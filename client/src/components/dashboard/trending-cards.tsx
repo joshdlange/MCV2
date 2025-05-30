@@ -233,45 +233,46 @@ export function TrendingCards() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="font-bebas text-xl tracking-wide">TOP TRENDING CARDS</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Most popular cards being added to collections
-        </p>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {trendingCards.slice(0, 8).map((card) => (
-            <TrendingCard
-              key={card.id}
-              card={card}
-              isInCollection={isCardInCollection(card.id)}
-              onClick={() => handleCardClick(card)}
-            />
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-bebas text-xl tracking-wide">TOP TRENDING CARDS</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Most popular cards being added to collections
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {trendingCards.slice(0, 8).map((card) => (
+              <TrendingCard
+                key={card.id}
+                card={card}
+                isInCollection={isCardInCollection(card.id)}
+                onClick={() => handleCardClick(card)}
+              />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-    {/* Card Detail Modal */}
-    <CardDetailModal
-      card={selectedCard}
-      isOpen={isModalOpen}
-      onClose={() => setIsModalOpen(false)}
-      isInCollection={selectedCard ? isCardInCollection(selectedCard.id) : false}
-      isInWishlist={selectedCard ? isCardInWishlist(selectedCard.id) : false}
-      onAddToCollection={() => {
-        if (selectedCard) {
-          addToCollectionMutation.mutate(selectedCard.id);
-        }
-      }}
-      onAddToWishlist={() => {
-        if (selectedCard) {
-          addToWishlistMutation.mutate(selectedCard.id);
-        }
-      }}
-    />
-  </>
+      {/* Card Detail Modal */}
+      <CardDetailModal
+        card={selectedCard}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        isInCollection={selectedCard ? isCardInCollection(selectedCard.id) : false}
+        isInWishlist={selectedCard ? isCardInWishlist(selectedCard.id) : false}
+        onAddToCollection={() => {
+          if (selectedCard) {
+            addToCollectionMutation.mutate(selectedCard.id);
+          }
+        }}
+        onAddToWishlist={() => {
+          if (selectedCard) {
+            addToWishlistMutation.mutate(selectedCard.id);
+          }
+        }}
+      />
+    </>
   );
 }
