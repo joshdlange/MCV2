@@ -1,8 +1,10 @@
 import { useAppStore } from "@/lib/store";
 import { Menu, Search, Bolt } from "lucide-react";
+import { useLocation } from "wouter";
 
 export function MobileHeader() {
   const { toggleMobileMenu } = useAppStore();
+  const [, setLocation] = useLocation();
 
   return (
     <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between">
@@ -22,7 +24,10 @@ export function MobileHeader() {
           </h1>
         </div>
       </div>
-      <button className="text-gray-600 hover:text-gray-900">
+      <button 
+        className="text-gray-600 hover:text-gray-900"
+        onClick={() => setLocation('/card-search')}
+      >
         <Search className="w-5 h-5" />
       </button>
     </div>

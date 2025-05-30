@@ -45,6 +45,11 @@ export function QuickSearch() {
             placeholder="Quick search cards..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && searchQuery.trim().length >= 2) {
+                setLocation(`/card-search?search=${encodeURIComponent(searchQuery.trim())}`);
+              }
+            }}
             className="pl-10 bg-white border-gray-200 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-red-500 focus:border-red-500"
           />
         </div>
@@ -71,6 +76,11 @@ export function QuickSearch() {
             placeholder="Search cards..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && searchQuery.trim().length >= 2) {
+                setLocation(`/card-search?search=${encodeURIComponent(searchQuery.trim())}`);
+              }
+            }}
             className="pl-12 pr-4 py-4 text-lg bg-white border-gray-200 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-red-500 focus:border-red-500 rounded-xl"
           />
         </div>
