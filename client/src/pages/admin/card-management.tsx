@@ -418,18 +418,32 @@ function CSVUploadForm({ cardSets }: { cardSets: CardSet[] }) {
         body: formData,
       });
 
+      const result = await response.json();
+
       if (response.ok) {
-        toast({ title: "CSV uploaded successfully" });
+        // Invalidate cards cache to refresh the data
+        queryClient.invalidateQueries({ queryKey: ['/api/cards'] });
+        
+        let message = result.message;
+        if (result.errors && result.errors.length > 0) {
+          message += ` ${result.errors.length} rows had errors.`;
+        }
+        
+        toast({ title: message });
         setCsvFile(null);
         setSelectedSet('');
         // Reset file input
         const fileInput = document.getElementById('csvFile') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
       } else {
-        throw new Error('Upload failed');
+        throw new Error(result.message || 'Upload failed');
       }
     } catch (error) {
-      toast({ title: "Failed to upload CSV", variant: "destructive" });
+      toast({ 
+        title: "Failed to upload CSV", 
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive" 
+      });
     } finally {
       setIsUploading(false);
     }
@@ -442,10 +456,10 @@ function CSVUploadForm({ cardSets }: { cardSets: CardSet[] }) {
         <div className="text-sm text-blue-800 space-y-1">
           <p>Your CSV file should include the following columns:</p>
           <code className="block bg-blue-100 p-2 rounded text-xs">
-            name,cardNumber,rarity,isInsert,frontImageUrl,backImageUrl,estimatedValue,description
+            name,cardNumber,isInsert,rarity,frontImageUrl,backImageUrl,description
           </code>
-          <p className="mt-2"><strong>Required:</strong> name, cardNumber, rarity</p>
-          <p><strong>Optional:</strong> isInsert (true/false), frontImageUrl, backImageUrl, estimatedValue, description</p>
+          <p className="mt-2"><strong>Required:</strong> name, cardNumber, isInsert (true/false)</p>
+          <p><strong>Optional:</strong> rarity, frontImageUrl, backImageUrl, description</p>
         </div>
       </div>
 

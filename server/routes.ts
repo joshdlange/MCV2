@@ -3,6 +3,12 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertCardSetSchema, insertCardSchema, insertUserCollectionSchema, insertUserWishlistSchema, insertUserSchema } from "@shared/schema";
 import { z } from "zod";
+import multer from "multer";
+import csv from "csv-parser";
+import { Readable } from "stream";
+
+// Configure multer for file uploads
+const upload = multer({ storage: multer.memoryStorage() });
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Card Sets Routes
@@ -151,6 +157,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Card deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete card" });
+    }
+  });
+
+  // CSV Upload Route
+  app.post("/api/cards/upload-csv", upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const setId = parseInt(req.body.setId);
+      if (!setId) {
+        return res.status(400).json({ message: "Set ID is required" });
+      }
+
+      // Parse CSV from buffer
+      const results: any[] = [];
+      const csvStream = Readable.from(req.file.buffer.toString())
+        .pipe(csv())
+        .on('data', (data) => results.push(data))
+        .on('error', (error) => {
+          console.error('CSV parsing error:', error);
+          return res.status(400).json({ message: "Invalid CSV format" });
+        });
+
+      await new Promise((resolve, reject) => {
+        csvStream.on('end', resolve);
+        csvStream.on('error', reject);
+      });
+
+      // Validate and process each row
+      const createdCards = [];
+      const errors = [];
+
+      for (let i = 0; i < results.length; i++) {
+        const row = results[i];
+        const rowNumber = i + 1;
+
+        try {
+          // Validate required fields
+          if (!row.name || !row.cardNumber || !row.isInsert) {
+            errors.push(`Row ${rowNumber}: Missing required fields (name, cardNumber, isInsert)`);
+            continue;
+          }
+
+          // Parse isInsert boolean
+          let isInsert = false;
+          if (typeof row.isInsert === 'string') {
+            isInsert = row.isInsert.toLowerCase() === 'true';
+          } else {
+            isInsert = Boolean(row.isInsert);
+          }
+
+          const cardData = {
+            setId,
+            name: row.name.trim(),
+            cardNumber: row.cardNumber.trim(),
+            isInsert,
+            rarity: row.rarity?.trim() || 'Common',
+            frontImageUrl: row.frontImageUrl?.trim() || null,
+            backImageUrl: row.backImageUrl?.trim() || null,
+            description: row.description?.trim() || null,
+            estimatedValue: null,
+            variation: null
+          };
+
+          const validatedData = insertCardSchema.parse(cardData);
+          const card = await storage.createCard(validatedData);
+          createdCards.push(card);
+
+        } catch (error) {
+          if (error instanceof z.ZodError) {
+            errors.push(`Row ${rowNumber}: ${error.errors.map(e => e.message).join(', ')}`);
+          } else {
+            errors.push(`Row ${rowNumber}: Failed to create card`);
+          }
+        }
+      }
+
+      res.json({
+        message: `CSV processed successfully. Created ${createdCards.length} cards.`,
+        created: createdCards.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+
+    } catch (error) {
+      console.error('CSV upload error:', error);
+      res.status(500).json({ message: "Failed to process CSV file" });
     }
   });
 
