@@ -27,7 +27,9 @@ function MobileMenu() {
         onClick={() => setMobileMenuOpen(false)}
       />
       <div className="fixed inset-y-0 left-0 w-80 bg-white shadow-lg">
-        <Sidebar />
+        <div onClick={() => setMobileMenuOpen(false)}>
+          <Sidebar />
+        </div>
       </div>
     </div>
   );
@@ -36,9 +38,20 @@ function MobileMenu() {
 function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-gray-50">
-      <Sidebar />
-      <MobileHeader />
+      {/* Desktop Sidebar - hidden on mobile */}
+      <div className="hidden lg:block">
+        <Sidebar />
+      </div>
+      
+      {/* Mobile Header - shown on mobile only */}
+      <div className="lg:hidden">
+        <MobileHeader />
+      </div>
+      
+      {/* Mobile Menu Overlay */}
       <MobileMenu />
+      
+      {/* Main Content */}
       <div className="lg:ml-80">
         {children}
       </div>
