@@ -65,7 +65,7 @@ export function StatsDashboard() {
       value: stats.wishlistItems.toLocaleString(),
       change: "-5.1%",
       icon: "heart",
-      color: "bg-red-500",
+      color: "bg-pink-500",
     },
   ];
 
