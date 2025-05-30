@@ -8,14 +8,14 @@ export function cn(...inputs: ClassValue[]) {
 export function convertGoogleDriveUrl(url: string): string {
   if (!url) return url;
   
-  // Check if it's a Google Drive URL with file/d/ format
+  // Check if it's a Google Drive URL with file/d/ format (including view links)
   const driveRegex = /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/;
   const match = url.match(driveRegex);
   
   if (match) {
     const fileId = match[1];
-    // Convert to the direct googleusercontent format that works for public images
-    return `https://lh3.googleusercontent.com/d/${fileId}=w400`;
+    // Convert to the uc?export=view format that works more reliably for public images
+    return `https://drive.google.com/uc?export=view&id=${fileId}`;
   }
   
   // Handle sharing URLs with open?id= format
@@ -24,7 +24,7 @@ export function convertGoogleDriveUrl(url: string): string {
   
   if (shareMatch) {
     const fileId = shareMatch[1];
-    return `https://lh3.googleusercontent.com/d/${fileId}=w400`;
+    return `https://drive.google.com/uc?export=view&id=${fileId}`;
   }
   
   // Handle URLs that already have the correct format
