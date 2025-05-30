@@ -1,18 +1,20 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { Star, Plus, Heart, Check } from "lucide-react";
-import type { CardWithSet, CollectionItem } from "@shared/schema";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { CardWithSet, CollectionItem, InsertUserCollection, InsertUserWishlist, WishlistItem } from "@shared/schema";
 
 interface TrendingCardProps {
   card: CardWithSet;
   isInCollection?: boolean;
-  onAddToCollection?: () => void;
-  onAddToWishlist?: () => void;
+  onClick?: () => void;
 }
 
-function TrendingCard({ card, isInCollection, onAddToCollection, onAddToWishlist }: TrendingCardProps) {
+function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
 
   // Generate mock price change for trending effect
@@ -103,31 +105,9 @@ function TrendingCard({ card, isInCollection, onAddToCollection, onAddToWishlist
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-1 md:gap-2 mt-2 md:mt-4">
-            <Button 
-              size="sm" 
-              className="flex-1 bg-white text-black hover:bg-gray-200 text-xs font-medium py-1 md:py-2"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddToCollection?.();
-              }}
-            >
-              <Plus className="w-2 md:w-3 h-2 md:h-3 mr-1" />
-              Add
-            </Button>
-            <Button 
-              size="sm" 
-              variant="outline" 
-              className="flex-1 border-red-500 text-red-500 hover:bg-red-500 hover:text-white text-xs font-medium py-1 md:py-2"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddToWishlist?.();
-              }}
-            >
-              <Heart className="w-2 md:w-3 h-2 md:h-3 mr-1" />
-              Wishlist
-            </Button>
+          {/* Click to view details hint */}
+          <div className="text-center mt-2 md:mt-4">
+            <span className="text-xs text-gray-400">Tap for details</span>
           </div>
         </div>
       </div>
@@ -136,6 +116,10 @@ function TrendingCard({ card, isInCollection, onAddToCollection, onAddToWishlist
 }
 
 export function TrendingCards() {
+  const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { toast } = useToast();
+
   const { data: trendingCards, isLoading } = useQuery<CardWithSet[]>({
     queryKey: ["/api/trending-cards"],
   });
@@ -144,10 +128,77 @@ export function TrendingCards() {
     queryKey: ["/api/collection"],
   });
 
+  const { data: wishlist } = useQuery<WishlistItem[]>({
+    queryKey: ["/api/wishlist"],
+  });
+
   // Helper function to check if a card is in the collection
   const isCardInCollection = (cardId: number) => {
     return collection?.some(item => item.cardId === cardId) || false;
   };
+
+  // Helper function to check if a card is in the wishlist
+  const isCardInWishlist = (cardId: number) => {
+    return wishlist?.some(item => item.cardId === cardId) || false;
+  };
+
+  // Handle card click to open modal
+  const handleCardClick = (card: CardWithSet) => {
+    setSelectedCard(card);
+    setIsModalOpen(true);
+  };
+
+  // Add to collection mutation
+  const addToCollectionMutation = useMutation({
+    mutationFn: async (cardId: number) => {
+      const insertData: InsertUserCollection = {
+        userId: 1,
+        cardId,
+        condition: "Near Mint",
+        quantity: 1,
+        acquiredDate: new Date(),
+        personalValue: "0",
+        isForSale: false,
+        isFavorite: false,
+      };
+      return apiRequest("/api/collection", {
+        method: "POST",
+        body: JSON.stringify(insertData),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collection"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({
+        title: "Added to Collection",
+        description: "Card successfully added to your collection",
+      });
+    },
+  });
+
+  // Add to wishlist mutation
+  const addToWishlistMutation = useMutation({
+    mutationFn: async (cardId: number) => {
+      const insertData: InsertUserWishlist = {
+        userId: 1,
+        cardId,
+        priority: 1,
+        maxPrice: null,
+        notes: null,
+      };
+      return apiRequest("/api/wishlist", {
+        method: "POST",
+        body: JSON.stringify(insertData),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
+      toast({
+        title: "Added to Wishlist",
+        description: "Card successfully added to your wishlist",
+      });
+    },
+  });
 
   if (isLoading) {
     return (
@@ -196,18 +247,31 @@ export function TrendingCards() {
               key={card.id}
               card={card}
               isInCollection={isCardInCollection(card.id)}
-              onAddToCollection={() => {
-                // TODO: Implement add to collection
-                console.log('Add to collection:', card.name);
-              }}
-              onAddToWishlist={() => {
-                // TODO: Implement add to wishlist
-                console.log('Add to wishlist:', card.name);
-              }}
+              onClick={() => handleCardClick(card)}
             />
           ))}
         </div>
       </CardContent>
     </Card>
+
+    {/* Card Detail Modal */}
+    <CardDetailModal
+      card={selectedCard}
+      isOpen={isModalOpen}
+      onClose={() => setIsModalOpen(false)}
+      isInCollection={selectedCard ? isCardInCollection(selectedCard.id) : false}
+      isInWishlist={selectedCard ? isCardInWishlist(selectedCard.id) : false}
+      onAddToCollection={() => {
+        if (selectedCard) {
+          addToCollectionMutation.mutate(selectedCard.id);
+        }
+      }}
+      onAddToWishlist={() => {
+        if (selectedCard) {
+          addToWishlistMutation.mutate(selectedCard.id);
+        }
+      }}
+    />
+  </>
   );
 }
