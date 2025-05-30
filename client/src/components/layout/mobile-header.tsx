@@ -18,7 +18,7 @@ export function MobileHeader() {
             <Bolt className="text-white text-sm" />
           </div>
           <h1 className="text-gray-900 font-bebas text-xl tracking-wide font-bold">
-            MARVEL VAULT
+            MARVEL CARD VAULT
           </h1>
         </div>
       </div>
