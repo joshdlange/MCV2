@@ -188,7 +188,7 @@ export default function MyCollection() {
               variant="outline"
               size="sm"
               onClick={handleSelectAll}
-              className="bg-black text-white border-black hover:bg-gray-800"
+              className="bg-gray-800 text-white border-gray-800 hover:bg-gray-700"
             >
               <Checkbox 
                 checked={selectedItems.size === filteredCollection.length && filteredCollection.length > 0}
@@ -277,7 +277,7 @@ export default function MyCollection() {
                   <div className="absolute bottom-2 left-2 flex gap-1">
                     {item.card.isInsert && (
                       <Badge className="bg-yellow-100 text-yellow-800 text-xs p-1">
-                        <Star className="h-3 w-3" />
+                        INSERT
                       </Badge>
                     )}
                   </div>
@@ -290,9 +290,16 @@ export default function MyCollection() {
                   </h3>
                   <p className="text-xs text-gray-600">{item.card.set.name} #{item.card.cardNumber}</p>
                   <div className="flex items-center justify-between mt-2">
-                    <Badge className="bg-blue-100 text-blue-800 text-xs border-blue-200">
-                      {item.condition}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-blue-100 text-blue-800 text-xs border-blue-200">
+                        {item.condition}
+                      </Badge>
+                      {item.quantity && item.quantity > 1 && (
+                        <Badge className="bg-gray-100 text-gray-800 text-xs border-gray-200">
+                          Qty: {item.quantity}
+                        </Badge>
+                      )}
+                    </div>
                     <div className="flex gap-1">
                       <Button
                         variant="ghost"
