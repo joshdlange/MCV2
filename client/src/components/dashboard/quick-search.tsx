@@ -35,8 +35,8 @@ export function QuickSearch() {
 
   return (
     <div className="relative">
-      {/* Compact Search Controls for Header */}
-      <div className="flex gap-2">
+      {/* Desktop Search Controls */}
+      <div className="hidden md:flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
@@ -49,6 +49,32 @@ export function QuickSearch() {
         <Select value={selectedSet} onValueChange={setSelectedSet}>
           <SelectTrigger className="w-32 bg-white border-gray-200 text-gray-900">
             <SelectValue placeholder="Set" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Sets</SelectItem>
+            {cardSets?.map((set) => (
+              <SelectItem key={set.id} value={set.id.toString()}>
+                {set.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Mobile Search Controls - Larger and More Touch-Friendly */}
+      <div className="md:hidden space-y-3">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Input
+            placeholder="Search cards..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-12 pr-4 py-4 text-lg bg-white border-gray-200 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-red-500 focus:border-red-500 rounded-xl"
+          />
+        </div>
+        <Select value={selectedSet} onValueChange={setSelectedSet}>
+          <SelectTrigger className="w-full py-4 text-lg bg-white border-gray-200 text-gray-900 rounded-xl">
+            <SelectValue placeholder="Choose Set" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Sets</SelectItem>
