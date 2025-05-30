@@ -6,6 +6,7 @@ import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { Star, Plus, Heart, Check } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { convertGoogleDriveUrl } from "@/lib/utils";
 import type { CardWithSet, CollectionItem, InsertUserCollection, InsertUserWishlist, WishlistItem } from "@shared/schema";
 
 interface TrendingCardProps {

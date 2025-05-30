@@ -6,6 +6,7 @@ import { Heart, Plus, Check, Star } from "lucide-react";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { convertGoogleDriveUrl } from "@/lib/utils";
 import type { CardWithSet, CollectionItem, WishlistItem } from "@shared/schema";
 import { CardFilters } from "@/types";
 
@@ -147,9 +148,12 @@ export function CardGrid({
               <div className="relative">
                 {card.frontImageUrl ? (
                   <img 
-                    src={card.frontImageUrl} 
+                    src={convertGoogleDriveUrl(card.frontImageUrl)} 
                     alt={card.name}
                     className="w-full h-40 object-cover rounded-t-lg"
+                    onError={(e) => {
+                      e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzlkYTNhZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIEVycm9yPC90ZXh0Pjwvc3ZnPg==';
+                    }}
                   />
                 ) : (
                   <div className="w-full h-40 bg-gray-200 rounded-t-lg flex items-center justify-center">
