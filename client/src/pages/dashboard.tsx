@@ -17,7 +17,11 @@ export default function Dashboard() {
               Welcome back! Here's your collection overview.
             </p>
           </div>
-
+          
+          {/* Quick Search in Header */}
+          <div className="w-80">
+            <QuickSearch />
+          </div>
         </div>
       </div>
 
@@ -25,9 +29,8 @@ export default function Dashboard() {
       <div className="p-6">
         <StatsDashboard />
         
-        {/* Quick Search and Recent Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-          <QuickSearch />
+        {/* Recent Cards */}
+        <div className="mt-6">
           <RecentCards />
         </div>
       </div>

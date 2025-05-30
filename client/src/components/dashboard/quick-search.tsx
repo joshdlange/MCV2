@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Check, Heart, Star, Search } from "lucide-react";
+import { Star, Search } from "lucide-react";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import type { CardWithSet, CardSet } from "@shared/schema";
 
@@ -35,62 +34,59 @@ export function QuickSearch() {
   const cardAspectRatio = "aspect-[2.5/3.5]";
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="font-bebas text-lg tracking-wide">QUICK SEARCH</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Search Controls */}
-        <div className="flex gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              placeholder="Search cards..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Select value={selectedSet} onValueChange={setSelectedSet}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="All Sets" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Sets</SelectItem>
-              {cardSets?.map((set) => (
-                <SelectItem key={set.id} value={set.id.toString()}>
-                  {set.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+    <div className="relative">
+      {/* Compact Search Controls for Header */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="Quick search cards..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 bg-white border-gray-200 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-red-500 focus:border-red-500"
+          />
         </div>
+        <Select value={selectedSet} onValueChange={setSelectedSet}>
+          <SelectTrigger className="w-32 bg-white border-gray-200 text-gray-900">
+            <SelectValue placeholder="Set" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Sets</SelectItem>
+            {cardSets?.map((set) => (
+              <SelectItem key={set.id} value={set.id.toString()}>
+                {set.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-        {/* Search Results */}
-        {debouncedQuery.length >= 2 && (
-          <div className="space-y-3">
+      {/* Search Results Dropdown */}
+      {debouncedQuery.length >= 2 && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden">
+          <div className="p-4">
             {isLoading && (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Searching...</p>
+              <div className="text-center py-4">
+                <p className="text-gray-500">Searching...</p>
               </div>
             )}
 
             {!isLoading && searchResults && searchResults.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">No cards found matching your search.</p>
+              <div className="text-center py-4">
+                <p className="text-gray-500">No cards found matching your search.</p>
               </div>
             )}
 
             {!isLoading && searchResults && searchResults.length > 0 && (
-              <>
-                <p className="text-sm text-muted-foreground">
+              <div className="space-y-3">
+                <p className="text-sm text-gray-600 font-medium">
                   Found {searchResults.length} card{searchResults.length === 1 ? '' : 's'}
                 </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 max-h-64 overflow-y-auto">
+                <div className="grid grid-cols-6 gap-2 max-h-64 overflow-y-auto">
                   {searchResults.slice(0, 12).map((card) => (
                     <div 
                       key={card.id} 
-                      className="bg-background rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow cursor-pointer border relative"
+                      className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer border border-gray-200 hover:border-orange-300 hover:bg-gradient-to-br hover:from-orange-50 hover:to-red-50 transform hover:scale-105"
                       onClick={() => setSelectedCard(card)}
                     >
                       {/* Trading card with proper 2.5:3.5 aspect ratio */}
@@ -99,11 +95,11 @@ export function QuickSearch() {
                           <img 
                             src={card.frontImageUrl} 
                             alt={card.name}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover rounded-t-lg"
                           />
                         ) : (
-                          <div className="w-full h-full bg-muted flex items-center justify-center">
-                            <span className="text-muted-foreground text-xs">No Image</span>
+                          <div className="w-full h-full bg-gray-100 flex items-center justify-center rounded-t-lg">
+                            <span className="text-gray-400 text-xs">No Image</span>
                           </div>
                         )}
                         
@@ -119,13 +115,13 @@ export function QuickSearch() {
                       
                       {/* Card info below image */}
                       <div className="p-1.5">
-                        <p className="font-medium text-card-foreground text-xs truncate">
+                        <p className="font-medium text-gray-900 text-xs truncate">
                           {card.name}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate">
+                        <p className="text-xs text-gray-600 truncate">
                           {card.set.name}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-gray-500">
                           #{card.cardNumber}
                         </p>
                         {card.estimatedValue && (
@@ -138,21 +134,23 @@ export function QuickSearch() {
                   ))}
                 </div>
                 {searchResults.length > 12 && (
-                  <p className="text-xs text-muted-foreground text-center">
+                  <p className="text-xs text-gray-500 text-center">
                     Showing first 12 results. Use Card Search for more detailed filtering.
                   </p>
                 )}
-              </>
+              </div>
             )}
           </div>
-        )}
+        </div>
+      )}
 
-        {debouncedQuery.length < 2 && debouncedQuery.length > 0 && (
-          <div className="text-center py-4">
-            <p className="text-muted-foreground text-sm">Type at least 2 characters to search</p>
+      {debouncedQuery.length < 2 && debouncedQuery.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+          <div className="p-4 text-center">
+            <p className="text-gray-500 text-sm">Type at least 2 characters to search</p>
           </div>
-        )}
-      </CardContent>
+        </div>
+      )}
 
       {/* Card Detail Modal */}
       <CardDetailModal
@@ -162,6 +160,6 @@ export function QuickSearch() {
         isInCollection={false}
         isInWishlist={false}
       />
-    </Card>
+    </div>
   );
 }
