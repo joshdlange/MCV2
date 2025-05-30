@@ -87,19 +87,7 @@ export default function BrowseCards() {
             </SelectContent>
           </Select>
 
-          <Select value={filters.rarity || "all"} onValueChange={handleRarityChange}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="All Rarities" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Rarities</SelectItem>
-              <SelectItem value="Common">Common</SelectItem>
-              <SelectItem value="Uncommon">Uncommon</SelectItem>
-              <SelectItem value="Rare">Rare</SelectItem>
-              <SelectItem value="Epic">Epic</SelectItem>
-              <SelectItem value="Legendary">Legendary</SelectItem>
-            </SelectContent>
-          </Select>
+
 
           <Select 
             value={filters.isInsert === undefined ? "all" : filters.isInsert.toString()} 
@@ -111,7 +99,7 @@ export default function BrowseCards() {
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="true">Insert Cards</SelectItem>
-              <SelectItem value="false">Regular Cards</SelectItem>
+              <SelectItem value="false">Base Cards</SelectItem>
             </SelectContent>
           </Select>
 
