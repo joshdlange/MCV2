@@ -301,7 +301,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCard(id: number): Promise<void> {
-    await db.delete(cards).where(eq(cards.id, id));
+    try {
+      // First, delete any user collection items that reference this card
+      await db.delete(userCollections).where(eq(userCollections.cardId, id));
+      
+      // Then, delete any wishlist items that reference this card
+      await db.delete(userWishlists).where(eq(userWishlists.cardId, id));
+      
+      // Finally, delete the card itself
+      await db.delete(cards).where(eq(cards.id, id));
+    } catch (error) {
+      console.error('Error deleting card:', error);
+      throw error;
+    }
   }
 
   async getUserCollection(userId: number): Promise<CollectionItem[]> {
