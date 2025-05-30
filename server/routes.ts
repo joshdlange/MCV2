@@ -126,6 +126,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/cards/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const data = insertCardSchema.partial().parse(req.body);
+      const card = await storage.updateCard(id, data);
+      if (!card) {
+        return res.status(404).json({ message: "Card not found" });
+      }
+      res.json(card);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update card" });
+      }
+    }
+  });
+
   app.delete("/api/cards/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);

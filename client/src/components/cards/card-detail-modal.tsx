@@ -213,29 +213,119 @@ export function CardDetailModal({
 
           {/* Card Details */}
           <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold text-card-foreground">{card.name}</h3>
-              <p className="text-muted-foreground">{card.set.name}</p>
-              <div className="flex items-center gap-4 mt-2">
-                <Badge variant="outline">#{card.cardNumber}</Badge>
-                {card.variation && <Badge variant="outline">{card.variation}</Badge>}
-                {card.isInsert && <Badge className="bg-yellow-500">Insert Card</Badge>}
-              </div>
-            </div>
+            {isEditing ? (
+              /* Admin Edit Form */
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="cardName">Card Name</Label>
+                  <Input
+                    id="cardName"
+                    value={editedCard.name || ''}
+                    onChange={(e) => setEditedCard({ ...editedCard, name: e.target.value })}
+                    className="bg-white"
+                  />
+                </div>
 
-            {card.description && (
-              <div>
-                <Label className="text-sm font-medium">Description</Label>
-                <p className="text-sm text-muted-foreground mt-1">{card.description}</p>
+                <div>
+                  <Label htmlFor="cardNumber">Card Number</Label>
+                  <Input
+                    id="cardNumber"
+                    value={editedCard.cardNumber || ''}
+                    onChange={(e) => setEditedCard({ ...editedCard, cardNumber: e.target.value })}
+                    className="bg-white"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="rarity">Rarity</Label>
+                  <Input
+                    id="rarity"
+                    value={editedCard.rarity || ''}
+                    onChange={(e) => setEditedCard({ ...editedCard, rarity: e.target.value })}
+                    className="bg-white"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="estimatedValue">Estimated Value</Label>
+                  <Input
+                    id="estimatedValue"
+                    type="number"
+                    step="0.01"
+                    value={editedCard.estimatedValue || ''}
+                    onChange={(e) => setEditedCard({ ...editedCard, estimatedValue: e.target.value })}
+                    className="bg-white"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="frontImage">Front Image URL</Label>
+                  <Input
+                    id="frontImage"
+                    value={editedCard.frontImageUrl || ''}
+                    onChange={(e) => setEditedCard({ ...editedCard, frontImageUrl: e.target.value })}
+                    className="bg-white"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="backImage">Back Image URL</Label>
+                  <Input
+                    id="backImage"
+                    value={editedCard.backImageUrl || ''}
+                    onChange={(e) => setEditedCard({ ...editedCard, backImageUrl: e.target.value })}
+                    className="bg-white"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={editedCard.description || ''}
+                    onChange={(e) => setEditedCard({ ...editedCard, description: e.target.value })}
+                    className="bg-white"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="isInsert"
+                    checked={editedCard.isInsert || false}
+                    onCheckedChange={(checked) => setEditedCard({ ...editedCard, isInsert: checked })}
+                  />
+                  <Label htmlFor="isInsert">Insert Card</Label>
+                </div>
               </div>
+            ) : (
+              /* Regular Card Display */
+              <>
+                <div>
+                  <h3 className="text-lg font-semibold text-card-foreground">{card.name}</h3>
+                  <p className="text-muted-foreground">{card.set.name}</p>
+                  <div className="flex items-center gap-4 mt-2">
+                    <Badge variant="outline">#{card.cardNumber}</Badge>
+                    {card.variation && <Badge variant="outline">{card.variation}</Badge>}
+                    {card.isInsert && <Badge className="bg-yellow-500">Insert Card</Badge>}
+                  </div>
+                </div>
+
+                {card.description && (
+                  <div>
+                    <Label className="text-sm font-medium">Description</Label>
+                    <p className="text-sm text-muted-foreground mt-1">{card.description}</p>
+                  </div>
+                )}
+
+                <div>
+                  <Label className="text-sm font-medium">Estimated Value</Label>
+                  <p className="text-lg font-semibold text-green-600">
+                    ${card.estimatedValue ? parseFloat(card.estimatedValue).toFixed(2) : "N/A"}
+                  </p>
+                </div>
+              </>
             )}
-
-            <div>
-              <Label className="text-sm font-medium">Estimated Value</Label>
-              <p className="text-lg font-semibold text-green-600">
-                ${card.estimatedValue ? parseFloat(card.estimatedValue).toFixed(2) : "N/A"}
-              </p>
-            </div>
 
             {/* Collection Actions */}
             <div className="flex gap-2">
