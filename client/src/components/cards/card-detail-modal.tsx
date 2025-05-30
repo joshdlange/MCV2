@@ -193,8 +193,8 @@ export function CardDetailModal({
                     </div>
                   )}
                   {card.isInsert && (
-                    <div className="bg-yellow-500 rounded-full p-1 shadow-lg">
-                      <Star className="w-4 h-4 text-white fill-white" />
+                    <div className="bg-purple-600 text-white px-2 py-1 rounded text-xs font-bold shadow-lg">
+                      INSERT
                     </div>
                   )}
                 </div>

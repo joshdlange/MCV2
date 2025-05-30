@@ -174,8 +174,8 @@ export default function Marketplace() {
                     {/* Insert Badge */}
                     <div className="absolute bottom-2 left-2 flex gap-1">
                       {item.card.isInsert && (
-                        <Badge className="bg-yellow-100 text-yellow-800 text-xs p-1">
-                          <Star className="h-3 w-3" />
+                        <Badge className="bg-purple-600 text-white text-xs px-2 py-1 font-bold">
+                          INSERT
                         </Badge>
                       )}
                     </div>

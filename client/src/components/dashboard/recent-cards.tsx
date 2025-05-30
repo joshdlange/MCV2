@@ -123,8 +123,8 @@ export function RecentCards() {
                     <Check className="w-3 h-3 text-white" />
                   </div>
                   {item.card.isInsert && (
-                    <div className="bg-yellow-500 rounded-full p-1 shadow-lg">
-                      <Star className="w-3 h-3 text-white fill-white" />
+                    <div className="bg-purple-600 text-white px-2 py-1 rounded text-xs font-bold shadow-lg">
+                      INSERT
                     </div>
                   )}
                 </div>

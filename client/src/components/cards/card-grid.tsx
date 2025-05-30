@@ -196,8 +196,8 @@ export function CardGrid({
                     </span>
                   )}
                   {card.isInsert && (
-                    <span className="text-xs text-yellow-600 px-1 py-0.5 rounded bg-[#ffffff]">
-                      ⭐
+                    <span className="text-xs text-white px-2 py-1 rounded bg-purple-600 font-bold shadow-lg">
+                      INSERT
                     </span>
                   )}
                 </div>
