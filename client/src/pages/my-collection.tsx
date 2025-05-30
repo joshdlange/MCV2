@@ -5,8 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
-import { Star, Heart, Check, ShoppingCart, Trash2 } from "lucide-react";
+import { Star, Heart, Check, ShoppingCart, Trash2, Search } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { CollectionItem, CardWithSet } from "@shared/schema";
@@ -16,12 +17,21 @@ export default function MyCollection() {
   const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const { data: collection, isLoading } = useQuery<CollectionItem[]>({
     queryKey: ["/api/collection"],
   });
+
+  // Filter collection based on search query
+  const filteredCollection = collection?.filter(item => 
+    item.card.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.card.set.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.card.cardNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.card.rarity.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
 
   const removeFromCollectionMutation = useMutation({
     mutationFn: async (itemId: number) => {
@@ -126,10 +136,10 @@ export default function MyCollection() {
   };
 
   const handleSelectAll = () => {
-    if (selectedItems.size === collection?.length) {
+    if (selectedItems.size === filteredCollection.length) {
       setSelectedItems(new Set());
     } else {
-      setSelectedItems(new Set(collection?.map(item => item.id) || []));
+      setSelectedItems(new Set(filteredCollection.map(item => item.id)));
     }
   };
 
@@ -165,6 +175,15 @@ export default function MyCollection() {
           <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">MY COLLECTION</h2>
           
           <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search your collection..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 w-64"
+              />
+            </div>
             <Button
               variant="outline"
               size="sm"
@@ -172,24 +191,30 @@ export default function MyCollection() {
               className="bg-black text-white border-black hover:bg-gray-800"
             >
               <Checkbox 
-                checked={selectedItems.size === collection.length && collection.length > 0}
+                checked={selectedItems.size === filteredCollection.length && filteredCollection.length > 0}
                 className="mr-2"
               />
-              {selectedItems.size === collection.length ? 'Deselect All' : 'Select All'}
+              {selectedItems.size === filteredCollection.length ? 'Deselect All' : 'Select All'}
             </Button>
           </div>
         </div>
         
         <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-          <span>{collection.length} cards in collection</span>
+          <span>{collection?.length || 0} cards in collection</span>
+          {searchQuery && (
+            <>
+              <span>•</span>
+              <span>{filteredCollection.length} matching "{searchQuery}"</span>
+            </>
+          )}
           <span>•</span>
-          <span>{collection.filter(item => item.isForSale).length} listed for sale</span>
+          <span>{collection?.filter(item => item.isForSale).length || 0} listed for sale</span>
         </div>
       </div>
 
       <div className="p-6">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-          {collection.map((item) => (
+          {filteredCollection.map((item) => (
             <Card 
               key={item.id} 
               className="group hover:shadow-lg transition-all duration-200 cursor-pointer relative"
