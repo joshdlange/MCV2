@@ -25,7 +25,6 @@ const navigationItems: NavigationItem[] = [
 
 const adminItems: NavigationItem[] = [
   { href: "/admin/cards", label: "Add Cards", icon: "PlusCircle" },
-  { href: "/admin/sets", label: "Manage Sets", icon: "Edit" },
   { href: "/admin/users", label: "Manage Users", icon: "Users" },
 ];
 
