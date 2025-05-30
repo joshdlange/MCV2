@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bolt, Settings, Crown } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { 
   LayoutDashboard, 
   Grid3X3, 
@@ -20,12 +21,17 @@ import {
   Store
 } from "lucide-react";
 
-const navigationItems: NavigationItem[] = [
+const getNavigationItems = (userPlan: string): NavigationItem[] => [
   { href: "/", label: "Dashboard", icon: "LayoutDashboard" },
   { href: "/browse", label: "Browse Cards", icon: "Grid3X3" },
   { href: "/collection", label: "My Collection", icon: "FolderOpen" },
   { href: "/wishlist", label: "Wishlist", icon: "Heart" },
-  { href: "/marketplace", label: "Marketplace", icon: "Store" },
+  { 
+    href: "/marketplace", 
+    label: "Marketplace", 
+    icon: "Store",
+    badge: userPlan === 'SIDE_KICK' ? "👑" : undefined
+  },
   { href: "/trends", label: "Market Trends", icon: "TrendingUp" },
 ];
 
@@ -52,6 +58,10 @@ export function Sidebar() {
   const { isAdminMode, currentUser } = useAppStore();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
+  const { data: collectionStats } = useQuery({
+    queryKey: ["/api/stats"],
+  });
+
   const IconComponent = ({ iconName }: { iconName: string }) => {
     const Icon = iconMap[iconName as keyof typeof iconMap];
     return Icon ? <Icon className="w-5 h-5 mr-3" /> : null;
@@ -77,7 +87,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-4 py-6 space-y-2">
-        {navigationItems.map((item) => (
+        {getNavigationItems(currentUser?.plan || 'SIDE_KICK').map((item) => (
           <Link key={item.href} href={item.href}>
             <div 
               className={`flex items-center px-4 py-3 rounded-lg transition-colors group cursor-pointer ${
@@ -115,8 +125,7 @@ export function Sidebar() {
               <div className="flex items-center justify-between text-xs text-gray-500">
                 <span>Collection Limit</span>
                 <Badge variant="outline" className="text-xs">
-                  {/* TODO: Replace with actual count */}
-                  ? / 250
+                  {collectionStats?.totalCards || 0} / 250
                 </Badge>
               </div>
             </div>
