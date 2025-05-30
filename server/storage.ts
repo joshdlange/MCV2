@@ -27,6 +27,9 @@ interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(insertUser: InsertUser): Promise<User>;
+  getAllUsers(): Promise<User[]>;
+  updateUser(id: number, insertUser: Partial<InsertUser>): Promise<User | undefined>;
+  deleteUser(id: number): Promise<void>;
   
   // Card Sets
   getCardSets(): Promise<CardSet[]>;
@@ -85,6 +88,38 @@ export class DatabaseStorage implements IStorage {
       .values(insertUser)
       .returning();
     return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    try {
+      return await db.select().from(users);
+    } catch (error) {
+      console.error('Error getting all users:', error);
+      return [];
+    }
+  }
+
+  async updateUser(id: number, insertUser: Partial<InsertUser>): Promise<User | undefined> {
+    try {
+      const [user] = await db
+        .update(users)
+        .set(insertUser)
+        .where(eq(users.id, id))
+        .returning();
+      return user || undefined;
+    } catch (error) {
+      console.error('Error updating user:', error);
+      return undefined;
+    }
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    try {
+      await db.delete(users).where(eq(users.id, id));
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      throw new Error('Failed to delete user');
+    }
   }
 
   async getCardSets(): Promise<CardSet[]> {
