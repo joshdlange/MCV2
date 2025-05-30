@@ -321,6 +321,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Marketplace routes
+  app.get("/api/marketplace", async (req, res) => {
+    try {
+      const marketplaceItems = await storage.getMarketplaceItems();
+      res.json(marketplaceItems);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch marketplace items" });
+    }
+  });
+
+  // Update collection item (for marketplace functionality)
+  app.patch("/api/collection/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      const item = await storage.updateCollectionItem(id, updates);
+      res.json(item);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update collection item" });
+    }
+  });
+
   // Stats Route
   app.get("/api/stats", async (req, res) => {
     try {

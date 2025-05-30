@@ -22,6 +22,7 @@ const navigationItems: NavigationItem[] = [
   { href: "/collection", label: "My Collection", icon: "FolderOpen" },
   { href: "/wishlist", label: "Wishlist", icon: "Heart" },
   { href: "/marketplace", label: "Marketplace", icon: "Store" },
+  { href: "/card-search", label: "Card Search", icon: "Search" },
   { href: "/trends", label: "Market Trends", icon: "TrendingUp" },
 ];
 

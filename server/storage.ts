@@ -47,6 +47,10 @@ interface IStorage {
   getUserCollection(userId: number): Promise<CollectionItem[]>;
   addToCollection(insertUserCollection: InsertUserCollection): Promise<UserCollection>;
   removeFromCollection(id: number): Promise<void>;
+  updateCollectionItem(id: number, updates: Partial<UserCollection>): Promise<UserCollection | undefined>;
+  
+  // Marketplace
+  getMarketplaceItems(): Promise<CollectionItem[]>;
   
   // User Wishlists
   getUserWishlist(userId: number): Promise<WishlistItem[]>;
@@ -365,6 +369,58 @@ export class DatabaseStorage implements IStorage {
 
   async removeFromCollection(id: number): Promise<void> {
     await db.delete(userCollections).where(eq(userCollections.id, id));
+  }
+
+  async updateCollectionItem(id: number, updates: Partial<UserCollection>): Promise<UserCollection | undefined> {
+    const [updated] = await db
+      .update(userCollections)
+      .set(updates)
+      .where(eq(userCollections.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getMarketplaceItems(): Promise<CollectionItem[]> {
+    const items = await db
+      .select({
+        id: userCollections.id,
+        userId: userCollections.userId,
+        cardId: userCollections.cardId,
+        condition: userCollections.condition,
+        acquiredDate: userCollections.acquiredDate,
+        personalValue: userCollections.personalValue,
+        salePrice: userCollections.salePrice,
+        isForSale: userCollections.isForSale,
+        notes: userCollections.notes,
+        card: {
+          id: cards.id,
+          name: cards.name,
+          setId: cards.setId,
+          cardNumber: cards.cardNumber,
+          variation: cards.variation,
+          rarity: cards.rarity,
+          isInsert: cards.isInsert,
+          description: cards.description,
+          frontImageUrl: cards.frontImageUrl,
+          backImageUrl: cards.backImageUrl,
+          estimatedValue: cards.estimatedValue,
+          createdAt: cards.createdAt,
+          set: {
+            id: cardSets.id,
+            name: cardSets.name,
+            year: cardSets.year,
+            description: cardSets.description,
+            totalCards: cardSets.totalCards,
+            createdAt: cardSets.createdAt,
+          }
+        }
+      })
+      .from(userCollections)
+      .leftJoin(cards, eq(userCollections.cardId, cards.id))
+      .leftJoin(cardSets, eq(cards.setId, cardSets.id))
+      .where(eq(userCollections.isForSale, true));
+
+    return items as CollectionItem[];
   }
 
   async getUserWishlist(userId: number): Promise<WishlistItem[]> {
