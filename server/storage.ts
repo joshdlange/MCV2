@@ -355,6 +355,11 @@ export class DatabaseStorage implements IStorage {
         condition: row.condition,
         acquiredDate: row.acquiredDate,
         personalValue: row.personalValue,
+        salePrice: row.salePrice,
+        isForSale: row.isForSale,
+        serialNumber: row.serialNumber,
+        quantity: row.quantity,
+        isFavorite: row.isFavorite,
         notes: row.notes,
         card: row.card
       }));
