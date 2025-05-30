@@ -162,7 +162,7 @@ export default function MyCollection() {
               variant="outline"
               size="sm"
               onClick={handleSelectAll}
-              className="text-gray-700 border-gray-300 hover:bg-gray-50"
+              className="bg-black text-white border-black hover:bg-gray-800"
             >
               <Checkbox 
                 checked={selectedItems.size === collection.length && collection.length > 0}
@@ -170,17 +170,6 @@ export default function MyCollection() {
               />
               {selectedItems.size === collection.length ? 'Deselect All' : 'Select All'}
             </Button>
-            
-            {selectedItems.size > 0 && (
-              <Button
-                onClick={handleBulkAddToMarketplace}
-                size="sm"
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                Add to Marketplace ({selectedItems.size})
-              </Button>
-            )}
           </div>
         </div>
         

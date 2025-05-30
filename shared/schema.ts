@@ -48,6 +48,8 @@ export const userCollections = pgTable("user_collections", {
   salePrice: decimal("sale_price", { precision: 10, scale: 2 }),
   isForSale: boolean("is_for_sale").default(false).notNull(),
   serialNumber: text("serial_number"),
+  quantity: integer("quantity").default(1).notNull(),
+  isFavorite: boolean("is_favorite").default(false).notNull(),
   notes: text("notes"),
 });
 

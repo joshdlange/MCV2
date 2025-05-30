@@ -20,7 +20,7 @@ import {
   type CollectionStats
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, ilike, and, count, sum, desc } from "drizzle-orm";
+import { eq, ilike, and, count, sum, desc, sql } from "drizzle-orm";
 
 interface IStorage {
   // Users
@@ -360,6 +360,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async addToCollection(insertUserCollection: InsertUserCollection): Promise<UserCollection> {
+    // Check if the card already exists in the user's collection
+    const existingItem = await db
+      .select()
+      .from(userCollections)
+      .where(
+        and(
+          eq(userCollections.userId, insertUserCollection.userId),
+          eq(userCollections.cardId, insertUserCollection.cardId)
+        )
+      )
+      .limit(1);
+
+    if (existingItem.length > 0) {
+      // If card exists, increase quantity
+      const [updatedItem] = await db
+        .update(userCollections)
+        .set({ quantity: sql`${userCollections.quantity} + 1` })
+        .where(eq(userCollections.id, existingItem[0].id))
+        .returning();
+      return updatedItem;
+    }
+
+    // If card doesn't exist, create new entry
     const [item] = await db
       .insert(userCollections)
       .values({
@@ -370,6 +393,8 @@ export class DatabaseStorage implements IStorage {
         salePrice: insertUserCollection.salePrice || null,
         isForSale: insertUserCollection.isForSale || false,
         serialNumber: insertUserCollection.serialNumber || null,
+        quantity: insertUserCollection.quantity || 1,
+        isFavorite: insertUserCollection.isFavorite || false,
         notes: insertUserCollection.notes || null,
       })
       .returning();
