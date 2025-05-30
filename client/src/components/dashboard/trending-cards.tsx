@@ -2,16 +2,17 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Star, Plus, Heart } from "lucide-react";
-import type { CardWithSet } from "@shared/schema";
+import { Star, Plus, Heart, Check } from "lucide-react";
+import type { CardWithSet, CollectionItem } from "@shared/schema";
 
 interface TrendingCardProps {
   card: CardWithSet;
+  isInCollection?: boolean;
   onAddToCollection?: () => void;
   onAddToWishlist?: () => void;
 }
 
-function TrendingCard({ card, onAddToCollection, onAddToWishlist }: TrendingCardProps) {
+function TrendingCard({ card, isInCollection, onAddToCollection, onAddToWishlist }: TrendingCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
 
   // Generate mock price change for trending effect
@@ -52,6 +53,13 @@ function TrendingCard({ card, onAddToCollection, onAddToWishlist }: TrendingCard
           {card.isInsert && (
             <div className="absolute top-2 right-2 bg-yellow-500 rounded-full p-1 shadow-lg">
               <Star className="w-3 h-3 text-white fill-white" />
+            </div>
+          )}
+          
+          {/* Collection status badge */}
+          {isInCollection && (
+            <div className="absolute top-2 left-2 bg-green-500 rounded-full p-1 shadow-lg">
+              <Check className="w-3 h-3 text-white" />
             </div>
           )}
         </div>
@@ -132,6 +140,15 @@ export function TrendingCards() {
     queryKey: ["/api/trending-cards"],
   });
 
+  const { data: collection } = useQuery<CollectionItem[]>({
+    queryKey: ["/api/collection"],
+  });
+
+  // Helper function to check if a card is in the collection
+  const isCardInCollection = (cardId: number) => {
+    return collection?.some(item => item.cardId === cardId) || false;
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -178,6 +195,7 @@ export function TrendingCards() {
             <TrendingCard
               key={card.id}
               card={card}
+              isInCollection={isCardInCollection(card.id)}
               onAddToCollection={() => {
                 // TODO: Implement add to collection
                 console.log('Add to collection:', card.name);

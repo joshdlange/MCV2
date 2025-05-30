@@ -181,7 +181,7 @@ export default function MyCollection() {
                 placeholder="Search your collection..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 w-64"
+                className="pl-10 w-64 bg-white"
               />
             </div>
             <Button
