@@ -49,7 +49,7 @@ export function Sidebar() {
   };
 
   return (
-    <div className="fixed inset-y-0 left-0 z-50 w-80 bg-white shadow-lg border-r border-gray-200 hidden lg:flex flex-col">
+    <div className="fixed inset-y-0 left-0 z-50 w-80 bg-background shadow-lg border-r border-border hidden lg:flex flex-col">
       {/* Logo & Branding */}
       <div className="flex items-center px-6 py-4 bg-marvel-red">
         <div className="flex items-center space-x-3">
@@ -74,7 +74,7 @@ export function Sidebar() {
               className={`flex items-center px-4 py-3 rounded-lg transition-colors group cursor-pointer ${
                 location === item.href 
                   ? 'bg-marvel-red text-white' 
-                  : 'text-gray-700 hover:bg-marvel-red hover:text-white'
+                  : 'text-foreground hover:bg-marvel-red hover:text-white'
               }`}
             >
               <IconComponent iconName={item.icon} />
@@ -104,7 +104,7 @@ export function Sidebar() {
                   className={`flex items-center px-4 py-3 rounded-lg transition-colors group cursor-pointer ${
                     location === item.href 
                       ? 'bg-marvel-red text-white' 
-                      : 'text-gray-700 hover:bg-marvel-red hover:text-white'
+                      : 'text-foreground hover:bg-marvel-red hover:text-white'
                   }`}
                 >
                   <IconComponent iconName={item.icon} />
@@ -118,7 +118,7 @@ export function Sidebar() {
 
       {/* User Profile */}
       {currentUser && (
-        <div className="border-t border-gray-200 p-4">
+        <div className="border-t border-border p-4">
           <div className="flex items-center space-x-3">
             <img 
               src={currentUser.avatar} 
@@ -126,14 +126,14 @@ export function Sidebar() {
               className="w-8 h-8 rounded-full" 
             />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
+              <p className="text-sm font-medium text-foreground truncate">
                 {currentUser.name}
               </p>
-              <p className="text-xs text-gray-500 truncate">
+              <p className="text-xs text-muted-foreground truncate">
                 {currentUser.email}
               </p>
             </div>
-            <button className="text-gray-400 hover:text-gray-600">
+            <button className="text-muted-foreground hover:text-foreground">
               <Settings className="w-4 h-4" />
             </button>
           </div>

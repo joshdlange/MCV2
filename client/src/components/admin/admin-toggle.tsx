@@ -9,9 +9,9 @@ export function AdminToggle() {
   }
 
   return (
-    <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+    <div className="px-6 py-4 border-b border-border bg-muted">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-gray-700">Admin Mode</span>
+        <span className="text-sm font-medium text-foreground">Admin Mode</span>
         <Switch
           checked={isAdminMode}
           onCheckedChange={toggleAdminMode}
