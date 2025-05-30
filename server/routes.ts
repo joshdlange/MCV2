@@ -300,6 +300,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/wishlist", async (req, res) => {
     try {
       const userId = 1; // Mock user ID
+      const { cardId } = req.body;
+      
+      // Check if card is already in wishlist
+      const existingWishlist = await storage.getUserWishlist(userId);
+      const alreadyInWishlist = existingWishlist.some(item => item.cardId === cardId);
+      
+      if (alreadyInWishlist) {
+        return res.status(400).json({ message: "Card is already in your wishlist" });
+      }
+      
       const data = insertUserWishlistSchema.parse({ ...req.body, userId });
       const item = await storage.addToWishlist(data);
       res.json(item);
