@@ -20,7 +20,7 @@ export function StatsDashboard() {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {[...Array(4)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
+          <Card key={i} className="animate-pulse stat-card-hover">
             <CardContent className="p-6">
               <div className="h-20 bg-gray-200 rounded"></div>
             </CardContent>

@@ -67,6 +67,19 @@
   body {
     @apply font-inter antialiased bg-background text-foreground;
   }
+  
+  /* Custom hover effects and gradients */
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:border-orange-300 hover:bg-gradient-to-br hover:from-orange-50 hover:to-red-50 transform hover:scale-105;
+  }
+  
+  .stat-card-hover {
+    @apply transition-all duration-200 hover:shadow-lg hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100 transform hover:scale-105;
+  }
+  
+  .button-gradient {
+    @apply bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 transition-all duration-200;
+  }
 }
 
 @layer utilities {
