@@ -149,7 +149,7 @@ export function CardGrid({
                     </span>
                   )}
                   {card.isInsert && (
-                    <span className="text-xs text-yellow-600 bg-yellow-100 px-1 py-0.5 rounded">
+                    <span className="text-xs text-yellow-600 px-1 py-0.5 rounded bg-[#ffffff]">
                       ⭐
                     </span>
                   )}
@@ -189,7 +189,6 @@ export function CardGrid({
           </Card>
         ))}
       </div>
-
       <CardDetailModal
         card={selectedCard}
         isOpen={isModalOpen}
