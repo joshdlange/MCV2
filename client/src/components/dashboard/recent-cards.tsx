@@ -82,7 +82,11 @@ export function RecentCards() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="font-bebas text-lg tracking-wide">RECENT ADDITIONS</CardTitle>
-          <Button variant="ghost" className="text-marvel-red hover:text-red-700">
+          <Button 
+            variant="ghost" 
+            className="text-marvel-red hover:text-red-700"
+            onClick={() => setLocation('/my-collection')}
+          >
             View All
           </Button>
         </div>
@@ -143,6 +147,15 @@ export function RecentCards() {
           ))}
         </div>
       </CardContent>
+      
+      {/* Card Detail Modal */}
+      <CardDetailModal
+        card={selectedCard?.card || null}
+        isOpen={!!selectedCard}
+        onClose={() => setSelectedCard(null)}
+        isInCollection={true}
+        isInWishlist={false}
+      />
     </Card>
   );
 }

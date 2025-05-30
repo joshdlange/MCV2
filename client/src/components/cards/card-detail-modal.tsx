@@ -57,7 +57,7 @@ export function CardDetailModal({
             <div className="relative">
               <div className={`${cardAspectRatio} w-full max-w-sm mx-auto relative overflow-hidden rounded-lg shadow-lg`}>
                 <img
-                  src={showBack ? card.backImageUrl : card.frontImageUrl}
+                  src={showBack ? (card.backImageUrl || '') : (card.frontImageUrl || '')}
                   alt={showBack ? `${card.name} back` : card.name}
                   className="w-full h-full object-cover"
                 />
