@@ -26,6 +26,7 @@ function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
       className="relative w-full aspect-[2.5/3.5] perspective-1000 cursor-pointer"
       onMouseEnter={() => setIsFlipped(true)}
       onMouseLeave={() => setIsFlipped(false)}
+      onClick={onClick}
     >
       {/* Card Container with 3D flip */}
       <div className={`relative w-full h-full transition-transform duration-700 transform-style-preserve-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
