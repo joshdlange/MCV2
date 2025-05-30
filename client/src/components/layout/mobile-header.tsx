@@ -17,7 +17,7 @@ export function MobileHeader() {
           <div className="w-8 h-8 bg-marvel-red rounded-lg flex items-center justify-center">
             <Bolt className="text-white text-sm" />
           </div>
-          <h1 className="text-marvel-red font-bebas text-xl tracking-wide">
+          <h1 className="text-gray-900 font-bebas text-xl tracking-wide font-bold">
             MARVEL VAULT
           </h1>
         </div>
