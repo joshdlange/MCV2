@@ -83,6 +83,13 @@ export default function MyCollection() {
     setIsModalOpen(true);
   };
 
+  const handleToggleFavorite = (item: CollectionItem) => {
+    updateCollectionItemMutation.mutate({
+      itemId: item.id,
+      updates: { isFavorite: !item.isFavorite }
+    });
+  };
+
   const handleToggleForSale = (itemId: number, isForSale: boolean) => {
     updateCollectionItemMutation.mutate({
       itemId,

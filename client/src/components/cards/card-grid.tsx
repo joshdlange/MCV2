@@ -2,11 +2,11 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Heart, Plus } from "lucide-react";
+import { Heart, Plus, Check, Star } from "lucide-react";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { CardWithSet } from "@shared/schema";
+import type { CardWithSet, CollectionItem, WishlistItem } from "@shared/schema";
 import { CardFilters } from "@/types";
 
 interface CardGridProps {
@@ -33,6 +33,15 @@ export function CardGrid({
 
   const { data: cards, isLoading } = useQuery<CardWithSet[]>({
     queryKey: [`/api/cards?${queryParams.toString()}`],
+  });
+
+  // Fetch user's collection and wishlist to show status indicators
+  const { data: collection } = useQuery<CollectionItem[]>({
+    queryKey: ['/api/collection'],
+  });
+
+  const { data: wishlist } = useQuery<WishlistItem[]>({
+    queryKey: ['/api/wishlist'],
   });
 
   const addToCollectionMutation = useMutation({
@@ -70,6 +79,19 @@ export function CardGrid({
   const handleCardClick = (card: CardWithSet) => {
     setSelectedCard(card);
     setIsModalOpen(true);
+  };
+
+  // Helper functions to check card status
+  const isInCollection = (cardId: number) => {
+    return collection?.some(item => item.card.id === cardId) ?? false;
+  };
+
+  const isInWishlist = (cardId: number) => {
+    return wishlist?.some(item => item.card.id === cardId) ?? false;
+  };
+
+  const isFavorite = (cardId: number) => {
+    return collection?.some(item => item.card.id === cardId && item.isFavorite) ?? false;
   };
 
   const handleCloseModal = () => {
@@ -134,6 +156,25 @@ export function CardGrid({
                     <span className="text-gray-400 text-xs">No Image</span>
                   </div>
                 )}
+                
+                {/* Status indicators */}
+                <div className="absolute top-2 right-2 flex gap-1">
+                  {isInCollection(card.id) && (
+                    <div className="bg-green-500 text-white rounded-full p-1">
+                      <Check className="w-3 h-3" />
+                    </div>
+                  )}
+                  {isInWishlist(card.id) && (
+                    <div className="bg-pink-500 text-white rounded-full p-1">
+                      <Heart className="w-3 h-3 fill-current" />
+                    </div>
+                  )}
+                  {isFavorite(card.id) && (
+                    <div className="bg-yellow-500 text-white rounded-full p-1">
+                      <Star className="w-3 h-3 fill-current" />
+                    </div>
+                  )}
+                </div>
               </div>
               
               <div className="p-2">
