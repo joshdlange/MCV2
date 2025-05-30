@@ -2,7 +2,11 @@ import { Link, useLocation } from "wouter";
 import { AdminToggle } from "@/components/admin/admin-toggle";
 import { useAppStore } from "@/lib/store";
 import { NavigationItem } from "@/types";
-import { Bolt, Settings } from "lucide-react";
+import { UpgradeModal } from "@/components/subscription/upgrade-modal";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Bolt, Settings, Crown } from "lucide-react";
+import { useState } from "react";
 import { 
   LayoutDashboard, 
   Grid3X3, 
@@ -46,6 +50,7 @@ const iconMap = {
 export function Sidebar() {
   const [location] = useLocation();
   const { isAdminMode, currentUser } = useAppStore();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const IconComponent = ({ iconName }: { iconName: string }) => {
     const Icon = iconMap[iconName as keyof typeof iconMap];
@@ -95,6 +100,40 @@ export function Sidebar() {
             </div>
           </Link>
         ))}
+
+        {/* Upgrade Section for SIDE KICK users */}
+        {currentUser && currentUser.plan === 'SIDE_KICK' && (
+          <div className="pt-4 border-t border-gray-200 mt-4">
+            <Button 
+              onClick={() => setShowUpgradeModal(true)}
+              className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-yellow-900 font-bold py-3 px-4 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-200"
+            >
+              <Crown className="w-5 h-5 mr-2" />
+              Upgrade to SUPER HERO
+            </Button>
+            <div className="mt-2 px-2">
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>Collection Limit</span>
+                <Badge variant="outline" className="text-xs">
+                  {/* TODO: Replace with actual count */}
+                  ? / 250
+                </Badge>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Plan Badge for SUPER HERO users */}
+        {currentUser && currentUser.plan === 'SUPER_HERO' && (
+          <div className="pt-4 border-t border-gray-200 mt-4">
+            <div className="flex items-center justify-center">
+              <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-yellow-900 px-3 py-1">
+                <Crown className="w-4 h-4 mr-1" />
+                SUPER HERO
+              </Badge>
+            </div>
+          </div>
+        )}
 
         {/* Admin Only Section */}
         {isAdminMode && currentUser?.isAdmin && (

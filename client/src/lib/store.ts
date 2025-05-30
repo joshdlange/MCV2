@@ -9,6 +9,8 @@ interface AppState {
     email: string;
     avatar: string;
     isAdmin: boolean;
+    plan: string;
+    subscriptionStatus: string;
   } | null;
   toggleAdminMode: () => void;
   toggleMobileMenu: () => void;
@@ -25,6 +27,8 @@ export const useAppStore = create<AppState>((set) => ({
     email: "stan@marvel.com",
     avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=32&h=32",
     isAdmin: true,
+    plan: "SIDE_KICK",
+    subscriptionStatus: "active",
   },
   toggleAdminMode: () => set((state) => ({ isAdminMode: !state.isAdminMode })),
   toggleMobileMenu: () => set((state) => ({ isMobileMenuOpen: !state.isMobileMenuOpen })),
