@@ -17,7 +17,6 @@ import {
 const navigationItems: NavigationItem[] = [
   { href: "/", label: "Dashboard", icon: "LayoutDashboard" },
   { href: "/browse", label: "Browse Cards", icon: "Grid3X3" },
-  { href: "/search", label: "Card Search", icon: "Search" },
   { href: "/collection", label: "My Collection", icon: "FolderOpen" },
   { href: "/wishlist", label: "Wishlist", icon: "Heart" },
   { href: "/trends", label: "Market Trends", icon: "TrendingUp" },
