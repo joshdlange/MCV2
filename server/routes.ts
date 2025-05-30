@@ -6,6 +6,12 @@ import { z } from "zod";
 import multer from "multer";
 import csv from "csv-parser";
 import { Readable } from "stream";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Configure multer for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
@@ -172,6 +178,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Card deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete card" });
+    }
+  });
+
+  // Image upload from URL
+  app.post("/api/upload-image-from-url", async (req, res) => {
+    try {
+      const { url } = req.body;
+      if (!url) {
+        return res.status(400).json({ message: "URL is required" });
+      }
+
+      // Create uploads directory if it doesn't exist
+      const uploadsDir = path.join(process.cwd(), "uploads");
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+
+      // Download the image
+      const response = await fetch(url);
+      if (!response.ok) {
+        return res.status(400).json({ message: "Failed to download image from URL" });
+      }
+
+      // Get file extension from content type or URL
+      const contentType = response.headers.get("content-type");
+      let extension = ".jpg"; // default
+      if (contentType?.includes("png")) extension = ".png";
+      if (contentType?.includes("gif")) extension = ".gif";
+      if (contentType?.includes("webp")) extension = ".webp";
+
+      // Generate unique filename
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2, 15);
+      const filename = `image_${timestamp}_${randomString}${extension}`;
+      const filepath = path.join(uploadsDir, filename);
+
+      // Save the image
+      const buffer = await response.arrayBuffer();
+      fs.writeFileSync(filepath, Buffer.from(buffer));
+
+      // Return the local URL
+      const localUrl = `/uploads/${filename}`;
+      res.json({ url: localUrl, originalUrl: url });
+    } catch (error: any) {
+      console.error("Error uploading image from URL:", error);
+      res.status(500).json({ message: error.message });
     }
   });
 
