@@ -376,7 +376,8 @@ export default function BrowseCards() {
                     </div>
                     <div className="p-4">
                       <h3 className="font-semibold text-gray-900 mb-2">{set.name}</h3>
-                      <p className="text-sm text-gray-600 mb-3">{set.description || 'Click to explore cards from this set'}</p>
+                      <p className="text-sm text-gray-600 mb-2">{set.description || 'Click to explore cards from this set'}</p>
+                      <p className="text-xs text-gray-500 mb-3">{set.totalCards} cards • {set.year}</p>
                       <div className="flex gap-2">
                         <Button
                           onClick={(e) => {
@@ -448,7 +449,8 @@ export default function BrowseCards() {
                   </div>
                   <div className="p-4">
                     <h3 className="font-semibold text-gray-900 mb-2">{set.name}</h3>
-                    <p className="text-sm text-gray-600 mb-3">{set.description || 'Click to explore cards from this set'}</p>
+                    <p className="text-sm text-gray-600 mb-2">{set.description || 'Click to explore cards from this set'}</p>
+                    <p className="text-xs text-gray-500 mb-3">{set.totalCards} cards • {set.year}</p>
                     <div className="flex gap-2">
                       <Button
                         onClick={(e) => {
