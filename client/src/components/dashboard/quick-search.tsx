@@ -28,7 +28,7 @@ export function QuickSearch() {
 
   // Fetch search results
   const { data: searchResults, isLoading } = useQuery<CardWithSet[]>({
-    queryKey: ["/api/cards/search", debouncedQuery, selectedSet],
+    queryKey: ["/api/cards/search", { query: debouncedQuery, setId: selectedSet }],
     enabled: debouncedQuery.length >= 2,
   });
 

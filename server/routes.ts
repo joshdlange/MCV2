@@ -73,6 +73,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Quick search endpoint for dashboard
+  app.get("/api/cards/search", async (req, res) => {
+    try {
+      const query = req.query.query as string;
+      const setId = req.query.setId === 'all' ? undefined : parseInt(req.query.setId as string);
+      
+      if (!query || query.length < 2) {
+        return res.json([]);
+      }
+
+      const filters = {
+        search: query,
+        setId: setId
+      };
+      const cards = await storage.getCards(filters);
+      res.json(cards);
+    } catch (error) {
+      console.error('Error searching cards:', error);
+      res.status(500).json({ message: "Failed to search cards" });
+    }
+  });
+
   app.get("/api/cards/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);

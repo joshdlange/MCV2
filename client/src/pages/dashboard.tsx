@@ -1,6 +1,7 @@
 
 import { StatsDashboard } from "@/components/dashboard/stats-dashboard";
 import { RecentCards } from "@/components/dashboard/recent-cards";
+import { QuickSearch } from "@/components/dashboard/quick-search";
 
 
 export default function Dashboard() {
@@ -24,8 +25,9 @@ export default function Dashboard() {
       <div className="p-6">
         <StatsDashboard />
         
-        {/* Recent Cards */}
-        <div className="grid grid-cols-1 gap-6">
+        {/* Quick Search and Recent Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          <QuickSearch />
           <RecentCards />
         </div>
       </div>
