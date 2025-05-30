@@ -4,8 +4,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
-import { Star, Heart, Plus, Trash2 } from "lucide-react";
+import { Star, Heart, Plus, Trash2, Search } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { WishlistItem, CardWithSet } from "@shared/schema";
@@ -14,12 +15,25 @@ export default function Wishlist() {
   const [, setLocation] = useLocation();
   const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const { data: wishlist, isLoading } = useQuery<WishlistItem[]>({
     queryKey: ["/api/wishlist"],
   });
+
+  // Filter wishlist based on search query
+  const filteredWishlist = wishlist?.filter(item => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      item.card.name.toLowerCase().includes(query) ||
+      item.card.set.name.toLowerCase().includes(query) ||
+      item.card.cardNumber.toLowerCase().includes(query) ||
+      item.card.rarity.toLowerCase().includes(query)
+    );
+  }) || [];
 
   const removeFromWishlistMutation = useMutation({
     mutationFn: async (itemId: number) => {
@@ -126,16 +140,26 @@ export default function Wishlist() {
           <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">MY WISHLIST</h2>
         </div>
         
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search your wishlist..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 w-64 bg-white"
+            />
+          </div>
+        </div>
+        
         <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-          <span>{wishlist.length} cards in wishlist</span>
-          <span>•</span>
-          <span>Total estimated value: ${wishlist.reduce((sum, item) => sum + parseFloat(item.maxPrice || '0'), 0).toFixed(2)}</span>
+          <span>{filteredWishlist.length} cards in wishlist</span>
         </div>
       </div>
 
       <div className="p-6">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-          {wishlist.map((item) => (
+          {filteredWishlist.map((item) => (
             <Card 
               key={item.id} 
               className="group hover:shadow-lg transition-all duration-200 cursor-pointer"
@@ -167,14 +191,7 @@ export default function Wishlist() {
                     )}
                   </div>
 
-                  {/* Priority Badge */}
-                  {item.priority && item.priority > 3 && (
-                    <div className="absolute top-2 right-2">
-                      <Badge className="bg-red-100 text-red-800 text-xs px-2 py-1">
-                        High Priority
-                      </Badge>
-                    </div>
-                  )}
+
                 </div>
 
                 {/* Card Info */}
@@ -192,10 +209,7 @@ export default function Wishlist() {
                     </p>
                   )}
 
-                  <div className="flex items-center justify-between mt-2 gap-1">
-                    <Badge variant="outline" className="text-xs">
-                      Priority: {item.priority}/5
-                    </Badge>
+                  <div className="flex items-center justify-end mt-2 gap-1">
                     <div className="flex gap-1">
                       <Button
                         variant="ghost"
