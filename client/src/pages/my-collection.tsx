@@ -1,11 +1,23 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit, Plus } from "lucide-react";
-import type { CollectionItem } from "@shared/schema";
+import { Trash2, Edit, Plus, Check, ShoppingCart } from "lucide-react";
+import { CardDetailModal } from "@/components/cards/card-detail-modal";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { CollectionItem, CardWithSet } from "@shared/schema";
 
 export default function MyCollection() {
+  const [, setLocation] = useLocation();
+  const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
   const { data: collection, isLoading } = useQuery<CollectionItem[]>({
     queryKey: ["/api/collection"],
   });
@@ -35,12 +47,75 @@ export default function MyCollection() {
     );
   }
 
+  const removeFromCollectionMutation = useMutation({
+    mutationFn: async (itemId: number) => {
+      return apiRequest('DELETE', `/api/collection/${itemId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
+      toast({ title: "Card removed from collection" });
+    },
+    onError: () => {
+      toast({ title: "Failed to remove card", variant: "destructive" });
+    }
+  });
+
+  const updateCollectionItemMutation = useMutation({
+    mutationFn: async ({ itemId, updates }: { itemId: number; updates: any }) => {
+      return apiRequest('PATCH', `/api/collection/${itemId}`, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
+      toast({ title: "Collection item updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update collection item", variant: "destructive" });
+    }
+  });
+
   const handleRemoveFromCollection = (itemId: number) => {
-    console.log('Remove from collection:', itemId);
+    removeFromCollectionMutation.mutate(itemId);
   };
 
-  const handleEditItem = (itemId: number) => {
-    console.log('Edit collection item:', itemId);
+  const handleCardClick = (card: CardWithSet) => {
+    setSelectedCard(card);
+    setIsModalOpen(true);
+  };
+
+  const handleToggleForSale = (itemId: number, isForSale: boolean) => {
+    updateCollectionItemMutation.mutate({
+      itemId,
+      updates: { isForSale: !isForSale }
+    });
+  };
+
+  const handleToggleSelection = (itemId: number) => {
+    const newSelection = new Set(selectedItems);
+    if (newSelection.has(itemId)) {
+      newSelection.delete(itemId);
+    } else {
+      newSelection.add(itemId);
+    }
+    setSelectedItems(newSelection);
+  };
+
+  const handleBulkAddToMarketplace = () => {
+    if (selectedItems.size === 0) {
+      toast({ title: "Please select items to add to marketplace", variant: "destructive" });
+      return;
+    }
+
+    Promise.all(
+      Array.from(selectedItems).map(itemId =>
+        updateCollectionItemMutation.mutateAsync({
+          itemId,
+          updates: { isForSale: true }
+        })
+      )
+    ).then(() => {
+      setSelectedItems(new Set());
+      toast({ title: `Added ${selectedItems.size} items to marketplace` });
+    });
   };
 
   const getRarityColor = (rarity: string, isInsert: boolean) => {
@@ -67,10 +142,24 @@ export default function MyCollection() {
               {collection?.length || 0} cards in your collection
             </p>
           </div>
-          <Button className="bg-marvel-red text-white hover:bg-red-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Cards
-          </Button>
+          <div className="flex gap-2">
+            {selectedItems.size > 0 && (
+              <Button 
+                onClick={handleBulkAddToMarketplace}
+                className="bg-green-600 text-white hover:bg-green-700"
+              >
+                <ShoppingCart className="w-4 h-4 mr-2" />
+                Add {selectedItems.size} to Marketplace
+              </Button>
+            )}
+            <Button 
+              onClick={() => setLocation('/browse-cards')}
+              className="bg-marvel-red text-white hover:bg-red-700"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Cards
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -95,12 +184,34 @@ export default function MyCollection() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {collection.map((item) => (
-              <Card key={item.id} className="group comic-border card-hover">
+              <Card key={item.id} className="group comic-border card-hover relative">
                 <CardContent className="p-0">
-                  <div className="relative">
-                    {item.card.imageUrl ? (
+                  {/* Selection checkbox */}
+                  <div className="absolute top-2 left-2 z-10">
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.has(item.id)}
+                      onChange={() => handleToggleSelection(item.id)}
+                      className="w-4 h-4 text-marvel-red bg-white border-gray-300 rounded focus:ring-marvel-red"
+                    />
+                  </div>
+                  
+                  {/* For sale indicator */}
+                  {item.isForSale && (
+                    <div className="absolute top-2 right-2 z-10">
+                      <div className="bg-green-600 text-white text-xs px-2 py-1 rounded">
+                        For Sale
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div 
+                    className="relative cursor-pointer"
+                    onClick={() => handleCardClick(item.card)}
+                  >
+                    {item.card.frontImageUrl ? (
                       <img 
-                        src={item.card.imageUrl} 
+                        src={item.card.frontImageUrl} 
                         alt={item.card.name}
                         className="w-full h-64 object-cover rounded-t-lg"
                       />
@@ -115,15 +226,21 @@ export default function MyCollection() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleEditItem(item.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleForSale(item.id, item.isForSale || false);
+                        }}
                         className="bg-white hover:bg-gray-100"
                       >
-                        <Edit className="w-4 h-4" />
+                        <ShoppingCart className="w-4 h-4" />
                       </Button>
                       <Button
                         size="sm"
                         variant="destructive"
-                        onClick={() => handleRemoveFromCollection(item.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveFromCollection(item.id);
+                        }}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -138,11 +255,9 @@ export default function MyCollection() {
                     
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Badge 
-                          className={`text-xs text-white px-2 py-1 ${getRarityColor(item.card.rarity, item.card.isInsert)}`}
-                        >
-                          {item.card.isInsert ? 'Insert' : item.card.rarity}
-                        </Badge>
+                        {item.card.isInsert && (
+                          <span className="text-xs font-medium text-marvel-gold">★ Insert</span>
+                        )}
                         {item.card.estimatedValue && (
                           <span className="text-sm font-semibold text-gray-900">
                             ${parseFloat(item.card.estimatedValue).toFixed(0)}
@@ -154,6 +269,9 @@ export default function MyCollection() {
                         <p>Condition: {item.condition}</p>
                         {item.personalValue && (
                           <p>Personal Value: ${parseFloat(item.personalValue).toFixed(0)}</p>
+                        )}
+                        {item.salePrice && (
+                          <p>Sale Price: ${parseFloat(item.salePrice).toFixed(0)}</p>
                         )}
                       </div>
                     </div>
