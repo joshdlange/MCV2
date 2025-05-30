@@ -156,4 +156,8 @@ export type CollectionStats = {
   wishlistItems: number;
   completedSets: number;
   recentAdditions: number;
+  totalCardsGrowth: string;
+  insertCardsGrowth: string;
+  totalValueGrowth: string;
+  wishlistGrowth: string;
 };
