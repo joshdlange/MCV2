@@ -226,7 +226,7 @@ export function CardDetailModal({
                     id="cardName"
                     value={editedCard.name || ''}
                     onChange={(e) => setEditedCard({ ...editedCard, name: e.target.value })}
-                    className="bg-white"
+                    className="bg-white text-black"
                   />
                 </div>
 
@@ -236,7 +236,7 @@ export function CardDetailModal({
                     id="cardNumber"
                     value={editedCard.cardNumber || ''}
                     onChange={(e) => setEditedCard({ ...editedCard, cardNumber: e.target.value })}
-                    className="bg-white"
+                    className="bg-white text-black"
                   />
                 </div>
 
@@ -246,7 +246,7 @@ export function CardDetailModal({
                     id="rarity"
                     value={editedCard.rarity || ''}
                     onChange={(e) => setEditedCard({ ...editedCard, rarity: e.target.value })}
-                    className="bg-white"
+                    className="bg-white text-black"
                   />
                 </div>
 
@@ -258,7 +258,7 @@ export function CardDetailModal({
                     step="0.01"
                     value={editedCard.estimatedValue || ''}
                     onChange={(e) => setEditedCard({ ...editedCard, estimatedValue: e.target.value })}
-                    className="bg-white"
+                    className="bg-white text-black"
                   />
                 </div>
 
@@ -268,7 +268,7 @@ export function CardDetailModal({
                     id="frontImage"
                     value={editedCard.frontImageUrl || ''}
                     onChange={(e) => setEditedCard({ ...editedCard, frontImageUrl: e.target.value })}
-                    className="bg-white"
+                    className="bg-white text-black"
                   />
                 </div>
 
@@ -278,7 +278,7 @@ export function CardDetailModal({
                     id="backImage"
                     value={editedCard.backImageUrl || ''}
                     onChange={(e) => setEditedCard({ ...editedCard, backImageUrl: e.target.value })}
-                    className="bg-white"
+                    className="bg-white text-black"
                   />
                 </div>
 
@@ -288,7 +288,7 @@ export function CardDetailModal({
                     id="description"
                     value={editedCard.description || ''}
                     onChange={(e) => setEditedCard({ ...editedCard, description: e.target.value })}
-                    className="bg-white"
+                    className="bg-white text-black"
                     rows={3}
                   />
                 </div>
