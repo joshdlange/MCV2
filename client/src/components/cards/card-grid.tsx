@@ -178,7 +178,7 @@ export function CardGrid({
                         e.stopPropagation();
                         handleAddToWishlist(card.id);
                       }}
-                      className="flex-1 border-gray-300 hover:bg-gray-100 text-xs h-6 px-1 text-gray-700 hover:text-gray-900"
+                      className="flex-1 border-gray-300 hover:bg-gray-100 text-xs h-6 px-1 text-pink-500 hover:text-pink-600"
                     >
                       <Heart className="w-3 h-3 fill-current" />
                     </Button>
