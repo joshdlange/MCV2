@@ -9,14 +9,18 @@ import {
   FolderOpen, 
   Heart, 
   PlusCircle, 
-  Edit 
+  Edit,
+  Search,
+  TrendingUp
 } from "lucide-react";
 
 const navigationItems: NavigationItem[] = [
-  { href: "/", label: "Dashboard", icon: "LayoutDashboard", badge: "847" },
+  { href: "/", label: "Dashboard", icon: "LayoutDashboard" },
   { href: "/browse", label: "Browse Cards", icon: "Grid3X3" },
-  { href: "/collection", label: "My Collection", icon: "FolderOpen", badge: "127" },
-  { href: "/wishlist", label: "Wishlist", icon: "Heart", badge: "23" },
+  { href: "/search", label: "Card Search", icon: "Search" },
+  { href: "/collection", label: "My Collection", icon: "FolderOpen" },
+  { href: "/wishlist", label: "Wishlist", icon: "Heart" },
+  { href: "/trends", label: "Market Trends", icon: "TrendingUp" },
 ];
 
 const adminItems: NavigationItem[] = [
@@ -31,6 +35,8 @@ const iconMap = {
   Heart,
   PlusCircle,
   Edit,
+  Search,
+  TrendingUp,
 };
 
 export function Sidebar() {
@@ -64,8 +70,8 @@ export function Sidebar() {
       <nav className="flex-1 px-4 py-6 space-y-2">
         {navigationItems.map((item) => (
           <Link key={item.href} href={item.href}>
-            <a 
-              className={`flex items-center px-4 py-3 rounded-lg transition-colors group ${
+            <div 
+              className={`flex items-center px-4 py-3 rounded-lg transition-colors group cursor-pointer ${
                 location === item.href 
                   ? 'bg-marvel-red text-white' 
                   : 'text-gray-700 hover:bg-marvel-red hover:text-white'
@@ -82,7 +88,7 @@ export function Sidebar() {
                   {item.badge}
                 </span>
               )}
-            </a>
+            </div>
           </Link>
         ))}
 
@@ -94,8 +100,8 @@ export function Sidebar() {
             </p>
             {adminItems.map((item) => (
               <Link key={item.href} href={item.href}>
-                <a 
-                  className={`flex items-center px-4 py-3 rounded-lg transition-colors group ${
+                <div 
+                  className={`flex items-center px-4 py-3 rounded-lg transition-colors group cursor-pointer ${
                     location === item.href 
                       ? 'bg-marvel-red text-white' 
                       : 'text-gray-700 hover:bg-marvel-red hover:text-white'
@@ -103,7 +109,7 @@ export function Sidebar() {
                 >
                   <IconComponent iconName={item.icon} />
                   <span className="font-medium">{item.label}</span>
-                </a>
+                </div>
               </Link>
             ))}
           </div>
