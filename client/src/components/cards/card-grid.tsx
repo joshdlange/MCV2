@@ -33,17 +33,17 @@ export function CardGrid({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-        {[...Array(10)].map((_, i) => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+        {[...Array(16)].map((_, i) => (
           <Card key={i} className="animate-pulse">
             <CardContent className="p-0">
-              <div className="w-full h-64 bg-gray-200 rounded-t-lg"></div>
-              <div className="p-4 space-y-2">
-                <div className="h-4 bg-gray-200 rounded"></div>
-                <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+              <div className="w-full h-40 bg-gray-200 rounded-t-lg"></div>
+              <div className="p-2 space-y-1">
+                <div className="h-3 bg-gray-200 rounded"></div>
+                <div className="h-2 bg-gray-200 rounded w-3/4"></div>
                 <div className="flex justify-between">
-                  <div className="h-6 bg-gray-200 rounded w-16"></div>
                   <div className="h-4 bg-gray-200 rounded w-12"></div>
+                  <div className="h-3 bg-gray-200 rounded w-8"></div>
                 </div>
               </div>
             </CardContent>
@@ -91,7 +91,7 @@ export function CardGrid({
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
         {cards.map((card) => (
           <Card key={card.id} className="group comic-border card-hover cursor-pointer" onClick={() => handleCardClick(card)}>
             <CardContent className="p-0">
@@ -100,36 +100,36 @@ export function CardGrid({
                   <img 
                     src={card.frontImageUrl} 
                     alt={card.name}
-                    className="w-full h-64 object-cover rounded-t-lg"
+                    className="w-full h-40 object-cover rounded-t-lg"
                   />
                 ) : (
-                  <div className="w-full h-64 bg-gray-200 rounded-t-lg flex items-center justify-center">
-                    <span className="text-gray-400">No Image</span>
+                  <div className="w-full h-40 bg-gray-200 rounded-t-lg flex items-center justify-center">
+                    <span className="text-gray-400 text-xs">No Image</span>
                   </div>
                 )}
               </div>
               
-              <div className="p-4">
-                <h3 className="font-medium text-gray-900 text-sm truncate">
+              <div className="p-2">
+                <h3 className="font-medium text-gray-900 text-xs truncate">
                   {card.name} #{card.cardNumber}
                 </h3>
-                <p className="text-xs text-gray-500 mb-3">{card.set.name}</p>
+                <p className="text-xs text-gray-500 mb-2">{card.set.name}</p>
                 
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-2">
                   {card.estimatedValue && (
-                    <span className="text-sm font-semibold text-gray-900">
+                    <span className="text-xs font-semibold text-gray-900">
                       ${parseFloat(card.estimatedValue).toFixed(0)}
                     </span>
                   )}
                   {card.isInsert && (
-                    <span className="text-xs text-yellow-600 bg-yellow-100 px-2 py-1 rounded">
-                      ⭐ Insert
+                    <span className="text-xs text-yellow-600 bg-yellow-100 px-1 py-0.5 rounded">
+                      ⭐
                     </span>
                   )}
                 </div>
 
-                {/* Action Buttons - Now properly positioned */}
-                <div className="flex gap-2">
+                {/* Action Buttons - Compact */}
+                <div className="flex gap-1">
                   {showAddToCollection && (
                     <Button
                       size="sm"
@@ -137,10 +137,9 @@ export function CardGrid({
                         e.stopPropagation();
                         handleAddToCollection(card.id);
                       }}
-                      className="flex-1 bg-marvel-red hover:bg-red-700 text-xs"
+                      className="flex-1 bg-marvel-red hover:bg-red-700 text-xs h-6 px-1"
                     >
-                      <Plus className="w-3 h-3 mr-1" />
-                      Collection
+                      <Plus className="w-3 h-3" />
                     </Button>
                   )}
                   {showAddToWishlist && (
@@ -151,19 +150,12 @@ export function CardGrid({
                         e.stopPropagation();
                         handleAddToWishlist(card.id);
                       }}
-                      className="flex-1 text-xs"
+                      className="flex-1 text-xs h-6 px-1 bg-white hover:bg-gray-100 text-gray-700 border-gray-300"
                     >
-                      <Heart className="w-3 h-3 mr-1" />
-                      Wishlist
+                      <Heart className="w-3 h-3" />
                     </Button>
                   )}
                 </div>
-                
-                {card.variation && (
-                  <p className="text-xs text-gray-400 mt-2 truncate">
-                    {card.variation}
-                  </p>
-                )}
               </div>
             </CardContent>
           </Card>
