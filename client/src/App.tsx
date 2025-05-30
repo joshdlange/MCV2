@@ -11,6 +11,8 @@ import BrowseCards from "@/pages/browse-cards";
 import MyCollection from "@/pages/my-collection";
 import Wishlist from "@/pages/wishlist";
 import CardEditor from "@/pages/admin/card-editor";
+import CardSearch from "@/pages/card-search";
+import MarketTrends from "@/pages/market-trends";
 import NotFound from "@/pages/not-found";
 
 function MobileMenu() {
@@ -49,8 +51,10 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/browse" component={BrowseCards} />
+      <Route path="/search" component={CardSearch} />
       <Route path="/collection" component={MyCollection} />
       <Route path="/wishlist" component={Wishlist} />
+      <Route path="/trends" component={MarketTrends} />
       <Route path="/admin/cards" component={CardEditor} />
       <Route component={NotFound} />
     </Switch>
