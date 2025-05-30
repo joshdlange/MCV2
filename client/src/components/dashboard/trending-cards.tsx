@@ -65,67 +65,67 @@ function TrendingCard({ card, isInCollection, onAddToCollection, onAddToWishlist
         </div>
 
         {/* Back of Card - Details */}
-        <div className="absolute inset-0 w-full h-full backface-hidden rotate-y-180 bg-gradient-to-br from-gray-900 to-black rounded-lg p-4 flex flex-col justify-between text-white shadow-lg">
+        <div className="absolute inset-0 w-full h-full backface-hidden rotate-y-180 bg-gradient-to-br from-gray-900 to-black rounded-lg p-2 md:p-4 flex flex-col justify-between text-white shadow-lg">
           <div>
-            <h3 className="font-bold text-xl mb-2 font-bebas tracking-wide text-center">
+            <h3 className="font-bold text-sm md:text-xl mb-1 md:mb-2 font-bebas tracking-wide text-center leading-tight">
               {card.name}
             </h3>
             
-            <div className="space-y-3 text-sm">
+            <div className="space-y-1 md:space-y-3 text-xs md:text-sm">
               <div>
                 <span className="text-gray-300">Rarity:</span>
-                <span className="ml-2 font-medium">{card.rarity}</span>
+                <span className="ml-1 md:ml-2 font-medium">{card.rarity}</span>
               </div>
               
               <div>
-                <span className="text-gray-300">Current Value:</span>
-                <span className="ml-2 font-bold text-green-400">
+                <span className="text-gray-300">Value:</span>
+                <span className="ml-1 md:ml-2 font-bold text-green-400">
                   ${currentValue.toFixed(2)}
                 </span>
               </div>
               
               <div>
-                <span className="text-gray-300">1-Month Change:</span>
-                <span className="ml-2 font-bold text-green-400">
+                <span className="text-gray-300">Change:</span>
+                <span className="ml-1 md:ml-2 font-bold text-green-400">
                   +{priceChange}%
                 </span>
               </div>
 
               <div>
                 <span className="text-gray-300">Set:</span>
-                <span className="ml-2 text-xs">{card.set.name}</span>
+                <span className="ml-1 md:ml-2 text-xs">{card.set.name}</span>
               </div>
 
               <div>
                 <span className="text-gray-300">Card #:</span>
-                <span className="ml-2">{card.cardNumber}</span>
+                <span className="ml-1 md:ml-2">{card.cardNumber}</span>
               </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-2 mt-4">
+          <div className="flex gap-1 md:gap-2 mt-2 md:mt-4">
             <Button 
               size="sm" 
-              className="flex-1 bg-white text-black hover:bg-gray-200 text-xs font-medium"
+              className="flex-1 bg-white text-black hover:bg-gray-200 text-xs font-medium py-1 md:py-2"
               onClick={(e) => {
                 e.stopPropagation();
                 onAddToCollection?.();
               }}
             >
-              <Plus className="w-3 h-3 mr-1" />
+              <Plus className="w-2 md:w-3 h-2 md:h-3 mr-1" />
               Add
             </Button>
             <Button 
               size="sm" 
               variant="outline" 
-              className="flex-1 border-red-500 text-red-500 hover:bg-red-500 hover:text-white text-xs font-medium"
+              className="flex-1 border-red-500 text-red-500 hover:bg-red-500 hover:text-white text-xs font-medium py-1 md:py-2"
               onClick={(e) => {
                 e.stopPropagation();
                 onAddToWishlist?.();
               }}
             >
-              <Heart className="w-3 h-3 mr-1" />
+              <Heart className="w-2 md:w-3 h-2 md:h-3 mr-1" />
               Wishlist
             </Button>
           </div>
