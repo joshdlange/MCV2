@@ -149,10 +149,19 @@ export function CardGrid({
                 <div className="w-full aspect-[5/7] bg-gray-200 rounded-t-lg overflow-hidden">
                   {card.frontImageUrl ? (
                     <img 
-                      src={convertGoogleDriveUrl(card.frontImageUrl)} 
+                      src={card.frontImageUrl} 
                       alt={card.name}
                       className="w-full h-full object-contain"
                       onError={(e) => {
+                        // Try converting the URL if the original fails
+                        const originalSrc = e.currentTarget.src;
+                        if (!originalSrc.includes('thumbnail') && !originalSrc.includes('uc?export=view')) {
+                          const converted = convertGoogleDriveUrl(originalSrc);
+                          if (converted !== originalSrc) {
+                            e.currentTarget.src = converted;
+                            return;
+                          }
+                        }
                         e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzlkYTNhZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIEVycm9yPC90ZXh0Pjwvc3ZnPg==';
                       }}
                     />
