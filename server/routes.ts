@@ -48,6 +48,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/card-sets/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      const cardSet = await storage.updateCardSet(id, updates);
+      if (!cardSet) {
+        return res.status(404).json({ message: "Card set not found" });
+      }
+      res.json(cardSet);
+    } catch (error) {
+      console.error("Error updating card set:", error);
+      res.status(500).json({ message: "Failed to update card set" });
+    }
+  });
+
   // Cards Routes
   app.get("/api/cards", async (req, res) => {
     try {

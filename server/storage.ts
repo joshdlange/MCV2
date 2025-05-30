@@ -35,6 +35,7 @@ interface IStorage {
   getCardSets(): Promise<CardSet[]>;
   getCardSet(id: number): Promise<CardSet | undefined>;
   createCardSet(insertCardSet: InsertCardSet): Promise<CardSet>;
+  updateCardSet(id: number, updates: Partial<InsertCardSet>): Promise<CardSet | undefined>;
   
   // Cards
   getCards(filters?: { setId?: number; search?: string; rarity?: string; isInsert?: boolean }): Promise<CardWithSet[]>;
@@ -151,6 +152,15 @@ export class DatabaseStorage implements IStorage {
       .values(insertCardSet)
       .returning();
     return cardSet;
+  }
+
+  async updateCardSet(id: number, updates: Partial<InsertCardSet>): Promise<CardSet | undefined> {
+    const [cardSet] = await db
+      .update(cardSets)
+      .set(updates)
+      .where(eq(cardSets.id, id))
+      .returning();
+    return cardSet || undefined;
   }
 
   async getCards(filters?: { setId?: number; search?: string; rarity?: string; isInsert?: boolean }): Promise<CardWithSet[]> {
