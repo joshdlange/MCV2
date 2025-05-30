@@ -2,6 +2,7 @@
 import { StatsDashboard } from "@/components/dashboard/stats-dashboard";
 import { RecentCards } from "@/components/dashboard/recent-cards";
 import { QuickSearch } from "@/components/dashboard/quick-search";
+import { TrendingCards } from "@/components/dashboard/trending-cards";
 
 
 export default function Dashboard() {
@@ -28,6 +29,11 @@ export default function Dashboard() {
       {/* Dashboard Content */}
       <div className="p-6">
         <StatsDashboard />
+        
+        {/* Trending Cards */}
+        <div className="mt-6">
+          <TrendingCards />
+        </div>
         
         {/* Recent Cards */}
         <div className="mt-6">

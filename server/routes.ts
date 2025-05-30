@@ -232,6 +232,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Trending Cards Route
+  app.get("/api/trending-cards", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 8;
+      const trendingCards = await storage.getTrendingCards(limit);
+      res.json(trendingCards);
+    } catch (error) {
+      console.error('Error fetching trending cards:', error);
+      res.status(500).json({ message: "Failed to fetch trending cards" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

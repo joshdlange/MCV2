@@ -53,6 +53,9 @@ interface IStorage {
   // Stats
   getCollectionStats(userId: number): Promise<CollectionStats>;
   getRecentCards(userId: number, limit: number): Promise<CollectionItem[]>;
+  
+  // Trending
+  getTrendingCards(limit: number): Promise<CardWithSet[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -503,6 +506,61 @@ export class DatabaseStorage implements IStorage {
       }));
     } catch (error) {
       console.error('Error getting recent cards:', error);
+      return [];
+    }
+  }
+
+  async getTrendingCards(limit: number): Promise<CardWithSet[]> {
+    try {
+      // Get cards ordered by how many times they've been added to collections
+      const results = await db
+        .select({
+          id: cards.id,
+          setId: cards.setId,
+          cardNumber: cards.cardNumber,
+          name: cards.name,
+          variation: cards.variation,
+          isInsert: cards.isInsert,
+          frontImageUrl: cards.frontImageUrl,
+          backImageUrl: cards.backImageUrl,
+          description: cards.description,
+          rarity: cards.rarity,
+          estimatedValue: cards.estimatedValue,
+          createdAt: cards.createdAt,
+          collectionCount: count(userCollections.id),
+          set: {
+            id: cardSets.id,
+            name: cardSets.name,
+            year: cardSets.year,
+            description: cardSets.description,
+            totalCards: cardSets.totalCards,
+            createdAt: cardSets.createdAt,
+          }
+        })
+        .from(cards)
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+        .leftJoin(userCollections, eq(cards.id, userCollections.cardId))
+        .groupBy(cards.id, cardSets.id)
+        .orderBy(desc(count(userCollections.id)))
+        .limit(limit);
+
+      return results.map(row => ({
+        id: row.id,
+        setId: row.setId,
+        cardNumber: row.cardNumber,
+        name: row.name,
+        variation: row.variation,
+        isInsert: row.isInsert,
+        frontImageUrl: row.frontImageUrl,
+        backImageUrl: row.backImageUrl,
+        description: row.description,
+        rarity: row.rarity,
+        estimatedValue: row.estimatedValue,
+        createdAt: row.createdAt,
+        set: row.set
+      }));
+    } catch (error) {
+      console.error('Error getting trending cards:', error);
       return [];
     }
   }
