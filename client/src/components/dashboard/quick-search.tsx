@@ -4,9 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Star, Search } from "lucide-react";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
+import { useLocation } from "wouter";
 import type { CardWithSet, CardSet } from "@shared/schema";
 
 export function QuickSearch() {
+  const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSet, setSelectedSet] = useState<string>("all");
   const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
@@ -160,9 +162,17 @@ export function QuickSearch() {
                   ))}
                 </div>
                 {searchResults.length > 12 && (
-                  <p className="text-xs text-gray-500 text-center">
-                    Showing first 12 results. Use Card Search for more detailed filtering.
-                  </p>
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500 mb-2">
+                      Showing first 12 results.
+                    </p>
+                    <button 
+                      onClick={() => setLocation(`/card-search?search=${encodeURIComponent(debouncedQuery)}`)}
+                      className="text-xs text-marvel-red hover:text-red-700 font-medium"
+                    >
+                      View all results in Card Search →
+                    </button>
+                  </div>
                 )}
               </div>
             )}
