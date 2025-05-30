@@ -49,7 +49,7 @@ export function Sidebar() {
   };
 
   return (
-    <div className="fixed inset-y-0 left-0 z-50 w-80 bg-background shadow-lg border-r border-border hidden lg:flex flex-col">
+    <div className="h-screen w-80 bg-background shadow-lg border-r border-border flex flex-col">
       {/* Logo & Branding */}
       <div className="flex items-center px-6 py-4 bg-marvel-red">
         <div className="flex items-center space-x-3">

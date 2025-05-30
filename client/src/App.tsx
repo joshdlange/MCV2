@@ -39,7 +39,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Desktop Sidebar - hidden on mobile */}
-      <div className="hidden lg:block">
+      <div className="hidden lg:block fixed inset-y-0 left-0 z-40">
         <Sidebar />
       </div>
       
