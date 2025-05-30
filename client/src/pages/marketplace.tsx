@@ -6,12 +6,16 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
-import { Star, Search, Filter } from "lucide-react";
+import { UpgradeModal } from "@/components/subscription/upgrade-modal";
+import { useAppStore } from "@/lib/store";
+import { Star, Search, Filter, Crown, Lock } from "lucide-react";
 import type { CollectionItem, CardWithSet, CardSet } from "@shared/schema";
 
 export default function Marketplace() {
+  const { currentUser } = useAppStore();
   const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSet, setSelectedSet] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("newest");
@@ -53,6 +57,59 @@ export default function Marketplace() {
         return 0;
     }
   });
+
+  // Check if user is on SIDE KICK plan and restrict access
+  if (currentUser?.plan === 'SIDE_KICK') {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+          <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">MARKETPLACE</h2>
+        </div>
+        <div className="flex items-center justify-center min-h-[60vh] p-6">
+          <div className="max-w-lg mx-auto text-center">
+            <div className="w-32 h-32 bg-gradient-to-br from-yellow-100 to-orange-100 rounded-full flex items-center justify-center mx-auto mb-8">
+              <Lock className="h-16 w-16 text-yellow-600" />
+            </div>
+            <h3 className="text-3xl font-bold text-gray-900 mb-4">Marketplace Access</h3>
+            <h4 className="text-xl font-semibold text-yellow-600 mb-4">SUPER HERO Feature</h4>
+            <p className="text-gray-600 mb-8 leading-relaxed">
+              The Marketplace is an exclusive feature for SUPER HERO members. Buy and sell cards with other collectors, 
+              access premium listings, and unlock the full trading experience.
+            </p>
+            <div className="bg-gray-50 rounded-lg p-6 mb-8">
+              <h5 className="font-semibold text-gray-900 mb-3">What you'll get with SUPER HERO:</h5>
+              <ul className="text-left space-y-2 text-gray-600">
+                <li className="flex items-center gap-2">
+                  <Crown className="w-4 h-4 text-yellow-500" />
+                  Full marketplace access
+                </li>
+                <li className="flex items-center gap-2">
+                  <Crown className="w-4 h-4 text-yellow-500" />
+                  Buy & sell with collectors
+                </li>
+                <li className="flex items-center gap-2">
+                  <Crown className="w-4 h-4 text-yellow-500" />
+                  Unlimited card storage
+                </li>
+                <li className="flex items-center gap-2">
+                  <Crown className="w-4 h-4 text-yellow-500" />
+                  Priority support
+                </li>
+              </ul>
+            </div>
+            <Button 
+              onClick={() => setShowUpgradeModal(true)}
+              className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-yellow-900 font-bold px-8 py-3 text-lg"
+            >
+              <Crown className="w-5 h-5 mr-2" />
+              Upgrade to SUPER HERO
+            </Button>
+            <p className="text-sm text-gray-500 mt-4">Only $4/month • Cancel anytime</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -230,6 +287,12 @@ export default function Marketplace() {
         }}
         isInCollection={false}
         isInWishlist={false}
+      />
+
+      <UpgradeModal 
+        isOpen={showUpgradeModal} 
+        onClose={() => setShowUpgradeModal(false)} 
+        reason="marketplace"
       />
     </div>
   );

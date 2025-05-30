@@ -159,6 +159,12 @@ export function Sidebar() {
         )}
       </nav>
 
+      {/* Upgrade Modal */}
+      <UpgradeModal 
+        isOpen={showUpgradeModal} 
+        onClose={() => setShowUpgradeModal(false)} 
+      />
+
       {/* User Profile */}
       {currentUser && (
         <div className="border-t border-border p-4">
