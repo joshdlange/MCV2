@@ -1,21 +1,31 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { CardGrid } from "@/components/cards/card-grid";
 import { CardFilters } from "@/types";
-import { Search, Filter, ArrowLeft, Heart, Plus, Star } from "lucide-react";
-import type { CardSet } from "@shared/schema";
+import { Search, Filter, ArrowLeft, Heart, Plus, Star, Edit } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAppStore } from "@/lib/store";
+import { apiRequest } from "@/lib/queryClient";
+import type { CardSet, CardWithSet, CollectionItem, InsertUserCollection } from "@shared/schema";
 
 export default function BrowseCards() {
   const [selectedSet, setSelectedSet] = useState<CardSet | null>(null);
   const [filters, setFilters] = useState<CardFilters>({});
   const [favoriteSetIds, setFavoriteSetIds] = useState<number[]>([]);
+  const { toast } = useToast();
+  const { isAdminMode } = useAppStore();
+  const queryClient = useQueryClient();
 
   const { data: cardSets } = useQuery<CardSet[]>({
     queryKey: ["/api/card-sets"],
+  });
+
+  const { data: collection } = useQuery<CollectionItem[]>({
+    queryKey: ["/api/collection"],
   });
 
   const handleSearchChange = (search: string) => {
@@ -65,9 +75,59 @@ export default function BrowseCards() {
     );
   };
 
+  const addAllMutation = useMutation({
+    mutationFn: async (setId: number) => {
+      // First get all cards from the set
+      const cardsResponse = await fetch(`/api/cards?setId=${setId}`);
+      const cards: CardWithSet[] = await cardsResponse.json();
+      
+      // Get cards already in collection for this set
+      const collectionCardIds = collection?.map(item => item.cardId) || [];
+      
+      // Filter out cards already in collection
+      const newCards = cards.filter(card => !collectionCardIds.includes(card.id));
+      
+      if (newCards.length === 0) {
+        throw new Error('All cards from this set are already in your collection!');
+      }
+      
+      // Add each new card to collection
+      const promises = newCards.map(card => {
+        const insertData: InsertUserCollection = {
+          userId: 1, // TODO: Get from auth context
+          cardId: card.id,
+          condition: 'near_mint',
+          quantity: 1
+        };
+        
+        return apiRequest('/api/collection', {
+          method: 'POST',
+          body: JSON.stringify(insertData)
+        });
+      });
+      
+      await Promise.all(promises);
+      return { addedCount: newCards.length, totalCards: cards.length };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+      toast({
+        title: "Cards Added Successfully!",
+        description: `Added ${data.addedCount} new cards to your collection (${data.totalCards - data.addedCount} were already owned).`
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error Adding Cards",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleAddAllToCollection = (setId: number) => {
-    console.log('Add all cards from set to collection:', setId);
-    // TODO: Implement bulk add functionality
+    addAllMutation.mutate(setId);
   };
 
   // Show individual cards if a set is selected
@@ -108,10 +168,11 @@ export default function BrowseCards() {
               </Button>
               <Button
                 onClick={() => handleAddAllToCollection(selectedSet.id)}
+                disabled={addAllMutation.isPending}
                 className="bg-marvel-red hover:bg-red-700 flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
-                Add All to Collection
+                {addAllMutation.isPending ? 'Adding All Cards...' : 'Add All to Collection'}
               </Button>
             </div>
           </div>
@@ -235,7 +296,7 @@ export default function BrowseCards() {
                           className="flex-1 bg-marvel-red hover:bg-red-700"
                         >
                           <Plus className="w-3 h-3 mr-1" />
-                          Add All
+                          {addAllMutation.isPending ? 'Adding...' : 'Add All'}
                         </Button>
                       </div>
                     </div>
