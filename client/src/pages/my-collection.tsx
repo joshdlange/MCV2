@@ -290,40 +290,20 @@ export default function MyCollection() {
                   </h3>
                   <p className="text-xs text-gray-600">{item.card.set.name} #{item.card.cardNumber}</p>
                   <div className="flex items-center justify-between mt-2">
-                    <div className="flex items-center gap-2">
-                      <Badge className="bg-blue-100 text-blue-800 text-xs border-blue-200">
-                        {item.condition}
-                      </Badge>
-                      {item.quantity && item.quantity > 1 && (
-                        <Badge className="bg-gray-100 text-gray-800 text-xs border-gray-200">
-                          Qty: {item.quantity}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleToggleForSale(item.id, item.isForSale);
-                        }}
-                        className="h-6 w-6 p-0 hover:bg-green-100"
-                      >
-                        <ShoppingCart className={`h-3 w-3 ${item.isForSale ? 'text-green-600' : 'text-gray-400'}`} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveFromCollection(item.id);
-                        }}
-                        className="h-6 w-6 p-0 hover:bg-red-100"
-                      >
-                        <Trash2 className="h-3 w-3 text-gray-400 hover:text-red-600" />
-                      </Button>
-                    </div>
+                    <Badge className="bg-blue-100 text-blue-800 text-xs border-blue-200">
+                      {item.condition}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveFromCollection(item.id);
+                      }}
+                      className="h-6 w-6 p-0 hover:bg-red-100"
+                    >
+                      <Trash2 className="h-3 w-3 text-gray-400 hover:text-red-600" />
+                    </Button>
                   </div>
                 </div>
               </CardContent>
