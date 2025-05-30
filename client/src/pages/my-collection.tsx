@@ -210,14 +210,27 @@ export default function MyCollection() {
                   />
                 </div>
 
-                {/* Sale Status */}
-                {item.isForSale && (
-                  <div className="absolute top-2 right-2 z-10">
+                {/* Sale Status and Favorite */}
+                <div className="absolute top-2 right-2 z-10 flex gap-1">
+                  {item.isForSale && (
                     <Badge className="bg-green-100 text-green-800 text-xs px-2 py-1">
                       For Sale
                     </Badge>
-                  </div>
-                )}
+                  )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleFavorite(item);
+                    }}
+                    className={`p-1 rounded-full transition-colors ${
+                      item.isFavorite 
+                        ? 'bg-yellow-500 text-white' 
+                        : 'bg-white/80 text-gray-400 hover:text-yellow-500'
+                    }`}
+                  >
+                    <Star className={`w-4 h-4 ${item.isFavorite ? 'fill-current' : ''}`} />
+                  </button>
+                </div>
 
                 {/* Card Image */}
                 <div className="relative aspect-[2.5/3.5] bg-gray-100 rounded-t-lg overflow-hidden">
@@ -252,7 +265,7 @@ export default function MyCollection() {
                   </h3>
                   <p className="text-xs text-gray-600">{item.card.set.name} #{item.card.cardNumber}</p>
                   <div className="flex items-center justify-between mt-2">
-                    <Badge variant="outline" className="text-xs">
+                    <Badge className="bg-blue-100 text-blue-800 text-xs border-blue-200">
                       {item.condition}
                     </Badge>
                     <div className="flex gap-1">
