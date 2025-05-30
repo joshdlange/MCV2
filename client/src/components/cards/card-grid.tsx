@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Heart, Plus } from "lucide-react";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { CardWithSet } from "@shared/schema";
 import { CardFilters } from "@/types";
 
@@ -20,6 +22,8 @@ export function CardGrid({
 }: CardGridProps) {
   const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   const queryParams = new URLSearchParams();
   if (filters.setId) queryParams.set('setId', filters.setId.toString());
@@ -31,6 +35,56 @@ export function CardGrid({
     queryKey: [`/api/cards?${queryParams.toString()}`],
   });
 
+  const addToCollectionMutation = useMutation({
+    mutationFn: async (cardId: number) => {
+      return apiRequest('POST', '/api/collection', {
+        cardId,
+        condition: 'Near Mint'
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
+      toast({ title: "Card added to collection" });
+    },
+    onError: () => {
+      toast({ title: "Failed to add to collection", variant: "destructive" });
+    }
+  });
+
+  const addToWishlistMutation = useMutation({
+    mutationFn: async (cardId: number) => {
+      return apiRequest('POST', '/api/wishlist', {
+        cardId,
+        priority: 3
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/wishlist'] });
+      toast({ title: "Card added to wishlist" });
+    },
+    onError: () => {
+      toast({ title: "Failed to add to wishlist", variant: "destructive" });
+    }
+  });
+
+  const handleCardClick = (card: CardWithSet) => {
+    setSelectedCard(card);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedCard(null);
+  };
+
+  const handleAddToCollection = (cardId: number) => {
+    addToCollectionMutation.mutate(cardId);
+  };
+
+  const handleAddToWishlist = (cardId: number) => {
+    addToWishlistMutation.mutate(cardId);
+  };
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
@@ -38,12 +92,12 @@ export function CardGrid({
           <Card key={i} className="animate-pulse">
             <CardContent className="p-0">
               <div className="w-full h-40 bg-gray-200 rounded-t-lg"></div>
-              <div className="p-2 space-y-1">
+              <div className="p-2 space-y-2">
                 <div className="h-3 bg-gray-200 rounded"></div>
                 <div className="h-2 bg-gray-200 rounded w-3/4"></div>
-                <div className="flex justify-between">
-                  <div className="h-4 bg-gray-200 rounded w-12"></div>
-                  <div className="h-3 bg-gray-200 rounded w-8"></div>
+                <div className="flex gap-1">
+                  <div className="h-6 bg-gray-200 rounded flex-1"></div>
+                  <div className="h-6 bg-gray-200 rounded flex-1"></div>
                 </div>
               </div>
             </CardContent>
@@ -56,38 +110,11 @@ export function CardGrid({
   if (!cards || cards.length === 0) {
     return (
       <div className="text-center py-12">
-        <div className="max-w-md mx-auto">
-          <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
-            <span className="text-gray-400 text-2xl">📋</span>
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No cards found</h3>
-          <p className="text-gray-500">
-            {Object.keys(filters).length > 0 
-              ? "Try adjusting your filters to see more results." 
-              : "No cards have been added yet."}
-          </p>
-        </div>
+        <p className="text-gray-500 text-lg">No cards found</p>
+        <p className="text-gray-400 text-sm">Try adjusting your search filters</p>
       </div>
     );
   }
-
-  const handleAddToCollection = (cardId: number) => {
-    console.log('Add to collection:', cardId);
-  };
-
-  const handleAddToWishlist = (cardId: number) => {
-    console.log('Add to wishlist:', cardId);
-  };
-
-  const handleCardClick = (card: CardWithSet) => {
-    setSelectedCard(card);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedCard(null);
-  };
 
   return (
     <>
@@ -142,15 +169,16 @@ export function CardGrid({
                       <Plus className="w-3 h-3" />
                     </Button>
                   )}
+                  
                   {showAddToWishlist && (
                     <Button
-                      size="sm"
                       variant="outline"
+                      size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleAddToWishlist(card.id);
                       }}
-                      className="flex-1 text-xs h-6 px-1 bg-white hover:bg-gray-100 text-gray-700 border-gray-300"
+                      className="flex-1 border-gray-300 hover:bg-gray-100 text-xs h-6 px-1"
                     >
                       <Heart className="w-3 h-3" />
                     </Button>
@@ -162,13 +190,12 @@ export function CardGrid({
         ))}
       </div>
 
-      {/* Card Detail Modal */}
       <CardDetailModal
         card={selectedCard}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        onAddToCollection={() => selectedCard && handleAddToCollection(selectedCard.id)}
-        onAddToWishlist={() => selectedCard && handleAddToWishlist(selectedCard.id)}
+        onAddToCollection={selectedCard ? () => handleAddToCollection(selectedCard.id) : undefined}
+        onAddToWishlist={selectedCard ? () => handleAddToWishlist(selectedCard.id) : undefined}
       />
     </>
   );
