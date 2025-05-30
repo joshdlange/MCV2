@@ -362,7 +362,16 @@ export class DatabaseStorage implements IStorage {
   async addToCollection(insertUserCollection: InsertUserCollection): Promise<UserCollection> {
     const [item] = await db
       .insert(userCollections)
-      .values(insertUserCollection)
+      .values({
+        ...insertUserCollection,
+        acquiredDate: new Date(),
+        condition: insertUserCollection.condition || 'Near Mint',
+        personalValue: insertUserCollection.personalValue || null,
+        salePrice: insertUserCollection.salePrice || null,
+        isForSale: insertUserCollection.isForSale || false,
+        serialNumber: insertUserCollection.serialNumber || null,
+        notes: insertUserCollection.notes || null,
+      })
       .returning();
     return item;
   }
