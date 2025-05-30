@@ -1,10 +1,16 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Check, Heart, Star } from "lucide-react";
+import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import type { CollectionItem } from "@shared/schema";
+import { useLocation } from "wouter";
 
 export function RecentCards() {
+  const [selectedCard, setSelectedCard] = useState<CollectionItem | null>(null);
+  const [, setLocation] = useLocation();
+  
   const { data: recentCards, isLoading } = useQuery<CollectionItem[]>({
     queryKey: ["/api/recent-cards"],
   });
@@ -82,42 +88,56 @@ export function RecentCards() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
           {recentCards.map((item) => (
             <div 
               key={item.id} 
-              className="bg-card rounded-lg overflow-hidden comic-border card-hover cursor-pointer border"
+              className="bg-card rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow cursor-pointer border relative"
+              onClick={() => setSelectedCard(item)}
             >
-              {item.card.imageUrl ? (
-                <img 
-                  src={item.card.imageUrl} 
-                  alt={item.card.name}
-                  className="w-full h-40 object-cover"
-                />
-              ) : (
-                <div className="w-full h-40 bg-muted flex items-center justify-center">
-                  <span className="text-muted-foreground">No Image</span>
-                </div>
-              )}
-              <div className="p-3">
-                <p className="font-medium text-card-foreground text-sm truncate">
-                  {item.card.name} #{item.card.cardNumber}
-                </p>
-                <p className="text-xs text-muted-foreground">{item.card.set.name}</p>
-                <div className="flex items-center justify-between mt-2">
-                  <Badge 
-                    className={`text-xs text-white px-2 py-1 ${
-                      item.card.isInsert ? 'bg-marvel-gold' : getRarityColor(item.card.rarity)
-                    }`}
-                  >
-                    {item.card.isInsert ? 'Insert' : item.card.rarity}
-                  </Badge>
-                  {item.card.estimatedValue && (
-                    <span className="text-sm font-semibold text-card-foreground">
-                      ${parseFloat(item.card.estimatedValue).toFixed(0)}
-                    </span>
+              {/* Trading card with proper 2.5:3.5 aspect ratio */}
+              <div className="aspect-[2.5/3.5] relative">
+                {item.card.frontImageUrl ? (
+                  <img 
+                    src={item.card.frontImageUrl} 
+                    alt={item.card.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-muted flex items-center justify-center">
+                    <span className="text-muted-foreground text-xs">No Image</span>
+                  </div>
+                )}
+                
+                {/* Status badges */}
+                <div className="absolute top-1 right-1 flex flex-col gap-1">
+                  <div className="bg-green-500 rounded-full p-1 shadow-lg">
+                    <Check className="w-3 h-3 text-white" />
+                  </div>
+                  {item.card.isInsert && (
+                    <div className="bg-yellow-500 rounded-full p-1 shadow-lg">
+                      <Star className="w-3 h-3 text-white fill-white" />
+                    </div>
                   )}
                 </div>
+              </div>
+              
+              {/* Card info below image */}
+              <div className="p-2">
+                <p className="font-medium text-card-foreground text-xs truncate">
+                  {item.card.name}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {item.card.set.name}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  #{item.card.cardNumber}
+                </p>
+                {item.card.estimatedValue && (
+                  <p className="text-xs font-semibold text-green-600 mt-1">
+                    ${parseFloat(item.card.estimatedValue).toFixed(0)}
+                  </p>
+                )}
               </div>
             </div>
           ))}
