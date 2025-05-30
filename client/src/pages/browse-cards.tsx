@@ -13,6 +13,7 @@ import { Search, Filter, ArrowLeft, Heart, Plus, Star, Edit, Save, X } from "luc
 import { useToast } from "@/hooks/use-toast";
 import { useAppStore } from "@/lib/store";
 import { apiRequest } from "@/lib/queryClient";
+import { convertGoogleDriveUrl } from "@/lib/utils";
 import type { CardSet, CardWithSet, CollectionItem, InsertUserCollection } from "@shared/schema";
 
 export default function BrowseCards() {
@@ -337,7 +338,7 @@ export default function BrowseCards() {
                     <div className="relative">
                       {set.imageUrl ? (
                         <img 
-                          src={set.imageUrl} 
+                          src={convertGoogleDriveUrl(set.imageUrl)} 
                           alt={set.name}
                           className="w-full h-48 object-cover rounded-t-lg"
                         />
@@ -409,7 +410,7 @@ export default function BrowseCards() {
                   <div className="relative">
                     {set.imageUrl ? (
                       <img 
-                        src={set.imageUrl} 
+                        src={convertGoogleDriveUrl(set.imageUrl)} 
                         alt={set.name}
                         className="w-full h-48 object-cover rounded-t-lg"
                       />
