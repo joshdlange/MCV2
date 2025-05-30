@@ -262,6 +262,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin User Management Routes
+  app.get("/api/admin/users", async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.post("/api/admin/users", async (req, res) => {
+    try {
+      const data = insertUserSchema.parse(req.body);
+      const user = await storage.createUser(data);
+      res.json(user);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to create user" });
+      }
+    }
+  });
+
+  app.patch("/api/admin/users/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const data = insertUserSchema.partial().parse(req.body);
+      const user = await storage.updateUser(id, data);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update user" });
+      }
+    }
+  });
+
+  app.delete("/api/admin/users/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteUser(id);
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
