@@ -36,9 +36,12 @@ function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
         <div className="absolute inset-0 w-full h-full backface-hidden bg-gradient-to-br from-gray-900 to-black rounded-lg overflow-hidden shadow-lg">
           {card.frontImageUrl ? (
             <img 
-              src={card.frontImageUrl} 
+              src={convertGoogleDriveUrl(card.frontImageUrl)} 
               alt={card.name}
               className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzlkYTNhZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIEVycm9yPC90ZXh0Pjwvc3ZnPg==';
+              }}
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">

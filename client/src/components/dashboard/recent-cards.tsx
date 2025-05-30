@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, Heart, Star } from "lucide-react";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
+import { convertGoogleDriveUrl } from "@/lib/utils";
 import type { CollectionItem } from "@shared/schema";
 import { useLocation } from "wouter";
 
@@ -103,9 +104,12 @@ export function RecentCards() {
               <div className="aspect-[2.5/3.5] relative">
                 {item.card.frontImageUrl ? (
                   <img 
-                    src={item.card.frontImageUrl} 
+                    src={convertGoogleDriveUrl(item.card.frontImageUrl)} 
                     alt={item.card.name}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzlkYTNhZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIEVycm9yPC90ZXh0Pjwvc3ZnPg==';
+                    }}
                   />
                 ) : (
                   <div className="w-full h-full bg-muted flex items-center justify-center">
