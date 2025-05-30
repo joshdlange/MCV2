@@ -19,6 +19,7 @@ export const cardSets = pgTable("card_sets", {
   name: text("name").notNull(),
   year: integer("year").notNull(),
   description: text("description"),
+  imageUrl: text("image_url"),
   totalCards: integer("total_cards").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

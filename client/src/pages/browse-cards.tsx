@@ -16,6 +16,8 @@ export default function BrowseCards() {
   const [selectedSet, setSelectedSet] = useState<CardSet | null>(null);
   const [filters, setFilters] = useState<CardFilters>({});
   const [favoriteSetIds, setFavoriteSetIds] = useState<number[]>([]);
+  const [editingSetId, setEditingSetId] = useState<number | null>(null);
+  const [editImageUrl, setEditImageUrl] = useState('');
   const { toast } = useToast();
   const { isAdminMode } = useAppStore();
   const queryClient = useQueryClient();
@@ -100,8 +102,11 @@ export default function BrowseCards() {
           quantity: 1
         };
         
-        return apiRequest('/api/collection', {
+        return fetch('/api/collection', {
           method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
           body: JSON.stringify(insertData)
         });
       });
@@ -128,6 +133,55 @@ export default function BrowseCards() {
 
   const handleAddAllToCollection = (setId: number) => {
     addAllMutation.mutate(setId);
+  };
+
+  const handleEditSetImage = (setId: number) => {
+    const set = cardSets?.find(s => s.id === setId);
+    if (set) {
+      setEditingSetId(setId);
+      setEditImageUrl(set.imageUrl || '');
+    }
+  };
+
+  const updateSetMutation = useMutation({
+    mutationFn: async ({ setId, imageUrl }: { setId: number, imageUrl: string }) => {
+      const response = await fetch(`/api/card-sets/${setId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ imageUrl })
+      });
+      if (!response.ok) throw new Error('Failed to update set');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/card-sets'] });
+      setEditingSetId(null);
+      setEditImageUrl('');
+      toast({
+        title: "Set Updated",
+        description: "Card set image has been updated successfully."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error Updating Set",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleSaveSetImage = () => {
+    if (editingSetId && editImageUrl.trim()) {
+      updateSetMutation.mutate({ setId: editingSetId, imageUrl: editImageUrl.trim() });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingSetId(null);
+    setEditImageUrl('');
   };
 
   // Show individual cards if a set is selected
