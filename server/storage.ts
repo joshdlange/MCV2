@@ -314,6 +314,11 @@ export class DatabaseStorage implements IStorage {
           condition: userCollections.condition,
           acquiredDate: userCollections.acquiredDate,
           personalValue: userCollections.personalValue,
+          salePrice: userCollections.salePrice,
+          isForSale: userCollections.isForSale,
+          serialNumber: userCollections.serialNumber,
+          quantity: userCollections.quantity,
+          isFavorite: userCollections.isFavorite,
           notes: userCollections.notes,
           card: {
             id: cards.id,
@@ -467,8 +472,7 @@ export class DatabaseStorage implements IStorage {
           cardId: userWishlists.cardId,
           priority: userWishlists.priority,
           maxPrice: userWishlists.maxPrice,
-          notes: userWishlists.notes,
-          createdAt: userWishlists.createdAt,
+          addedDate: userWishlists.addedDate,
           card: {
             id: cards.id,
             setId: cards.setId,
