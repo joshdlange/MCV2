@@ -68,7 +68,7 @@ export default function BrowseCards() {
                 placeholder="Search cards..."
                 value={filters.search || ""}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-10"
+                className="pl-10 bg-white border-gray-200 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-red-500 focus:border-red-500"
               />
             </div>
           </div>
