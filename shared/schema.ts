@@ -27,7 +27,9 @@ export const cards = pgTable("cards", {
   name: text("name").notNull(),
   variation: text("variation"),
   isInsert: boolean("is_insert").default(false).notNull(),
-  imageUrl: text("image_url"),
+  frontImageUrl: text("front_image_url"),
+  backImageUrl: text("back_image_url"),
+  description: text("description"),
   rarity: text("rarity").notNull(),
   estimatedValue: decimal("estimated_value", { precision: 10, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -40,6 +42,8 @@ export const userCollections = pgTable("user_collections", {
   condition: text("condition").default("Near Mint").notNull(),
   acquiredDate: timestamp("acquired_date").defaultNow().notNull(),
   personalValue: decimal("personal_value", { precision: 10, scale: 2 }),
+  salePrice: decimal("sale_price", { precision: 10, scale: 2 }),
+  isForSale: boolean("is_for_sale").default(false).notNull(),
   notes: text("notes"),
 });
 
