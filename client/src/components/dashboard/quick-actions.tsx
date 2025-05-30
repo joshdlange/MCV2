@@ -53,7 +53,7 @@ export function QuickActions() {
         <CardContent className="space-y-3">
           <Button
             variant="ghost"
-            className="w-full justify-start bg-gray-50 hover:bg-gray-100 p-4 h-auto border border-gray-200 comic-border"
+            className="w-full justify-start bg-muted hover:bg-muted/80 p-4 h-auto border border-border comic-border"
             onClick={handleUploadCards}
           >
             <div className="flex items-center space-x-3">
@@ -61,15 +61,15 @@ export function QuickActions() {
                 <Upload className="text-white text-sm" />
               </div>
               <div className="text-left">
-                <p className="font-medium text-gray-900">Upload Cards</p>
-                <p className="text-xs text-gray-600">Bulk import from images</p>
+                <p className="font-medium text-card-foreground">Upload Cards</p>
+                <p className="text-xs text-muted-foreground">Bulk import from images</p>
               </div>
             </div>
           </Button>
 
           <Button
             variant="ghost"
-            className="w-full justify-start bg-gray-50 hover:bg-gray-100 p-4 h-auto border border-gray-200 comic-border"
+            className="w-full justify-start bg-muted hover:bg-muted/80 p-4 h-auto border border-border comic-border"
             onClick={handleScanCard}
           >
             <div className="flex items-center space-x-3">
@@ -77,15 +77,15 @@ export function QuickActions() {
                 <Camera className="text-white text-sm" />
               </div>
               <div className="text-left">
-                <p className="font-medium text-gray-900">Scan Card</p>
-                <p className="text-xs text-gray-600">Auto-identify with camera</p>
+                <p className="font-medium text-card-foreground">Scan Card</p>
+                <p className="text-xs text-muted-foreground">Auto-identify with camera</p>
               </div>
             </div>
           </Button>
 
           <Button
             variant="ghost"
-            className="w-full justify-start bg-gray-50 hover:bg-gray-100 p-4 h-auto border border-gray-200 comic-border"
+            className="w-full justify-start bg-muted hover:bg-muted/80 p-4 h-auto border border-border comic-border"
             onClick={handleManualAdd}
           >
             <div className="flex items-center space-x-3">
@@ -93,8 +93,8 @@ export function QuickActions() {
                 <Plus className="text-white text-sm" />
               </div>
               <div className="text-left">
-                <p className="font-medium text-gray-900">Add Manually</p>
-                <p className="text-xs text-gray-600">Enter card details</p>
+                <p className="font-medium text-card-foreground">Add Manually</p>
+                <p className="text-xs text-muted-foreground">Enter card details</p>
               </div>
             </div>
           </Button>
@@ -116,7 +116,7 @@ export function QuickActions() {
             {topSets.map((set) => (
               <div 
                 key={set.id}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                className="flex items-center justify-between p-3 bg-muted rounded-lg border border-border"
               >
                 <div className="flex items-center space-x-3">
                   <img 
@@ -125,12 +125,12 @@ export function QuickActions() {
                     className="w-10 h-10 rounded-lg object-cover"
                   />
                   <div>
-                    <p className="font-medium text-gray-900 text-sm">{set.name}</p>
-                    <p className="text-xs text-gray-600">{set.completion}</p>
+                    <p className="font-medium text-card-foreground text-sm">{set.name}</p>
+                    <p className="text-xs text-muted-foreground">{set.completion}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-semibold text-gray-900">{set.value}</p>
+                  <p className="text-sm font-semibold text-card-foreground">{set.value}</p>
                   <p className={`text-xs ${
                     set.change.startsWith('+') ? 'text-green-600' : 'text-red-600'
                   }`}>
