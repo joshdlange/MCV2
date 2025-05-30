@@ -6,7 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Check, Heart, Star, RotateCcw } from "lucide-react";
+import { Check, Heart, Star, RotateCcw, Edit, Trash2, Save, X } from "lucide-react";
+import { useAppStore } from "@/lib/store";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { CardWithSet } from "@shared/schema";
 
 interface CardDetailModalProps {
@@ -37,8 +41,71 @@ export function CardDetailModal({
   const [isForSale, setIsForSale] = useState(false);
   const [condition, setCondition] = useState("Near Mint");
   const [notes, setNotes] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedCard, setEditedCard] = useState<Partial<CardWithSet>>({});
+  
+  const { isAdminMode } = useAppStore();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  // Admin mutations
+  const updateCardMutation = useMutation({
+    mutationFn: async (updatedCard: Partial<CardWithSet>) => {
+      if (!card) throw new Error('No card selected');
+      return apiRequest('PATCH', `/api/cards/${card.id}`, updatedCard);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/cards'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cards/search'] });
+      toast({ title: "Card updated successfully" });
+      setIsEditing(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to update card", variant: "destructive" });
+    }
+  });
+
+  const deleteCardMutation = useMutation({
+    mutationFn: async () => {
+      if (!card) throw new Error('No card selected');
+      return apiRequest('DELETE', `/api/cards/${card.id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/cards'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cards/search'] });
+      toast({ title: "Card deleted successfully" });
+      onClose();
+    },
+    onError: () => {
+      toast({ title: "Failed to delete card", variant: "destructive" });
+    }
+  });
+
+  const handleSaveEdit = () => {
+    updateCardMutation.mutate(editedCard);
+  };
+
+  const handleDelete = () => {
+    if (confirm('Are you sure you want to delete this card? This action cannot be undone.')) {
+      deleteCardMutation.mutate();
+    }
+  };
 
   if (!card) return null;
+
+  const startEditing = () => {
+    setIsEditing(true);
+    setEditedCard({
+      name: card.name,
+      cardNumber: card.cardNumber,
+      rarity: card.rarity,
+      estimatedValue: card.estimatedValue,
+      frontImageUrl: card.frontImageUrl,
+      backImageUrl: card.backImageUrl,
+      isInsert: card.isInsert,
+      description: card.description,
+    });
+  };
 
   const cardAspectRatio = "aspect-[2.5/3.5]"; // Trading card proportions
 
@@ -46,9 +113,56 @@ export function CardDetailModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bebas tracking-wide">
-            {card.name} #{card.cardNumber}
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-xl font-bebas tracking-wide">
+              {isEditing ? 'Edit Card' : `${card.name} #${card.cardNumber}`}
+            </DialogTitle>
+            {isAdminMode && (
+              <div className="flex gap-2">
+                {isEditing ? (
+                  <>
+                    <Button
+                      onClick={handleSaveEdit}
+                      disabled={updateCardMutation.isPending}
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <Save className="w-4 h-4 mr-1" />
+                      Save
+                    </Button>
+                    <Button
+                      onClick={() => setIsEditing(false)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Cancel
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      onClick={startEditing}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Edit className="w-4 h-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      onClick={handleDelete}
+                      disabled={deleteCardMutation.isPending}
+                      variant="destructive"
+                      size="sm"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Delete
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </DialogHeader>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
