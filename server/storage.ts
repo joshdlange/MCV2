@@ -203,6 +203,13 @@ export class DatabaseStorage implements IStorage {
         query = query.where(and(...conditions));
       }
 
+      // Sort by card number when filtering by set, otherwise by creation date
+      if (filters?.setId) {
+        query = query.orderBy(cards.cardNumber);
+      } else {
+        query = query.orderBy(cards.createdAt);
+      }
+
       const results = await query;
       return results.map(row => ({
         id: row.id,
