@@ -16,11 +16,11 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       {/* Page Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+      <div className="bg-card shadow-sm border-b border-border px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">DASHBOARD</h2>
-            <p className="text-sm text-gray-600 font-roboto">
+            <h2 className="text-2xl font-bebas text-foreground tracking-wide">DASHBOARD</h2>
+            <p className="text-sm text-muted-foreground font-roboto">
               Welcome back! Here's your collection overview.
             </p>
           </div>
