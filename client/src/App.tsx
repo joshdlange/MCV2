@@ -65,8 +65,8 @@ function AppLayout({ children }: { children: React.ReactNode }) {
         <Sidebar />
       </div>
       
-      {/* Mobile Header - shown on mobile only */}
-      <div className="lg:hidden">
+      {/* Mobile Header - shown on mobile only, fixed at top */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50">
         <MobileHeader />
       </div>
       
@@ -79,7 +79,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
       <MobileMenu />
       
       {/* Main Content */}
-      <div className="lg:ml-80">
+      <div className="lg:ml-80 pt-16 lg:pt-0">
         {children}
       </div>
     </div>
