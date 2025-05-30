@@ -78,7 +78,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCards(filters?: { setId?: number; search?: string; rarity?: string; isInsert?: boolean }): Promise<CardWithSet[]> {
-    let query = db
+    const baseQuery = db
       .select({
         id: cards.id,
         setId: cards.setId,
@@ -90,10 +90,17 @@ export class DatabaseStorage implements IStorage {
         rarity: cards.rarity,
         estimatedValue: cards.estimatedValue,
         createdAt: cards.createdAt,
-        set: cardSets
+        set: {
+          id: cardSets.id,
+          name: cardSets.name,
+          year: cardSets.year,
+          description: cardSets.description,
+          totalCards: cardSets.totalCards,
+          createdAt: cardSets.createdAt,
+        }
       })
       .from(cards)
-      .leftJoin(cardSets, eq(cards.setId, cardSets.id));
+      .innerJoin(cardSets, eq(cards.setId, cardSets.id));
 
     const conditions = [];
     if (filters?.setId) conditions.push(eq(cards.setId, filters.setId));
@@ -102,10 +109,10 @@ export class DatabaseStorage implements IStorage {
     if (filters?.isInsert !== undefined) conditions.push(eq(cards.isInsert, filters.isInsert));
 
     if (conditions.length > 0) {
-      query = query.where(and(...conditions));
+      return await baseQuery.where(and(...conditions)).orderBy(cards.cardNumber);
     }
 
-    return await query.orderBy(cards.cardNumber);
+    return await baseQuery.orderBy(cards.cardNumber);
   }
 
   async getCard(id: number): Promise<CardWithSet | undefined> {
@@ -121,10 +128,17 @@ export class DatabaseStorage implements IStorage {
         rarity: cards.rarity,
         estimatedValue: cards.estimatedValue,
         createdAt: cards.createdAt,
-        set: cardSets
+        set: {
+          id: cardSets.id,
+          name: cardSets.name,
+          year: cardSets.year,
+          description: cardSets.description,
+          totalCards: cardSets.totalCards,
+          createdAt: cardSets.createdAt,
+        }
       })
       .from(cards)
-      .leftJoin(cardSets, eq(cards.setId, cardSets.id))
+      .innerJoin(cardSets, eq(cards.setId, cardSets.id))
       .where(eq(cards.id, id));
     return card || undefined;
   }
@@ -151,34 +165,43 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserCollection(userId: number): Promise<CollectionItem[]> {
-    return await db
-      .select({
-        id: userCollections.id,
-        userId: userCollections.userId,
-        cardId: userCollections.cardId,
-        condition: userCollections.condition,
-        acquiredDate: userCollections.acquiredDate,
-        personalValue: userCollections.personalValue,
-        notes: userCollections.notes,
-        card: {
-          id: cards.id,
-          setId: cards.setId,
-          cardNumber: cards.cardNumber,
-          name: cards.name,
-          variation: cards.variation,
-          isInsert: cards.isInsert,
-          imageUrl: cards.imageUrl,
-          rarity: cards.rarity,
-          estimatedValue: cards.estimatedValue,
-          createdAt: cards.createdAt,
-          set: cardSets
-        }
-      })
+    const result = await db
+      .select()
       .from(userCollections)
       .leftJoin(cards, eq(userCollections.cardId, cards.id))
       .leftJoin(cardSets, eq(cards.setId, cardSets.id))
       .where(eq(userCollections.userId, userId))
       .orderBy(desc(userCollections.acquiredDate));
+
+    return result.map(row => ({
+      id: row.user_collections.id,
+      userId: row.user_collections.userId,
+      cardId: row.user_collections.cardId,
+      condition: row.user_collections.condition,
+      acquiredDate: row.user_collections.acquiredDate,
+      personalValue: row.user_collections.personalValue,
+      notes: row.user_collections.notes,
+      card: {
+        id: row.cards?.id || 0,
+        setId: row.cards?.setId || 0,
+        cardNumber: row.cards?.cardNumber || '',
+        name: row.cards?.name || '',
+        variation: row.cards?.variation,
+        isInsert: row.cards?.isInsert || false,
+        imageUrl: row.cards?.imageUrl,
+        rarity: row.cards?.rarity || '',
+        estimatedValue: row.cards?.estimatedValue,
+        createdAt: row.cards?.createdAt || new Date(),
+        set: {
+          id: row.card_sets?.id || 0,
+          name: row.card_sets?.name || '',
+          year: row.card_sets?.year || 0,
+          description: row.card_sets?.description,
+          totalCards: row.card_sets?.totalCards || 0,
+          createdAt: row.card_sets?.createdAt || new Date(),
+        }
+      }
+    }));
   }
 
   async addToCollection(insertUserCollection: InsertUserCollection): Promise<UserCollection> {
@@ -194,33 +217,42 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserWishlist(userId: number): Promise<WishlistItem[]> {
-    return await db
-      .select({
-        id: userWishlists.id,
-        userId: userWishlists.userId,
-        cardId: userWishlists.cardId,
-        priority: userWishlists.priority,
-        maxPrice: userWishlists.maxPrice,
-        addedDate: userWishlists.addedDate,
-        card: {
-          id: cards.id,
-          setId: cards.setId,
-          cardNumber: cards.cardNumber,
-          name: cards.name,
-          variation: cards.variation,
-          isInsert: cards.isInsert,
-          imageUrl: cards.imageUrl,
-          rarity: cards.rarity,
-          estimatedValue: cards.estimatedValue,
-          createdAt: cards.createdAt,
-          set: cardSets
-        }
-      })
+    const result = await db
+      .select()
       .from(userWishlists)
       .leftJoin(cards, eq(userWishlists.cardId, cards.id))
       .leftJoin(cardSets, eq(cards.setId, cardSets.id))
       .where(eq(userWishlists.userId, userId))
       .orderBy(userWishlists.priority, desc(userWishlists.addedDate));
+
+    return result.map(row => ({
+      id: row.user_wishlists.id,
+      userId: row.user_wishlists.userId,
+      cardId: row.user_wishlists.cardId,
+      priority: row.user_wishlists.priority,
+      maxPrice: row.user_wishlists.maxPrice,
+      addedDate: row.user_wishlists.addedDate,
+      card: {
+        id: row.cards?.id || 0,
+        setId: row.cards?.setId || 0,
+        cardNumber: row.cards?.cardNumber || '',
+        name: row.cards?.name || '',
+        variation: row.cards?.variation,
+        isInsert: row.cards?.isInsert || false,
+        imageUrl: row.cards?.imageUrl,
+        rarity: row.cards?.rarity || '',
+        estimatedValue: row.cards?.estimatedValue,
+        createdAt: row.cards?.createdAt || new Date(),
+        set: {
+          id: row.card_sets?.id || 0,
+          name: row.card_sets?.name || '',
+          year: row.card_sets?.year || 0,
+          description: row.card_sets?.description,
+          totalCards: row.card_sets?.totalCards || 0,
+          createdAt: row.card_sets?.createdAt || new Date(),
+        }
+      }
+    }));
   }
 
   async addToWishlist(insertUserWishlist: InsertUserWishlist): Promise<UserWishlist> {
