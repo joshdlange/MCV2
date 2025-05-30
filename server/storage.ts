@@ -1,12 +1,26 @@
 import { 
-  users, cardSets, cards, userCollections, userWishlists,
-  type User, type InsertUser, type CardSet, type InsertCardSet,
-  type Card, type InsertCard, type CardWithSet, type CollectionItem,
-  type WishlistItem, type UserCollection, type InsertUserCollection,
-  type UserWishlist, type InsertUserWishlist, type CollectionStats
+  users, 
+  cardSets, 
+  cards, 
+  userCollections, 
+  userWishlists,
+  type User, 
+  type InsertUser,
+  type CardSet,
+  type InsertCardSet,
+  type Card,
+  type InsertCard,
+  type UserCollection,
+  type InsertUserCollection,
+  type UserWishlist,
+  type InsertUserWishlist,
+  type CardWithSet,
+  type CollectionItem,
+  type WishlistItem,
+  type CollectionStats
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, like, desc, count, sum, gte, lt } from "drizzle-orm";
+import { eq, ilike, and, count, sum, desc } from "drizzle-orm";
 
 interface IStorage {
   // Users
@@ -43,13 +57,23 @@ interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+    try {
+      const [user] = await db.select().from(users).where(eq(users.id, id));
+      return user || undefined;
+    } catch (error) {
+      console.error('Error getting user:', error);
+      return undefined;
+    }
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user || undefined;
+    try {
+      const [user] = await db.select().from(users).where(eq(users.username, username));
+      return user || undefined;
+    } catch (error) {
+      console.error('Error getting user by username:', error);
+      return undefined;
+    }
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -61,12 +85,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCardSets(): Promise<CardSet[]> {
-    return await db.select().from(cardSets).orderBy(desc(cardSets.year));
+    try {
+      return await db.select().from(cardSets);
+    } catch (error) {
+      console.error('Error getting card sets:', error);
+      return [];
+    }
   }
 
   async getCardSet(id: number): Promise<CardSet | undefined> {
-    const [cardSet] = await db.select().from(cardSets).where(eq(cardSets.id, id));
-    return cardSet || undefined;
+    try {
+      const [cardSet] = await db.select().from(cardSets).where(eq(cardSets.id, id));
+      return cardSet || undefined;
+    } catch (error) {
+      console.error('Error getting card set:', error);
+      return undefined;
+    }
   }
 
   async createCardSet(insertCardSet: InsertCardSet): Promise<CardSet> {
@@ -78,69 +112,128 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCards(filters?: { setId?: number; search?: string; rarity?: string; isInsert?: boolean }): Promise<CardWithSet[]> {
-    const baseQuery = db
-      .select({
-        id: cards.id,
-        setId: cards.setId,
-        cardNumber: cards.cardNumber,
-        name: cards.name,
-        variation: cards.variation,
-        isInsert: cards.isInsert,
-        imageUrl: cards.imageUrl,
-        rarity: cards.rarity,
-        estimatedValue: cards.estimatedValue,
-        createdAt: cards.createdAt,
-        set: {
-          id: cardSets.id,
-          name: cardSets.name,
-          year: cardSets.year,
-          description: cardSets.description,
-          totalCards: cardSets.totalCards,
-          createdAt: cardSets.createdAt,
-        }
-      })
-      .from(cards)
-      .innerJoin(cardSets, eq(cards.setId, cardSets.id));
+    try {
+      let query = db
+        .select({
+          id: cards.id,
+          setId: cards.setId,
+          cardNumber: cards.cardNumber,
+          name: cards.name,
+          variation: cards.variation,
+          isInsert: cards.isInsert,
+          frontImageUrl: cards.frontImageUrl,
+          backImageUrl: cards.backImageUrl,
+          description: cards.description,
+          rarity: cards.rarity,
+          estimatedValue: cards.estimatedValue,
+          createdAt: cards.createdAt,
+          set: {
+            id: cardSets.id,
+            name: cardSets.name,
+            year: cardSets.year,
+            description: cardSets.description,
+            totalCards: cardSets.totalCards,
+            createdAt: cardSets.createdAt,
+          }
+        })
+        .from(cards)
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id));
 
-    const conditions = [];
-    if (filters?.setId) conditions.push(eq(cards.setId, filters.setId));
-    if (filters?.search) conditions.push(like(cards.name, `%${filters.search}%`));
-    if (filters?.rarity) conditions.push(eq(cards.rarity, filters.rarity));
-    if (filters?.isInsert !== undefined) conditions.push(eq(cards.isInsert, filters.isInsert));
+      const conditions = [];
 
-    if (conditions.length > 0) {
-      return await baseQuery.where(and(...conditions)).orderBy(cards.cardNumber);
+      if (filters?.setId) {
+        conditions.push(eq(cards.setId, filters.setId));
+      }
+
+      if (filters?.search) {
+        conditions.push(ilike(cards.name, `%${filters.search}%`));
+      }
+
+      if (filters?.rarity) {
+        conditions.push(eq(cards.rarity, filters.rarity));
+      }
+
+      if (filters?.isInsert !== undefined) {
+        conditions.push(eq(cards.isInsert, filters.isInsert));
+      }
+
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+
+      const results = await query;
+      return results.map(row => ({
+        id: row.id,
+        setId: row.setId,
+        cardNumber: row.cardNumber,
+        name: row.name,
+        variation: row.variation,
+        isInsert: row.isInsert,
+        frontImageUrl: row.frontImageUrl,
+        backImageUrl: row.backImageUrl,
+        description: row.description,
+        rarity: row.rarity,
+        estimatedValue: row.estimatedValue,
+        createdAt: row.createdAt,
+        set: row.set
+      }));
+    } catch (error) {
+      console.error('Error getting cards:', error);
+      return [];
     }
-
-    return await baseQuery.orderBy(cards.cardNumber);
   }
 
   async getCard(id: number): Promise<CardWithSet | undefined> {
-    const [card] = await db
-      .select({
-        id: cards.id,
-        setId: cards.setId,
-        cardNumber: cards.cardNumber,
-        name: cards.name,
-        variation: cards.variation,
-        isInsert: cards.isInsert,
-        imageUrl: cards.imageUrl,
-        rarity: cards.rarity,
-        estimatedValue: cards.estimatedValue,
-        createdAt: cards.createdAt,
-        set: {
-          id: cardSets.id,
-          name: cardSets.name,
-          year: cardSets.year,
-          description: cardSets.description,
-          totalCards: cardSets.totalCards,
-          createdAt: cardSets.createdAt,
-        }
-      })
-      .from(cards)
-      .innerJoin(cardSets, eq(cards.setId, cardSets.id))
-      .where(eq(cards.id, id));
-    return card || undefined;
+    try {
+      const result = await db
+        .select({
+          id: cards.id,
+          setId: cards.setId,
+          cardNumber: cards.cardNumber,
+          name: cards.name,
+          variation: cards.variation,
+          isInsert: cards.isInsert,
+          frontImageUrl: cards.frontImageUrl,
+          backImageUrl: cards.backImageUrl,
+          description: cards.description,
+          rarity: cards.rarity,
+          estimatedValue: cards.estimatedValue,
+          createdAt: cards.createdAt,
+          set: {
+            id: cardSets.id,
+            name: cardSets.name,
+            year: cardSets.year,
+            description: cardSets.description,
+            totalCards: cardSets.totalCards,
+            createdAt: cardSets.createdAt,
+          }
+        })
+        .from(cards)
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+        .where(eq(cards.id, id));
+
+      if (result.length === 0) return undefined;
+
+      const row = result[0];
+      return {
+        id: row.id,
+        setId: row.setId,
+        cardNumber: row.cardNumber,
+        name: row.name,
+        variation: row.variation,
+        isInsert: row.isInsert,
+        frontImageUrl: row.frontImageUrl,
+        backImageUrl: row.backImageUrl,
+        description: row.description,
+        rarity: row.rarity,
+        estimatedValue: row.estimatedValue,
+        createdAt: row.createdAt,
+        set: row.set
+      };
+    } catch (error) {
+      console.error('Error getting card:', error);
+      return undefined;
+    }
   }
 
   async createCard(insertCard: InsertCard): Promise<Card> {
@@ -152,12 +245,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateCard(id: number, insertCard: InsertCard): Promise<Card | undefined> {
-    const [card] = await db
-      .update(cards)
-      .set(insertCard)
-      .where(eq(cards.id, id))
-      .returning();
-    return card || undefined;
+    try {
+      const [card] = await db
+        .update(cards)
+        .set(insertCard)
+        .where(eq(cards.id, id))
+        .returning();
+      return card || undefined;
+    } catch (error) {
+      console.error('Error updating card:', error);
+      return undefined;
+    }
   }
 
   async deleteCard(id: number): Promise<void> {
@@ -165,43 +263,58 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserCollection(userId: number): Promise<CollectionItem[]> {
-    const result = await db
-      .select()
-      .from(userCollections)
-      .leftJoin(cards, eq(userCollections.cardId, cards.id))
-      .leftJoin(cardSets, eq(cards.setId, cardSets.id))
-      .where(eq(userCollections.userId, userId))
-      .orderBy(desc(userCollections.acquiredDate));
+    try {
+      const results = await db
+        .select({
+          id: userCollections.id,
+          userId: userCollections.userId,
+          cardId: userCollections.cardId,
+          condition: userCollections.condition,
+          acquiredDate: userCollections.acquiredDate,
+          personalValue: userCollections.personalValue,
+          notes: userCollections.notes,
+          card: {
+            id: cards.id,
+            setId: cards.setId,
+            cardNumber: cards.cardNumber,
+            name: cards.name,
+            variation: cards.variation,
+            isInsert: cards.isInsert,
+            frontImageUrl: cards.frontImageUrl,
+            backImageUrl: cards.backImageUrl,
+            description: cards.description,
+            rarity: cards.rarity,
+            estimatedValue: cards.estimatedValue,
+            createdAt: cards.createdAt,
+            set: {
+              id: cardSets.id,
+              name: cardSets.name,
+              year: cardSets.year,
+              description: cardSets.description,
+              totalCards: cardSets.totalCards,
+              createdAt: cardSets.createdAt,
+            }
+          }
+        })
+        .from(userCollections)
+        .innerJoin(cards, eq(userCollections.cardId, cards.id))
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+        .where(eq(userCollections.userId, userId));
 
-    return result.map(row => ({
-      id: row.user_collections.id,
-      userId: row.user_collections.userId,
-      cardId: row.user_collections.cardId,
-      condition: row.user_collections.condition,
-      acquiredDate: row.user_collections.acquiredDate,
-      personalValue: row.user_collections.personalValue,
-      notes: row.user_collections.notes,
-      card: {
-        id: row.cards?.id || 0,
-        setId: row.cards?.setId || 0,
-        cardNumber: row.cards?.cardNumber || '',
-        name: row.cards?.name || '',
-        variation: row.cards?.variation,
-        isInsert: row.cards?.isInsert || false,
-        imageUrl: row.cards?.imageUrl,
-        rarity: row.cards?.rarity || '',
-        estimatedValue: row.cards?.estimatedValue,
-        createdAt: row.cards?.createdAt || new Date(),
-        set: {
-          id: row.card_sets?.id || 0,
-          name: row.card_sets?.name || '',
-          year: row.card_sets?.year || 0,
-          description: row.card_sets?.description,
-          totalCards: row.card_sets?.totalCards || 0,
-          createdAt: row.card_sets?.createdAt || new Date(),
-        }
-      }
-    }));
+      return results.map(row => ({
+        id: row.id,
+        userId: row.userId,
+        cardId: row.cardId,
+        condition: row.condition,
+        acquiredDate: row.acquiredDate,
+        personalValue: row.personalValue,
+        notes: row.notes,
+        card: row.card
+      }));
+    } catch (error) {
+      console.error('Error getting user collection:', error);
+      return [];
+    }
   }
 
   async addToCollection(insertUserCollection: InsertUserCollection): Promise<UserCollection> {
@@ -217,42 +330,58 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserWishlist(userId: number): Promise<WishlistItem[]> {
-    const result = await db
-      .select()
-      .from(userWishlists)
-      .leftJoin(cards, eq(userWishlists.cardId, cards.id))
-      .leftJoin(cardSets, eq(cards.setId, cardSets.id))
-      .where(eq(userWishlists.userId, userId))
-      .orderBy(userWishlists.priority, desc(userWishlists.addedDate));
+    try {
+      const results = await db
+        .select({
+          id: userWishlists.id,
+          userId: userWishlists.userId,
+          cardId: userWishlists.cardId,
+          priority: userWishlists.priority,
+          maxPrice: userWishlists.maxPrice,
+          notes: userWishlists.notes,
+          createdAt: userWishlists.createdAt,
+          card: {
+            id: cards.id,
+            setId: cards.setId,
+            cardNumber: cards.cardNumber,
+            name: cards.name,
+            variation: cards.variation,
+            isInsert: cards.isInsert,
+            frontImageUrl: cards.frontImageUrl,
+            backImageUrl: cards.backImageUrl,
+            description: cards.description,
+            rarity: cards.rarity,
+            estimatedValue: cards.estimatedValue,
+            createdAt: cards.createdAt,
+            set: {
+              id: cardSets.id,
+              name: cardSets.name,
+              year: cardSets.year,
+              description: cardSets.description,
+              totalCards: cardSets.totalCards,
+              createdAt: cardSets.createdAt,
+            }
+          }
+        })
+        .from(userWishlists)
+        .innerJoin(cards, eq(userWishlists.cardId, cards.id))
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+        .where(eq(userWishlists.userId, userId));
 
-    return result.map(row => ({
-      id: row.user_wishlists.id,
-      userId: row.user_wishlists.userId,
-      cardId: row.user_wishlists.cardId,
-      priority: row.user_wishlists.priority,
-      maxPrice: row.user_wishlists.maxPrice,
-      addedDate: row.user_wishlists.addedDate,
-      card: {
-        id: row.cards?.id || 0,
-        setId: row.cards?.setId || 0,
-        cardNumber: row.cards?.cardNumber || '',
-        name: row.cards?.name || '',
-        variation: row.cards?.variation,
-        isInsert: row.cards?.isInsert || false,
-        imageUrl: row.cards?.imageUrl,
-        rarity: row.cards?.rarity || '',
-        estimatedValue: row.cards?.estimatedValue,
-        createdAt: row.cards?.createdAt || new Date(),
-        set: {
-          id: row.card_sets?.id || 0,
-          name: row.card_sets?.name || '',
-          year: row.card_sets?.year || 0,
-          description: row.card_sets?.description,
-          totalCards: row.card_sets?.totalCards || 0,
-          createdAt: row.card_sets?.createdAt || new Date(),
-        }
-      }
-    }));
+      return results.map(row => ({
+        id: row.id,
+        userId: row.userId,
+        cardId: row.cardId,
+        priority: row.priority,
+        maxPrice: row.maxPrice,
+        notes: row.notes,
+        createdAt: row.createdAt,
+        card: row.card
+      }));
+    } catch (error) {
+      console.error('Error getting user wishlist:', error);
+      return [];
+    }
   }
 
   async addToWishlist(insertUserWishlist: InsertUserWishlist): Promise<UserWishlist> {
@@ -268,72 +397,114 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCollectionStats(userId: number): Promise<CollectionStats> {
-    const [collectionCount] = await db
-      .select({ count: count() })
-      .from(userCollections)
-      .where(eq(userCollections.userId, userId));
+    try {
+      // Get basic counts
+      const totalCardsResult = await db
+        .select({ count: count() })
+        .from(userCollections)
+        .where(eq(userCollections.userId, userId));
 
-    const [insertCount] = await db
-      .select({ count: count() })
-      .from(userCollections)
-      .leftJoin(cards, eq(userCollections.cardId, cards.id))
-      .where(and(eq(userCollections.userId, userId), eq(cards.isInsert, true)));
+      const insertCardsResult = await db
+        .select({ count: count() })
+        .from(userCollections)
+        .innerJoin(cards, eq(userCollections.cardId, cards.id))
+        .where(and(eq(userCollections.userId, userId), eq(cards.isInsert, true)));
 
-    const [valueSum] = await db
-      .select({ total: sum(cards.estimatedValue) })
-      .from(userCollections)
-      .leftJoin(cards, eq(userCollections.cardId, cards.id))
-      .where(eq(userCollections.userId, userId));
+      const totalValueResult = await db
+        .select({ total: sum(cards.estimatedValue) })
+        .from(userCollections)
+        .innerJoin(cards, eq(userCollections.cardId, cards.id))
+        .where(eq(userCollections.userId, userId));
 
-    const [wishlistCount] = await db
-      .select({ count: count() })
-      .from(userWishlists)
-      .where(eq(userWishlists.userId, userId));
+      const wishlistResult = await db
+        .select({ count: count() })
+        .from(userWishlists)
+        .where(eq(userWishlists.userId, userId));
 
-    return {
-      totalCards: collectionCount.count || 0,
-      insertCards: insertCount.count || 0,
-      totalValue: parseFloat(valueSum.total || "0"),
-      wishlistItems: wishlistCount.count || 0,
-      completedSets: 0,
-      recentAdditions: 0,
-      totalCardsGrowth: "+12.5%",
-      insertCardsGrowth: "+3.2%",
-      totalValueGrowth: "+18.7%",
-      wishlistGrowth: "-5.1%",
-    };
+      return {
+        totalCards: totalCardsResult[0]?.count || 0,
+        insertCards: insertCardsResult[0]?.count || 0,
+        totalValue: parseFloat(totalValueResult[0]?.total || '0'),
+        wishlistItems: wishlistResult[0]?.count || 0,
+        completedSets: 0,
+        recentAdditions: 0,
+        totalCardsGrowth: '+12.5%',
+        insertCardsGrowth: '+3.2%',
+        totalValueGrowth: '+18.7%',
+        wishlistGrowth: '-5.1%'
+      };
+    } catch (error) {
+      console.error('Error getting collection stats:', error);
+      return {
+        totalCards: 0,
+        insertCards: 0,
+        totalValue: 0,
+        wishlistItems: 0,
+        completedSets: 0,
+        recentAdditions: 0,
+        totalCardsGrowth: '+0%',
+        insertCardsGrowth: '+0%',
+        totalValueGrowth: '+0%',
+        wishlistGrowth: '+0%'
+      };
+    }
   }
 
   async getRecentCards(userId: number, limit: number): Promise<CollectionItem[]> {
-    return await db
-      .select({
-        id: userCollections.id,
-        userId: userCollections.userId,
-        cardId: userCollections.cardId,
-        condition: userCollections.condition,
-        acquiredDate: userCollections.acquiredDate,
-        personalValue: userCollections.personalValue,
-        notes: userCollections.notes,
-        card: {
-          id: cards.id,
-          setId: cards.setId,
-          cardNumber: cards.cardNumber,
-          name: cards.name,
-          variation: cards.variation,
-          isInsert: cards.isInsert,
-          imageUrl: cards.imageUrl,
-          rarity: cards.rarity,
-          estimatedValue: cards.estimatedValue,
-          createdAt: cards.createdAt,
-          set: cardSets
-        }
-      })
-      .from(userCollections)
-      .leftJoin(cards, eq(userCollections.cardId, cards.id))
-      .leftJoin(cardSets, eq(cards.setId, cardSets.id))
-      .where(eq(userCollections.userId, userId))
-      .orderBy(desc(userCollections.acquiredDate))
-      .limit(limit);
+    try {
+      const results = await db
+        .select({
+          id: userCollections.id,
+          userId: userCollections.userId,
+          cardId: userCollections.cardId,
+          condition: userCollections.condition,
+          acquiredDate: userCollections.acquiredDate,
+          personalValue: userCollections.personalValue,
+          notes: userCollections.notes,
+          card: {
+            id: cards.id,
+            setId: cards.setId,
+            cardNumber: cards.cardNumber,
+            name: cards.name,
+            variation: cards.variation,
+            isInsert: cards.isInsert,
+            frontImageUrl: cards.frontImageUrl,
+            backImageUrl: cards.backImageUrl,
+            description: cards.description,
+            rarity: cards.rarity,
+            estimatedValue: cards.estimatedValue,
+            createdAt: cards.createdAt,
+            set: {
+              id: cardSets.id,
+              name: cardSets.name,
+              year: cardSets.year,
+              description: cardSets.description,
+              totalCards: cardSets.totalCards,
+              createdAt: cardSets.createdAt,
+            }
+          }
+        })
+        .from(userCollections)
+        .innerJoin(cards, eq(userCollections.cardId, cards.id))
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+        .where(eq(userCollections.userId, userId))
+        .orderBy(desc(userCollections.acquiredDate))
+        .limit(limit);
+
+      return results.map(row => ({
+        id: row.id,
+        userId: row.userId,
+        cardId: row.cardId,
+        condition: row.condition,
+        acquiredDate: row.acquiredDate,
+        personalValue: row.personalValue,
+        notes: row.notes,
+        card: row.card
+      }));
+    } catch (error) {
+      console.error('Error getting recent cards:', error);
+      return [];
+    }
   }
 }
 
