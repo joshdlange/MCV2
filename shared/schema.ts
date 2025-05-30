@@ -9,7 +9,10 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   isAdmin: boolean("is_admin").default(false).notNull(),
-  plan: text("plan").default("free").notNull(),
+  plan: text("plan").default("SIDE_KICK").notNull(), // SIDE_KICK or SUPER_HERO
+  subscriptionStatus: text("subscription_status").default("active").notNull(), // active, cancelled, expired
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
   lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
