@@ -33,7 +33,7 @@ export function StatsDashboard() {
   if (!stats) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500">Failed to load statistics</p>
+        <p className="text-muted-foreground">Failed to load statistics</p>
       </div>
     );
   }
@@ -92,8 +92,8 @@ export function StatsDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">{stat.label}</p>
-                <p className="text-3xl font-bebas text-gray-900 mt-1">{stat.value}</p>
+                <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
+                <p className="text-3xl font-bebas text-card-foreground mt-1">{stat.value}</p>
                 <div className="flex items-center mt-2">
                   <span className={`text-xs font-medium flex items-center gap-1 ${
                     stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'
@@ -101,7 +101,7 @@ export function StatsDashboard() {
                     {getTrendIcon(stat.change)}
                     {stat.change}
                   </span>
-                  <span className="text-xs text-gray-500 ml-1">from last month</span>
+                  <span className="text-xs text-muted-foreground ml-1">from last month</span>
                 </div>
               </div>
               <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center`}>

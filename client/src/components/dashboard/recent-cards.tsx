@@ -18,14 +18,14 @@ export function RecentCards() {
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-gray-50 rounded-lg overflow-hidden animate-pulse">
-                <div className="w-full h-40 bg-gray-200"></div>
+              <div key={i} className="bg-card rounded-lg overflow-hidden animate-pulse border">
+                <div className="w-full h-40 bg-muted"></div>
                 <div className="p-3 space-y-2">
-                  <div className="h-4 bg-gray-200 rounded"></div>
-                  <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-4 bg-muted rounded"></div>
+                  <div className="h-3 bg-muted rounded w-3/4"></div>
                   <div className="flex justify-between">
-                    <div className="h-6 bg-gray-200 rounded w-16"></div>
-                    <div className="h-4 bg-gray-200 rounded w-12"></div>
+                    <div className="h-6 bg-muted rounded w-16"></div>
+                    <div className="h-4 bg-muted rounded w-12"></div>
                   </div>
                 </div>
               </div>
@@ -49,7 +49,7 @@ export function RecentCards() {
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <p className="text-gray-500">No cards in your collection yet</p>
+            <p className="text-muted-foreground">No cards in your collection yet</p>
             <Button className="mt-4 bg-marvel-red hover:bg-red-700">
               Add Your First Card
             </Button>
@@ -86,7 +86,7 @@ export function RecentCards() {
           {recentCards.map((item) => (
             <div 
               key={item.id} 
-              className="bg-gray-50 rounded-lg overflow-hidden comic-border card-hover cursor-pointer"
+              className="bg-card rounded-lg overflow-hidden comic-border card-hover cursor-pointer border"
             >
               {item.card.imageUrl ? (
                 <img 
@@ -95,15 +95,15 @@ export function RecentCards() {
                   className="w-full h-40 object-cover"
                 />
               ) : (
-                <div className="w-full h-40 bg-gray-200 flex items-center justify-center">
-                  <span className="text-gray-400">No Image</span>
+                <div className="w-full h-40 bg-muted flex items-center justify-center">
+                  <span className="text-muted-foreground">No Image</span>
                 </div>
               )}
               <div className="p-3">
-                <p className="font-medium text-gray-900 text-sm truncate">
+                <p className="font-medium text-card-foreground text-sm truncate">
                   {item.card.name} #{item.card.cardNumber}
                 </p>
-                <p className="text-xs text-gray-500">{item.card.set.name}</p>
+                <p className="text-xs text-muted-foreground">{item.card.set.name}</p>
                 <div className="flex items-center justify-between mt-2">
                   <Badge 
                     className={`text-xs text-white px-2 py-1 ${
@@ -113,7 +113,7 @@ export function RecentCards() {
                     {item.card.isInsert ? 'Insert' : item.card.rarity}
                   </Badge>
                   {item.card.estimatedValue && (
-                    <span className="text-sm font-semibold text-gray-900">
+                    <span className="text-sm font-semibold text-card-foreground">
                       ${parseFloat(item.card.estimatedValue).toFixed(0)}
                     </span>
                   )}
