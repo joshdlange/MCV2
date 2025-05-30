@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit, Plus, Check, ShoppingCart } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
+import { Star, Heart, Check, ShoppingCart, Trash2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { CollectionItem, CardWithSet } from "@shared/schema";
@@ -73,32 +74,6 @@ export default function MyCollection() {
     );
   }
 
-  const removeFromCollectionMutation = useMutation({
-    mutationFn: async (itemId: number) => {
-      return apiRequest('DELETE', `/api/collection/${itemId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
-      toast({ title: "Card removed from collection" });
-    },
-    onError: () => {
-      toast({ title: "Failed to remove card", variant: "destructive" });
-    }
-  });
-
-  const updateCollectionItemMutation = useMutation({
-    mutationFn: async ({ itemId, updates }: { itemId: number; updates: any }) => {
-      return apiRequest('PATCH', `/api/collection/${itemId}`, updates);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
-      toast({ title: "Collection item updated" });
-    },
-    onError: () => {
-      toast({ title: "Failed to update collection item", variant: "destructive" });
-    }
-  });
-
   const handleRemoveFromCollection = (itemId: number) => {
     removeFromCollectionMutation.mutate(itemId);
   };
@@ -131,191 +106,191 @@ export default function MyCollection() {
       return;
     }
 
-    Promise.all(
-      Array.from(selectedItems).map(itemId =>
-        updateCollectionItemMutation.mutateAsync({
-          itemId,
-          updates: { isForSale: true }
-        })
-      )
-    ).then(() => {
-      setSelectedItems(new Set());
-      toast({ title: `Added ${selectedItems.size} items to marketplace` });
+    // Update all selected items to be for sale
+    selectedItems.forEach(itemId => {
+      updateCollectionItemMutation.mutate({
+        itemId,
+        updates: { isForSale: true }
+      });
     });
+
+    setSelectedItems(new Set());
+    toast({ title: `Added ${selectedItems.size} items to marketplace` });
   };
 
-  const getRarityColor = (rarity: string, isInsert: boolean) => {
-    if (isInsert) return 'bg-marvel-gold';
-    
-    switch (rarity.toLowerCase()) {
-      case 'common': return 'bg-blue-600';
-      case 'uncommon': return 'bg-green-600';
-      case 'rare': return 'bg-marvel-red';
-      case 'epic': return 'bg-purple-600';
-      case 'legendary': return 'bg-orange-600';
-      default: return 'bg-gray-600';
+  const handleSelectAll = () => {
+    if (selectedItems.size === collection?.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(collection?.map(item => item.id) || []));
     }
   };
 
+  if (!collection || collection.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+          <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">MY COLLECTION</h2>
+        </div>
+        <div className="flex flex-col items-center justify-center p-12 text-center">
+          <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-6">
+            <Heart className="h-12 w-12 text-gray-400" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">No Cards in Collection</h3>
+          <p className="text-gray-600 mb-6 max-w-md">
+            Start building your Marvel card collection by browsing available cards and adding them to your collection.
+          </p>
+          <Button 
+            onClick={() => setLocation("/browse")}
+            className="bg-red-600 hover:bg-red-700 text-white"
+          >
+            Browse Cards
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Page Header */}
       <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">MY COLLECTION</h2>
-            <p className="text-sm text-gray-600 font-roboto">
-              {collection?.length || 0} cards in your collection
-            </p>
-          </div>
-          <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">MY COLLECTION</h2>
+          
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSelectAll}
+              className="text-gray-700 border-gray-300 hover:bg-gray-50"
+            >
+              <Checkbox 
+                checked={selectedItems.size === collection.length && collection.length > 0}
+                className="mr-2"
+              />
+              {selectedItems.size === collection.length ? 'Deselect All' : 'Select All'}
+            </Button>
+            
             {selectedItems.size > 0 && (
-              <Button 
+              <Button
                 onClick={handleBulkAddToMarketplace}
-                className="bg-green-600 text-white hover:bg-green-700"
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 text-white"
               >
-                <ShoppingCart className="w-4 h-4 mr-2" />
-                Add {selectedItems.size} to Marketplace
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                Add to Marketplace ({selectedItems.size})
               </Button>
             )}
-            <Button 
-              onClick={() => setLocation('/browse-cards')}
-              className="bg-marvel-red text-white hover:bg-red-700"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Cards
-            </Button>
           </div>
+        </div>
+        
+        <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+          <span>{collection.length} cards in collection</span>
+          <span>•</span>
+          <span>{collection.filter(item => item.isForSale).length} listed for sale</span>
         </div>
       </div>
 
-      {/* Collection Grid */}
       <div className="p-6">
-        {!collection || collection.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="max-w-md mx-auto">
-              <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <span className="text-gray-400 text-2xl">📚</span>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Your collection is empty</h3>
-              <p className="text-gray-500 mb-6">
-                Start building your Marvel card collection by adding your first card.
-              </p>
-              <Button className="bg-marvel-red hover:bg-red-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Your First Card
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {collection.map((item) => (
-              <Card key={item.id} className="group comic-border card-hover relative">
-                <CardContent className="p-0">
-                  {/* Selection checkbox */}
-                  <div className="absolute top-2 left-2 z-10">
-                    <input
-                      type="checkbox"
-                      checked={selectedItems.has(item.id)}
-                      onChange={() => handleToggleSelection(item.id)}
-                      className="w-4 h-4 text-marvel-red bg-white border-gray-300 rounded focus:ring-marvel-red"
-                    />
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          {collection.map((item) => (
+            <Card 
+              key={item.id} 
+              className="group hover:shadow-lg transition-all duration-200 cursor-pointer relative"
+              onClick={() => handleCardClick(item.card)}
+            >
+              <CardContent className="p-0">
+                {/* Selection Checkbox */}
+                <div 
+                  className="absolute top-2 left-2 z-10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleSelection(item.id);
+                  }}
+                >
+                  <Checkbox 
+                    checked={selectedItems.has(item.id)}
+                    className="bg-white/80 border-2"
+                  />
+                </div>
+
+                {/* Sale Status */}
+                {item.isForSale && (
+                  <div className="absolute top-2 right-2 z-10">
+                    <Badge className="bg-green-100 text-green-800 text-xs px-2 py-1">
+                      For Sale
+                    </Badge>
                   </div>
-                  
-                  {/* For sale indicator */}
-                  {item.isForSale && (
-                    <div className="absolute top-2 right-2 z-10">
-                      <div className="bg-green-600 text-white text-xs px-2 py-1 rounded">
-                        For Sale
-                      </div>
+                )}
+
+                {/* Card Image */}
+                <div className="relative aspect-[2.5/3.5] bg-gray-100 rounded-t-lg overflow-hidden">
+                  {item.card.frontImageUrl ? (
+                    <img
+                      src={item.card.frontImageUrl}
+                      alt={item.card.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
+                      <span className="text-red-600 font-bold text-xs text-center px-2">
+                        {item.card.name}
+                      </span>
                     </div>
                   )}
-                  
-                  <div 
-                    className="relative cursor-pointer"
-                    onClick={() => handleCardClick(item.card)}
-                  >
-                    {item.card.frontImageUrl ? (
-                      <img 
-                        src={item.card.frontImageUrl} 
-                        alt={item.card.name}
-                        className="w-full h-64 object-cover rounded-t-lg"
-                      />
-                    ) : (
-                      <div className="w-full h-64 bg-gray-200 rounded-t-lg flex items-center justify-center">
-                        <span className="text-gray-400">No Image</span>
-                      </div>
+
+                  {/* Badges */}
+                  <div className="absolute bottom-2 left-2 flex gap-1">
+                    {item.card.isInsert && (
+                      <Badge className="bg-yellow-100 text-yellow-800 text-xs p-1">
+                        <Star className="h-3 w-3" />
+                      </Badge>
                     )}
-                    
-                    {/* Overlay buttons */}
-                    <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2 rounded-t-lg">
+                  </div>
+                </div>
+
+                {/* Card Info */}
+                <div className="p-3 space-y-1">
+                  <h3 className="font-semibold text-sm text-gray-900 line-clamp-2 leading-tight">
+                    {item.card.name}
+                  </h3>
+                  <p className="text-xs text-gray-600">{item.card.set.name} #{item.card.cardNumber}</p>
+                  <div className="flex items-center justify-between mt-2">
+                    <Badge variant="outline" className="text-xs">
+                      {item.condition}
+                    </Badge>
+                    <div className="flex gap-1">
                       <Button
+                        variant="ghost"
                         size="sm"
-                        variant="outline"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleToggleForSale(item.id, item.isForSale || false);
+                          handleToggleForSale(item.id, item.isForSale);
                         }}
-                        className="bg-white hover:bg-gray-100"
+                        className="h-6 w-6 p-0 hover:bg-green-100"
                       >
-                        <ShoppingCart className="w-4 h-4" />
+                        <ShoppingCart className={`h-3 w-3 ${item.isForSale ? 'text-green-600' : 'text-gray-400'}`} />
                       </Button>
                       <Button
+                        variant="ghost"
                         size="sm"
-                        variant="destructive"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleRemoveFromCollection(item.id);
                         }}
+                        className="h-6 w-6 p-0 hover:bg-red-100"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="h-3 w-3 text-gray-400 hover:text-red-600" />
                       </Button>
                     </div>
                   </div>
-                  
-                  <div className="p-4">
-                    <h3 className="font-medium text-gray-900 text-sm truncate">
-                      {item.card.name} #{item.card.cardNumber}
-                    </h3>
-                    <p className="text-xs text-gray-500 mb-2">{item.card.set.name}</p>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        {item.card.isInsert && (
-                          <span className="text-xs font-medium text-marvel-gold">★ Insert</span>
-                        )}
-                        {item.card.estimatedValue && (
-                          <span className="text-sm font-semibold text-gray-900">
-                            ${parseFloat(item.card.estimatedValue).toFixed(0)}
-                          </span>
-                        )}
-                      </div>
-                      
-                      <div className="text-xs text-gray-500">
-                        <p>Condition: {item.condition}</p>
-                        {item.personalValue && (
-                          <p>Personal Value: ${parseFloat(item.personalValue).toFixed(0)}</p>
-                        )}
-                        {item.salePrice && (
-                          <p>Sale Price: ${parseFloat(item.salePrice).toFixed(0)}</p>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {item.notes && (
-                      <p className="text-xs text-gray-400 mt-2 truncate">
-                        {item.notes}
-                      </p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
 
-      {/* Card Detail Modal */}
       <CardDetailModal
         card={selectedCard}
         isOpen={isModalOpen}
@@ -324,6 +299,16 @@ export default function MyCollection() {
           setSelectedCard(null);
         }}
         isInCollection={true}
+        onRemoveFromCollection={() => {
+          if (selectedCard) {
+            const collectionItem = collection.find(item => item.card.id === selectedCard.id);
+            if (collectionItem) {
+              handleRemoveFromCollection(collectionItem.id);
+              setIsModalOpen(false);
+              setSelectedCard(null);
+            }
+          }
+        }}
       />
     </div>
   );
