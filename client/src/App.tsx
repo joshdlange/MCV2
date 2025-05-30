@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileHeader } from "@/components/layout/mobile-header";
 import { useAppStore } from "@/lib/store";
+import { Search } from "lucide-react";
+import { useLocation } from "wouter";
 import Dashboard from "@/pages/dashboard";
 import BrowseCards from "@/pages/browse-cards";
 import MyCollection from "@/pages/my-collection";
@@ -16,6 +18,24 @@ import AdminUsers from "@/pages/admin/users";
 import CardSearch from "@/pages/card-search";
 import MarketTrends from "@/pages/market-trends";
 import NotFound from "@/pages/not-found";
+
+function DesktopHeader() {
+  const [, setLocation] = useLocation();
+
+  return (
+    <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+      <div className="flex justify-end">
+        <button 
+          className="text-gray-600 hover:text-gray-900 flex items-center gap-2"
+          onClick={() => setLocation('/card-search')}
+        >
+          <Search className="w-5 h-5" />
+          <span className="text-sm">Quick Search</span>
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function MobileMenu() {
   const { isMobileMenuOpen, setMobileMenuOpen } = useAppStore();
@@ -48,6 +68,11 @@ function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile Header - shown on mobile only */}
       <div className="lg:hidden">
         <MobileHeader />
+      </div>
+      
+      {/* Desktop Header - shown on desktop only */}
+      <div className="hidden lg:block lg:ml-80">
+        <DesktopHeader />
       </div>
       
       {/* Mobile Menu Overlay */}
