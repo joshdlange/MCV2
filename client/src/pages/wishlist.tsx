@@ -1,28 +1,87 @@
-import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { useLocation } from "wouter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, ShoppingCart } from "lucide-react";
-import type { WishlistItem } from "@shared/schema";
+import { CardDetailModal } from "@/components/cards/card-detail-modal";
+import { Star, Heart, Plus, Trash2 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { WishlistItem, CardWithSet } from "@shared/schema";
 
 export default function Wishlist() {
+  const [, setLocation] = useLocation();
+  const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
   const { data: wishlist, isLoading } = useQuery<WishlistItem[]>({
     queryKey: ["/api/wishlist"],
   });
+
+  const removeFromWishlistMutation = useMutation({
+    mutationFn: async (itemId: number) => {
+      return apiRequest('DELETE', `/api/wishlist/${itemId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/wishlist'] });
+      toast({ title: "Card removed from wishlist" });
+    },
+    onError: () => {
+      toast({ title: "Failed to remove card", variant: "destructive" });
+    }
+  });
+
+  const addToCollectionMutation = useMutation({
+    mutationFn: async (cardId: number) => {
+      return apiRequest('POST', '/api/collection', {
+        cardId,
+        condition: 'Near Mint'
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
+      toast({ title: "Card added to collection" });
+    },
+    onError: () => {
+      toast({ title: "Failed to add to collection", variant: "destructive" });
+    }
+  });
+
+  const handleCardClick = (card: CardWithSet) => {
+    setSelectedCard(card);
+    setIsModalOpen(true);
+  };
+
+  const handleRemoveFromWishlist = (itemId: number) => {
+    removeFromWishlistMutation.mutate(itemId);
+  };
+
+  const handleAddToCollection = (item: WishlistItem) => {
+    addToCollectionMutation.mutate(item.card.id);
+  };
+
+  const handleMoveToCollection = (item: WishlistItem) => {
+    // Add to collection and remove from wishlist
+    addToCollectionMutation.mutate(item.card.id);
+    removeFromWishlistMutation.mutate(item.id);
+  };
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-          <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">WISHLIST</h2>
+          <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">MY WISHLIST</h2>
         </div>
         <div className="p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {[...Array(6)].map((_, i) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {[...Array(8)].map((_, i) => (
               <Card key={i} className="animate-pulse">
                 <CardContent className="p-0">
-                  <div className="w-full h-64 bg-gray-200 rounded-t-lg"></div>
-                  <div className="p-4 space-y-2">
+                  <div className="w-full aspect-[2.5/3.5] bg-gray-200 rounded-t-lg"></div>
+                  <div className="p-3 space-y-2">
                     <div className="h-4 bg-gray-200 rounded"></div>
                     <div className="h-3 bg-gray-200 rounded w-3/4"></div>
                   </div>
@@ -35,160 +94,172 @@ export default function Wishlist() {
     );
   }
 
-  const handleRemoveFromWishlist = (itemId: number) => {
-    console.log('Remove from wishlist:', itemId);
-  };
-
-  const handleMoveToCollection = (item: WishlistItem) => {
-    console.log('Move to collection:', item);
-  };
-
-  const getRarityColor = (rarity: string, isInsert: boolean) => {
-    if (isInsert) return 'bg-marvel-gold';
-    
-    switch (rarity.toLowerCase()) {
-      case 'common': return 'bg-blue-600';
-      case 'uncommon': return 'bg-green-600';
-      case 'rare': return 'bg-marvel-red';
-      case 'epic': return 'bg-purple-600';
-      case 'legendary': return 'bg-orange-600';
-      default: return 'bg-gray-600';
-    }
-  };
-
-  const getPriorityColor = (priority: number) => {
-    switch (priority) {
-      case 1: return 'bg-red-500';
-      case 2: return 'bg-orange-500';
-      case 3: return 'bg-yellow-500';
-      case 4: return 'bg-green-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
-  const getPriorityLabel = (priority: number) => {
-    switch (priority) {
-      case 1: return 'High';
-      case 2: return 'Medium';
-      case 3: return 'Low';
-      case 4: return 'Someday';
-      default: return 'Normal';
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Page Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">WISHLIST</h2>
-            <p className="text-sm text-gray-600 font-roboto">
-              {wishlist?.length || 0} cards on your wishlist
-            </p>
+  if (!wishlist || wishlist.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+          <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">MY WISHLIST</h2>
+        </div>
+        <div className="flex flex-col items-center justify-center p-12 text-center">
+          <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-6">
+            <Heart className="h-12 w-12 text-gray-400" />
           </div>
-          <Button className="bg-marvel-red text-white hover:bg-red-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Add to Wishlist
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">No Cards in Wishlist</h3>
+          <p className="text-gray-600 mb-6 max-w-md">
+            Start building your wishlist by browsing cards and clicking the heart icon to add cards you want to collect.
+          </p>
+          <Button 
+            onClick={() => setLocation("/browse")}
+            className="bg-red-600 hover:bg-red-700 text-white"
+          >
+            Browse Cards
           </Button>
         </div>
       </div>
+    );
+  }
 
-      {/* Wishlist Grid */}
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">MY WISHLIST</h2>
+        </div>
+        
+        <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+          <span>{wishlist.length} cards in wishlist</span>
+          <span>•</span>
+          <span>Total estimated value: ${wishlist.reduce((sum, item) => sum + parseFloat(item.maxPrice || '0'), 0).toFixed(2)}</span>
+        </div>
+      </div>
+
       <div className="p-6">
-        {!wishlist || wishlist.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="max-w-md mx-auto">
-              <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <span className="text-gray-400 text-2xl">💝</span>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Your wishlist is empty</h3>
-              <p className="text-gray-500 mb-6">
-                Add cards you want to acquire to keep track of your collecting goals.
-              </p>
-              <Button className="bg-marvel-red hover:bg-red-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Your First Card
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {wishlist.map((item) => (
-              <Card key={item.id} className="group comic-border card-hover">
-                <CardContent className="p-0">
-                  <div className="relative">
-                    {item.card.imageUrl ? (
-                      <img 
-                        src={item.card.imageUrl} 
-                        alt={item.card.name}
-                        className="w-full h-64 object-cover rounded-t-lg"
-                      />
-                    ) : (
-                      <div className="w-full h-64 bg-gray-200 rounded-t-lg flex items-center justify-center">
-                        <span className="text-gray-400">No Image</span>
-                      </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          {wishlist.map((item) => (
+            <Card 
+              key={item.id} 
+              className="group hover:shadow-lg transition-all duration-200 cursor-pointer"
+              onClick={() => handleCardClick(item.card)}
+            >
+              <CardContent className="p-0">
+                {/* Card Image */}
+                <div className="relative aspect-[2.5/3.5] bg-gray-100 rounded-t-lg overflow-hidden">
+                  {item.card.frontImageUrl ? (
+                    <img
+                      src={item.card.frontImageUrl}
+                      alt={item.card.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
+                      <span className="text-red-600 font-bold text-xs text-center px-2">
+                        {item.card.name}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Badges */}
+                  <div className="absolute bottom-2 left-2 flex gap-1">
+                    {item.card.isInsert && (
+                      <Badge className="bg-yellow-100 text-yellow-800 text-xs p-1">
+                        <Star className="h-3 w-3" />
+                      </Badge>
                     )}
-                    
-                    {/* Priority badge */}
-                    <div className="absolute top-2 left-2">
-                      <Badge className={`text-xs text-white ${getPriorityColor(item.priority)}`}>
-                        {getPriorityLabel(item.priority)}
+                  </div>
+
+                  {/* Priority Badge */}
+                  {item.priority && item.priority > 3 && (
+                    <div className="absolute top-2 right-2">
+                      <Badge className="bg-red-100 text-red-800 text-xs px-2 py-1">
+                        High Priority
                       </Badge>
                     </div>
-                    
-                    {/* Overlay buttons */}
-                    <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2 rounded-t-lg">
-                      <Button
-                        size="sm"
-                        onClick={() => handleMoveToCollection(item)}
-                        className="bg-marvel-red hover:bg-red-700"
-                      >
-                        <ShoppingCart className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleRemoveFromWishlist(item.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
+                  )}
+                </div>
+
+                {/* Card Info */}
+                <div className="p-3 space-y-1">
+                  <h3 className="font-semibold text-sm text-gray-900 line-clamp-2 leading-tight">
+                    {item.card.name}
+                  </h3>
+                  <p className="text-xs text-gray-600">
+                    {item.card.set.name} #{item.card.cardNumber}
+                  </p>
                   
-                  <div className="p-4">
-                    <h3 className="font-medium text-gray-900 text-sm truncate">
-                      {item.card.name} #{item.card.cardNumber}
-                    </h3>
-                    <p className="text-xs text-gray-500 mb-2">{item.card.set.name}</p>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Badge 
-                          className={`text-xs text-white px-2 py-1 ${getRarityColor(item.card.rarity, item.card.isInsert)}`}
-                        >
-                          {item.card.isInsert ? 'Insert' : item.card.rarity}
-                        </Badge>
-                        {item.card.estimatedValue && (
-                          <span className="text-sm font-semibold text-gray-900">
-                            ${parseFloat(item.card.estimatedValue).toFixed(0)}
-                          </span>
-                        )}
-                      </div>
-                      
-                      {item.maxPrice && (
-                        <div className="text-xs text-gray-500">
-                          <p>Max Price: ${parseFloat(item.maxPrice).toFixed(0)}</p>
-                        </div>
-                      )}
+                  {item.maxPrice && (
+                    <p className="text-xs text-green-600 font-medium">
+                      Max Price: ${item.maxPrice}
+                    </p>
+                  )}
+
+                  <div className="flex items-center justify-between mt-2 gap-1">
+                    <Badge variant="outline" className="text-xs">
+                      Priority: {item.priority}/5
+                    </Badge>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddToCollection(item);
+                        }}
+                        className="h-6 w-6 p-0 hover:bg-green-100"
+                        title="Add to Collection"
+                      >
+                        <Plus className="h-3 w-3 text-gray-400 hover:text-green-600" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveFromWishlist(item.id);
+                        }}
+                        className="h-6 w-6 p-0 hover:bg-red-100"
+                        title="Remove from Wishlist"
+                      >
+                        <Trash2 className="h-3 w-3 text-gray-400 hover:text-red-600" />
+                      </Button>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
+
+      <CardDetailModal
+        card={selectedCard}
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedCard(null);
+        }}
+        isInCollection={false}
+        isInWishlist={true}
+        onAddToCollection={() => {
+          if (selectedCard) {
+            const wishlistItem = wishlist.find(item => item.card.id === selectedCard.id);
+            if (wishlistItem) {
+              handleMoveToCollection(wishlistItem);
+              setIsModalOpen(false);
+              setSelectedCard(null);
+            }
+          }
+        }}
+        onRemoveFromWishlist={() => {
+          if (selectedCard) {
+            const wishlistItem = wishlist.find(item => item.card.id === selectedCard.id);
+            if (wishlistItem) {
+              handleRemoveFromWishlist(wishlistItem.id);
+              setIsModalOpen(false);
+              setSelectedCard(null);
+            }
+          }
+        }}
+      />
     </div>
   );
 }

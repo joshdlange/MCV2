@@ -391,6 +391,7 @@ export class DatabaseStorage implements IStorage {
         personalValue: userCollections.personalValue,
         salePrice: userCollections.salePrice,
         isForSale: userCollections.isForSale,
+        serialNumber: userCollections.serialNumber,
         notes: userCollections.notes,
         card: {
           id: cards.id,
