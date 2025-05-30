@@ -22,6 +22,32 @@ export default function MyCollection() {
     queryKey: ["/api/collection"],
   });
 
+  const removeFromCollectionMutation = useMutation({
+    mutationFn: async (itemId: number) => {
+      return apiRequest('DELETE', `/api/collection/${itemId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
+      toast({ title: "Card removed from collection" });
+    },
+    onError: () => {
+      toast({ title: "Failed to remove card", variant: "destructive" });
+    }
+  });
+
+  const updateCollectionItemMutation = useMutation({
+    mutationFn: async ({ itemId, updates }: { itemId: number; updates: any }) => {
+      return apiRequest('PATCH', `/api/collection/${itemId}`, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
+      toast({ title: "Collection item updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update collection item", variant: "destructive" });
+    }
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -288,6 +314,17 @@ export default function MyCollection() {
           </div>
         )}
       </div>
+
+      {/* Card Detail Modal */}
+      <CardDetailModal
+        card={selectedCard}
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedCard(null);
+        }}
+        isInCollection={true}
+      />
     </div>
   );
 }

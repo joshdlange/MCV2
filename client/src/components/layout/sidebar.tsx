@@ -12,7 +12,8 @@ import {
   Edit,
   Search,
   TrendingUp,
-  Users
+  Users,
+  Store
 } from "lucide-react";
 
 const navigationItems: NavigationItem[] = [
@@ -20,6 +21,7 @@ const navigationItems: NavigationItem[] = [
   { href: "/browse", label: "Browse Cards", icon: "Grid3X3" },
   { href: "/collection", label: "My Collection", icon: "FolderOpen" },
   { href: "/wishlist", label: "Wishlist", icon: "Heart" },
+  { href: "/marketplace", label: "Marketplace", icon: "Store" },
   { href: "/trends", label: "Market Trends", icon: "TrendingUp" },
 ];
 
@@ -38,6 +40,7 @@ const iconMap = {
   Search,
   TrendingUp,
   Users,
+  Store,
 };
 
 export function Sidebar() {
