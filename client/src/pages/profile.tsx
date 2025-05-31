@@ -143,15 +143,26 @@ export default function Profile() {
               </Avatar>
               
               <div className="flex-1 text-center md:text-left">
-                <div className="flex flex-col md:flex-row md:items-center gap-3 mb-2">
-                  <h1 className="text-3xl font-bold">{user.displayName || 'User'}</h1>
-                  {user.isAdmin && (
-                    <Badge className="bg-red-600">
-                      <Shield className="w-3 h-3 mr-1" />
-                      Admin
-                    </Badge>
-                  )}
-                  {getPlanBadge(userProfile?.plan || 'SIDE_KICK')}
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-2">
+                  <div className="flex flex-col md:flex-row md:items-center gap-3">
+                    <h1 className="text-3xl font-bold">{user.displayName || 'User'}</h1>
+                    {user.isAdmin && (
+                      <Badge className="bg-red-600">
+                        <Shield className="w-3 h-3 mr-1" />
+                        Admin
+                      </Badge>
+                    )}
+                    {getPlanBadge(userProfile?.plan || 'SIDE_KICK')}
+                  </div>
+                  <Button 
+                    onClick={() => setIsEditing(!isEditing)} 
+                    variant="outline" 
+                    size="sm"
+                    className="bg-background border-border text-foreground hover:bg-accent hover:text-accent-foreground"
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    {isEditing ? 'Cancel' : 'Edit Profile'}
+                  </Button>
                 </div>
                 
                 <p className="text-muted-foreground mb-2">{user.email}</p>
@@ -228,6 +239,7 @@ export default function Profile() {
                       onChange={(e) => setProfileData(prev => ({ ...prev, displayName: e.target.value }))}
                       disabled={!isEditing}
                       placeholder="Your display name"
+                      className="bg-background text-foreground border-border"
                     />
                   </div>
                   <div>
@@ -238,6 +250,7 @@ export default function Profile() {
                       onChange={(e) => setProfileData(prev => ({ ...prev, location: e.target.value }))}
                       disabled={!isEditing}
                       placeholder="City, Country"
+                      className="bg-background text-foreground border-border"
                     />
                     <MapPin className="w-4 h-4 inline mr-1 mt-1 text-muted-foreground" />
                   </div>
@@ -251,6 +264,7 @@ export default function Profile() {
                     onChange={(e) => setProfileData(prev => ({ ...prev, website: e.target.value }))}
                     disabled={!isEditing}
                     placeholder="https://yourwebsite.com"
+                    className="bg-background text-foreground border-border"
                   />
                   <Globe className="w-4 h-4 inline mr-1 mt-1 text-muted-foreground" />
                 </div>
@@ -264,6 +278,7 @@ export default function Profile() {
                     disabled={!isEditing}
                     placeholder="Tell us about yourself and your collecting interests..."
                     rows={4}
+                    className="bg-background text-foreground border-border"
                   />
                 </div>
 
