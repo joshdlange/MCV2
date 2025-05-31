@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 interface OptimizedImageProps {
@@ -19,6 +19,17 @@ const IMAGE_CONFIGS = {
   mobile: { w: 150, h: 210, q: 70 },
 } as const;
 
+// Convert Google Drive URLs to direct download format
+function convertGoogleDriveUrl(url: string): string {
+  if (!url.includes('drive.google.com')) return url;
+  
+  const fileIdMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (fileIdMatch) {
+    return `https://drive.google.com/uc?export=view&id=${fileIdMatch[1]}`;
+  }
+  return url;
+}
+
 function buildCloudinaryUrl(originalUrl: string, config: typeof IMAGE_CONFIGS[keyof typeof IMAGE_CONFIGS]): string {
   if (!originalUrl) return '';
   
@@ -27,10 +38,13 @@ function buildCloudinaryUrl(originalUrl: string, config: typeof IMAGE_CONFIGS[ke
     return originalUrl;
   }
   
+  // Convert Google Drive URLs to direct download format first
+  const directUrl = convertGoogleDriveUrl(originalUrl);
+  
   const cloudName = 'dqydhlszn'; // Using your Cloudinary cloud name directly
   if (!cloudName) {
-    // Fallback to original URL if Cloudinary not configured
-    return originalUrl;
+    // Fallback to converted URL if Cloudinary not configured
+    return directUrl;
   }
   
   const { w, h, q } = config;
@@ -41,8 +55,8 @@ function buildCloudinaryUrl(originalUrl: string, config: typeof IMAGE_CONFIGS[ke
   if (h) transformations += `,h_${h}`;
   if (c) transformations += `,c_${c}`;
   
-  // Use Cloudinary's fetch functionality to optimize any URL
-  return `https://res.cloudinary.com/${cloudName}/image/fetch/${transformations}/${encodeURIComponent(originalUrl)}`;
+  // Use Cloudinary's fetch functionality to optimize the direct URL
+  return `https://res.cloudinary.com/${cloudName}/image/fetch/${transformations}/${encodeURIComponent(directUrl)}`;
 }
 
 export function OptimizedImage({ 
@@ -55,9 +69,18 @@ export function OptimizedImage({
 }: OptimizedImageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [imgSrc, setImgSrc] = useState('');
   
   const config = IMAGE_CONFIGS[size];
-  const optimizedUrl = buildCloudinaryUrl(src, config);
+  
+  // Set up the image source when src changes
+  useEffect(() => {
+    if (src) {
+      setIsLoading(true);
+      setHasError(false);
+      setImgSrc(convertGoogleDriveUrl(src));
+    }
+  }, [src]);
   
   if (!src || hasError) {
     return (
@@ -92,7 +115,7 @@ export function OptimizedImage({
         </div>
       )}
       <img
-        src={optimizedUrl}
+        src={imgSrc}
         alt={alt}
         loading={loading}
         className={cn(
