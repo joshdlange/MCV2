@@ -472,10 +472,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User Collection Routes
-  app.get("/api/collection", async (req, res) => {
+  app.get("/api/collection", authenticateUser, async (req: any, res) => {
     try {
-      // Mock user ID - in real app this would come from session
-      const userId = 1;
+      const userId = req.user.id;
       const collection = await storage.getUserCollection(userId);
       res.json(collection);
     } catch (error) {
@@ -483,9 +482,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/collection", async (req, res) => {
+  app.post("/api/collection", authenticateUser, async (req: any, res) => {
     try {
-      const userId = 1; // Mock user ID
+      const userId = req.user.id;
       const data = insertUserCollectionSchema.parse({ ...req.body, userId });
       const item = await storage.addToCollection(data);
       res.json(item);
@@ -510,9 +509,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User Wishlist Routes
-  app.get("/api/wishlist", async (req, res) => {
+  app.get("/api/wishlist", authenticateUser, async (req: any, res) => {
     try {
-      const userId = 1; // Mock user ID
+      const userId = req.user.id;
       const wishlist = await storage.getUserWishlist(userId);
       res.json(wishlist);
     } catch (error) {
@@ -520,9 +519,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/wishlist", async (req, res) => {
+  app.post("/api/wishlist", authenticateUser, async (req, res) => {
     try {
-      const userId = 1; // Mock user ID
+      const userId = req.user.id;
       const { cardId } = req.body;
       
       // Check if card is already in wishlist
@@ -578,9 +577,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Stats Route
-  app.get("/api/stats", async (req, res) => {
+  app.get("/api/stats", authenticateUser, async (req: any, res) => {
     try {
-      const userId = 1; // Mock user ID
+      const userId = req.user.id;
       const stats = await storage.getCollectionStats(userId);
       res.json(stats);
     } catch (error) {
@@ -589,9 +588,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Recent Cards Route
-  app.get("/api/recent-cards", async (req, res) => {
+  app.get("/api/recent-cards", authenticateUser, async (req: any, res) => {
     try {
-      const userId = 1; // Mock user ID
+      const userId = req.user.id;
       const limit = parseInt(req.query.limit as string) || 6;
       const recentCards = await storage.getRecentCards(userId, limit);
       res.json(recentCards);
