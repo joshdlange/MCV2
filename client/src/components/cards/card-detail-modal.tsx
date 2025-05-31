@@ -206,7 +206,7 @@ export function CardDetailModal({
                   variant="outline"
                   size="sm"
                   onClick={() => setShowBack(!showBack)}
-                  className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-white/90 hover:bg-white"
+                  className="absolute bottom-2 left-1/2 transform -translate-x-1/2 hover:bg-white bg-[#141414]"
                 >
                   <RotateCcw className="w-4 h-4 mr-2" />
                   {showBack ? "Front" : "Back"}
