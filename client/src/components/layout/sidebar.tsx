@@ -21,7 +21,8 @@ import {
   Search,
   TrendingUp,
   Users,
-  Store
+  Store,
+  User
 } from "lucide-react";
 
 const getNavigationItems = (userPlan: string): NavigationItem[] => [
@@ -186,15 +187,20 @@ export function Sidebar() {
       {user && (
         <div className="border-t border-border p-4">
           <div className="flex items-center space-x-3">
-            <img 
-              src={user.photoURL || '/default-avatar.png'} 
-              alt="User avatar" 
-              className="w-8 h-8 rounded-full" 
-            />
+            <Link href="/profile">
+              <img 
+                src={user.photoURL || '/default-avatar.png'} 
+                alt="User avatar" 
+                className="w-8 h-8 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all" 
+                title="View Profile"
+              />
+            </Link>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">
-                {user.displayName || 'User'}
-              </p>
+              <Link href="/profile" className="block">
+                <p className="text-sm font-medium text-foreground truncate hover:text-blue-600 cursor-pointer">
+                  {user.displayName || 'User'}
+                </p>
+              </Link>
               <p className="text-xs text-muted-foreground truncate">
                 {user.email}
               </p>

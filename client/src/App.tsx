@@ -15,6 +15,7 @@ import BrowseCards from "@/pages/browse-cards";
 import MyCollection from "@/pages/my-collection";
 import Wishlist from "@/pages/wishlist";
 import Marketplace from "@/pages/marketplace";
+import Profile from "@/pages/profile";
 import AdminCardManagement from "@/pages/admin/card-management";
 import AdminUsers from "@/pages/admin/users";
 import CardSearch from "@/pages/card-search";
@@ -98,6 +99,7 @@ function Router() {
       <Route path="/wishlist" component={Wishlist} />
       <Route path="/marketplace" component={Marketplace} />
       <Route path="/trends" component={MarketTrends} />
+      <Route path="/profile" component={Profile} />
       <Route path="/admin/cards" component={AdminCardManagement} />
       <Route path="/admin/users" component={AdminUsers} />
       <Route component={NotFound} />
