@@ -185,7 +185,7 @@ export default function Profile() {
                   </div>
                   <div className="flex items-center gap-1">
                     <CreditCard className="w-4 h-4 text-green-500" />
-                    <span className="font-medium">${stats?.totalValue || 0}</span>
+                    <span className="font-medium">${parseFloat((stats?.totalValue || 0).toString()).toFixed(2)}</span>
                     <span className="text-muted-foreground">Value</span>
                   </div>
                 </div>

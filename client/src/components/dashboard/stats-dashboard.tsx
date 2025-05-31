@@ -55,7 +55,7 @@ export function StatsDashboard() {
     },
     {
       label: "Total Value",
-      value: `$${stats.totalValue.toLocaleString()}`,
+      value: `$${parseFloat(stats.totalValue.toString()).toFixed(2)}`,
       change: stats.totalValueGrowth,
       icon: "dollar",
       color: "bg-green-500",

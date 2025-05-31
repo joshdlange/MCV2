@@ -143,7 +143,7 @@ export function RecentCards() {
                 </p>
                 {item.card.estimatedValue && (
                   <p className="text-xs font-semibold text-green-600 mt-1">
-                    ${parseFloat(item.card.estimatedValue).toFixed(0)}
+                    ${parseFloat(item.card.estimatedValue).toFixed(2)}
                   </p>
                 )}
               </div>

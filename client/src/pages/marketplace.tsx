@@ -241,7 +241,7 @@ export default function Marketplace() {
                     {item.salePrice && (
                       <div className="absolute top-2 right-2">
                         <Badge className="bg-green-100 text-green-800 text-sm font-bold px-2 py-1">
-                          ${item.salePrice}
+                          ${parseFloat(item.salePrice).toFixed(2)}
                         </Badge>
                       </div>
                     )}
