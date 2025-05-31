@@ -7,7 +7,8 @@ import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
-import type { CardWithSet, CollectionItem, WishlistItem } from "@shared/schema";
+import type { CardWithSet, CollectionItem, WishlistItem } from "@/types/schema";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 import { CardFilters } from "@/types";
 
 interface CardGridProps {
