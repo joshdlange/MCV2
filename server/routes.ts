@@ -51,17 +51,34 @@ const authenticateUser = async (req: any, res: any, next: any) => {
     
     if (!user) {
       // Create new user from Firebase auth
-      const userData = {
-        firebaseUid: firebaseUid as string,
-        username: req.headers['x-user-name'] as string || 'User',
-        email: userEmail,
-        displayName: req.headers['x-display-name'] as string || null,
-        photoURL: req.headers['x-photo-url'] as string || null,
-        isAdmin: userEmail === 'joshdlange045@gmail.com', // Make you admin
-        plan: 'SIDE_KICK',
-        subscriptionStatus: 'active'
-      };
-      user = await storage.createUser(userData);
+      try {
+        const userData = {
+          firebaseUid: firebaseUid as string,
+          username: req.headers['x-user-name'] as string || 'User',
+          email: userEmail,
+          displayName: req.headers['x-display-name'] as string || null,
+          photoURL: req.headers['x-photo-url'] as string || null,
+          isAdmin: userEmail === 'joshdlange045@gmail.com', // Make you admin
+          plan: 'SIDE_KICK',
+          subscriptionStatus: 'active'
+        };
+        user = await storage.createUser(userData);
+      } catch (error: any) {
+        // If user already exists with this username, try to find and update them
+        if (error.code === '23505') {
+          user = await storage.getUserByUsername(req.headers['x-user-name'] as string || userEmail);
+          if (user && !user.firebaseUid) {
+            user = await storage.updateUser(user.id, { 
+              firebaseUid: firebaseUid as string,
+              displayName: req.headers['x-display-name'] as string || user.displayName,
+              photoURL: req.headers['x-photo-url'] as string || user.photoURL
+            });
+          }
+        }
+        if (!user) {
+          throw error;
+        }
+      }
     }
 
     req.user = user;
@@ -519,7 +536,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/wishlist", authenticateUser, async (req, res) => {
+  app.post("/api/wishlist", authenticateUser, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { cardId } = req.body;
