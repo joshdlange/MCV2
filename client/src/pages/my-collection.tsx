@@ -18,6 +18,7 @@ export default function MyCollection() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -117,6 +118,24 @@ export default function MyCollection() {
     setSelectedItems(newSelection);
   };
 
+  const handleToggleSelectionMode = () => {
+    if (isSelectionMode) {
+      // Exit selection mode and clear selections
+      setIsSelectionMode(false);
+      setSelectedItems(new Set());
+    } else {
+      // Enter selection mode
+      setIsSelectionMode(true);
+    }
+  };
+
+  const formatCondition = (condition: string) => {
+    return condition
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   const handleBulkAddToMarketplace = () => {
     if (selectedItems.size === 0) {
       toast({ title: "Please select items to add to marketplace", variant: "destructive" });
@@ -187,14 +206,20 @@ export default function MyCollection() {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleSelectAll}
-              className="bg-gray-800 text-white border-gray-800 hover:bg-gray-700"
+              onClick={handleToggleSelectionMode}
+              className={isSelectionMode ? "bg-red-600 text-white border-red-600 hover:bg-red-700" : "bg-gray-800 text-white border-gray-800 hover:bg-gray-700"}
             >
-              <Checkbox 
-                checked={selectedItems.size === filteredCollection.length && filteredCollection.length > 0}
-                className="mr-2"
-              />
-              {selectedItems.size === filteredCollection.length ? 'Deselect All' : 'Select All'}
+              {isSelectionMode ? (
+                <>
+                  <Check className="mr-2 h-4 w-4" />
+                  Exit Selection
+                </>
+              ) : (
+                <>
+                  <Checkbox className="mr-2" />
+                  Select Items
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -221,19 +246,21 @@ export default function MyCollection() {
               onClick={() => handleCardClick(item.card)}
             >
               <CardContent className="p-0">
-                {/* Selection Checkbox */}
-                <div 
-                  className="absolute top-2 left-2 z-10"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleToggleSelection(item.id);
-                  }}
-                >
-                  <Checkbox 
-                    checked={selectedItems.has(item.id)}
-                    className="bg-white/80 border-2"
-                  />
-                </div>
+                {/* Selection Checkbox - Only visible in selection mode */}
+                {isSelectionMode && (
+                  <div 
+                    className="absolute top-2 left-2 z-10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleSelection(item.id);
+                    }}
+                  >
+                    <Checkbox 
+                      checked={selectedItems.has(item.id)}
+                      className="bg-white/80 border-2"
+                    />
+                  </div>
+                )}
 
                 {/* Sale Status and Favorite */}
                 <div className="absolute top-2 right-2 z-10 flex gap-1">
@@ -291,7 +318,7 @@ export default function MyCollection() {
                   <p className="text-xs text-gray-600">{item.card.set.name} #{item.card.cardNumber}</p>
                   <div className="flex items-center justify-between mt-2">
                     <Badge className="bg-blue-100 text-blue-800 text-xs border-blue-200">
-                      {item.condition}
+                      {formatCondition(item.condition)}
                     </Badge>
                     <Button
                       variant="ghost"
