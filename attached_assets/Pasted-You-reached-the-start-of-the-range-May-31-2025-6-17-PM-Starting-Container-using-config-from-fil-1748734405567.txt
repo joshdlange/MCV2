@@ -1,0 +1,125 @@
+You reached the start of the range → May 31, 2025 6:17 PM
+
+Starting Container
+
+using config from file
+
+adapted config to JSON
+
+admin endpoint disabled
+
+automatic HTTPS is completely disabled for server
+
+started background certificate maintenance
+
+server running
+
+serving initial configuration
+
+cleaning storage unit
+
+finished cleaning storage units
+
+Starting Container
+
+npm warn config production Use `--omit=dev` instead.
+
+ 
+
+> rest-express@1.0.0 start
+
+> NODE_ENV=production node dist/index.js
+
+ 
+
+file:///app/dist/index.js:169
+
+  throw new Error(
+
+        ^
+
+ 
+
+Error: DATABASE_URL must be set. Did you forget to provision a database?
+
+    at file:///app/dist/index.js:169:9
+
+    at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+
+    at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+
+    at async loadESM (node:internal/process/esm_loader:34:7)
+
+    at async handleMainPromise (node:internal/modules/run_main:106:12)
+
+ 
+
+Node.js v18.20.5
+
+npm warn config production Use `--omit=dev` instead.
+
+ 
+
+> rest-express@1.0.0 start
+
+> NODE_ENV=production node dist/index.js
+
+ 
+
+file:///app/dist/index.js:169
+
+  throw new Error(
+
+        ^
+
+ 
+
+Error: DATABASE_URL must be set. Did you forget to provision a database?
+
+    at file:///app/dist/index.js:169:9
+
+    at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+
+    at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+
+    at async loadESM (node:internal/process/esm_loader:34:7)
+
+    at async handleMainPromise (node:internal/modules/run_main:106:12)
+
+ 
+
+Node.js v18.20.5
+
+npm warn config production Use `--omit=dev` instead.
+
+ 
+
+> rest-express@1.0.0 start
+
+> NODE_ENV=production node dist/index.js
+
+ 
+
+file:///app/dist/index.js:169
+
+  throw new Error(
+
+        ^
+
+ 
+
+Error: DATABASE_URL must be set. Did you forget to provision a database?
+
+    at file:///app/dist/index.js:169:9
+
+    at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+
+    at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+
+    at async loadESM (node:internal/process/esm_loader:34:7)
+
+    at async handleMainPromise (node:internal/modules/run_main:106:12)
+
+ 
+
+Node.js v18.20.5

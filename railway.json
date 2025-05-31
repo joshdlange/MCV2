@@ -5,9 +5,7 @@
     "buildCommand": "npm run build"
   },
   "deploy": {
-    "startCommand": "npm run start",
-    "healthcheckPath": "/api/health",
-    "healthcheckTimeout": 300,
+    "startCommand": "NODE_ENV=production tsx server/index.ts",
     "restartPolicyType": "ON_FAILURE"
   }
 }
