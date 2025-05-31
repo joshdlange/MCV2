@@ -25,6 +25,7 @@ import { eq, ilike, and, count, sum, desc, sql } from "drizzle-orm";
 interface IStorage {
   // Users
   getUser(id: number): Promise<User | undefined>;
+  getUserByFirebaseUid(firebaseUid: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(insertUser: InsertUser): Promise<User>;
   getAllUsers(): Promise<User[]>;
@@ -73,6 +74,16 @@ export class DatabaseStorage implements IStorage {
       return user || undefined;
     } catch (error) {
       console.error('Error getting user:', error);
+      return undefined;
+    }
+  }
+
+  async getUserByFirebaseUid(firebaseUid: string): Promise<User | undefined> {
+    try {
+      const [user] = await db.select().from(users).where(eq(users.firebaseUid, firebaseUid));
+      return user || undefined;
+    } catch (error) {
+      console.error('Error getting user by Firebase UID:', error);
       return undefined;
     }
   }
