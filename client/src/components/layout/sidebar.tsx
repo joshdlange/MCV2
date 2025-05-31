@@ -58,6 +58,7 @@ const iconMap = {
 export function Sidebar() {
   const [location] = useLocation();
   const { isAdminMode, currentUser } = useAppStore();
+  const { user } = useAuth();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const { data: collectionStats } = useQuery({
@@ -177,24 +178,28 @@ export function Sidebar() {
       />
 
       {/* User Profile */}
-      {currentUser && (
+      {user && (
         <div className="border-t border-border p-4">
           <div className="flex items-center space-x-3">
             <img 
-              src={currentUser.avatar} 
+              src={user.photoURL || '/default-avatar.png'} 
               alt="User avatar" 
               className="w-8 h-8 rounded-full" 
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground truncate">
-                {currentUser.name}
+                {user.displayName || 'User'}
               </p>
               <p className="text-xs text-muted-foreground truncate">
-                {currentUser.email}
+                {user.email}
               </p>
             </div>
-            <button className="text-muted-foreground hover:text-foreground">
-              <Settings className="w-4 h-4" />
+            <button 
+              onClick={() => signOutUser()}
+              className="text-muted-foreground hover:text-foreground"
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>
