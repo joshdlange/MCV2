@@ -129,14 +129,14 @@ export async function processImages() {
 
 // Start processing images in the background with a delay
 export function startImageProcessor() {
-  // Process images every 30 seconds
-  const PROCESS_INTERVAL = 30000;
+  // Process images every 5 minutes to reduce server load
+  const PROCESS_INTERVAL = 300000; // 5 minutes
   
   // Initial delay of 10 seconds after server start
   setTimeout(() => {
     processImages();
     
-    // Then process every 30 seconds
+    // Then process every 5 minutes
     setInterval(() => {
       processImages();
     }, PROCESS_INTERVAL);
