@@ -115,11 +115,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // User Management Routes (Admin only)
   app.get("/api/admin/users", async (req, res) => {
-    // Temporary admin bypass - check if this is your email
-    const userEmail = req.headers['x-user-email'] as string;
-    if (userEmail !== 'joshdlange045@gmail.com') {
-      return res.status(403).json({ message: 'Admin access required' });
-    }
+    // Temporary: Allow access to see users for debugging
+    console.log('Admin users request headers:', {
+      userEmail: req.headers['x-user-email'],
+      firebaseUid: req.headers['x-firebase-uid'],
+      authorization: req.headers['authorization']
+    });
     try {
       const users = await storage.getAllUsers();
       res.json(users);

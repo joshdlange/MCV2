@@ -9,22 +9,29 @@ async function throwIfResNotOk(res: Response) {
 }
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  const user = auth.currentUser;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
 
-  if (user) {
-    const token = await user.getIdToken();
-    headers['Authorization'] = `Bearer ${token}`;
-    headers['x-firebase-uid'] = user.uid;
-    headers['x-user-email'] = user.email || '';
-    headers['x-display-name'] = user.displayName || '';
-    headers['x-photo-url'] = user.photoURL || '';
-    headers['x-user-name'] = user.displayName || user.email?.split('@')[0] || 'User';
-  }
-
-  return headers;
+  // Wait for auth to be ready
+  return new Promise((resolve) => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      unsubscribe();
+      if (user) {
+        user.getIdToken().then((token) => {
+          headers['Authorization'] = `Bearer ${token}`;
+          headers['x-firebase-uid'] = user.uid;
+          headers['x-user-email'] = user.email || '';
+          headers['x-display-name'] = user.displayName || '';
+          headers['x-photo-url'] = user.photoURL || '';
+          headers['x-user-name'] = user.displayName || user.email?.split('@')[0] || 'User';
+          resolve(headers);
+        });
+      } else {
+        resolve(headers);
+      }
+    });
+  });
 }
 
 export async function apiRequest(
