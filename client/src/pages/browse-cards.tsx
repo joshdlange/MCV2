@@ -104,28 +104,25 @@ export default function BrowseCards() {
       
       // Add each new card to collection
       const promises = newCards.map(card => {
-        const insertData: InsertUserCollection = {
-          userId: 1, // TODO: Get from auth context
+        const insertData = {
           cardId: card.id,
           condition: 'near_mint',
           quantity: 1
         };
         
-        return fetch('/api/collection', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(insertData)
-        });
+        return apiRequest('POST', '/api/collection', insertData);
       });
       
       await Promise.all(promises);
       return { addedCount: newCards.length, totalCards: cards.length };
     },
     onSuccess: (data) => {
+      // Invalidate all related queries for immediate updates
       queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/recent-cards'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/trending-cards'] });
+      
       toast({
         title: "Cards Added Successfully!",
         description: `Added ${data.addedCount} new cards to your collection (${data.totalCards - data.addedCount} were already owned).`
