@@ -8,6 +8,8 @@ import { MobileHeader } from "@/components/layout/mobile-header";
 import { useAppStore } from "@/lib/store";
 import { Search } from "lucide-react";
 import { useLocation } from "wouter";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { Login } from "@/components/auth/Login";
 import Dashboard from "@/pages/dashboard";
 import BrowseCards from "@/pages/browse-cards";
 import MyCollection from "@/pages/my-collection";
@@ -103,14 +105,36 @@ function Router() {
   );
 }
 
+function AuthenticatedApp() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
+  return (
+    <AppLayout>
+      <Router />
+    </AppLayout>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <AppLayout>
-          <Router />
-        </AppLayout>
+        <AuthProvider>
+          <Toaster />
+          <AuthenticatedApp />
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

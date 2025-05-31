@@ -5,9 +5,11 @@ import { NavigationItem } from "@/types";
 import { UpgradeModal } from "@/components/subscription/upgrade-modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bolt, Settings, Crown } from "lucide-react";
+import { Bolt, Settings, Crown, LogOut } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+import { signOutUser } from "@/lib/firebase";
 import { 
   LayoutDashboard, 
   Grid3X3, 

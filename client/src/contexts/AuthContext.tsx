@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from 'firebase/auth';
 import { auth, onAuthStateChanged } from '@/lib/firebase';
+import { handleRedirect } from '@/lib/handleRedirect';
 
 interface AuthContextType {
   user: User | null;
@@ -25,6 +26,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Handle redirect result from Google authentication
+    handleRedirect();
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
