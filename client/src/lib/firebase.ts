@@ -14,8 +14,14 @@ export const auth = getAuth(app);
 
 const provider = new GoogleAuthProvider();
 
-export const signInWithGoogle = () => {
-  signInWithRedirect(auth, provider);
+export const signInWithGoogle = async () => {
+  try {
+    console.log('Starting Google sign-in...');
+    await signInWithRedirect(auth, provider);
+  } catch (error: any) {
+    console.error('Google sign-in error:', error);
+    throw error;
+  }
 };
 
 export const signOutUser = () => {

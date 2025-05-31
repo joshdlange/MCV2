@@ -11,7 +11,7 @@ export function Login() {
 
   const { data: featuredCards } = useQuery({
     queryKey: ["/api/trending-cards"],
-    select: (data) => data?.slice(0, 8) || [],
+    select: (data: any) => Array.isArray(data) ? data.slice(0, 8) : [],
   });
 
   useEffect(() => {
@@ -67,10 +67,10 @@ export function Login() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-red-900/20 to-blue-900/20">
-      <div className="flex min-h-screen">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+      <div className="flex flex-col lg:flex-row min-h-screen">
         {/* Left Side - Marketing Content */}
-        <div className="hidden lg:flex lg:w-1/2 flex-col justify-center p-12 bg-gradient-to-br from-red-600/10 to-blue-600/10 backdrop-blur-sm">
+        <div className="w-full lg:w-1/2 flex flex-col justify-center p-6 lg:p-12 bg-gradient-to-br from-red-600/10 to-gray-800/50 backdrop-blur-sm">
           <div className="max-w-xl">
             {/* Logo */}
             <div className="mb-8">
@@ -82,8 +82,8 @@ export function Login() {
 
             {/* Featured Card Carousel */}
             {featuredCards && featuredCards.length > 0 && (
-              <div className="mb-8">
-                <div className="relative w-64 h-80 mx-auto mb-4 rounded-lg overflow-hidden shadow-2xl">
+              <div className="mb-8 lg:mb-8">
+                <div className="relative w-48 h-64 lg:w-64 lg:h-80 mx-auto mb-4 rounded-lg overflow-hidden shadow-2xl">
                   <img
                     src={featuredCards[currentImageIndex]?.frontImageUrl}
                     alt={featuredCards[currentImageIndex]?.name}
@@ -98,7 +98,7 @@ export function Login() {
                   </div>
                 </div>
                 <div className="flex justify-center space-x-2">
-                  {featuredCards.map((_, index) => (
+                  {featuredCards.map((card: any, index: number) => (
                     <button
                       key={index}
                       className={`w-2 h-2 rounded-full transition-colors ${
@@ -127,7 +127,7 @@ export function Login() {
             </div>
 
             {/* Pricing Preview */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {plans.map((plan, index) => (
                 <div key={index} className={`p-4 rounded-lg border ${plan.popular ? 'border-red-500 bg-red-500/10' : 'border-gray-600 bg-gray-800/30'}`}>
                   <div className="flex items-center justify-between mb-2">
@@ -150,14 +150,14 @@ export function Login() {
         </div>
 
         {/* Right Side - Authentication */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
-          <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm shadow-2xl">
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-8">
+          <Card className="w-full max-w-md bg-gray-800/90 border-gray-700 backdrop-blur-sm shadow-2xl">
             <CardHeader className="text-center pb-8">
               <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-white font-bold text-xl">M</span>
               </div>
-              <CardTitle className="text-2xl font-bold text-gray-900">Welcome Back</CardTitle>
-              <CardDescription className="text-gray-600">
+              <CardTitle className="text-2xl font-bold text-white">Welcome Back</CardTitle>
+              <CardDescription className="text-gray-300">
                 Sign in to access your Marvel card collection
               </CardDescription>
             </CardHeader>
@@ -178,22 +178,9 @@ export function Login() {
               </Button>
 
               <div className="text-center">
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-400">
                   By signing in, you agree to our Terms of Service and Privacy Policy
                 </p>
-              </div>
-
-              {/* Mobile Features Preview */}
-              <div className="lg:hidden space-y-3 pt-4 border-t">
-                <h4 className="font-semibold text-gray-900">What you'll get:</h4>
-                <div className="space-y-2">
-                  {features.slice(0, 2).map((feature, index) => (
-                    <div key={index} className="flex items-center space-x-2">
-                      <div className="text-red-600">{feature.icon}</div>
-                      <span className="text-sm text-gray-700">{feature.title}</span>
-                    </div>
-                  ))}
-                </div>
               </div>
             </CardContent>
           </Card>
