@@ -10,11 +10,20 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   displayName: text("display_name"),
   photoURL: text("photo_url"),
+  bio: text("bio"),
+  location: text("location"),
+  website: text("website"),
   isAdmin: boolean("is_admin").default(false).notNull(),
   plan: text("plan").default("SIDE_KICK").notNull(), // SIDE_KICK or SUPER_HERO
   subscriptionStatus: text("subscription_status").default("active").notNull(), // active, cancelled, expired
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
+  showEmail: boolean("show_email").default(false).notNull(),
+  showCollection: boolean("show_collection").default(true).notNull(),
+  showWishlist: boolean("show_wishlist").default(true).notNull(),
+  emailUpdates: boolean("email_updates").default(true).notNull(),
+  priceAlerts: boolean("price_alerts").default(true).notNull(),
+  friendActivity: boolean("friend_activity").default(true).notNull(),
   lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

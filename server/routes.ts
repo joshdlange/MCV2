@@ -571,6 +571,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Profile endpoints
+  app.get("/api/user/profile", authenticateUser, async (req: any, res) => {
+    try {
+      const user = req.user;
+      res.json(user);
+    } catch (error: any) {
+      console.error("Error fetching profile:", error);
+      res.status(500).json({ message: "Failed to fetch profile" });
+    }
+  });
+
+  app.patch("/api/user/profile", authenticateUser, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const updates = req.body;
+      
+      // Flatten profile data for database update
+      const updateData: any = {};
+      
+      if (updates.displayName !== undefined) updateData.displayName = updates.displayName;
+      if (updates.bio !== undefined) updateData.bio = updates.bio;
+      if (updates.location !== undefined) updateData.location = updates.location;
+      if (updates.website !== undefined) updateData.website = updates.website;
+      
+      if (updates.privacySettings) {
+        if (updates.privacySettings.showEmail !== undefined) updateData.showEmail = updates.privacySettings.showEmail;
+        if (updates.privacySettings.showCollection !== undefined) updateData.showCollection = updates.privacySettings.showCollection;
+        if (updates.privacySettings.showWishlist !== undefined) updateData.showWishlist = updates.privacySettings.showWishlist;
+      }
+      
+      if (updates.notifications) {
+        if (updates.notifications.emailUpdates !== undefined) updateData.emailUpdates = updates.notifications.emailUpdates;
+        if (updates.notifications.priceAlerts !== undefined) updateData.priceAlerts = updates.notifications.priceAlerts;
+        if (updates.notifications.friendActivity !== undefined) updateData.friendActivity = updates.notifications.friendActivity;
+      }
+
+      const updatedUser = await storage.updateUser(userId, updateData);
+      res.json(updatedUser);
+    } catch (error: any) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
   // Marketplace routes
   app.get("/api/marketplace", async (req, res) => {
     try {
