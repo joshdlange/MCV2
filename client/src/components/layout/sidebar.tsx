@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bolt, Settings, Crown, LogOut } from "lucide-react";
 import { useState } from "react";
+import vaultLogo from "@assets/ChatGPT Image May 31, 2025, 09_57_44 AM.png";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { signOutUser } from "@/lib/firebase";
@@ -75,8 +76,12 @@ export function Sidebar() {
       {/* Logo & Branding */}
       <div className="flex items-center px-6 py-4 bg-marvel-red">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-            <Bolt className="text-marvel-red text-xl" />
+          <div className="w-10 h-10 flex items-center justify-center">
+            <img 
+              src={vaultLogo} 
+              alt="Marvel Card Vault" 
+              className="w-10 h-10 object-contain"
+            />
           </div>
           <div>
             <h1 className="text-white font-bebas text-2xl tracking-wide">MARVEL</h1>
