@@ -30,7 +30,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { User as UserType } from "@shared/schema";
+import type { User as UserType } from "@/types/schema";
 
 export default function Profile() {
   const { user } = useAuth();

@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAppStore } from "@/lib/store";
 import { apiRequest } from "@/lib/queryClient";
 import { convertGoogleDriveUrl } from "@/lib/utils";
-import type { CardSet, CardWithSet, CollectionItem, InsertUserCollection } from "@shared/schema";
+import type { CardSet, CardWithSet, CollectionItem, InsertUserCollection } from "@/types/schema";
 
 export default function BrowseCards() {
   const [selectedSet, setSelectedSet] = useState<CardSet | null>(null);

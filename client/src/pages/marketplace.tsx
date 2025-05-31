@@ -9,7 +9,7 @@ import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { UpgradeModal } from "@/components/subscription/upgrade-modal";
 import { useAppStore } from "@/lib/store";
 import { Star, Search, Filter, Crown, Lock } from "lucide-react";
-import type { CollectionItem, CardWithSet, CardSet } from "@shared/schema";
+import type { CollectionItem, CardWithSet, CardSet } from "@/types/schema";
 
 export default function Marketplace() {
   const { currentUser } = useAppStore();
