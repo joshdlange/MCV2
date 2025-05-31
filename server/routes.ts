@@ -42,7 +42,7 @@ const authenticateUser = async (req: any, res: any, next: any) => {
         email: req.headers['x-user-email'] as string,
         displayName: req.headers['x-display-name'] as string || null,
         photoURL: req.headers['x-photo-url'] as string || null,
-        isAdmin: (req.headers['x-user-email'] as string) === 'joshlange00@gmail.com', // Make you admin
+        isAdmin: (req.headers['x-user-email'] as string) === 'joshdlange045@gmail.com', // Make you admin
         plan: 'SIDE_KICK',
         subscriptionStatus: 'active'
       };
@@ -69,6 +69,33 @@ const requireAdmin = (req: any, res: any, next: any) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Test route to create your admin user
+  app.post("/api/create-admin", async (req, res) => {
+    try {
+      const adminData = {
+        firebaseUid: 'test-admin-uid',
+        username: 'Joshua Lange',
+        email: 'joshdlange045@gmail.com',
+        displayName: 'Joshua Lange',
+        photoURL: null,
+        isAdmin: true,
+        plan: 'SUPER_HERO',
+        subscriptionStatus: 'active'
+      };
+      
+      const existingUser = await storage.getUserByFirebaseUid(adminData.firebaseUid);
+      if (existingUser) {
+        return res.json({ message: 'Admin user already exists', user: existingUser });
+      }
+      
+      const user = await storage.createUser(adminData);
+      res.json({ message: 'Admin user created', user });
+    } catch (error) {
+      console.error('Error creating admin user:', error);
+      res.status(500).json({ message: 'Failed to create admin user' });
+    }
+  });
+
   // Auth Routes
   app.get("/api/me", authenticateUser, async (req: any, res) => {
     res.json(req.user);
