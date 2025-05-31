@@ -1,10 +1,15 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { startImageProcessor } from "./image-processor";
+import path from "path";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Serve uploaded images statically
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -66,5 +71,8 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    
+    // Start the background image processor
+    startImageProcessor();
   });
 })();
