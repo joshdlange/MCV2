@@ -23,6 +23,8 @@ interface EbayApiResponse {
 export class EbayPricingService {
   private readonly appId: string;
   private readonly baseUrl = 'https://svcs.ebay.com/services/search/FindingService/v1';
+  private lastRequestTime: number = 0;
+  private readonly minRequestInterval = 2000; // 2 seconds between requests
   
   constructor() {
     // Use production keys if available, otherwise fall back to sandbox
@@ -31,6 +33,22 @@ export class EbayPricingService {
       throw new Error('EBAY_APP_ID_PROD or EBAY_APP_ID environment variable is required');
     }
     console.log('eBay Pricing Service initialized with:', this.appId.startsWith('JoshLan') ? 'PRODUCTION' : 'SANDBOX', 'credentials');
+  }
+
+  /**
+   * Rate limiting helper to prevent hitting eBay API limits
+   */
+  private async waitForRateLimit(): Promise<void> {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    
+    if (timeSinceLastRequest < this.minRequestInterval) {
+      const waitTime = this.minRequestInterval - timeSinceLastRequest;
+      console.log(`Rate limiting: waiting ${waitTime}ms before next eBay API call`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    
+    this.lastRequestTime = Date.now();
   }
 
   /**
@@ -72,6 +90,9 @@ export class EbayPricingService {
     });
 
     try {
+      // Apply rate limiting
+      await this.waitForRateLimit();
+      
       console.log('eBay API Request URL:', `${this.baseUrl}?${params.toString()}`);
       console.log('eBay API Headers:', headers);
       
@@ -83,6 +104,13 @@ export class EbayPricingService {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('eBay API Error Response:', errorText);
+        
+        // Check for rate limit error
+        if (errorText.includes('exceeded the number of times')) {
+          console.warn('eBay API rate limit exceeded. Pricing data will use cached values.');
+          return []; // Return empty array instead of throwing
+        }
+        
         throw new Error(`eBay API returned ${response.status}: ${response.statusText}`);
       }
 

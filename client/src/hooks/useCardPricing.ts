@@ -20,7 +20,7 @@ export function useCardPricing(cardId: number) {
       }
       return response.json() as Promise<CardPricing>;
     },
-    staleTime: 1000 * 60 * 60, // 1 hour
+    staleTime: 1000 * 60 * 5, // 5 minutes
     retry: false,
   });
 }
