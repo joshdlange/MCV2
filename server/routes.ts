@@ -686,34 +686,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // eBay Marketplace Account Deletion Notification endpoint
+  // eBay Marketplace Account Deletion Notification endpoint - GET for validation
+  app.get("/api/ebay-account-deletion", (req, res) => {
+    console.log("eBay GET validation request:", {
+      timestamp: new Date().toISOString(),
+      queryParams: req.query,
+      headers: {
+        'user-agent': req.headers['user-agent']
+      }
+    });
+    
+    // Handle challenge code in query parameters
+    if (req.query.challenge_code) {
+      console.log("eBay GET validation challenge received:", req.query.challenge_code);
+      return res.status(200).send(req.query.challenge_code);
+    }
+    
+    res.status(200).send("eBay Account Deletion Endpoint");
+  });
+
+  // eBay Marketplace Account Deletion Notification endpoint - POST for notifications
   // Compliant with https://developer.ebay.com/marketplace-account-deletion
   app.post("/api/ebay-account-deletion", (req, res) => {
     try {
-      const { verificationToken, timestamp, challengeCode } = req.body;
-      
       // Log all incoming requests for compliance audit
       console.log("eBay account deletion notification received:", {
         timestamp: new Date().toISOString(),
         requestBody: req.body,
+        queryParams: req.query,
         headers: {
           'content-type': req.headers['content-type'],
           'user-agent': req.headers['user-agent']
         }
       });
       
-      // Verify the token matches our registered verification token
-      if (verificationToken && process.env.EBAY_VERIFICATION_TOKEN) {
-        if (verificationToken !== process.env.EBAY_VERIFICATION_TOKEN) {
+      // Check for challenge code in query parameters (eBay validation)
+      if (req.query.challenge_code) {
+        console.log("eBay endpoint verification challenge received in query:", req.query.challenge_code);
+        return res.status(200).send(req.query.challenge_code);
+      }
+      
+      // Check for challenge code in request body
+      if (req.body.challengeCode) {
+        console.log("eBay endpoint verification challenge received in body:", req.body.challengeCode);
+        return res.status(200).json({ challengeCode: req.body.challengeCode });
+      }
+      
+      // Verify verification token if provided
+      if (req.body.verificationToken && process.env.EBAY_VERIFICATION_TOKEN) {
+        if (req.body.verificationToken !== process.env.EBAY_VERIFICATION_TOKEN) {
           console.error("Invalid verification token received");
           return res.status(401).json({ error: "Invalid verification token" });
         }
-      }
-      
-      // Handle verification challenge (for endpoint validation)
-      if (challengeCode) {
-        console.log("eBay endpoint verification challenge received:", challengeCode);
-        return res.status(200).json({ challengeCode });
       }
       
       // Handle actual account deletion notification
