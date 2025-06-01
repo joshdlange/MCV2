@@ -1,7 +1,5 @@
 import { useCardPricing } from "@/hooks/useCardPricing";
-import { Button } from "@/components/ui/button";
-import { RefreshCw, DollarSign } from "lucide-react";
-import { useState } from "react";
+import { DollarSign } from "lucide-react";
 
 interface CardPricingProps {
   cardId: number;
@@ -9,47 +7,22 @@ interface CardPricingProps {
 }
 
 export function CardPricing({ cardId, className = "" }: CardPricingProps) {
-  const { data: pricing, isLoading, error, refetch } = useCardPricing(cardId);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      await fetch(`/api/card-pricing/${cardId}/refresh`, { method: 'POST' });
-      await refetch();
-    } catch (error) {
-      console.error('Failed to refresh pricing:', error);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
+  const { data: pricing, isLoading } = useCardPricing(cardId);
 
   if (isLoading) {
     return (
-      <div className={`flex items-center space-x-2 text-sm text-gray-500 ${className}`}>
-        <DollarSign className="w-4 h-4 animate-pulse" />
-        <span>Loading price...</span>
+      <div className={`flex items-center space-x-1 text-sm text-gray-500 ${className}`}>
+        <DollarSign className="w-3 h-3 animate-pulse" />
+        <span className="text-xs">Loading...</span>
       </div>
     );
   }
 
-  if (error || !pricing) {
+  if (!pricing) {
     return (
-      <div className={`flex items-center space-x-2 text-sm ${className}`}>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          className="h-6 px-2 text-xs text-blue-600 hover:text-blue-800"
-        >
-          {isRefreshing ? (
-            <RefreshCw className="w-3 h-3 animate-spin" />
-          ) : (
-            <DollarSign className="w-3 h-3" />
-          )}
-          Get Price
-        </Button>
+      <div className={`flex items-center space-x-1 text-sm text-gray-400 ${className}`}>
+        <DollarSign className="w-3 h-3" />
+        <span className="text-xs">Pricing pending</span>
       </div>
     );
   }
@@ -71,8 +44,8 @@ export function CardPricing({ cardId, className = "" }: CardPricingProps) {
   };
 
   return (
-    <div className={`flex items-center space-x-2 text-sm ${className}`}>
-      <DollarSign className="w-4 h-4 text-green-600" />
+    <div className={`flex items-center space-x-1 text-sm ${className}`}>
+      <DollarSign className="w-3 h-3 text-green-600" />
       <span className={getPriceColor(pricing.avgPrice)}>
         {formatPrice(pricing.avgPrice)}
       </span>
@@ -81,15 +54,6 @@ export function CardPricing({ cardId, className = "" }: CardPricingProps) {
           ({pricing.salesCount} sales)
         </span>
       )}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleRefresh}
-        disabled={isRefreshing}
-        className="h-4 w-4 p-0 opacity-50 hover:opacity-100"
-      >
-        <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-      </Button>
     </div>
   );
 }

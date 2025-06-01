@@ -73,6 +73,35 @@ interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  async getCardPricing(cardId: number): Promise<{ avgPrice: number; salesCount: number; lastFetched: Date } | null> {
+    const [pricing] = await db.select().from(cardPriceCache).where(eq(cardPriceCache.cardId, cardId));
+    if (!pricing) return null;
+    return {
+      avgPrice: parseFloat(pricing.avgPrice.toString()),
+      salesCount: pricing.salesCount,
+      lastFetched: pricing.lastFetched
+    };
+  }
+
+  async updateCardPricing(cardId: number, avgPrice: number, salesCount: number, recentSales: string[]): Promise<void> {
+    await db.insert(cardPriceCache)
+      .values({
+        cardId,
+        avgPrice: avgPrice.toString(),
+        salesCount,
+        recentSales,
+        lastFetched: new Date()
+      })
+      .onConflictDoUpdate({
+        target: cardPriceCache.cardId,
+        set: {
+          avgPrice: avgPrice.toString(),
+          salesCount,
+          recentSales,
+          lastFetched: new Date()
+        }
+      });
+  }
   async getUser(id: number): Promise<User | undefined> {
     try {
       const [user] = await db.select().from(users).where(eq(users.id, id));

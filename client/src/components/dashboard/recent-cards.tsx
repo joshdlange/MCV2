@@ -57,7 +57,10 @@ export function RecentCards() {
         <CardContent>
           <div className="text-center py-8">
             <p className="text-muted-foreground">No cards in your collection yet</p>
-            <Button className="mt-4 bg-marvel-red hover:bg-red-700">
+            <Button 
+              className="mt-4 bg-marvel-red hover:bg-red-700"
+              onClick={() => setLocation('/browse')}
+            >
               Add Your First Card
             </Button>
           </div>
