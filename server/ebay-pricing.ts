@@ -62,33 +62,28 @@ export class EbayPricingService {
     // Clean card name - remove special characters but keep spaces
     const cleanCardName = cardName.replace(/[^\w\s-]/g, '').trim();
     
-    // Extract publisher/brand info
-    const setLower = setName.toLowerCase();
-    let brand = '';
-    if (setLower.includes('impel')) brand = 'Impel';
-    else if (setLower.includes('fleer')) brand = 'Fleer';
-    else if (setLower.includes('skybox')) brand = 'SkyBox';
-    else if (setLower.includes('topps')) brand = 'Topps';
-    
     console.log(`Building eBay search queries for: "${cardName}" from "${setName}" #${cardNumber}`);
     
-    // Build tiered queries from most specific to most general
+    // Build tiered queries based on successful eBay search pattern
     const queries: string[] = [];
     
-    // Query 1: Year + Character + Marvel (most effective according to feedback)
+    // Query 1: Full pattern like the successful example - "Year Set Name Character #Number"
     if (year) {
-      queries.push(`${year} ${cleanCardName} Marvel`);
+      queries.push(`${year} ${setName} ${cleanCardName} #${cardNumber}`);
     }
     
-    // Query 2: Character + Marvel + card
-    queries.push(`${cleanCardName} Marvel card`);
+    // Query 2: Set name + character + card number without year
+    queries.push(`${setName} ${cleanCardName} #${cardNumber}`);
     
-    // Query 3: Character + Marvel + brand (if available)
-    if (brand) {
-      queries.push(`${cleanCardName} Marvel ${brand}`);
+    // Query 3: Year + character + Marvel + card number
+    if (year) {
+      queries.push(`${year} ${cleanCardName} Marvel #${cardNumber}`);
     }
     
-    // Query 4: Just character + Marvel (broadest)
+    // Query 4: Character + Marvel + card number (more general)
+    queries.push(`${cleanCardName} Marvel #${cardNumber}`);
+    
+    // Query 5: Fallback - just character + Marvel (broadest)
     queries.push(`${cleanCardName} Marvel`);
     
     console.log(`Generated ${queries.length} query variations:`, queries);
