@@ -7,6 +7,7 @@ import { Star, Plus, Heart, Check } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
+import { useCardPricing } from "@/hooks/useCardPricing";
 import type { CardWithSet, CollectionItem, InsertUserCollection, InsertUserWishlist, WishlistItem } from "@shared/schema";
 
 interface TrendingCardProps {
@@ -17,10 +18,14 @@ interface TrendingCardProps {
 
 function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
+  const { data: pricing } = useCardPricing(card.id);
 
-  // Generate mock price change for trending effect
-  const priceChange = Math.floor(Math.random() * 20) + 5; // Random between 5-25%
-  const currentValue = card.estimatedValue ? parseFloat(card.estimatedValue) : 10;
+  // Use real eBay pricing data when available
+  const currentValue = pricing?.avgPrice || (card.estimatedValue ? parseFloat(card.estimatedValue) : 0);
+  const hasRealPricing = pricing && pricing.avgPrice > 0;
+  
+  // Calculate mock price change for trending effect
+  const priceChange = Math.floor(Math.random() * 20) + 5;
 
   return (
     <div 
@@ -85,14 +90,34 @@ function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
               </div>
               
               <div>
-                <span className="text-gray-300">Value:</span>
-                <span className="ml-1 md:ml-2 font-bold text-green-400">
-                  ${currentValue.toFixed(2)}
-                </span>
+                <span className="text-gray-300">Market Value:</span>
+                <div className="ml-1 md:ml-2">
+                  {hasRealPricing ? (
+                    <div className="flex items-center gap-1">
+                      <span className="font-bold text-green-400">
+                        ${currentValue.toFixed(2)}
+                      </span>
+                      <span className="text-xs text-blue-400">eBay</span>
+                    </div>
+                  ) : (
+                    <span className="font-bold text-gray-400">
+                      {currentValue > 0 ? `$${currentValue.toFixed(2)}` : 'No data'}
+                    </span>
+                  )}
+                </div>
               </div>
               
+              {hasRealPricing && pricing && pricing.salesCount > 0 && (
+                <div>
+                  <span className="text-gray-300">Sales:</span>
+                  <span className="ml-1 md:ml-2 text-xs text-blue-300">
+                    {pricing.salesCount} recent
+                  </span>
+                </div>
+              )}
+              
               <div>
-                <span className="text-gray-300">Change:</span>
+                <span className="text-gray-300">Trending:</span>
                 <span className="ml-1 md:ml-2 font-bold text-green-400">
                   +{priceChange}%
                 </span>
@@ -243,7 +268,7 @@ export function TrendingCards() {
         <CardHeader>
           <CardTitle className="font-bebas text-xl tracking-wide">TOP TRENDING CARDS</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Most popular cards being added to collections
+            Most popular cards with live eBay market pricing
           </p>
         </CardHeader>
         <CardContent>

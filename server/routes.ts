@@ -641,6 +641,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/card-pricing/:cardId", async (req, res) => {
     try {
       const cardId = parseInt(req.params.cardId);
+      
+      // Validate card ID
+      if (isNaN(cardId) || cardId <= 0) {
+        return res.status(400).json({ message: "Invalid card ID" });
+      }
+      
       const pricing = await ebayPricingService.getCardPricing(cardId);
       
       if (!pricing) {
