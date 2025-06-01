@@ -189,6 +189,7 @@ export function Sidebar() {
       <UpgradeModal 
         isOpen={showUpgradeModal} 
         onClose={() => setShowUpgradeModal(false)} 
+        currentPlan={currentUser?.plan || 'SIDE_KICK'}
       />
 
       {/* User Profile */}

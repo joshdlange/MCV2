@@ -20,6 +20,8 @@ import AdminCardManagement from "@/pages/admin/card-management";
 import AdminUsers from "@/pages/admin/users";
 import CardSearch from "@/pages/card-search";
 import MarketTrends from "@/pages/market-trends";
+import SubscriptionSuccess from "@/pages/subscription-success";
+import SubscriptionCancelled from "@/pages/subscription-cancelled";
 import NotFound from "@/pages/not-found";
 
 function DesktopHeader() {
@@ -92,6 +94,8 @@ function Router() {
       <Route path="/profile" component={Profile} />
       <Route path="/admin/cards" component={AdminCardManagement} />
       <Route path="/admin/users" component={AdminUsers} />
+      <Route path="/subscription-success" component={SubscriptionSuccess} />
+      <Route path="/subscription-cancelled" component={SubscriptionCancelled} />
       <Route component={NotFound} />
     </Switch>
   );

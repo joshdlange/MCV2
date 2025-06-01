@@ -553,6 +553,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/collection", authenticateUser, async (req: any, res) => {
     try {
       const userId = req.user.id;
+      const user = req.user;
+      
+      // Check collection limit for Side Kick users
+      if (user.plan === 'SIDE_KICK' || !user.plan) {
+        const currentCollection = await storage.getUserCollection(userId);
+        if (currentCollection.length >= 250) {
+          return res.status(403).json({ 
+            message: "Collection limit reached. Upgrade to Super Hero plan for unlimited cards.",
+            code: "COLLECTION_LIMIT_REACHED"
+          });
+        }
+      }
+      
       const data = insertUserCollectionSchema.parse({ ...req.body, userId });
       const item = await storage.addToCollection(data);
       res.json(item);
