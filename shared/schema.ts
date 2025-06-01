@@ -78,6 +78,16 @@ export const userWishlists = pgTable("user_wishlists", {
   addedDate: timestamp("added_date").defaultNow().notNull(),
 });
 
+export const cardPriceCache = pgTable("card_price_cache", {
+  id: serial("id").primaryKey(),
+  cardId: integer("card_id").notNull().references(() => cards.id, { onDelete: "cascade" }),
+  avgPrice: decimal("avg_price", { precision: 10, scale: 2 }),
+  recentSales: text("recent_sales").array(),
+  salesCount: integer("sales_count").default(0),
+  lastFetched: timestamp("last_fetched").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const cardSetsRelations = relations(cardSets, ({ many }) => ({
   cards: many(cards),
@@ -90,6 +100,17 @@ export const cardsRelations = relations(cards, ({ one, many }) => ({
   }),
   userCollections: many(userCollections),
   userWishlists: many(userWishlists),
+  priceCache: one(cardPriceCache, {
+    fields: [cards.id],
+    references: [cardPriceCache.cardId],
+  }),
+}));
+
+export const cardPriceCacheRelations = relations(cardPriceCache, ({ one }) => ({
+  card: one(cards, {
+    fields: [cardPriceCache.cardId],
+    references: [cards.id],
+  }),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -146,6 +167,12 @@ export const insertUserWishlistSchema = createInsertSchema(userWishlists).omit({
   addedDate: true,
 });
 
+export const insertCardPriceCacheSchema = createInsertSchema(cardPriceCache).omit({
+  id: true,
+  createdAt: true,
+  lastFetched: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -161,6 +188,9 @@ export type InsertUserCollection = z.infer<typeof insertUserCollectionSchema>;
 
 export type UserWishlist = typeof userWishlists.$inferSelect;
 export type InsertUserWishlist = z.infer<typeof insertUserWishlistSchema>;
+
+export type CardPriceCache = typeof cardPriceCache.$inferSelect;
+export type InsertCardPriceCache = z.infer<typeof insertCardPriceCacheSchema>;
 
 // Extended types for API responses
 export type CardWithSet = Card & {
