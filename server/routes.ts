@@ -696,10 +696,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // Challenge verification - eBay sends ?challenge=abc123
+      // Handle challenge_code verification with SHA256 hash
+      const challengeCode = req.query.challenge_code;
+      if (challengeCode) {
+        const VERIFICATION_TOKEN = "mcv-ebay-verify-5a28db8a9f4e4f39bd73d9a67c45dc94";
+        const ENDPOINT_URL = "https://app.marvelcardvault.com/api/ebay-webhook";
+        
+        // Import crypto using require (CommonJS style for compatibility)
+        const crypto = require('node:crypto');
+        const hash = crypto.createHash('sha256')
+          .update(`${challengeCode}${VERIFICATION_TOKEN}${ENDPOINT_URL}`)
+          .digest('hex');
+
+        console.log("Challenge code received:", challengeCode);
+        console.log("Generated hash:", hash);
+        
+        return res.status(200).json({
+          challengeResponse: hash
+        });
+      }
+
+      // Legacy challenge support (if eBay sends ?challenge=abc123)
       if (req.query.challenge) {
         const challengeValue = req.query.challenge;
-        console.log("Challenge received:", challengeValue);
+        console.log("Legacy challenge received:", challengeValue);
         
         return res.status(200).json({
           challenge: challengeValue
