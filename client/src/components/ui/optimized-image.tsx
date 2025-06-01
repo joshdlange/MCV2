@@ -41,7 +41,8 @@ function buildCloudinaryUrl(originalUrl: string, config: typeof IMAGE_CONFIGS[ke
   // Convert Google Drive URLs to direct download format first
   const directUrl = convertGoogleDriveUrl(originalUrl);
   
-  const cloudName = 'dqydhlszn'; // Using your Cloudinary cloud name directly
+  // Use environment variable for cloud name
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dqydhlszn';
   if (!cloudName) {
     // Fallback to converted URL if Cloudinary not configured
     return directUrl;
@@ -73,26 +74,27 @@ export function OptimizedImage({
   
   const config = IMAGE_CONFIGS[size];
   
-  // Optimized URL creation - use Cloudinary for performance
+  // Simplified image URL handling - prioritize direct loading
   const getOptimizedUrl = (originalUrl: string): string => {
     if (!originalUrl) return '';
     
-    // If already optimized or Cloudinary URL, use as-is
+    // If already a Cloudinary URL, use as-is
     if (originalUrl.includes('cloudinary.com')) {
       return originalUrl;
     }
     
-    // For Google Drive URLs, convert to direct access
+    // For Google Drive URLs, convert to direct access first
     if (originalUrl.includes('drive.google.com')) {
       const fileIdMatch = originalUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
       if (fileIdMatch) {
         const fileId = fileIdMatch[1];
-        // Use thumbnail endpoint for better performance
-        return `https://drive.google.com/thumbnail?id=${fileId}&sz=w${config.w || 400}`;
+        // Use direct download format for reliability
+        return `https://drive.google.com/uc?export=view&id=${fileId}`;
       }
     }
     
-    return buildCloudinaryUrl(originalUrl, config);
+    // For other URLs, return as-is
+    return originalUrl;
   };
   
   useEffect(() => {
