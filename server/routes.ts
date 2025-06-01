@@ -686,105 +686,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // eBay Marketplace Account Deletion Notification endpoint - GET for validation
-  app.get("/api/ebay-account-deletion", (req, res) => {
-    console.log("eBay GET validation request:", {
-      timestamp: new Date().toISOString(),
-      queryParams: req.query,
-      headers: {
-        'user-agent': req.headers['user-agent']
-      }
-    });
-    
-    // Handle challenge code in query parameters
-    if (req.query.challenge_code) {
-      console.log("eBay GET validation challenge received:", req.query.challenge_code);
-      return res.status(200).send(req.query.challenge_code);
-    }
-    
-    res.status(200).send("eBay Account Deletion Endpoint");
-  });
-
-  // eBay Marketplace Account Deletion Notification endpoint - POST for notifications
-  // Compliant with eBay AsyncAPI 2.0.0 specification
-  app.post("/api/ebay-account-deletion", (req, res) => {
+  // eBay Marketplace Account Deletion Notification endpoint
+  app.all("/api/ebay-account-deletion", (req, res) => {
     try {
-      // Log all incoming requests for compliance audit
-      console.log("eBay account deletion notification received:", {
-        timestamp: new Date().toISOString(),
-        requestBody: req.body,
-        queryParams: req.query,
+      // Log the request for debugging
+      console.log(`eBay ${req.method} request:`, {
+        method: req.method,
+        query: req.query,
+        body: req.body,
         headers: {
           'content-type': req.headers['content-type'],
-          'x-ebay-signature': req.headers['x-ebay-signature'] || 'not-provided',
           'user-agent': req.headers['user-agent']
         }
       });
-      
-      // Handle challenge code validation (for endpoint verification)
-      if (req.query.challenge_code) {
-        console.log("eBay endpoint verification challenge received in query:", req.query.challenge_code);
-        return res.status(200).send(req.query.challenge_code);
+
+      // Handle challenge code validation (both GET and POST)
+      const challengeCode = req.query.challenge_code || req.body.challenge_code || req.body.challengeCode;
+      if (challengeCode) {
+        console.log("Challenge code received:", challengeCode);
+        return res.status(200).send(String(challengeCode));
       }
-      
-      if (req.body.challengeCode) {
-        console.log("eBay endpoint verification challenge received in body:", req.body.challengeCode);
-        return res.status(200).json({ challengeCode: req.body.challengeCode });
+
+      // Handle notification payload
+      if (req.body && (req.body.metadata || req.body.notification)) {
+        console.log("Account deletion notification received");
+        // Just acknowledge receipt
+        return res.status(200).send();
       }
-      
-      // Verify eBay signature if present (production requirement)
-      const ebaySignature = req.headers['x-ebay-signature'];
-      if (ebaySignature && process.env.EBAY_VERIFICATION_TOKEN) {
-        console.log("eBay signature verification:", ebaySignature);
-        // In production, you would verify the signature here using the verification token
-        // For now, we accept any signature for compliance
-      }
-      
-      // Handle actual eBay account deletion notification according to AsyncAPI spec
-      if (req.body.metadata && req.body.notification) {
-        const { metadata, notification } = req.body;
-        
-        console.log("Processing eBay account deletion notification:", {
-          topic: metadata.topic,
-          schemaVersion: metadata.schemaVersion,
-          notificationId: notification.notificationId,
-          eventDate: notification.eventDate,
-          publishDate: notification.publishDate
-        });
-        
-        // Process the account deletion data
-        if (notification.data && notification.data.username) {
-          const { username, userId, eiasToken } = notification.data;
-          
-          console.log("Account deletion request for:", {
-            username,
-            userId,
-            eiasToken
-          });
-          
-          // In production, you would:
-          // 1. Verify the user exists in your system
-          // 2. Delete all user data according to data retention policies
-          // 3. Log the deletion for compliance records
-          // 4. Optionally notify the user of successful deletion
-          
-          console.log("Account deletion processed successfully for user:", username);
-        }
-      }
-      
-      // eBay requires one of these status codes: 200 OK, 201 Created, 202 Accepted, or 204 No Content
-      return res.status(202).json({ 
-        status: "accepted",
-        timestamp: new Date().toISOString(),
-        processed: true
-      });
-      
+
+      // Default response for basic validation
+      return res.status(200).send("OK");
+
     } catch (error) {
-      console.error("Error processing eBay deletion notification:", error);
-      res.status(500).json({ 
-        error: "Internal server error",
-        timestamp: new Date().toISOString()
-      });
+      console.error("eBay endpoint error:", error);
+      return res.status(200).send("OK");
     }
   });
 
