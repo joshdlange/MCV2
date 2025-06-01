@@ -4,6 +4,7 @@ import { signInWithGoogle } from "@/lib/firebase";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { ArrowRight, Sparkles, Info } from "lucide-react";
+import heroLogoRed from "@assets/noun-super-hero-380874-FF001C.png";
 import { useAppStore } from "@/lib/store";
 
 export function Login() {
@@ -157,7 +158,11 @@ export function Login() {
             <Card className="bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700 shadow-2xl">
               <CardHeader className="text-center pb-6">
                 <div className="w-20 h-20 bg-gradient-to-r from-red-600 to-red-700 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                  <Sparkles className="w-8 h-8 text-white" />
+                  <img 
+                    src={heroLogoRed} 
+                    alt="Marvel Card Vault" 
+                    className="w-10 h-10 object-contain"
+                  />
                 </div>
                 <CardTitle className="text-3xl font-bold text-white mb-2">
                   Join the Vault
