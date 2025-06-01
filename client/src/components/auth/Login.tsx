@@ -4,7 +4,7 @@ import { signInWithGoogle } from "@/lib/firebase";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { ArrowRight, Sparkles, Info } from "lucide-react";
-import heroLogoRed from "@assets/noun-super-hero-380874-FF001C.png";
+import heroLogoWhite from "@assets/noun-super-hero-380874-FFFFFF.png";
 import { useAppStore } from "@/lib/store";
 
 export function Login() {
@@ -159,7 +159,7 @@ export function Login() {
               <CardHeader className="text-center pb-6">
                 <div className="w-20 h-20 bg-gradient-to-r from-red-600 to-red-700 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
                   <img 
-                    src={heroLogoRed} 
+                    src={heroLogoWhite} 
                     alt="Marvel Card Vault" 
                     className="w-10 h-10 object-contain"
                   />
