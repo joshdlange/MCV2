@@ -58,6 +58,18 @@ const syncUserWithBackend = async (user: any) => {
         plan: data.user.plan,
         subscriptionStatus: data.user.subscriptionStatus
       });
+
+      // Check if user selected Super Hero plan during login
+      const selectedPlan = localStorage.getItem('selectedPlan');
+      if (selectedPlan === 'SUPER_HERO' && data.user.plan === 'SIDE_KICK') {
+        localStorage.removeItem('selectedPlan');
+        // Trigger upgrade flow
+        setTimeout(() => {
+          window.location.href = 'https://buy.stripe.com/3cI14n5dwegW7Bo8pP6kg00';
+        }, 1000); // Small delay to ensure UI is loaded
+      } else if (selectedPlan) {
+        localStorage.removeItem('selectedPlan');
+      }
     } else {
       console.error('Failed to sync user with backend');
     }

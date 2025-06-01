@@ -9,6 +9,8 @@ import { useAppStore } from "@/lib/store";
 export function Login() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showFeatures, setShowFeatures] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<'SIDE_KICK' | 'SUPER_HERO' | null>(null);
+  const { setCurrentUser } = useAppStore();
 
   const { data: allCards } = useQuery({
     queryKey: ["/api/cards"],
@@ -32,6 +34,13 @@ export function Login() {
 
   const handleGoogleSignIn = () => {
     signInWithGoogle();
+  };
+
+  const handlePlanSelection = (plan: 'SIDE_KICK' | 'SUPER_HERO') => {
+    setSelectedPlan(plan);
+    // Store the plan choice in localStorage so we can handle it after sign-in
+    localStorage.setItem('selectedPlan', plan);
+    handleGoogleSignIn();
   };
 
   const handleSwipe = (direction: 'left' | 'right') => {
@@ -259,7 +268,7 @@ export function Login() {
                 <h4 className="font-bold text-white mb-3">Choose Your Plan</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <button 
-                    onClick={handleGoogleSignIn}
+                    onClick={() => handlePlanSelection('SIDE_KICK')}
                     className="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors cursor-pointer text-left"
                   >
                     <div className="font-semibold text-gray-300">SIDE KICK</div>
@@ -272,9 +281,7 @@ export function Login() {
                     <div className="mt-3 text-xs text-gray-500">Click to sign up</div>
                   </button>
                   <button 
-                    onClick={() => {
-                      window.open('https://buy.stripe.com/3cI14n5dwegW7Bo8pP6kg00', '_blank');
-                    }}
+                    onClick={() => handlePlanSelection('SUPER_HERO')}
                     className="p-4 bg-gradient-to-br from-purple-800 to-pink-800 rounded-lg border border-purple-500 hover:from-purple-700 hover:to-pink-700 transition-colors cursor-pointer text-left"
                   >
                     <div className="font-semibold text-white">SUPER HERO</div>
@@ -284,7 +291,7 @@ export function Login() {
                       <li>• Marketplace access</li>
                       <li>• Advanced analytics</li>
                     </ul>
-                    <div className="mt-3 text-xs text-gray-300">Click to subscribe</div>
+                    <div className="mt-3 text-xs text-gray-300">Click to sign up & subscribe</div>
                   </button>
                 </div>
               </div>
