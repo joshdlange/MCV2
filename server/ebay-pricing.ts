@@ -25,10 +25,12 @@ export class EbayPricingService {
   private readonly baseUrl = 'https://svcs.ebay.com/services/search/FindingService/v1';
   
   constructor() {
-    if (!process.env.EBAY_APP_ID) {
-      throw new Error('EBAY_APP_ID environment variable is required');
+    // Use production keys if available, otherwise fall back to sandbox
+    this.appId = process.env.EBAY_APP_ID_PROD || process.env.EBAY_APP_ID || '';
+    if (!this.appId) {
+      throw new Error('EBAY_APP_ID_PROD or EBAY_APP_ID environment variable is required');
     }
-    this.appId = process.env.EBAY_APP_ID;
+    console.log('eBay Pricing Service initialized with:', this.appId.startsWith('JoshLan') ? 'PRODUCTION' : 'SANDBOX', 'credentials');
   }
 
   /**

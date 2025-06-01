@@ -700,7 +700,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Handle challenge_code verification with SHA256 hash
       const challengeCode = req.query.challenge_code;
       if (challengeCode) {
-        const VERIFICATION_TOKEN = "mcv-ebay-verify-5a28db8a9f4e4f39bd73d9a67c45dc94";
+        const VERIFICATION_TOKEN = process.env.EBAY_VERIFICATION_TOKEN_PROD || "mcv-ebay-verify-5a28db8a9f4e4f39bd73d9a67c45dc94";
         const ENDPOINT_URL = "https://app.marvelcardvault.com/api/ebay-webhook";
         
         const hash = crypto.createHash('sha256')
