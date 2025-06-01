@@ -73,6 +73,23 @@ interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  private calculateGrowthPercentage(current: number, previous: number): string {
+    if (previous === 0) {
+      return current > 0 ? '+100%' : '0%';
+    }
+    
+    const growth = ((current - previous) / previous) * 100;
+    const rounded = Math.round(growth * 10) / 10; // Round to 1 decimal place
+    
+    if (rounded > 0) {
+      return `+${rounded}%`;
+    } else if (rounded < 0) {
+      return `${rounded}%`;
+    } else {
+      return '0%';
+    }
+  }
+
   async getCardPricing(cardId: number): Promise<{ avgPrice: number; salesCount: number; lastFetched: Date } | null> {
     const [pricing] = await db.select().from(cardPriceCache).where(eq(cardPriceCache.cardId, cardId));
     if (!pricing) return null;
@@ -611,7 +628,10 @@ export class DatabaseStorage implements IStorage {
 
   async getCollectionStats(userId: number): Promise<CollectionStats> {
     try {
-      // Get basic counts
+      const now = new Date();
+      const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+
+      // Current counts
       const totalCardsResult = await db
         .select({ count: count() })
         .from(userCollections)
@@ -634,17 +654,57 @@ export class DatabaseStorage implements IStorage {
         .from(userWishlists)
         .where(eq(userWishlists.userId, userId));
 
+      // Previous month counts for growth calculation
+      const totalCardsLastMonth = await db
+        .select({ count: count() })
+        .from(userCollections)
+        .where(and(
+          eq(userCollections.userId, userId),
+          sql`${userCollections.acquiredDate} <= ${oneMonthAgo}`
+        ));
+
+      const insertCardsLastMonth = await db
+        .select({ count: count() })
+        .from(userCollections)
+        .innerJoin(cards, eq(userCollections.cardId, cards.id))
+        .where(and(
+          eq(userCollections.userId, userId),
+          eq(cards.isInsert, true),
+          sql`${userCollections.acquiredDate} <= ${oneMonthAgo}`
+        ));
+
+      const wishlistLastMonth = await db
+        .select({ count: count() })
+        .from(userWishlists)
+        .where(and(
+          eq(userWishlists.userId, userId),
+          sql`${userWishlists.addedDate} <= ${oneMonthAgo}`
+        ));
+
+      // Calculate growth percentages
+      const currentTotal = totalCardsResult[0]?.count || 0;
+      const previousTotal = totalCardsLastMonth[0]?.count || 0;
+      const totalGrowth = this.calculateGrowthPercentage(currentTotal, previousTotal);
+
+      const currentInserts = insertCardsResult[0]?.count || 0;
+      const previousInserts = insertCardsLastMonth[0]?.count || 0;
+      const insertGrowth = this.calculateGrowthPercentage(currentInserts, previousInserts);
+
+      const currentWishlist = wishlistResult[0]?.count || 0;
+      const previousWishlist = wishlistLastMonth[0]?.count || 0;
+      const wishlistGrowth = this.calculateGrowthPercentage(currentWishlist, previousWishlist);
+
       return {
-        totalCards: totalCardsResult[0]?.count || 0,
-        insertCards: insertCardsResult[0]?.count || 0,
+        totalCards: currentTotal,
+        insertCards: currentInserts,
         totalValue: parseFloat(totalValueResult[0]?.total || '0'),
-        wishlistItems: wishlistResult[0]?.count || 0,
+        wishlistItems: currentWishlist,
         completedSets: 0,
         recentAdditions: 0,
-        totalCardsGrowth: '+12.5%',
-        insertCardsGrowth: '+3.2%',
-        totalValueGrowth: '+18.7%',
-        wishlistGrowth: '-5.1%'
+        totalCardsGrowth: totalGrowth,
+        insertCardsGrowth: insertGrowth,
+        totalValueGrowth: '0%', // Will implement when pricing data is available
+        wishlistGrowth: wishlistGrowth
       };
     } catch (error) {
       console.error('Error getting collection stats:', error);
