@@ -59,24 +59,26 @@ export class EbayPricingService {
       'categoryId': '2536', // Non-Sport Trading Cards
       'itemFilter(0).name': 'SoldItemsOnly',
       'itemFilter(0).value': 'true',
-      'itemFilter(1).name': 'Condition',
-      'itemFilter(1).value(0)': 'New',
-      'itemFilter(1).value(1)': 'Like New',
-      'itemFilter(1).value(2)': 'Excellent',
-      'itemFilter(1).value(3)': 'Very Good',
-      'itemFilter(1).value(4)': 'Good',
+      'itemFilter(1).name': 'ListingType',
+      'itemFilter(1).value': 'AuctionWithBIN',
+      'itemFilter(2).name': 'ListingType',
+      'itemFilter(2).value': 'FixedPrice',
       'sortOrder': 'EndTimeSoonest',
-      'paginationInput.entriesPerPage': '5'
+      'paginationInput.entriesPerPage': '10'
     });
 
     try {
+      console.log('eBay API Request URL:', `${this.baseUrl}?${params.toString()}`);
       const response = await fetch(`${this.baseUrl}?${params}`);
       
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('eBay API Error Response:', errorText);
         throw new Error(`eBay API returned ${response.status}: ${response.statusText}`);
       }
 
       const data: EbayApiResponse = await response.json();
+      console.log('eBay API Response:', JSON.stringify(data, null, 2));
       
       if (data.findCompletedItemsResponse[0].ack[0] !== 'Success') {
         console.warn('eBay API warning:', data);
