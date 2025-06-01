@@ -59,8 +59,12 @@ export class EbayPricingService {
     const cleanSetName = setName.replace(/\d{4}\s*/, ''); // Remove year prefix
     const cleanCardName = cardName.replace(/[^\w\s]/g, ''); // Remove special characters
     
-    // Build query: "Set Name Card Name #Number"
-    return `${cleanSetName} ${cleanCardName} ${cardNumber}`.trim();
+    // Build a more flexible query - try multiple variations
+    const primaryQuery = `${cleanSetName} ${cleanCardName} ${cardNumber}`.trim();
+    console.log(`Building eBay search query for card: "${cardName}" from set: "${setName}" #${cardNumber}`);
+    console.log(`Primary search query: "${primaryQuery}"`);
+    
+    return primaryQuery;
   }
 
   /**
