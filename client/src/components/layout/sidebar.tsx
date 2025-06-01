@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bolt, Settings, Crown, LogOut } from "lucide-react";
 import { useState } from "react";
-import vaultLogo from "@assets/ChatGPT Image May 31, 2025, 09_57_44 AM.png";
+import vaultLogo from "@assets/noun-super-hero-380874-FFFFFF.png";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { signOutUser } from "@/lib/firebase";
