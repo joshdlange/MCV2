@@ -29,6 +29,18 @@ export function handleRedirect() {
           if (response.ok) {
             const data = await response.json();
             console.log('User synced with backend:', data.user);
+            
+            // Update app store with backend user data
+            const { useAppStore } = await import('@/lib/store');
+            useAppStore.getState().setCurrentUser({
+              id: data.user.id,
+              name: data.user.displayName || data.user.username,
+              email: data.user.email,
+              avatar: data.user.photoURL || '',
+              isAdmin: data.user.isAdmin,
+              plan: data.user.plan,
+              subscriptionStatus: data.user.subscriptionStatus
+            });
           } else {
             console.error('Failed to sync user with backend');
           }
