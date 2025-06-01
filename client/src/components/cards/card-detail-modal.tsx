@@ -112,15 +112,7 @@ export function CardDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto relative">
-        {/* Enhanced Close Button for Mobile */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-50 w-10 h-10 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-colors md:hidden"
-          aria-label="Close"
-        >
-          <X className="w-5 h-5" />
-        </button>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="text-xl font-bebas tracking-wide">
