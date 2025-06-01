@@ -336,38 +336,37 @@ function EditUserForm({ user, onSubmit, isLoading }: { user: User; onSubmit: (da
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <Label htmlFor="username">Username</Label>
+        <Label htmlFor="username" className="text-black">Username</Label>
         <Input
           id="username"
           value={formData.username}
           onChange={(e) => setFormData({ ...formData, username: e.target.value })}
           required
-          className="bg-white"
+          className="bg-white text-black"
         />
       </div>
 
       <div>
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email" className="text-black">Email</Label>
         <Input
           id="email"
           type="email"
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           required
-          className="bg-white"
+          className="bg-white text-black"
         />
       </div>
 
       <div>
-        <Label htmlFor="plan">Plan</Label>
+        <Label htmlFor="plan" className="text-black">Plan</Label>
         <Select value={formData.plan} onValueChange={(value) => setFormData({ ...formData, plan: value })}>
-          <SelectTrigger className="bg-white">
+          <SelectTrigger className="bg-white text-black">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="free">Free</SelectItem>
-            <SelectItem value="pro">Pro</SelectItem>
-            <SelectItem value="premium">Premium</SelectItem>
+            <SelectItem value="SIDE_KICK">SIDE KICK</SelectItem>
+            <SelectItem value="SUPER_HERO">SUPER HERO</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -378,7 +377,7 @@ function EditUserForm({ user, onSubmit, isLoading }: { user: User; onSubmit: (da
           checked={formData.isAdmin}
           onCheckedChange={(checked) => setFormData({ ...formData, isAdmin: checked })}
         />
-        <Label htmlFor="isAdmin">Admin privileges</Label>
+        <Label htmlFor="isAdmin" className="text-black">Admin privileges</Label>
       </div>
 
       <div className="flex justify-end gap-2">

@@ -23,19 +23,9 @@ import MarketTrends from "@/pages/market-trends";
 import NotFound from "@/pages/not-found";
 
 function DesktopHeader() {
-  const [, setLocation] = useLocation();
-
   return (
-    <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-      <div className="flex justify-end">
-        <button 
-          className="text-gray-600 hover:text-gray-900 flex items-center gap-2"
-          onClick={() => setLocation('/card-search')}
-        >
-          <Search className="w-5 h-5" />
-          <span className="text-sm">Quick Search</span>
-        </button>
-      </div>
+    <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-2">
+      {/* Removed duplicate Quick Search - already in sidebar */}
     </div>
   );
 }

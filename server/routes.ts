@@ -148,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             photoURL: photoURL || user.photoURL
           });
         } else {
-          // Create new user
+          // Create new user - Only joshdlange045@gmail.com is admin
           const userData = {
             firebaseUid,
             username: email,
@@ -156,7 +156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             displayName: displayName || 'User',
             photoURL,
             isAdmin: email === 'joshdlange045@gmail.com',
-            plan: 'SIDE_KICK',
+            plan: email === 'joshdlange045@gmail.com' ? 'SUPER_HERO' : 'SIDE_KICK',
             subscriptionStatus: 'active'
           };
           user = await storage.createUser(userData);
