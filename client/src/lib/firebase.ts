@@ -63,11 +63,23 @@ export const signInWithGoogle = async () => {
       hostname: window.location.hostname
     });
     
-    // Always use popup authentication for better reliability
-    const result = await signInWithPopup(auth, provider);
-    if (result.user) {
-      console.log('User signed in:', result.user.displayName);
-      await syncUserWithBackend(result.user);
+    // Try popup first, fallback to redirect if popup fails
+    try {
+      const result = await signInWithPopup(auth, provider);
+      if (result.user) {
+        console.log('User signed in via popup:', result.user.displayName);
+        await syncUserWithBackend(result.user);
+      }
+    } catch (popupError: any) {
+      // If popup fails (blocked, closed, etc.), use redirect
+      if (popupError.code === 'auth/popup-blocked' || 
+          popupError.code === 'auth/popup-closed-by-user' ||
+          popupError.code === 'auth/cancelled-popup-request') {
+        console.log('Popup blocked or closed, using redirect method...');
+        await signInWithRedirect(auth, provider);
+        return; // Redirect will handle the rest
+      }
+      throw popupError;
     }
   } catch (error: any) {
     console.error('Google sign-in error details:', {
