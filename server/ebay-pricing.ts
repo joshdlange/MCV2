@@ -49,12 +49,16 @@ export class EbayPricingService {
    * Fetch completed listings from eBay
    */
   private async fetchCompletedListings(searchQuery: string): Promise<EbaySoldItem[]> {
+    // Correct eBay Finding API headers (SOA format, not REST)
+    const headers = {
+      'X-EBAY-SOA-OPERATION-NAME': 'findCompletedItems',
+      'X-EBAY-SOA-SERVICE-VERSION': '1.0.0',
+      'X-EBAY-SOA-SECURITY-APPNAME': this.appId,
+      'X-EBAY-SOA-RESPONSE-DATA-FORMAT': 'JSON',
+    };
+
+    // Query parameters for the request
     const params = new URLSearchParams({
-      'OPERATION-NAME': 'findCompletedItems',
-      'SERVICE-VERSION': '1.0.0',
-      'SECURITY-APPNAME': this.appId,
-      'RESPONSE-DATA-FORMAT': 'JSON',
-      'REST-PAYLOAD': '',
       'keywords': searchQuery,
       'categoryId': '2536', // Non-Sport Trading Cards
       'itemFilter(0).name': 'SoldItemsOnly',
@@ -69,7 +73,12 @@ export class EbayPricingService {
 
     try {
       console.log('eBay API Request URL:', `${this.baseUrl}?${params.toString()}`);
-      const response = await fetch(`${this.baseUrl}?${params}`);
+      console.log('eBay API Headers:', headers);
+      
+      const response = await fetch(`${this.baseUrl}?${params}`, {
+        method: 'GET',
+        headers: headers
+      });
       
       if (!response.ok) {
         const errorText = await response.text();
