@@ -4,6 +4,7 @@ import {
   cards, 
   userCollections, 
   userWishlists,
+  cardPriceCache,
   type User, 
   type InsertUser,
   type CardSet,
@@ -65,6 +66,10 @@ interface IStorage {
   
   // Trending
   getTrendingCards(limit: number): Promise<CardWithSet[]>;
+  
+  // Pricing
+  getCardPricing(cardId: number): Promise<{ avgPrice: number; salesCount: number; lastFetched: Date } | null>;
+  updateCardPricing(cardId: number, avgPrice: number, salesCount: number, recentSales: string[]): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
