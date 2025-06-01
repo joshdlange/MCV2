@@ -69,24 +69,61 @@ export function OptimizedImage({
 }: OptimizedImageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const [imgSrc, setImgSrc] = useState('');
+  const [currentSrc, setCurrentSrc] = useState('');
+  const [fallbackAttempt, setFallbackAttempt] = useState(0);
   
   const config = IMAGE_CONFIGS[size];
   
-  // Set up the image source when src changes
+  // Create multiple fallback URLs for maximum compatibility
+  const createFallbackUrls = (originalUrl: string): string[] => {
+    const urls: string[] = [];
+    
+    if (originalUrl.includes('drive.google.com')) {
+      const fileIdMatch = originalUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+      if (fileIdMatch) {
+        const fileId = fileIdMatch[1];
+        // Primary fallbacks for Google Drive
+        urls.push(`https://drive.google.com/uc?export=view&id=${fileId}`);
+        urls.push(`https://drive.google.com/thumbnail?id=${fileId}&sz=w400`);
+        urls.push(`https://drive.google.com/uc?export=download&id=${fileId}`);
+      }
+    } else {
+      // For non-Google Drive URLs, use as-is
+      urls.push(originalUrl);
+    }
+    
+    return urls;
+  };
+  
   useEffect(() => {
     if (src) {
       setIsLoading(true);
       setHasError(false);
-      setImgSrc(convertGoogleDriveUrl(src));
+      setFallbackAttempt(0);
+      const fallbackUrls = createFallbackUrls(src);
+      setCurrentSrc(fallbackUrls[0] || src);
     }
   }, [src]);
+  
+  const handleImageError = () => {
+    const fallbackUrls = createFallbackUrls(src);
+    const nextAttempt = fallbackAttempt + 1;
+    
+    if (nextAttempt < fallbackUrls.length) {
+      setFallbackAttempt(nextAttempt);
+      setCurrentSrc(fallbackUrls[nextAttempt]);
+      setIsLoading(true);
+    } else {
+      setIsLoading(false);
+      setHasError(true);
+    }
+  };
   
   if (!src || hasError) {
     return (
       <div 
         className={cn(
-          "bg-muted flex items-center justify-center text-muted-foreground text-sm",
+          "bg-gray-200 flex items-center justify-center text-gray-500 text-sm border rounded",
           className
         )}
         style={{ 
@@ -95,31 +132,34 @@ export function OptimizedImage({
           aspectRatio: config.w && config.h ? `${config.w}/${config.h}` : undefined
         }}
       >
-        {hasError ? 'Failed to load' : 'No image'}
+        <div className="text-center p-2">
+          <div className="text-xs opacity-75">Image unavailable</div>
+        </div>
       </div>
     );
   }
   
   return (
-    <div className={cn("relative overflow-hidden", className)}>
+    <div className={cn("relative overflow-hidden bg-gray-100", className)}>
       {isLoading && (
         <div 
-          className="absolute inset-0 bg-muted animate-pulse flex items-center justify-center"
+          className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center"
           style={{ 
             width: config.w, 
             height: config.h,
             aspectRatio: config.w && config.h ? `${config.w}/${config.h}` : undefined
           }}
         >
-          <div className="text-muted-foreground text-xs">Loading...</div>
+          <div className="text-gray-400 text-xs">Loading...</div>
         </div>
       )}
       <img
-        src={imgSrc}
+        src={currentSrc}
         alt={alt}
         loading={loading}
+        crossOrigin="anonymous"
         className={cn(
-          "transition-opacity duration-300",
+          "object-cover transition-opacity duration-300",
           isLoading ? "opacity-0" : "opacity-100",
           onClick ? "cursor-pointer hover:opacity-90" : "",
           className
@@ -130,10 +170,7 @@ export function OptimizedImage({
           aspectRatio: config.w && config.h ? `${config.w}/${config.h}` : undefined
         }}
         onLoad={() => setIsLoading(false)}
-        onError={() => {
-          setIsLoading(false);
-          setHasError(true);
-        }}
+        onError={handleImageError}
         onClick={onClick}
       />
     </div>
