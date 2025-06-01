@@ -42,6 +42,7 @@ export default function Profile() {
     bio: '',
     location: '',
     website: '',
+    address: '',
     privacySettings: {
       showEmail: false,
       showCollection: true,
@@ -129,7 +130,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-4xl mx-auto">
         {/* Profile Header */}
         <Card className="mb-6">
@@ -191,13 +192,7 @@ export default function Profile() {
                 </div>
               </div>
               
-              <Button 
-                onClick={() => setIsEditing(!isEditing)}
-                variant={isEditing ? "outline" : "default"}
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                {isEditing ? 'Cancel' : 'Edit Profile'}
-              </Button>
+
             </div>
           </CardContent>
         </Card>
@@ -267,6 +262,22 @@ export default function Profile() {
                     className="bg-background text-foreground border-border"
                   />
                   <Globe className="w-4 h-4 inline mr-1 mt-1 text-muted-foreground" />
+                </div>
+
+                <div>
+                  <Label htmlFor="address">Shipping Address</Label>
+                  <Textarea
+                    id="address"
+                    value={profileData.address}
+                    onChange={(e) => setProfileData(prev => ({ ...prev, address: e.target.value }))}
+                    disabled={!isEditing}
+                    placeholder="Street address, city, state, postal code, country"
+                    rows={3}
+                    className="bg-background text-foreground border-border"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This address will be used for shipping when buying/selling cards through the marketplace
+                  </p>
                 </div>
                 
                 <div>
