@@ -330,8 +330,8 @@ export function CardDetailModal({
                 {/* eBay Market Pricing */}
                 <div className="border rounded-lg p-4 bg-gray-50">
                   <div className="flex items-center justify-between mb-3">
-                    <Label className="text-sm font-medium flex items-center gap-2">
-                      <ExternalLink className="w-4 h-4" />
+                    <Label className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                      <ExternalLink className="w-4 h-4 text-blue-600" />
                       eBay Market Price
                     </Label>
                     <Button
