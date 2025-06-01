@@ -197,14 +197,13 @@ export function Login() {
                     </div>
                     <Button 
                       onClick={() => {
-                        // Create a checkout session without authentication
-                        window.open('https://buy.stripe.com/test_your_payment_link', '_blank');
+                        window.open('https://buy.stripe.com/3cI14n5dwegW7Bo8pP6kg00', '_blank');
                       }}
                       variant="outline"
                       size="sm"
                       className="border-purple-500 text-purple-300 hover:bg-purple-600 hover:text-white"
                     >
-                      View Pricing
+                      Subscribe Now
                     </Button>
                   </div>
                 </div>
