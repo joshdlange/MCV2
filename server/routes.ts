@@ -125,7 +125,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Auth Routes
+  // Auth Routes - Sync Firebase user with backend
+  app.post("/api/auth/sync", async (req, res) => {
+    try {
+      const { firebaseUid, email, displayName, photoURL } = req.body;
+      
+      if (!firebaseUid || !email) {
+        return res.status(400).json({ message: 'Firebase UID and email required' });
+      }
+
+      // Check if user already exists
+      let user = await storage.getUserByFirebaseUid(firebaseUid);
+      
+      if (!user) {
+        // Try to find by email first
+        user = await storage.getUserByUsername(email);
+        if (user) {
+          // Update existing user with Firebase UID
+          user = await storage.updateUser(user.id, { 
+            firebaseUid,
+            displayName: displayName || user.displayName,
+            photoURL: photoURL || user.photoURL
+          });
+        } else {
+          // Create new user
+          const userData = {
+            firebaseUid,
+            username: email,
+            email,
+            displayName: displayName || 'User',
+            photoURL,
+            isAdmin: email === 'joshdlange045@gmail.com',
+            plan: 'SIDE_KICK',
+            subscriptionStatus: 'active'
+          };
+          user = await storage.createUser(userData);
+        }
+      }
+
+      res.json({ user });
+    } catch (error) {
+      console.error('User sync error:', error);
+      res.status(500).json({ message: 'Failed to sync user' });
+    }
+  });
+
   app.get("/api/me", authenticateUser, async (req: any, res) => {
     res.json(req.user);
   });
