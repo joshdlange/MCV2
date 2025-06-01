@@ -1,5 +1,6 @@
 import { useAppStore } from "@/lib/store";
-import { Menu, Search, Bolt } from "lucide-react";
+import { Menu, Search } from "lucide-react";
+import heroLogoRed from "@assets/noun-super-hero-380874-FF001C.png";
 import { useLocation } from "wouter";
 
 export function MobileHeader() {
@@ -17,7 +18,11 @@ export function MobileHeader() {
         </button>
         <div className="flex items-center space-x-2">
           <div className="w-8 h-8 bg-marvel-red rounded-lg flex items-center justify-center">
-            <Bolt className="text-white text-sm" />
+            <img 
+              src={heroLogoRed} 
+              alt="Marvel Card Vault" 
+              className="w-5 h-5 object-contain"
+            />
           </div>
           <h1 className="text-gray-900 font-bebas text-xl tracking-wide font-bold">
             MARVEL CARD VAULT
