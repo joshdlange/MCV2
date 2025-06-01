@@ -205,9 +205,7 @@ export function Login() {
                       Upgrade to Super Hero for $4/month
                     </div>
                     <Button 
-                      onClick={() => {
-                        window.open('https://buy.stripe.com/3cI14n5dwegW7Bo8pP6kg00', '_blank');
-                      }}
+                      onClick={() => handlePlanSelection('SUPER_HERO')}
                       variant="outline"
                       size="sm"
                       className="border-purple-500 text-purple-300 hover:bg-purple-600 hover:text-white"
