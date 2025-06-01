@@ -686,6 +686,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // eBay Marketplace Account Deletion Notification endpoint
+  // Required for eBay production API key approval
+  app.post("/api/ebay-account-deletion", (req, res) => {
+    console.log("eBay account deletion notification received:", {
+      timestamp: new Date().toISOString(),
+      headers: req.headers,
+      body: req.body
+    });
+    
+    // eBay requires a 200 OK response to confirm endpoint is active
+    res.status(200).send("Notification received and processed");
+  });
+
   // Profile endpoints
   app.get("/api/user/profile", authenticateUser, async (req: any, res) => {
     try {
