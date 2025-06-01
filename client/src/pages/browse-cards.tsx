@@ -208,28 +208,30 @@ export default function BrowseCards() {
     return (
       <div className="min-h-screen bg-gray-50">
         {/* Page Header */}
-        <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-4">
+          <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-4">
               <Button
                 variant="outline"
                 onClick={handleBackToSets}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 text-sm"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Back to Sets
+                <span className="hidden sm:inline">Back to Sets</span>
+                <span className="sm:hidden">Back</span>
               </Button>
-              <div>
-                <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">{selectedSet.name}</h2>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-xl md:text-2xl font-bebas text-gray-900 tracking-wide truncate">{selectedSet.name}</h2>
                 <p className="text-sm text-gray-600 font-roboto">
                   Explore cards from this set
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
                 onClick={() => handleFavoriteSet(selectedSet.id)}
                 variant="outline"
+                size="sm"
                 className={`flex items-center gap-2 ${
                   favoriteSetIds.includes(selectedSet.id) 
                     ? 'bg-yellow-50 text-yellow-700 border-yellow-300' 
@@ -237,23 +239,26 @@ export default function BrowseCards() {
                 }`}
               >
                 <Star className={`w-4 h-4 ${favoriteSetIds.includes(selectedSet.id) ? 'fill-current' : ''}`} />
-                {favoriteSetIds.includes(selectedSet.id) ? 'Favorited' : 'Favorite Set'}
+                <span className="hidden sm:inline">{favoriteSetIds.includes(selectedSet.id) ? 'Favorited' : 'Favorite Set'}</span>
+                <span className="sm:hidden">{favoriteSetIds.includes(selectedSet.id) ? 'Favorited' : 'Favorite'}</span>
               </Button>
               <Button
                 onClick={() => handleAddAllToCollection(selectedSet.id)}
                 disabled={addAllMutation.isPending}
+                size="sm"
                 className="bg-marvel-red hover:bg-red-700 flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
-                {addAllMutation.isPending ? 'Adding All Cards...' : 'Add All to Collection'}
+                <span className="hidden sm:inline">{addAllMutation.isPending ? 'Adding All Cards...' : 'Add All to Collection'}</span>
+                <span className="sm:hidden">{addAllMutation.isPending ? 'Adding...' : 'Add All'}</span>
               </Button>
             </div>
           </div>
         </div>
 
         {/* Filters for individual cards */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex flex-wrap items-center gap-4">
+        <div className="bg-white border-b border-gray-200 px-4 md:px-6 py-4">
+          <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:flex-wrap md:items-center gap-4">
             <div className="flex-1 min-w-64">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />

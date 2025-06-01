@@ -14,8 +14,8 @@ export function convertGoogleDriveUrl(url: string): string {
   
   if (match) {
     const fileId = match[1];
-    // Convert to the thumbnail format which works better for embedded images
-    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+    // Try the uc export format first, it's more reliable for direct display
+    return `https://drive.google.com/uc?export=view&id=${fileId}`;
   }
   
   // Handle sharing URLs with open?id= format
@@ -24,7 +24,7 @@ export function convertGoogleDriveUrl(url: string): string {
   
   if (shareMatch) {
     const fileId = shareMatch[1];
-    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+    return `https://drive.google.com/uc?export=view&id=${fileId}`;
   }
   
   // Handle URLs that already have the correct format
