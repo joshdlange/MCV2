@@ -24,7 +24,10 @@ export class EbayPricingService {
   private readonly appId: string;
   private readonly baseUrl = 'https://svcs.ebay.com/services/search/FindingService/v1';
   private lastRequestTime: number = 0;
-  private readonly minRequestInterval = 2000; // 2 seconds between requests
+  private readonly minRequestInterval = 5000; // 5 seconds between requests (more conservative)
+  private requestCount: number = 0;
+  private readonly maxRequestsPerHour = 40; // Conservative limit
+  private hourlyResetTime: number = Date.now() + (60 * 60 * 1000); // Reset every hour
   
   constructor() {
     // Use production keys if available, otherwise fall back to sandbox
@@ -33,6 +36,22 @@ export class EbayPricingService {
       throw new Error('EBAY_APP_ID_PROD or EBAY_APP_ID environment variable is required');
     }
     console.log('eBay Pricing Service initialized with:', this.appId.startsWith('JoshLan') ? 'PRODUCTION' : 'SANDBOX', 'credentials');
+  }
+
+  /**
+   * Check and enforce hourly rate limits
+   */
+  private canMakeRequest(): boolean {
+    const now = Date.now();
+    
+    // Reset hourly counter if needed
+    if (now > this.hourlyResetTime) {
+      this.requestCount = 0;
+      this.hourlyResetTime = now + (60 * 60 * 1000);
+      console.log('eBay API rate limit counter reset');
+    }
+    
+    return this.requestCount < this.maxRequestsPerHour;
   }
 
   /**
@@ -49,6 +68,7 @@ export class EbayPricingService {
     }
     
     this.lastRequestTime = Date.now();
+    this.requestCount++;
   }
 
   /**
@@ -238,6 +258,13 @@ export class EbayPricingService {
   }
 
   /**
+   * Check if we should skip API call due to rate limits
+   */
+  private shouldSkipApiCall(): boolean {
+    return !this.canMakeRequest();
+  }
+
+  /**
    * Get or fetch pricing for a specific card
    */
   async getCardPricing(cardId: number): Promise<{ avgPrice: number; salesCount: number; lastFetched: Date } | null> {
@@ -249,12 +276,29 @@ export class EbayPricingService {
         .where(eq(cardPriceCache.cardId, cardId))
         .limit(1);
 
-      if (cachedPrice && !this.isCacheStale(cachedPrice.lastFetched)) {
-        return {
+      // If we have cache data, use it unless it's stale AND we can make an API call
+      if (cachedPrice) {
+        const isStale = this.isCacheStale(cachedPrice.lastFetched);
+        const canFetch = this.canMakeRequest();
+        
+        if (!isStale || !canFetch) {
+          // Use cached data if fresh, or if we can't make API call due to rate limits
+          return {
+            avgPrice: parseFloat(cachedPrice.avgPrice || '0'),
+            salesCount: cachedPrice.salesCount || 0,
+            lastFetched: cachedPrice.lastFetched
+          };
+        }
+      }
+
+      // Only fetch fresh data if cache is stale AND we can make API calls
+      if (this.shouldSkipApiCall()) {
+        console.log(`Skipping API call for card ${cardId} due to rate limits`);
+        return cachedPrice ? {
           avgPrice: parseFloat(cachedPrice.avgPrice || '0'),
           salesCount: cachedPrice.salesCount || 0,
           lastFetched: cachedPrice.lastFetched
-        };
+        } : null;
       }
 
       // Fetch fresh data from eBay
