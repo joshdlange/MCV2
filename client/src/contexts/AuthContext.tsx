@@ -26,15 +26,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Handle redirect result from Google authentication
-    handleRedirect();
+    try {
+      // Handle redirect result from Google authentication
+      handleRedirect();
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setUser(user);
+        setLoading(false);
+      });
+
+      return unsubscribe;
+    } catch (error) {
+      console.error('Firebase auth error:', error);
+      // If Firebase auth fails, still mark as not loading
       setLoading(false);
-    });
-
-    return unsubscribe;
+    }
   }, []);
 
   const value = {

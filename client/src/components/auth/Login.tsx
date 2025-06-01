@@ -4,6 +4,7 @@ import { signInWithGoogle } from "@/lib/firebase";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { ArrowRight, Sparkles, Info } from "lucide-react";
+import { useAppStore } from "@/lib/store";
 
 export function Login() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
