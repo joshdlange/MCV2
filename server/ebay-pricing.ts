@@ -52,25 +52,71 @@ export class EbayPricingService {
   }
 
   /**
-   * Construct search query for a Marvel card
+   * Build multiple search query variations for a Marvel card
    */
-  private buildSearchQuery(setName: string, cardName: string, cardNumber: string): string {
-    // Clean up the search terms
-    const cleanSetName = setName.replace(/\d{4}\s*/, ''); // Remove year prefix
-    const cleanCardName = cardName.replace(/[^\w\s]/g, ''); // Remove special characters
+  private buildSearchQueries(setName: string, cardName: string, cardNumber: string): string[] {
+    // Extract year from set name
+    const yearMatch = setName.match(/(\d{4})/);
+    const year = yearMatch ? yearMatch[1] : '';
     
-    // Build a more flexible query - try multiple variations
-    const primaryQuery = `${cleanSetName} ${cleanCardName} ${cardNumber}`.trim();
-    console.log(`Building eBay search query for card: "${cardName}" from set: "${setName}" #${cardNumber}`);
-    console.log(`Primary search query: "${primaryQuery}"`);
+    // Clean card name - remove special characters but keep spaces
+    const cleanCardName = cardName.replace(/[^\w\s-]/g, '').trim();
     
-    return primaryQuery;
+    // Extract publisher/brand info
+    const setLower = setName.toLowerCase();
+    let brand = '';
+    if (setLower.includes('impel')) brand = 'Impel';
+    else if (setLower.includes('fleer')) brand = 'Fleer';
+    else if (setLower.includes('skybox')) brand = 'SkyBox';
+    else if (setLower.includes('topps')) brand = 'Topps';
+    
+    console.log(`Building eBay search queries for: "${cardName}" from "${setName}" #${cardNumber}`);
+    
+    // Build tiered queries from most specific to most general
+    const queries: string[] = [];
+    
+    // Query 1: Year + Character + Marvel (most effective according to feedback)
+    if (year) {
+      queries.push(`${year} ${cleanCardName} Marvel`);
+    }
+    
+    // Query 2: Character + Marvel + card
+    queries.push(`${cleanCardName} Marvel card`);
+    
+    // Query 3: Character + Marvel + brand (if available)
+    if (brand) {
+      queries.push(`${cleanCardName} Marvel ${brand}`);
+    }
+    
+    // Query 4: Just character + Marvel (broadest)
+    queries.push(`${cleanCardName} Marvel`);
+    
+    console.log(`Generated ${queries.length} query variations:`, queries);
+    return queries;
   }
 
   /**
-   * Fetch completed listings from eBay
+   * Fetch completed listings from eBay using multiple query attempts
    */
-  private async fetchCompletedListings(searchQuery: string): Promise<EbaySoldItem[]> {
+  private async fetchCompletedListings(queries: string[]): Promise<EbaySoldItem[]> {
+    for (const searchQuery of queries) {
+      console.log(`Trying eBay search: "${searchQuery}"`);
+      const results = await this.fetchSingleQuery(searchQuery);
+      
+      if (results.length > 0) {
+        console.log(`Found ${results.length} results for query: "${searchQuery}"`);
+        return results.slice(0, 10); // Take top 10 results for filtering
+      }
+    }
+    
+    console.log('No results found for any query variations');
+    return [];
+  }
+
+  /**
+   * Fetch completed listings for a single search query
+   */
+  private async fetchSingleQuery(searchQuery: string): Promise<EbaySoldItem[]> {
     // Correct eBay Finding API headers (SOA format, not REST)
     const headers = {
       'X-EBAY-SOA-OPERATION-NAME': 'findCompletedItems',
@@ -146,6 +192,37 @@ export class EbayPricingService {
   }
 
   /**
+   * Filter eBay results to ensure they're relevant to the character
+   */
+  private filterRelevantResults(soldItems: EbaySoldItem[], cardName: string): EbaySoldItem[] {
+    if (soldItems.length === 0) return [];
+    
+    const cleanCardName = cardName.toLowerCase().replace(/[^\w\s-]/g, '');
+    const keywords = cleanCardName.split(/\s+/);
+    
+    const relevantItems = soldItems.filter(item => {
+      const title = item.title.toLowerCase();
+      
+      // Must contain "marvel" and at least one keyword from the character name
+      const hasMarvel = title.includes('marvel');
+      const hasCharacter = keywords.some(keyword => 
+        keyword.length > 2 && title.includes(keyword)
+      );
+      
+      // Filter out obvious non-card items
+      const isLikelyCard = !title.includes('comic') || 
+                          title.includes('card') || 
+                          title.includes('trading') ||
+                          title.includes('non-sport');
+      
+      return hasMarvel && hasCharacter && isLikelyCard;
+    });
+    
+    console.log(`Filtered ${soldItems.length} results down to ${relevantItems.length} relevant items`);
+    return relevantItems.slice(0, 5); // Take top 5 most relevant
+  }
+
+  /**
    * Calculate average price from sold listings
    */
   private calculateAveragePrice(soldItems: EbaySoldItem[]): number {
@@ -216,13 +293,15 @@ export class EbayPricingService {
         throw new Error(`Card with ID ${cardId} not found`);
       }
 
-      // Build search query and fetch eBay data
-      const searchQuery = this.buildSearchQuery(card.setName, card.name, card.cardNumber);
-      console.log(`Fetching eBay pricing for: "${searchQuery}"`);
+      // Build multiple search queries and fetch eBay data
+      const searchQueries = this.buildSearchQueries(card.setName, card.name, card.cardNumber);
+      console.log(`Fetching eBay pricing for card: ${card.name}`);
       
-      const soldItems = await this.fetchCompletedListings(searchQuery);
-      const avgPrice = this.calculateAveragePrice(soldItems);
-      const recentSales = soldItems.map(item => item.viewItemURL);
+      const soldItems = await this.fetchCompletedListings(searchQueries);
+      // Filter results to ensure they're relevant to the character
+      const filteredItems = this.filterRelevantResults(soldItems, card.name);
+      const avgPrice = this.calculateAveragePrice(filteredItems);
+      const recentSales = filteredItems.map(item => item.viewItemURL);
 
       // Update or insert cache entry
       const now = new Date();

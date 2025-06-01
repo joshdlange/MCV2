@@ -1,0 +1,105 @@
+Why Your Current Queries Fail
+Your current queries look like:
+
+"Impel Marvel Universe Series III Spider-Man 1"
+
+Problems:
+
+Too verbose — sellers rarely write out full set names.
+
+Card number almost never used in title — eBay sellers don’t say “Card 1”.
+
+Too strict — eBay doesn't rank results well when the full title doesn’t match.
+
+🔍 How Marvel Cards Are Actually Listed on eBay
+Most successful listings follow patterns like:
+
+"1992 Marvel Spider-Man #1 Impel Series 3"
+
+"Spider-Man Marvel card hologram 1992"
+
+"Marvel Universe Series 3 Spider-Man NM"
+
+"1992 Marvel Impel Carnage PSA 9"
+
+"Venom Marvel Impel NM-MT card"
+
+So, sellers often:
+
+Omit full set name
+
+Use abbreviated set references like “Impel”, “Fleer”, “Skybox”
+
+Include character name + Marvel
+
+Occasionally use year or ‘insert’/‘holo’/’foil’
+
+Include grade info (e.g. PSA 9) if applicable
+
+✅ New Suggested Strategy for Queries
+Tell Replit to try a tiered query approach:
+
+First try:
+
+ts
+Copy
+Edit
+"1992 Spider-Man Marvel"
+If zero results:
+
+ts
+Copy
+Edit
+"Spider-Man Marvel card"
+If still zero, fallback:
+
+ts
+Copy
+Edit
+"Spider-Man Marvel Impel"
+(Optional): Try including "card #1" in the keywords but not relying on it
+
+Then filter the results based on:
+
+Character name match (includes('spider-man'))
+
+Year match (includes('1992'))
+
+Optional: Image similarity (future upgrade)
+
+🧩 Extra Tips
+Sort by BestMatch or EndTimeSoonest works fine
+
+Include filters like:
+
+ts
+Copy
+Edit
+'itemFilter(0).name': 'SoldItemsOnly',
+'itemFilter(0).value': 'true'
+Set entriesPerPage: 10–25 — beyond that, it slows response time
+
+Avoid strict matching — just get 3–5 best matches and calculate an average sold price from them
+
+✉️ Final Message Prompt for Replit
+We're not matching results in the eBay API because our queries are too specific and don't reflect how sellers list cards.
+
+New strategy:
+
+For each card, build 2–3 keyword variations, like:
+
+"1992 Spider-Man Marvel"
+
+"Spider-Man Marvel card"
+
+"Spider-Man Marvel Impel"
+
+Use the findCompletedItems operation with these keywords (in order)
+
+If one returns results, skip the rest and calculate average sold price from top 5
+
+Use fuzzy filters in code to confirm matches: character name, Marvel, year (if available)
+
+This should give us real sold values for 80–90% of the catalog.
+
+Let me know if you'd like a sample implementation of the logic too.
