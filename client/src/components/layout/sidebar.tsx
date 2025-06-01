@@ -144,11 +144,19 @@ export function Sidebar() {
         {/* Plan Badge for SUPER HERO users */}
         {currentUser && currentUser.plan === 'SUPER_HERO' && (
           <div className="pt-4 border-t border-gray-200 mt-4">
-            <div className="flex items-center justify-center">
+            <div className="flex flex-col items-center space-y-2">
               <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-yellow-900 px-3 py-1">
                 <Crown className="w-4 h-4 mr-1" />
                 SUPER HERO
               </Badge>
+              <div className="px-2">
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>Collection Limit</span>
+                  <Badge variant="outline" className="text-xs">
+                    {collectionStats?.totalCards || 0} / unlimited
+                  </Badge>
+                </div>
+              </div>
             </div>
           </div>
         )}
