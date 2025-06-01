@@ -44,23 +44,30 @@ const syncUserWithBackend = async (user: any) => {
 export const signInWithGoogle = async () => {
   try {
     console.log('Starting Google sign-in...');
+    console.log('Firebase config check:', {
+      apiKey: !!import.meta.env.VITE_FIREBASE_API_KEY,
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+      appId: !!import.meta.env.VITE_FIREBASE_APP_ID,
+      hostname: window.location.hostname
+    });
     
-    // Use popup for deployed version, redirect for preview
-    const isDeployed = window.location.hostname.includes('.replit.app');
-    
-    if (isDeployed) {
-      // Use popup authentication for deployed version
-      const result = await signInWithPopup(auth, provider);
-      if (result.user) {
-        console.log('User signed in:', result.user.displayName);
-        await syncUserWithBackend(result.user);
-      }
-    } else {
-      // Use redirect authentication for preview
-      await signInWithRedirect(auth, provider);
+    // Always use popup authentication for better reliability
+    const result = await signInWithPopup(auth, provider);
+    if (result.user) {
+      console.log('User signed in:', result.user.displayName);
+      await syncUserWithBackend(result.user);
     }
   } catch (error: any) {
-    console.error('Google sign-in error:', error);
+    console.error('Google sign-in error details:', {
+      code: error.code,
+      message: error.message,
+      stack: error.stack
+    });
+    
+    if (error.code === 'auth/unauthorized-domain') {
+      console.error('Domain not authorized in Firebase. Add this domain to Firebase Console > Authentication > Settings > Authorized domains');
+    }
+    
     throw error;
   }
 };
