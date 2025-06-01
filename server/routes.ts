@@ -10,6 +10,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import Stripe from "stripe";
+import { ebayPricingService } from "./ebay-pricing";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -632,6 +633,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Item removed from wishlist" });
     } catch (error) {
       res.status(500).json({ message: "Failed to remove from wishlist" });
+    }
+  });
+
+  // eBay Pricing endpoints
+  app.get("/api/card-pricing/:cardId", async (req, res) => {
+    try {
+      const cardId = parseInt(req.params.cardId);
+      const pricing = await ebayPricingService.getCardPricing(cardId);
+      
+      if (!pricing) {
+        return res.status(404).json({ message: "Pricing data not available" });
+      }
+      
+      res.json(pricing);
+    } catch (error) {
+      console.error("Error fetching card pricing:", error);
+      res.status(500).json({ message: "Failed to fetch pricing data" });
+    }
+  });
+
+  app.post("/api/card-pricing/:cardId/refresh", async (req, res) => {
+    try {
+      const cardId = parseInt(req.params.cardId);
+      const pricing = await ebayPricingService.fetchAndCacheCardPricing(cardId);
+      
+      if (!pricing) {
+        return res.status(404).json({ message: "Unable to fetch pricing data" });
+      }
+      
+      res.json(pricing);
+    } catch (error) {
+      console.error("Error refreshing card pricing:", error);
+      res.status(500).json({ message: "Failed to refresh pricing data" });
+    }
+  });
+
+  app.post("/api/pricing/batch-update", async (req, res) => {
+    try {
+      const { cardIds } = req.body;
+      if (!Array.isArray(cardIds)) {
+        return res.status(400).json({ message: "cardIds must be an array" });
+      }
+      
+      // Start background update
+      ebayPricingService.updatePricingForCards(cardIds).catch(console.error);
+      
+      res.json({ message: "Batch pricing update started" });
+    } catch (error) {
+      console.error("Error starting batch pricing update:", error);
+      res.status(500).json({ message: "Failed to start pricing update" });
     }
   });
 
