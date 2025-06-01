@@ -200,7 +200,7 @@ export default function MyCollection() {
                 placeholder="Search your collection..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 w-64 bg-white"
+                className="pl-10 w-64 bg-white text-gray-900 placeholder:text-gray-500"
               />
             </div>
             <Button
@@ -317,9 +317,16 @@ export default function MyCollection() {
                   </h3>
                   <p className="text-xs text-gray-600">{item.card.set.name} #{item.card.cardNumber}</p>
                   <div className="flex items-center justify-between mt-2">
-                    <Badge className="bg-blue-100 text-blue-800 text-xs border-blue-200">
-                      {formatCondition(item.condition)}
-                    </Badge>
+                    <div className="flex gap-1">
+                      <Badge className="bg-blue-100 text-blue-800 text-xs border-blue-200">
+                        {formatCondition(item.condition)}
+                      </Badge>
+                      {item.quantity > 1 && (
+                        <Badge className="bg-orange-100 text-orange-800 text-xs border-orange-200">
+                          Qty: {item.quantity}
+                        </Badge>
+                      )}
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
