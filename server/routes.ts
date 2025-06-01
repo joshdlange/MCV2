@@ -8,6 +8,7 @@ import csv from "csv-parser";
 import { Readable } from "stream";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import { fileURLToPath } from "url";
 import Stripe from "stripe";
 import { ebayPricingService } from "./ebay-pricing";
@@ -702,8 +703,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const VERIFICATION_TOKEN = "mcv-ebay-verify-5a28db8a9f4e4f39bd73d9a67c45dc94";
         const ENDPOINT_URL = "https://app.marvelcardvault.com/api/ebay-webhook";
         
-        // Import crypto using require (CommonJS style for compatibility)
-        const crypto = require('node:crypto');
         const hash = crypto.createHash('sha256')
           .update(`${challengeCode}${VERIFICATION_TOKEN}${ENDPOINT_URL}`)
           .digest('hex');
