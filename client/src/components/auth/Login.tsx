@@ -258,7 +258,10 @@ export function Login() {
               <div className="mt-6 p-6 bg-gradient-to-r from-purple-900/30 to-pink-900/30 rounded-xl border border-purple-700/30">
                 <h4 className="font-bold text-white mb-3">Choose Your Plan</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 bg-gray-800 rounded-lg">
+                  <button 
+                    onClick={handleGoogleSignIn}
+                    className="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors cursor-pointer text-left"
+                  >
                     <div className="font-semibold text-gray-300">SIDE KICK</div>
                     <div className="text-2xl font-bold text-green-400 mb-2">FREE</div>
                     <ul className="text-sm text-gray-400 space-y-1">
@@ -266,8 +269,14 @@ export function Login() {
                       <li>• Basic tracking</li>
                       <li>• Wishlist management</li>
                     </ul>
-                  </div>
-                  <div className="p-4 bg-gradient-to-br from-purple-800 to-pink-800 rounded-lg border border-purple-500">
+                    <div className="mt-3 text-xs text-gray-500">Click to sign up</div>
+                  </button>
+                  <button 
+                    onClick={() => {
+                      window.open('https://buy.stripe.com/3cI14n5dwegW7Bo8pP6kg00', '_blank');
+                    }}
+                    className="p-4 bg-gradient-to-br from-purple-800 to-pink-800 rounded-lg border border-purple-500 hover:from-purple-700 hover:to-pink-700 transition-colors cursor-pointer text-left"
+                  >
                     <div className="font-semibold text-white">SUPER HERO</div>
                     <div className="text-2xl font-bold text-white mb-2">$4/mo</div>
                     <ul className="text-sm text-gray-200 space-y-1">
@@ -275,7 +284,8 @@ export function Login() {
                       <li>• Marketplace access</li>
                       <li>• Advanced analytics</li>
                     </ul>
-                  </div>
+                    <div className="mt-3 text-xs text-gray-300">Click to subscribe</div>
+                  </button>
                 </div>
               </div>
             </div>
