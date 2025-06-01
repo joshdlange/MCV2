@@ -190,20 +190,12 @@ export function CardGrid({
                 </h3>
                 <p className="text-xs text-gray-500 mb-2">{card.set.name}</p>
                 
-                <div className="flex flex-col space-y-1 mb-2">
-                  <CardPricing cardId={card.id} className="text-xs" />
-                  <div className="flex items-center justify-between">
-                    {card.estimatedValue && (
-                      <span className="text-xs text-gray-500">
-                        Est: ${parseFloat(card.estimatedValue).toFixed(0)}
-                      </span>
-                    )}
-                    {card.isInsert && (
-                      <span className="text-xs text-white px-2 py-1 rounded bg-purple-600 font-bold shadow-lg">
-                        INSERT
-                      </span>
-                    )}
-                  </div>
+                <div className="flex items-center justify-between mb-2">
+                  {card.isInsert && (
+                    <span className="text-xs text-white px-2 py-1 rounded bg-purple-600 font-bold shadow-lg">
+                      INSERT
+                    </span>
+                  )}
                 </div>
 
                 {/* Action Buttons - Compact */}

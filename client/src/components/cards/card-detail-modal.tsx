@@ -6,13 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Check, Heart, Star, RotateCcw, Edit, Trash2, Save, X } from "lucide-react";
+import { Check, Heart, Star, RotateCcw, Edit, Trash2, Save, X, RefreshCw, ExternalLink } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
 import type { CardWithSet } from "@shared/schema";
+import { useCardPricing, useRefreshCardPricing } from "@/hooks/useCardPricing";
 
 interface CardDetailModalProps {
   card: CardWithSet | null;
@@ -48,6 +49,10 @@ export function CardDetailModal({
   const { isAdminMode } = useAppStore();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  
+  // eBay pricing hooks
+  const { data: pricing, isLoading: isPricingLoading } = useCardPricing(card?.id || 0);
+  const refreshPricing = useRefreshCardPricing();
 
   // Admin mutations
   const updateCardMutation = useMutation({
@@ -322,11 +327,66 @@ export function CardDetailModal({
                   </div>
                 )}
 
-                <div>
-                  <Label className="text-sm font-medium">Estimated Value</Label>
-                  <p className="text-lg font-semibold text-green-600">
-                    ${card.estimatedValue ? parseFloat(card.estimatedValue).toFixed(2) : "N/A"}
-                  </p>
+                {/* eBay Market Pricing */}
+                <div className="border rounded-lg p-4 bg-gray-50">
+                  <div className="flex items-center justify-between mb-3">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <ExternalLink className="w-4 h-4" />
+                      eBay Market Price
+                    </Label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        if (!card) return;
+                        try {
+                          await refreshPricing(card.id);
+                          queryClient.invalidateQueries({ queryKey: ["/api/card-pricing", card.id] });
+                          toast({ title: "Pricing updated from eBay" });
+                        } catch (error) {
+                          toast({ title: "Failed to update pricing", variant: "destructive" });
+                        }
+                      }}
+                      disabled={isPricingLoading}
+                      className="text-xs"
+                    >
+                      <RefreshCw className={`w-3 h-3 mr-1 ${isPricingLoading ? 'animate-spin' : ''}`} />
+                      Refresh
+                    </Button>
+                  </div>
+                  
+                  {isPricingLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span className="text-sm text-gray-500">Fetching latest prices...</span>
+                    </div>
+                  ) : pricing ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg font-bold text-green-600">
+                          ${pricing.avgPrice.toFixed(2)}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          Based on {pricing.salesCount} recent sales
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        Last updated: {new Date(pricing.lastFetched).toLocaleDateString()}
+                      </div>
+                      <div className="text-xs text-blue-600">
+                        Real-time data from eBay completed listings
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-500">
+                        No pricing data available yet
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        Click refresh to fetch from eBay
+                      </p>
+                    </div>
+                  )}
                 </div>
               </>
             )}

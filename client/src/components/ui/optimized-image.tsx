@@ -70,53 +70,51 @@ export function OptimizedImage({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [currentSrc, setCurrentSrc] = useState('');
-  const [fallbackAttempt, setFallbackAttempt] = useState(0);
   
   const config = IMAGE_CONFIGS[size];
   
-  // Create multiple fallback URLs for maximum compatibility
-  const createFallbackUrls = (originalUrl: string): string[] => {
-    const urls: string[] = [];
+  // Optimized URL creation - use Cloudinary for performance
+  const getOptimizedUrl = (originalUrl: string): string => {
+    if (!originalUrl) return '';
     
+    // If already optimized or Cloudinary URL, use as-is
+    if (originalUrl.includes('cloudinary.com')) {
+      return originalUrl;
+    }
+    
+    // For Google Drive URLs, convert to direct access
     if (originalUrl.includes('drive.google.com')) {
       const fileIdMatch = originalUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
       if (fileIdMatch) {
         const fileId = fileIdMatch[1];
-        // Primary fallbacks for Google Drive
-        urls.push(`https://drive.google.com/uc?export=view&id=${fileId}`);
-        urls.push(`https://drive.google.com/thumbnail?id=${fileId}&sz=w400`);
-        urls.push(`https://drive.google.com/uc?export=download&id=${fileId}`);
+        // Use thumbnail endpoint for better performance
+        return `https://drive.google.com/thumbnail?id=${fileId}&sz=w${config.w || 400}`;
       }
-    } else {
-      // For non-Google Drive URLs, use as-is
-      urls.push(originalUrl);
     }
     
-    return urls;
+    return buildCloudinaryUrl(originalUrl, config);
   };
   
   useEffect(() => {
     if (src) {
       setIsLoading(true);
       setHasError(false);
-      setFallbackAttempt(0);
-      const fallbackUrls = createFallbackUrls(src);
-      setCurrentSrc(fallbackUrls[0] || src);
+      setCurrentSrc(getOptimizedUrl(src));
     }
   }, [src]);
   
   const handleImageError = () => {
-    const fallbackUrls = createFallbackUrls(src);
-    const nextAttempt = fallbackAttempt + 1;
-    
-    if (nextAttempt < fallbackUrls.length) {
-      setFallbackAttempt(nextAttempt);
-      setCurrentSrc(fallbackUrls[nextAttempt]);
-      setIsLoading(true);
-    } else {
-      setIsLoading(false);
-      setHasError(true);
+    // Simple fallback to original URL if optimized version fails
+    if (currentSrc !== src && src.includes('drive.google.com')) {
+      const fileIdMatch = src.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+      if (fileIdMatch) {
+        setCurrentSrc(`https://drive.google.com/uc?export=view&id=${fileIdMatch[1]}`);
+        setIsLoading(true);
+        return;
+      }
     }
+    setIsLoading(false);
+    setHasError(true);
   };
   
   if (!src || hasError) {
