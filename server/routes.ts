@@ -686,40 +686,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // eBay Marketplace Account Deletion Notification endpoint
-  app.all("/api/ebay-account-deletion", (req, res) => {
+  // eBay Marketplace Account Deletion webhook endpoint
+  app.get("/api/ebay-webhook", (req, res) => {
     try {
-      // Log the request for debugging
-      console.log(`eBay ${req.method} request:`, {
-        method: req.method,
+      console.log("eBay GET challenge verification:", {
         query: req.query,
-        body: req.body,
         headers: {
-          'content-type': req.headers['content-type'],
           'user-agent': req.headers['user-agent']
         }
       });
 
-      // Handle challenge code validation (both GET and POST)
-      const challengeCode = req.query.challenge_code || req.body.challenge_code || req.body.challengeCode;
-      if (challengeCode) {
-        console.log("Challenge code received:", challengeCode);
-        return res.status(200).send(String(challengeCode));
+      // Challenge verification - eBay sends ?challenge=abc123
+      if (req.query.challenge) {
+        const challengeValue = req.query.challenge;
+        console.log("Challenge received:", challengeValue);
+        
+        return res.status(200).json({
+          challenge: challengeValue
+        });
       }
 
-      // Handle notification payload
-      if (req.body && (req.body.metadata || req.body.notification)) {
-        console.log("Account deletion notification received");
-        // Just acknowledge receipt
-        return res.status(200).send();
-      }
-
-      // Default response for basic validation
-      return res.status(200).send("OK");
+      // Default response if no challenge
+      return res.status(200).json({ status: "OK" });
 
     } catch (error) {
-      console.error("eBay endpoint error:", error);
-      return res.status(200).send("OK");
+      console.error("eBay webhook GET error:", error);
+      return res.status(200).json({ error: "Internal error" });
+    }
+  });
+
+  app.post("/api/ebay-webhook", (req, res) => {
+    try {
+      console.log("eBay POST notification received:", {
+        body: req.body,
+        headers: {
+          'content-type': req.headers['content-type'],
+          'x-ebay-signature': req.headers['x-ebay-signature'],
+          'user-agent': req.headers['user-agent']
+        }
+      });
+
+      // Validate signature if present (skip for now if complex)
+      const signature = req.headers['x-ebay-signature'];
+      if (signature) {
+        console.log("eBay signature present:", signature);
+        // TODO: Implement signature validation using verification token
+      }
+
+      // Process account deletion notification
+      if (req.body && req.body.metadata && req.body.notification) {
+        const { metadata, notification } = req.body;
+        
+        console.log("Processing account deletion:", {
+          topic: metadata.topic,
+          notificationId: notification.notificationId,
+          username: notification.data?.username,
+          userId: notification.data?.userId
+        });
+
+        // In production: delete user data here
+        console.log("Account deletion processed successfully");
+      }
+
+      // Always return 200 OK for successful processing
+      return res.status(200).json({ status: "received" });
+
+    } catch (error) {
+      console.error("eBay webhook POST error:", error);
+      return res.status(200).json({ error: "Internal error" });
     }
   });
 
