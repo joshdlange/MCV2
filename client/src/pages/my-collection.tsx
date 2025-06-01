@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
-import { Star, Heart, Check, ShoppingCart, Trash2, Search } from "lucide-react";
+import { Star, Heart, Check, ShoppingCart, Trash2, Search, Grid3X3, List, Filter } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { CollectionItem, CardWithSet } from "@shared/schema";
+import { convertGoogleDriveUrl } from "@/lib/utils";
+import type { CollectionItem, CardWithSet, CardSet } from "@shared/schema";
 
 export default function MyCollection() {
   const [, setLocation] = useLocation();
@@ -18,6 +20,8 @@ export default function MyCollection() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSet, setSelectedSet] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -26,13 +30,26 @@ export default function MyCollection() {
     queryKey: ["/api/collection"],
   });
 
-  // Filter collection based on search query
-  const filteredCollection = collection?.filter(item => 
-    item.card.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.card.set.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.card.cardNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.card.rarity.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  const { data: cardSets } = useQuery<CardSet[]>({
+    queryKey: ["/api/card-sets"],
+  });
+
+  // Get unique sets from collection
+  const collectionSets = Array.from(new Set(collection?.map(item => item.card.set.id) || []))
+    .map(setId => collection?.find(item => item.card.set.id === setId)?.card.set)
+    .filter(Boolean) as CardSet[];
+
+  // Filter collection based on search query and selected set
+  const filteredCollection = collection?.filter(item => {
+    const matchesSearch = item.card.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.card.set.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.card.cardNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.card.rarity.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesSet = selectedSet === "all" || item.card.set.id.toString() === selectedSet;
+    
+    return matchesSearch && matchesSet;
+  }) || [];
 
   const removeFromCollectionMutation = useMutation({
     mutationFn: async (itemId: number) => {
