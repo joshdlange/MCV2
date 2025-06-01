@@ -186,6 +186,29 @@ export function Login() {
                   </div>
                 </div>
 
+                {/* Upgrade Option */}
+                <div className="p-4 bg-gradient-to-r from-purple-900/30 to-pink-900/30 rounded-lg border border-purple-500/20">
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-white mb-2">
+                      Want unlimited cards?
+                    </div>
+                    <div className="text-sm text-gray-300 mb-3">
+                      Upgrade to Super Hero for $4/month
+                    </div>
+                    <Button 
+                      onClick={() => {
+                        // Create a checkout session without authentication
+                        window.open('https://buy.stripe.com/test_your_payment_link', '_blank');
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="border-purple-500 text-purple-300 hover:bg-purple-600 hover:text-white"
+                    >
+                      View Pricing
+                    </Button>
+                  </div>
+                </div>
+
                 <div className="text-center">
                   <p className="text-xs text-gray-500">
                     By signing in, you agree to our Terms & Privacy Policy

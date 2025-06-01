@@ -905,6 +905,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create customer portal session for billing management
+  app.post("/api/create-portal-session", authenticateUser, async (req: any, res) => {
+    try {
+      const user = req.user;
+      
+      if (!user.stripeCustomerId) {
+        return res.status(400).json({ message: "No Stripe customer ID found" });
+      }
+
+      const session = await stripe.billingPortal.sessions.create({
+        customer: user.stripeCustomerId,
+        return_url: `${req.headers.origin}/profile`,
+      });
+
+      res.json({ url: session.url });
+    } catch (error: any) {
+      console.error('Error creating portal session:', error);
+      res.status(500).json({ message: 'Failed to create portal session' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
