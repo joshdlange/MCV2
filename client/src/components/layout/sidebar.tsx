@@ -73,7 +73,7 @@ export function Sidebar() {
   };
 
   return (
-    <div className="h-screen w-80 bg-background shadow-lg border-r border-border flex flex-col">
+    <div className="h-screen w-80 md:w-80 bg-background shadow-lg border-r border-border flex flex-col">
       {/* Logo & Branding */}
       <div className="flex items-center px-6 py-4 bg-marvel-red">
         <div className="flex items-center space-x-3">
@@ -99,7 +99,7 @@ export function Sidebar() {
         {getNavigationItems(currentUser?.plan || 'SIDE_KICK').map((item) => (
           <Link key={item.href} href={item.href}>
             <div 
-              className={`flex items-center px-4 py-3 rounded-lg transition-colors group cursor-pointer ${
+              className={`flex items-center px-4 py-4 md:py-3 rounded-lg transition-colors group cursor-pointer text-base md:text-sm ${
                 location === item.href 
                   ? 'bg-marvel-red text-white' 
                   : 'text-foreground hover:bg-marvel-red hover:text-white'

@@ -1,4 +1,5 @@
 import { storage } from "./storage";
+import { uploadImage } from "./cloudinary";
 import fs from "fs";
 import path from "path";
 
@@ -24,10 +25,10 @@ function convertGoogleDriveUrl(url: string): string {
   return url;
 }
 
-// Function to download and save an image from URL
-async function downloadAndSaveImage(url: string): Promise<string | null> {
+// Function to download and upload image to Cloudinary
+async function downloadAndUploadToCloudinary(url: string, folder: string = 'marvel-cards'): Promise<string | null> {
   try {
-    // Create uploads directory if it doesn't exist
+    // Create temporary uploads directory if it doesn't exist
     const uploadsDir = path.join(process.cwd(), "uploads");
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
@@ -56,14 +57,23 @@ async function downloadAndSaveImage(url: string): Promise<string | null> {
     const filename = `image_${timestamp}_${randomString}${extension}`;
     const filepath = path.join(uploadsDir, filename);
 
-    // Save the image
+    // Save the image temporarily
     const buffer = await response.arrayBuffer();
     fs.writeFileSync(filepath, Buffer.from(buffer));
 
-    // Return the local URL
-    return `/uploads/${filename}`;
+    // Upload to Cloudinary
+    const cloudinaryUrl = await uploadImage(filepath, folder);
+    
+    // Clean up temporary file
+    try {
+      fs.unlinkSync(filepath);
+    } catch (cleanupError) {
+      console.warn(`Failed to clean up temporary file ${filepath}:`, cleanupError);
+    }
+
+    return cloudinaryUrl;
   } catch (error) {
-    console.error(`Error downloading image from ${url}:`, error);
+    console.error(`Error processing image from ${url}:`, error);
     return null;
   }
 }
@@ -83,9 +93,9 @@ export async function processImages() {
       // Process front image
       if (card.frontImageUrl && card.frontImageUrl.includes("drive.google.com")) {
         console.log(`Processing front image for card ${card.id}: ${card.name}`);
-        const localUrl = await downloadAndSaveImage(card.frontImageUrl);
-        if (localUrl) {
-          updates.frontImageUrl = localUrl;
+        const cloudinaryUrl = await downloadAndUploadToCloudinary(card.frontImageUrl, 'marvel-cards');
+        if (cloudinaryUrl) {
+          updates.frontImageUrl = cloudinaryUrl;
           updated = true;
         }
       }
@@ -93,9 +103,9 @@ export async function processImages() {
       // Process back image
       if (card.backImageUrl && card.backImageUrl.includes("drive.google.com")) {
         console.log(`Processing back image for card ${card.id}: ${card.name}`);
-        const localUrl = await downloadAndSaveImage(card.backImageUrl);
-        if (localUrl) {
-          updates.backImageUrl = localUrl;
+        const cloudinaryUrl = await downloadAndUploadToCloudinary(card.backImageUrl, 'marvel-cards');
+        if (cloudinaryUrl) {
+          updates.backImageUrl = cloudinaryUrl;
           updated = true;
         }
       }
@@ -113,10 +123,10 @@ export async function processImages() {
     for (const set of allSets) {
       if (set.imageUrl && set.imageUrl.includes("drive.google.com")) {
         console.log(`Processing image for set ${set.id}: ${set.name}`);
-        const localUrl = await downloadAndSaveImage(set.imageUrl);
-        if (localUrl) {
-          await storage.updateCardSet(set.id, { imageUrl: localUrl });
-          console.log(`Updated set ${set.id} with local image URL`);
+        const cloudinaryUrl = await downloadAndUploadToCloudinary(set.imageUrl, 'card-sets');
+        if (cloudinaryUrl) {
+          await storage.updateCardSet(set.id, { imageUrl: cloudinaryUrl });
+          console.log(`Updated set ${set.id} with Cloudinary URL`);
         }
       }
     }
