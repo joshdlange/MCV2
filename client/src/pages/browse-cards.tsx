@@ -20,6 +20,7 @@ export default function BrowseCards() {
   const [selectedSet, setSelectedSet] = useState<CardSet | null>(null);
   const [filters, setFilters] = useState<CardFilters>({});
   const [favoriteSetIds, setFavoriteSetIds] = useState<number[]>([]);
+  const [setSearchQuery, setSetSearchQuery] = useState("");
   const [editingSet, setEditingSet] = useState<CardSet | null>(null);
   const [editFormData, setEditFormData] = useState({
     name: '',
@@ -306,20 +307,42 @@ export default function BrowseCards() {
     );
   }
 
+  // Filter sets based on search query
+  const filteredSets = cardSets?.filter(set => {
+    if (!setSearchQuery) return true;
+    const query = setSearchQuery.toLowerCase();
+    return set.name.toLowerCase().includes(query) || 
+           set.year?.toString().includes(query) ||
+           set.description?.toLowerCase().includes(query);
+  }) || [];
+
   // Show card sets grid
-  const favoritesets = cardSets?.filter(set => favoriteSetIds.includes(set.id)) || [];
-  const otherSets = cardSets?.filter(set => !favoriteSetIds.includes(set.id)) || [];
+  const favoritesets = filteredSets.filter(set => favoriteSetIds.includes(set.id));
+  const otherSets = filteredSets.filter(set => !favoriteSetIds.includes(set.id));
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Page Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">BROWSE CARD SETS</h2>
-            <p className="text-sm text-gray-600 font-roboto">
-              Choose a card set to explore individual cards
-            </p>
+      <div className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-4">
+        <div className="flex flex-col space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">BROWSE CARD SETS</h2>
+              <p className="text-sm text-gray-600 font-roboto">
+                Choose a card set to explore individual cards
+              </p>
+            </div>
+          </div>
+          
+          {/* Set Search Bar */}
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Search sets by name or year..."
+              value={setSearchQuery}
+              onChange={(e) => setSetSearchQuery(e.target.value)}
+              className="pl-10 bg-white text-gray-900 placeholder:text-gray-500"
+            />
           </div>
         </div>
       </div>
@@ -333,7 +356,7 @@ export default function BrowseCards() {
               <Star className="w-5 h-5 text-yellow-500 fill-current" />
               Favorite Sets
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
               {favoritesets.map((set) => (
                 <Card key={set.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSetClick(set)}>
                   <CardContent className="p-0">
@@ -342,11 +365,11 @@ export default function BrowseCards() {
                         <img 
                           src={convertGoogleDriveUrl(set.imageUrl)} 
                           alt={set.name}
-                          className="w-full h-48 object-cover rounded-t-lg"
+                          className="w-full h-32 md:h-48 object-cover rounded-t-lg"
                         />
                       ) : (
-                        <div className="w-full h-48 bg-gradient-to-br from-marvel-red to-red-700 rounded-t-lg flex items-center justify-center">
-                          <span className="text-white text-lg font-bold text-center px-4">{set.name}</span>
+                        <div className="w-full h-32 md:h-48 bg-gradient-to-br from-marvel-red to-red-700 rounded-t-lg flex items-center justify-center">
+                          <span className="text-white text-sm md:text-lg font-bold text-center px-2 md:px-4">{set.name}</span>
                         </div>
                       )}
                       <div className="absolute top-2 right-2 flex gap-1">
@@ -376,10 +399,10 @@ export default function BrowseCards() {
                         </Button>
                       </div>
                     </div>
-                    <div className="p-4">
-                      <h3 className="font-semibold text-gray-900 mb-2">{set.name}</h3>
-                      <p className="text-sm text-gray-600 mb-2">{set.description || 'Click to explore cards from this set'}</p>
-                      <p className="text-xs text-gray-500 mb-3">{set.totalCards} cards • {set.year}</p>
+                    <div className="p-3 md:p-4">
+                      <h3 className="font-semibold text-gray-900 mb-1 md:mb-2 text-sm md:text-base line-clamp-2">{set.name}</h3>
+                      <p className="text-xs md:text-sm text-gray-600 mb-2 line-clamp-2 hidden md:block">{set.description || 'Click to explore cards from this set'}</p>
+                      <p className="text-xs text-gray-500 mb-2 md:mb-3">{set.totalCards} cards • {set.year}</p>
                       <div className="flex gap-2">
                         <Button
                           onClick={(e) => {
@@ -406,7 +429,7 @@ export default function BrowseCards() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             {favoritesets.length > 0 ? 'All Sets' : 'Card Sets'}
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
             {otherSets.map((set) => (
               <Card key={set.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSetClick(set)}>
                 <CardContent className="p-0">
@@ -415,11 +438,11 @@ export default function BrowseCards() {
                       <img 
                         src={convertGoogleDriveUrl(set.imageUrl)} 
                         alt={set.name}
-                        className="w-full h-48 object-cover rounded-t-lg"
+                        className="w-full h-32 md:h-48 object-cover rounded-t-lg"
                       />
                     ) : (
-                      <div className="w-full h-48 bg-gradient-to-br from-marvel-red to-red-700 rounded-t-lg flex items-center justify-center">
-                        <span className="text-white text-lg font-bold text-center px-4">{set.name}</span>
+                      <div className="w-full h-32 md:h-48 bg-gradient-to-br from-marvel-red to-red-700 rounded-t-lg flex items-center justify-center">
+                        <span className="text-white text-sm md:text-lg font-bold text-center px-2 md:px-4">{set.name}</span>
                       </div>
                     )}
                     <div className="absolute top-2 right-2 flex gap-1">
