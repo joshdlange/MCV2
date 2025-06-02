@@ -42,7 +42,13 @@ export default function Profile() {
     bio: '',
     location: '',
     website: '',
-    address: '',
+    address: {
+      street: '',
+      city: '',
+      state: '',
+      postalCode: '',
+      country: ''
+    },
     privacySettings: {
       showEmail: false,
       showCollection: true,
@@ -199,20 +205,20 @@ export default function Profile() {
 
         {/* Profile Tabs */}
         <Tabs defaultValue="personal" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="personal">
+          <TabsList className="grid w-full grid-cols-4 bg-card border border-border">
+            <TabsTrigger value="personal" className="text-foreground data-[state=active]:text-foreground data-[state=active]:bg-background">
               <User className="w-4 h-4 mr-2" />
               Personal
             </TabsTrigger>
-            <TabsTrigger value="social">
+            <TabsTrigger value="social" className="text-foreground data-[state=active]:text-foreground data-[state=active]:bg-background">
               <Users className="w-4 h-4 mr-2" />
               Social
             </TabsTrigger>
-            <TabsTrigger value="billing">
+            <TabsTrigger value="billing" className="text-foreground data-[state=active]:text-foreground data-[state=active]:bg-background">
               <CreditCard className="w-4 h-4 mr-2" />
               Billing
             </TabsTrigger>
-            <TabsTrigger value="privacy">
+            <TabsTrigger value="privacy" className="text-foreground data-[state=active]:text-foreground data-[state=active]:bg-background">
               <Lock className="w-4 h-4 mr-2" />
               Privacy
             </TabsTrigger>
@@ -264,20 +270,88 @@ export default function Profile() {
                   <Globe className="w-4 h-4 inline mr-1 mt-1 text-muted-foreground" />
                 </div>
 
-                <div>
-                  <Label htmlFor="address">Shipping Address</Label>
-                  <Textarea
-                    id="address"
-                    value={profileData.address}
-                    onChange={(e) => setProfileData(prev => ({ ...prev, address: e.target.value }))}
-                    disabled={!isEditing}
-                    placeholder="Street address, city, state, postal code, country"
-                    rows={3}
-                    className="bg-background text-foreground border-border"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
+                <div className="space-y-4">
+                  <Label className="text-base font-semibold">Shipping Address</Label>
+                  <p className="text-xs text-muted-foreground">
                     This address will be used for shipping when buying/selling cards through the marketplace
                   </p>
+                  
+                  <div>
+                    <Label htmlFor="street">Street Address</Label>
+                    <Input
+                      id="street"
+                      value={profileData.address.street}
+                      onChange={(e) => setProfileData(prev => ({ 
+                        ...prev, 
+                        address: { ...prev.address, street: e.target.value }
+                      }))}
+                      disabled={!isEditing}
+                      placeholder="123 Main Street"
+                      className="bg-background text-foreground border-border"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="city">City</Label>
+                      <Input
+                        id="city"
+                        value={profileData.address.city}
+                        onChange={(e) => setProfileData(prev => ({ 
+                          ...prev, 
+                          address: { ...prev.address, city: e.target.value }
+                        }))}
+                        disabled={!isEditing}
+                        placeholder="New York"
+                        className="bg-background text-foreground border-border"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="state">State/Province</Label>
+                      <Input
+                        id="state"
+                        value={profileData.address.state}
+                        onChange={(e) => setProfileData(prev => ({ 
+                          ...prev, 
+                          address: { ...prev.address, state: e.target.value }
+                        }))}
+                        disabled={!isEditing}
+                        placeholder="NY"
+                        className="bg-background text-foreground border-border"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="postalCode">Postal Code</Label>
+                      <Input
+                        id="postalCode"
+                        value={profileData.address.postalCode}
+                        onChange={(e) => setProfileData(prev => ({ 
+                          ...prev, 
+                          address: { ...prev.address, postalCode: e.target.value }
+                        }))}
+                        disabled={!isEditing}
+                        placeholder="10001"
+                        className="bg-background text-foreground border-border"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="country">Country</Label>
+                      <Input
+                        id="country"
+                        value={profileData.address.country}
+                        onChange={(e) => setProfileData(prev => ({ 
+                          ...prev, 
+                          address: { ...prev.address, country: e.target.value }
+                        }))}
+                        disabled={!isEditing}
+                        placeholder="United States"
+                        className="bg-background text-foreground border-border"
+                      />
+                    </div>
+                  </div>
                 </div>
                 
                 <div>
@@ -301,7 +375,11 @@ export default function Profile() {
                     >
                       {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
                     </Button>
-                    <Button variant="outline" onClick={() => setIsEditing(false)}>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setIsEditing(false)}
+                      className="bg-gray-800 text-white border-gray-800 hover:bg-gray-900 hover:text-white hover:border-gray-900"
+                    >
                       Cancel
                     </Button>
                   </div>
@@ -323,7 +401,9 @@ export default function Profile() {
                   <p className="text-muted-foreground mb-4">
                     Connect with other collectors, share your collection, and discover new cards together.
                   </p>
-                  <Badge variant="outline">Coming Soon</Badge>
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                    Coming Soon
+                  </Badge>
                 </div>
               </CardContent>
             </Card>
@@ -371,7 +451,9 @@ export default function Profile() {
                         <p className="text-sm text-muted-foreground mb-4">
                           Payment and subscription management will be integrated with Stripe.
                         </p>
-                        <Badge variant="outline">Stripe Integration Coming Soon</Badge>
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          Stripe Integration Coming Soon
+                        </Badge>
                       </div>
                     </div>
                   )}
