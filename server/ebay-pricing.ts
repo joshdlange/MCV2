@@ -24,10 +24,11 @@ export class EbayPricingService {
   private readonly appId: string;
   private readonly baseUrl = 'https://svcs.ebay.com/services/search/FindingService/v1';
   private lastRequestTime: number = 0;
-  private readonly minRequestInterval = 5000; // 5 seconds between requests (more conservative)
+  private readonly minRequestInterval = 3000; // 3 seconds between requests
   private requestCount: number = 0;
-  private readonly maxRequestsPerHour = 40; // Conservative limit
+  private readonly maxRequestsPerHour = 70; // Increased limit but stay under eBay's limits
   private hourlyResetTime: number = Date.now() + (60 * 60 * 1000); // Reset every hour
+  private failedRequests: Set<number> = new Set(); // Track failed card IDs for retry
   
   constructor() {
     // Use production keys if available, otherwise fall back to sandbox
@@ -69,6 +70,62 @@ export class EbayPricingService {
     
     this.lastRequestTime = Date.now();
     this.requestCount++;
+  }
+
+  /**
+   * Exponential backoff retry helper
+   */
+  private async retryWithExponentialBackoff<T>(
+    operation: () => Promise<T>,
+    maxRetries: number = 3,
+    baseDelay: number = 2000
+  ): Promise<T> {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error as Error;
+        
+        if (attempt === maxRetries) {
+          console.error(`Operation failed after ${maxRetries + 1} attempts:`, lastError.message);
+          throw lastError;
+        }
+        
+        const delay = baseDelay * Math.pow(2, attempt); // 2s, 4s, 8s
+        console.warn(`Attempt ${attempt + 1} failed, retrying in ${delay}ms:`, lastError.message);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    throw lastError;
+  }
+
+  /**
+   * Get cached price as fallback when API fails
+   */
+  private async getCachedPriceAsFallback(cardId: number): Promise<{ avgPrice: number; salesCount: number; lastFetched: Date } | null> {
+    try {
+      const [cachedPrice] = await db
+        .select()
+        .from(cardPriceCache)
+        .where(eq(cardPriceCache.cardId, cardId))
+        .limit(1);
+
+      if (cachedPrice) {
+        console.log(`Using cached price as fallback for card ${cardId}`);
+        return {
+          avgPrice: parseFloat(cachedPrice.avgPrice || '0'),
+          salesCount: cachedPrice.salesCount || 0,
+          lastFetched: cachedPrice.lastFetched
+        };
+      }
+    } catch (error) {
+      console.error(`Error getting cached price for card ${cardId}:`, error);
+    }
+    
+    return null;
   }
 
   /**
@@ -129,32 +186,32 @@ export class EbayPricingService {
   }
 
   /**
-   * Fetch completed listings for a single search query
+   * Fetch completed listings for a single search query with retry logic
    */
   private async fetchSingleQuery(searchQuery: string): Promise<EbaySoldItem[]> {
-    // Correct eBay Finding API headers (SOA format, not REST)
-    const headers = {
-      'X-EBAY-SOA-OPERATION-NAME': 'findCompletedItems',
-      'X-EBAY-SOA-SERVICE-VERSION': '1.0.0',
-      'X-EBAY-SOA-SECURITY-APPNAME': this.appId,
-      'X-EBAY-SOA-RESPONSE-DATA-FORMAT': 'JSON',
-    };
+    return this.retryWithExponentialBackoff(async () => {
+      // Correct eBay Finding API headers (SOA format, not REST)
+      const headers = {
+        'X-EBAY-SOA-OPERATION-NAME': 'findCompletedItems',
+        'X-EBAY-SOA-SERVICE-VERSION': '1.0.0',
+        'X-EBAY-SOA-SECURITY-APPNAME': this.appId,
+        'X-EBAY-SOA-RESPONSE-DATA-FORMAT': 'JSON',
+      };
 
-    // Query parameters for the request
-    const params = new URLSearchParams({
-      'keywords': searchQuery,
-      'categoryId': '2536', // Non-Sport Trading Cards
-      'itemFilter(0).name': 'SoldItemsOnly',
-      'itemFilter(0).value': 'true',
-      'itemFilter(1).name': 'ListingType',
-      'itemFilter(1).value': 'AuctionWithBIN',
-      'itemFilter(2).name': 'ListingType',
-      'itemFilter(2).value': 'FixedPrice',
-      'sortOrder': 'EndTimeSoonest',
-      'paginationInput.entriesPerPage': '10'
-    });
+      // Query parameters for the request
+      const params = new URLSearchParams({
+        'keywords': searchQuery,
+        'categoryId': '2536', // Non-Sport Trading Cards
+        'itemFilter(0).name': 'SoldItemsOnly',
+        'itemFilter(0).value': 'true',
+        'itemFilter(1).name': 'ListingType',
+        'itemFilter(1).value': 'AuctionWithBIN',
+        'itemFilter(2).name': 'ListingType',
+        'itemFilter(2).value': 'FixedPrice',
+        'sortOrder': 'EndTimeSoonest',
+        'paginationInput.entriesPerPage': '10'
+      });
 
-    try {
       // Apply rate limiting
       await this.waitForRateLimit();
       
@@ -168,31 +225,31 @@ export class EbayPricingService {
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('eBay API Error Response:', errorText);
+        console.error(`eBay API Error Response for query "${searchQuery}":`, errorText);
         
         // Check for rate limit error
         if (errorText.includes('exceeded the number of times')) {
-          console.warn('eBay API rate limit exceeded. Pricing data will use cached values.');
-          return []; // Return empty array instead of throwing
+          console.warn('eBay API rate limit exceeded. Will use cached values.');
+          throw new Error('Rate limit exceeded');
         }
         
         throw new Error(`eBay API returned ${response.status}: ${response.statusText}`);
       }
 
       const data: EbayApiResponse = await response.json();
-      console.log('eBay API Response:', JSON.stringify(data, null, 2));
       
       if (data.findCompletedItemsResponse[0].ack[0] !== 'Success') {
-        console.warn('eBay API warning:', data);
+        console.warn(`eBay API warning for query "${searchQuery}":`, data);
         return [];
       }
 
       const searchResult = data.findCompletedItemsResponse[0].searchResult[0];
       if (!searchResult.item || parseInt(searchResult.count) === 0) {
+        console.log(`No results found for query: "${searchQuery}"`);
         return [];
       }
 
-      return searchResult.item.map(item => ({
+      const items = searchResult.item.map(item => ({
         title: item.title,
         soldPrice: item.soldPrice,
         condition: item.condition,
@@ -200,10 +257,12 @@ export class EbayPricingService {
         viewItemURL: item.viewItemURL
       }));
 
-    } catch (error) {
-      console.error('Error fetching eBay data:', error);
-      return [];
-    }
+      console.log(`Found ${items.length} sold items for query: "${searchQuery}"`);
+      return items;
+    }).catch(error => {
+      console.error(`Failed to fetch eBay data for query "${searchQuery}" after retries:`, error.message);
+      return []; // Return empty array on final failure
+    });
   }
 
   /**
@@ -265,7 +324,7 @@ export class EbayPricingService {
   }
 
   /**
-   * Get or fetch pricing for a specific card
+   * Get or fetch pricing for a specific card with improved error handling
    */
   async getCardPricing(cardId: number): Promise<{ avgPrice: number; salesCount: number; lastFetched: Date } | null> {
     try {
@@ -283,6 +342,9 @@ export class EbayPricingService {
         
         if (!isStale || !canFetch) {
           // Use cached data if fresh, or if we can't make API call due to rate limits
+          if (!canFetch) {
+            console.log(`Using cached price for card ${cardId} - rate limit reached (${this.requestCount}/${this.maxRequestsPerHour})`);
+          }
           return {
             avgPrice: parseFloat(cachedPrice.avgPrice || '0'),
             salesCount: cachedPrice.salesCount || 0,
@@ -293,7 +355,8 @@ export class EbayPricingService {
 
       // Only fetch fresh data if cache is stale AND we can make API calls
       if (this.shouldSkipApiCall()) {
-        console.log(`Skipping API call for card ${cardId} due to rate limits`);
+        console.log(`Skipping API call for card ${cardId} due to rate limits - queuing for retry`);
+        this.failedRequests.add(cardId);
         return cachedPrice ? {
           avgPrice: parseFloat(cachedPrice.avgPrice || '0'),
           salesCount: cachedPrice.salesCount || 0,
@@ -301,17 +364,30 @@ export class EbayPricingService {
         } : null;
       }
 
-      // Fetch fresh data from eBay
-      return await this.fetchAndCacheCardPricing(cardId);
+      // Attempt to fetch fresh data from eBay
+      const result = await this.fetchAndCacheCardPricing(cardId);
+      
+      if (result) {
+        // Remove from failed requests on success
+        this.failedRequests.delete(cardId);
+        return result;
+      } else {
+        // If fetch failed, add to failed requests and use cached data as fallback
+        this.failedRequests.add(cardId);
+        console.log(`eBay fetch failed for card ${cardId}, using cached data as fallback`);
+        return await this.getCachedPriceAsFallback(cardId);
+      }
 
     } catch (error) {
       console.error(`Error getting pricing for card ${cardId}:`, error);
-      return null;
+      this.failedRequests.add(cardId);
+      // Try to return cached data as fallback
+      return await this.getCachedPriceAsFallback(cardId);
     }
   }
 
   /**
-   * Fetch fresh pricing data and update cache
+   * Fetch fresh pricing data and update cache with improved error handling
    */
   async fetchAndCacheCardPricing(cardId: number): Promise<{ avgPrice: number; salesCount: number; lastFetched: Date } | null> {
     try {
@@ -329,21 +405,56 @@ export class EbayPricingService {
         .limit(1);
 
       if (!card) {
-        throw new Error(`Card with ID ${cardId} not found`);
+        console.error(`Card with ID ${cardId} not found in database`);
+        return null;
       }
 
       // Build multiple search queries and fetch eBay data
       const searchQueries = this.buildSearchQueries(card.setName, card.name, card.cardNumber);
-      console.log(`Fetching eBay pricing for card: ${card.name}`);
+      console.log(`Fetching eBay pricing for card: "${card.name}" from "${card.setName}" #${card.cardNumber}`);
       
       const soldItems = await this.fetchCompletedListings(searchQueries);
+      
+      if (soldItems.length === 0) {
+        console.log(`No eBay sold items found for card "${card.name}" - queries attempted: ${searchQueries.length}`);
+        // Still update the cache with zero data to prevent repeated failed attempts
+        await this.updatePriceCache(cardId, 0, [], 0);
+        return {
+          avgPrice: 0,
+          salesCount: 0,
+          lastFetched: new Date()
+        };
+      }
+
       // Filter results to ensure they're relevant to the character
       const filteredItems = this.filterRelevantResults(soldItems, card.name);
       const avgPrice = this.calculateAveragePrice(filteredItems);
       const recentSales = filteredItems.map(item => item.viewItemURL);
 
-      // Update or insert cache entry
-      const now = new Date();
+      // Update cache with new data
+      await this.updatePriceCache(cardId, avgPrice, recentSales, filteredItems.length);
+
+      console.log(`Successfully updated pricing for card "${card.name}": $${avgPrice} (${filteredItems.length} relevant sales from ${soldItems.length} total)`);
+
+      return {
+        avgPrice,
+        salesCount: filteredItems.length,
+        lastFetched: new Date()
+      };
+
+    } catch (error) {
+      console.error(`Error fetching pricing for card ${cardId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Helper method to update price cache in database
+   */
+  private async updatePriceCache(cardId: number, avgPrice: number, recentSales: string[], salesCount: number): Promise<void> {
+    const now = new Date();
+    
+    try {
       const [existingCache] = await db
         .select()
         .from(cardPriceCache)
@@ -356,7 +467,7 @@ export class EbayPricingService {
           .set({
             avgPrice: avgPrice.toString(),
             recentSales,
-            salesCount: soldItems.length,
+            salesCount,
             lastFetched: now
           })
           .where(eq(cardPriceCache.cardId, cardId));
@@ -367,42 +478,75 @@ export class EbayPricingService {
             cardId,
             avgPrice: avgPrice.toString(),
             recentSales,
-            salesCount: soldItems.length,
+            salesCount,
             lastFetched: now
           });
       }
-
-      console.log(`Updated pricing for card "${card.name}": $${avgPrice} (${soldItems.length} sales)`);
-
-      return {
-        avgPrice,
-        salesCount: soldItems.length,
-        lastFetched: now
-      };
-
     } catch (error) {
-      console.error(`Error fetching pricing for card ${cardId}:`, error);
-      return null;
+      console.error(`Error updating price cache for card ${cardId}:`, error);
+      throw error;
     }
   }
 
   /**
-   * Batch update pricing for multiple cards
+   * Batch update pricing for multiple cards with improved error handling
    */
   async updatePricingForCards(cardIds: number[]): Promise<void> {
     console.log(`Starting batch pricing update for ${cardIds.length} cards...`);
+    let successCount = 0;
+    let failedCount = 0;
     
     for (const cardId of cardIds) {
       try {
-        await this.fetchAndCacheCardPricing(cardId);
+        // Check if we can make more requests
+        if (!this.canMakeRequest()) {
+          console.log(`Rate limit reached after ${successCount} successful updates. Remaining cards queued for retry.`);
+          // Add remaining cards to failed requests for later retry
+          for (let i = cardIds.indexOf(cardId); i < cardIds.length; i++) {
+            this.failedRequests.add(cardIds[i]);
+          }
+          break;
+        }
+
+        const result = await this.fetchAndCacheCardPricing(cardId);
+        if (result) {
+          successCount++;
+          this.failedRequests.delete(cardId); // Remove from failed on success
+        } else {
+          failedCount++;
+          this.failedRequests.add(cardId);
+          console.log(`Failed to fetch pricing for card ${cardId}, added to retry queue`);
+        }
+        
         // Add small delay to respect eBay API rate limits
         await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
+        failedCount++;
+        this.failedRequests.add(cardId);
         console.error(`Failed to update pricing for card ${cardId}:`, error);
       }
     }
     
-    console.log('Batch pricing update completed');
+    console.log(`Batch pricing update completed: ${successCount} successful, ${failedCount} failed`);
+    console.log(`Failed requests queue size: ${this.failedRequests.size}`);
+  }
+
+  /**
+   * Retry failed requests when rate limits reset
+   */
+  async retryFailedRequests(): Promise<void> {
+    if (this.failedRequests.size === 0) {
+      return;
+    }
+
+    console.log(`Retrying ${this.failedRequests.size} failed pricing requests...`);
+    const failedCards = Array.from(this.failedRequests);
+    
+    // Clear the failed requests set to prevent duplicates
+    this.failedRequests.clear();
+    
+    // Retry the failed requests
+    await this.updatePricingForCards(failedCards);
   }
 
   /**
@@ -420,6 +564,25 @@ export class EbayPricingService {
       console.log(`Found ${staleCards.length} cards with stale pricing data`);
       await this.updatePricingForCards(staleCards.map(c => c.cardId));
     }
+  }
+
+  /**
+   * Get current service status and failed requests info
+   */
+  getServiceStatus(): {
+    requestCount: number;
+    maxRequestsPerHour: number;
+    failedRequestsCount: number;
+    canMakeRequest: boolean;
+    nextResetTime: Date;
+  } {
+    return {
+      requestCount: this.requestCount,
+      maxRequestsPerHour: this.maxRequestsPerHour,
+      failedRequestsCount: this.failedRequests.size,
+      canMakeRequest: this.canMakeRequest(),
+      nextResetTime: new Date(this.hourlyResetTime)
+    };
   }
 }
 
