@@ -166,8 +166,10 @@ export default function MyCollection() {
     removeFromCollectionMutation.mutate(itemId);
   };
 
-  const handleCardClick = (card: CardWithSet) => {
-    setSelectedCard(card);
+  const handleCardClick = (item: CardWithSet | CollectionItem) => {
+    // Convert CollectionItem to CardWithSet format for the modal
+    const cardData: CardWithSet = 'card' in item ? item.card : item;
+    setSelectedCard(cardData);
     setIsModalOpen(true);
   };
 
@@ -404,27 +406,29 @@ export default function MyCollection() {
                   </div>
                 )}
 
-                {/* Sale Status and Favorite */}
-                <div className="absolute top-2 right-2 z-10 flex gap-1">
-                  {item.isForSale && (
-                    <Badge className="bg-green-100 text-green-800 text-xs px-2 py-1">
-                      For Sale
-                    </Badge>
-                  )}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleToggleFavorite(item);
-                    }}
-                    className={`p-1 rounded-full transition-colors ${
-                      item.isFavorite 
-                        ? 'bg-yellow-500 text-white' 
-                        : 'bg-white/80 text-gray-400 hover:text-yellow-500'
-                    }`}
-                  >
-                    <Star className={`w-4 h-4 ${item.isFavorite ? 'fill-current' : ''}`} />
-                  </button>
-                </div>
+                {/* Sale Status and Favorite - Only for owned cards */}
+                {'card' in item && (
+                  <div className="absolute top-2 right-2 z-10 flex gap-1">
+                    {item.isForSale && (
+                      <Badge className="bg-green-100 text-green-800 text-xs px-2 py-1">
+                        For Sale
+                      </Badge>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleFavorite(item);
+                      }}
+                      className={`p-1 rounded-full transition-colors ${
+                        item.isFavorite 
+                          ? 'bg-yellow-500 text-white' 
+                          : 'bg-white/80 text-gray-400 hover:text-yellow-500'
+                      }`}
+                    >
+                      <Star className={`w-4 h-4 ${item.isFavorite ? 'fill-current' : ''}`} />
+                    </button>
+                  </div>
+                )}
 
                 {/* Card Image */}
                 <div className="relative aspect-[2.5/3.5] bg-gray-100 rounded-t-lg overflow-hidden">
@@ -477,17 +481,19 @@ export default function MyCollection() {
                         </Badge>
                       )}
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveFromCollection(item.id);
-                      }}
-                      className="h-6 w-6 p-0 hover:bg-red-100"
-                    >
-                      <Trash2 className="h-3 w-3 text-gray-400 hover:text-red-600" />
-                    </Button>
+                    {'card' in item && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveFromCollection(item.id);
+                        }}
+                        className="h-6 w-6 p-0 hover:bg-red-100"
+                      >
+                        <Trash2 className="h-3 w-3 text-gray-400 hover:text-red-600" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -501,7 +507,7 @@ export default function MyCollection() {
                 <Card 
                   key={item.id} 
                   className="group hover:shadow-md transition-all duration-200 cursor-pointer"
-                  onClick={() => handleCardClick(item.card)}
+                  onClick={() => handleCardClick(item)}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center gap-4">
