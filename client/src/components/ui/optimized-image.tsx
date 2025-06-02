@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 
 interface OptimizedImageProps {
@@ -19,7 +19,7 @@ const IMAGE_CONFIGS = {
   mobile: { w: 150, h: 210, q: 70 },
 } as const;
 
-// Convert Google Drive URLs to direct download format
+// Convert Google Drive URLs to direct view format
 function convertGoogleDriveUrl(url: string): string {
   if (!url.includes('drive.google.com')) return url;
   
@@ -30,6 +30,15 @@ function convertGoogleDriveUrl(url: string): string {
   return url;
 }
 
+// Extract Google Drive file ID from URL
+function extractGoogleDriveFileId(url: string): string | null {
+  if (!url.includes('drive.google.com')) return null;
+  
+  const fileIdMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  return fileIdMatch ? fileIdMatch[1] : null;
+}
+
+// Build Cloudinary optimized URL with fallback handling
 function buildCloudinaryUrl(originalUrl: string, config: typeof IMAGE_CONFIGS[keyof typeof IMAGE_CONFIGS]): string {
   if (!originalUrl) return '';
   
@@ -38,7 +47,7 @@ function buildCloudinaryUrl(originalUrl: string, config: typeof IMAGE_CONFIGS[ke
     return originalUrl;
   }
   
-  // Convert Google Drive URLs to direct download format first
+  // Convert Google Drive URLs to direct view format first
   const directUrl = convertGoogleDriveUrl(originalUrl);
   
   // Use environment variable for cloud name
@@ -71,59 +80,94 @@ export function OptimizedImage({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [currentSrc, setCurrentSrc] = useState('');
+  const [fallbackAttempts, setFallbackAttempts] = useState(0);
   
   const config = IMAGE_CONFIGS[size];
-  
-  // Simplified image URL handling - prioritize direct loading
-  const getOptimizedUrl = (originalUrl: string): string => {
-    if (!originalUrl) return '';
+
+  // Generate different URL formats for fallback chain
+  const generateImageUrls = useCallback((originalUrl: string): string[] => {
+    if (!originalUrl) return [];
     
-    // If already a Cloudinary URL, use as-is
+    const urls: string[] = [];
+    
+    // If already a Cloudinary URL, just use it
     if (originalUrl.includes('cloudinary.com')) {
-      return originalUrl;
+      urls.push(originalUrl);
+      return urls;
     }
     
-    // For Google Drive URLs, convert to direct access first
+    // For Google Drive URLs, create fallback chain
     if (originalUrl.includes('drive.google.com')) {
-      const fileIdMatch = originalUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-      if (fileIdMatch) {
-        const fileId = fileIdMatch[1];
-        // Use direct download format for reliability
-        return `https://drive.google.com/uc?export=view&id=${fileId}`;
+      const fileId = extractGoogleDriveFileId(originalUrl);
+      if (fileId) {
+        // 1. First try Cloudinary optimized
+        urls.push(buildCloudinaryUrl(originalUrl, config));
+        
+        // 2. Fallback to direct Google Drive view
+        urls.push(`https://drive.google.com/uc?export=view&id=${fileId}`);
+        
+        // 3. Alternative Google Drive thumbnail (smaller, more reliable on mobile)
+        urls.push(`https://drive.google.com/thumbnail?id=${fileId}&sz=w${config.w || 400}`);
+        
+        // 4. Last resort: original URL
+        if (originalUrl !== urls[urls.length - 1]) {
+          urls.push(originalUrl);
+        }
+      }
+    } else {
+      // For non-Google Drive URLs
+      urls.push(buildCloudinaryUrl(originalUrl, config));
+      if (originalUrl !== urls[0]) {
+        urls.push(originalUrl);
       }
     }
     
-    // For other URLs, return as-is
-    return originalUrl;
-  };
-  
+    return urls.filter(Boolean);
+  }, [config]);
+
+  // Initialize image loading
   useEffect(() => {
     if (src) {
       setIsLoading(true);
       setHasError(false);
-      setCurrentSrc(getOptimizedUrl(src));
-    }
-  }, [src]);
-  
-  const handleImageError = () => {
-    // Simple fallback to original URL if optimized version fails
-    if (currentSrc !== src && src.includes('drive.google.com')) {
-      const fileIdMatch = src.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-      if (fileIdMatch) {
-        setCurrentSrc(`https://drive.google.com/uc?export=view&id=${fileIdMatch[1]}`);
-        setIsLoading(true);
-        return;
+      setFallbackAttempts(0);
+      
+      const urls = generateImageUrls(src);
+      if (urls.length > 0) {
+        setCurrentSrc(urls[0]);
       }
     }
+  }, [src, generateImageUrls]);
+
+  // Handle image loading errors with fallback chain
+  const handleImageError = useCallback(() => {
+    const urls = generateImageUrls(src);
+    const nextAttempt = fallbackAttempts + 1;
+    
+    if (nextAttempt < urls.length) {
+      // Try next URL in fallback chain
+      setCurrentSrc(urls[nextAttempt]);
+      setFallbackAttempts(nextAttempt);
+      setIsLoading(true);
+    } else {
+      // All fallbacks failed
+      setIsLoading(false);
+      setHasError(true);
+    }
+  }, [src, fallbackAttempts, generateImageUrls]);
+
+  // Handle successful image load
+  const handleImageLoad = useCallback(() => {
     setIsLoading(false);
-    setHasError(true);
-  };
-  
+    setHasError(false);
+  }, []);
+
+  // Render placeholder for missing or failed images
   if (!src || hasError) {
     return (
       <div 
         className={cn(
-          "bg-gray-200 flex items-center justify-center text-gray-500 text-sm border rounded",
+          "bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm",
           className
         )}
         style={{ 
@@ -131,8 +175,15 @@ export function OptimizedImage({
           height: config.h,
           aspectRatio: config.w && config.h ? `${config.w}/${config.h}` : undefined
         }}
+        onClick={onClick}
       >
         <div className="text-center p-2">
+          <div className="w-8 h-8 mx-auto mb-1 opacity-40">
+            {/* Simple card icon SVG */}
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
+              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-7-2l-4-5 1.41-1.41L12 13.17l2.59-2.58L16 12l-4 5z"/>
+            </svg>
+          </div>
           <div className="text-xs opacity-75">Image unavailable</div>
         </div>
       </div>
@@ -140,38 +191,41 @@ export function OptimizedImage({
   }
   
   return (
-    <div className={cn("relative overflow-hidden bg-gray-100", className)}>
+    <div className={cn("relative overflow-hidden bg-gray-100 rounded-lg", className)}>
       {isLoading && (
         <div 
-          className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center"
+          className="absolute inset-0 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 animate-pulse flex items-center justify-center z-10"
           style={{ 
             width: config.w, 
             height: config.h,
             aspectRatio: config.w && config.h ? `${config.w}/${config.h}` : undefined
           }}
         >
-          <div className="text-gray-400 text-xs">Loading...</div>
+          <div className="text-gray-400 dark:text-gray-500 text-xs">Loading...</div>
         </div>
       )}
       <img
         src={currentSrc}
         alt={alt}
         loading={loading}
+        referrerPolicy="no-referrer"
         crossOrigin="anonymous"
         className={cn(
-          "object-cover transition-opacity duration-300",
+          "object-cover transition-all duration-300 w-full h-full",
           isLoading ? "opacity-0" : "opacity-100",
-          onClick ? "cursor-pointer hover:opacity-90" : "",
-          className
+          onClick ? "cursor-pointer hover:opacity-90 hover:scale-105 transition-transform" : "",
+          "rounded-lg"
         )}
         style={{ 
           width: config.w, 
           height: config.h,
           aspectRatio: config.w && config.h ? `${config.w}/${config.h}` : undefined
         }}
-        onLoad={() => setIsLoading(false)}
+        onLoad={handleImageLoad}
         onError={handleImageError}
         onClick={onClick}
+        // Add additional attributes for better iOS/Safari compatibility
+        decoding="async"
       />
     </div>
   );
