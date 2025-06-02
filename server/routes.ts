@@ -12,12 +12,20 @@ import crypto from "crypto";
 import { fileURLToPath } from "url";
 import Stripe from "stripe";
 import { ebayPricingService } from "./ebay-pricing";
+import admin from "firebase-admin";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Configure multer for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
+
+// Initialize Firebase Admin
+if (!admin.apps.length) {
+  admin.initializeApp({
+    projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+  });
+}
 
 // Initialize Stripe
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -33,61 +41,17 @@ const authenticateUser = async (req: any, res: any, next: any) => {
   }
 
   try {
-    const token = authHeader.substring(7);
-    // For now, we'll implement client-side token verification
-    // In production, you'd verify the Firebase ID token here
-    const firebaseUid = req.headers['x-firebase-uid'];
-    if (!firebaseUid) {
-      return res.status(401).json({ message: 'Firebase UID required' });
-    }
-
-    // Get or create user from database
-    let user = await storage.getUserByFirebaseUid(firebaseUid as string);
-    const userEmail = req.headers['x-user-email'] as string;
+    const idToken = authHeader.substring(7);
     
-    if (!user && userEmail) {
-      // Try to find existing user by email
-      user = await storage.getUserByUsername(userEmail);
-      if (user) {
-        // Update existing user with Firebase UID
-        user = await storage.updateUser(user.id, { 
-          firebaseUid: firebaseUid as string,
-          displayName: req.headers['x-display-name'] as string || user.displayName,
-          photoURL: req.headers['x-photo-url'] as string || user.photoURL
-        });
-      }
-    }
+    // Verify Firebase ID token
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const firebaseUid = decodedToken.uid;
+    
+    // Get user from database using Firebase UID
+    let user = await storage.getUserByFirebaseUid(firebaseUid);
     
     if (!user) {
-      // Create new user from Firebase auth
-      try {
-        const userData = {
-          firebaseUid: firebaseUid as string,
-          username: req.headers['x-user-name'] as string || 'User',
-          email: userEmail,
-          displayName: req.headers['x-display-name'] as string || null,
-          photoURL: req.headers['x-photo-url'] as string || null,
-          isAdmin: userEmail === 'joshdlange045@gmail.com', // Make you admin
-          plan: 'SIDE_KICK',
-          subscriptionStatus: 'active'
-        };
-        user = await storage.createUser(userData);
-      } catch (error: any) {
-        // If user already exists with this username, try to find and update them
-        if (error.code === '23505') {
-          user = await storage.getUserByUsername(req.headers['x-user-name'] as string || userEmail);
-          if (user && !user.firebaseUid) {
-            user = await storage.updateUser(user.id, { 
-              firebaseUid: firebaseUid as string,
-              displayName: req.headers['x-display-name'] as string || user.displayName,
-              photoURL: req.headers['x-photo-url'] as string || user.photoURL
-            });
-          }
-        }
-        if (!user) {
-          throw error;
-        }
-      }
+      return res.status(401).json({ message: 'User not found in database' });
     }
 
     req.user = user;
