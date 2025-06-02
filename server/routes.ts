@@ -883,6 +883,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get missing cards in a set
+  app.get("/api/missing-cards/:setId", authenticateUser, async (req: any, res) => {
+    try {
+      const setId = parseInt(req.params.setId);
+      const userId = req.user.id;
+      const missingCards = await storage.getMissingCardsInSet(userId, setId);
+      res.json(missingCards);
+    } catch (error: any) {
+      console.error('Error fetching missing cards:', error);
+      res.status(500).json({ message: "Failed to fetch missing cards" });
+    }
+  });
+
   // Admin User Management Routes
   app.get("/api/admin/users", async (req, res) => {
     try {

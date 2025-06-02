@@ -21,7 +21,7 @@ import {
   type CollectionStats
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, ilike, and, count, sum, desc, sql } from "drizzle-orm";
+import { eq, ilike, and, count, sum, desc, sql, isNull } from "drizzle-orm";
 
 interface IStorage {
   // Users
@@ -848,6 +848,51 @@ export class DatabaseStorage implements IStorage {
       }));
     } catch (error) {
       console.error('Error getting trending cards:', error);
+      return [];
+    }
+  }
+
+  async getMissingCardsInSet(userId: number, setId: number): Promise<CardWithSet[]> {
+    try {
+      const results = await db
+        .select({
+          id: cards.id,
+          setId: cards.setId,
+          cardNumber: cards.cardNumber,
+          name: cards.name,
+          variation: cards.variation,
+          isInsert: cards.isInsert,
+          frontImageUrl: cards.frontImageUrl,
+          backImageUrl: cards.backImageUrl,
+          description: cards.description,
+          rarity: cards.rarity,
+          estimatedValue: cards.estimatedValue,
+          createdAt: cards.createdAt,
+          set: {
+            id: cardSets.id,
+            name: cardSets.name,
+            year: cardSets.year,
+            description: cardSets.description,
+            imageUrl: cardSets.imageUrl,
+            totalCards: cardSets.totalCards,
+            createdAt: cardSets.createdAt,
+          }
+        })
+        .from(cards)
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+        .leftJoin(userCollections, and(
+          eq(userCollections.cardId, cards.id),
+          eq(userCollections.userId, userId)
+        ))
+        .where(and(
+          eq(cards.setId, setId),
+          isNull(userCollections.id)
+        ))
+        .orderBy(sql`CAST(${cards.cardNumber} AS INTEGER)`);
+      
+      return results as CardWithSet[];
+    } catch (error) {
+      console.error('Error getting missing cards:', error);
       return [];
     }
   }

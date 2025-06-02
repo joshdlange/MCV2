@@ -294,7 +294,7 @@ export default function MyCollection() {
               variant="outline"
               size="sm"
               onClick={handleToggleSelectionMode}
-              className={isSelectionMode ? "bg-red-600 text-white border-red-600 hover:bg-red-700" : "bg-gray-800 text-white border-gray-800 hover:bg-gray-700 hover:text-white"}
+              className={isSelectionMode ? "bg-red-600 text-white border-red-600 hover:bg-red-700 hover:text-white" : "bg-gray-800 text-white border-gray-800 hover:bg-gray-700 hover:text-white"}
             >
               {isSelectionMode ? (
                 <>
