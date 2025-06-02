@@ -778,45 +778,34 @@ export default function MyCollection() {
 
                           {/* Actions */}
                           <div className="flex items-center gap-2 ml-4">
-                            <Badge 
-                              className={`text-white font-bold ${
-                                set.completionPercentage === 100 
-                                  ? 'bg-green-600' 
-                                  : set.completionPercentage >= 75 
-                                  ? 'bg-blue-600' 
-                                  : set.completionPercentage >= 50 
-                                  ? 'bg-yellow-600' 
-                                  : 'bg-gray-600'
-                              }`}
-                            >
-                              {set.completionPercentage}%
-                            </Badge>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setCollectionView("cards");
-                                setSelectedSet(set.id.toString());
-                              }}
-                              className="text-gray-900 border-gray-300 hover:bg-gray-50"
-                            >
-                              View Cards
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toast({
-                                  title: "Missing Cards",
-                                  description: "This feature will help you find missing cards on the marketplace."
-                                });
-                              }}
-                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            >
-                              Find Missing
-                            </Button>
+                            <div className="flex rounded-lg overflow-hidden">
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="rounded-none bg-green-600 text-white hover:bg-green-700 text-xs px-3"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCollectionView("cards");
+                                  setSelectedSet(set.id.toString());
+                                  setCardsViewMode("owned");
+                                }}
+                              >
+                                View Owned
+                              </Button>
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="rounded-none bg-[#f73f32] text-white hover:bg-red-700 text-xs px-3"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCollectionView("cards");
+                                  setSelectedSet(set.id.toString());
+                                  setCardsViewMode("missing");
+                                }}
+                              >
+                                View Missing
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </div>
