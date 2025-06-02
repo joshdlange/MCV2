@@ -22,6 +22,7 @@ export default function MyCollection() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSet, setSelectedSet] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [collectionView, setCollectionView] = useState<"cards" | "sets">("cards");
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -34,10 +35,32 @@ export default function MyCollection() {
     queryKey: ["/api/card-sets"],
   });
 
-  // Get unique sets from collection
+  // Get unique sets from collection with completion data
   const collectionSets = Array.from(new Set(collection?.map(item => item.card.set.id) || []))
-    .map(setId => collection?.find(item => item.card.set.id === setId)?.card.set)
-    .filter(Boolean) as CardSet[];
+    .map(setId => {
+      const set = collection?.find(item => item.card.set.id === setId)?.card.set;
+      if (!set) return null;
+      
+      const ownedCards = collection?.filter(item => item.card.set.id === setId).length || 0;
+      const totalCards = cardSets?.find(s => s.id === setId)?.totalCards || 0;
+      const completionPercentage = totalCards > 0 ? Math.round((ownedCards / totalCards) * 100) : 0;
+      
+      return {
+        ...set,
+        ownedCards,
+        totalCards,
+        completionPercentage,
+        firstCardImage: collection?.find(item => item.card.set.id === setId)?.card.frontImageUrl
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      // Sort by completion percentage (highest first), then by year (newest first)
+      if (a.completionPercentage !== b.completionPercentage) {
+        return b.completionPercentage - a.completionPercentage;
+      }
+      return (b.year || 0) - (a.year || 0);
+    });
 
   // Filter collection based on search query and selected set
   const filteredCollection = collection?.filter(item => {
@@ -220,6 +243,49 @@ export default function MyCollection() {
                 className="pl-10 w-64 bg-white text-gray-900 placeholder:text-gray-500"
               />
             </div>
+            
+            {/* View Mode Toggle */}
+            <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+              <Button
+                variant={collectionView === "cards" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setCollectionView("cards")}
+                className="rounded-none px-3"
+              >
+                Cards
+              </Button>
+              <Button
+                variant={collectionView === "sets" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setCollectionView("sets")}
+                className="rounded-none px-3"
+              >
+                Sets
+              </Button>
+            </div>
+            
+            {/* Layout Toggle - Only show for cards view */}
+            {collectionView === "cards" && (
+              <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+                <Button
+                  variant={viewMode === "grid" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("grid")}
+                  className="rounded-none px-2"
+                >
+                  <Grid3X3 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("list")}
+                  className="rounded-none px-2"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            
             <Button
               variant="outline"
               size="sm"
@@ -255,8 +321,10 @@ export default function MyCollection() {
       </div>
 
       <div className="p-6">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-          {filteredCollection.map((item) => (
+        {collectionView === "cards" ? (
+          viewMode === "grid" ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              {filteredCollection.map((item) => (
             <Card 
               key={item.id} 
               className="group hover:shadow-lg transition-all duration-200 cursor-pointer relative"
@@ -361,6 +429,115 @@ export default function MyCollection() {
             </Card>
           ))}
         </div>
+      ) : (
+            // List View
+            <div className="space-y-2">
+              {filteredCollection.map((item) => (
+                <Card 
+                  key={item.id} 
+                  className="group hover:shadow-md transition-all duration-200 cursor-pointer"
+                  onClick={() => handleCardClick(item.card)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-4">
+                      {/* Selection Checkbox */}
+                      {isSelectionMode && (
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleSelection(item.id);
+                          }}
+                        >
+                          <Checkbox 
+                            checked={selectedItems.has(item.id)}
+                            className="border-2"
+                          />
+                        </div>
+                      )}
+
+                      {/* Card Thumbnail */}
+                      <div className="w-16 h-22 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                        {item.card.frontImageUrl ? (
+                          <img
+                            src={item.card.frontImageUrl}
+                            alt={item.card.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
+                            <span className="text-red-600 font-bold text-xs text-center px-1">
+                              {item.card.name.substring(0, 10)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Card Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-gray-900 truncate">{item.card.name}</h3>
+                            <p className="text-sm text-gray-600">{item.card.set.name} #{item.card.cardNumber}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge className="bg-blue-100 text-blue-800 text-xs">
+                                {formatCondition(item.condition)}
+                              </Badge>
+                              {item.card.isInsert && (
+                                <Badge className="bg-purple-600 text-white text-xs">INSERT</Badge>
+                              )}
+                              {item.quantity > 1 && (
+                                <Badge className="bg-orange-100 text-orange-800 text-xs">
+                                  Qty: {item.quantity}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex items-center gap-2 ml-4">
+                            {item.isForSale && (
+                              <Badge className="bg-green-100 text-green-800 text-xs">For Sale</Badge>
+                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleFavorite(item);
+                              }}
+                              className={`p-1 rounded-full transition-colors ${
+                                item.isFavorite 
+                                  ? 'bg-yellow-500 text-white' 
+                                  : 'bg-gray-100 text-gray-400 hover:text-yellow-500'
+                              }`}
+                            >
+                              <Star className={`w-4 h-4 ${item.isFavorite ? 'fill-current' : ''}`} />
+                            </button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveFromCollection(item.id);
+                              }}
+                              className="h-8 w-8 p-0 hover:bg-red-100"
+                            >
+                              <Trash2 className="h-4 w-4 text-gray-400 hover:text-red-600" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )
+        ) : (
+          // Sets View - Placeholder for now
+          <div className="text-center py-12">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Sets View</h3>
+            <p className="text-gray-600">Set-based collection view coming soon...</p>
+          </div>
+        )}
       </div>
 
       <CardDetailModal
