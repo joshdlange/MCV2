@@ -884,7 +884,7 @@ export class DatabaseStorage implements IStorage {
         .from(cards)
         .innerJoin(cardSets, eq(cards.setId, cardSets.id))
         .where(eq(cards.setId, setId))
-        .orderBy(sql`CAST(${cards.cardNumber} AS INTEGER)`);
+        .orderBy(cards.cardNumber);
 
       console.log(`Found ${allCardsInSet.length} total cards in set ${setId}`);
 
