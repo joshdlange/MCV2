@@ -53,7 +53,7 @@ export default function MyCollection() {
         firstCardImage: collection?.find(item => item.card.set.id === setId)?.card.frontImageUrl
       };
     })
-    .filter(Boolean)
+    .filter((set): set is NonNullable<typeof set> => set !== null)
     .sort((a, b) => {
       // Sort by completion percentage (highest first), then by year (newest first)
       if (a.completionPercentage !== b.completionPercentage) {
@@ -532,10 +532,119 @@ export default function MyCollection() {
             </div>
           )
         ) : (
-          // Sets View - Placeholder for now
-          <div className="text-center py-12">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Sets View</h3>
-            <p className="text-gray-600">Set-based collection view coming soon...</p>
+          // Sets View
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {collectionSets.map((set) => (
+              <Card 
+                key={set.id} 
+                className="group hover:shadow-lg transition-all duration-200 cursor-pointer"
+                onClick={() => {
+                  setCollectionView("cards");
+                  setSelectedSet(set.id.toString());
+                }}
+              >
+                <CardContent className="p-0">
+                  {/* Set Image */}
+                  <div className="relative aspect-[2.5/3.5] bg-gray-100 rounded-t-lg overflow-hidden">
+                    {set.firstCardImage ? (
+                      <img
+                        src={set.firstCardImage}
+                        alt={set.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
+                        <span className="text-red-600 font-bold text-sm text-center px-4">
+                          {set.name}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Completion Badge */}
+                    <div className="absolute top-2 right-2">
+                      <Badge 
+                        className={`text-white font-bold ${
+                          set.completionPercentage === 100 
+                            ? 'bg-green-600' 
+                            : set.completionPercentage >= 75 
+                            ? 'bg-blue-600' 
+                            : set.completionPercentage >= 50 
+                            ? 'bg-yellow-600' 
+                            : 'bg-gray-600'
+                        }`}
+                      >
+                        {set.completionPercentage}%
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Set Info */}
+                  <div className="p-4 space-y-3">
+                    <div>
+                      <h3 className="font-semibold text-gray-900 line-clamp-2 leading-tight">
+                        {set.name}
+                      </h3>
+                      <p className="text-sm text-gray-600">{set.year}</p>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600">Progress</span>
+                        <span className="font-medium text-gray-900">
+                          {set.ownedCards} of {set.totalCards}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all duration-300 ${
+                            set.completionPercentage === 100 
+                              ? 'bg-green-600' 
+                              : set.completionPercentage >= 75 
+                              ? 'bg-blue-600' 
+                              : set.completionPercentage >= 50 
+                              ? 'bg-yellow-600' 
+                              : 'bg-gray-600'
+                          }`}
+                          style={{ width: `${set.completionPercentage}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCollectionView("cards");
+                          setSelectedSet(set.id.toString());
+                        }}
+                      >
+                        View Cards
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-blue-600 hover:text-blue-700"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // TODO: Navigate to missing cards view
+                          toast({
+                            title: "Missing Cards",
+                            description: "This feature will help you find missing cards on the marketplace."
+                          });
+                        }}
+                      >
+                        Find Missing
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         )}
       </div>
