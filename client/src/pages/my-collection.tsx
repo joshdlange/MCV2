@@ -238,10 +238,10 @@ export default function MyCollection() {
   };
 
   const handleSelectAll = () => {
-    if (selectedItems.size === filteredCollection.length) {
+    if (selectedItems.size === filteredCards.length) {
       setSelectedItems(new Set());
     } else {
-      setSelectedItems(new Set(filteredCollection.map(item => item.id)));
+      setSelectedItems(new Set(filteredCards.map(item => item.id)));
     }
   };
 
@@ -306,6 +306,28 @@ export default function MyCollection() {
                 Sets
               </Button>
             </div>
+            
+            {/* Cards View Mode Toggle - Show only in cards view */}
+            {collectionView === "cards" && selectedSet !== "all" && (
+              <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+                <Button
+                  variant={cardsViewMode === "owned" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setCardsViewMode("owned")}
+                  className={`rounded-none px-3 ${cardsViewMode === "owned" ? "text-white" : "text-[#f73f32] hover:text-[#f73f32]"}`}
+                >
+                  View Owned
+                </Button>
+                <Button
+                  variant={cardsViewMode === "missing" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setCardsViewMode("missing")}
+                  className={`rounded-none px-3 ${cardsViewMode === "missing" ? "text-white" : "text-[#f73f32] hover:text-[#f73f32]"}`}
+                >
+                  View Missing
+                </Button>
+              </div>
+            )}
             
             {/* Layout Toggle - Show for both cards and sets view */}
             <div className="flex border border-gray-300 rounded-lg overflow-hidden">
@@ -473,7 +495,7 @@ export default function MyCollection() {
       ) : (
             // List View
             <div className="space-y-2">
-              {filteredCollection.map((item) => (
+              {filteredCards.map((item) => (
                 <Card 
                   key={item.id} 
                   className="group hover:shadow-md transition-all duration-200 cursor-pointer"
