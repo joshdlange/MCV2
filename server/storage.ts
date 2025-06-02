@@ -191,7 +191,21 @@ export class DatabaseStorage implements IStorage {
 
   async getCardSets(): Promise<CardSet[]> {
     try {
-      return await db.select().from(cardSets);
+      const sets = await db.select().from(cardSets);
+      
+      // Calculate actual total cards for each set
+      const setsWithCounts = await Promise.all(sets.map(async (set) => {
+        const [{ count }] = await db.select({ count: sql<number>`count(*)` })
+          .from(cards)
+          .where(eq(cards.setId, set.id));
+        
+        return {
+          ...set,
+          totalCards: count || 0
+        };
+      }));
+      
+      return setsWithCounts;
     } catch (error) {
       console.error('Error getting card sets:', error);
       return [];
