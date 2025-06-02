@@ -855,9 +855,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get missing cards in a set (temporary debugging endpoint)
+  // Get missing cards in a set
   app.get("/api/missing-cards/:setId", authenticateUser, async (req: any, res) => {
-    return res.json({ success: true, user: req.user });
+    try {
+      const setId = parseInt(req.params.setId);
+      const userId = req.user.id;
+      
+      if (isNaN(setId) || setId <= 0) {
+        return res.status(400).json({ message: "Invalid set ID" });
+      }
+      
+      console.log(`Fetching missing cards for user ${userId} in set ${setId}`);
+      
+      const missingCards = await storage.getMissingCardsInSet(userId, setId);
+      console.log(`Found ${missingCards.length} missing cards`);
+      
+      res.json(missingCards);
+    } catch (error: any) {
+      console.error('Error fetching missing cards:', error);
+      res.status(500).json({ message: "Failed to fetch missing cards" });
+    }
   });
 
   // Admin User Management Routes
