@@ -256,7 +256,7 @@ export default function MyCollection() {
                 variant={collectionView === "cards" ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setCollectionView("cards")}
-                className="rounded-none px-3"
+                className={`rounded-none px-3 ${collectionView === "cards" ? "text-white" : "text-[#f73f32] hover:text-[#f73f32]"}`}
               >
                 Cards
               </Button>
@@ -264,7 +264,7 @@ export default function MyCollection() {
                 variant={collectionView === "sets" ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setCollectionView("sets")}
-                className="rounded-none px-3"
+                className={`rounded-none px-3 ${collectionView === "sets" ? "text-white" : "text-[#f73f32] hover:text-[#f73f32]"}`}
               >
                 Sets
               </Button>
