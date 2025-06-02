@@ -36,6 +36,18 @@ export default function MyCollection() {
     queryKey: ["/api/card-sets"],
   });
 
+  // Query for missing cards when in missing view mode
+  const { data: missingCards } = useQuery<CardWithSet[]>({
+    queryKey: ["/api/missing-cards", selectedSet],
+    queryFn: async () => {
+      if (selectedSet === "all") return [];
+      const response = await fetch(`/api/missing-cards/${selectedSet}`);
+      if (!response.ok) throw new Error('Failed to fetch missing cards');
+      return response.json();
+    },
+    enabled: collectionView === "cards" && cardsViewMode === "missing" && selectedSet !== "all",
+  });
+
   // Get unique sets from collection with completion data
   const collectionSets = Array.from(new Set(collection?.map(item => item.card.set.id) || []))
     .map(setId => {
@@ -63,22 +75,47 @@ export default function MyCollection() {
       return (b.year || 0) - (a.year || 0);
     });
 
-  // Filter collection based on search query and selected set
-  const filteredCollection = collection?.filter(item => {
-    const matchesSearch = item.card.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.card.set.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.card.cardNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.card.rarity.toLowerCase().includes(searchQuery.toLowerCase());
+  // Get filtered cards based on view mode (owned vs missing)
+  const filteredCards = (() => {
+    if (cardsViewMode === "missing" && missingCards) {
+      let filtered = missingCards;
+      
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        filtered = filtered.filter(card => 
+          card.name.toLowerCase().includes(query) ||
+          card.cardNumber.toLowerCase().includes(query) ||
+          card.set.name.toLowerCase().includes(query)
+        );
+      }
+      
+      // Sort by card number (convert to number for proper sorting)
+      return filtered.sort((a, b) => {
+        const aNum = parseInt(a.cardNumber) || 0;
+        const bNum = parseInt(b.cardNumber) || 0;
+        return aNum - bNum;
+      });
+    }
     
-    const matchesSet = selectedSet === "all" || item.card.set.id.toString() === selectedSet;
+    // For owned cards (collection items)
+    const filteredCollection = collection?.filter(item => {
+      const matchesSearch = item.card.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.card.set.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.card.cardNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.card.rarity.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesSet = selectedSet === "all" || item.card.set.id.toString() === selectedSet;
+      
+      return matchesSearch && matchesSet;
+    }).sort((a, b) => {
+      // Sort cards by card number (1, 2, 3...)
+      const numA = parseInt(a.card.cardNumber) || 0;
+      const numB = parseInt(b.card.cardNumber) || 0;
+      return numA - numB;
+    }) || [];
     
-    return matchesSearch && matchesSet;
-  }).sort((a, b) => {
-    // Sort cards by card number (1, 2, 3...)
-    const numA = parseInt(a.card.cardNumber) || 0;
-    const numB = parseInt(b.card.cardNumber) || 0;
-    return numA - numB;
-  }) || [];
+    return filteredCollection;
+  })();
 
   const removeFromCollectionMutation = useMutation({
     mutationFn: async (itemId: number) => {
@@ -303,7 +340,7 @@ export default function MyCollection() {
                 </>
               ) : (
                 <>
-                  <Checkbox className="mr-2" />
+                  <div className="mr-2 w-4 h-4 border border-gray-400 rounded" />
                   Select Items
                 </>
               )}
@@ -316,7 +353,7 @@ export default function MyCollection() {
           {searchQuery && (
             <>
               <span>•</span>
-              <span>{filteredCollection.length} matching "{searchQuery}"</span>
+              <span>{filteredCards.length} matching "{searchQuery}"</span>
             </>
           )}
           <span>•</span>
@@ -328,11 +365,11 @@ export default function MyCollection() {
         {collectionView === "cards" ? (
           viewMode === "grid" ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-              {filteredCollection.map((item) => (
+              {filteredCards.map((item) => (
             <Card 
-              key={item.id} 
+              key={item.id || item.card?.id} 
               className="group hover:shadow-lg transition-all duration-200 cursor-pointer relative"
-              onClick={() => handleCardClick(item.card)}
+              onClick={() => handleCardClick(item.card || item)}
             >
               <CardContent className="p-0">
                 {/* Selection Checkbox - Only visible in selection mode */}
