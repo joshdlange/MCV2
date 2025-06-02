@@ -205,20 +205,20 @@ export default function Profile() {
 
         {/* Profile Tabs */}
         <Tabs defaultValue="personal" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-card border border-border">
-            <TabsTrigger value="personal" className="text-foreground data-[state=active]:text-foreground data-[state=active]:bg-background">
+          <TabsList className="grid w-full grid-cols-4 bg-gray-100 border border-gray-300">
+            <TabsTrigger value="personal" className="text-gray-700 font-medium data-[state=active]:text-white data-[state=active]:bg-gray-900 hover:text-gray-900">
               <User className="w-4 h-4 mr-2" />
               Personal
             </TabsTrigger>
-            <TabsTrigger value="social" className="text-foreground data-[state=active]:text-foreground data-[state=active]:bg-background">
+            <TabsTrigger value="social" className="text-gray-700 font-medium data-[state=active]:text-white data-[state=active]:bg-gray-900 hover:text-gray-900">
               <Users className="w-4 h-4 mr-2" />
               Social
             </TabsTrigger>
-            <TabsTrigger value="billing" className="text-foreground data-[state=active]:text-foreground data-[state=active]:bg-background">
+            <TabsTrigger value="billing" className="text-gray-700 font-medium data-[state=active]:text-white data-[state=active]:bg-gray-900 hover:text-gray-900">
               <CreditCard className="w-4 h-4 mr-2" />
               Billing
             </TabsTrigger>
-            <TabsTrigger value="privacy" className="text-foreground data-[state=active]:text-foreground data-[state=active]:bg-background">
+            <TabsTrigger value="privacy" className="text-gray-700 font-medium data-[state=active]:text-white data-[state=active]:bg-gray-900 hover:text-gray-900">
               <Lock className="w-4 h-4 mr-2" />
               Privacy
             </TabsTrigger>
