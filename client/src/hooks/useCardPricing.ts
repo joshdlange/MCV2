@@ -11,6 +11,9 @@ export function useCardPricing(cardId: number) {
   return useQuery({
     queryKey: ["/api/card-pricing", cardId],
     queryFn: async () => {
+      if (!cardId || cardId <= 0) {
+        return null; // Invalid card ID
+      }
       const response = await apiRequest("GET", `/api/card-pricing/${cardId}`);
       if (!response.ok) {
         if (response.status === 404) {
@@ -20,6 +23,7 @@ export function useCardPricing(cardId: number) {
       }
       return response.json() as Promise<CardPricing>;
     },
+    enabled: cardId > 0, // Only run query if cardId is valid
     staleTime: 1000 * 60 * 5, // 5 minutes
     retry: false,
   });

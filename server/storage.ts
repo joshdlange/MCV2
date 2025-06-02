@@ -854,7 +854,10 @@ export class DatabaseStorage implements IStorage {
 
   async getMissingCardsInSet(userId: number, setId: number): Promise<CardWithSet[]> {
     try {
-      const results = await db
+      console.log(`Getting missing cards for user ${userId} in set ${setId}`);
+      
+      // First get all cards in the set
+      const allCardsInSet = await db
         .select({
           id: cards.id,
           setId: cards.setId,
@@ -880,17 +883,34 @@ export class DatabaseStorage implements IStorage {
         })
         .from(cards)
         .innerJoin(cardSets, eq(cards.setId, cardSets.id))
-        .leftJoin(userCollections, and(
-          eq(userCollections.cardId, cards.id),
-          eq(userCollections.userId, userId)
-        ))
-        .where(and(
-          eq(cards.setId, setId),
-          isNull(userCollections.id)
-        ))
+        .where(eq(cards.setId, setId))
         .orderBy(sql`CAST(${cards.cardNumber} AS INTEGER)`);
+
+      console.log(`Found ${allCardsInSet.length} total cards in set ${setId}`);
+
+      // Get all cards the user owns from this set
+      const ownedCardsInSet = await db
+        .select({
+          cardId: userCollections.cardId,
+        })
+        .from(userCollections)
+        .innerJoin(cards, eq(userCollections.cardId, cards.id))
+        .where(and(
+          eq(userCollections.userId, userId),
+          eq(cards.setId, setId)
+        ));
+
+      console.log(`User owns ${ownedCardsInSet.length} cards in set ${setId}`);
+
+      // Create set of owned card IDs
+      const ownedCardIds = new Set(ownedCardsInSet.map(owned => owned.cardId));
       
-      return results as CardWithSet[];
+      // Filter to get missing cards
+      const missingCards = allCardsInSet.filter(card => !ownedCardIds.has(card.id));
+      
+      console.log(`User is missing ${missingCards.length} cards in set ${setId}`);
+      
+      return missingCards as CardWithSet[];
     } catch (error) {
       console.error('Error getting missing cards:', error);
       return [];
