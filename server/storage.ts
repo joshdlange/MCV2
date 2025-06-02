@@ -67,6 +67,9 @@ interface IStorage {
   // Trending
   getTrendingCards(limit: number): Promise<CardWithSet[]>;
   
+  // Missing Cards
+  getMissingCardsInSet(userId: number, setId: number): Promise<CardWithSet[]>;
+  
   // Pricing
   getCardPricing(cardId: number): Promise<{ avgPrice: number; salesCount: number; lastFetched: Date } | null>;
   updateCardPricing(cardId: number, avgPrice: number, salesCount: number, recentSales: string[]): Promise<void>;

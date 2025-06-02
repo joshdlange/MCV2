@@ -23,6 +23,7 @@ export default function MyCollection() {
   const [selectedSet, setSelectedSet] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [collectionView, setCollectionView] = useState<"cards" | "sets">("cards");
+  const [cardsViewMode, setCardsViewMode] = useState<"owned" | "missing">("owned");
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -293,7 +294,7 @@ export default function MyCollection() {
               variant="outline"
               size="sm"
               onClick={handleToggleSelectionMode}
-              className={isSelectionMode ? "bg-red-600 text-white border-red-600 hover:bg-red-700" : "bg-gray-800 text-white border-gray-800 hover:bg-gray-700"}
+              className={isSelectionMode ? "bg-red-600 text-white border-red-600 hover:bg-red-700" : "bg-gray-800 text-white border-gray-800 hover:bg-gray-700 hover:text-white"}
             >
               {isSelectionMode ? (
                 <>
@@ -620,28 +621,28 @@ export default function MyCollection() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1 text-xs text-gray-900 border-gray-300 hover:bg-gray-50"
+                        className="flex-1 text-xs text-gray-900 border-gray-300 hover:bg-gray-50 hover:text-gray-900"
                         onClick={(e) => {
                           e.stopPropagation();
                           setCollectionView("cards");
                           setSelectedSet(set.id.toString());
+                          setCardsViewMode("owned");
                         }}
                       >
-                        View Cards
+                        View Owned
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-xs text-blue-600 border-blue-300 hover:bg-blue-50"
+                        className="text-xs text-blue-600 border-blue-300 hover:bg-blue-50 hover:text-blue-700"
                         onClick={(e) => {
                           e.stopPropagation();
-                          toast({
-                            title: "Missing Cards",
-                            description: "This feature will help you find missing cards on the marketplace."
-                          });
+                          setCollectionView("cards");
+                          setSelectedSet(set.id.toString());
+                          setCardsViewMode("missing");
                         }}
                       >
-                        Find Missing
+                        View Missing
                       </Button>
                     </div>
                   </div>
