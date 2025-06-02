@@ -558,6 +558,10 @@ export default function MyCollection() {
 
                           {/* Actions */}
                           <div className="flex items-center gap-2 ml-4">
+                            {/* Green checkmark for owned cards */}
+                            <div className="p-1 rounded-full bg-green-500 text-white">
+                              <Check className="w-4 h-4" />
+                            </div>
                             {item.isForSale && (
                               <Badge className="bg-green-100 text-green-800 text-xs">For Sale</Badge>
                             )}
@@ -680,7 +684,7 @@ export default function MyCollection() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1 text-xs text-gray-900 border-gray-300 hover:bg-gray-50 hover:text-gray-900"
+                        className="flex-1 text-xs text-white bg-green-600 border-green-600 hover:bg-green-700 hover:text-white"
                         onClick={(e) => {
                           e.stopPropagation();
                           setCollectionView("cards");
@@ -693,7 +697,7 @@ export default function MyCollection() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-xs text-blue-600 border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+                        className="flex-1 text-xs text-white bg-[#f73f32] border-[#f73f32] hover:bg-red-700 hover:text-white"
                         onClick={(e) => {
                           e.stopPropagation();
                           setCollectionView("cards");

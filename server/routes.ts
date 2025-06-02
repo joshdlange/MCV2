@@ -884,10 +884,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get missing cards in a set
-  app.get("/api/missing-cards/:setId", authenticateUser, async (req: any, res) => {
+  app.get("/api/missing-cards/:setId", async (req, res) => {
     try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
       const setId = parseInt(req.params.setId);
-      const userId = req.user.id;
+      const userId = (req.user as any).id;
       const missingCards = await storage.getMissingCardsInSet(userId, setId);
       res.json(missingCards);
     } catch (error: any) {
