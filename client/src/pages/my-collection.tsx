@@ -39,12 +39,6 @@ export default function MyCollection() {
   // Query for missing cards when in missing view mode
   const { data: missingCards } = useQuery<CardWithSet[]>({
     queryKey: ["/api/missing-cards", selectedSet],
-    queryFn: async () => {
-      if (selectedSet === "all") return [];
-      const response = await fetch(`/api/missing-cards/${selectedSet}`);
-      if (!response.ok) throw new Error('Failed to fetch missing cards');
-      return response.json();
-    },
     enabled: collectionView === "cards" && cardsViewMode === "missing" && selectedSet !== "all",
   });
 

@@ -35,29 +35,37 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Middleware to authenticate Firebase users
 const authenticateUser = async (req: any, res: any, next: any) => {
+  console.log("AUTH MIDDLEWARE HIT");
+  console.log("Authorization Header:", req.headers.authorization);
+  
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log("No auth header or doesn't start with Bearer");
     return res.status(401).json({ message: 'No authorization token provided' });
   }
 
   try {
     const idToken = authHeader.substring(7);
+    console.log("Extracted token:", idToken.substring(0, 20) + "...");
     
     // Verify Firebase ID token
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     const firebaseUid = decodedToken.uid;
+    console.log("Token verified, Firebase UID:", firebaseUid);
     
     // Get user from database using Firebase UID
     let user = await storage.getUserByFirebaseUid(firebaseUid);
+    console.log("User from database:", user ? `Found user ${user.id}` : "User not found");
     
     if (!user) {
       return res.status(401).json({ message: 'User not found in database' });
     }
 
     req.user = user;
+    console.log("Authentication successful for user:", user.id);
     next();
   } catch (error) {
-    console.error('Auth error:', error);
+    console.error('Token verification failed:', error);
     return res.status(401).json({ message: 'Invalid token' });
   }
 };
@@ -847,17 +855,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get missing cards in a set
+  // Get missing cards in a set (temporary debugging endpoint)
   app.get("/api/missing-cards/:setId", authenticateUser, async (req: any, res) => {
-    try {
-      const setId = parseInt(req.params.setId);
-      const userId = req.user.id;
-      const missingCards = await storage.getMissingCardsInSet(userId, setId);
-      res.json(missingCards);
-    } catch (error: any) {
-      console.error('Error fetching missing cards:', error);
-      res.status(500).json({ message: "Failed to fetch missing cards" });
-    }
+    return res.json({ success: true, user: req.user });
   });
 
   // Admin User Management Routes
