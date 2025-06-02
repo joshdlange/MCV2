@@ -91,6 +91,39 @@ export function Sidebar() {
         </div>
       </div>
 
+      {/* User Profile */}
+      {user && (
+        <div className="border-b border-border p-4">
+          <div className="flex items-center space-x-3">
+            <Link href="/profile">
+              <img 
+                src={user.photoURL || '/default-avatar.png'} 
+                alt="User avatar" 
+                className="w-8 h-8 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all" 
+                title="View Profile"
+              />
+            </Link>
+            <div className="flex-1 min-w-0">
+              <Link href="/profile" className="block">
+                <p className="text-sm font-medium text-foreground truncate hover:text-blue-600 cursor-pointer">
+                  {user.displayName || 'User'}
+                </p>
+              </Link>
+              <p className="text-xs text-muted-foreground truncate">
+                {user.email}
+              </p>
+            </div>
+            <button 
+              onClick={() => signOutUser()}
+              className="text-red-500 hover:text-red-600"
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Admin Toggle */}
       <AdminToggle />
 
@@ -191,39 +224,6 @@ export function Sidebar() {
         onClose={() => setShowUpgradeModal(false)} 
         currentPlan={currentUser?.plan || 'SIDE_KICK'}
       />
-
-      {/* User Profile */}
-      {user && (
-        <div className="border-t border-border p-4">
-          <div className="flex items-center space-x-3">
-            <Link href="/profile">
-              <img 
-                src={user.photoURL || '/default-avatar.png'} 
-                alt="User avatar" 
-                className="w-8 h-8 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all" 
-                title="View Profile"
-              />
-            </Link>
-            <div className="flex-1 min-w-0">
-              <Link href="/profile" className="block">
-                <p className="text-sm font-medium text-foreground truncate hover:text-blue-600 cursor-pointer">
-                  {user.displayName || 'User'}
-                </p>
-              </Link>
-              <p className="text-xs text-muted-foreground truncate">
-                {user.email}
-              </p>
-            </div>
-            <button 
-              onClick={() => signOutUser()}
-              className="text-muted-foreground hover:text-foreground"
-              title="Sign out"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
