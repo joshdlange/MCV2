@@ -276,7 +276,7 @@ export default function MyCollection() {
                 variant={viewMode === "grid" ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setViewMode("grid")}
-                className="rounded-none px-2 text-gray-900 hover:text-gray-900"
+                className={`rounded-none px-2 ${viewMode === "grid" ? "text-white" : "text-gray-900 hover:text-gray-900"}`}
               >
                 <Grid3X3 className="h-4 w-4" />
               </Button>
@@ -284,7 +284,7 @@ export default function MyCollection() {
                 variant={viewMode === "list" ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setViewMode("list")}
-                className="rounded-none px-2 text-gray-900 hover:text-gray-900"
+                className={`rounded-none px-2 ${viewMode === "list" ? "text-white" : "text-gray-900 hover:text-gray-900"}`}
               >
                 <List className="h-4 w-4" />
               </Button>
