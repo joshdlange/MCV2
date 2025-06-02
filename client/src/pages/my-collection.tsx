@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
-import { Star, Heart, Check, ShoppingCart, Trash2, Search, Grid3X3, List, Filter } from "lucide-react";
+import { Star, Heart, Check, ShoppingCart, Trash2, Search, Grid3X3, List, Filter, X } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
@@ -514,16 +514,16 @@ export default function MyCollection() {
 
                       {/* Card Thumbnail */}
                       <div className="w-16 h-22 bg-gray-100 rounded overflow-hidden flex-shrink-0">
-                        {item.card.frontImageUrl ? (
+                        {('card' in item ? item.card.frontImageUrl : item.frontImageUrl) ? (
                           <img
-                            src={item.card.frontImageUrl}
-                            alt={item.card.name}
+                            src={'card' in item ? item.card.frontImageUrl : item.frontImageUrl}
+                            alt={'card' in item ? item.card.name : item.name}
                             className="w-full h-full object-cover"
                           />
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
                             <span className="text-red-600 font-bold text-xs text-center px-1">
-                              {item.card.name.substring(0, 10)}
+                              {('card' in item ? item.card.name : item.name).substring(0, 10)}
                             </span>
                           </div>
                         )}
@@ -533,16 +533,26 @@ export default function MyCollection() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-gray-900 truncate">{item.card.name}</h3>
-                            <p className="text-sm text-gray-600">{item.card.set.name} #{item.card.cardNumber}</p>
+                            <h3 className="font-semibold text-gray-900 truncate">
+                              {'card' in item ? item.card.name : item.name}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              {'card' in item ? item.card.set.name : item.set.name} #{'card' in item ? item.card.cardNumber : item.cardNumber}
+                            </p>
                             <div className="flex items-center gap-2 mt-1">
-                              <Badge className="bg-blue-100 text-blue-800 text-xs">
-                                {formatCondition(item.condition)}
-                              </Badge>
-                              {item.card.isInsert && (
+                              {'card' in item ? (
+                                <Badge className="bg-blue-100 text-blue-800 text-xs">
+                                  {formatCondition(item.condition)}
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-red-100 text-red-800 text-xs">
+                                  Missing
+                                </Badge>
+                              )}
+                              {('card' in item ? item.card.isInsert : item.isInsert) && (
                                 <Badge className="bg-purple-600 text-white text-xs">INSERT</Badge>
                               )}
-                              {item.quantity > 1 && (
+                              {'card' in item && item.quantity > 1 && (
                                 <Badge className="bg-orange-100 text-orange-800 text-xs">
                                   Qty: {item.quantity}
                                 </Badge>
@@ -552,26 +562,34 @@ export default function MyCollection() {
 
                           {/* Actions */}
                           <div className="flex items-center gap-2 ml-4">
-                            {/* Green checkmark for owned cards */}
-                            <div className="p-1 rounded-full bg-green-500 text-white">
-                              <Check className="w-4 h-4" />
-                            </div>
-                            {item.isForSale && (
+                            {/* Show different icons for owned vs missing cards */}
+                            {'card' in item ? (
+                              <div className="p-1 rounded-full bg-green-500 text-white">
+                                <Check className="w-4 h-4" />
+                              </div>
+                            ) : (
+                              <div className="p-1 rounded-full bg-red-500 text-white">
+                                <X className="w-4 h-4" />
+                              </div>
+                            )}
+                            {'card' in item && item.isForSale && (
                               <Badge className="bg-green-100 text-green-800 text-xs">For Sale</Badge>
                             )}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleToggleFavorite(item);
-                              }}
-                              className={`p-1 rounded-full transition-colors ${
-                                item.isFavorite 
-                                  ? 'bg-yellow-500 text-white' 
-                                  : 'bg-gray-100 text-gray-400 hover:text-yellow-500'
-                              }`}
-                            >
-                              <Star className={`w-4 h-4 ${item.isFavorite ? 'fill-current' : ''}`} />
-                            </button>
+                            {'card' in item && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleFavorite(item);
+                                }}
+                                className={`p-1 rounded-full transition-colors ${
+                                  item.isFavorite 
+                                    ? 'bg-yellow-500 text-white' 
+                                    : 'bg-gray-100 text-gray-400 hover:text-yellow-500'
+                                }`}
+                              >
+                                <Star className={`w-4 h-4 ${item.isFavorite ? 'fill-current' : ''}`} />
+                              </button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
