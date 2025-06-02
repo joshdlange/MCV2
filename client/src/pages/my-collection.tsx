@@ -385,7 +385,7 @@ export default function MyCollection() {
             <Card 
               key={item.id || item.card?.id} 
               className="group hover:shadow-lg transition-all duration-200 cursor-pointer relative"
-              onClick={() => handleCardClick(item.card || item)}
+              onClick={() => handleCardClick(item)}
             >
               <CardContent className="p-0">
                 {/* Selection Checkbox - Only visible in selection mode */}
@@ -428,23 +428,23 @@ export default function MyCollection() {
 
                 {/* Card Image */}
                 <div className="relative aspect-[2.5/3.5] bg-gray-100 rounded-t-lg overflow-hidden">
-                  {item.card.frontImageUrl ? (
+                  {('card' in item ? item.card.frontImageUrl : item.frontImageUrl) ? (
                     <img
-                      src={item.card.frontImageUrl}
-                      alt={item.card.name}
+                      src={'card' in item ? item.card.frontImageUrl : item.frontImageUrl}
+                      alt={'card' in item ? item.card.name : item.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
                       <span className="text-red-600 font-bold text-xs text-center px-2">
-                        {item.card.name}
+                        {'card' in item ? item.card.name : item.name}
                       </span>
                     </div>
                   )}
 
                   {/* Badges */}
                   <div className="absolute bottom-2 left-2 flex gap-1">
-                    {item.card.isInsert && (
+                    {('card' in item ? item.card.isInsert : item.isInsert) && (
                       <Badge className="bg-purple-600 text-white text-xs px-2 py-1 font-bold">
                         INSERT
                       </Badge>
@@ -455,15 +455,23 @@ export default function MyCollection() {
                 {/* Card Info */}
                 <div className="p-3 space-y-1">
                   <h3 className="font-semibold text-sm text-gray-900 line-clamp-2 leading-tight">
-                    {item.card.name}
+                    {'card' in item ? item.card.name : item.name}
                   </h3>
-                  <p className="text-xs text-gray-600">{item.card.set.name} #{item.card.cardNumber}</p>
+                  <p className="text-xs text-gray-600">
+                    {'card' in item ? item.card.set.name : item.set.name} #{'card' in item ? item.card.cardNumber : item.cardNumber}
+                  </p>
                   <div className="flex items-center justify-between mt-2">
                     <div className="flex gap-1">
-                      <Badge className="bg-blue-100 text-blue-800 text-xs border-blue-200">
-                        {formatCondition(item.condition)}
-                      </Badge>
-                      {item.quantity > 1 && (
+                      {'card' in item ? (
+                        <Badge className="bg-blue-100 text-blue-800 text-xs border-blue-200">
+                          {formatCondition(item.condition)}
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-red-100 text-red-800 text-xs border-red-200">
+                          Missing
+                        </Badge>
+                      )}
+                      {'card' in item && item.quantity > 1 && (
                         <Badge className="bg-orange-100 text-orange-800 text-xs border-orange-200">
                           Qty: {item.quantity}
                         </Badge>
