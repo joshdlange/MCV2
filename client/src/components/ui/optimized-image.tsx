@@ -215,6 +215,9 @@ export function OptimizedImage({
           isLoading ? "opacity-0" : "opacity-100",
           onClick ? "cursor-pointer hover:opacity-90 hover:scale-105 transition-transform" : "",
           "rounded-lg",
+          // Default to object-cover if no object-fit class is provided in className
+          className && (className.includes("object-") ? "" : "object-cover"),
+          !className && "object-cover",
           className
         )}
         style={{ 
