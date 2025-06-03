@@ -317,37 +317,35 @@ export function CardGrid({
                       </div>
 
                       {/* Actions */}
-                      <div className="flex items-center gap-2 w-full md:w-auto md:ml-4">
-                        <div className="flex rounded-lg overflow-hidden w-full">
-                          {showAddToCollection && (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              className="rounded-none bg-marvel-red text-white hover:bg-red-700 text-sm md:text-xs px-4 md:px-3 flex-1 md:flex-none"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAddToCollection(card.id);
-                              }}
-                            >
-                              <Plus className="w-4 h-4 mr-1" />
-                              Add to Collection
-                            </Button>
-                          )}
-                          {showAddToWishlist && (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              className="rounded-none bg-pink-600 text-white hover:bg-pink-700 text-sm md:text-xs px-4 md:px-3 flex-1 md:flex-none"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAddToWishlist(card.id);
-                              }}
-                            >
-                              <Heart className="w-4 h-4 mr-1" />
-                              Add to Wishlist
-                            </Button>
-                          )}
-                        </div>
+                      <div className="flex items-center gap-2 md:ml-4">
+                        {showAddToCollection && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 hover:bg-green-100 text-gray-400 hover:text-green-600"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAddToCollection(card.id);
+                            }}
+                            title="Add to Collection"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {showAddToWishlist && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 hover:bg-pink-100 text-gray-400 hover:text-pink-600"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAddToWishlist(card.id);
+                            }}
+                            title="Add to Wishlist"
+                          >
+                            <Heart className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
