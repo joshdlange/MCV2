@@ -211,10 +211,11 @@ export function OptimizedImage({
         referrerPolicy="no-referrer"
         crossOrigin="anonymous"
         className={cn(
-          "object-cover transition-all duration-300 w-full h-full",
+          "transition-all duration-300 w-full h-full",
           isLoading ? "opacity-0" : "opacity-100",
           onClick ? "cursor-pointer hover:opacity-90 hover:scale-105 transition-transform" : "",
-          "rounded-lg"
+          "rounded-lg",
+          className
         )}
         style={{ 
           width: config.w, 
