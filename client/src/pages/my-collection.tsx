@@ -741,7 +741,7 @@ export default function MyCollection() {
             </div>
           ) : (
             // Sets List View
-            <div className="space-y-4">
+            <div className="space-y-6">
               {collectionSets.map((set) => (
                 <Card 
                   key={set.id} 
@@ -751,10 +751,10 @@ export default function MyCollection() {
                     setSelectedSet(set.id.toString());
                   }}
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-4">
+                  <CardContent className="p-4 md:p-6">
+                    <div className="flex items-center gap-4 md:gap-6">
                       {/* Set Thumbnail */}
-                      <div className="w-16 h-22 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                      <div className="w-20 h-28 md:w-16 md:h-22 bg-gray-100 rounded overflow-hidden flex-shrink-0">
                         {set.firstCardImage ? (
                           <img
                             src={set.firstCardImage}
@@ -772,22 +772,22 @@ export default function MyCollection() {
 
                       {/* Set Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between">
+                        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-gray-900 truncate">{set.name}</h3>
-                            <p className="text-sm text-gray-600">{set.year}</p>
+                            <h3 className="font-semibold text-gray-900 text-lg md:text-base truncate">{set.name}</h3>
+                            <p className="text-sm text-gray-600 mt-1">{set.year}</p>
                             
                             {/* Progress Bar */}
-                            <div className="space-y-2 mt-2">
+                            <div className="space-y-2 mt-3">
                               <div className="flex justify-between items-center text-sm">
                                 <span className="text-gray-600">Progress</span>
                                 <span className="font-medium text-gray-900">
                                   {set.ownedCards} of {set.totalCards} ({set.completionPercentage}%)
                                 </span>
                               </div>
-                              <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div className="w-full bg-gray-200 rounded-full h-2.5">
                                 <div 
-                                  className={`h-2 rounded-full transition-all duration-300 ${
+                                  className={`h-2.5 rounded-full transition-all duration-300 ${
                                     set.completionPercentage === 100 
                                       ? 'bg-green-600' 
                                       : set.completionPercentage >= 75 
@@ -803,12 +803,12 @@ export default function MyCollection() {
                           </div>
 
                           {/* Actions */}
-                          <div className="flex items-center gap-2 ml-4">
-                            <div className="flex rounded-lg overflow-hidden">
+                          <div className="flex items-center gap-2 w-full md:w-auto md:ml-4">
+                            <div className="flex rounded-lg overflow-hidden w-full">
                               <Button
                                 variant="default"
                                 size="sm"
-                                className="rounded-none bg-green-600 text-white hover:bg-green-700 text-xs px-3"
+                                className="rounded-none bg-green-600 text-white hover:bg-green-700 text-sm md:text-xs px-4 md:px-3 flex-1 md:flex-none"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setCollectionView("cards");
@@ -821,7 +821,7 @@ export default function MyCollection() {
                               <Button
                                 variant="default"
                                 size="sm"
-                                className="rounded-none bg-[#f73f32] text-white hover:bg-red-700 text-xs px-3"
+                                className="rounded-none bg-[#f73f32] text-white hover:bg-red-700 text-sm md:text-xs px-4 md:px-3 flex-1 md:flex-none"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setCollectionView("cards");

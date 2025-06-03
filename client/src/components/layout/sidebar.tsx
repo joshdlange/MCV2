@@ -203,7 +203,7 @@ export function Sidebar() {
             {adminItems.map((item) => (
               <Link key={item.href} href={item.href}>
                 <div 
-                  className={`flex items-center px-4 py-3 rounded-lg transition-colors group cursor-pointer ${
+                  className={`flex items-center px-4 py-4 md:py-3 rounded-lg transition-colors group cursor-pointer text-base md:text-sm ${
                     location === item.href 
                       ? 'bg-marvel-red text-white' 
                       : 'text-foreground hover:bg-marvel-red hover:text-white'
