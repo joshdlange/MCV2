@@ -22,7 +22,7 @@ export default function BrowseCards() {
   const [favoriteSetIds, setFavoriteSetIds] = useState<number[]>([]);
   const [setSearchQuery, setSetSearchQuery] = useState("");
   const [editingSet, setEditingSet] = useState<CardSet | null>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [editFormData, setEditFormData] = useState({
     name: '',
     year: 0,
@@ -254,6 +254,19 @@ export default function BrowseCards() {
                 <span className="hidden sm:inline">{addAllMutation.isPending ? 'Adding All Cards...' : 'Add All to Collection'}</span>
                 <span className="sm:hidden">{addAllMutation.isPending ? 'Adding...' : 'Add All'}</span>
               </Button>
+              <Select 
+                value={filters.isInsert === undefined ? "all" : filters.isInsert.toString()} 
+                onValueChange={handleInsertFilter}
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="true">Insert Cards</SelectItem>
+                  <SelectItem value="false">Base Cards</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
@@ -273,37 +286,23 @@ export default function BrowseCards() {
               </div>
             </div>
 
-            <Select 
-              value={filters.isInsert === undefined ? "all" : filters.isInsert.toString()} 
-              onValueChange={handleInsertFilter}
-            >
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="true">Insert Cards</SelectItem>
-                <SelectItem value="false">Base Cards</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Layout Toggle */}
+            {/* Layout Toggle - Larger on mobile */}
             <div className="flex gap-1">
               <Button
                 variant={viewMode === "grid" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setViewMode("grid")}
-                className="h-8 w-8 p-0"
+                className="h-10 w-12 md:h-8 md:w-8 p-0"
               >
-                <Grid3X3 className="h-4 w-4" />
+                <Grid3X3 className="h-5 w-5 md:h-4 md:w-4" />
               </Button>
               <Button
                 variant={viewMode === "list" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setViewMode("list")}
-                className="h-8 w-8 p-0"
+                className="h-10 w-12 md:h-8 md:w-8 p-0"
               >
-                <List className="h-4 w-4" />
+                <List className="h-5 w-5 md:h-4 md:w-4" />
               </Button>
             </div>
 

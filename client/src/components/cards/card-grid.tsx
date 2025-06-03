@@ -262,7 +262,7 @@ export function CardGrid({
               <CardContent className="p-4 md:p-6">
                 <div className="flex items-center gap-4 md:gap-6">
                   {/* Card Thumbnail */}
-                  <div className="w-20 h-28 md:w-16 md:h-22 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                  <div className="w-16 h-20 md:w-20 md:h-28 bg-gray-100 rounded overflow-hidden flex-shrink-0">
                     {card.frontImageUrl ? (
                       <OptimizedImage
                         src={card.frontImageUrl}
