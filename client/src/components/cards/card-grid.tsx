@@ -264,10 +264,9 @@ export function CardGrid({
                   {/* Card Thumbnail */}
                   <div className="w-16 h-20 md:w-20 md:h-28 bg-gray-100 rounded overflow-hidden flex-shrink-0">
                     {card.frontImageUrl ? (
-                      <OptimizedImage
+                      <img
                         src={card.frontImageUrl}
                         alt={card.name}
-                        size="thumbnail"
                         className="w-full h-full object-contain"
                         loading="lazy"
                       />
