@@ -16,12 +16,14 @@ interface CardGridProps {
   filters?: CardFilters;
   showAddToCollection?: boolean;
   showAddToWishlist?: boolean;
+  viewMode?: "grid" | "list";
 }
 
 export function CardGrid({ 
   filters = {}, 
   showAddToCollection = true, 
-  showAddToWishlist = true 
+  showAddToWishlist = true,
+  viewMode = "grid"
 }: CardGridProps) {
   const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -111,7 +113,7 @@ export function CardGrid({
   };
 
   if (isLoading) {
-    return (
+    return viewMode === "grid" ? (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
         {[...Array(16)].map((_, i) => (
           <Card key={i} className="animate-pulse">
@@ -123,6 +125,26 @@ export function CardGrid({
                 <div className="flex gap-1">
                   <div className="h-6 bg-gray-200 rounded flex-1"></div>
                   <div className="h-6 bg-gray-200 rounded flex-1"></div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    ) : (
+      <div className="space-y-4">
+        {[...Array(8)].map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-22 bg-gray-200 rounded flex-shrink-0"></div>
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-200 rounded"></div>
+                  <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                  <div className="flex gap-2">
+                    <div className="h-6 bg-gray-200 rounded w-20"></div>
+                    <div className="h-6 bg-gray-200 rounded w-20"></div>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -143,95 +165,198 @@ export function CardGrid({
 
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
-        {cards.map((card) => (
-          <Card key={card.id} className="group comic-border card-hover cursor-pointer" onClick={() => handleCardClick(card)}>
-            <CardContent className="p-0">
-              <div className="relative">
-                <div className="w-full aspect-[5/7] bg-gray-200 rounded-t-lg overflow-hidden">
-                  {card.frontImageUrl ? (
-                    <OptimizedImage
-                      src={card.frontImageUrl}
-                      alt={card.name}
-                      size="thumbnail"
-                      className="w-full h-full object-contain"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <span className="text-gray-400 text-xs">No Image</span>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Status indicators */}
-                <div className="absolute top-2 right-2 flex gap-1">
-                  {isInCollection(card.id) && (
-                    <div className="bg-green-500 text-white rounded-full p-1">
-                      <Check className="w-3 h-3" />
-                    </div>
-                  )}
-                  {isInWishlist(card.id) && (
-                    <div className="bg-pink-500 text-white rounded-full p-1">
-                      <Heart className="w-3 h-3 fill-current" />
-                    </div>
-                  )}
-                  {isFavorite(card.id) && (
-                    <div className="bg-yellow-500 text-white rounded-full p-1">
-                      <Star className="w-3 h-3 fill-current" />
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <div className="p-2">
-                <h3 className="font-medium text-gray-900 text-xs truncate">
-                  {card.name} #{card.cardNumber}
-                </h3>
-                <p className="text-xs text-gray-500 mb-2">{card.set.name}</p>
-                
-                <div className="flex items-center justify-between mb-2">
-                  {card.isInsert && (
-                    <span className="text-xs text-white px-2 py-1 rounded bg-purple-600 font-bold shadow-lg">
-                      INSERT
-                    </span>
-                  )}
-                </div>
-
-                {/* Action Buttons - Compact */}
-                <div className="flex gap-1">
-                  {showAddToCollection && (
-                    <Button
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddToCollection(card.id);
-                      }}
-                      className="flex-1 bg-marvel-red hover:bg-red-700 text-xs h-6 px-1"
-                    >
-                      <Plus className="w-3 h-3" />
-                    </Button>
-                  )}
+      {viewMode === "grid" ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+          {cards.map((card) => (
+            <Card key={card.id} className="group comic-border card-hover cursor-pointer" onClick={() => handleCardClick(card)}>
+              <CardContent className="p-0">
+                <div className="relative">
+                  <div className="w-full aspect-[5/7] bg-gray-200 rounded-t-lg overflow-hidden">
+                    {card.frontImageUrl ? (
+                      <OptimizedImage
+                        src={card.frontImageUrl}
+                        alt={card.name}
+                        size="thumbnail"
+                        className="w-full h-full object-contain"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="text-gray-400 text-xs">No Image</span>
+                      </div>
+                    )}
+                  </div>
                   
-                  {showAddToWishlist && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddToWishlist(card.id);
-                      }}
-                      className="flex-1 border-gray-300 hover:bg-gray-100 text-xs h-6 px-1 text-pink-500 hover:text-pink-600"
-                    >
-                      <Heart className="w-3 h-3 fill-current" />
-                    </Button>
-                  )}
+                  {/* Status indicators */}
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    {isInCollection(card.id) && (
+                      <div className="bg-green-500 text-white rounded-full p-1">
+                        <Check className="w-3 h-3" />
+                      </div>
+                    )}
+                    {isInWishlist(card.id) && (
+                      <div className="bg-pink-500 text-white rounded-full p-1">
+                        <Heart className="w-3 h-3 fill-current" />
+                      </div>
+                    )}
+                    {isFavorite(card.id) && (
+                      <div className="bg-yellow-500 text-white rounded-full p-1">
+                        <Star className="w-3 h-3 fill-current" />
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                
+                <div className="p-2">
+                  <h3 className="font-medium text-gray-900 text-xs truncate">
+                    {card.name} #{card.cardNumber}
+                  </h3>
+                  <p className="text-xs text-gray-500 mb-2">{card.set.name}</p>
+                  
+                  <div className="flex items-center justify-between mb-2">
+                    {card.isInsert && (
+                      <span className="text-xs text-white px-2 py-1 rounded bg-purple-600 font-bold shadow-lg">
+                        INSERT
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Action Buttons - Compact */}
+                  <div className="flex gap-1">
+                    {showAddToCollection && (
+                      <Button
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddToCollection(card.id);
+                        }}
+                        className="flex-1 bg-marvel-red hover:bg-red-700 text-xs h-6 px-1"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                    )}
+                    
+                    {showAddToWishlist && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddToWishlist(card.id);
+                        }}
+                        className="flex-1 border-gray-300 hover:bg-gray-100 text-xs h-6 px-1 text-pink-500 hover:text-pink-600"
+                      >
+                        <Heart className="w-3 h-3 fill-current" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {cards.map((card) => (
+            <Card key={card.id} className="group hover:shadow-md transition-all duration-200 cursor-pointer" onClick={() => handleCardClick(card)}>
+              <CardContent className="p-4 md:p-6">
+                <div className="flex items-center gap-4 md:gap-6">
+                  {/* Card Thumbnail */}
+                  <div className="w-20 h-28 md:w-16 md:h-22 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                    {card.frontImageUrl ? (
+                      <OptimizedImage
+                        src={card.frontImageUrl}
+                        alt={card.name}
+                        size="thumbnail"
+                        className="w-full h-full object-contain"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
+                        <span className="text-red-600 font-bold text-xs text-center px-1">
+                          {card.name.substring(0, 10)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Card Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-gray-900 text-lg md:text-base truncate">
+                          {card.name} #{card.cardNumber}
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1">{card.set.name}</p>
+                        
+                        {/* Status indicators and insert badge */}
+                        <div className="flex items-center gap-2 mt-3">
+                          {card.isInsert && (
+                            <span className="text-xs text-white px-2 py-1 rounded bg-purple-600 font-bold shadow-lg">
+                              INSERT
+                            </span>
+                          )}
+                          <div className="flex gap-1">
+                            {isInCollection(card.id) && (
+                              <div className="bg-green-500 text-white rounded-full p-1">
+                                <Check className="w-3 h-3" />
+                              </div>
+                            )}
+                            {isInWishlist(card.id) && (
+                              <div className="bg-pink-500 text-white rounded-full p-1">
+                                <Heart className="w-3 h-3 fill-current" />
+                              </div>
+                            )}
+                            {isFavorite(card.id) && (
+                              <div className="bg-yellow-500 text-white rounded-full p-1">
+                                <Star className="w-3 h-3 fill-current" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 w-full md:w-auto md:ml-4">
+                        <div className="flex rounded-lg overflow-hidden w-full">
+                          {showAddToCollection && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="rounded-none bg-marvel-red text-white hover:bg-red-700 text-sm md:text-xs px-4 md:px-3 flex-1 md:flex-none"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddToCollection(card.id);
+                              }}
+                            >
+                              <Plus className="w-4 h-4 mr-1" />
+                              Add to Collection
+                            </Button>
+                          )}
+                          {showAddToWishlist && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="rounded-none bg-pink-600 text-white hover:bg-pink-700 text-sm md:text-xs px-4 md:px-3 flex-1 md:flex-none"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddToWishlist(card.id);
+                              }}
+                            >
+                              <Heart className="w-4 h-4 mr-1" />
+                              Add to Wishlist
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
       <CardDetailModal
         card={selectedCard}
         isOpen={isModalOpen}

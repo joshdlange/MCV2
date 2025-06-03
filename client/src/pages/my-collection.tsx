@@ -21,8 +21,8 @@ export default function MyCollection() {
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSet, setSelectedSet] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [collectionView, setCollectionView] = useState<"cards" | "sets">("cards");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [collectionView, setCollectionView] = useState<"cards" | "sets">("sets");
   const [cardsViewMode, setCardsViewMode] = useState<"owned" | "missing">("owned");
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const queryClient = useQueryClient();

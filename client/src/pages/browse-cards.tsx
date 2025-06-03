@@ -22,6 +22,7 @@ export default function BrowseCards() {
   const [favoriteSetIds, setFavoriteSetIds] = useState<number[]>([]);
   const [setSearchQuery, setSetSearchQuery] = useState("");
   const [editingSet, setEditingSet] = useState<CardSet | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [editFormData, setEditFormData] = useState({
     name: '',
     year: 0,
@@ -286,6 +287,26 @@ export default function BrowseCards() {
               </SelectContent>
             </Select>
 
+            {/* Layout Toggle */}
+            <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+              <Button
+                variant={viewMode === "grid" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+                className={`rounded-none px-2 ${viewMode === "grid" ? "text-white" : "text-gray-900 hover:text-gray-900"}`}
+              >
+                <Grid3X3 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className={`rounded-none px-2 ${viewMode === "list" ? "text-white" : "text-gray-900 hover:text-gray-900"}`}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+
             {Object.keys(filters).filter(key => key !== 'setId').length > 0 && (
               <Button 
                 variant="outline" 
@@ -301,7 +322,7 @@ export default function BrowseCards() {
 
         {/* Cards Grid */}
         <div className="p-6">
-          <CardGrid filters={filters} />
+          <CardGrid filters={filters} viewMode={viewMode} />
         </div>
       </div>
     );
