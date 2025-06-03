@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
-import { Star, Heart, Plus, Trash2, Search } from "lucide-react";
+import { Star, Heart, Plus, Trash2, Search, Grid3X3, List } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { WishlistItem, CardWithSet } from "@shared/schema";
@@ -16,6 +16,7 @@ export default function Wishlist() {
   const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -150,6 +151,26 @@ export default function Wishlist() {
               className="pl-10 w-64 bg-white"
             />
           </div>
+          
+          {/* Layout Toggle */}
+          <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+            <Button
+              variant={viewMode === "grid" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("grid")}
+              className={`rounded-none px-2 ${viewMode === "grid" ? "text-white" : "text-gray-900 hover:text-gray-900"}`}
+            >
+              <Grid3X3 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("list")}
+              className={`rounded-none px-2 ${viewMode === "list" ? "text-white" : "text-gray-900 hover:text-gray-900"}`}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         
         <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
@@ -158,88 +179,181 @@ export default function Wishlist() {
       </div>
 
       <div className="p-6">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-          {filteredWishlist.map((item) => (
-            <Card 
-              key={item.id} 
-              className="group hover:shadow-lg transition-all duration-200 cursor-pointer"
-              onClick={() => handleCardClick(item.card)}
-            >
-              <CardContent className="p-0">
-                {/* Card Image */}
-                <div className="relative aspect-[2.5/3.5] bg-gray-100 rounded-t-lg overflow-hidden">
-                  {item.card.frontImageUrl ? (
-                    <img
-                      src={item.card.frontImageUrl}
-                      alt={item.card.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
-                      <span className="text-red-600 font-bold text-xs text-center px-2">
-                        {item.card.name}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Badges */}
-                  <div className="absolute bottom-2 left-2 flex gap-1">
-                    {item.card.isInsert && (
-                      <Badge className="bg-purple-600 text-white text-xs px-2 py-1 font-bold">
-                        INSERT
-                      </Badge>
+        {viewMode === "grid" ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {filteredWishlist.map((item) => (
+              <Card 
+                key={item.id} 
+                className="group hover:shadow-lg transition-all duration-200 cursor-pointer"
+                onClick={() => handleCardClick(item.card)}
+              >
+                <CardContent className="p-0">
+                  {/* Card Image */}
+                  <div className="relative aspect-[2.5/3.5] bg-gray-100 rounded-t-lg overflow-hidden">
+                    {item.card.frontImageUrl ? (
+                      <img
+                        src={item.card.frontImageUrl}
+                        alt={item.card.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
+                        <span className="text-red-600 font-bold text-xs text-center px-2">
+                          {item.card.name}
+                        </span>
+                      </div>
                     )}
-                  </div>
-                </div>
 
-                {/* Card Info */}
-                <div className="p-3 space-y-1">
-                  <h3 className="font-semibold text-sm text-gray-900 line-clamp-2 leading-tight">
-                    {item.card.name}
-                  </h3>
-                  <p className="text-xs text-gray-600">
-                    {item.card.set.name} #{item.card.cardNumber}
-                  </p>
-                  
-                  {item.maxPrice && (
-                    <p className="text-xs text-green-600 font-medium">
-                      Max Price: ${item.maxPrice}
-                    </p>
-                  )}
-
-                  <div className="flex items-center justify-end mt-2 gap-1">
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAddToCollection(item);
-                        }}
-                        className="h-6 w-6 p-0 hover:bg-green-100"
-                        title="Add to Collection"
-                      >
-                        <Plus className="h-3 w-3 text-gray-400 hover:text-green-600" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveFromWishlist(item.id);
-                        }}
-                        className="h-6 w-6 p-0 hover:bg-red-100"
-                        title="Remove from Wishlist"
-                      >
-                        <Trash2 className="h-3 w-3 text-gray-400 hover:text-red-600" />
-                      </Button>
+                    {/* Badges */}
+                    <div className="absolute bottom-2 left-2 flex gap-1">
+                      {item.card.isInsert && (
+                        <Badge className="bg-purple-600 text-white text-xs px-2 py-1 font-bold">
+                          INSERT
+                        </Badge>
+                      )}
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+
+                  {/* Card Info */}
+                  <div className="p-3 space-y-1">
+                    <h3 className="font-semibold text-sm text-gray-900 line-clamp-2 leading-tight">
+                      {item.card.name}
+                    </h3>
+                    <p className="text-xs text-gray-600">
+                      {item.card.set.name} #{item.card.cardNumber}
+                    </p>
+                    
+                    {item.maxPrice && (
+                      <p className="text-xs text-green-600 font-medium">
+                        Max Price: ${item.maxPrice}
+                      </p>
+                    )}
+
+                    <div className="flex items-center justify-end mt-2 gap-1">
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddToCollection(item);
+                          }}
+                          className="h-6 w-6 p-0 hover:bg-green-100"
+                          title="Add to Collection"
+                        >
+                          <Plus className="h-3 w-3 text-gray-400 hover:text-green-600" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveFromWishlist(item.id);
+                          }}
+                          className="h-6 w-6 p-0 hover:bg-red-100"
+                          title="Remove from Wishlist"
+                        >
+                          <Trash2 className="h-3 w-3 text-gray-400 hover:text-red-600" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredWishlist.map((item) => (
+              <Card 
+                key={item.id} 
+                className="group hover:shadow-lg transition-all duration-200 cursor-pointer"
+                onClick={() => handleCardClick(item.card)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex gap-4">
+                    {/* Card Image */}
+                    <div className="w-16 h-20 md:w-20 md:h-28 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                      {item.card.frontImageUrl ? (
+                        <img
+                          src={item.card.frontImageUrl}
+                          alt={item.card.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
+                          <span className="text-red-600 font-bold text-xs text-center px-1">
+                            {item.card.name}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Card Details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-base md:text-lg text-gray-900 truncate">
+                            {item.card.name}
+                          </h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {item.card.set.name} #{item.card.cardNumber}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {item.card.rarity}
+                          </p>
+                          
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
+                            {item.card.isInsert && (
+                              <Badge className="bg-purple-600 text-white text-xs px-2 py-1 font-bold">
+                                INSERT
+                              </Badge>
+                            )}
+                            {item.maxPrice && (
+                              <span className="text-sm text-green-600 font-medium">
+                                Max Price: ${item.maxPrice}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAddToCollection(item);
+                            }}
+                            className="h-8 px-3 hover:bg-green-100 text-gray-600 hover:text-green-700"
+                            title="Add to Collection"
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveFromWishlist(item.id);
+                            }}
+                            className="h-8 px-3 hover:bg-red-100 text-gray-600 hover:text-red-700"
+                            title="Remove from Wishlist"
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       <CardDetailModal

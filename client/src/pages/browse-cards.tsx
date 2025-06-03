@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CardGrid } from "@/components/cards/card-grid";
 import { CardFilters } from "@/types";
-import { Search, Filter, ArrowLeft, Heart, Plus, Star, Edit, Save, X, Grid3X3 } from "lucide-react";
+import { Search, Filter, ArrowLeft, Heart, Plus, Star, Edit, Save, X, Grid3X3, List } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAppStore } from "@/lib/store";
 import { apiRequest } from "@/lib/queryClient";
