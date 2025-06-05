@@ -660,10 +660,15 @@ export class DatabaseStorage implements IStorage {
         .innerJoin(cards, eq(userCollections.cardId, cards.id))
         .where(and(eq(userCollections.userId, userId), eq(cards.isInsert, true)));
 
+      // Calculate total value using real eBay pricing data where available
       const totalValueResult = await db
-        .select({ total: sum(cards.estimatedValue) })
+        .select({ 
+          totalEstimated: sum(cards.estimatedValue),
+          totalReal: sum(cardPriceCache.avgPrice)
+        })
         .from(userCollections)
         .innerJoin(cards, eq(userCollections.cardId, cards.id))
+        .leftJoin(cardPriceCache, eq(cards.id, cardPriceCache.cardId))
         .where(eq(userCollections.userId, userId));
 
       const wishlistResult = await db
@@ -711,10 +716,15 @@ export class DatabaseStorage implements IStorage {
       const previousWishlist = wishlistLastMonth[0]?.count || 0;
       const wishlistGrowth = this.calculateGrowthPercentage(currentWishlist, previousWishlist);
 
+      // Calculate total value using real pricing data where available, fallback to estimated
+      const realTotal = parseFloat(totalValueResult[0]?.totalReal || '0');
+      const estimatedTotal = parseFloat(totalValueResult[0]?.totalEstimated || '0');
+      const totalValue = realTotal > 0 ? realTotal : estimatedTotal;
+
       return {
         totalCards: currentTotal,
         insertCards: currentInserts,
-        totalValue: parseFloat(totalValueResult[0]?.total || '0'),
+        totalValue: totalValue,
         wishlistItems: currentWishlist,
         completedSets: 0,
         recentAdditions: 0,

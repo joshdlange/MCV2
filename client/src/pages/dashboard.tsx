@@ -3,6 +3,7 @@ import { StatsDashboard } from "@/components/dashboard/stats-dashboard";
 import { RecentCards } from "@/components/dashboard/recent-cards";
 import { QuickSearch } from "@/components/dashboard/quick-search";
 import { TrendingCards } from "@/components/dashboard/trending-cards";
+import { BulkPricingRefresh } from "@/components/dashboard/bulk-pricing-refresh";
 
 
 export default function Dashboard() {
@@ -44,9 +45,14 @@ export default function Dashboard() {
           <TrendingCards />
         </div>
         
-        {/* Recent Cards */}
-        <div className="mt-6">
-          <RecentCards />
+        {/* Bulk Pricing Refresh */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+          <div className="lg:col-span-2">
+            <RecentCards />
+          </div>
+          <div>
+            <BulkPricingRefresh />
+          </div>
         </div>
       </div>
     </div>

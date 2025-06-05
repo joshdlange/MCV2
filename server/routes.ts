@@ -632,6 +632,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk pricing refresh for all cards
+  app.post("/api/bulk-pricing-refresh", async (req: any, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    try {
+      // Get all cards without cached pricing or with stale pricing (older than 7 days)
+      const staleDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      
+      const cardsNeedingPricing = await db
+        .select({
+          id: cards.id,
+          name: cards.name,
+          cardNumber: cards.cardNumber,
+          setName: cardSets.name,
+          lastFetched: cardPriceCache.lastFetched
+        })
+        .from(cards)
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+        .leftJoin(cardPriceCache, eq(cards.id, cardPriceCache.cardId))
+        .where(
+          or(
+            isNull(cardPriceCache.lastFetched),
+            lt(cardPriceCache.lastFetched, staleDate)
+          )
+        )
+        .limit(20); // Process 20 cards at a time to avoid overwhelming eBay API
+
+      console.log(`Found ${cardsNeedingPricing.length} cards needing pricing updates`);
+
+      if (cardsNeedingPricing.length === 0) {
+        return res.json({ message: "All cards have up-to-date pricing", processed: 0 });
+      }
+
+      // Process cards in batches to respect rate limits
+      let processed = 0;
+      let successful = 0;
+
+      for (const card of cardsNeedingPricing) {
+        try {
+          console.log(`Processing pricing for: ${card.name} #${card.cardNumber} from ${card.setName}`);
+          const pricing = await ebayPricingService.fetchAndCacheCardPricing(card.id);
+          
+          if (pricing) {
+            successful++;
+            console.log(`✅ Successfully priced ${card.name}: $${pricing.avgPrice}`);
+          } else {
+            console.log(`⚠️ No pricing data found for ${card.name}`);
+          }
+          
+          processed++;
+          
+          // Add delay between requests to respect rate limits
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+        } catch (error: any) {
+          console.error(`Failed to price ${card.name}:`, error.message);
+          processed++;
+          
+          // If rate limited, stop processing
+          if (error.message.includes('Rate limit')) {
+            break;
+          }
+        }
+      }
+
+      res.json({ 
+        message: `Processed ${processed} cards, ${successful} successful`,
+        processed,
+        successful,
+        remaining: cardsNeedingPricing.length - processed
+      });
+
+    } catch (error: any) {
+      console.error("Bulk pricing refresh failed:", error.message);
+      res.status(500).json({ message: "Failed to refresh pricing data" });
+    }
+  });
+
   // Test OAuth token generation
   app.post("/api/test-oauth", async (req, res) => {
     try {
