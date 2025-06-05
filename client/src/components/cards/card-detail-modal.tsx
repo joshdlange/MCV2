@@ -328,10 +328,17 @@ export function CardDetailModal({
                 )}
 
                 {/* eBay Market Pricing */}
-                <div className="border rounded-lg p-4 bg-gray-50">
-                  <div className="flex items-center justify-between mb-3">
-                    <Label className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                      <ExternalLink className="w-4 h-4 text-blue-600" />
+                <div className="rounded-xl p-5 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 shadow-lg">
+                  <div className="flex items-center justify-between mb-4">
+                    <Label className="text-sm font-bold text-white flex items-center gap-2">
+                      <div className="w-6 h-6 bg-white rounded flex items-center justify-center">
+                        <svg viewBox="0 0 100 100" className="w-4 h-4">
+                          <text x="50" y="55" textAnchor="middle" className="text-xs font-bold fill-red-500">e</text>
+                          <text x="50" y="55" textAnchor="middle" className="text-xs font-bold fill-blue-500" dx="8">b</text>
+                          <text x="50" y="55" textAnchor="middle" className="text-xs font-bold fill-yellow-500" dx="16">a</text>
+                          <text x="50" y="55" textAnchor="middle" className="text-xs font-bold fill-green-500" dx="22">y</text>
+                        </svg>
+                      </div>
                       eBay Market Price
                     </Label>
                     <Button
@@ -382,7 +389,7 @@ export function CardDetailModal({
                         }
                       }}
                       disabled={isPricingLoading}
-                      className="text-xs"
+                      className="text-xs bg-white/20 border-white/30 text-white hover:bg-white/30 hover:text-white backdrop-blur-sm"
                     >
                       <RefreshCw className={`w-3 h-3 mr-1 ${isPricingLoading ? 'animate-spin' : ''}`} />
                       Refresh
@@ -391,46 +398,46 @@ export function CardDetailModal({
                   
                   {isPricingLoading ? (
                     <div className="flex items-center space-x-2">
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span className="text-sm text-gray-500">Fetching latest prices...</span>
+                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                      <span className="text-sm text-white/90">Fetching latest prices...</span>
                     </div>
                   ) : pricing ? (
                     pricing.avgPrice === -1 ? (
                       <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-red-600">
+                        <div className="flex items-center gap-2 text-red-200">
                           <span className="text-sm font-medium">⚠️ Pricing unavailable (rate limit reached)</span>
                         </div>
-                        <div className="text-xs text-gray-600">
+                        <div className="text-xs text-white/80">
                           eBay API limits exceeded. Try again later.
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-white/60">
                           Last attempted: {new Date(pricing.lastFetched).toLocaleDateString()}
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-lg font-bold text-green-600">
+                          <span className="text-2xl font-bold text-white drop-shadow-lg">
                             ${pricing.avgPrice.toFixed(2)}
                           </span>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-white/80 bg-white/20 px-2 py-1 rounded-full backdrop-blur-sm">
                             Based on {pricing.salesCount} recent sales
                           </span>
                         </div>
-                        <div className="text-xs text-gray-600">
+                        <div className="text-xs text-white/80">
                           Last updated: {new Date(pricing.lastFetched).toLocaleDateString()}
                         </div>
-                        <div className="text-xs text-blue-600">
+                        <div className="text-xs text-white/90 font-medium">
                           Real-time data from eBay completed listings
                         </div>
                       </div>
                     )
                   ) : (
                     <div className="space-y-2">
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-white/90">
                         No pricing data available yet
                       </p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-white/70">
                         Click refresh to fetch from eBay
                       </p>
                     </div>
