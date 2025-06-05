@@ -181,17 +181,22 @@ export class EbayPricingService {
    */
   private async fetchCompletedListings(queries: string[]): Promise<EbaySoldItem[]> {
     console.log('=== USING BROWSE API TO BYPASS FINDING API RATE LIMITS ===');
+    console.log(`Testing all ${queries.length} query variations:`, queries);
     
     // Try Browse API first (OAuth-based, higher limits)
-    for (const query of queries) {
+    for (let i = 0; i < queries.length; i++) {
+      const query = queries[i];
       try {
+        console.log(`\n--- Testing query ${i + 1}/${queries.length}: "${query}" ---`);
         const items = await this.fetchWithBrowseAPI(query);
         if (items.length > 0) {
-          console.log(`Browse API success: Found ${items.length} items with query: "${query}"`);
+          console.log(`✓ Browse API success: Found ${items.length} items with query: "${query}"`);
           return items;
+        } else {
+          console.log(`✗ No results for query: "${query}"`);
         }
       } catch (error: any) {
-        console.error(`Browse API failed for query "${query}":`, error.message);
+        console.error(`✗ Browse API failed for query "${query}":`, error.message);
         
         // If OAuth issue, try to regenerate token once
         if (error.message.includes('OAuth token expired')) {
