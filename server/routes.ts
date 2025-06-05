@@ -462,17 +462,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         try {
           // Validate required fields
-          if (!row.name || !row.cardNumber || !row.isInsert) {
-            errors.push(`Row ${rowNumber}: Missing required fields (name, cardNumber, isInsert)`);
+          if (!row.name || !row.cardNumber) {
+            errors.push(`Row ${rowNumber}: Missing required fields (name, cardNumber)`);
             continue;
           }
 
-          // Parse isInsert boolean
+          // Parse isInsert boolean (default to false if missing or empty)
           let isInsert = false;
-          if (typeof row.isInsert === 'string') {
-            isInsert = row.isInsert.toLowerCase() === 'true';
-          } else {
-            isInsert = Boolean(row.isInsert);
+          if (row.isInsert !== undefined && row.isInsert !== null && row.isInsert !== '') {
+            if (typeof row.isInsert === 'string') {
+              isInsert = row.isInsert.toLowerCase() === 'true';
+            } else {
+              isInsert = Boolean(row.isInsert);
+            }
           }
 
           const cardData = {
