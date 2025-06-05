@@ -218,6 +218,27 @@ export default function MyCollection() {
       .join(' ');
   };
 
+  // Helper functions to handle both CardWithSet and CollectionItem types
+  const getCardId = (item: CardWithSet | CollectionItem): number => {
+    return 'card' in item ? item.card.id : item.cardId;
+  };
+
+  const getCardName = (item: CardWithSet | CollectionItem): string => {
+    return 'card' in item ? item.card.name : item.card.name;
+  };
+
+  const getImageUrl = (item: CardWithSet | CollectionItem): string | null => {
+    return 'card' in item ? item.card.frontImageUrl : item.card.frontImageUrl;
+  };
+
+  const getEstimatedValue = (item: CardWithSet | CollectionItem): string | null => {
+    return 'card' in item ? item.card.estimatedValue : item.card.estimatedValue;
+  };
+
+  const getCurrentPrice = (item: CardWithSet | CollectionItem): number | null => {
+    return 'card' in item ? item.card.currentPrice : item.card.currentPrice;
+  };
+
   const handleBulkAddToMarketplace = () => {
     if (selectedItems.size === 0) {
       toast({ title: "Please select items to add to marketplace", variant: "destructive" });
@@ -435,16 +456,16 @@ export default function MyCollection() {
 
                 {/* Card Image */}
                 <div className="relative aspect-[2.5/3.5] bg-gray-100 rounded-t-lg overflow-hidden">
-                  {('card' in item ? item.card.frontImageUrl : item.frontImageUrl) ? (
+                  {getImageUrl(item) ? (
                     <img
-                      src={'card' in item ? item.card.frontImageUrl : item.frontImageUrl}
-                      alt={'card' in item ? item.card.name : item.name}
+                      src={getImageUrl(item)}
+                      alt={getCardName(item)}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
                       <span className="text-red-600 font-bold text-xs text-center px-2">
-                        {'card' in item ? item.card.name : item.name}
+                        {getCardName(item)}
                       </span>
                     </div>
                   )}
@@ -485,7 +506,12 @@ export default function MyCollection() {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <CardValue cardId={'card' in item ? item.card.id : item.id} />
+                      <CardValue 
+                        cardId={getCardId(item)} 
+                        estimatedValue={getEstimatedValue(item)}
+                        currentPrice={getCurrentPrice(item)}
+                        showRefresh={true}
+                      />
                       {'card' in item && (
                         <Button
                           variant="ghost"

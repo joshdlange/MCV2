@@ -2,7 +2,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DollarSign, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -16,7 +15,6 @@ interface CardValueProps {
 export function CardValue({ cardId, showRefresh = false, estimatedValue, currentPrice }: CardValueProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Use current price from cache, fallback to estimated value
   const fallbackPrice = estimatedValue ? parseFloat(estimatedValue) : null;
