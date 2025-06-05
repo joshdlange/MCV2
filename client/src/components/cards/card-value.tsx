@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DollarSign, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
 interface CardValueProps {
@@ -16,13 +16,30 @@ export function CardValue({ cardId, showRefresh = false, estimatedValue, current
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Use current price from cache, fallback to estimated value
+  // Fetch pricing data from the database
+  const { data: pricingData } = useQuery({
+    queryKey: ["/api/card-pricing", cardId],
+    queryFn: async () => {
+      try {
+        const response = await apiRequest("GET", `/api/card-pricing/${cardId}`);
+        return await response.json();
+      } catch (error) {
+        return null;
+      }
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: false
+  });
+
+  // Use pricing data from database, fallback to current price prop, then estimated value
+  const marketPrice = pricingData?.avgPrice;
   const fallbackPrice = estimatedValue ? parseFloat(estimatedValue) : null;
-  const displayPrice = currentPrice || fallbackPrice;
+  const displayPrice = marketPrice || currentPrice || fallbackPrice;
 
   const refreshMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("POST", `/api/refresh-card-pricing/${cardId}`);
+      const response = await apiRequest("POST", `/api/refresh-card-pricing/${cardId}`);
+      return await response.json();
     },
     onSuccess: (data: any) => {
       if (data.success) {
@@ -75,7 +92,7 @@ export function CardValue({ cardId, showRefresh = false, estimatedValue, current
     );
   }
 
-  const isMarketPrice = currentPrice && currentPrice > 0;
+  const isMarketPrice = marketPrice && marketPrice > 0;
   const badgeColor = isMarketPrice 
     ? "bg-green-50 text-green-700 border-green-200" 
     : "bg-blue-50 text-blue-700 border-blue-200";
