@@ -70,8 +70,8 @@ function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
           
           {/* Collection status badge */}
           {isInCollection && (
-            <div className="absolute top-2 left-2 bg-green-500 rounded-full p-1 shadow-lg">
-              <Check className="w-3 h-3 text-white" />
+            <div className="absolute top-2 left-2 bg-green-500 text-white rounded-full p-1 shadow-lg flex items-center justify-center">
+              <Check className="w-3 h-3" />
             </div>
           )}
         </div>

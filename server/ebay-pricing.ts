@@ -232,21 +232,28 @@ export class EbayPricingService {
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`eBay API Error Response for query "${searchQuery}":`, errorText);
-        
-        // Check for rate limit error  
-        if (errorText.includes('exceeded the number of times') || errorText.includes('Service call has exceeded')) {
-          console.warn('eBay API rate limit exceeded. Will use cached values.');
-          throw new Error('Rate limit exceeded');
-        }
-        
-        throw new Error(`eBay API returned ${response.status}: ${response.statusText}`);
+        console.error(`eBay API HTTP Error ${response.status} for query "${searchQuery}":`, errorText);
+        throw new Error(`eBay API HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data: EbayApiResponse = await response.json();
       
+      // Log the full response to debug the issue
+      console.log('Full eBay API Response:', JSON.stringify(data, null, 2));
+      
       if (data.findCompletedItemsResponse[0].ack[0] !== 'Success') {
-        console.warn(`eBay API warning for query "${searchQuery}":`, data);
+        console.error(`eBay API error for query "${searchQuery}":`, JSON.stringify(data, null, 2));
+        
+        // Check if it's actually a rate limit or another issue
+        if ((data as any).errorMessage && (data as any).errorMessage[0] && (data as any).errorMessage[0].error[0]) {
+          const error = (data as any).errorMessage[0].error[0];
+          console.error('eBay Error Details:', error);
+          if (error.message[0].includes('exceeded the number of times')) {
+            throw new Error('Rate limit exceeded');
+          }
+          throw new Error(`eBay API Error: ${error.message[0]}`);
+        }
+        
         return [];
       }
 
