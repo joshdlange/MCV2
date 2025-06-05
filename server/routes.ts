@@ -456,36 +456,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const createdCards = [];
       const errors = [];
 
+      console.log(`Processing CSV with ${results.length} rows for setId: ${setId}`);
+
       for (let i = 0; i < results.length; i++) {
         const row = results[i];
         const rowNumber = i + 1;
 
         try {
-          // Validate required fields
-          if (!row.name || !row.cardNumber) {
+          // Validate required fields - handle case variations
+          const name = row.name || row.Name || row.NAME;
+          const cardNumber = row.cardNumber || row.cardnumber || row.CardNumber || row.CARDNUMBER;
+          
+          if (!name || !cardNumber) {
             errors.push(`Row ${rowNumber}: Missing required fields (name, cardNumber)`);
             continue;
           }
 
           // Parse isInsert boolean (default to false if missing or empty)
+          // Handle different case variations: isInsert, isinsert, IsInsert, etc.
           let isInsert = false;
-          if (row.isInsert !== undefined && row.isInsert !== null && row.isInsert !== '') {
-            if (typeof row.isInsert === 'string') {
-              isInsert = row.isInsert.toLowerCase() === 'true';
+          const isInsertValue = row.isInsert || row.isinsert || row.IsInsert || row.ISINSERT;
+          if (isInsertValue !== undefined && isInsertValue !== null && isInsertValue !== '') {
+            if (typeof isInsertValue === 'string') {
+              isInsert = isInsertValue.toLowerCase() === 'true';
             } else {
-              isInsert = Boolean(row.isInsert);
+              isInsert = Boolean(isInsertValue);
             }
           }
 
+          // Handle other field variations
+          const rarity = row.rarity || row.Rarity || row.RARITY;
+          const frontImageUrl = row.frontImageUrl || row.frontimageur || row.frontImageURL || row.FrontImageUrl;
+          const backImageUrl = row.backImageUrl || row.backimageurl || row.backImageURL || row.BackImageUrl;
+          const description = row.description || row.Description || row.DESCRIPTION;
+
           const cardData = {
             setId,
-            name: row.name.trim(),
-            cardNumber: row.cardNumber.trim(),
+            name: name.trim(),
+            cardNumber: cardNumber.trim(),
             isInsert,
-            rarity: row.rarity?.trim() || 'Common',
-            frontImageUrl: row.frontImageUrl?.trim() || null,
-            backImageUrl: row.backImageUrl?.trim() || null,
-            description: row.description?.trim() || null,
+            rarity: rarity?.trim() || 'Common',
+            frontImageUrl: frontImageUrl?.trim() || null,
+            backImageUrl: backImageUrl?.trim() || null,
+            description: description?.trim() || null,
             estimatedValue: null,
             variation: null
           };
@@ -495,10 +508,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           createdCards.push(card);
 
         } catch (error) {
+          console.error(`Error processing row ${rowNumber}:`, error);
           if (error instanceof z.ZodError) {
             errors.push(`Row ${rowNumber}: ${error.errors.map(e => e.message).join(', ')}`);
           } else {
-            errors.push(`Row ${rowNumber}: Failed to create card`);
+            errors.push(`Row ${rowNumber}: Failed to create card - ${error instanceof Error ? error.message : 'Unknown error'}`);
           }
         }
       }
