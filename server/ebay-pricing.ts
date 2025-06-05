@@ -691,19 +691,25 @@ export class EbayPricingService {
    * Force refresh pricing data bypassing cache and rate limits (for user-triggered refresh)
    */
   async forceRefreshCardPricing(cardId: number): Promise<{ avgPrice: number; salesCount: number; lastFetched: Date } | null> {
-    console.log(`Force refreshing pricing for card ${cardId} - bypassing cache and rate limits`);
+    console.log(`🔄 Force refreshing pricing for card ${cardId} - bypassing cache and rate limits`);
+    console.log(`📊 Current rate limit status: ${this.requestCount}/${this.maxRequestsPerHour} requests used`);
     
-    // Temporarily override rate limiting for user-triggered refresh
+    // Temporarily reset rate limiting for user-triggered refresh
     const originalRequestCount = this.requestCount;
     const originalResetTime = this.hourlyResetTime;
     
+    // Reset rate limits to allow this request
+    this.requestCount = 0;
+    this.hourlyResetTime = Date.now() + (60 * 60 * 1000);
+    
     try {
-      // Allow this request even if we're at rate limit
+      console.log(`✅ Rate limits temporarily reset - proceeding with eBay API call`);
       return await this.fetchAndCacheCardPricing(cardId);
     } finally {
       // Restore original rate limiting state
-      this.requestCount = originalRequestCount;
+      this.requestCount = originalRequestCount + 1; // Count this request
       this.hourlyResetTime = originalResetTime;
+      console.log(`🔄 Rate limits restored: ${this.requestCount}/${this.maxRequestsPerHour} requests used`);
     }
   }
 
