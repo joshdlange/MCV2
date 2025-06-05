@@ -328,14 +328,14 @@ export function CardDetailModal({
                 )}
 
                 {/* eBay Market Pricing */}
-                <div className="rounded-lg p-4 bg-white border-2 border-gray-200 shadow-md hover:shadow-lg transition-shadow">
+                <div className="rounded-lg p-4 bg-gray-900 border-2 border-gray-700 shadow-lg">
                   <div className="flex items-center justify-between mb-3">
-                    <Label className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                    <Label className="text-sm font-semibold text-white flex items-center gap-2">
                       <div className="flex items-center gap-1">
-                        <span className="text-red-600 font-bold text-lg">e</span>
-                        <span className="text-blue-600 font-bold text-lg">b</span>
-                        <span className="text-yellow-500 font-bold text-lg">a</span>
-                        <span className="text-green-500 font-bold text-lg">y</span>
+                        <span className="text-red-500 font-bold text-lg">e</span>
+                        <span className="text-blue-500 font-bold text-lg">b</span>
+                        <span className="text-yellow-400 font-bold text-lg">a</span>
+                        <span className="text-green-400 font-bold text-lg">y</span>
                       </div>
                       Market Price
                     </Label>
@@ -387,7 +387,7 @@ export function CardDetailModal({
                         }
                       }}
                       disabled={isPricingLoading}
-                      className="text-xs border-blue-200 text-blue-600 hover:bg-blue-50"
+                      className="text-xs bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white border-none hover:from-blue-600 hover:via-purple-600 hover:to-pink-600"
                     >
                       <RefreshCw className={`w-3 h-3 mr-1 ${isPricingLoading ? 'animate-spin' : ''}`} />
                       Refresh
@@ -396,16 +396,16 @@ export function CardDetailModal({
                   
                   {isPricingLoading ? (
                     <div className="flex items-center space-x-2">
-                      <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
-                      <span className="text-sm text-gray-600">Fetching latest prices...</span>
+                      <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />
+                      <span className="text-sm text-gray-300">Fetching latest prices...</span>
                     </div>
                   ) : pricing ? (
                     pricing.avgPrice === -1 ? (
                       <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-red-600">
+                        <div className="flex items-center gap-2 text-red-400">
                           <span className="text-sm font-medium">⚠️ Pricing unavailable (rate limit reached)</span>
                         </div>
-                        <div className="text-xs text-gray-600">
+                        <div className="text-xs text-gray-400">
                           eBay API limits exceeded. Try again later.
                         </div>
                         <div className="text-xs text-gray-500">
@@ -415,27 +415,27 @@ export function CardDetailModal({
                     ) : (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-2xl font-bold text-green-600">
+                          <span className="text-2xl font-bold text-green-400">
                             ${pricing.avgPrice.toFixed(2)}
                           </span>
-                          <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
+                          <span className="text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded-full border border-gray-700">
                             Based on {pricing.salesCount} recent sales
                           </span>
                         </div>
-                        <div className="text-xs text-gray-600">
+                        <div className="text-xs text-gray-400">
                           Last updated: {new Date(pricing.lastFetched).toLocaleDateString()}
                         </div>
-                        <div className="text-xs text-blue-600 font-medium">
+                        <div className="text-xs text-blue-400 font-medium">
                           Real-time data from eBay completed listings
                         </div>
                       </div>
                     )
                   ) : (
                     <div className="space-y-2">
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-300">
                         No pricing data available yet
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-400">
                         Click refresh to fetch from eBay
                       </p>
                     </div>
