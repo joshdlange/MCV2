@@ -446,23 +446,42 @@ export class EbayPricingService {
     const relevantItems = soldItems.filter(item => {
       const title = item.title.toLowerCase();
       
-      // Must contain "marvel" and at least one keyword from the character name
+      // Must contain "marvel" - this is our primary filter
       const hasMarvel = title.includes('marvel');
+      
+      // For set-based searches, be more flexible with character matching
+      // Accept if it has Marvel + any trading card indicators
+      const hasCardIndicators = title.includes('card') || 
+                               title.includes('trading') ||
+                               title.includes('fleer') ||
+                               title.includes('topps') ||
+                               title.includes('upper deck') ||
+                               title.includes('1994') ||
+                               title.includes('1995') ||
+                               title.includes('masterpiece');
+      
+      // Character match is now optional for set-based searches
       const hasCharacter = keywords.some(keyword => 
         keyword.length > 2 && title.includes(keyword)
       );
       
       // Filter out obvious non-card items
-      const isLikelyCard = !title.includes('comic') || 
-                          title.includes('card') || 
-                          title.includes('trading') ||
-                          title.includes('non-sport');
+      const isNotComic = !title.includes('comic book') && !title.includes('graphic novel');
       
-      return hasMarvel && hasCharacter && isLikelyCard;
+      // Accept if it's Marvel + (has character OR has card indicators) + not a comic
+      const isRelevant = hasMarvel && (hasCharacter || hasCardIndicators) && isNotComic;
+      
+      if (isRelevant) {
+        console.log(`✓ Keeping result: "${item.title}" - $${item.soldPrice.toFixed(2)}`);
+      } else {
+        console.log(`✗ Filtering out: "${item.title}" (Marvel: ${hasMarvel}, Character: ${hasCharacter}, Cards: ${hasCardIndicators})`);
+      }
+      
+      return isRelevant;
     });
     
     console.log(`Filtered ${soldItems.length} results down to ${relevantItems.length} relevant items`);
-    return relevantItems.slice(0, 5); // Take top 5 most relevant
+    return relevantItems.slice(0, 10); // Take top 10 most relevant (increased from 5)
   }
 
   /**
