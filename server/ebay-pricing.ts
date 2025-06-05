@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { cards, cardPriceCache, cardSets } from "@shared/schema";
 import { eq, and, lt, or, isNull } from "drizzle-orm";
+import { ebayOAuthService } from './ebay-oauth';
 
 interface EbaySoldItem {
   title: string;
@@ -176,9 +177,40 @@ export class EbayPricingService {
   }
 
   /**
-   * Fetch completed listings from eBay using multiple query attempts
+   * Fetch completed listings from eBay using Browse API (bypasses Finding API rate limits)
    */
   private async fetchCompletedListings(queries: string[]): Promise<EbaySoldItem[]> {
+    console.log('=== USING BROWSE API TO BYPASS FINDING API RATE LIMITS ===');
+    
+    // Try Browse API first (OAuth-based, higher limits)
+    for (const query of queries) {
+      try {
+        const items = await this.fetchWithBrowseAPI(query);
+        if (items.length > 0) {
+          console.log(`Browse API success: Found ${items.length} items with query: "${query}"`);
+          return items;
+        }
+      } catch (error: any) {
+        console.error(`Browse API failed for query "${query}":`, error.message);
+        
+        // If OAuth issue, try to regenerate token once
+        if (error.message.includes('OAuth token expired')) {
+          try {
+            console.log('Retrying with fresh OAuth token...');
+            const items = await this.fetchWithBrowseAPI(query);
+            if (items.length > 0) {
+              return items;
+            }
+          } catch (retryError: any) {
+            console.error('Retry with fresh token failed:', retryError.message);
+          }
+        }
+      }
+    }
+    
+    // If Browse API fails completely, fallback to Finding API (may hit rate limits)
+    console.log('Browse API failed, falling back to Finding API...');
+    
     for (const searchQuery of queries) {
       console.log(`Trying eBay search: "${searchQuery}"`);
       const results = await this.fetchSingleQuery(searchQuery);
@@ -191,6 +223,89 @@ export class EbayPricingService {
     
     console.log('No results found for any query variations');
     return [];
+  }
+
+  /**
+   * Fetch pricing data using Browse API (OAuth-based, higher limits)
+   */
+  private async fetchWithBrowseAPI(searchQuery: string): Promise<EbaySoldItem[]> {
+    try {
+      console.log(`Trying eBay Browse API: "${searchQuery}"`);
+      
+      const accessToken = await ebayOAuthService.getAccessToken();
+      
+      const params = new URLSearchParams({
+        'q': searchQuery,
+        'category_ids': '2536', // Non-Sport Trading Cards
+        'filter': 'conditionIds:{1000|1500|2000|2500|3000|4000|5000},deliveryCountry:US',
+        'sort': 'price',
+        'limit': '10'
+      });
+
+      const url = `${this.browseApiUrl}/item_summary/search?${params.toString()}`;
+      console.log('eBay Browse API Request URL:', url);
+      
+      const headers = {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US'
+      };
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: headers,
+        signal: AbortSignal.timeout(8000)
+      });
+      
+      // Log response headers for debugging
+      console.log('eBay Browse API Response Headers:');
+      response.headers.forEach((value, key) => {
+        console.log(`  ${key}: ${value}`);
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`eBay Browse API Error ${response.status}:`, errorText);
+        
+        // If OAuth token expired, reset and retry once
+        if (response.status === 401) {
+          console.log('OAuth token expired, resetting...');
+          ebayOAuthService.resetToken();
+          throw new Error('OAuth token expired');
+        }
+        
+        throw new Error(`Browse API Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Browse API Response:', JSON.stringify(data, null, 2));
+      
+      if (!data.itemSummaries || data.itemSummaries.length === 0) {
+        console.log(`No results found for query: "${searchQuery}"`);
+        return [];
+      }
+
+      // Convert Browse API active listings to estimated sold prices
+      const items = data.itemSummaries.map((item: any) => {
+        const price = item.price?.value ? parseFloat(item.price.value) : 0;
+        const estimatedSoldPrice = price * 0.85; // Estimate 85% of active listing price
+        
+        return {
+          title: item.title,
+          soldPrice: estimatedSoldPrice,
+          condition: item.condition || 'Unknown',
+          endTime: new Date().toISOString(),
+          viewItemURL: item.itemWebUrl || ''
+        };
+      });
+
+      console.log(`Found ${items.length} active listings via Browse API for query: "${searchQuery}"`);
+      return items;
+
+    } catch (error: any) {
+      console.error(`Browse API failed for query "${searchQuery}":`, error.message);
+      throw error;
+    }
   }
 
   /**

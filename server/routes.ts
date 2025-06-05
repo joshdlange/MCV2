@@ -632,6 +632,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test OAuth token generation
+  app.post("/api/test-oauth", async (req, res) => {
+    try {
+      const { ebayOAuthService } = await import('./ebay-oauth');
+      const token = await ebayOAuthService.getAccessToken();
+      res.json({ 
+        success: true, 
+        tokenLength: token.length,
+        tokenPreview: `${token.substring(0, 20)}...`
+      });
+    } catch (error: any) {
+      res.status(500).json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  });
+
   // Debug route to test eBay API directly
   app.post("/api/debug-ebay/:query", async (req, res) => {
     try {
