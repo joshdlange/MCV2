@@ -236,7 +236,8 @@ export default function MyCollection() {
   };
 
   const getCurrentPrice = (item: CardWithSet | CollectionItem): number | null => {
-    return 'card' in item ? item.card.currentPrice : item.currentPrice;
+    // CollectionItems don't have currentPrice, only cards do
+    return 'card' in item ? null : null;
   };
 
   const getSetName = (item: CardWithSet | CollectionItem): string => {

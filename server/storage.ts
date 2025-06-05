@@ -97,8 +97,8 @@ export class DatabaseStorage implements IStorage {
     const [pricing] = await db.select().from(cardPriceCache).where(eq(cardPriceCache.cardId, cardId));
     if (!pricing || pricing.avgPrice === null) return null;
     return {
-      avgPrice: pricing.avgPrice,
-      salesCount: pricing.salesCount,
+      avgPrice: parseFloat(pricing.avgPrice),
+      salesCount: pricing.salesCount || 0,
       lastFetched: pricing.lastFetched
     };
   }
@@ -449,6 +449,7 @@ export class DatabaseStorage implements IStorage {
               description: cardSets.description,
               totalCards: cardSets.totalCards,
               createdAt: cardSets.createdAt,
+              imageUrl: cardSets.imageUrl,
             }
           }
         })
@@ -457,21 +458,7 @@ export class DatabaseStorage implements IStorage {
         .innerJoin(cardSets, eq(cards.setId, cardSets.id))
         .where(eq(userCollections.userId, userId));
 
-      return results.map(row => ({
-        id: row.id,
-        userId: row.userId,
-        cardId: row.cardId,
-        condition: row.condition,
-        acquiredDate: row.acquiredDate,
-        personalValue: row.personalValue,
-        salePrice: row.salePrice,
-        isForSale: row.isForSale,
-        serialNumber: row.serialNumber,
-        quantity: row.quantity,
-        isFavorite: row.isFavorite,
-        notes: row.notes,
-        card: row.card
-      }));
+      return results as CollectionItem[];
     } catch (error) {
       console.error('Error getting user collection:', error);
       return [];
