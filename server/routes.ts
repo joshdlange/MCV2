@@ -501,8 +501,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Start background pricing fetch for newly created cards
+      if (createdCards.length > 0) {
+        console.log(`Starting background pricing fetch for ${createdCards.length} newly uploaded cards`);
+        setImmediate(async () => {
+          try {
+            for (let i = 0; i < createdCards.length; i++) {
+              const card = createdCards[i];
+              try {
+                console.log(`Fetching initial pricing for card ${card.id}: ${card.name} (${i + 1}/${createdCards.length})`);
+                await ebayPricingService.fetchAndCacheCardPricing(card.id);
+                
+                // Rate limit: 3 seconds between requests
+                if (i < createdCards.length - 1) {
+                  await new Promise(resolve => setTimeout(resolve, 3000));
+                }
+              } catch (error: any) {
+                console.error(`Failed to fetch initial pricing for card ${card.id}:`, error.message);
+                
+                // If rate limited, pause longer
+                if (error.message.includes('Rate limit')) {
+                  await new Promise(resolve => setTimeout(resolve, 60000)); // 1 minute pause
+                }
+              }
+            }
+            console.log(`Background pricing fetch completed for ${createdCards.length} cards`);
+          } catch (error: any) {
+            console.error(`Background pricing fetch failed:`, error.message);
+          }
+        });
+      }
+
       res.json({
-        message: `CSV processed successfully. Created ${createdCards.length} cards.`,
+        message: `CSV processed successfully. Created ${createdCards.length} cards. ${createdCards.length > 0 ? 'Pricing data will be fetched in background.' : ''}`,
         created: createdCards.length,
         errors: errors.length > 0 ? errors : undefined
       });
@@ -634,71 +665,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 
-  // Auto-populate pricing for user collection
-  app.post("/api/auto-populate-pricing", authenticateUser, async (req: any, res) => {
+  // Manual refresh pricing for individual card
+  app.post("/api/refresh-card-pricing/:cardId", authenticateUser, async (req: any, res) => {
     try {
-      const userId = req.user.id;
-      console.log(`Starting auto-populate pricing for user ${userId}`);
-
-      // Get cards from user's collection
-      const userCards = await storage.getUserCollection(userId);
-      const cardIds = userCards.map(item => item.card.id);
+      const cardId = parseInt(req.params.cardId);
       
-      if (cardIds.length === 0) {
-        return res.json({ message: "No cards in collection", processed: 0 });
+      if (isNaN(cardId)) {
+        return res.status(400).json({ message: "Invalid card ID" });
       }
 
-      console.log(`Found ${cardIds.length} cards in user's collection for pricing`);
+      console.log(`Manual pricing refresh requested for card ${cardId}`);
 
-      // Start background pricing process
-      let processed = 0;
-      let successful = 0;
-
-      // Process cards in background (don't wait for completion)
-      setImmediate(async () => {
-        for (let i = 0; i < cardIds.length; i++) {
-          const cardId = cardIds[i];
-          try {
-            // Check if pricing already exists and is recent (within 24 hours)
-            const existingPricing = await ebayPricingService.getCardPricing(cardId);
-            
-            if (!existingPricing || ebayPricingService.isCacheStale(new Date(existingPricing.lastFetched))) {
-              console.log(`Auto-fetching pricing for card ${cardId} (${i + 1}/${cardIds.length})`);
-              await ebayPricingService.fetchAndCacheCardPricing(cardId);
-              successful++;
-              
-              // Rate limit: 3 seconds between requests
-              if (i < cardIds.length - 1) {
-                await new Promise(resolve => setTimeout(resolve, 3000));
-              }
-            } else {
-              console.log(`Card ${cardId} has recent pricing data, skipping`);
-            }
-            
-            processed++;
-          } catch (error: any) {
-            console.error(`Failed to auto-price card ${cardId}:`, error.message);
-            processed++;
-            
-            // If rate limited, pause longer
-            if (error.message.includes('Rate limit')) {
-              await new Promise(resolve => setTimeout(resolve, 60000)); // 1 minute pause
-            }
-          }
-        }
-        
-        console.log(`Auto-pricing completed: ${processed} processed, ${successful} successful`);
-      });
-
-      res.json({ 
-        message: "Auto-pricing started in background",
-        totalCards: cardIds.length,
-        status: "processing"
-      });
+      // Force refresh pricing data
+      const pricingData = await ebayPricingService.forceRefreshCardPricing(cardId);
+      
+      if (pricingData) {
+        res.json({
+          success: true,
+          avgPrice: pricingData.avgPrice,
+          salesCount: pricingData.salesCount,
+          lastFetched: pricingData.lastFetched
+        });
+      } else {
+        res.json({
+          success: false,
+          message: "Unable to fetch pricing data"
+        });
+      }
 
     } catch (error: any) {
-      console.error("Auto-populate pricing failed:", error.message);
-      res.status(500).json({ message: "Failed to start auto-pricing" });
+      console.error(`Manual pricing refresh failed for card ${req.params.cardId}:`, error.message);
+      res.status(500).json({ message: "Failed to refresh pricing" });
     }
   });
 
