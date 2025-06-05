@@ -490,6 +490,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const backImageUrl = row.backImageUrl || row.backimageurl || row.backImageURL || row.BackImageUrl;
           const description = row.description || row.Description || row.DESCRIPTION;
 
+          // Check for duplicate cards (same setId, cardNumber, and name)
+          const existingCard = await storage.getCardBySetAndNumber(setId, cardNumber.trim(), name.trim());
+          if (existingCard) {
+            console.log(`Skipping duplicate card: ${name.trim()} #${cardNumber.trim()}`);
+            continue;
+          }
+
           const cardData = {
             setId,
             name: name.trim(),
@@ -548,9 +555,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      const skippedCount = results.length - createdCards.length - errors.length;
+      
       res.json({
-        message: `CSV processed successfully. Created ${createdCards.length} cards. ${createdCards.length > 0 ? 'Pricing data will be fetched in background.' : ''}`,
+        message: `CSV processed successfully. Created ${createdCards.length} cards${skippedCount > 0 ? `, skipped ${skippedCount} duplicates` : ''}. ${createdCards.length > 0 ? 'Pricing data will be fetched in background.' : ''}`,
         created: createdCards.length,
+        skipped: skippedCount,
         errors: errors.length > 0 ? errors : undefined
       });
 

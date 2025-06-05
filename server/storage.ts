@@ -42,6 +42,7 @@ interface IStorage {
   // Cards
   getCards(filters?: { setId?: number; search?: string; rarity?: string; isInsert?: boolean }): Promise<CardWithSet[]>;
   getCard(id: number): Promise<CardWithSet | undefined>;
+  getCardBySetAndNumber(setId: number, cardNumber: string, name: string): Promise<Card | undefined>;
   createCard(insertCard: InsertCard): Promise<Card>;
   updateCard(id: number, insertCard: InsertCard): Promise<Card | undefined>;
   deleteCard(id: number): Promise<void>;
@@ -371,6 +372,23 @@ export class DatabaseStorage implements IStorage {
       };
     } catch (error) {
       console.error('Error getting card:', error);
+      return undefined;
+    }
+  }
+
+  async getCardBySetAndNumber(setId: number, cardNumber: string, name: string): Promise<Card | undefined> {
+    try {
+      const [card] = await db
+        .select()
+        .from(cards)
+        .where(and(
+          eq(cards.setId, setId),
+          eq(cards.cardNumber, cardNumber),
+          eq(cards.name, name)
+        ));
+      return card || undefined;
+    } catch (error) {
+      console.error('Error checking for duplicate card:', error);
       return undefined;
     }
   }
