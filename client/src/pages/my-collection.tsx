@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,6 +32,25 @@ export default function MyCollection() {
   const { data: collection, isLoading } = useQuery<CollectionItem[]>({
     queryKey: ["/api/collection"],
   });
+
+  // Auto-populate pricing data for collection on first load
+  useEffect(() => {
+    if (collection && collection.length > 0) {
+      // Trigger background pricing population once per session
+      const hasTriggeredPricing = sessionStorage.getItem('pricing-triggered');
+      if (!hasTriggeredPricing) {
+        sessionStorage.setItem('pricing-triggered', 'true');
+        
+        // Start background pricing process
+        fetch('/api/auto-populate-pricing', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        }).catch(err => {
+          console.log('Background pricing failed:', err);
+        });
+      }
+    }
+  }, [collection]);
 
   const { data: cardSets } = useQuery<CardSet[]>({
     queryKey: ["/api/card-sets"],

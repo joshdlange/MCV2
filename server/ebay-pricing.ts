@@ -603,7 +603,7 @@ export class EbayPricingService {
   /**
    * Check if price cache is stale (older than 24 hours)
    */
-  private isCacheStale(lastFetched: Date): boolean {
+  public isCacheStale(lastFetched: Date): boolean {
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     return lastFetched < twentyFourHoursAgo;
   }
