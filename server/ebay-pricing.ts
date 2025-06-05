@@ -139,9 +139,10 @@ export class EbayPricingService {
   }
 
   /**
-   * Build high-fidelity search queries using exact format: "{year} {setName} {characterName} #{cardNumber}"
+   * Build high-fidelity search queries using exact format: "{year} {setName} {characterName} #{cardNumber} {description}"
+   * For insert cards, includes description field for better accuracy
    */
-  private buildSearchQueries(setName: string, cardName: string, cardNumber: string): string[] {
+  private buildSearchQueries(setName: string, cardName: string, cardNumber: string, isInsert: boolean = false, description: string | null = null): string[] {
     // Extract year from set name
     const yearMatch = setName.match(/(\d{4})/);
     const year = yearMatch ? yearMatch[1] : '';
@@ -150,10 +151,36 @@ export class EbayPricingService {
     const cleanCardName = cardName.replace(/[^\w\s-]/g, '').trim();
     const cleanCardNumber = cardNumber.replace(/[^\w]/g, ''); // Remove # symbols
     
-    console.log(`Building high-fidelity eBay search queries for: "${cardName}" from "${setName}" #${cardNumber}`);
+    // For insert cards, include description as additional keyword
+    const insertKeyword = isInsert && description ? description.replace(/[^\w\s-]/g, '').trim() : '';
+    
+    console.log(`Building high-fidelity eBay search queries for: "${cardName}" from "${setName}" #${cardNumber}${isInsert ? ' (INSERT)' : ''}`);
+    if (isInsert && insertKeyword) {
+      console.log(`Including insert description keyword: "${insertKeyword}"`);
+    }
     
     const queries: string[] = [];
     
+    // For insert cards, build enhanced queries with description
+    if (isInsert && insertKeyword) {
+      // Query 1: EXACT format with insert description - "{year} {setName} {characterName} #{cardNumber} {description}"
+      if (year) {
+        queries.push(`${year} ${setName} ${cleanCardName} #${cleanCardNumber} ${insertKeyword}`);
+      }
+      
+      // Query 2: Same but without # symbol
+      if (year) {
+        queries.push(`${year} ${setName} ${cleanCardName} ${cleanCardNumber} ${insertKeyword}`);
+      }
+      
+      // Query 3: Set + character + card number + description (no year)
+      queries.push(`${setName} ${cleanCardName} #${cleanCardNumber} ${insertKeyword}`);
+      
+      // Query 4: Set + character + card number + description (no year, no #)
+      queries.push(`${setName} ${cleanCardName} ${cleanCardNumber} ${insertKeyword}`);
+    }
+    
+    // Standard queries (for base cards or as fallback for inserts)
     // Query 1: EXACT format that works on eBay - "{year} {setName} {characterName} #{cardNumber}"
     if (year) {
       queries.push(`${year} ${setName} ${cleanCardName} #${cleanCardNumber}`);
@@ -175,10 +202,11 @@ export class EbayPricingService {
       queries.push(`${year} ${cleanCardName} Marvel ${cleanCardNumber}`);
     }
     
-    console.log(`Generated ${queries.length} high-fidelity query variations:`);
+    console.log(`Generated ${queries.length} high-fidelity query variations${isInsert && insertKeyword ? ' (enhanced for insert card)' : ''}:`);
     queries.forEach((query, index) => {
+      const isEnhanced = isInsert && insertKeyword && index < 4; // First 4 queries are enhanced for inserts
       const isUnreliable = index === queries.length - 1; // Last query is the broad fallback
-      console.log(`  ${index + 1}. "${query}"${isUnreliable ? ' (FALLBACK - UNRELIABLE)' : ''}`);
+      console.log(`  ${index + 1}. "${query}"${isEnhanced ? ' (INSERT ENHANCED)' : ''}${isUnreliable ? ' (FALLBACK - UNRELIABLE)' : ''}`);
     });
     
     return queries;
@@ -715,13 +743,15 @@ export class EbayPricingService {
    */
   async fetchAndCacheCardPricing(cardId: number): Promise<{ avgPrice: number; salesCount: number; lastFetched: Date } | null> {
     try {
-      // Get card details
+      // Get card details including insert flag and description
       const [card] = await db
         .select({
           id: cards.id,
           name: cards.name,
           cardNumber: cards.cardNumber,
-          setName: cardSets.name
+          setName: cardSets.name,
+          isInsert: cards.isInsert,
+          description: cards.description
         })
         .from(cards)
         .innerJoin(cardSets, eq(cards.setId, cardSets.id))
@@ -734,8 +764,8 @@ export class EbayPricingService {
       }
 
       // Build multiple search queries and fetch eBay data
-      const searchQueries = this.buildSearchQueries(card.setName, card.name, card.cardNumber);
-      console.log(`Fetching eBay pricing for card: "${card.name}" from "${card.setName}" #${card.cardNumber}`);
+      const searchQueries = this.buildSearchQueries(card.setName, card.name, card.cardNumber, card.isInsert, card.description);
+      console.log(`Fetching eBay pricing for card: "${card.name}" from "${card.setName}" #${card.cardNumber}${card.isInsert ? ' (INSERT)' : ''}`);
       
       try {
         const soldItems = await this.fetchCompletedListings(searchQueries);
