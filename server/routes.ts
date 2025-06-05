@@ -271,15 +271,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/cards", async (req, res) => {
     try {
       const { setId, search, rarity, isInsert } = req.query;
+      
+      // Safely parse setId to avoid "NaN" errors
+      let parsedSetId: number | undefined = undefined;
+      if (setId && setId !== 'undefined' && setId !== 'null') {
+        const parsed = parseInt(setId as string);
+        if (!isNaN(parsed)) {
+          parsedSetId = parsed;
+        }
+      }
+      
       const filters = {
-        setId: setId ? parseInt(setId as string) : undefined,
+        setId: parsedSetId,
         search: search as string,
         rarity: rarity as string,
         isInsert: isInsert === 'true' ? true : isInsert === 'false' ? false : undefined,
       };
+      
       const cards = await storage.getCards(filters);
       res.json(cards);
     } catch (error) {
+      console.error('Error fetching cards:', error);
       res.status(500).json({ message: "Failed to fetch cards" });
     }
   });

@@ -295,8 +295,8 @@ export class DatabaseStorage implements IStorage {
 
       // Sort by card number when filtering by set, otherwise by creation date
       if (filters?.setId) {
-        // Use SQL to cast cardNumber to integer for proper numerical sorting
-        query = query.orderBy(sql`CAST(REGEXP_REPLACE(${cards.cardNumber}, '[^0-9]', '', 'g') AS INTEGER)`) as any;
+        // Simple string sorting for card numbers to avoid casting issues
+        query = query.orderBy(cards.cardNumber) as any;
       } else {
         query = query.orderBy(cards.createdAt) as any;
       }
