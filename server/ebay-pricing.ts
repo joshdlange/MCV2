@@ -553,6 +553,7 @@ export class EbayPricingService {
 
   /**
    * Smart filtering for card accuracy: character + card number + reasonable set matching
+   * Enhanced for insert cards with special numbering formats
    */
   private filterRelevantResults(soldItems: EbaySoldItem[], cardName: string, setName: string, cardNumber: string): EbaySoldItem[] {
     if (soldItems.length === 0) return [];
@@ -564,16 +565,74 @@ export class EbayPricingService {
     console.log(`\n🔍 SMART FILTERING for: "${cardName}" from "${setName}" #${cardNumber}`);
     console.log(`Primary filters: Character name + Card number + Trading card validation`);
     
+    // Enhanced card number patterns for insert cards
+    const createNumberPatterns = (cardNum: string) => {
+      const patterns = [];
+      const originalNum = cardNum.toLowerCase();
+      const cleanNum = cardNum.replace(/[^\w]/g, '');
+      
+      // Always add the original format and clean format
+      patterns.push(originalNum, cardNum, `#${originalNum}`, `#${cardNum}`);
+      
+      // Standard patterns
+      patterns.push(`#${cleanNum}`, ` ${cleanNum}`, `${cleanNum} `);
+      
+      // Special handling for 3-D format
+      if (originalNum.includes('3-d')) {
+        patterns.push('3-d', '#3-d', ' 3-d', '3-d ', '3d', '#3d', ' 3d', '3d ');
+      }
+      
+      // Handle "X of Y" format
+      if (originalNum.includes(' of ')) {
+        const parts = originalNum.split(' of ');
+        if (parts.length === 2) {
+          const num = parts[0].trim();
+          const total = parts[1].trim();
+          patterns.push(
+            `${num} of ${total}`, `${num}of${total}`, `${num}/${total}`,
+            `#${num} of ${total}`, `#${num}of${total}`, `#${num}/${total}`
+          );
+        }
+      }
+      
+      // Handle slash formats
+      if (originalNum.includes('/')) {
+        patterns.push(originalNum, originalNum.replace('/', ' of '));
+      }
+      
+      console.log(`📋 Generated number patterns for "${cardNum}":`, patterns);
+      return patterns;
+    };
+    
+    const numberPatterns = createNumberPatterns(cardNumber);
+    
     const relevantItems = soldItems.filter(item => {
       const title = item.title.toLowerCase();
       
-      // CORE REQUIREMENT 1: Character name match (strict)
-      const nameMatch = title.includes(cardName.toLowerCase());
+      // CORE REQUIREMENT 1: Character name match (flexible for variations)
+      const cardNameLower = cardName.toLowerCase();
+      const nameMatch = title.includes(cardNameLower) || 
+                       // Handle common variations
+                       (cardNameLower.includes('vs.') && title.includes(cardNameLower.replace('vs.', 'vs'))) ||
+                       (cardNameLower.includes('vs') && title.includes(cardNameLower.replace('vs', 'vs.')));
       
-      // CORE REQUIREMENT 2: Card number match (flexible)
-      const numberMatch = title.includes(`#${cleanCardNumber}`) || 
-                         title.includes(` ${cleanCardNumber}`) ||
-                         title.includes(`${cleanCardNumber} `);
+      // CORE REQUIREMENT 2: Enhanced card number match for insert cards
+      let numberMatch = false;
+      
+      // Test each pattern and log for debugging
+      for (const pattern of numberPatterns) {
+        if (title.includes(pattern)) {
+          console.log(`   🎯 PATTERN MATCH: "${pattern}" found in title`);
+          numberMatch = true;
+          break;
+        }
+      }
+      
+      // If no pattern matched, show debug info
+      if (!numberMatch) {
+        console.log(`   🔍 TESTED PATTERNS: ${numberPatterns.join(', ')}`);
+        console.log(`   📝 TITLE LOWERCASE: "${title}"`);
+      }
       
       // CORE REQUIREMENT 3: Must be trading card, not comic/other
       const isCard = title.includes('card') || title.includes('trading') || 
