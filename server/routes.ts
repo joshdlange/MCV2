@@ -632,55 +632,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Bulk pricing refresh for all cards
-  app.post("/api/bulk-pricing-refresh", async (req: any, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-
+  // Bulk pricing refresh for user's collection cards
+  app.post("/api/bulk-pricing-refresh", authenticateUser, async (req: any, res) => {
     try {
-      // Get all cards without cached pricing or with stale pricing (older than 7 days)
-      const staleDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const userId = req.user.id;
+      console.log(`Starting bulk pricing refresh for user ${userId}`);
+
+      // Get cards from user's collection that need pricing updates
+      const userCards = await storage.getUserCollection(userId);
+      const cardIds = userCards.map(item => item.card.id);
       
-      const cardsNeedingPricing = await db
-        .select({
-          id: cards.id,
-          name: cards.name,
-          cardNumber: cards.cardNumber,
-          setName: cardSets.name,
-          lastFetched: cardPriceCache.lastFetched
-        })
-        .from(cards)
-        .innerJoin(cardSets, eq(cards.setId, cardSets.id))
-        .leftJoin(cardPriceCache, eq(cards.id, cardPriceCache.cardId))
-        .where(
-          or(
-            isNull(cardPriceCache.lastFetched),
-            lt(cardPriceCache.lastFetched, staleDate)
-          )
-        )
-        .limit(20); // Process 20 cards at a time to avoid overwhelming eBay API
+      console.log(`Found ${cardIds.length} cards in user's collection`);
 
-      console.log(`Found ${cardsNeedingPricing.length} cards needing pricing updates`);
-
-      if (cardsNeedingPricing.length === 0) {
-        return res.json({ message: "All cards have up-to-date pricing", processed: 0 });
+      if (cardIds.length === 0) {
+        return res.json({ 
+          message: "No cards in collection to price", 
+          processed: 0,
+          successful: 0,
+          remaining: 0
+        });
       }
 
-      // Process cards in batches to respect rate limits
+      // Process first 10 cards to respect rate limits
+      const cardsToProcess = cardIds.slice(0, 10);
       let processed = 0;
       let successful = 0;
 
-      for (const card of cardsNeedingPricing) {
+      for (const cardId of cardsToProcess) {
         try {
-          console.log(`Processing pricing for: ${card.name} #${card.cardNumber} from ${card.setName}`);
-          const pricing = await ebayPricingService.fetchAndCacheCardPricing(card.id);
+          console.log(`Processing pricing for card ID: ${cardId}`);
+          const pricing = await ebayPricingService.fetchAndCacheCardPricing(cardId);
           
-          if (pricing) {
+          if (pricing && pricing.avgPrice > 0) {
             successful++;
-            console.log(`✅ Successfully priced ${card.name}: $${pricing.avgPrice}`);
+            console.log(`Successfully priced card ${cardId}: $${pricing.avgPrice}`);
           } else {
-            console.log(`⚠️ No pricing data found for ${card.name}`);
+            console.log(`No pricing data found for card ${cardId}`);
           }
           
           processed++;
@@ -689,7 +676,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await new Promise(resolve => setTimeout(resolve, 3000));
           
         } catch (error: any) {
-          console.error(`Failed to price ${card.name}:`, error.message);
+          console.error(`Failed to price card ${cardId}:`, error.message);
           processed++;
           
           // If rate limited, stop processing
@@ -703,7 +690,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: `Processed ${processed} cards, ${successful} successful`,
         processed,
         successful,
-        remaining: cardsNeedingPricing.length - processed
+        remaining: Math.max(0, cardIds.length - processed)
       });
 
     } catch (error: any) {
