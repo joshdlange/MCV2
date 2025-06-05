@@ -75,5 +75,10 @@ app.use((req, res, next) => {
     
     // Start the background image processor
     startImageProcessor();
+    
+    // Start background pricing auto-fetch service
+    import('./ebay-pricing').then(({ startBackgroundPricingFetch }) => {
+      startBackgroundPricingFetch();
+    });
   });
 })();

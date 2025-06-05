@@ -60,10 +60,10 @@ export function CardPricing({ cardId, className = "" }: CardPricingProps) {
   return (
     <div className={`flex items-center space-x-1 text-sm ${className}`}>
       <DollarSign className="w-3 h-3 text-green-600" />
-      <span className={getPriceColor(pricing.avgPrice)}>
-        {formatPrice(pricing.avgPrice)}
+      <span className={getPriceColor(pricing.avgPrice, pricing.salesCount)}>
+        {formatPrice(pricing.avgPrice, pricing.salesCount)}
       </span>
-      {pricing.salesCount > 0 && (
+      {pricing.salesCount > 0 && pricing.salesCount !== -1 && (
         <span className="text-xs text-gray-500">
           ({pricing.salesCount} sales)
         </span>

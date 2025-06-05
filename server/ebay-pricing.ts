@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { cards, cardPriceCache, cardSets } from "@shared/schema";
-import { eq, and, lt } from "drizzle-orm";
+import { eq, and, lt, or, isNull } from "drizzle-orm";
 
 interface EbaySoldItem {
   title: string;
@@ -628,3 +628,36 @@ export class EbayPricingService {
 }
 
 export const ebayPricingService = new EbayPricingService();
+
+/**
+ * Background service to auto-fetch pricing for cards without cached data
+ */
+export function startBackgroundPricingFetch() {
+  console.log('Starting background pricing fetch service...');
+  
+  // Run every 10 minutes to check for cards needing pricing updates
+  setInterval(async () => {
+    try {
+      // Get cards that don't have pricing data or have stale data
+      const cardsNeedingPricing = await db
+        .select({ cardId: cards.id })
+        .from(cards)
+        .leftJoin(cardPriceCache, eq(cards.id, cardPriceCache.cardId))
+        .where(
+          or(
+            isNull(cardPriceCache.cardId), // No pricing data
+            lt(cardPriceCache.lastFetched, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)) // Older than 7 days
+          )
+        )
+        .limit(10); // Process 10 cards at a time
+      
+      if (cardsNeedingPricing.length > 0) {
+        console.log(`Background fetch: Found ${cardsNeedingPricing.length} cards needing pricing updates`);
+        const cardIds = cardsNeedingPricing.map(c => c.cardId);
+        await ebayPricingService.updatePricingForCards(cardIds);
+      }
+    } catch (error) {
+      console.error('Background pricing fetch error:', error);
+    }
+  }, 10 * 60 * 1000); // Every 10 minutes
+}
