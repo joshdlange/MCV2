@@ -635,12 +635,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/card-pricing/:cardId/refresh", async (req, res) => {
     try {
       const cardId = parseInt(req.params.cardId);
+      
+      // Force fresh fetch and update global cache
+      console.log(`Force refreshing pricing for card ${cardId} - user requested refresh`);
       const pricing = await ebayPricingService.fetchAndCacheCardPricing(cardId);
       
       if (!pricing) {
         return res.status(404).json({ message: "Unable to fetch pricing data" });
       }
       
+      console.log(`Successfully refreshed pricing for card ${cardId}: $${pricing.avgPrice} - now available to all users`);
       res.json(pricing);
     } catch (error) {
       console.error("Error refreshing card pricing:", error);

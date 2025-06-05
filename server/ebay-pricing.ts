@@ -335,7 +335,13 @@ export class EbayPricingService {
         .where(eq(cardPriceCache.cardId, cardId))
         .limit(1);
 
-      // If we have cache data, use it unless it's stale AND we can make an API call
+      // Auto-fetch: If no cache exists, always try to fetch fresh data
+      if (!cachedPrice && this.canMakeRequest()) {
+        console.log(`Auto-fetching pricing for card ${cardId} - no cache found`);
+        return await this.fetchAndCacheCardPricing(cardId);
+      }
+
+      // If we have cached data, check if it's stale
       if (cachedPrice) {
         const isStale = this.isCacheStale(cachedPrice.lastFetched);
         const canFetch = this.canMakeRequest();
@@ -387,6 +393,26 @@ export class EbayPricingService {
   }
 
   /**
+   * Force refresh pricing data bypassing cache and rate limits (for user-triggered refresh)
+   */
+  async forceRefreshCardPricing(cardId: number): Promise<{ avgPrice: number; salesCount: number; lastFetched: Date } | null> {
+    console.log(`Force refreshing pricing for card ${cardId} - bypassing cache and rate limits`);
+    
+    // Temporarily override rate limiting for user-triggered refresh
+    const originalRequestCount = this.requestCount;
+    const originalResetTime = this.hourlyResetTime;
+    
+    try {
+      // Allow this request even if we're at rate limit
+      return await this.fetchAndCacheCardPricing(cardId);
+    } finally {
+      // Restore original rate limiting state
+      this.requestCount = originalRequestCount;
+      this.hourlyResetTime = originalResetTime;
+    }
+  }
+
+  /**
    * Fetch fresh pricing data and update cache with improved error handling
    */
   async fetchAndCacheCardPricing(cardId: number): Promise<{ avgPrice: number; salesCount: number; lastFetched: Date } | null> {
@@ -413,34 +439,49 @@ export class EbayPricingService {
       const searchQueries = this.buildSearchQueries(card.setName, card.name, card.cardNumber);
       console.log(`Fetching eBay pricing for card: "${card.name}" from "${card.setName}" #${card.cardNumber}`);
       
-      const soldItems = await this.fetchCompletedListings(searchQueries);
-      
-      if (soldItems.length === 0) {
-        console.log(`No eBay sold items found for card "${card.name}" - queries attempted: ${searchQueries.length}`);
-        // Still update the cache with zero data to prevent repeated failed attempts
-        await this.updatePriceCache(cardId, 0, [], 0);
+      try {
+        const soldItems = await this.fetchCompletedListings(searchQueries);
+        
+        if (soldItems.length === 0) {
+          console.log(`No eBay sold items found for card "${card.name}" - legitimate $0.00 value`);
+          // Legitimate $0.00 - no sales found but API call succeeded
+          await this.updatePriceCache(cardId, 0, [], 0);
+          return {
+            avgPrice: 0,
+            salesCount: 0,
+            lastFetched: new Date()
+          };
+        }
+
+        // Filter results to ensure they're relevant to the character
+        const filteredItems = this.filterRelevantResults(soldItems, card.name);
+        const avgPrice = this.calculateAveragePrice(filteredItems);
+        const recentSales = filteredItems.map(item => item.viewItemURL);
+
+        // Update cache with new data
+        await this.updatePriceCache(cardId, avgPrice, recentSales, filteredItems.length);
+
+        console.log(`Successfully updated pricing for card "${card.name}": $${avgPrice} (${filteredItems.length} relevant sales from ${soldItems.length} total)`);
+
         return {
-          avgPrice: 0,
-          salesCount: 0,
+          avgPrice,
+          salesCount: filteredItems.length,
+          lastFetched: new Date()
+        };
+
+      } catch (apiError: any) {
+        console.error(`eBay API error for card "${card.name}":`, apiError.message);
+        
+        // Distinguish API errors from legitimate zero values
+        // Use 0.02 to indicate API fetch failed or rate limit hit
+        await this.updatePriceCache(cardId, 0.02, [], -1); // -1 salesCount indicates error state
+        
+        return {
+          avgPrice: 0.02, // Error indicator price
+          salesCount: -1, // Error indicator count
           lastFetched: new Date()
         };
       }
-
-      // Filter results to ensure they're relevant to the character
-      const filteredItems = this.filterRelevantResults(soldItems, card.name);
-      const avgPrice = this.calculateAveragePrice(filteredItems);
-      const recentSales = filteredItems.map(item => item.viewItemURL);
-
-      // Update cache with new data
-      await this.updatePriceCache(cardId, avgPrice, recentSales, filteredItems.length);
-
-      console.log(`Successfully updated pricing for card "${card.name}": $${avgPrice} (${filteredItems.length} relevant sales from ${soldItems.length} total)`);
-
-      return {
-        avgPrice,
-        salesCount: filteredItems.length,
-        lastFetched: new Date()
-      };
 
     } catch (error) {
       console.error(`Error fetching pricing for card ${cardId}:`, error);

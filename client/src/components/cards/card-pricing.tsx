@@ -27,7 +27,16 @@ export function CardPricing({ cardId, className = "" }: CardPricingProps) {
     );
   }
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number, salesCount: number) => {
+    // Distinguish between legitimate $0.00 and error states
+    if (price === 0.02 && salesCount === -1) {
+      return "Error";
+    }
+    
+    if (price === 0 && salesCount === 0) {
+      return "$0.00";
+    }
+    
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -36,7 +45,12 @@ export function CardPricing({ cardId, className = "" }: CardPricingProps) {
     }).format(price);
   };
 
-  const getPriceColor = (price: number) => {
+  const getPriceColor = (price: number, salesCount: number) => {
+    // Error state indicator
+    if (price === 0.02 && salesCount === -1) {
+      return "text-red-500 font-medium";
+    }
+    
     if (price >= 50) return "text-green-600 font-semibold";
     if (price >= 20) return "text-blue-600 font-medium";
     if (price >= 5) return "text-gray-700";
