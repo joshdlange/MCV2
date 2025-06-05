@@ -28,9 +28,9 @@ export function CardPricing({ cardId, className = "" }: CardPricingProps) {
   }
 
   const formatPrice = (price: number, salesCount: number) => {
-    // Distinguish between legitimate $0.00 and error states
-    if (price === 0.02 && salesCount === -1) {
-      return "Error";
+    // Check for rate limit or error state
+    if (price === -1) {
+      return "Unavailable";
     }
     
     if (price === 0 && salesCount === 0) {
@@ -46,8 +46,8 @@ export function CardPricing({ cardId, className = "" }: CardPricingProps) {
   };
 
   const getPriceColor = (price: number, salesCount: number) => {
-    // Error state indicator
-    if (price === 0.02 && salesCount === -1) {
+    // Rate limit or error state indicator
+    if (price === -1) {
       return "text-red-500 font-medium";
     }
     

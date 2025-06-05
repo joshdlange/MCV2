@@ -473,22 +473,27 @@ export class EbayPricingService {
         console.error(`eBay API error for card "${card.name}":`, apiError.message);
         
         // Check for rate limit errors and handle appropriately
-        if (apiError.message.includes('Rate limit exceeded')) {
-          console.log(`eBay API rate limit exceeded for card ${card.name} - will retry later`);
+        if (apiError.message.includes('Rate limit exceeded') || apiError.message.includes('Service call has exceeded')) {
+          console.log(`eBay API rate limit exceeded for card ${card.name} - marking as unavailable`);
           
-          // Return cached data if available, otherwise indicate rate limit error
-          const cachedData = await this.getCachedPriceAsFallback(cardId);
-          if (cachedData) {
-            return cachedData;
-          }
+          // Mark card as failed for future retry, but don't cache error state
+          this.failedRequests.add(cardId);
+          
+          // Return rate limit indicator without caching
+          return {
+            avgPrice: -1, // Rate limit indicator
+            salesCount: 0,
+            lastFetched: new Date()
+          };
         }
         
         // For other API errors, use error indicator
-        await this.updatePriceCache(cardId, 0.02, [], -1); // -1 salesCount indicates error state
+        console.log(`eBay API error (non-rate-limit) for card ${card.name}:`, apiError.message);
+        await this.updatePriceCache(cardId, -1, [], 0); // -1 avgPrice indicates error state
         
         return {
-          avgPrice: 0.02, // Error indicator price
-          salesCount: -1, // Error indicator count
+          avgPrice: -1, // Error indicator price
+          salesCount: 0, // Error indicator count
           lastFetched: new Date()
         };
       }

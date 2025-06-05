@@ -348,10 +348,10 @@ export function CardDetailModal({
                           await queryClient.invalidateQueries({ queryKey: ["/api/card-pricing", card.id] });
                           await queryClient.refetchQueries({ queryKey: ["/api/card-pricing", card.id] });
                           
-                          if (result && result.avgPrice === 0.02 && result.salesCount === -1) {
+                          if (result && result.avgPrice === -1) {
                             toast({ 
                               title: "eBay API rate limit reached", 
-                              description: "Using cached data. Try again later.",
+                              description: "Try again later when limits reset.",
                               variant: "destructive" 
                             });
                           } else {
@@ -383,22 +383,36 @@ export function CardDetailModal({
                       <span className="text-sm text-gray-500">Fetching latest prices...</span>
                     </div>
                   ) : pricing ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-lg font-bold text-green-600">
-                          ${pricing.avgPrice.toFixed(2)}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          Based on {pricing.salesCount} recent sales
-                        </span>
+                    pricing.avgPrice === -1 ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-red-600">
+                          <span className="text-sm font-medium">⚠️ Pricing unavailable (rate limit reached)</span>
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          eBay API limits exceeded. Try again later.
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Last attempted: {new Date(pricing.lastFetched).toLocaleDateString()}
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-600">
-                        Last updated: {new Date(pricing.lastFetched).toLocaleDateString()}
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg font-bold text-green-600">
+                            ${pricing.avgPrice.toFixed(2)}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            Based on {pricing.salesCount} recent sales
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          Last updated: {new Date(pricing.lastFetched).toLocaleDateString()}
+                        </div>
+                        <div className="text-xs text-blue-600">
+                          Real-time data from eBay completed listings
+                        </div>
                       </div>
-                      <div className="text-xs text-blue-600">
-                        Real-time data from eBay completed listings
-                      </div>
-                    </div>
+                    )
                   ) : (
                     <div className="space-y-2">
                       <p className="text-sm text-gray-500">

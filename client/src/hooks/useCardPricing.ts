@@ -7,7 +7,7 @@ interface CardPricing {
   lastFetched: Date;
 }
 
-export function useCardPricing(cardId: number, autoFetch: boolean = true) {
+export function useCardPricing(cardId: number, autoFetch: boolean = false) {
   return useQuery({
     queryKey: ["/api/card-pricing", cardId],
     queryFn: async () => {
@@ -23,7 +23,7 @@ export function useCardPricing(cardId: number, autoFetch: boolean = true) {
       }
       return response.json() as Promise<CardPricing>;
     },
-    enabled: cardId > 0 && autoFetch, // Auto-fetch pricing data on load
+    enabled: cardId > 0 && autoFetch, // Disabled auto-fetch to reduce API calls
     staleTime: 1000 * 60 * 30, // 30 minutes - longer cache for better performance
     retry: (failureCount, error) => {
       // Retry up to 2 times for network errors, but not for 404s
