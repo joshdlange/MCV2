@@ -139,34 +139,47 @@ export class EbayPricingService {
   }
 
   /**
-   * Build precise search queries like a real collector would search
+   * Build high-fidelity search queries using exact format: "{year} {setName} {characterName} #{cardNumber}"
    */
   private buildSearchQueries(setName: string, cardName: string, cardNumber: string): string[] {
-    // Clean card name - remove special characters but keep spaces
+    // Extract year from set name
+    const yearMatch = setName.match(/(\d{4})/);
+    const year = yearMatch ? yearMatch[1] : '';
+    
+    // Clean inputs
     const cleanCardName = cardName.replace(/[^\w\s-]/g, '').trim();
-    const cleanCardNumber = cardNumber.replace(/[^\w]/g, ''); // Remove # symbols for consistency
+    const cleanCardNumber = cardNumber.replace(/[^\w]/g, ''); // Remove # symbols
     
-    console.log(`Building precise eBay search queries for: "${cardName}" from "${setName}" #${cardNumber}`);
+    console.log(`Building high-fidelity eBay search queries for: "${cardName}" from "${setName}" #${cardNumber}`);
     
-    // Build precise collector-style queries - NO BROAD FALLBACKS
     const queries: string[] = [];
     
-    // Query 1: Exact full set + character + card number
-    queries.push(`${setName} ${cleanCardName} #${cleanCardNumber}`);
+    // Query 1: EXACT format that works on eBay - "{year} {setName} {characterName} #{cardNumber}"
+    if (year) {
+      queries.push(`${year} ${setName} ${cleanCardName} #${cleanCardNumber}`);
+    }
     
     // Query 2: Same but without # symbol
+    if (year) {
+      queries.push(`${year} ${setName} ${cleanCardName} ${cleanCardNumber}`);
+    }
+    
+    // Query 3: Set + character + card number (no year)
+    queries.push(`${setName} ${cleanCardName} #${cleanCardNumber}`);
+    
+    // Query 4: Set + character + card number (no year, no #)
     queries.push(`${setName} ${cleanCardName} ${cleanCardNumber}`);
     
-    // Query 3: Add "card" keyword for specificity
-    queries.push(`${setName} ${cleanCardName} card #${cleanCardNumber}`);
+    // ONLY IF ALL ABOVE FAIL: Add one broader query but FLAG as unreliable
+    if (year) {
+      queries.push(`${year} ${cleanCardName} Marvel ${cleanCardNumber}`);
+    }
     
-    console.log(`Generated ${queries.length} precise query variations (NO BROAD FALLBACKS):`);
+    console.log(`Generated ${queries.length} high-fidelity query variations:`);
     queries.forEach((query, index) => {
-      console.log(`  ${index + 1}. "${query}"`);
+      const isUnreliable = index === queries.length - 1; // Last query is the broad fallback
+      console.log(`  ${index + 1}. "${query}"${isUnreliable ? ' (FALLBACK - UNRELIABLE)' : ''}`);
     });
-    
-    // Store queries for verification logging
-    this.lastUsedQueries = queries;
     
     return queries;
   }
@@ -175,23 +188,38 @@ export class EbayPricingService {
    * Fetch completed listings from eBay using Browse API (bypasses Finding API rate limits)
    */
   private async fetchCompletedListings(queries: string[]): Promise<EbaySoldItem[]> {
-    console.log('=== USING BROWSE API TO BYPASS FINDING API RATE LIMITS ===');
-    console.log(`Testing all ${queries.length} query variations:`, queries);
+    console.log('\n=== COMPREHENSIVE EBAY SEARCH LOGGING ===');
+    console.log(`Testing ${queries.length} high-fidelity query variations:`);
+    queries.forEach((query, index) => {
+      console.log(`  ${index + 1}. "${query}"`);
+    });
     
-    // Try Browse API first (OAuth-based, higher limits)
+    // Try Browse API with detailed logging for each query
     for (let i = 0; i < queries.length; i++) {
       const query = queries[i];
+      const isUnreliableFallback = i === queries.length - 1; // Last query is broad fallback
+      
       try {
-        console.log(`\n--- Testing query ${i + 1}/${queries.length}: "${query}" ---`);
+        console.log(`\n🔍 QUERY ${i + 1}/${queries.length}: "${query}"${isUnreliableFallback ? ' (UNRELIABLE FALLBACK)' : ''}`);
         const items = await this.fetchWithBrowseAPI(query);
+        
+        console.log(`📊 RAW RESULTS: ${items.length} items returned from eBay`);
         if (items.length > 0) {
-          console.log(`✓ Browse API success: Found ${items.length} items with query: "${query}"`);
+          console.log(`📋 SAMPLE TITLES:`);
+          items.slice(0, 3).forEach((item: any, index: number) => {
+            console.log(`   ${index + 1}. "${item.title}" - $${item.soldPrice.toFixed(2)}`);
+          });
+          
+          if (isUnreliableFallback) {
+            console.log(`⚠️  WARNING: Using unreliable fallback query - pricing may be inaccurate`);
+          }
+          
           return items;
         } else {
-          console.log(`✗ No results for query: "${query}"`);
+          console.log(`❌ ZERO RESULTS for query: "${query}"`);
         }
       } catch (error: any) {
-        console.error(`✗ Browse API failed for query "${query}":`, error.message);
+        console.error(`💥 QUERY FAILED: "${query}" - ${error.message}`);
         
         // If OAuth issue, try to regenerate token once
         if (error.message.includes('OAuth token expired')) {
@@ -430,64 +458,68 @@ export class EbayPricingService {
   }
 
   /**
-   * Filter eBay results with precision like a real collector
-   * Must match set name AND card number to prevent cross-contamination
+   * Enforce card-specific accuracy: ALL requirements must match
+   * Set name + Year + Character + Card number must ALL be present
    */
   private filterRelevantResults(soldItems: EbaySoldItem[], cardName: string, setName: string, cardNumber: string): EbaySoldItem[] {
     if (soldItems.length === 0) return [];
     
-    const cleanCardName = cardName.toLowerCase().replace(/[^\w\s-]/g, '');
-    const cleanSetName = setName.toLowerCase();
-    const cleanCardNumber = cardNumber.replace(/[^\w]/g, ''); // Remove # symbols
+    const cleanCardNumber = cardNumber.replace(/[^\w]/g, '');
+    const yearMatch = setName.match(/(\d{4})/);
+    const year = yearMatch ? yearMatch[1] : '';
     
-    console.log(`\n🔍 PRECISE FILTERING for: "${cardName}" from "${setName}" #${cardNumber}`);
-    console.log(`Looking for titles that contain SET NAME + CARD NUMBER to prevent wrong card pricing`);
+    console.log(`\n🔍 STRICT FILTERING for: "${cardName}" from "${setName}" #${cardNumber}`);
+    console.log(`Requiring ALL: Set name + Year + Character + Card number`);
     
     const relevantItems = soldItems.filter(item => {
       const title = item.title.toLowerCase();
       
-      // REQUIREMENT 1: Must contain key parts of the set name
-      const setKeywords = cleanSetName.split(/\s+/).filter(word => word.length > 3); // Ignore small words
-      const hasSetMatch = setKeywords.some(keyword => title.includes(keyword));
+      // REQUIREMENT 1: Set name match (handle Marvel Masterpieces specifically)
+      let setMatch = false;
+      if (setName.toLowerCase().includes("marvel masterpieces")) {
+        setMatch = title.includes("marvel masterpieces") && title.includes("1994");
+      } else {
+        setMatch = title.includes(setName.toLowerCase());
+      }
       
-      // REQUIREMENT 2: Must contain the exact card number
-      const hasCardNumber = title.includes(cleanCardNumber) || title.includes(`#${cleanCardNumber}`);
+      // REQUIREMENT 2: Character name match
+      const nameMatch = title.includes(cardName.toLowerCase());
       
-      // REQUIREMENT 3: Must contain character name (primary requirement)
-      const hasCharacter = title.includes(cleanCardName);
+      // REQUIREMENT 3: Card number match
+      const numberMatch = title.includes(`#${cleanCardNumber}`) || title.includes(` ${cleanCardNumber}`);
       
-      // REQUIREMENT 4: Filter out wrong sets (prevent Spider-Man cards showing for Deadpool)
-      const isNotWrongSet = !title.includes('spider-man') || cleanCardName.includes('spider');
+      // REQUIREMENT 4: Year match (if available)
+      const yearMatch = !year || title.includes(year);
       
-      // REQUIREMENT 5: Must be a trading card, not comic book
+      // REQUIREMENT 5: Must be trading card, not comic
       const isCard = title.includes('card') || title.includes('trading') || 
                      title.includes('fleer') || title.includes('topps') || title.includes('upper deck');
       const isNotComic = !title.includes('comic book') && !title.includes('graphic novel');
       
-      const isRelevant = hasSetMatch && hasCardNumber && hasCharacter && isNotWrongSet && isCard && isNotComic;
+      const isRelevant = setMatch && nameMatch && numberMatch && yearMatch && isCard && isNotComic;
       
-      // DETAILED LOGGING for verification
+      // DETAILED LOGGING for every result
+      console.log(`${isRelevant ? '✅ ACCEPTED' : '❌ REJECTED'}: "${item.title}"`);
+      console.log(`   Set: ${setMatch}, Name: ${nameMatch}, Number: ${numberMatch}, Year: ${yearMatch}, Card: ${isCard}, NotComic: ${isNotComic}`);
       if (isRelevant) {
-        console.log(`✅ ACCEPTED: "${item.title}" - $${item.soldPrice.toFixed(2)}`);
-        console.log(`   ✓ Set match: ${hasSetMatch}, Card #: ${hasCardNumber}, Character: ${hasCharacter}`);
-      } else {
-        console.log(`❌ REJECTED: "${item.title}"`);
-        console.log(`   Set: ${hasSetMatch}, Card#: ${hasCardNumber}, Char: ${hasCharacter}, NotWrong: ${isNotWrongSet}, IsCard: ${isCard}`);
+        console.log(`   💰 Price: $${item.soldPrice.toFixed(2)}`);
       }
       
       return isRelevant;
     });
     
-    // Log final results with source titles for verification
+    // Final summary with complete transparency
     console.log(`\n📊 FILTERING SUMMARY: ${soldItems.length} → ${relevantItems.length} relevant items`);
     if (relevantItems.length > 0) {
-      console.log(`📋 FINAL PRICING SOURCES:`);
+      console.log(`💎 FINAL PRICING SOURCES (verified accurate):`);
       relevantItems.forEach((item, index) => {
         console.log(`   ${index + 1}. "${item.title}" - $${item.soldPrice.toFixed(2)}`);
       });
+    } else {
+      console.log(`❌ NO ACCURATE MATCHES FOUND - preventing incorrect pricing`);
     }
     
-    return relevantItems.slice(0, 5); // Take top 5 most relevant
+    return relevantItems.slice(0, 5);
   }
 
   /**
@@ -652,10 +684,23 @@ export class EbayPricingService {
         const avgPrice = this.calculateAveragePrice(filteredItems);
         const recentSales = filteredItems.map(item => item.viewItemURL);
 
+        // FINAL PRICING VERIFICATION - Log exactly what pricing is based on
+        console.log(`\n💰 FINAL PRICING CALCULATION for "${card.name}" from "${card.setName}" #${card.cardNumber}:`);
+        if (filteredItems.length > 0) {
+          console.log(`✅ PRICE: $${avgPrice.toFixed(2)} (average of ${filteredItems.length} verified listings)`);
+          console.log(`📋 PRICING SOURCES:`);
+          filteredItems.forEach((item, index) => {
+            console.log(`   ${index + 1}. "${item.title}" - $${item.soldPrice.toFixed(2)}`);
+          });
+        } else {
+          console.log(`❌ PRICE: $0.00 (no verified listings found - preventing inaccurate pricing)`);
+          console.log(`📋 REJECTED ${soldItems.length} listings that didn't match our strict criteria`);
+        }
+
         // Update cache with new data
         await this.updatePriceCache(cardId, avgPrice, recentSales, filteredItems.length);
 
-        console.log(`Successfully updated pricing for card "${card.name}": $${avgPrice} (${filteredItems.length} relevant sales from ${soldItems.length} total)`);
+        console.log(`✅ Successfully updated pricing for card "${card.name}": $${avgPrice} (${filteredItems.length} relevant sales from ${soldItems.length} total)`);
 
         return {
           avgPrice,
