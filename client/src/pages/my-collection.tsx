@@ -484,19 +484,22 @@ export default function MyCollection() {
                         </Badge>
                       )}
                     </div>
-                    {'card' in item && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveFromCollection(item.id);
-                        }}
-                        className="h-6 w-6 p-0 hover:bg-red-100"
-                      >
-                        <Trash2 className="h-3 w-3 text-gray-400 hover:text-red-600" />
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <CardValue cardId={'card' in item ? item.card.id : item.id} />
+                      {'card' in item && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveFromCollection(item.id);
+                          }}
+                          className="h-6 w-6 p-0 hover:bg-red-100"
+                        >
+                          <Trash2 className="h-3 w-3 text-gray-400 hover:text-red-600" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -580,9 +583,7 @@ export default function MyCollection() {
                           {/* Card Value and Actions */}
                           <div className="flex items-center gap-3 ml-4">
                             {/* Card Value */}
-                            {'card' in item && (
-                              <CardValue cardId={item.card.id} />
-                            )}
+                            <CardValue cardId={'card' in item ? item.card.id : item.id} showRefresh={true} />
                             
                             {/* Show different icons for owned vs missing cards */}
                             {'card' in item ? (

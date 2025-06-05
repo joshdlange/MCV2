@@ -795,6 +795,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Force refresh pricing for a single card (user-triggered)
+  app.post("/api/refresh-card-pricing/:cardId", async (req, res) => {
+    try {
+      const cardId = parseInt(req.params.cardId);
+      if (isNaN(cardId)) {
+        return res.status(400).json({ message: "Invalid card ID" });
+      }
+
+      // Force refresh bypassing cache and rate limits
+      const result = await ebayPricingService.forceRefreshCardPricing(cardId);
+      
+      if (result) {
+        res.json({
+          success: true,
+          avgPrice: result.avgPrice,
+          salesCount: result.salesCount,
+          lastFetched: result.lastFetched
+        });
+      } else {
+        res.json({
+          success: false,
+          message: "Unable to fetch pricing data"
+        });
+      }
+    } catch (error) {
+      console.error("Error refreshing card pricing:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to refresh pricing" 
+      });
+    }
+  });
+
   app.post("/api/pricing/batch-update", async (req, res) => {
     try {
       const { cardIds } = req.body;

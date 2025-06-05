@@ -27,10 +27,13 @@ export function CardValue({ cardId, showRefresh = false }: CardValueProps) {
   });
 
   const refreshMutation = useMutation({
-    mutationFn: () => apiRequest(`/api/refresh-card-pricing/${cardId}`, {
-      method: "POST"
-    }),
-    onSuccess: (data) => {
+    mutationFn: async () => {
+      const response = await apiRequest(`/api/refresh-card-pricing/${cardId}`, {
+        method: "POST"
+      });
+      return response.json();
+    },
+    onSuccess: (data: any) => {
       if (data.success) {
         queryClient.invalidateQueries({
           queryKey: ["/api/card-pricing", cardId]
