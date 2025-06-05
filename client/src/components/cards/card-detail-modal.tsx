@@ -340,11 +340,33 @@ export function CardDetailModal({
                       onClick={async () => {
                         if (!card) return;
                         try {
-                          await refreshPricing(card.id);
-                          queryClient.invalidateQueries({ queryKey: ["/api/card-pricing", card.id] });
-                          toast({ title: "Pricing updated from eBay" });
-                        } catch (error) {
-                          toast({ title: "Failed to update pricing", variant: "destructive" });
+                          console.log(`Refreshing pricing for card ${card.id}: ${card.name}`);
+                          const result = await refreshPricing(card.id);
+                          console.log('Refresh result:', result);
+                          
+                          // Invalidate both the specific card pricing and general queries
+                          await queryClient.invalidateQueries({ queryKey: ["/api/card-pricing", card.id] });
+                          await queryClient.refetchQueries({ queryKey: ["/api/card-pricing", card.id] });
+                          
+                          if (result && result.avgPrice === 0.02 && result.salesCount === -1) {
+                            toast({ 
+                              title: "eBay API rate limit reached", 
+                              description: "Using cached data. Try again later.",
+                              variant: "destructive" 
+                            });
+                          } else {
+                            toast({ 
+                              title: "Pricing updated from eBay",
+                              description: result ? `$${result.avgPrice.toFixed(2)} (${result.salesCount} sales)` : "No data found"
+                            });
+                          }
+                        } catch (error: any) {
+                          console.error('Refresh error:', error);
+                          toast({ 
+                            title: "Failed to update pricing", 
+                            description: error.message || "Unknown error",
+                            variant: "destructive" 
+                          });
                         }
                       }}
                       disabled={isPricingLoading}

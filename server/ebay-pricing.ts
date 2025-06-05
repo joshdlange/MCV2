@@ -472,8 +472,18 @@ export class EbayPricingService {
       } catch (apiError: any) {
         console.error(`eBay API error for card "${card.name}":`, apiError.message);
         
-        // Distinguish API errors from legitimate zero values
-        // Use 0.02 to indicate API fetch failed or rate limit hit
+        // Check for rate limit errors and handle appropriately
+        if (apiError.message.includes('Rate limit exceeded')) {
+          console.log(`eBay API rate limit exceeded for card ${card.name} - will retry later`);
+          
+          // Return cached data if available, otherwise indicate rate limit error
+          const cachedData = await this.getCachedPriceAsFallback(cardId);
+          if (cachedData) {
+            return cachedData;
+          }
+        }
+        
+        // For other API errors, use error indicator
         await this.updatePriceCache(cardId, 0.02, [], -1); // -1 salesCount indicates error state
         
         return {
