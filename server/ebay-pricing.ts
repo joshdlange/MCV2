@@ -218,17 +218,24 @@ export class EbayPricingService {
       console.log('eBay API Request URL:', `${this.baseUrl}?${params.toString()}`);
       console.log('eBay API Headers:', headers);
       
+      // Check rate limits before making request
+      if (!this.canMakeRequest()) {
+        console.log('eBay API hourly limit reached - failing fast');
+        throw new Error('Rate limit exceeded');
+      }
+
       const response = await fetch(`${this.baseUrl}?${params}`, {
         method: 'GET',
-        headers: headers
+        headers: headers,
+        signal: AbortSignal.timeout(8000) // 8 second timeout
       });
       
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`eBay API Error Response for query "${searchQuery}":`, errorText);
         
-        // Check for rate limit error
-        if (errorText.includes('exceeded the number of times')) {
+        // Check for rate limit error  
+        if (errorText.includes('exceeded the number of times') || errorText.includes('Service call has exceeded')) {
           console.warn('eBay API rate limit exceeded. Will use cached values.');
           throw new Error('Rate limit exceeded');
         }
