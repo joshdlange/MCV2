@@ -77,8 +77,9 @@ app.use((req, res, next) => {
     startImageProcessor();
     
     // Start background pricing auto-fetch service
-    import('./ebay-pricing').then(({ startBackgroundPricingFetch }) => {
-      startBackgroundPricingFetch();
-    });
+    // Temporarily disabled to respect eBay API rate limits
+    // import('./ebay-pricing').then(({ startBackgroundPricingFetch }) => {
+    //   startBackgroundPricingFetch();
+    // });
   });
 })();

@@ -125,7 +125,7 @@ class PricingQueue {
 
 export const pricingQueue = new PricingQueue();
 
-// Start background processing of trending cards every hour
-setInterval(() => {
-  pricingQueue.queueTrendingCards();
-}, 60 * 60 * 1000); // Every hour
+// Temporarily disabled to respect eBay API rate limits
+// setInterval(() => {
+//   pricingQueue.queueTrendingCards();
+// }, 60 * 60 * 1000); // Every hour

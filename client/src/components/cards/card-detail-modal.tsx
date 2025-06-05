@@ -50,8 +50,8 @@ export function CardDetailModal({
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  // eBay pricing hooks
-  const { data: pricing, isLoading: isPricingLoading } = useCardPricing(card?.id || 0);
+  // eBay pricing hooks - autoFetch disabled to reduce API calls
+  const { data: pricing, isLoading: isPricingLoading } = useCardPricing(card?.id || 0, false);
   const refreshPricing = useRefreshCardPricing();
 
   // Admin mutations
