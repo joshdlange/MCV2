@@ -211,7 +211,7 @@ export function CardDetailModal({
                   variant="outline"
                   size="sm"
                   onClick={() => setShowBack(!showBack)}
-                  className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-white text-black border-gray-300 hover:bg-gray-50"
+                  className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-orange-500 text-white border-orange-500 hover:bg-orange-500 hover:text-white"
                 >
                   <RotateCcw className="w-4 h-4 mr-2" />
                   FLIP
