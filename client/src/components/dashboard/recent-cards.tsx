@@ -122,8 +122,8 @@ export function RecentCards() {
                 
                 {/* Status badges */}
                 <div className="absolute top-1 right-1 flex flex-col gap-1">
-                  <div className="bg-green-500 rounded-full p-1 shadow-lg">
-                    <Check className="w-3 h-3 text-white" />
+                  <div className="bg-green-500 text-white rounded-full p-1 shadow-lg">
+                    <Check className="w-3 h-3" />
                   </div>
                   {item.card.isInsert && (
                     <div className="bg-purple-600 text-white px-2 py-1 rounded text-xs font-bold shadow-lg">

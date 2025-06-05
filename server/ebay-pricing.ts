@@ -186,10 +186,10 @@ export class EbayPricingService {
   }
 
   /**
-   * Fetch completed listings for a single search query with retry logic
+   * Fetch completed listings for a single search query with fast-fail on rate limits
    */
   private async fetchSingleQuery(searchQuery: string): Promise<EbaySoldItem[]> {
-    return this.retryWithExponentialBackoff(async () => {
+    try {
       // Correct eBay Finding API headers (SOA format, not REST)
       const headers = {
         'X-EBAY-SOA-OPERATION-NAME': 'findCompletedItems',
@@ -259,10 +259,13 @@ export class EbayPricingService {
 
       console.log(`Found ${items.length} sold items for query: "${searchQuery}"`);
       return items;
-    }).catch(error => {
-      console.error(`Failed to fetch eBay data for query "${searchQuery}" after retries:`, error.message);
-      return []; // Return empty array on final failure
-    });
+    } catch (error: any) {
+      console.error(`Failed to fetch eBay data for query "${searchQuery}":`, error.message);
+      if (error.message.includes('Rate limit exceeded') || error.message.includes('Service call has exceeded')) {
+        throw error; // Re-throw rate limit errors
+      }
+      return []; // Return empty array for other errors
+    }
   }
 
   /**

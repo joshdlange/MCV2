@@ -339,6 +339,13 @@ export function CardDetailModal({
                       size="sm"
                       onClick={async () => {
                         if (!card) return;
+                        
+                        // Show immediate loading state
+                        const loadingToast = toast({ 
+                          title: "Fetching eBay pricing...", 
+                          description: "This may take a moment"
+                        });
+                        
                         try {
                           console.log(`Refreshing pricing for card ${card.id}: ${card.name}`);
                           const result = await refreshPricing(card.id);
@@ -353,6 +360,11 @@ export function CardDetailModal({
                               title: "eBay API rate limit reached", 
                               description: "Try again later when limits reset.",
                               variant: "destructive" 
+                            });
+                          } else if (result && result.avgPrice === 0 && result.salesCount === 0) {
+                            toast({ 
+                              title: "No eBay sales found", 
+                              description: "This card may not have recent sales data."
                             });
                           } else {
                             toast({ 
