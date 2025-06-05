@@ -220,23 +220,43 @@ export default function MyCollection() {
 
   // Helper functions to handle both CardWithSet and CollectionItem types
   const getCardId = (item: CardWithSet | CollectionItem): number => {
-    return 'card' in item ? item.card.id : item.cardId;
+    return 'card' in item ? item.card.id : item.id;
   };
 
   const getCardName = (item: CardWithSet | CollectionItem): string => {
-    return 'card' in item ? item.card.name : item.card.name;
+    return 'card' in item ? item.card.name : item.name;
   };
 
   const getImageUrl = (item: CardWithSet | CollectionItem): string | null => {
-    return 'card' in item ? item.card.frontImageUrl : item.card.frontImageUrl;
+    return 'card' in item ? item.card.frontImageUrl : item.frontImageUrl;
   };
 
   const getEstimatedValue = (item: CardWithSet | CollectionItem): string | null => {
-    return 'card' in item ? item.card.estimatedValue : item.card.estimatedValue;
+    return 'card' in item ? item.card.estimatedValue : item.estimatedValue;
   };
 
   const getCurrentPrice = (item: CardWithSet | CollectionItem): number | null => {
-    return 'card' in item ? item.card.currentPrice : item.card.currentPrice;
+    return 'card' in item ? item.card.currentPrice : item.currentPrice;
+  };
+
+  const getSetName = (item: CardWithSet | CollectionItem): string => {
+    return 'card' in item ? item.card.set.name : item.set.name;
+  };
+
+  const getCardNumber = (item: CardWithSet | CollectionItem): string => {
+    return 'card' in item ? item.card.cardNumber : item.cardNumber;
+  };
+
+  const getIsInsert = (item: CardWithSet | CollectionItem): boolean => {
+    return 'card' in item ? item.card.isInsert : item.isInsert;
+  };
+
+  const getCollectionCondition = (item: CollectionItem): string => {
+    return item.condition;
+  };
+
+  const getCollectionQuantity = (item: CollectionItem): number => {
+    return item.quantity;
   };
 
   const handleBulkAddToMarketplace = () => {
@@ -483,25 +503,25 @@ export default function MyCollection() {
                 {/* Card Info */}
                 <div className="p-3 space-y-1">
                   <h3 className="font-semibold text-sm text-gray-900 line-clamp-2 leading-tight">
-                    {'card' in item ? item.card.name : item.name}
+                    {getCardName(item)}
                   </h3>
                   <p className="text-xs text-gray-600">
-                    {'card' in item ? item.card.set.name : item.set.name} #{'card' in item ? item.card.cardNumber : item.cardNumber}
+                    {getSetName(item)} #{getCardNumber(item)}
                   </p>
                   <div className="flex items-center justify-between mt-2">
                     <div className="flex gap-1">
                       {'card' in item ? (
                         <Badge className="bg-blue-100 text-blue-800 text-xs border-blue-200">
-                          {formatCondition(item.condition)}
+                          {formatCondition(getCollectionCondition(item))}
                         </Badge>
                       ) : (
                         <Badge className="bg-red-100 text-red-800 text-xs border-red-200">
                           Missing
                         </Badge>
                       )}
-                      {'card' in item && item.quantity > 1 && (
+                      {'card' in item && getCollectionQuantity(item) > 1 && (
                         <Badge className="bg-orange-100 text-orange-800 text-xs border-orange-200">
-                          Qty: {item.quantity}
+                          Qty: {getCollectionQuantity(item)}
                         </Badge>
                       )}
                     </div>

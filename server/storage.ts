@@ -95,9 +95,9 @@ export class DatabaseStorage implements IStorage {
 
   async getCardPricing(cardId: number): Promise<{ avgPrice: number; salesCount: number; lastFetched: Date } | null> {
     const [pricing] = await db.select().from(cardPriceCache).where(eq(cardPriceCache.cardId, cardId));
-    if (!pricing) return null;
+    if (!pricing || pricing.avgPrice === null) return null;
     return {
-      avgPrice: parseFloat(pricing.avgPrice.toString()),
+      avgPrice: pricing.avgPrice,
       salesCount: pricing.salesCount,
       lastFetched: pricing.lastFetched
     };
@@ -289,15 +289,15 @@ export class DatabaseStorage implements IStorage {
       }
 
       if (conditions.length > 0) {
-        query = query.where(and(...conditions));
+        query = query.where(and(...conditions)) as any;
       }
 
       // Sort by card number when filtering by set, otherwise by creation date
       if (filters?.setId) {
         // Use SQL to cast cardNumber to integer for proper numerical sorting
-        query = query.orderBy(sql`CAST(REGEXP_REPLACE(${cards.cardNumber}, '[^0-9]', '', 'g') AS INTEGER)`);
+        query = query.orderBy(sql`CAST(REGEXP_REPLACE(${cards.cardNumber}, '[^0-9]', '', 'g') AS INTEGER)`) as any;
       } else {
-        query = query.orderBy(cards.createdAt);
+        query = query.orderBy(cards.createdAt) as any;
       }
 
       const results = await query;
