@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
+import { CardValue } from "@/components/cards/card-value";
 import { Star, Heart, Check, ShoppingCart, Trash2, Search, Grid3X3, List, Filter, X } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -574,8 +575,13 @@ export default function MyCollection() {
                             </div>
                           </div>
 
-                          {/* Actions */}
-                          <div className="flex items-center gap-2 ml-4">
+                          {/* Card Value and Actions */}
+                          <div className="flex items-center gap-3 ml-4">
+                            {/* Card Value */}
+                            {'card' in item && (
+                              <CardValue cardId={item.card.id} />
+                            )}
+                            
                             {/* Show different icons for owned vs missing cards */}
                             {'card' in item ? (
                               <div className="p-1 rounded-full bg-green-500 text-white">

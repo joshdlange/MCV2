@@ -632,70 +632,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Bulk pricing refresh for user's collection cards
-  app.post("/api/bulk-pricing-refresh", authenticateUser, async (req: any, res) => {
+
+
+  // Auto-populate pricing for user collection
+  app.post("/api/auto-populate-pricing", authenticateUser, async (req: any, res) => {
     try {
       const userId = req.user.id;
-      console.log(`Starting bulk pricing refresh for user ${userId}`);
+      console.log(`Starting auto-populate pricing for user ${userId}`);
 
-      // Get cards from user's collection that need pricing updates
+      // Get cards from user's collection
       const userCards = await storage.getUserCollection(userId);
       const cardIds = userCards.map(item => item.card.id);
       
-      console.log(`Found ${cardIds.length} cards in user's collection`);
-
       if (cardIds.length === 0) {
-        return res.json({ 
-          message: "No cards in collection to price", 
-          processed: 0,
-          successful: 0,
-          remaining: 0
-        });
+        return res.json({ message: "No cards in collection", processed: 0 });
       }
 
-      // Process first 10 cards to respect rate limits
-      const cardsToProcess = cardIds.slice(0, 10);
+      console.log(`Found ${cardIds.length} cards in user's collection for pricing`);
+
+      // Start background pricing process
       let processed = 0;
       let successful = 0;
 
-      for (const cardId of cardsToProcess) {
-        try {
-          console.log(`Processing pricing for card ID: ${cardId}`);
-          const pricing = await ebayPricingService.fetchAndCacheCardPricing(cardId);
-          
-          if (pricing && pricing.avgPrice > 0) {
-            successful++;
-            console.log(`Successfully priced card ${cardId}: $${pricing.avgPrice}`);
-          } else {
-            console.log(`No pricing data found for card ${cardId}`);
-          }
-          
-          processed++;
-          
-          // Add delay between requests to respect rate limits
-          await new Promise(resolve => setTimeout(resolve, 3000));
-          
-        } catch (error: any) {
-          console.error(`Failed to price card ${cardId}:`, error.message);
-          processed++;
-          
-          // If rate limited, stop processing
-          if (error.message.includes('Rate limit')) {
-            break;
+      // Process cards in background (don't wait for completion)
+      setImmediate(async () => {
+        for (let i = 0; i < cardIds.length; i++) {
+          const cardId = cardIds[i];
+          try {
+            // Check if pricing already exists and is recent (within 24 hours)
+            const existingPricing = await ebayPricingService.getCardPricing(cardId);
+            
+            if (!existingPricing || ebayPricingService.isCacheStale(new Date(existingPricing.lastFetched))) {
+              console.log(`Auto-fetching pricing for card ${cardId} (${i + 1}/${cardIds.length})`);
+              await ebayPricingService.fetchAndCacheCardPricing(cardId);
+              successful++;
+              
+              // Rate limit: 3 seconds between requests
+              if (i < cardIds.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 3000));
+              }
+            } else {
+              console.log(`Card ${cardId} has recent pricing data, skipping`);
+            }
+            
+            processed++;
+          } catch (error: any) {
+            console.error(`Failed to auto-price card ${cardId}:`, error.message);
+            processed++;
+            
+            // If rate limited, pause longer
+            if (error.message.includes('Rate limit')) {
+              await new Promise(resolve => setTimeout(resolve, 60000)); // 1 minute pause
+            }
           }
         }
-      }
+        
+        console.log(`Auto-pricing completed: ${processed} processed, ${successful} successful`);
+      });
 
       res.json({ 
-        message: `Processed ${processed} cards, ${successful} successful`,
-        processed,
-        successful,
-        remaining: Math.max(0, cardIds.length - processed)
+        message: "Auto-pricing started in background",
+        totalCards: cardIds.length,
+        status: "processing"
       });
 
     } catch (error: any) {
-      console.error("Bulk pricing refresh failed:", error.message);
-      res.status(500).json({ message: "Failed to refresh pricing data" });
+      console.error("Auto-populate pricing failed:", error.message);
+      res.status(500).json({ message: "Failed to start auto-pricing" });
     }
   });
 
