@@ -277,6 +277,9 @@ export class EbayPricingService {
       };
       
       console.log(`📤 Making Browse API request...`);
+      console.log(`🔑 Using OAuth token: ${accessToken.substring(0, 20)}...`);
+      console.log(`📋 Request headers:`, JSON.stringify(headers, null, 2));
+      
       const response = await fetch(url, {
         method: 'GET',
         headers: headers,
