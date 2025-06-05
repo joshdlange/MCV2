@@ -81,6 +81,36 @@ export function CardGrid({
     }
   });
 
+  const removeFromCollectionMutation = useMutation({
+    mutationFn: async (cardId: number) => {
+      const collectionItem = collection?.find(item => item.card.id === cardId);
+      if (!collectionItem) throw new Error('Card not in collection');
+      return apiRequest('DELETE', `/api/collection/${collectionItem.id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
+      toast({ title: "Card removed from collection" });
+    },
+    onError: () => {
+      toast({ title: "Failed to remove from collection", variant: "destructive" });
+    }
+  });
+
+  const removeFromWishlistMutation = useMutation({
+    mutationFn: async (cardId: number) => {
+      const wishlistItem = wishlist?.find(item => item.card.id === cardId);
+      if (!wishlistItem) throw new Error('Card not in wishlist');
+      return apiRequest('DELETE', `/api/wishlist/${wishlistItem.id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/wishlist'] });
+      toast({ title: "Card removed from wishlist" });
+    },
+    onError: () => {
+      toast({ title: "Failed to remove from wishlist", variant: "destructive" });
+    }
+  });
+
   const handleCardClick = (card: CardWithSet) => {
     setSelectedCard(card);
     setIsModalOpen(true);
@@ -110,6 +140,14 @@ export function CardGrid({
 
   const handleAddToWishlist = (cardId: number) => {
     addToWishlistMutation.mutate(cardId);
+  };
+
+  const handleRemoveFromCollection = (cardId: number) => {
+    removeFromCollectionMutation.mutate(cardId);
+  };
+
+  const handleRemoveFromWishlist = (cardId: number) => {
+    removeFromWishlistMutation.mutate(cardId);
   };
 
   if (isLoading) {
@@ -362,6 +400,8 @@ export function CardGrid({
         isInWishlist={selectedCard ? isInWishlist(selectedCard.id) : false}
         onAddToCollection={selectedCard ? () => handleAddToCollection(selectedCard.id) : undefined}
         onAddToWishlist={selectedCard ? () => handleAddToWishlist(selectedCard.id) : undefined}
+        onRemoveFromCollection={selectedCard ? () => handleRemoveFromCollection(selectedCard.id) : undefined}
+        onRemoveFromWishlist={selectedCard ? () => handleRemoveFromWishlist(selectedCard.id) : undefined}
       />
     </>
   );
