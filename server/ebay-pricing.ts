@@ -259,20 +259,10 @@ export class EbayPricingService {
       // Build simplified query with just character name and card number
       const simpleQuery = cardNumber ? `${cardName} #${cardNumber}` : cardName;
       
-      // Build basic filters that are guaranteed to work
-      const filters = [
-        'conditionIds:{1000|1500|2000|2500|3000|4000|5000}',
-        'deliveryCountry:US',
-        'price:[1|500]',
-        'priceCurrency:USD'
-      ];
-      
+      // Try with minimal filters first
       const params = new URLSearchParams({
-        'q': simpleQuery,
-        'category_ids': '26395', // Non-Sport Trading Card Singles category (more specific)
-        'filter': filters.join(','),
-        'sort': 'price',
-        'limit': '20'
+        'q': 'Deadpool Marvel card',
+        'limit': '10'
       });
 
       const url = `${this.browseApiUrl}/item_summary/search?${params.toString()}`;
