@@ -254,24 +254,50 @@ export class EbayPricingService {
   }
 
   /**
-   * Fetch pricing data using Browse API (OAuth-based, higher limits)
+   * Fetch pricing data using Browse API with advanced filters for accuracy
    */
   private async fetchWithBrowseAPI(searchQuery: string): Promise<EbaySoldItem[]> {
     try {
-      console.log(`Trying eBay Browse API: "${searchQuery}"`);
+      console.log(`Trying eBay Browse API with advanced filters: "${searchQuery}"`);
       
       const accessToken = await ebayOAuthService.getAccessToken();
       
+      // Extract card info for better filtering
+      const cardNameMatch = searchQuery.match(/^(\d{4}\s+)?(.+?)\s+(#?\d+)$/);
+      const year = searchQuery.match(/(\d{4})/)?.[1];
+      const cardName = cardNameMatch ? cardNameMatch[2].replace(/Marvel.*/, '').trim() : searchQuery.split(' ')[0];
+      const cardNumber = cardNameMatch ? cardNameMatch[3].replace('#', '') : '';
+      
+      // Build simplified query with just character name and card number
+      const simpleQuery = cardNumber ? `${cardName} #${cardNumber}` : cardName;
+      
+      // Build filters for targeted search
+      const filters = [
+        'conditionIds:{1000|1500|2000|2500|3000|4000|5000}',
+        'deliveryCountry:US',
+        'price:[1|500]',
+        'priceCurrency:USD'
+      ];
+      
+      if (year) {
+        filters.push(`yearManufactured:[${year}]`);
+      }
+      
+      // Add Marvel franchise filter
+      filters.push('franchise:{Marvel}');
+      
       const params = new URLSearchParams({
-        'q': searchQuery,
-        'category_ids': '2536', // Non-Sport Trading Cards
-        'filter': 'conditionIds:{1000|1500|2000|2500|3000|4000|5000},deliveryCountry:US',
+        'q': simpleQuery,
+        'category_ids': '26395', // Non-Sport Trading Card Singles category (more specific)
+        'filter': filters.join(','),
         'sort': 'price',
-        'limit': '10'
+        'limit': '20'
       });
 
       const url = `${this.browseApiUrl}/item_summary/search?${params.toString()}`;
-      console.log('eBay Browse API Request URL:', url);
+      console.log(`🎯 TARGETED Browse API URL: ${url}`);
+      console.log(`📋 Filters: Category=26395 (Non-Sport Singles), Year=${year || 'any'}, Franchise=Marvel`);
+      console.log(`🔍 Simplified query: "${simpleQuery}" (from original: "${searchQuery}")`);
       
       const headers = {
         'Authorization': `Bearer ${accessToken}`,
@@ -285,17 +311,16 @@ export class EbayPricingService {
         signal: AbortSignal.timeout(8000)
       });
       
-      // Log response headers for debugging
-      console.log('eBay Browse API Response Headers:');
-      response.headers.forEach((value, key) => {
-        console.log(`  ${key}: ${value}`);
-      });
-      
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`eBay Browse API Error ${response.status}:`, errorText);
         
-        // If OAuth token expired, reset and retry once
+        // Try fallback without advanced filters
+        if (response.status === 400) {
+          console.log('🔄 Advanced filters failed, trying fallback...');
+          return await this.fetchWithBrowseAPIFallback(searchQuery);
+        }
+        
         if (response.status === 401) {
           console.log('OAuth token expired, resetting...');
           ebayOAuthService.resetToken();
@@ -306,14 +331,13 @@ export class EbayPricingService {
       }
 
       const data = await response.json();
-      console.log('Browse API Response:', JSON.stringify(data, null, 2));
+      console.log(`📊 Advanced filter results: ${data.total || 0} total, ${data.itemSummaries?.length || 0} returned`);
       
       if (!data.itemSummaries || data.itemSummaries.length === 0) {
-        console.log(`No results found for query: "${searchQuery}"`);
-        return [];
+        console.log(`❌ No results with advanced filters, trying fallback...`);
+        return await this.fetchWithBrowseAPIFallback(searchQuery);
       }
 
-      // Convert Browse API active listings to estimated sold prices
       const items = data.itemSummaries.map((item: any) => {
         const price = item.price?.value ? parseFloat(item.price.value) : 0;
         const estimatedSoldPrice = price * 0.85; // Estimate 85% of active listing price
@@ -327,16 +351,83 @@ export class EbayPricingService {
         };
       });
 
-      console.log(`Sample titles from Browse API results for "${searchQuery}":`);
+      console.log(`📋 Filtered results for "${simpleQuery}":`);
       items.slice(0, 3).forEach((item: any, index: number) => {
-        console.log(`  ${index + 1}. "${item.title}" - $${item.soldPrice.toFixed(2)}`);
+        console.log(`   ${index + 1}. "${item.title}" - $${item.soldPrice.toFixed(2)}`);
       });
 
-      console.log(`Found ${items.length} active listings via Browse API for query: "${searchQuery}"`);
+      console.log(`✅ Found ${items.length} targeted listings via advanced Browse API filters`);
       return items;
 
     } catch (error: any) {
-      console.error(`Browse API failed for query "${searchQuery}":`, error.message);
+      console.error(`Browse API failed:`, error.message);
+      console.log(`🔄 Trying fallback without advanced filters...`);
+      return await this.fetchWithBrowseAPIFallback(searchQuery);
+    }
+  }
+
+  /**
+   * Fallback Browse API call with minimal filters
+   */
+  private async fetchWithBrowseAPIFallback(searchQuery: string): Promise<EbaySoldItem[]> {
+    try {
+      const accessToken = await ebayOAuthService.getAccessToken();
+      
+      const params = new URLSearchParams({
+        'q': searchQuery,
+        'category_ids': '26395', // Still use Non-Sport Trading Card Singles
+        'filter': 'conditionIds:{1000|1500|2000|2500|3000|4000|5000},deliveryCountry:US,price:[1|500]',
+        'sort': 'price',
+        'limit': '10'
+      });
+
+      const url = `${this.browseApiUrl}/item_summary/search?${params.toString()}`;
+      console.log(`🔄 FALLBACK Browse API URL: ${url}`);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US'
+        },
+        signal: AbortSignal.timeout(8000)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Fallback Browse API Error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log(`📊 Fallback results: ${data.total || 0} total, ${data.itemSummaries?.length || 0} returned`);
+      
+      if (!data.itemSummaries || data.itemSummaries.length === 0) {
+        console.log(`❌ No results even with fallback query`);
+        return [];
+      }
+
+      const items = data.itemSummaries.map((item: any) => {
+        const price = item.price?.value ? parseFloat(item.price.value) : 0;
+        const estimatedSoldPrice = price * 0.85;
+        
+        return {
+          title: item.title,
+          soldPrice: estimatedSoldPrice,
+          condition: item.condition || 'Unknown',
+          endTime: new Date().toISOString(),
+          viewItemURL: item.itemWebUrl || ''
+        };
+      });
+
+      console.log(`📋 Fallback sample results:`);
+      items.slice(0, 3).forEach((item: any, index: number) => {
+        console.log(`   ${index + 1}. "${item.title}" - $${item.soldPrice.toFixed(2)}`);
+      });
+
+      return items;
+      
+    } catch (error: any) {
+      console.error(`Fallback Browse API also failed:`, error.message);
       throw error;
     }
   }
