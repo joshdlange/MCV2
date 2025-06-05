@@ -38,6 +38,7 @@ export class EbayPricingService {
   private readonly maxRequestsPerHour = 70; // Increased limit but stay under eBay's limits
   private hourlyResetTime: number = Date.now() + (60 * 60 * 1000); // Reset every hour
   private failedRequests: Set<number> = new Set(); // Track failed card IDs for retry
+  private lastUsedQueries: string[] = []; // Store queries for verification logging
   
   constructor() {
     // Use production keys if available, otherwise fall back to sandbox
@@ -138,48 +139,35 @@ export class EbayPricingService {
   }
 
   /**
-   * Build multiple search query variations for a Marvel card
+   * Build precise search queries like a real collector would search
    */
   private buildSearchQueries(setName: string, cardName: string, cardNumber: string): string[] {
-    // Extract year from set name
-    const yearMatch = setName.match(/(\d{4})/);
-    const year = yearMatch ? yearMatch[1] : '';
-    
     // Clean card name - remove special characters but keep spaces
     const cleanCardName = cardName.replace(/[^\w\s-]/g, '').trim();
+    const cleanCardNumber = cardNumber.replace(/[^\w]/g, ''); // Remove # symbols for consistency
     
-    console.log(`Building eBay search queries for: "${cardName}" from "${setName}" #${cardNumber}`);
+    console.log(`Building precise eBay search queries for: "${cardName}" from "${setName}" #${cardNumber}`);
     
-    // Build tiered queries based on successful eBay search pattern
+    // Build precise collector-style queries - NO BROAD FALLBACKS
     const queries: string[] = [];
     
-    // Query 1: EXACT pattern like successful example - "Year Fleer Marvel Masterpieces Hildebrandt Brothers Character #Number"
-    if (year && setName.includes('Fleer') && setName.includes('Masterpieces')) {
-      queries.push(`${year} Fleer Marvel Masterpieces Hildebrandt Brothers ${cleanCardName} #${cardNumber}`);
-    }
+    // Query 1: Exact full set + character + card number
+    queries.push(`${setName} ${cleanCardName} #${cleanCardNumber}`);
     
-    // Query 2: Full set name pattern - "Year Set Name Character #Number"
-    if (year) {
-      queries.push(`${year} ${setName} ${cleanCardName} #${cardNumber}`);
-    }
+    // Query 2: Same but without # symbol
+    queries.push(`${setName} ${cleanCardName} ${cleanCardNumber}`);
     
-    // Query 3: Simplified set pattern - "Year Fleer Marvel Character #Number"
-    if (year && setName.includes('Fleer')) {
-      queries.push(`${year} Fleer Marvel ${cleanCardName} #${cardNumber}`);
-    }
+    // Query 3: Add "card" keyword for specificity
+    queries.push(`${setName} ${cleanCardName} card #${cleanCardNumber}`);
     
-    // Query 4: Set name + character + card number (no year)
-    queries.push(`${setName} ${cleanCardName} #${cardNumber}`);
-    
-    // Query 5: Year + character + Marvel + card number
-    if (year) {
-      queries.push(`${year} ${cleanCardName} Marvel #${cardNumber}`);
-    }
-    
-    console.log(`Generated ${queries.length} query variations:`);
+    console.log(`Generated ${queries.length} precise query variations (NO BROAD FALLBACKS):`);
     queries.forEach((query, index) => {
       console.log(`  ${index + 1}. "${query}"`);
     });
+    
+    // Store queries for verification logging
+    this.lastUsedQueries = queries;
+    
     return queries;
   }
 
@@ -312,7 +300,7 @@ export class EbayPricingService {
       });
 
       console.log(`Sample titles from Browse API results for "${searchQuery}":`);
-      items.slice(0, 3).forEach((item, index) => {
+      items.slice(0, 3).forEach((item: any, index: number) => {
         console.log(`  ${index + 1}. "${item.title}" - $${item.soldPrice.toFixed(2)}`);
       });
 
@@ -442,53 +430,64 @@ export class EbayPricingService {
   }
 
   /**
-   * Filter eBay results to ensure they're relevant to the character
+   * Filter eBay results with precision like a real collector
+   * Must match set name AND card number to prevent cross-contamination
    */
-  private filterRelevantResults(soldItems: EbaySoldItem[], cardName: string): EbaySoldItem[] {
+  private filterRelevantResults(soldItems: EbaySoldItem[], cardName: string, setName: string, cardNumber: string): EbaySoldItem[] {
     if (soldItems.length === 0) return [];
     
     const cleanCardName = cardName.toLowerCase().replace(/[^\w\s-]/g, '');
-    const keywords = cleanCardName.split(/\s+/);
+    const cleanSetName = setName.toLowerCase();
+    const cleanCardNumber = cardNumber.replace(/[^\w]/g, ''); // Remove # symbols
+    
+    console.log(`\n🔍 PRECISE FILTERING for: "${cardName}" from "${setName}" #${cardNumber}`);
+    console.log(`Looking for titles that contain SET NAME + CARD NUMBER to prevent wrong card pricing`);
     
     const relevantItems = soldItems.filter(item => {
       const title = item.title.toLowerCase();
       
-      // Must contain "marvel" - this is our primary filter
-      const hasMarvel = title.includes('marvel');
+      // REQUIREMENT 1: Must contain key parts of the set name
+      const setKeywords = cleanSetName.split(/\s+/).filter(word => word.length > 3); // Ignore small words
+      const hasSetMatch = setKeywords.some(keyword => title.includes(keyword));
       
-      // For set-based searches, be more flexible with character matching
-      // Accept if it has Marvel + any trading card indicators
-      const hasCardIndicators = title.includes('card') || 
-                               title.includes('trading') ||
-                               title.includes('fleer') ||
-                               title.includes('topps') ||
-                               title.includes('upper deck') ||
-                               title.includes('1994') ||
-                               title.includes('1995') ||
-                               title.includes('masterpiece');
+      // REQUIREMENT 2: Must contain the exact card number
+      const hasCardNumber = title.includes(cleanCardNumber) || title.includes(`#${cleanCardNumber}`);
       
-      // Character match is now optional for set-based searches
-      const hasCharacter = keywords.some(keyword => 
-        keyword.length > 2 && title.includes(keyword)
-      );
+      // REQUIREMENT 3: Must contain character name (primary requirement)
+      const hasCharacter = title.includes(cleanCardName);
       
-      // Filter out obvious non-card items
+      // REQUIREMENT 4: Filter out wrong sets (prevent Spider-Man cards showing for Deadpool)
+      const isNotWrongSet = !title.includes('spider-man') || cleanCardName.includes('spider');
+      
+      // REQUIREMENT 5: Must be a trading card, not comic book
+      const isCard = title.includes('card') || title.includes('trading') || 
+                     title.includes('fleer') || title.includes('topps') || title.includes('upper deck');
       const isNotComic = !title.includes('comic book') && !title.includes('graphic novel');
       
-      // Accept if it's Marvel + (has character OR has card indicators) + not a comic
-      const isRelevant = hasMarvel && (hasCharacter || hasCardIndicators) && isNotComic;
+      const isRelevant = hasSetMatch && hasCardNumber && hasCharacter && isNotWrongSet && isCard && isNotComic;
       
+      // DETAILED LOGGING for verification
       if (isRelevant) {
-        console.log(`✓ Keeping result: "${item.title}" - $${item.soldPrice.toFixed(2)}`);
+        console.log(`✅ ACCEPTED: "${item.title}" - $${item.soldPrice.toFixed(2)}`);
+        console.log(`   ✓ Set match: ${hasSetMatch}, Card #: ${hasCardNumber}, Character: ${hasCharacter}`);
       } else {
-        console.log(`✗ Filtering out: "${item.title}" (Marvel: ${hasMarvel}, Character: ${hasCharacter}, Cards: ${hasCardIndicators})`);
+        console.log(`❌ REJECTED: "${item.title}"`);
+        console.log(`   Set: ${hasSetMatch}, Card#: ${hasCardNumber}, Char: ${hasCharacter}, NotWrong: ${isNotWrongSet}, IsCard: ${isCard}`);
       }
       
       return isRelevant;
     });
     
-    console.log(`Filtered ${soldItems.length} results down to ${relevantItems.length} relevant items`);
-    return relevantItems.slice(0, 10); // Take top 10 most relevant (increased from 5)
+    // Log final results with source titles for verification
+    console.log(`\n📊 FILTERING SUMMARY: ${soldItems.length} → ${relevantItems.length} relevant items`);
+    if (relevantItems.length > 0) {
+      console.log(`📋 FINAL PRICING SOURCES:`);
+      relevantItems.forEach((item, index) => {
+        console.log(`   ${index + 1}. "${item.title}" - $${item.soldPrice.toFixed(2)}`);
+      });
+    }
+    
+    return relevantItems.slice(0, 5); // Take top 5 most relevant
   }
 
   /**
@@ -648,8 +647,8 @@ export class EbayPricingService {
           };
         }
 
-        // Filter results to ensure they're relevant to the character
-        const filteredItems = this.filterRelevantResults(soldItems, card.name);
+        // Filter results to ensure they're relevant to the character, set, and card number
+        const filteredItems = this.filterRelevantResults(soldItems, card.name, card.setName, card.cardNumber);
         const avgPrice = this.calculateAveragePrice(filteredItems);
         const recentSales = filteredItems.map(item => item.viewItemURL);
 
