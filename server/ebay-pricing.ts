@@ -304,6 +304,11 @@ export class EbayPricingService {
         };
       });
 
+      console.log(`Sample titles from Browse API results for "${searchQuery}":`);
+      items.slice(0, 3).forEach((item, index) => {
+        console.log(`  ${index + 1}. "${item.title}" - $${item.soldPrice.toFixed(2)}`);
+      });
+
       console.log(`Found ${items.length} active listings via Browse API for query: "${searchQuery}"`);
       return items;
 
