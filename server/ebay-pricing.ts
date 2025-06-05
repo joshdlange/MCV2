@@ -185,41 +185,36 @@ export class EbayPricingService {
   }
 
   /**
-   * Fetch completed listings from eBay using Browse API (bypasses Finding API rate limits)
+   * Fetch completed listings from eBay using Browse API only
    */
   private async fetchCompletedListings(queries: string[]): Promise<EbaySoldItem[]> {
-    console.log('\n=== COMPREHENSIVE EBAY SEARCH LOGGING ===');
-    console.log(`Testing ${queries.length} high-fidelity query variations:`);
+    console.log('\n=== BROWSE API SEARCH ===');
+    console.log(`Testing ${queries.length} query variations:`);
     queries.forEach((query, index) => {
       console.log(`  ${index + 1}. "${query}"`);
     });
     
-    // Try Browse API with detailed logging for each query
+    // Try each query with Browse API only
     for (let i = 0; i < queries.length; i++) {
       const query = queries[i];
-      const isUnreliableFallback = i === queries.length - 1; // Last query is broad fallback
       
       try {
-        console.log(`\n🔍 QUERY ${i + 1}/${queries.length}: "${query}"${isUnreliableFallback ? ' (UNRELIABLE FALLBACK)' : ''}`);
+        console.log(`\nQUERY ${i + 1}/${queries.length}: "${query}"`);
         const items = await this.fetchWithBrowseAPI(query);
         
-        console.log(`📊 RAW RESULTS: ${items.length} items returned from eBay`);
+        console.log(`RAW RESULTS: ${items.length} items returned from eBay Browse API`);
         if (items.length > 0) {
-          console.log(`📋 SAMPLE TITLES:`);
+          console.log(`SAMPLE TITLES:`);
           items.slice(0, 3).forEach((item: any, index: number) => {
             console.log(`   ${index + 1}. "${item.title}" - $${item.soldPrice.toFixed(2)}`);
           });
           
-          if (isUnreliableFallback) {
-            console.log(`⚠️  WARNING: Using unreliable fallback query - pricing may be inaccurate`);
-          }
-          
           return items;
         } else {
-          console.log(`❌ ZERO RESULTS for query: "${query}"`);
+          console.log(`ZERO RESULTS for query: "${query}"`);
         }
       } catch (error: any) {
-        console.error(`💥 QUERY FAILED: "${query}" - ${error.message}`);
+        console.error(`QUERY FAILED: "${query}" - ${error.message}`);
         
         // If OAuth issue, try to regenerate token once
         if (error.message.includes('OAuth token expired')) {
@@ -236,8 +231,7 @@ export class EbayPricingService {
       }
     }
     
-    console.log('❌ ALL BROWSE API QUERIES FAILED - no fallback to rate-limited Finding API');
-    console.log('This prevents inaccurate pricing data and respects eBay API limits');
+    console.log('ALL BROWSE API QUERIES FAILED - no results found');
     return [];
   }
 
@@ -259,9 +253,12 @@ export class EbayPricingService {
       // Build simplified query with just character name and card number
       const simpleQuery = cardNumber ? `${cardName} #${cardNumber}` : cardName;
       
-      // Try with minimal filters first
+      // Use proper search query and category for trading cards
       const params = new URLSearchParams({
-        'q': 'Deadpool Marvel card',
+        'q': searchQuery,
+        'category_ids': '183050', // Non-Sport Trading Cards
+        'filter': 'conditionIds:{1000|1500|2000|2500|3000|4000|5000},deliveryCountry:US,price:[1|500]',
+        'sort': 'price',
         'limit': '10'
       });
 
@@ -353,7 +350,7 @@ export class EbayPricingService {
       
       const params = new URLSearchParams({
         'q': searchQuery,
-        'category_ids': '26395', // Still use Non-Sport Trading Card Singles
+        'category_ids': '183050', // Non-Sport Trading Card Singles
         'filter': 'conditionIds:{1000|1500|2000|2500|3000|4000|5000},deliveryCountry:US,price:[1|500]',
         'sort': 'price',
         'limit': '10'
