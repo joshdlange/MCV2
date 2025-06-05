@@ -21,7 +21,7 @@ import {
   type CollectionStats
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, ilike, and, count, sum, desc, sql, isNull } from "drizzle-orm";
+import { eq, ilike, and, count, sum, desc, sql, isNull, or, lt } from "drizzle-orm";
 
 interface IStorage {
   // Users
@@ -923,6 +923,54 @@ export class DatabaseStorage implements IStorage {
       return missingCards as CardWithSet[];
     } catch (error) {
       console.error('Error getting missing cards:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get cards with stale pricing data (older than 24 hours) or no pricing
+   */
+  async getCardsWithStalePricing(): Promise<number[]> {
+    try {
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      
+      // Get cards with stale or missing pricing
+      const staleCards = await db
+        .select({ cardId: cardPriceCache.cardId })
+        .from(cardPriceCache)
+        .where(
+          or(
+            isNull(cardPriceCache.lastFetched),
+            lt(cardPriceCache.lastFetched, twentyFourHoursAgo)
+          )
+        )
+        .limit(100); // Limit to prevent overwhelming the system
+      
+      return staleCards.map(card => card.cardId);
+    } catch (error) {
+      console.error('Error getting cards with stale pricing:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get popular cards from user collections (most collected cards)
+   */
+  async getPopularCardsFromCollections(): Promise<number[]> {
+    try {
+      const popularCards = await db
+        .select({
+          cardId: userCollections.cardId,
+          count: sql<number>`count(*)`.as('count')
+        })
+        .from(userCollections)
+        .groupBy(userCollections.cardId)
+        .orderBy(sql`count(*) desc`)
+        .limit(50); // Get top 50 most collected cards
+      
+      return popularCards.map(card => card.cardId);
+    } catch (error) {
+      console.error('Error getting popular cards from collections:', error);
       return [];
     }
   }
