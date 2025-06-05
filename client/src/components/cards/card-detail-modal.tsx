@@ -328,18 +328,16 @@ export function CardDetailModal({
                 )}
 
                 {/* eBay Market Pricing */}
-                <div className="rounded-xl p-5 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 shadow-lg">
-                  <div className="flex items-center justify-between mb-4">
-                    <Label className="text-sm font-bold text-white flex items-center gap-2">
-                      <div className="w-6 h-6 bg-white rounded flex items-center justify-center">
-                        <svg viewBox="0 0 100 100" className="w-4 h-4">
-                          <text x="50" y="55" textAnchor="middle" className="text-xs font-bold fill-red-500">e</text>
-                          <text x="50" y="55" textAnchor="middle" className="text-xs font-bold fill-blue-500" dx="8">b</text>
-                          <text x="50" y="55" textAnchor="middle" className="text-xs font-bold fill-yellow-500" dx="16">a</text>
-                          <text x="50" y="55" textAnchor="middle" className="text-xs font-bold fill-green-500" dx="22">y</text>
-                        </svg>
+                <div className="rounded-lg p-4 bg-white border-2 border-gray-200 shadow-md hover:shadow-lg transition-shadow">
+                  <div className="flex items-center justify-between mb-3">
+                    <Label className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <span className="text-red-600 font-bold text-lg">e</span>
+                        <span className="text-blue-600 font-bold text-lg">b</span>
+                        <span className="text-yellow-500 font-bold text-lg">a</span>
+                        <span className="text-green-500 font-bold text-lg">y</span>
                       </div>
-                      eBay Market Price
+                      Market Price
                     </Label>
                     <Button
                       variant="outline"
@@ -389,7 +387,7 @@ export function CardDetailModal({
                         }
                       }}
                       disabled={isPricingLoading}
-                      className="text-xs bg-white/20 border-white/30 text-white hover:bg-white/30 hover:text-white backdrop-blur-sm"
+                      className="text-xs border-blue-200 text-blue-600 hover:bg-blue-50"
                     >
                       <RefreshCw className={`w-3 h-3 mr-1 ${isPricingLoading ? 'animate-spin' : ''}`} />
                       Refresh
@@ -398,46 +396,46 @@ export function CardDetailModal({
                   
                   {isPricingLoading ? (
                     <div className="flex items-center space-x-2">
-                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                      <span className="text-sm text-white/90">Fetching latest prices...</span>
+                      <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
+                      <span className="text-sm text-gray-600">Fetching latest prices...</span>
                     </div>
                   ) : pricing ? (
                     pricing.avgPrice === -1 ? (
                       <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-red-200">
+                        <div className="flex items-center gap-2 text-red-600">
                           <span className="text-sm font-medium">⚠️ Pricing unavailable (rate limit reached)</span>
                         </div>
-                        <div className="text-xs text-white/80">
+                        <div className="text-xs text-gray-600">
                           eBay API limits exceeded. Try again later.
                         </div>
-                        <div className="text-xs text-white/60">
+                        <div className="text-xs text-gray-500">
                           Last attempted: {new Date(pricing.lastFetched).toLocaleDateString()}
                         </div>
                       </div>
                     ) : (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-2xl font-bold text-white drop-shadow-lg">
+                          <span className="text-2xl font-bold text-green-600">
                             ${pricing.avgPrice.toFixed(2)}
                           </span>
-                          <span className="text-xs text-white/80 bg-white/20 px-2 py-1 rounded-full backdrop-blur-sm">
+                          <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
                             Based on {pricing.salesCount} recent sales
                           </span>
                         </div>
-                        <div className="text-xs text-white/80">
+                        <div className="text-xs text-gray-600">
                           Last updated: {new Date(pricing.lastFetched).toLocaleDateString()}
                         </div>
-                        <div className="text-xs text-white/90 font-medium">
+                        <div className="text-xs text-blue-600 font-medium">
                           Real-time data from eBay completed listings
                         </div>
                       </div>
                     )
                   ) : (
                     <div className="space-y-2">
-                      <p className="text-sm text-white/90">
+                      <p className="text-sm text-gray-600">
                         No pricing data available yet
                       </p>
-                      <p className="text-xs text-white/70">
+                      <p className="text-xs text-gray-500">
                         Click refresh to fetch from eBay
                       </p>
                     </div>
@@ -452,9 +450,11 @@ export function CardDetailModal({
                 <Button 
                   variant="outline" 
                   onClick={onRemoveFromCollection}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 border-green-200 text-green-700"
                 >
-                  <Check className="w-4 h-4" />
+                  <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                    <Check className="w-2.5 h-2.5 text-white" />
+                  </div>
                   In Collection
                 </Button>
               ) : (
