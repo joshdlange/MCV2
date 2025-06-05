@@ -41,7 +41,7 @@ class EbayOAuthService {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'application/json'
       },
-      body: 'grant_type=client_credentials&scope=https://api.ebay.com/oauth/api_scope/buy.item.feed'
+      body: 'grant_type=client_credentials&scope=https://api.ebay.com/oauth/api_scope'
     });
 
     if (!response.ok) {
