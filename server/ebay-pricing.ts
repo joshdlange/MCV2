@@ -247,7 +247,7 @@ export class EbayPricingService {
       // Log the full response to debug the issue
       console.log('Full eBay API Response:', JSON.stringify(data, null, 2));
       
-      if (data.findItemsByKeywordsResponse[0].ack[0] !== 'Success') {
+      if (!data.findItemsByKeywordsResponse || data.findItemsByKeywordsResponse[0].ack[0] !== 'Success') {
         console.error(`eBay API error for query "${searchQuery}":`, JSON.stringify(data, null, 2));
         
         // Check if it's actually a rate limit or another issue
