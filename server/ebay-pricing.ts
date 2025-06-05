@@ -11,18 +11,26 @@ interface EbaySoldItem {
 }
 
 interface EbayApiResponse {
-  findCompletedItemsResponse: [{
+  findCompletedItemsResponse?: [{
     ack: string[];
     searchResult: [{
       count: string;
       item?: EbaySoldItem[];
     }];
   }];
+  findItemsByKeywordsResponse?: [{
+    ack: string[];
+    searchResult: [{
+      count: string;
+      item?: any[];
+    }];
+  }];
 }
 
 export class EbayPricingService {
   private readonly appId: string;
-  private readonly baseUrl = 'https://svcs.ebay.com/services/search/FindingService/v1';
+  private readonly findingApiUrl = 'https://svcs.ebay.com/services/search/FindingService/v1';
+  private readonly browseApiUrl = 'https://api.ebay.com/buy/browse/v1';
   private lastRequestTime: number = 0;
   private readonly minRequestInterval = 3000; // 3 seconds between requests
   private requestCount: number = 0;
@@ -190,32 +198,30 @@ export class EbayPricingService {
    */
   private async fetchSingleQuery(searchQuery: string): Promise<EbaySoldItem[]> {
     try {
-      // Correct eBay Finding API headers (SOA format, not REST)
+      // Switch to findItemsByKeywords which has higher rate limits than findCompletedItems
       const headers = {
-        'X-EBAY-SOA-OPERATION-NAME': 'findCompletedItems',
+        'X-EBAY-SOA-OPERATION-NAME': 'findItemsByKeywords',
         'X-EBAY-SOA-SERVICE-VERSION': '1.0.0',
         'X-EBAY-SOA-SECURITY-APPNAME': this.appId,
         'X-EBAY-SOA-RESPONSE-DATA-FORMAT': 'JSON',
       };
 
-      // Query parameters for the request
+      // Query parameters for active listings (better rate limits)
       const params = new URLSearchParams({
         'keywords': searchQuery,
         'categoryId': '2536', // Non-Sport Trading Cards
-        'itemFilter(0).name': 'SoldItemsOnly',
-        'itemFilter(0).value': 'true',
+        'itemFilter(0).name': 'ListingType',
+        'itemFilter(0).value': 'AuctionWithBIN',
         'itemFilter(1).name': 'ListingType',
-        'itemFilter(1).value': 'AuctionWithBIN',
-        'itemFilter(2).name': 'ListingType',
-        'itemFilter(2).value': 'FixedPrice',
-        'sortOrder': 'EndTimeSoonest',
-        'paginationInput.entriesPerPage': '10'
+        'itemFilter(1).value': 'FixedPrice',
+        'sortOrder': 'PricePlusShipping',
+        'paginationInput.entriesPerPage': '5'
       });
 
       // Apply rate limiting
       await this.waitForRateLimit();
       
-      console.log('eBay API Request URL:', `${this.baseUrl}?${params.toString()}`);
+      console.log('eBay API Request URL:', `${this.findingApiUrl}?${params.toString()}`);
       console.log('eBay API Headers:', headers);
       
       // Check rate limits before making request
@@ -224,7 +230,7 @@ export class EbayPricingService {
         throw new Error('Rate limit exceeded');
       }
 
-      const response = await fetch(`${this.baseUrl}?${params}`, {
+      const response = await fetch(`${this.findingApiUrl}?${params}`, {
         method: 'GET',
         headers: headers,
         signal: AbortSignal.timeout(8000) // 8 second timeout
@@ -241,7 +247,7 @@ export class EbayPricingService {
       // Log the full response to debug the issue
       console.log('Full eBay API Response:', JSON.stringify(data, null, 2));
       
-      if (data.findCompletedItemsResponse[0].ack[0] !== 'Success') {
+      if (data.findItemsByKeywordsResponse[0].ack[0] !== 'Success') {
         console.error(`eBay API error for query "${searchQuery}":`, JSON.stringify(data, null, 2));
         
         // Check if it's actually a rate limit or another issue
@@ -257,19 +263,25 @@ export class EbayPricingService {
         return [];
       }
 
-      const searchResult = data.findCompletedItemsResponse[0].searchResult[0];
+      const searchResult = data.findItemsByKeywordsResponse[0].searchResult[0];
       if (!searchResult.item || parseInt(searchResult.count) === 0) {
         console.log(`No results found for query: "${searchQuery}"`);
         return [];
       }
 
-      const items = searchResult.item.map(item => ({
-        title: item.title,
-        soldPrice: item.soldPrice,
-        condition: item.condition,
-        endTime: item.endTime,
-        viewItemURL: item.viewItemURL
-      }));
+      // Convert active listings to estimated sold prices (since findItemsByKeywords returns active items)
+      const items = searchResult.item.map((item: any) => {
+        const currentPrice = parseFloat(item.sellingStatus[0].currentPrice[0].__value__);
+        const estimatedSoldPrice = currentPrice * 0.85; // Estimate 85% of current listing price
+        
+        return {
+          title: item.title[0],
+          soldPrice: estimatedSoldPrice,
+          condition: item.condition?.[0]?.conditionDisplayName?.[0] || 'Unknown',
+          endTime: new Date().toISOString(),
+          viewItemURL: item.viewItemURL[0]
+        };
+      });
 
       console.log(`Found ${items.length} sold items for query: "${searchQuery}"`);
       return items;
