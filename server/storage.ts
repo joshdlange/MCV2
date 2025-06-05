@@ -295,8 +295,13 @@ export class DatabaseStorage implements IStorage {
 
       // Sort by card number when filtering by set, otherwise by creation date
       if (filters?.setId) {
-        // Simple string sorting for card numbers to avoid casting issues
-        query = query.orderBy(cards.cardNumber) as any;
+        // Natural sorting for card numbers - convert pure numbers to integers, keep mixed strings as-is
+        query = query.orderBy(sql`
+          CASE 
+            WHEN ${cards.cardNumber} ~ '^[0-9]+$' THEN LPAD(${cards.cardNumber}, 10, '0')
+            ELSE ${cards.cardNumber}
+          END
+        `) as any;
       } else {
         query = query.orderBy(cards.createdAt) as any;
       }
