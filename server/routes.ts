@@ -632,6 +632,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug route to test eBay API directly
+  app.post("/api/debug-ebay/:query", async (req, res) => {
+    try {
+      const searchQuery = decodeURIComponent(req.params.query);
+      console.log(`=== DEBUG EBAY API CALL ===`);
+      console.log(`Search Query: "${searchQuery}"`);
+      console.log(`App ID: ${process.env.EBAY_APP_ID_PROD?.substring(0, 20)}...`);
+      
+      // Make direct eBay API call without retries
+      const params = new URLSearchParams({
+        'keywords': searchQuery,
+        'categoryId': '2536',
+        'itemFilter(0).name': 'ListingType',
+        'itemFilter(0).value': 'AuctionWithBIN',
+        'itemFilter(1).name': 'ListingType',
+        'itemFilter(1).value': 'FixedPrice',
+        'sortOrder': 'PricePlusShipping',
+        'paginationInput.entriesPerPage': '3'
+      });
+
+      const headers = {
+        'X-EBAY-SOA-OPERATION-NAME': 'findItemsByKeywords',
+        'X-EBAY-SOA-SERVICE-VERSION': '1.0.0',
+        'X-EBAY-SOA-SECURITY-APPNAME': process.env.EBAY_APP_ID_PROD!,
+        'X-EBAY-SOA-RESPONSE-DATA-FORMAT': 'JSON',
+      };
+
+      const url = `https://svcs.ebay.com/services/search/FindingService/v1?${params.toString()}`;
+      console.log(`Request URL: ${url}`);
+      console.log(`Headers:`, headers);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: headers,
+        signal: AbortSignal.timeout(10000)
+      });
+
+      const responseHeaders: any = {};
+      response.headers.forEach((value, key) => {
+        responseHeaders[key] = value;
+      });
+
+      const responseBody = await response.text();
+      
+      res.json({
+        status: response.status,
+        statusText: response.statusText,
+        headers: responseHeaders,
+        body: responseBody,
+        parsedBody: responseBody ? JSON.parse(responseBody) : null
+      });
+      
+    } catch (error: any) {
+      console.error('Debug eBay API Error:', error);
+      res.status(500).json({ error: error.message, stack: error.stack });
+    }
+  });
+
   app.post("/api/card-pricing/:cardId/refresh", async (req, res) => {
     try {
       const cardId = parseInt(req.params.cardId);

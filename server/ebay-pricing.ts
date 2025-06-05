@@ -236,9 +236,24 @@ export class EbayPricingService {
         signal: AbortSignal.timeout(8000) // 8 second timeout
       });
       
+      // Log response headers for debugging
+      console.log('eBay API Response Headers:');
+      response.headers.forEach((value, key) => {
+        console.log(`  ${key}: ${value}`);
+      });
+      
+      // Check for eBay-specific rate limit headers
+      const quotaUsed = response.headers.get('X-EBAY-C-QUOTA-USED');
+      const quotaRemaining = response.headers.get('X-EBAY-C-QUOTA-REMAINING');
+      const requestId = response.headers.get('X-EBAY-C-REQUEST-ID');
+      const errorId = response.headers.get('X-EBAY-C-ERROR-ID');
+      
+      console.log(`eBay Rate Limit Info - Used: ${quotaUsed}, Remaining: ${quotaRemaining}, Request ID: ${requestId}, Error ID: ${errorId}`);
+      
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`eBay API HTTP Error ${response.status} for query "${searchQuery}":`, errorText);
+        console.error(`Full request URL: ${this.findingApiUrl}?${params.toString()}`);
         throw new Error(`eBay API HTTP ${response.status}: ${response.statusText}`);
       }
 
