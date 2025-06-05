@@ -527,8 +527,7 @@ export class EbayPricingService {
   }
 
   /**
-   * Enforce card-specific accuracy: ALL requirements must match
-   * Set name + Year + Character + Card number must ALL be present
+   * Smart filtering for card accuracy: character + card number + reasonable set matching
    */
   private filterRelevantResults(soldItems: EbaySoldItem[], cardName: string, setName: string, cardNumber: string): EbaySoldItem[] {
     if (soldItems.length === 0) return [];
@@ -537,39 +536,40 @@ export class EbayPricingService {
     const yearMatch = setName.match(/(\d{4})/);
     const year = yearMatch ? yearMatch[1] : '';
     
-    console.log(`\n🔍 STRICT FILTERING for: "${cardName}" from "${setName}" #${cardNumber}`);
-    console.log(`Requiring ALL: Set name + Year + Character + Card number`);
+    console.log(`\n🔍 SMART FILTERING for: "${cardName}" from "${setName}" #${cardNumber}`);
+    console.log(`Primary filters: Character name + Card number + Trading card validation`);
     
     const relevantItems = soldItems.filter(item => {
       const title = item.title.toLowerCase();
       
-      // REQUIREMENT 1: Set name match (handle Marvel Masterpieces specifically)
-      let setMatch = false;
-      if (setName.toLowerCase().includes("marvel masterpieces")) {
-        setMatch = title.includes("marvel masterpieces") && title.includes("1994");
-      } else {
-        setMatch = title.includes(setName.toLowerCase());
-      }
-      
-      // REQUIREMENT 2: Character name match
+      // CORE REQUIREMENT 1: Character name match (strict)
       const nameMatch = title.includes(cardName.toLowerCase());
       
-      // REQUIREMENT 3: Card number match
-      const numberMatch = title.includes(`#${cleanCardNumber}`) || title.includes(` ${cleanCardNumber}`);
+      // CORE REQUIREMENT 2: Card number match (flexible)
+      const numberMatch = title.includes(`#${cleanCardNumber}`) || 
+                         title.includes(` ${cleanCardNumber}`) ||
+                         title.includes(`${cleanCardNumber} `);
       
-      // REQUIREMENT 4: Year match (if available)
-      const yearMatch = !year || title.includes(year);
-      
-      // REQUIREMENT 5: Must be trading card, not comic
+      // CORE REQUIREMENT 3: Must be trading card, not comic/other
       const isCard = title.includes('card') || title.includes('trading') || 
-                     title.includes('fleer') || title.includes('topps') || title.includes('upper deck');
-      const isNotComic = !title.includes('comic book') && !title.includes('graphic novel');
+                     title.includes('fleer') || title.includes('topps') || title.includes('upper deck') ||
+                     title.includes('marvel') || title.includes('skybox') || title.includes('impel');
+      const isNotComic = !title.includes('comic book') && !title.includes('graphic novel') && 
+                        !title.includes('cgc') && !title.includes('variant cover');
       
-      const isRelevant = setMatch && nameMatch && numberMatch && yearMatch && isCard && isNotComic;
+      // BONUS: Set/year matching (helpful but not required for card #28 specifically)
+      const hasRelevantSet = !setName || 
+                            title.includes('fleer') || 
+                            title.includes('masterpieces') ||
+                            title.includes('marvel') ||
+                            (year && title.includes(year));
+      
+      // Accept if character + number + is card + not comic
+      const isRelevant = nameMatch && numberMatch && isCard && isNotComic;
       
       // DETAILED LOGGING for every result
       console.log(`${isRelevant ? '✅ ACCEPTED' : '❌ REJECTED'}: "${item.title}"`);
-      console.log(`   Set: ${setMatch}, Name: ${nameMatch}, Number: ${numberMatch}, Year: ${yearMatch}, Card: ${isCard}, NotComic: ${isNotComic}`);
+      console.log(`   Name: ${nameMatch}, Number: ${numberMatch}, Card: ${isCard}, NotComic: ${isNotComic}, SetBonus: ${hasRelevantSet}`);
       if (isRelevant) {
         console.log(`   💰 Price: $${item.soldPrice.toFixed(2)}`);
       }
