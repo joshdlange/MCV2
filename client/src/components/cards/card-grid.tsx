@@ -358,6 +358,8 @@ export function CardGrid({
         card={selectedCard}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
+        isInCollection={selectedCard ? isInCollection(selectedCard.id) : false}
+        isInWishlist={selectedCard ? isInWishlist(selectedCard.id) : false}
         onAddToCollection={selectedCard ? () => handleAddToCollection(selectedCard.id) : undefined}
         onAddToWishlist={selectedCard ? () => handleAddToWishlist(selectedCard.id) : undefined}
       />

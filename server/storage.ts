@@ -278,7 +278,12 @@ export class DatabaseStorage implements IStorage {
       }
 
       if (filters?.search) {
-        conditions.push(ilike(cards.name, `%${filters.search}%`));
+        conditions.push(
+          or(
+            ilike(cards.name, `%${filters.search}%`),
+            ilike(cards.description, `%${filters.search}%`)
+          )
+        );
       }
 
       if (filters?.rarity) {
