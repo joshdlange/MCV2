@@ -153,26 +153,33 @@ export class EbayPricingService {
     // Build tiered queries based on successful eBay search pattern
     const queries: string[] = [];
     
-    // Query 1: Full pattern like the successful example - "Year Set Name Character #Number"
+    // Query 1: EXACT pattern like successful example - "Year Fleer Marvel Masterpieces Hildebrandt Brothers Character #Number"
+    if (year && setName.includes('Fleer') && setName.includes('Masterpieces')) {
+      queries.push(`${year} Fleer Marvel Masterpieces Hildebrandt Brothers ${cleanCardName} #${cardNumber}`);
+    }
+    
+    // Query 2: Full set name pattern - "Year Set Name Character #Number"
     if (year) {
       queries.push(`${year} ${setName} ${cleanCardName} #${cardNumber}`);
     }
     
-    // Query 2: Set name + character + card number without year
+    // Query 3: Simplified set pattern - "Year Fleer Marvel Character #Number"
+    if (year && setName.includes('Fleer')) {
+      queries.push(`${year} Fleer Marvel ${cleanCardName} #${cardNumber}`);
+    }
+    
+    // Query 4: Set name + character + card number (no year)
     queries.push(`${setName} ${cleanCardName} #${cardNumber}`);
     
-    // Query 3: Year + character + Marvel + card number
+    // Query 5: Year + character + Marvel + card number
     if (year) {
       queries.push(`${year} ${cleanCardName} Marvel #${cardNumber}`);
     }
     
-    // Query 4: Character + Marvel + card number (more general)
-    queries.push(`${cleanCardName} Marvel #${cardNumber}`);
-    
-    // Query 5: Fallback - just character + Marvel (broadest)
-    queries.push(`${cleanCardName} Marvel`);
-    
-    console.log(`Generated ${queries.length} query variations:`, queries);
+    console.log(`Generated ${queries.length} query variations:`);
+    queries.forEach((query, index) => {
+      console.log(`  ${index + 1}. "${query}"`);
+    });
     return queries;
   }
 
