@@ -236,20 +236,8 @@ export class EbayPricingService {
       }
     }
     
-    // If Browse API fails completely, fallback to Finding API (may hit rate limits)
-    console.log('Browse API failed, falling back to Finding API...');
-    
-    for (const searchQuery of queries) {
-      console.log(`Trying eBay search: "${searchQuery}"`);
-      const results = await this.fetchSingleQuery(searchQuery);
-      
-      if (results.length > 0) {
-        console.log(`Found ${results.length} results for query: "${searchQuery}"`);
-        return results.slice(0, 10); // Take top 10 results for filtering
-      }
-    }
-    
-    console.log('No results found for any query variations');
+    console.log('❌ ALL BROWSE API QUERIES FAILED - no fallback to rate-limited Finding API');
+    console.log('This prevents inaccurate pricing data and respects eBay API limits');
     return [];
   }
 
@@ -271,20 +259,13 @@ export class EbayPricingService {
       // Build simplified query with just character name and card number
       const simpleQuery = cardNumber ? `${cardName} #${cardNumber}` : cardName;
       
-      // Build filters for targeted search
+      // Build basic filters that are guaranteed to work
       const filters = [
         'conditionIds:{1000|1500|2000|2500|3000|4000|5000}',
         'deliveryCountry:US',
         'price:[1|500]',
         'priceCurrency:USD'
       ];
-      
-      if (year) {
-        filters.push(`yearManufactured:[${year}]`);
-      }
-      
-      // Add Marvel franchise filter
-      filters.push('franchise:{Marvel}');
       
       const params = new URLSearchParams({
         'q': simpleQuery,
@@ -295,8 +276,8 @@ export class EbayPricingService {
       });
 
       const url = `${this.browseApiUrl}/item_summary/search?${params.toString()}`;
-      console.log(`🎯 TARGETED Browse API URL: ${url}`);
-      console.log(`📋 Filters: Category=26395 (Non-Sport Singles), Year=${year || 'any'}, Franchise=Marvel`);
+      console.log(`🎯 SIMPLIFIED Browse API URL: ${url}`);
+      console.log(`📋 Basic filters: Category=26395 (Non-Sport Singles), Price=[1|500]`);
       console.log(`🔍 Simplified query: "${simpleQuery}" (from original: "${searchQuery}")`);
       
       const headers = {
@@ -305,15 +286,19 @@ export class EbayPricingService {
         'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US'
       };
       
+      console.log(`📤 Making Browse API request...`);
       const response = await fetch(url, {
         method: 'GET',
         headers: headers,
         signal: AbortSignal.timeout(8000)
       });
       
+      console.log(`📥 Browse API response status: ${response.status}`);
+      
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`eBay Browse API Error ${response.status}:`, errorText);
+        console.error(`❌ eBay Browse API Error ${response.status}:`, errorText);
+        console.error(`Failed URL: ${url}`);
         
         // Try fallback without advanced filters
         if (response.status === 400) {
