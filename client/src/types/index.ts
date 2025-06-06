@@ -11,6 +11,8 @@ export interface StatCard {
   change: string;
   icon: string;
   color: string;
+  tooltip?: string;
+  onClick?: () => void;
 }
 
 export interface CardFilters {

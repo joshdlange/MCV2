@@ -1,6 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { StatCard } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { 
   Layers, 
   Star, 
@@ -10,8 +16,10 @@ import {
   TrendingDown
 } from "lucide-react";
 import type { CollectionStats } from "@shared/schema";
+import { useLocation } from "wouter";
 
 export function StatsDashboard() {
+  const [, setLocation] = useLocation();
   const { data: stats, isLoading } = useQuery<CollectionStats>({
     queryKey: ["/api/stats"],
   });
@@ -45,6 +53,8 @@ export function StatsDashboard() {
       change: stats.totalCardsGrowth,
       icon: "layers",
       color: "bg-marvel-red",
+      tooltip: "The total amount of cards you've added to your collection. Add more individually, or if you have sets easily add the whole set to your collection from the browse cards page.",
+      onClick: () => setLocation("/my-collection")
     },
     {
       label: "Insert Cards", 
@@ -52,6 +62,8 @@ export function StatsDashboard() {
       change: stats.insertCardsGrowth,
       icon: "star",
       color: "bg-marvel-gold",
+      tooltip: "What's an insert card? These cards are typically rarer and more valuable than base cards, have unique designs and/or themes, and may have their own numbering systems. Examples include autographed cards, memorabilia cards, foil cards, and special edition cards.",
+      onClick: () => setLocation("/my-collection")
     },
     {
       label: "Total Value",
@@ -59,6 +71,8 @@ export function StatsDashboard() {
       change: stats.totalValueGrowth,
       icon: "dollar",
       color: "bg-green-500",
+      tooltip: "We've taken a look at your collection and have averaged the last 5 eBay sales of every card within your collection. This is how much your collection is worth today. Check back daily to see the changes over time.",
+      onClick: () => setLocation("/market-trends")
     },
     {
       label: "Wishlist Items",
@@ -66,6 +80,8 @@ export function StatsDashboard() {
       change: stats.wishlistGrowth,
       icon: "heart",
       color: "bg-pink-500",
+      tooltip: "Your wishlist is a great place to track the cards you're currently chasing - browse sets or cards and if you don't have it add it to your wishlist. You can easily add it to your collection once you have it in person.",
+      onClick: () => setLocation("/wishlist")
     },
   ];
 
@@ -86,31 +102,45 @@ export function StatsDashboard() {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      {statCards.map((stat, index) => (
-        <Card key={index} className="comic-border">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                <p className="text-3xl font-bebas text-card-foreground mt-1">{stat.value}</p>
-                <div className="flex items-center mt-2">
-                  <span className={`text-xs font-medium flex items-center gap-1 ${
-                    stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {getTrendIcon(stat.change)}
-                    {stat.change}
-                  </span>
-                  <span className="text-xs text-muted-foreground ml-1">from last month</span>
-                </div>
-              </div>
-              <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center`}>
-                {getIcon(stat.icon)}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+    <TooltipProvider>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {statCards.map((stat, index) => (
+          <Tooltip key={index}>
+            <TooltipTrigger asChild>
+              <Card 
+                className="comic-border cursor-pointer hover:shadow-lg transition-shadow duration-200"
+                onClick={stat.onClick}
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
+                      <p className="text-3xl font-bebas text-card-foreground mt-1">{stat.value}</p>
+                      <div className="flex items-center mt-2">
+                        <span className={`text-xs font-medium flex items-center gap-1 ${
+                          stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {getTrendIcon(stat.change)}
+                          {stat.change}
+                        </span>
+                        <span className="text-xs text-muted-foreground ml-1">from last month</span>
+                      </div>
+                    </div>
+                    <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center`}>
+                      {getIcon(stat.icon)}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            {stat.tooltip && (
+              <TooltipContent className="max-w-xs p-3">
+                <p className="text-sm">{stat.tooltip}</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        ))}
+      </div>
+    </TooltipProvider>
   );
 }
