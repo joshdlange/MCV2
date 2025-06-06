@@ -390,7 +390,20 @@ export default function BrowseCards() {
                 Search Results for "{setSearchQuery}"
               </h3>
               <div className="text-sm text-gray-600">
-                {searchResults.sets.length} sets, {searchResults.cards.length} cards
+                {searchResults.sets.length} sets, {searchResults.cards.length > 0 && (
+                  <button
+                    onClick={() => {
+                      const element = document.getElementById('individual-cards-section');
+                      if (element) {
+                        element.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }}
+                    className="text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                  >
+                    {searchResults.cards.length} cards
+                  </button>
+                )}
+                {searchResults.cards.length === 0 && `${searchResults.cards.length} cards`}
               </div>
             </div>
 
@@ -429,7 +442,7 @@ export default function BrowseCards() {
 
             {/* Individual Cards Results */}
             {searchResults.cards.length > 0 && (
-              <div>
+              <div id="individual-cards-section">
                 <h4 className="text-md font-semibold text-gray-900 mb-4">Individual Cards</h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
                   {searchResults.cards.slice(0, 12).map((card) => (
