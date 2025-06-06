@@ -244,36 +244,6 @@ export class DatabaseStorage implements IStorage {
     return cardSet || undefined;
   }
 
-  async searchCardSets(query: string): Promise<CardSet[]> {
-    try {
-      const sets = await db.select()
-        .from(cardSets)
-        .where(
-          or(
-            ilike(cardSets.name, `%${query}%`),
-            ilike(cardSets.description, `%${query}%`)
-          )
-        );
-      
-      // Calculate actual total cards for each set
-      const setsWithCounts = await Promise.all(sets.map(async (set) => {
-        const [{ count }] = await db.select({ count: sql<number>`count(*)` })
-          .from(cards)
-          .where(eq(cards.setId, set.id));
-        
-        return {
-          ...set,
-          totalCards: count || 0
-        };
-      }));
-      
-      return setsWithCounts;
-    } catch (error) {
-      console.error('Error searching card sets:', error);
-      return [];
-    }
-  }
-
   async getCards(filters?: { setId?: number; search?: string; rarity?: string; isInsert?: boolean }): Promise<CardWithSet[]> {
     try {
       let query = db
@@ -1029,6 +999,36 @@ export class DatabaseStorage implements IStorage {
       return popularCards.map(card => card.cardId);
     } catch (error) {
       console.error('Error getting popular cards from collections:', error);
+      return [];
+    }
+  }
+
+  async searchCardSets(query: string): Promise<CardSet[]> {
+    try {
+      const sets = await db.select()
+        .from(cardSets)
+        .where(
+          or(
+            ilike(cardSets.name, `%${query}%`),
+            ilike(cardSets.description, `%${query}%`)
+          )
+        );
+      
+      // Calculate actual total cards for each set
+      const setsWithCounts = await Promise.all(sets.map(async (set) => {
+        const [{ count }] = await db.select({ count: sql<number>`count(*)` })
+          .from(cards)
+          .where(eq(cards.setId, set.id));
+        
+        return {
+          ...set,
+          totalCards: count || 0
+        };
+      }));
+      
+      return setsWithCounts;
+    } catch (error) {
+      console.error('Error searching card sets:', error);
       return [];
     }
   }

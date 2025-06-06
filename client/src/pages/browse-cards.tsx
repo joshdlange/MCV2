@@ -41,6 +41,12 @@ export default function BrowseCards() {
     queryKey: ["/api/collection"],
   });
 
+  // Global search for both sets and cards
+  const { data: searchResults } = useQuery<{ sets: CardSet[], cards: CardWithSet[] }>({
+    queryKey: ["/api/search", setSearchQuery],
+    enabled: setSearchQuery.length >= 2,
+  });
+
   const handleSearchChange = (search: string) => {
     setFilters(prev => ({ ...prev, search: search || undefined }));
   };
