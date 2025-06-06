@@ -279,20 +279,13 @@ export class DatabaseStorage implements IStorage {
       }
 
       if (filters?.search) {
-        // Split query into words for more precise matching
-        const queryWords = filters.search.toLowerCase().split(/\s+/).filter(word => word.length > 1);
-        
-        if (queryWords.length > 0) {
-          const searchConditions = queryWords.map(word => 
-            or(
-              ilike(cards.name, `%${word}%`),
-              ilike(cards.description, `%${word}%`),
-              ilike(cards.cardNumber, `%${word}%`),
-              ilike(cards.rarity, `%${word}%`)
-            )
-          );
-          conditions.push(and(...searchConditions));
-        }
+        conditions.push(
+          or(
+            ilike(cards.name, `%${filters.search}%`),
+            ilike(cards.description, `%${filters.search}%`),
+            ilike(cards.cardNumber, `%${filters.search}%`)
+          )
+        );
       }
 
       if (filters?.rarity) {
@@ -1013,26 +1006,20 @@ export class DatabaseStorage implements IStorage {
 
   async searchCardSets(query: string): Promise<CardSet[]> {
     try {
-      // Split query into words for more precise matching
-      const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 1);
-      
-      if (queryWords.length === 0) {
+      if (!query || query.length < 2) {
         return [];
       }
       
-      // Build more precise search conditions
-      const searchConditions = queryWords.map(word => 
-        or(
-          ilike(cardSets.name, `%${word}%`),
-          ilike(cardSets.description, `%${word}%`),
-          sql`CAST(${cardSets.year} AS TEXT) LIKE ${`%${word}%`}`
-        )
-      );
-      
+      // Simple pattern matching for card sets
       const sets = await db.select()
         .from(cardSets)
-        .where(and(...searchConditions))
-        .limit(10); // Limit results to prevent too many matches
+        .where(
+          or(
+            ilike(cardSets.name, `%${query}%`),
+            ilike(cardSets.description, `%${query}%`)
+          )
+        )
+        .limit(10);
       
       // Calculate actual total cards for each set
       const setsWithCounts = await Promise.all(sets.map(async (set) => {

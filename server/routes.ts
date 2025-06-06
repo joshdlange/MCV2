@@ -357,7 +357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Global search endpoint for both sets and cards
   app.get("/api/search", async (req, res) => {
     try {
-      const query = req.query.query as string;
+      const query = req.query.q as string;
       
       if (!query || query.length < 2) {
         return res.json({ sets: [], cards: [] });
