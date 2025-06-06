@@ -38,6 +38,7 @@ interface IStorage {
   getCardSet(id: number): Promise<CardSet | undefined>;
   createCardSet(insertCardSet: InsertCardSet): Promise<CardSet>;
   updateCardSet(id: number, updates: Partial<InsertCardSet>): Promise<CardSet | undefined>;
+  searchCardSets(query: string): Promise<CardSet[]>;
   
   // Cards
   getCards(filters?: { setId?: number; search?: string; rarity?: string; isInsert?: boolean }): Promise<CardWithSet[]>;
@@ -241,6 +242,36 @@ export class DatabaseStorage implements IStorage {
       .where(eq(cardSets.id, id))
       .returning();
     return cardSet || undefined;
+  }
+
+  async searchCardSets(query: string): Promise<CardSet[]> {
+    try {
+      const sets = await db.select()
+        .from(cardSets)
+        .where(
+          or(
+            ilike(cardSets.name, `%${query}%`),
+            ilike(cardSets.description, `%${query}%`)
+          )
+        );
+      
+      // Calculate actual total cards for each set
+      const setsWithCounts = await Promise.all(sets.map(async (set) => {
+        const [{ count }] = await db.select({ count: sql<number>`count(*)` })
+          .from(cards)
+          .where(eq(cards.setId, set.id));
+        
+        return {
+          ...set,
+          totalCards: count || 0
+        };
+      }));
+      
+      return setsWithCounts;
+    } catch (error) {
+      console.error('Error searching card sets:', error);
+      return [];
+    }
   }
 
   async getCards(filters?: { setId?: number; search?: string; rarity?: string; isInsert?: boolean }): Promise<CardWithSet[]> {

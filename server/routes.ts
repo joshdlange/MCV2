@@ -332,6 +332,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Global search endpoint for both sets and cards
+  app.get("/api/search", async (req, res) => {
+    try {
+      const query = req.query.query as string;
+      
+      if (!query || query.length < 2) {
+        return res.json({ sets: [], cards: [] });
+      }
+
+      // Search both sets and cards in parallel
+      const [sets, cards] = await Promise.all([
+        storage.searchCardSets(query),
+        storage.getCards({ search: query })
+      ]);
+
+      res.json({ sets, cards });
+    } catch (error) {
+      console.error('Error in global search:', error);
+      res.status(500).json({ message: "Failed to search" });
+    }
+  });
+
   app.get("/api/cards/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);

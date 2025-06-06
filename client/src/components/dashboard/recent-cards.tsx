@@ -89,7 +89,7 @@ export function RecentCards() {
           <Button 
             variant="ghost" 
             className="text-marvel-red hover:text-red-700"
-            onClick={() => setLocation('/my-collection')}
+            onClick={() => setLocation('/collection')}
           >
             View All
           </Button>
