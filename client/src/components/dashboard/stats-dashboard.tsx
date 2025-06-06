@@ -54,7 +54,7 @@ export function StatsDashboard() {
       icon: "layers",
       color: "bg-marvel-red",
       tooltip: "The total amount of cards you've added to your collection. Add more individually, or if you have sets easily add the whole set to your collection from the browse cards page.",
-      onClick: () => setLocation("/my-collection")
+      onClick: () => setLocation("/collection")
     },
     {
       label: "Insert Cards", 
@@ -63,7 +63,7 @@ export function StatsDashboard() {
       icon: "star",
       color: "bg-marvel-gold",
       tooltip: "What's an insert card? These cards are typically rarer and more valuable than base cards, have unique designs and/or themes, and may have their own numbering systems. Examples include autographed cards, memorabilia cards, foil cards, and special edition cards.",
-      onClick: () => setLocation("/my-collection")
+      onClick: () => setLocation("/collection")
     },
     {
       label: "Total Value",
@@ -72,7 +72,7 @@ export function StatsDashboard() {
       icon: "dollar",
       color: "bg-green-500",
       tooltip: "We've taken a look at your collection and have averaged the last 5 eBay sales of every card within your collection. This is how much your collection is worth today. Check back daily to see the changes over time.",
-      onClick: () => setLocation("/market-trends")
+      onClick: () => setLocation("/trends")
     },
     {
       label: "Wishlist Items",
