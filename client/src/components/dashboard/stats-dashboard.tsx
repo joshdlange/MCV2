@@ -2,11 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { StatCard } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Info } from "lucide-react";
 import { 
   Layers, 
   Star, 
@@ -102,45 +102,52 @@ export function StatsDashboard() {
   };
 
   return (
-    <TooltipProvider>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {statCards.map((stat, index) => (
-          <Tooltip key={index}>
-            <TooltipTrigger asChild>
-              <Card 
-                className="comic-border cursor-pointer hover:shadow-lg transition-shadow duration-200"
-                onClick={stat.onClick}
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                      <p className="text-3xl font-bebas text-card-foreground mt-1">{stat.value}</p>
-                      <div className="flex items-center mt-2">
-                        <span className={`text-xs font-medium flex items-center gap-1 ${
-                          stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {getTrendIcon(stat.change)}
-                          {stat.change}
-                        </span>
-                        <span className="text-xs text-muted-foreground ml-1">from last month</span>
-                      </div>
-                    </div>
-                    <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center`}>
-                      {getIcon(stat.icon)}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TooltipTrigger>
-            {stat.tooltip && (
-              <TooltipContent className="max-w-xs p-3">
-                <p className="text-sm">{stat.tooltip}</p>
-              </TooltipContent>
-            )}
-          </Tooltip>
-        ))}
-      </div>
-    </TooltipProvider>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {statCards.map((stat, index) => (
+        <Card 
+          key={index}
+          className="comic-border cursor-pointer hover:shadow-lg transition-shadow duration-200"
+          onClick={stat.onClick}
+        >
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
+                  {stat.tooltip && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button 
+                          className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Info className="w-3 h-3 text-gray-500" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="max-w-xs p-3 bg-slate-800 text-white border-slate-700">
+                        <p className="text-sm">{stat.tooltip}</p>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
+                <p className="text-3xl font-bebas text-card-foreground mt-1">{stat.value}</p>
+                <div className="flex items-center mt-2">
+                  <span className={`text-xs font-medium flex items-center gap-1 ${
+                    stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {getTrendIcon(stat.change)}
+                    {stat.change}
+                  </span>
+                  <span className="text-xs text-muted-foreground ml-1">from last month</span>
+                </div>
+              </div>
+              <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center`}>
+                {getIcon(stat.icon)}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   );
 }
