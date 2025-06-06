@@ -18,7 +18,7 @@ interface TrendingCardProps {
 
 function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
-  const { data: pricing } = useCardPricing(card.id);
+  const { data: pricing } = useCardPricing(card.id, true);
 
   // Use real eBay pricing data when available
   const currentValue = pricing?.avgPrice || (card.estimatedValue ? parseFloat(card.estimatedValue) : 0);
@@ -85,45 +85,6 @@ function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
             
             <div className="space-y-1 md:space-y-3 text-xs md:text-sm">
               <div>
-                <span className="text-gray-300">Rarity:</span>
-                <span className="ml-1 md:ml-2 font-medium">{card.rarity}</span>
-              </div>
-              
-              <div>
-                <span className="text-gray-300">Market Value:</span>
-                <div className="ml-1 md:ml-2">
-                  {hasRealPricing ? (
-                    <div className="flex items-center gap-1">
-                      <span className="font-bold text-green-400">
-                        ${currentValue.toFixed(2)}
-                      </span>
-                      <span className="text-xs text-blue-400">eBay</span>
-                    </div>
-                  ) : (
-                    <span className="font-bold text-gray-400">
-                      {currentValue > 0 ? `$${currentValue.toFixed(2)}` : 'No data'}
-                    </span>
-                  )}
-                </div>
-              </div>
-              
-              {hasRealPricing && pricing && pricing.salesCount > 0 && (
-                <div>
-                  <span className="text-gray-300">Sales:</span>
-                  <span className="ml-1 md:ml-2 text-xs text-blue-300">
-                    {pricing.salesCount} recent
-                  </span>
-                </div>
-              )}
-              
-              <div>
-                <span className="text-gray-300">Trending:</span>
-                <span className="ml-1 md:ml-2 font-bold text-green-400">
-                  +{priceChange}%
-                </span>
-              </div>
-
-              <div>
                 <span className="text-gray-300">Set:</span>
                 <span className="ml-1 md:ml-2 text-xs">{card.set.name}</span>
               </div>
@@ -131,6 +92,29 @@ function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
               <div>
                 <span className="text-gray-300">Card #:</span>
                 <span className="ml-1 md:ml-2">{card.cardNumber}</span>
+              </div>
+              
+              <div className="text-center">
+                <span className="text-gray-300 block text-xs mb-1">Market Value</span>
+                <div>
+                  {hasRealPricing ? (
+                    <div className="flex items-center justify-center gap-1">
+                      <span className="font-bold text-green-400 text-lg md:text-2xl">
+                        ${currentValue.toFixed(2)}
+                      </span>
+                      <span className="text-xs text-blue-400">eBay</span>
+                    </div>
+                  ) : (
+                    <span className="font-bold text-lg md:text-2xl text-green-400">
+                      {currentValue > 0 ? `$${currentValue.toFixed(2)}` : 'No data'}
+                    </span>
+                  )}
+                </div>
+                {hasRealPricing && pricing && pricing.salesCount > 0 && (
+                  <span className="text-xs text-blue-300 block mt-1">
+                    {pricing.salesCount} recent sales
+                  </span>
+                )}
               </div>
             </div>
           </div>
