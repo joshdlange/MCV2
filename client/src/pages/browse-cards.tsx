@@ -34,6 +34,7 @@ export default function BrowseCards() {
     description: '',
     imageUrl: ''
   });
+  const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
   const { toast } = useToast();
   const { isAdminMode } = useAppStore();
   const queryClient = useQueryClient();
@@ -446,7 +447,7 @@ export default function BrowseCards() {
                 <h4 className="text-md font-semibold text-gray-900 mb-4">Individual Cards</h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
                   {searchResults.cards.slice(0, 12).map((card) => (
-                    <Card key={card.id} className="group cursor-pointer hover:shadow-lg transition-shadow">
+                    <Card key={card.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setSelectedCard(card)}>
                       <CardContent className="p-0">
                         <div className="relative">
                           {card.frontImageUrl ? (
@@ -716,6 +717,106 @@ export default function BrowseCards() {
               {updateSetMutation.isPending ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Card Details Modal */}
+      <Dialog open={!!selectedCard} onOpenChange={() => setSelectedCard(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedCard && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-xl font-bold text-gray-900">
+                  {selectedCard.name}
+                </DialogTitle>
+                <DialogDescription className="text-gray-600">
+                  {selectedCard.set.name} • #{selectedCard.cardNumber} • {selectedCard.rarity}
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Card Images */}
+                <div className="space-y-4">
+                  {selectedCard.frontImageUrl && (
+                    <div>
+                      <h4 className="font-semibold mb-2">Front</h4>
+                      <img 
+                        src={convertGoogleDriveUrl(selectedCard.frontImageUrl)} 
+                        alt={`${selectedCard.name} front`}
+                        className="w-full rounded-lg shadow-md"
+                      />
+                    </div>
+                  )}
+                  
+                  {selectedCard.backImageUrl && (
+                    <div>
+                      <h4 className="font-semibold mb-2">Back</h4>
+                      <img 
+                        src={convertGoogleDriveUrl(selectedCard.backImageUrl)} 
+                        alt={`${selectedCard.name} back`}
+                        className="w-full rounded-lg shadow-md"
+                      />
+                    </div>
+                  )}
+                </div>
+                
+                {/* Card Details */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Card Information</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Set:</span>
+                        <span className="font-medium">{selectedCard.set.name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Year:</span>
+                        <span className="font-medium">{selectedCard.set.year}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Card Number:</span>
+                        <span className="font-medium">#{selectedCard.cardNumber}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Rarity:</span>
+                        <span className="font-medium">{selectedCard.rarity}</span>
+                      </div>
+                      {selectedCard.variation && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Variation:</span>
+                          <span className="font-medium">{selectedCard.variation}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Type:</span>
+                        <span className="font-medium">{selectedCard.isInsert ? 'Insert' : 'Base'}</span>
+                      </div>
+                      {selectedCard.estimatedValue && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Estimated Value:</span>
+                          <span className="font-medium text-green-600">${selectedCard.estimatedValue}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {selectedCard.description && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Description</h4>
+                      <p className="text-sm text-gray-600">{selectedCard.description}</p>
+                    </div>
+                  )}
+                  
+                  {selectedCard.set.description && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Set Description</h4>
+                      <p className="text-sm text-gray-600">{selectedCard.set.description}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
