@@ -48,7 +48,7 @@ export default function BrowseCards() {
 
   // Global search for both sets and cards
   const { data: searchResults } = useQuery<{ sets: CardSet[], cards: CardWithSet[] }>({
-    queryKey: ["/api/search"],
+    queryKey: ["/api/search", setSearchQuery],
     queryFn: () => fetch(`/api/search?q=${encodeURIComponent(setSearchQuery)}`).then(res => res.json()),
     enabled: setSearchQuery.length >= 2,
   });
