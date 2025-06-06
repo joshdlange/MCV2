@@ -226,19 +226,19 @@ export function CardGrid({
                   </div>
                   
                   {/* Status indicators */}
-                  <div className="absolute top-2 right-2 flex gap-1">
+                  <div className="absolute top-2 right-2 flex flex-col gap-1">
                     {isInCollection(card.id) && (
-                      <div className="bg-green-500 text-white rounded-full p-1">
+                      <div className="bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center">
                         <Check className="w-3 h-3" />
                       </div>
                     )}
                     {isInWishlist(card.id) && (
-                      <div className="bg-pink-500 text-white rounded-full p-1">
+                      <div className="bg-pink-500 text-white rounded-full w-5 h-5 flex items-center justify-center">
                         <Heart className="w-3 h-3 fill-current" />
                       </div>
                     )}
                     {isFavorite(card.id) && (
-                      <div className="bg-yellow-500 text-white rounded-full p-1">
+                      <div className="bg-yellow-500 text-white rounded-full w-5 h-5 flex items-center justify-center">
                         <Star className="w-3 h-3 fill-current" />
                       </div>
                     )}
