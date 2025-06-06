@@ -63,8 +63,8 @@ function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
 
           {/* Insert badge */}
           {card.isInsert && (
-            <div className="absolute top-2 right-2 bg-purple-600 text-white px-2 py-1 rounded text-xs font-bold shadow-lg">
-              INSERT
+            <div className="absolute top-2 right-2 bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg">
+              <span className="text-sm">💎</span>
             </div>
           )}
           

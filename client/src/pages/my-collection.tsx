@@ -494,9 +494,9 @@ export default function MyCollection() {
                   {/* Badges */}
                   <div className="absolute bottom-2 left-2 flex gap-1">
                     {('card' in item ? item.card.isInsert : item.isInsert) && (
-                      <Badge className="bg-purple-600 text-white text-xs px-2 py-1 font-bold">
-                        INSERT
-                      </Badge>
+                      <div className="bg-purple-600 text-white rounded-full w-5 h-5 flex items-center justify-center">
+                        <span className="text-xs">💎</span>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -617,7 +617,9 @@ export default function MyCollection() {
                                 </Badge>
                               )}
                               {('card' in item ? item.card.isInsert : item.isInsert) && (
-                                <Badge className="bg-purple-600 text-white text-xs">INSERT</Badge>
+                                <div className="bg-purple-600 text-white rounded-full w-4 h-4 flex items-center justify-center">
+                                  <span className="text-xs">💎</span>
+                                </div>
                               )}
                               {'card' in item && item.quantity > 1 && (
                                 <Badge className="bg-orange-100 text-orange-800 text-xs">
