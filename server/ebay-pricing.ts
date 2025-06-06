@@ -285,7 +285,7 @@ export class EbayPricingService {
       const params = new URLSearchParams({
         'q': searchQuery,
         'category_ids': '183050', // Non-Sport Trading Cards
-        'filter': 'conditionIds:{1000|1500|2000|2500|3000|4000|5000},deliveryCountry:US,price:[1|500]',
+        'filter': 'conditionIds:{1000|3000|4000|5000|6000|7000|8000},deliveryCountry:US,price:[1|500]',
         'sort': 'price',
         'limit': '10'
       });
@@ -379,7 +379,7 @@ export class EbayPricingService {
       const params = new URLSearchParams({
         'q': searchQuery,
         'category_ids': '183050', // Non-Sport Trading Card Singles
-        'filter': 'conditionIds:{1000|1500|2000|2500|3000|4000|5000},deliveryCountry:US,price:[1|500]',
+        'filter': 'conditionIds:{1000|3000|4000|5000|6000|7000|8000},deliveryCountry:US,price:[1|500]',
         'sort': 'price',
         'limit': '10'
       });
@@ -639,7 +639,18 @@ export class EbayPricingService {
                      title.includes('fleer') || title.includes('topps') || title.includes('upper deck') ||
                      title.includes('marvel') || title.includes('skybox') || title.includes('impel');
       const isNotComic = !title.includes('comic book') && !title.includes('graphic novel') && 
-                        !title.includes('cgc') && !title.includes('variant cover');
+                        !title.includes('variant cover');
+      
+      // EXCLUDE GRADED CARDS: Filter out graded cards by title keywords
+      const isGraded = title.includes('psa') || title.includes('bgs') || 
+                      title.includes('cgc') || title.includes('graded') || 
+                      title.includes('beckett') || title.includes('gem mint') ||
+                      title.includes('grade') || title.includes('slab');
+      
+      if (isGraded) {
+        console.log(`   🚫 GRADED CARD EXCLUDED: Contains grading keywords`);
+        return false;
+      }
       
       // BONUS: Set/year matching (helpful but not required for card #28 specifically)
       const hasRelevantSet = !setName || 
