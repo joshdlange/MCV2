@@ -21,7 +21,7 @@ import {
   type CollectionStats
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, ilike, and, count, sum, desc, sql, isNull, or, lt } from "drizzle-orm";
+import { eq, ilike, and, count, sum, desc, sql, isNull, or, lt, gte } from "drizzle-orm";
 
 interface IStorage {
   // Users
@@ -824,7 +824,7 @@ export class DatabaseStorage implements IStorage {
 
   async getTrendingCards(limit: number): Promise<CardWithSet[]> {
     try {
-      // Get cards ordered by how many times they've been added to collections
+      // Get featured cards: mix of high-value cards and inserts, ordered by collection popularity
       const results = await db
         .select({
           id: cards.id,
@@ -845,6 +845,7 @@ export class DatabaseStorage implements IStorage {
             name: cardSets.name,
             year: cardSets.year,
             description: cardSets.description,
+            imageUrl: cardSets.imageUrl,
             totalCards: cardSets.totalCards,
             createdAt: cardSets.createdAt,
           }
@@ -852,8 +853,19 @@ export class DatabaseStorage implements IStorage {
         .from(cards)
         .innerJoin(cardSets, eq(cards.setId, cardSets.id))
         .leftJoin(userCollections, eq(cards.id, userCollections.cardId))
+        .leftJoin(cardPriceCache, eq(cards.id, cardPriceCache.cardId))
+        .where(
+          or(
+            eq(cards.isInsert, true), // Include all inserts
+            sql`CAST(${cardPriceCache.avgPrice} AS DECIMAL) >= 3.0` // Include cards worth $3+
+          )
+        )
         .groupBy(cards.id, cardSets.id)
-        .orderBy(desc(count(userCollections.id)))
+        .orderBy(
+          desc(count(userCollections.id)), // Most collected first
+          desc(cardSets.year), // Newer sets preferred
+          desc(cards.isInsert) // Inserts preferred
+        )
         .limit(limit);
 
       return results.map(row => ({

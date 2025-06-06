@@ -266,9 +266,9 @@ export function TrendingCards() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="font-bebas text-xl tracking-wide">TOP TRENDING CARDS</CardTitle>
+          <CardTitle className="font-bebas text-xl tracking-wide">FEATURED CARDS</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Most popular cards with live eBay market pricing
+            High-value cards and newest inserts with live eBay pricing
           </p>
         </CardHeader>
         <CardContent>
