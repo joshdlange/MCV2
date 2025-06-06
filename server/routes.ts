@@ -225,6 +225,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Combined search for sets and cards
+  app.get("/api/search", async (req, res) => {
+    try {
+      const query = req.query.q as string;
+      
+      if (!query || query.length < 2) {
+        return res.json({ sets: [], cards: [] });
+      }
+
+      // Search card sets
+      const sets = await storage.searchCardSets(query);
+      
+      // Search individual cards
+      const cards = await storage.getCards({ search: query });
+      
+      res.json({ sets, cards });
+    } catch (error) {
+      console.error("Error searching:", error);
+      res.status(500).json({ message: "Failed to search" });
+    }
+  });
+
   app.post("/api/card-sets", async (req, res) => {
     try {
       const data = insertCardSetSchema.parse(req.body);

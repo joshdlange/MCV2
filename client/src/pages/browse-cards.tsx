@@ -1,20 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, Star, ArrowLeft, Plus, Edit, Filter, Grid3X3, List, X, Save } from "lucide-react";
 import { CardGrid } from "@/components/cards/card-grid";
-import { CardFilters } from "@/types";
-import { Search, Filter, ArrowLeft, Heart, Plus, Star, Edit, Save, X, Grid3X3, List } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAppStore } from "@/lib/store";
 import { apiRequest } from "@/lib/queryClient";
-import { convertGoogleDriveUrl } from "@/lib/utils";
-import type { CardSet, CardWithSet, CollectionItem, InsertUserCollection } from "@/types/schema";
+import type { CardSet, CardWithSet, CollectionItem } from "@/types";
+
+interface CardFilters {
+  setId?: number;
+  search?: string;
+  rarity?: string;
+  isInsert?: boolean;
+}
 
 export default function BrowseCards() {
   const [selectedSet, setSelectedSet] = useState<CardSet | null>(null);
@@ -43,37 +48,13 @@ export default function BrowseCards() {
 
   // Global search for both sets and cards
   const { data: searchResults } = useQuery<{ sets: CardSet[], cards: CardWithSet[] }>({
-    queryKey: ["/api/search", setSearchQuery],
+    queryKey: ["/api/search"],
+    queryFn: () => fetch(`/api/search?q=${encodeURIComponent(setSearchQuery)}`).then(res => res.json()),
     enabled: setSearchQuery.length >= 2,
   });
 
   const handleSearchChange = (search: string) => {
     setFilters(prev => ({ ...prev, search: search || undefined }));
-  };
-
-  const handleSetChange = (setId: string) => {
-    setFilters(prev => ({ 
-      ...prev, 
-      setId: setId === "all" ? undefined : parseInt(setId) 
-    }));
-  };
-
-  const handleRarityChange = (rarity: string) => {
-    setFilters(prev => ({ 
-      ...prev, 
-      rarity: rarity === "all" ? undefined : rarity 
-    }));
-  };
-
-  const handleInsertFilter = (isInsert: string) => {
-    setFilters(prev => ({ 
-      ...prev, 
-      isInsert: isInsert === "all" ? undefined : isInsert === "true" 
-    }));
-  };
-
-  const clearFilters = () => {
-    setFilters({});
   };
 
   const handleSetClick = (set: CardSet) => {
@@ -86,6 +67,18 @@ export default function BrowseCards() {
     setFilters({});
   };
 
+  const clearFilters = () => {
+    setFilters(prev => ({ setId: prev.setId }));
+  };
+
+  const handleInsertFilter = (value: string) => {
+    if (value === "all") {
+      setFilters(prev => ({ ...prev, isInsert: undefined }));
+    } else {
+      setFilters(prev => ({ ...prev, isInsert: value === "true" }));
+    }
+  };
+
   const handleFavoriteSet = (setId: number) => {
     setFavoriteSetIds(prev => 
       prev.includes(setId) 
@@ -94,9 +87,19 @@ export default function BrowseCards() {
     );
   };
 
+  const convertGoogleDriveUrl = (url: string) => {
+    if (url.includes('drive.google.com')) {
+      const fileId = url.match(/\/d\/([a-zA-Z0-9-_]+)/)?.[1];
+      if (fileId) {
+        return `https://drive.google.com/uc?export=view&id=${fileId}`;
+      }
+    }
+    return url;
+  };
+
   const addAllMutation = useMutation({
     mutationFn: async (setId: number) => {
-      // First get all cards from the set
+      // Get cards for this set
       const cardsResponse = await fetch(`/api/cards?setId=${setId}`);
       const cards: CardWithSet[] = await cardsResponse.json();
       
@@ -342,6 +345,9 @@ export default function BrowseCards() {
            set.description?.toLowerCase().includes(query);
   }) || [];
 
+  // Show search results when user is searching
+  const shouldShowSearchResults = setSearchQuery.length >= 2 && searchResults;
+
   // Show card sets grid
   const favoritesets = filteredSets.filter(set => favoriteSetIds.includes(set.id));
   const otherSets = filteredSets.filter(set => !favoriteSetIds.includes(set.id));
@@ -373,154 +379,260 @@ export default function BrowseCards() {
         </div>
       </div>
 
-      {/* Card Sets Grid */}
+      {/* Search Results or Card Sets Grid */}
       <div className="p-6">
-        {/* Favorite Sets */}
-        {favoritesets.length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Star className="w-5 h-5 text-yellow-500 fill-current" />
-              Favorite Sets
-            </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-              {favoritesets.map((set) => (
-                <Card key={set.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSetClick(set)}>
-                  <CardContent className="p-0">
-                    <div className="relative">
-                      {set.imageUrl ? (
-                        <img 
-                          src={convertGoogleDriveUrl(set.imageUrl)} 
-                          alt={set.name}
-                          className="w-full h-32 md:h-48 object-cover rounded-t-lg"
-                        />
-                      ) : (
-                        <div className="w-full h-32 md:h-48 bg-gradient-to-br from-marvel-red to-red-700 rounded-t-lg flex items-center justify-center">
-                          <span className="text-white text-sm md:text-lg font-bold text-center px-2 md:px-4">{set.name}</span>
+        {/* Show Search Results */}
+        {shouldShowSearchResults ? (
+          <div className="space-y-8">
+            {/* Search Results Header */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Search Results for "{setSearchQuery}"
+              </h3>
+              <div className="text-sm text-gray-600">
+                {searchResults.sets.length} sets, {searchResults.cards.length} cards
+              </div>
+            </div>
+
+            {/* Card Sets Results */}
+            {searchResults.sets.length > 0 && (
+              <div>
+                <h4 className="text-md font-semibold text-gray-900 mb-4">Card Sets</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+                  {searchResults.sets.map((set) => (
+                    <Card key={set.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSetClick(set)}>
+                      <CardContent className="p-0">
+                        <div className="relative">
+                          {set.imageUrl ? (
+                            <img 
+                              src={convertGoogleDriveUrl(set.imageUrl)} 
+                              alt={set.name}
+                              className="w-full h-32 md:h-48 object-cover rounded-t-lg"
+                            />
+                          ) : (
+                            <div className="w-full h-32 md:h-48 bg-gradient-to-br from-marvel-red to-red-700 rounded-t-lg flex items-center justify-center">
+                              <span className="text-white text-sm md:text-lg font-bold text-center px-2 md:px-4">{set.name}</span>
+                            </div>
+                          )}
                         </div>
-                      )}
-                      <div className="absolute top-2 right-2 flex gap-1">
-                        {isAdminMode && (
+                        <div className="p-3 md:p-4">
+                          <h3 className="font-semibold text-gray-900 mb-1 md:mb-2 text-sm md:text-base line-clamp-2">{set.name}</h3>
+                          <p className="text-xs md:text-sm text-gray-600 mb-2 line-clamp-2 hidden md:block">{set.description || 'Click to explore cards from this set'}</p>
+                          <p className="text-xs text-gray-500 mb-2 md:mb-3">{set.totalCards} cards • {set.year}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Individual Cards Results */}
+            {searchResults.cards.length > 0 && (
+              <div>
+                <h4 className="text-md font-semibold text-gray-900 mb-4">Individual Cards</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
+                  {searchResults.cards.slice(0, 12).map((card) => (
+                    <Card key={card.id} className="group cursor-pointer hover:shadow-lg transition-shadow">
+                      <CardContent className="p-0">
+                        <div className="relative">
+                          {card.frontImageUrl ? (
+                            <img 
+                              src={convertGoogleDriveUrl(card.frontImageUrl)} 
+                              alt={card.name}
+                              className="w-full h-32 md:h-40 object-cover rounded-t-lg"
+                            />
+                          ) : (
+                            <div className="w-full h-32 md:h-40 bg-gradient-to-br from-marvel-red to-red-700 rounded-t-lg flex items-center justify-center">
+                              <span className="text-white text-xs md:text-sm font-bold text-center px-2">{card.name}</span>
+                            </div>
+                          )}
+                          <div className="absolute top-2 right-2">
+                            <span className="bg-black/70 text-white text-xs px-2 py-1 rounded">
+                              #{card.cardNumber}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="p-2 md:p-3">
+                          <h3 className="font-semibold text-gray-900 text-xs md:text-sm line-clamp-2 mb-1">{card.name}</h3>
+                          <p className="text-xs text-gray-600 mb-1">{card.set.name}</p>
+                          <p className="text-xs text-gray-500">{card.rarity}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+                {searchResults.cards.length > 12 && (
+                  <div className="mt-4 text-center">
+                    <p className="text-sm text-gray-600">
+                      Showing 12 of {searchResults.cards.length} cards. Click on a set to see all cards.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* No Results */}
+            {searchResults.sets.length === 0 && searchResults.cards.length === 0 && (
+              <div className="text-center py-12">
+                <div className="text-gray-400 mb-4">
+                  <Search className="w-16 h-16 mx-auto" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No results found</h3>
+                <p className="text-gray-600">Try adjusting your search terms</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Favorite Sets */}
+            {favoritesets.length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Star className="w-5 h-5 text-yellow-500 fill-current" />
+                  Favorite Sets
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+                  {favoritesets.map((set) => (
+                    <Card key={set.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSetClick(set)}>
+                      <CardContent className="p-0">
+                        <div className="relative">
+                          {set.imageUrl ? (
+                            <img 
+                              src={convertGoogleDriveUrl(set.imageUrl)} 
+                              alt={set.name}
+                              className="w-full h-32 md:h-48 object-cover rounded-t-lg"
+                            />
+                          ) : (
+                            <div className="w-full h-32 md:h-48 bg-gradient-to-br from-marvel-red to-red-700 rounded-t-lg flex items-center justify-center">
+                              <span className="text-white text-sm md:text-lg font-bold text-center px-2 md:px-4">{set.name}</span>
+                            </div>
+                          )}
+                          <div className="absolute top-2 right-2 flex gap-1">
+                            {isAdminMode && (
+                              <Button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditSet(set.id);
+                                }}
+                                variant="outline"
+                                size="sm"
+                                className="bg-white/90 hover:bg-white"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            )}
+                            <Button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleFavoriteSet(set.id);
+                              }}
+                              variant="outline"
+                              size="sm"
+                              className="bg-white/90 hover:bg-white"
+                            >
+                              <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="p-3 md:p-4">
+                          <h3 className="font-semibold text-gray-900 mb-1 md:mb-2 text-sm md:text-base line-clamp-2">{set.name}</h3>
+                          <p className="text-xs md:text-sm text-gray-600 mb-2 line-clamp-2 hidden md:block">{set.description || 'Click to explore cards from this set'}</p>
+                          <p className="text-xs text-gray-500 mb-2 md:mb-3">{set.totalCards} cards • {set.year}</p>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddAllToCollection(set.id);
+                              }}
+                              size="sm"
+                              className="flex-1 bg-marvel-red hover:bg-red-700"
+                            >
+                              <Plus className="w-3 h-3 mr-1" />
+                              {addAllMutation.isPending ? 'Adding...' : 'Add All'}
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* All Sets */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                {favoritesets.length > 0 ? 'All Sets' : 'Card Sets'}
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+                {otherSets.map((set) => (
+                  <Card key={set.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSetClick(set)}>
+                    <CardContent className="p-0">
+                      <div className="relative">
+                        {set.imageUrl ? (
+                          <img 
+                            src={convertGoogleDriveUrl(set.imageUrl)} 
+                            alt={set.name}
+                            className="w-full h-32 md:h-48 object-cover rounded-t-lg"
+                          />
+                        ) : (
+                          <div className="w-full h-32 md:h-48 bg-gradient-to-br from-marvel-red to-red-700 rounded-t-lg flex items-center justify-center">
+                            <span className="text-white text-sm md:text-lg font-bold text-center px-2 md:px-4">{set.name}</span>
+                          </div>
+                        )}
+                        <div className="absolute top-2 right-2 flex gap-1">
+                          {isAdminMode && (
+                            <Button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditSet(set.id);
+                              }}
+                              variant="outline"
+                              size="sm"
+                              className="bg-white/90 hover:bg-white"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          )}
                           <Button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleEditSet(set.id);
+                              handleFavoriteSet(set.id);
                             }}
                             variant="outline"
                             size="sm"
                             className="bg-white/90 hover:bg-white"
                           >
-                            <Edit className="w-4 h-4" />
+                            <Star className="w-4 h-4" />
                           </Button>
-                        )}
-                        <Button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleFavoriteSet(set.id);
-                          }}
-                          variant="outline"
-                          size="sm"
-                          className="bg-white/90 hover:bg-white"
-                        >
-                          <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                        </Button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="p-3 md:p-4">
-                      <h3 className="font-semibold text-gray-900 mb-1 md:mb-2 text-sm md:text-base line-clamp-2">{set.name}</h3>
-                      <p className="text-xs md:text-sm text-gray-600 mb-2 line-clamp-2 hidden md:block">{set.description || 'Click to explore cards from this set'}</p>
-                      <p className="text-xs text-gray-500 mb-2 md:mb-3">{set.totalCards} cards • {set.year}</p>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAddAllToCollection(set.id);
-                          }}
-                          size="sm"
-                          className="flex-1 bg-marvel-red hover:bg-red-700"
-                        >
-                          <Plus className="w-3 h-3 mr-1" />
-                          {addAllMutation.isPending ? 'Adding...' : 'Add All'}
-                        </Button>
+                      <div className="p-4">
+                        <h3 className="font-semibold text-gray-900 mb-2">{set.name}</h3>
+                        <p className="text-sm text-gray-600 mb-2">{set.description || 'Click to explore cards from this set'}</p>
+                        <p className="text-xs text-gray-500 mb-3">{set.totalCards} cards • {set.year}</p>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAddAllToCollection(set.id);
+                            }}
+                            size="sm"
+                            className="flex-1 bg-marvel-red hover:bg-red-700"
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add All
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
-          </div>
+          </>
         )}
-
-        {/* All Sets */}
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            {favoritesets.length > 0 ? 'All Sets' : 'Card Sets'}
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-            {otherSets.map((set) => (
-              <Card key={set.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSetClick(set)}>
-                <CardContent className="p-0">
-                  <div className="relative">
-                    {set.imageUrl ? (
-                      <img 
-                        src={convertGoogleDriveUrl(set.imageUrl)} 
-                        alt={set.name}
-                        className="w-full h-32 md:h-48 object-cover rounded-t-lg"
-                      />
-                    ) : (
-                      <div className="w-full h-32 md:h-48 bg-gradient-to-br from-marvel-red to-red-700 rounded-t-lg flex items-center justify-center">
-                        <span className="text-white text-sm md:text-lg font-bold text-center px-2 md:px-4">{set.name}</span>
-                      </div>
-                    )}
-                    <div className="absolute top-2 right-2 flex gap-1">
-                      {isAdminMode && (
-                        <Button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditSet(set.id);
-                          }}
-                          variant="outline"
-                          size="sm"
-                          className="bg-white/90 hover:bg-white"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      )}
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleFavoriteSet(set.id);
-                        }}
-                        variant="outline"
-                        size="sm"
-                        className="bg-white/90 hover:bg-white"
-                      >
-                        <Star className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold text-gray-900 mb-2">{set.name}</h3>
-                    <p className="text-sm text-gray-600 mb-2">{set.description || 'Click to explore cards from this set'}</p>
-                    <p className="text-xs text-gray-500 mb-3">{set.totalCards} cards • {set.year}</p>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAddAllToCollection(set.id);
-                        }}
-                        size="sm"
-                        className="flex-1 bg-marvel-red hover:bg-red-700"
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Add All
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Edit Set Modal */}
