@@ -12,7 +12,7 @@ import { CardGrid } from "@/components/cards/card-grid";
 import { useToast } from "@/hooks/use-toast";
 import { useAppStore } from "@/lib/store";
 import { apiRequest } from "@/lib/queryClient";
-import type { CardSet, CardWithSet, CollectionItem } from "@/types";
+import type { CardSet, CardWithSet, CollectionItem } from "@shared/schema";
 
 interface CardFilters {
   setId?: number;

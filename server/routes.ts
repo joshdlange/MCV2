@@ -363,13 +363,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ sets: [], cards: [] });
       }
 
-      // Search both sets and cards in parallel
+      // Search both sets and cards in parallel with limits
       const [sets, cards] = await Promise.all([
         storage.searchCardSets(query),
         storage.getCards({ search: query })
       ]);
 
-      res.json({ sets, cards });
+      // Limit cards to prevent overly broad results
+      const limitedCards = cards.slice(0, 20);
+
+      res.json({ sets, cards: limitedCards });
     } catch (error) {
       console.error('Error in global search:', error);
       res.status(500).json({ message: "Failed to search" });

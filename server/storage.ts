@@ -279,12 +279,20 @@ export class DatabaseStorage implements IStorage {
       }
 
       if (filters?.search) {
-        conditions.push(
-          or(
-            ilike(cards.name, `%${filters.search}%`),
-            ilike(cards.description, `%${filters.search}%`)
-          )
-        );
+        // Split query into words for more precise matching
+        const queryWords = filters.search.toLowerCase().split(/\s+/).filter(word => word.length > 1);
+        
+        if (queryWords.length > 0) {
+          const searchConditions = queryWords.map(word => 
+            or(
+              ilike(cards.name, `%${word}%`),
+              ilike(cards.description, `%${word}%`),
+              ilike(cards.cardNumber, `%${word}%`),
+              ilike(cards.rarity, `%${word}%`)
+            )
+          );
+          conditions.push(and(...searchConditions));
+        }
       }
 
       if (filters?.rarity) {
@@ -1005,14 +1013,26 @@ export class DatabaseStorage implements IStorage {
 
   async searchCardSets(query: string): Promise<CardSet[]> {
     try {
+      // Split query into words for more precise matching
+      const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 1);
+      
+      if (queryWords.length === 0) {
+        return [];
+      }
+      
+      // Build more precise search conditions
+      const searchConditions = queryWords.map(word => 
+        or(
+          ilike(cardSets.name, `%${word}%`),
+          ilike(cardSets.description, `%${word}%`),
+          sql`CAST(${cardSets.year} AS TEXT) LIKE ${`%${word}%`}`
+        )
+      );
+      
       const sets = await db.select()
         .from(cardSets)
-        .where(
-          or(
-            ilike(cardSets.name, `%${query}%`),
-            ilike(cardSets.description, `%${query}%`)
-          )
-        );
+        .where(and(...searchConditions))
+        .limit(10); // Limit results to prevent too many matches
       
       // Calculate actual total cards for each set
       const setsWithCounts = await Promise.all(sets.map(async (set) => {
