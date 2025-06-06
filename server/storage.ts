@@ -733,23 +733,36 @@ export class DatabaseStorage implements IStorage {
           sql`${userWishlists.addedDate} <= ${oneMonthAgo}`
         ));
 
-      // Calculate growth percentages
-      const currentTotal = totalCardsResult[0]?.count || 0;
-      const previousTotal = totalCardsLastMonth[0]?.count || 0;
+      // Calculate growth percentages with robust null handling
+      const currentTotal = Number(totalCardsResult[0]?.count) || 0;
+      const previousTotal = Number(totalCardsLastMonth[0]?.count) || 0;
       const totalGrowth = this.calculateGrowthPercentage(currentTotal, previousTotal);
 
-      const currentInserts = insertCardsResult[0]?.count || 0;
-      const previousInserts = insertCardsLastMonth[0]?.count || 0;
+      const currentInserts = Number(insertCardsResult[0]?.count) || 0;
+      const previousInserts = Number(insertCardsLastMonth[0]?.count) || 0;
       const insertGrowth = this.calculateGrowthPercentage(currentInserts, previousInserts);
 
-      const currentWishlist = wishlistResult[0]?.count || 0;
-      const previousWishlist = wishlistLastMonth[0]?.count || 0;
+      const currentWishlist = Number(wishlistResult[0]?.count) || 0;
+      const previousWishlist = Number(wishlistLastMonth[0]?.count) || 0;
       const wishlistGrowth = this.calculateGrowthPercentage(currentWishlist, previousWishlist);
 
       // Calculate total value using real pricing data where available, fallback to estimated
-      const realTotal = parseFloat(totalValueResult[0]?.totalReal || '0');
-      const estimatedTotal = parseFloat(totalValueResult[0]?.totalEstimated || '0');
-      const totalValue = realTotal > 0 ? realTotal : estimatedTotal;
+      // Handle null/undefined values more robustly
+      const realTotalStr = totalValueResult[0]?.totalReal;
+      const estimatedTotalStr = totalValueResult[0]?.totalEstimated;
+      
+      const realTotal = realTotalStr ? parseFloat(String(realTotalStr)) : 0;
+      const estimatedTotal = estimatedTotalStr ? parseFloat(String(estimatedTotalStr)) : 0;
+      const totalValue = (!isNaN(realTotal) && realTotal > 0) ? realTotal : (!isNaN(estimatedTotal) ? estimatedTotal : 0);
+
+      console.log(`Final stats calculation for user ${userId}:`, {
+        currentTotal,
+        currentInserts,
+        currentWishlist,
+        totalValue,
+        realTotal,
+        estimatedTotal
+      });
 
       return {
         totalCards: currentTotal,
@@ -764,8 +777,11 @@ export class DatabaseStorage implements IStorage {
         wishlistGrowth: wishlistGrowth
       };
     } catch (error) {
-      console.error('Error getting collection stats:', error);
-      return {
+      console.error(`Error getting collection stats for user ${userId}:`, error);
+      console.error('Stack trace:', error.stack);
+      
+      // Return safe defaults for new users
+      const safeStats = {
         totalCards: 0,
         insertCards: 0,
         totalValue: 0,
@@ -777,6 +793,9 @@ export class DatabaseStorage implements IStorage {
         totalValueGrowth: '+0%',
         wishlistGrowth: '+0%'
       };
+      
+      console.log(`Returning safe stats for user ${userId}:`, safeStats);
+      return safeStats;
     }
   }
 
