@@ -662,22 +662,30 @@ export class DatabaseStorage implements IStorage {
 
   async getCollectionStats(userId: number): Promise<CollectionStats> {
     try {
+      console.log(`Calculating stats for user ${userId}`);
       const now = new Date();
       const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
 
-      // Current counts
+      // Current counts with better error handling for new users
+      console.log(`Fetching total cards for user ${userId}`);
       const totalCardsResult = await db
         .select({ count: count() })
         .from(userCollections)
         .where(eq(userCollections.userId, userId));
+      
+      console.log(`Total cards result for user ${userId}:`, totalCardsResult);
 
+      console.log(`Fetching insert cards for user ${userId}`);
       const insertCardsResult = await db
         .select({ count: count() })
         .from(userCollections)
         .innerJoin(cards, eq(userCollections.cardId, cards.id))
         .where(and(eq(userCollections.userId, userId), eq(cards.isInsert, true)));
+      
+      console.log(`Insert cards result for user ${userId}:`, insertCardsResult);
 
       // Calculate total value using real eBay pricing data where available
+      console.log(`Fetching total value for user ${userId}`);
       const totalValueResult = await db
         .select({ 
           totalEstimated: sum(cards.estimatedValue),
@@ -687,11 +695,16 @@ export class DatabaseStorage implements IStorage {
         .innerJoin(cards, eq(userCollections.cardId, cards.id))
         .leftJoin(cardPriceCache, eq(cards.id, cardPriceCache.cardId))
         .where(eq(userCollections.userId, userId));
+      
+      console.log(`Total value result for user ${userId}:`, totalValueResult);
 
+      console.log(`Fetching wishlist for user ${userId}`);
       const wishlistResult = await db
         .select({ count: count() })
         .from(userWishlists)
         .where(eq(userWishlists.userId, userId));
+      
+      console.log(`Wishlist result for user ${userId}:`, wishlistResult);
 
       // Previous month counts for growth calculation
       const totalCardsLastMonth = await db

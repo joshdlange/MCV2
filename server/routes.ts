@@ -1089,9 +1089,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/stats", authenticateUser, async (req: any, res) => {
     try {
       const userId = req.user.id;
+      console.log(`Fetching stats for user ${userId}`);
       const stats = await storage.getCollectionStats(userId);
+      console.log(`Stats calculated for user ${userId}:`, stats);
       res.json(stats);
     } catch (error) {
+      console.error(`Error fetching stats for user ${req.user.id}:`, error);
       res.status(500).json({ message: "Failed to fetch stats" });
     }
   });
