@@ -227,6 +227,11 @@ export function CardGrid({
                   
                   {/* Status indicators */}
                   <div className="absolute top-2 right-2 flex flex-col gap-1">
+                    {card.isInsert && (
+                      <div className="bg-purple-600 text-white rounded-full w-5 h-5 flex items-center justify-center">
+                        <span className="text-xs">💎</span>
+                      </div>
+                    )}
                     {isInCollection(card.id) && (
                       <div className="bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center">
                         <Check className="w-3 h-3" />
