@@ -725,54 +725,30 @@ export class EbayPricingService {
         .where(eq(cardPriceCache.cardId, cardId))
         .limit(1);
 
-      // Auto-fetch: If no cache exists, always try to fetch fresh data
-      if (!cachedPrice && this.canMakeRequest()) {
-        console.log(`Auto-fetching pricing for card ${cardId} - no cache found`);
-        return await this.fetchAndCacheCardPricing(cardId);
-      }
-
-      // If we have cached data, check if it's stale
+      // If we have cached data, return it immediately (don't auto-refresh)
       if (cachedPrice) {
-        const isStale = this.isCacheStale(cachedPrice.lastFetched);
-        const canFetch = this.canMakeRequest();
-        
-        if (!isStale || !canFetch) {
-          // Use cached data if fresh, or if we can't make API call due to rate limits
-          if (!canFetch) {
-            console.log(`Using cached price for card ${cardId} - rate limit reached (${this.requestCount}/${this.maxRequestsPerHour})`);
-          }
-          return {
-            avgPrice: parseFloat(cachedPrice.avgPrice || '0'),
-            salesCount: cachedPrice.salesCount || 0,
-            lastFetched: cachedPrice.lastFetched
-          };
-        }
-      }
-
-      // Only fetch fresh data if cache is stale AND we can make API calls
-      if (this.shouldSkipApiCall()) {
-        console.log(`Skipping API call for card ${cardId} due to rate limits - queuing for retry`);
-        this.failedRequests.add(cardId);
-        return cachedPrice ? {
+        console.log(`Using cached price for card ${cardId} - cached on ${cachedPrice.lastFetched}`);
+        return {
           avgPrice: parseFloat(cachedPrice.avgPrice || '0'),
           salesCount: cachedPrice.salesCount || 0,
           lastFetched: cachedPrice.lastFetched
-        } : null;
+        };
       }
 
-      // Attempt to fetch fresh data from eBay
-      const result = await this.fetchAndCacheCardPricing(cardId);
-      
-      if (result) {
-        // Remove from failed requests on success
-        this.failedRequests.delete(cardId);
-        return result;
-      } else {
-        // If fetch failed, add to failed requests and use cached data as fallback
-        this.failedRequests.add(cardId);
-        console.log(`eBay fetch failed for card ${cardId}, using cached data as fallback`);
-        return await this.getCachedPriceAsFallback(cardId);
+      // Only fetch fresh data if no cache exists AND we can make API calls
+      if (!cachedPrice && this.canMakeRequest()) {
+        console.log(`No cached data found for card ${cardId} - fetching fresh pricing`);
+        return await this.fetchAndCacheCardPricing(cardId);
       }
+
+      // If no cache and can't make API call, return null
+      if (!cachedPrice && this.shouldSkipApiCall()) {
+        console.log(`No cached data for card ${cardId} and rate limit reached`);
+        return null;
+      }
+
+      // Fallback - should not reach here
+      return null;
 
     } catch (error) {
       console.error(`Error getting pricing for card ${cardId}:`, error);
