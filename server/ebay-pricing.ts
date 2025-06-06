@@ -285,7 +285,7 @@ export class EbayPricingService {
       const params = new URLSearchParams({
         'q': searchQuery,
         'category_ids': '183050', // Non-Sport Trading Cards
-        'filter': 'conditionIds:{1000|3000|4000|5000|6000|7000|8000},deliveryCountry:US,price:[1|500]',
+        'filter': 'conditionIds:{1000|1500|2000|2500|3000|4000|5000},deliveryCountry:US,price:[1|500]',
         'sort': 'price',
         'limit': '10'
       });
@@ -379,7 +379,7 @@ export class EbayPricingService {
       const params = new URLSearchParams({
         'q': searchQuery,
         'category_ids': '183050', // Non-Sport Trading Card Singles
-        'filter': 'conditionIds:{1000|3000|4000|5000|6000|7000|8000},deliveryCountry:US,price:[1|500]',
+        'filter': 'conditionIds:{1000|1500|2000|2500|3000|4000|5000},deliveryCountry:US,price:[1|500]',
         'sort': 'price',
         'limit': '10'
       });
