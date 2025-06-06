@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Star, ArrowLeft, Plus, Edit, Filter, Grid3X3, List, X, Save } from "lucide-react";
 import { CardGrid } from "@/components/cards/card-grid";
+import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { useToast } from "@/hooks/use-toast";
 import { useAppStore } from "@/lib/store";
 import { apiRequest } from "@/lib/queryClient";
@@ -46,6 +47,81 @@ export default function BrowseCards() {
   const { data: collection } = useQuery<CollectionItem[]>({
     queryKey: ["/api/collection"],
   });
+
+  const { data: wishlist } = useQuery<any[]>({
+    queryKey: ["/api/wishlist"],
+  });
+
+  // Add to collection mutation
+  const addToCollectionMutation = useMutation({
+    mutationFn: (cardId: number) => 
+      apiRequest("POST", "/api/collection", { cardId, condition: "Near Mint" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collection"] });
+      toast({ title: "Card added to collection!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to add card to collection", variant: "destructive" });
+    },
+  });
+
+  // Add to wishlist mutation
+  const addToWishlistMutation = useMutation({
+    mutationFn: (cardId: number) => 
+      apiRequest("POST", "/api/wishlist", { cardId, priority: 1 }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
+      toast({ title: "Card added to wishlist!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to add card to wishlist", variant: "destructive" });
+    },
+  });
+
+  // Remove from collection mutation
+  const removeFromCollectionMutation = useMutation({
+    mutationFn: (cardId: number) => {
+      const collectionItem = collection?.find(item => item.cardId === cardId);
+      if (collectionItem) {
+        return apiRequest("DELETE", `/api/collection/${collectionItem.id}`);
+      }
+      throw new Error("Card not found in collection");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collection"] });
+      toast({ title: "Card removed from collection!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to remove card from collection", variant: "destructive" });
+    },
+  });
+
+  // Remove from wishlist mutation
+  const removeFromWishlistMutation = useMutation({
+    mutationFn: (cardId: number) => {
+      const wishlistItem = wishlist?.find((item: any) => item.cardId === cardId);
+      if (wishlistItem) {
+        return apiRequest("DELETE", `/api/wishlist/${wishlistItem.id}`);
+      }
+      throw new Error("Card not found in wishlist");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
+      toast({ title: "Card removed from wishlist!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to remove card from wishlist", variant: "destructive" });
+    },
+  });
+
+  // Helper functions to check if card is in collection/wishlist
+  const isCardInCollection = (cardId: number) => {
+    return collection?.some(item => item.cardId === cardId) || false;
+  };
+
+  const isCardInWishlist = (cardId: number) => {
+    return wishlist?.some((item: any) => item.cardId === cardId) || false;
+  };
 
   // Global search for both sets and cards
   const { data: searchResults } = useQuery<{ sets: CardSet[], cards: CardWithSet[] }>({
@@ -720,105 +796,18 @@ export default function BrowseCards() {
         </DialogContent>
       </Dialog>
 
-      {/* Card Details Modal */}
-      <Dialog open={!!selectedCard} onOpenChange={() => setSelectedCard(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          {selectedCard && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold text-gray-900">
-                  {selectedCard.name}
-                </DialogTitle>
-                <DialogDescription className="text-gray-600">
-                  {selectedCard.set.name} • #{selectedCard.cardNumber} • {selectedCard.rarity}
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Card Images */}
-                <div className="space-y-4">
-                  {selectedCard.frontImageUrl && (
-                    <div>
-                      <h4 className="font-semibold mb-2">Front</h4>
-                      <img 
-                        src={convertGoogleDriveUrl(selectedCard.frontImageUrl)} 
-                        alt={`${selectedCard.name} front`}
-                        className="w-full rounded-lg shadow-md"
-                      />
-                    </div>
-                  )}
-                  
-                  {selectedCard.backImageUrl && (
-                    <div>
-                      <h4 className="font-semibold mb-2">Back</h4>
-                      <img 
-                        src={convertGoogleDriveUrl(selectedCard.backImageUrl)} 
-                        alt={`${selectedCard.name} back`}
-                        className="w-full rounded-lg shadow-md"
-                      />
-                    </div>
-                  )}
-                </div>
-                
-                {/* Card Details */}
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">Card Information</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Set:</span>
-                        <span className="font-medium">{selectedCard.set.name}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Year:</span>
-                        <span className="font-medium">{selectedCard.set.year}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Card Number:</span>
-                        <span className="font-medium">#{selectedCard.cardNumber}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Rarity:</span>
-                        <span className="font-medium">{selectedCard.rarity}</span>
-                      </div>
-                      {selectedCard.variation && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Variation:</span>
-                          <span className="font-medium">{selectedCard.variation}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Type:</span>
-                        <span className="font-medium">{selectedCard.isInsert ? 'Insert' : 'Base'}</span>
-                      </div>
-                      {selectedCard.estimatedValue && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Estimated Value:</span>
-                          <span className="font-medium text-green-600">${selectedCard.estimatedValue}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {selectedCard.description && (
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-2">Description</h4>
-                      <p className="text-sm text-gray-600">{selectedCard.description}</p>
-                    </div>
-                  )}
-                  
-                  {selectedCard.set.description && (
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-2">Set Description</h4>
-                      <p className="text-sm text-gray-600">{selectedCard.set.description}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Full-Featured Card Details Modal */}
+      <CardDetailModal
+        card={selectedCard}
+        isOpen={!!selectedCard}
+        onClose={() => setSelectedCard(null)}
+        isInCollection={selectedCard ? isCardInCollection(selectedCard.id) : false}
+        isInWishlist={selectedCard ? isCardInWishlist(selectedCard.id) : false}
+        onAddToCollection={() => selectedCard && addToCollectionMutation.mutate(selectedCard.id)}
+        onAddToWishlist={() => selectedCard && addToWishlistMutation.mutate(selectedCard.id)}
+        onRemoveFromCollection={() => selectedCard && removeFromCollectionMutation.mutate(selectedCard.id)}
+        onRemoveFromWishlist={() => selectedCard && removeFromWishlistMutation.mutate(selectedCard.id)}
+      />
 
       {/* Floating Set Navigation for Mobile */}
       {selectedSet && (
