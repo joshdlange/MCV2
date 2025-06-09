@@ -620,12 +620,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   }
                 } catch (error: any) {
                   console.error(`Failed to fetch initial pricing for card ${card.id}:`, error.message);
-                
-                // If rate limited, pause longer
-                if (error.message.includes('Rate limit')) {
-                  await new Promise(resolve => setTimeout(resolve, 60000)); // 1 minute pause
+                  
+                  // If rate limited, pause longer
+                  if (error.message.includes('Rate limit')) {
+                    await new Promise(resolve => setTimeout(resolve, 60000)); // 1 minute pause
+                  }
                 }
-              }
               }
             } else {
               console.log('All uploaded cards have cached prices, skipping eBay lookup');
@@ -640,10 +640,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const skippedCount = results.length - createdCards.length - errors.length;
       
+      // Count how many cards have cached prices vs need eBay lookup
+      let cardsWithPrices = 0;
+      let cardsNeedingPricing = 0;
+      
+      for (const card of createdCards) {
+        const existingPrice = await storage.getCardPricing(card.id);
+        if (existingPrice) {
+          cardsWithPrices++;
+        } else {
+          cardsNeedingPricing++;
+        }
+      }
+      
+      let pricingMessage = '';
+      if (cardsWithPrices > 0 && cardsNeedingPricing > 0) {
+        pricingMessage = ` ${cardsWithPrices} cards have cached prices, ${cardsNeedingPricing} will fetch pricing from eBay in background.`;
+      } else if (cardsWithPrices > 0) {
+        pricingMessage = ` All cards have cached prices from CSV data.`;
+      } else if (cardsNeedingPricing > 0) {
+        pricingMessage = ` Pricing data will be fetched from eBay in background.`;
+      }
+      
       res.json({
-        message: `CSV processed successfully. Created ${createdCards.length} cards${skippedCount > 0 ? `, skipped ${skippedCount} duplicates` : ''}. ${createdCards.length > 0 ? 'Pricing data will be fetched in background.' : ''}`,
+        message: `CSV processed successfully. Created ${createdCards.length} cards${skippedCount > 0 ? `, skipped ${skippedCount} duplicates` : ''}.${pricingMessage}`,
         created: createdCards.length,
         skipped: skippedCount,
+        cardsWithCachedPrices: cardsWithPrices,
+        cardsNeedingPricing: cardsNeedingPricing,
         errors: errors.length > 0 ? errors : undefined
       });
 
