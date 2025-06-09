@@ -28,7 +28,7 @@ import {
 const getNavigationItems = (userPlan: string): NavigationItem[] => [
   { href: "/", label: "Dashboard", icon: "LayoutDashboard" },
   { href: "/browse", label: "Browse Cards", icon: "Grid3X3" },
-  { href: "/collection", label: "My Collection", icon: "FolderOpen" },
+  { href: "/my-collection", label: "My Collection", icon: "FolderOpen" },
   { href: "/wishlist", label: "Wishlist", icon: "Heart" },
   { 
     href: "/marketplace", 
