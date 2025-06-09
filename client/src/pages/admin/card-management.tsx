@@ -624,8 +624,8 @@ function BulkImportForm() {
           <p>• Sets will be auto-created from unique SET values</p>
           <p>• Years will be extracted from set names (e.g., "1992 Marvel Masterpieces")</p>
           <p>• All cards will be grouped by set and imported in one operation</p>
-          <p>• Required columns: SET, Name, Card Number, Rarity</p>
-          <p>• Optional: Description, Variation, Is Insert, Front Image URL, Back Image URL, Estimated Value</p>
+          <p>• Required columns: SET, Name, Card Number</p>
+          <p>• Optional: Rarity, Description, Variation, Is Insert, Front Image URL, Back Image URL, Estimated Value</p>
         </div>
       </div>
 

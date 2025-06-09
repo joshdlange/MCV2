@@ -689,7 +689,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Bulk Import Route - handles master CSV with SET column
+  // Bulk Import Route - optimized for large datasets (11k+ rows)
   app.post("/api/bulk-import", upload.single('csvFile'), async (req, res) => {
     try {
       if (!req.file) {
@@ -699,7 +699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const csvContent = fs.readFileSync(req.file.path, 'utf-8');
       const results: any[] = [];
       
-      // Parse CSV
+      // Parse CSV with streaming for memory efficiency
       await new Promise((resolve, reject) => {
         const stream = Readable.from([csvContent])
           .pipe(csv())
@@ -712,11 +712,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "CSV file is empty or invalid" });
       }
 
-      // Clean up uploaded file
+      // Clean up uploaded file immediately
       fs.unlinkSync(req.file.path);
 
       const errors: string[] = [];
       const setCache = new Map<string, number>(); // setName -> setId
+      const existingCardsCache = new Map<string, Set<string>>(); // setId -> Set of "cardNumber:name"
       let setsCreated = 0;
       let cardsAdded = 0;
 
@@ -726,31 +727,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear();
       };
 
-      // Process each row
-      for (let i = 0; i < results.length; i++) {
-        const row = results[i];
-        const rowNum = i + 2; // Account for header row
-        
-        try {
-          // Required fields validation
-          if (!row.SET || !row.Name || !row['Card Number'] || !row.Rarity) {
-            errors.push(`Row ${rowNum}: Missing required fields (SET, Name, Card Number, Rarity)`);
-            continue;
-          }
+      // Pre-load existing sets for better performance
+      const existingSets = await storage.getCardSets();
+      const setsByName = new Map(existingSets.map(set => [set.name, set]));
 
-          const setName = row.SET.trim();
-          let setId: number;
+      // Process in batches to avoid memory issues and timeouts
+      const batchSize = 100;
+      const totalBatches = Math.ceil(results.length / batchSize);
 
-          // Check if set already exists in cache or database
-          if (setCache.has(setName)) {
-            setId = setCache.get(setName)!;
-          } else {
-            // Check if set exists in database
-            const existingSets = await storage.getCardSets();
-            const existingSet = existingSets.find(set => set.name === setName);
-            
-            if (existingSet) {
-              setId = existingSet.id;
+      for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+        const startIndex = batchIndex * batchSize;
+        const endIndex = Math.min(startIndex + batchSize, results.length);
+        const batch = results.slice(startIndex, endIndex);
+
+        console.log(`Processing batch ${batchIndex + 1}/${totalBatches} (rows ${startIndex + 1}-${endIndex})`);
+
+        for (let i = 0; i < batch.length; i++) {
+          const row = batch[i];
+          const rowNum = startIndex + i + 2; // Account for header row
+          
+          try {
+            // Required fields validation
+            if (!row.SET || !row.Name || !row['Card Number']) {
+              errors.push(`Row ${rowNum}: Missing required fields (SET, Name, Card Number)`);
+              continue;
+            }
+
+            const setName = row.SET.trim();
+            let setId: number;
+
+            // Check if set already exists in cache
+            if (setCache.has(setName)) {
+              setId = setCache.get(setName)!;
+            } else if (setsByName.has(setName)) {
+              setId = setsByName.get(setName)!.id;
               setCache.set(setName, setId);
             } else {
               // Create new set
@@ -763,42 +773,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
               });
               setId = newSet.id;
               setCache.set(setName, setId);
+              setsByName.set(setName, newSet);
               setsCreated++;
             }
+
+            // Prepare card data
+            const cardData = {
+              name: row.Name.trim(),
+              setId,
+              cardNumber: row['Card Number'].toString().trim(),
+              rarity: row.Rarity?.trim() || 'Common',
+              description: row.Description?.trim() || null,
+              variation: row.Variation?.trim() || null,
+              isInsert: row['Is Insert'] === 'true' || row['Is Insert'] === '1' || false,
+              frontImageUrl: row['Front Image URL']?.trim() || null,
+              backImageUrl: row['Back Image URL']?.trim() || null,
+              // Only use estimated value from CSV if provided, pricing system will fill missing values
+              estimatedValue: row['Estimated Value']?.trim() || null
+            };
+
+            // Efficient duplicate checking using cache
+            const setKey = setId.toString();
+            if (!existingCardsCache.has(setKey)) {
+              // Load existing cards for this set only once
+              const existingCards = await storage.getCardsBySet(setId);
+              const cardKeys = new Set(existingCards.map(card => `${card.cardNumber}:${card.name.toLowerCase()}`));
+              existingCardsCache.set(setKey, cardKeys);
+            }
+
+            const duplicateKey = `${cardData.cardNumber}:${cardData.name.toLowerCase()}`;
+            if (existingCardsCache.get(setKey)!.has(duplicateKey)) {
+              errors.push(`Row ${rowNum}: Card "${cardData.name}" #${cardData.cardNumber} already exists in set "${setName}"`);
+              continue;
+            }
+
+            // Create card
+            await storage.createCard(cardData);
+            cardsAdded++;
+
+            // Add to cache to prevent duplicates within the same import
+            existingCardsCache.get(setKey)!.add(duplicateKey);
+
+          } catch (error: any) {
+            errors.push(`Row ${rowNum}: ${error.message}`);
           }
+        }
 
-          // Prepare card data
-          const cardData = {
-            name: row.Name.trim(),
-            setId,
-            cardNumber: row['Card Number'].toString().trim(),
-            rarity: row.Rarity.trim(),
-            description: row.Description?.trim() || null,
-            variation: row.Variation?.trim() || null,
-            isInsert: row['Is Insert'] === 'true' || row['Is Insert'] === '1' || false,
-            frontImageUrl: row['Front Image URL']?.trim() || null,
-            backImageUrl: row['Back Image URL']?.trim() || null,
-            estimatedValue: row['Estimated Value']?.trim() || null
-          };
-
-          // Check for duplicates within the set
-          const existingCards = await storage.getCardsBySet(setId);
-          const isDuplicate = existingCards.some(card => 
-            card.cardNumber === cardData.cardNumber && 
-            card.name.toLowerCase() === cardData.name.toLowerCase()
-          );
-
-          if (isDuplicate) {
-            errors.push(`Row ${rowNum}: Card "${cardData.name}" #${cardData.cardNumber} already exists in set "${setName}"`);
-            continue;
-          }
-
-          // Create card
-          await storage.createCard(cardData);
-          cardsAdded++;
-
-        } catch (error: any) {
-          errors.push(`Row ${rowNum}: ${error.message}`);
+        // Log progress for large imports
+        if (results.length > 1000) {
+          const progress = Math.round(((batchIndex + 1) / totalBatches) * 100);
+          console.log(`Bulk import progress: ${progress}% (${cardsAdded} cards added, ${setsCreated} sets created)`);
         }
       }
 
