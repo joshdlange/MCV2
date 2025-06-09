@@ -739,6 +739,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const batch = results.slice(startIndex, endIndex);
 
         console.log(`Processing batch ${batchIndex + 1}/${totalBatches} (rows ${startIndex + 1}-${endIndex})`);
+        
+        // Debug first row of first batch
+        if (batchIndex === 0 && batch.length > 0) {
+          console.log('CSV Column headers detected:', Object.keys(batch[0]));
+          console.log('First row sample data:', batch[0]);
+        }
 
         for (let i = 0; i < batch.length; i++) {
           const row = batch[i];
@@ -747,10 +753,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           try {
             // Required fields validation
             if (!row.SET || !row.Name || !row['Card Number']) {
+              console.log(`Row ${rowNum} missing fields:`, {
+                SET: !!row.SET,
+                Name: !!row.Name,
+                CardNumber: !!row['Card Number'],
+                availableColumns: Object.keys(row)
+              });
               errors.push(`Row ${rowNum}: Missing required fields (SET, Name, Card Number)`);
               continue;
             }
 
+            console.log(`Processing row ${rowNum}: ${row.Name} from ${row.SET} #${row['Card Number']}`);
             const setName = row.SET.trim();
             let setId: number;
 
