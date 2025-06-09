@@ -720,6 +720,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingCardsCache = new Map<string, Set<string>>(); // setId -> Set of "cardNumber:name"
       let setsCreated = 0;
       let cardsAdded = 0;
+      let skippedRows = 0;
 
       // Extract year from set name (e.g., "1992 Marvel Masterpieces" -> 1992)
       const extractYear = (setName: string): number => {
@@ -730,6 +731,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Pre-load existing sets for better performance
       const existingSets = await storage.getCardSets();
       const setsByName = new Map(existingSets.map(set => [set.name, set]));
+      const existingSetNames = new Set(existingSets.map(set => set.name));
 
       // Process in batches to avoid memory issues and timeouts
       const batchSize = 100;
@@ -754,14 +756,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
 
             const setName = row.SET.trim();
+            
+            // Skip rows for sets that already exist
+            if (existingSetNames.has(setName)) {
+              skippedRows++;
+              continue; // Skip this entire row
+            }
+
             let setId: number;
 
-            // Check if set already exists in cache
+            // Check if set already exists in cache (for new sets created during this import)
             if (setCache.has(setName)) {
               setId = setCache.get(setName)!;
-            } else if (setsByName.has(setName)) {
-              setId = setsByName.get(setName)!.id;
-              setCache.set(setName, setId);
             } else {
               // Create new set
               const year = extractYear(setName);
@@ -773,7 +779,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               });
               setId = newSet.id;
               setCache.set(setName, setId);
-              setsByName.set(setName, newSet);
               setsCreated++;
             }
 
@@ -838,8 +843,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalRows: results.length,
         setsCreated,
         cardsAdded,
+        skippedRows,
         errors,
-        message: `Bulk import completed. Created ${setsCreated} sets and added ${cardsAdded} cards from ${results.length} rows.`
+        message: `Bulk import completed. Created ${setsCreated} new sets and added ${cardsAdded} cards. Skipped ${skippedRows} rows from existing sets. Processed ${results.length} total rows.`
       });
 
     } catch (error: any) {

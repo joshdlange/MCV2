@@ -628,6 +628,7 @@ function BulkImportForm() {
           <p>• Optional: Rarity, Description, Variation, Is Insert, Front Image URL, Back Image URL, Estimated Value</p>
           <p className="text-blue-700 font-medium mt-2">• Optimized for large datasets (handles 11,000+ rows efficiently)</p>
           <p className="text-blue-700">• Batch processing with progress tracking for reliable imports</p>
+          <p className="text-green-700 font-medium">• Automatically skips existing sets to prevent duplicates</p>
         </div>
       </div>
 
