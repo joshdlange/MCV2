@@ -413,19 +413,19 @@ export default function BrowseCards() {
     );
   }
 
-  // Filter sets based on search query
+  // Filter and sort sets based on search query (newest year first)
   const filteredSets = cardSets?.filter(set => {
     if (!setSearchQuery) return true;
     const query = setSearchQuery.toLowerCase();
     return set.name.toLowerCase().includes(query) || 
            set.year?.toString().includes(query) ||
            set.description?.toLowerCase().includes(query);
-  }) || [];
+  }).sort((a, b) => (b.year || 0) - (a.year || 0)) || [];
 
   // Show search results when user is searching
   const shouldShowSearchResults = setSearchQuery.length >= 2 && searchResults;
 
-  // Show card sets grid
+  // Show card sets grid (sort favorites by year too)
   const favoritesets = filteredSets.filter(set => favoriteSetIds.includes(set.id));
   const otherSets = filteredSets.filter(set => !favoriteSetIds.includes(set.id));
 
@@ -507,7 +507,6 @@ export default function BrowseCards() {
                         </div>
                         <div className="p-3 md:p-4">
                           <h3 className="font-semibold text-gray-900 mb-1 md:mb-2 text-sm md:text-base line-clamp-2">{set.name}</h3>
-                          <p className="text-xs md:text-sm text-gray-600 mb-2 line-clamp-2 hidden md:block">{set.description || 'Click to explore cards from this set'}</p>
                           <p className="text-xs text-gray-500 mb-2 md:mb-3">{set.totalCards} cards • {set.year}</p>
                         </div>
                       </CardContent>
@@ -627,7 +626,6 @@ export default function BrowseCards() {
                         </div>
                         <div className="p-3 md:p-4">
                           <h3 className="font-semibold text-gray-900 mb-1 md:mb-2 text-sm md:text-base line-clamp-2">{set.name}</h3>
-                          <p className="text-xs md:text-sm text-gray-600 mb-2 line-clamp-2 hidden md:block">{set.description || 'Click to explore cards from this set'}</p>
                           <p className="text-xs text-gray-500 mb-2 md:mb-3">{set.totalCards} cards • {set.year}</p>
                           <div className="flex gap-2">
                             <Button
@@ -700,7 +698,6 @@ export default function BrowseCards() {
                       </div>
                       <div className="p-4">
                         <h3 className="font-semibold text-gray-900 mb-2">{set.name}</h3>
-                        <p className="text-sm text-gray-600 mb-2">{set.description || 'Click to explore cards from this set'}</p>
                         <p className="text-xs text-gray-500 mb-3">{set.totalCards} cards • {set.year}</p>
                         <div className="flex gap-2">
                           <Button
