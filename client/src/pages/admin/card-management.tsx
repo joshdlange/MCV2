@@ -37,7 +37,7 @@ export default function AdminCardManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-gray-100">
+        <TabsList className="grid w-full grid-cols-4 bg-gray-100">
           <TabsTrigger value="individual" className="flex items-center gap-2">
             <PlusCircle className="w-4 h-4" />
             Add Individual Card
@@ -49,6 +49,10 @@ export default function AdminCardManagement() {
           <TabsTrigger value="upload" className="flex items-center gap-2">
             <Upload className="w-4 h-4" />
             Upload CSV
+          </TabsTrigger>
+          <TabsTrigger value="bulk" className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Bulk Import
           </TabsTrigger>
         </TabsList>
 
@@ -90,6 +94,20 @@ export default function AdminCardManagement() {
             </CardHeader>
             <CardContent>
               <CSVUploadForm cardSets={cardSets} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="bulk" className="space-y-6">
+          <Card className="bg-white border border-gray-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-marvel-red" />
+                Bulk Import Master Spreadsheet
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <BulkImportForm />
             </CardContent>
           </Card>
         </TabsContent>
@@ -517,6 +535,149 @@ function CSVUploadForm({ cardSets }: { cardSets: CardSet[] }) {
       >
         <Upload className="w-4 h-4 mr-2" />
         {isUploading ? "Uploading..." : "Upload CSV"}
+      </Button>
+    </div>
+  );
+}
+
+function BulkImportForm() {
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStats, setUploadStats] = useState<{
+    totalRows: number;
+    setsCreated: number;
+    cardsAdded: number;
+    errors: string[];
+  } | null>(null);
+
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type === 'text/csv') {
+      setCsvFile(file);
+      setUploadStats(null);
+    } else {
+      toast({
+        title: "Invalid file type",
+        description: "Please select a CSV file",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleBulkUpload = async () => {
+    if (!csvFile) return;
+    
+    setIsUploading(true);
+    setUploadStats(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('csvFile', csvFile);
+
+      const response = await fetch('/api/bulk-import', {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Upload failed');
+      }
+
+      setUploadStats(result);
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/card-sets'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cards'] });
+      
+      toast({
+        title: "Bulk Import Successful!",
+        description: `Created ${result.setsCreated} sets and added ${result.cardsAdded} cards from ${result.totalRows} rows.`
+      });
+
+      // Reset form
+      setCsvFile(null);
+      const fileInput = document.getElementById('bulk-csv-input') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+
+    } catch (error: any) {
+      toast({
+        title: "Upload Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 className="font-semibold text-blue-900 mb-2">Bulk Import Instructions</h4>
+        <div className="text-sm text-blue-800 space-y-1">
+          <p>• Upload a master CSV with a <strong>SET</strong> column containing set names</p>
+          <p>• Sets will be auto-created from unique SET values</p>
+          <p>• Years will be extracted from set names (e.g., "1992 Marvel Masterpieces")</p>
+          <p>• All cards will be grouped by set and imported in one operation</p>
+          <p>• Required columns: SET, Name, Card Number, Rarity</p>
+          <p>• Optional: Description, Variation, Is Insert, Front Image URL, Back Image URL, Estimated Value</p>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="bulk-csv-input">Select Master CSV File</Label>
+          <Input
+            id="bulk-csv-input"
+            type="file"
+            accept=".csv"
+            onChange={handleFileChange}
+            className="mt-1"
+          />
+          {csvFile && (
+            <p className="text-sm text-gray-600 mt-1">
+              Selected: {csvFile.name} ({(csvFile.size / 1024).toFixed(1)} KB)
+            </p>
+          )}
+        </div>
+
+        {uploadStats && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <h4 className="font-semibold text-green-900 mb-2">Import Results</h4>
+            <div className="text-sm text-green-800 space-y-1">
+              <p>• Processed {uploadStats.totalRows} rows</p>
+              <p>• Created {uploadStats.setsCreated} new sets</p>
+              <p>• Added {uploadStats.cardsAdded} cards</p>
+              {uploadStats.errors.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-red-700 font-medium">Errors:</p>
+                  <ul className="text-red-600 text-xs mt-1">
+                    {uploadStats.errors.slice(0, 5).map((error, index) => (
+                      <li key={index}>• {error}</li>
+                    ))}
+                    {uploadStats.errors.length > 5 && (
+                      <li>• ... and {uploadStats.errors.length - 5} more</li>
+                    )}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <Button 
+        onClick={handleBulkUpload}
+        disabled={!csvFile || isUploading}
+        className="bg-marvel-red hover:bg-red-700 text-white"
+      >
+        <FileText className="w-4 h-4 mr-2" />
+        {isUploading ? "Processing..." : "Start Bulk Import"}
       </Button>
     </div>
   );

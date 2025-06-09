@@ -689,6 +689,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk Import Route - handles master CSV with SET column
+  app.post("/api/bulk-import", upload.single('csvFile'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No CSV file uploaded" });
+      }
+
+      const csvContent = fs.readFileSync(req.file.path, 'utf-8');
+      const results: any[] = [];
+      
+      // Parse CSV
+      await new Promise((resolve, reject) => {
+        const stream = Readable.from([csvContent])
+          .pipe(csv())
+          .on('data', (data) => results.push(data))
+          .on('end', resolve)
+          .on('error', reject);
+      });
+
+      if (results.length === 0) {
+        return res.status(400).json({ message: "CSV file is empty or invalid" });
+      }
+
+      // Clean up uploaded file
+      fs.unlinkSync(req.file.path);
+
+      const errors: string[] = [];
+      const setCache = new Map<string, number>(); // setName -> setId
+      let setsCreated = 0;
+      let cardsAdded = 0;
+
+      // Extract year from set name (e.g., "1992 Marvel Masterpieces" -> 1992)
+      const extractYear = (setName: string): number => {
+        const yearMatch = setName.match(/\b(19|20)\d{2}\b/);
+        return yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear();
+      };
+
+      // Process each row
+      for (let i = 0; i < results.length; i++) {
+        const row = results[i];
+        const rowNum = i + 2; // Account for header row
+        
+        try {
+          // Required fields validation
+          if (!row.SET || !row.Name || !row['Card Number'] || !row.Rarity) {
+            errors.push(`Row ${rowNum}: Missing required fields (SET, Name, Card Number, Rarity)`);
+            continue;
+          }
+
+          const setName = row.SET.trim();
+          let setId: number;
+
+          // Check if set already exists in cache or database
+          if (setCache.has(setName)) {
+            setId = setCache.get(setName)!;
+          } else {
+            // Check if set exists in database
+            const existingSets = await storage.getCardSets();
+            const existingSet = existingSets.find(set => set.name === setName);
+            
+            if (existingSet) {
+              setId = existingSet.id;
+              setCache.set(setName, setId);
+            } else {
+              // Create new set
+              const year = extractYear(setName);
+              const newSet = await storage.createCardSet({
+                name: setName,
+                year,
+                description: `Trading card set from ${year}`,
+                imageUrl: null
+              });
+              setId = newSet.id;
+              setCache.set(setName, setId);
+              setsCreated++;
+            }
+          }
+
+          // Prepare card data
+          const cardData = {
+            name: row.Name.trim(),
+            setId,
+            cardNumber: row['Card Number'].toString().trim(),
+            rarity: row.Rarity.trim(),
+            description: row.Description?.trim() || null,
+            variation: row.Variation?.trim() || null,
+            isInsert: row['Is Insert'] === 'true' || row['Is Insert'] === '1' || false,
+            frontImageUrl: row['Front Image URL']?.trim() || null,
+            backImageUrl: row['Back Image URL']?.trim() || null,
+            estimatedValue: row['Estimated Value']?.trim() || null
+          };
+
+          // Check for duplicates within the set
+          const existingCards = await storage.getCardsBySet(setId);
+          const isDuplicate = existingCards.some(card => 
+            card.cardNumber === cardData.cardNumber && 
+            card.name.toLowerCase() === cardData.name.toLowerCase()
+          );
+
+          if (isDuplicate) {
+            errors.push(`Row ${rowNum}: Card "${cardData.name}" #${cardData.cardNumber} already exists in set "${setName}"`);
+            continue;
+          }
+
+          // Create card
+          await storage.createCard(cardData);
+          cardsAdded++;
+
+        } catch (error: any) {
+          errors.push(`Row ${rowNum}: ${error.message}`);
+        }
+      }
+
+      // Process images in background if cards were added
+      if (cardsAdded > 0) {
+        // Import and run image processing in background
+        import("./image-processor").then(({ processImages }) => {
+          processImages().catch(console.error);
+        });
+      }
+
+      res.json({
+        totalRows: results.length,
+        setsCreated,
+        cardsAdded,
+        errors,
+        message: `Bulk import completed. Created ${setsCreated} sets and added ${cardsAdded} cards from ${results.length} rows.`
+      });
+
+    } catch (error: any) {
+      console.error('Bulk import error:', error);
+      res.status(500).json({ 
+        message: "Failed to process bulk import", 
+        error: error.message 
+      });
+    }
+  });
+
   // User Collection Routes
   app.get("/api/collection", authenticateUser, async (req: any, res) => {
     try {
