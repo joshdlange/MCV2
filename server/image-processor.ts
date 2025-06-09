@@ -3,6 +3,20 @@ import { uploadImage } from "./cloudinary";
 import fs from "fs";
 import path from "path";
 
+// Check if an image URL should be processed (not already on Cloudinary)
+function shouldProcessImage(url: string): boolean {
+  if (!url) return false;
+  
+  // Skip if already on Cloudinary
+  if (url.includes("cloudinary.com")) return false;
+  
+  // Process Google Drive URLs, Google Storage URLs, and other external URLs
+  return url.includes("drive.google.com") || 
+         url.includes("storage.googleapis.com") || 
+         url.includes("pricecharting.com") ||
+         (!url.startsWith("/uploads/") && !url.startsWith("http://localhost") && !url.startsWith("https://localhost"));
+}
+
 // Convert Google Drive URLs to direct download URLs
 function convertGoogleDriveUrl(url: string): string {
   if (!url.includes("drive.google.com")) {
@@ -90,8 +104,8 @@ export async function processImages() {
       let updated = false;
       const updates: any = {};
 
-      // Process front image
-      if (card.frontImageUrl && card.frontImageUrl.includes("drive.google.com")) {
+      // Process front image - check for any external URL that needs processing
+      if (card.frontImageUrl && shouldProcessImage(card.frontImageUrl)) {
         console.log(`Processing front image for card ${card.id}: ${card.name}`);
         const cloudinaryUrl = await downloadAndUploadToCloudinary(card.frontImageUrl, 'marvel-cards');
         if (cloudinaryUrl) {
@@ -100,8 +114,8 @@ export async function processImages() {
         }
       }
 
-      // Process back image
-      if (card.backImageUrl && card.backImageUrl.includes("drive.google.com")) {
+      // Process back image - check for any external URL that needs processing
+      if (card.backImageUrl && shouldProcessImage(card.backImageUrl)) {
         console.log(`Processing back image for card ${card.id}: ${card.name}`);
         const cloudinaryUrl = await downloadAndUploadToCloudinary(card.backImageUrl, 'marvel-cards');
         if (cloudinaryUrl) {
@@ -117,11 +131,11 @@ export async function processImages() {
       }
     }
 
-    // Get all card sets with Google Drive URLs
+    // Get all card sets with external URLs that need processing
     const allSets = await storage.getCardSets();
     
     for (const set of allSets) {
-      if (set.imageUrl && set.imageUrl.includes("drive.google.com")) {
+      if (set.imageUrl && shouldProcessImage(set.imageUrl)) {
         console.log(`Processing image for set ${set.id}: ${set.name}`);
         const cloudinaryUrl = await downloadAndUploadToCloudinary(set.imageUrl, 'card-sets');
         if (cloudinaryUrl) {

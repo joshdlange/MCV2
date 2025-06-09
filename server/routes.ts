@@ -484,6 +484,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual image processing trigger
+  app.post("/api/process-images", async (req, res) => {
+    try {
+      const { processImages } = await import("./image-processor");
+      await processImages();
+      res.json({ message: "Image processing completed successfully" });
+    } catch (error: any) {
+      console.error("Error processing images:", error);
+      res.status(500).json({ message: "Image processing failed", error: error.message });
+    }
+  });
+
   // CSV Upload Route
   app.post("/api/cards/upload-csv", upload.single('file'), async (req, res) => {
     try {
