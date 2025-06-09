@@ -1011,19 +1011,20 @@ export class DatabaseStorage implements IStorage {
     try {
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
       
-      // Get cards with stale or missing pricing
-      const staleCards = await db
-        .select({ cardId: cardPriceCache.cardId })
-        .from(cardPriceCache)
+      // Get cards that don't have any pricing cache OR have stale pricing (older than 24 hours)
+      const cardsWithoutPricing = await db
+        .select({ id: cards.id })
+        .from(cards)
+        .leftJoin(cardPriceCache, eq(cards.id, cardPriceCache.cardId))
         .where(
           or(
-            isNull(cardPriceCache.lastFetched),
-            lt(cardPriceCache.lastFetched, twentyFourHoursAgo)
+            isNull(cardPriceCache.cardId), // No pricing cache at all
+            lt(cardPriceCache.lastFetched, twentyFourHoursAgo) // Stale pricing
           )
         )
-        .limit(100); // Limit to prevent overwhelming the system
+        .limit(50); // Conservative limit to respect API limits
       
-      return staleCards.map(card => card.cardId);
+      return cardsWithoutPricing.map(card => card.id);
     } catch (error) {
       console.error('Error getting cards with stale pricing:', error);
       return [];

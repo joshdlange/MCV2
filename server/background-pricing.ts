@@ -8,8 +8,8 @@ import { storage } from './storage.js';
 class BackgroundPricingService {
   private isRunning = false;
   private intervalId: NodeJS.Timeout | null = null;
-  private readonly refreshIntervalHours = 6; // Every 6 hours
-  private readonly maxCardsPerRun = 25; // Stay well under eBay limits
+  private readonly refreshIntervalHours = 24; // Every 24 hours to conserve API calls
+  private readonly maxCardsPerRun = 10; // Very conservative limit to respect eBay API
 
   /**
    * Start the background pricing service
@@ -23,13 +23,15 @@ class BackgroundPricingService {
     console.log(`Starting background pricing service - refreshing every ${this.refreshIntervalHours} hours`);
     this.isRunning = true;
 
-    // Run immediately on startup
-    this.runPricingUpdate().catch(console.error);
-
-    // Schedule regular updates
+    // Don't run immediately on startup - respect cached pricing
+    // Only run on schedule to avoid API limit exhaustion
+    
+    // Schedule regular updates (first run after 6 hours)
     this.intervalId = setInterval(() => {
       this.runPricingUpdate().catch(console.error);
     }, this.refreshIntervalHours * 60 * 60 * 1000);
+    
+    console.log(`Next pricing update scheduled in ${this.refreshIntervalHours} hours`);
   }
 
   /**
