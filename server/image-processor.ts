@@ -7,8 +7,11 @@ import path from "path";
 function shouldProcessImage(url: string): boolean {
   if (!url) return false;
   
-  // Skip if already on Cloudinary
-  if (url.includes("cloudinary.com")) return false;
+  // Skip if already on Cloudinary AND it's not a low-quality image we need to reprocess
+  if (url.includes("cloudinary.com")) {
+    // Don't reprocess unless we suspect it came from a low-quality source
+    return false;
+  }
   
   // Process Google Drive URLs, Google Storage URLs, and other external URLs
   return url.includes("drive.google.com") || 
@@ -39,6 +42,17 @@ function convertGoogleDriveUrl(url: string): string {
   return url;
 }
 
+// Try to get higher resolution version of image URLs
+function getHigherResolutionUrl(url: string): string {
+  // For PriceCharting images, try to get larger versions
+  if (url.includes("pricecharting.com") && url.includes("/60.jpg")) {
+    // Try different sizes: 300, 500, 800, or original
+    return url.replace("/60.jpg", "/500.jpg");
+  }
+  
+  return url;
+}
+
 // Function to download and upload image to Cloudinary
 async function downloadAndUploadToCloudinary(url: string, folder: string = 'marvel-cards'): Promise<string | null> {
   try {
@@ -48,11 +62,14 @@ async function downloadAndUploadToCloudinary(url: string, folder: string = 'marv
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
+    // Try to get higher resolution version
+    let processUrl = getHigherResolutionUrl(url);
+    
     // Convert Google Drive URL to direct download URL
-    const directUrl = convertGoogleDriveUrl(url);
+    processUrl = convertGoogleDriveUrl(processUrl);
     
     // Download the image
-    const response = await fetch(directUrl);
+    const response = await fetch(processUrl);
     if (!response.ok) {
       console.error(`Failed to download image from ${url}: ${response.status} ${response.statusText}`);
       return null;
