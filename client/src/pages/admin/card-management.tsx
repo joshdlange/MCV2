@@ -626,6 +626,8 @@ function BulkImportForm() {
           <p>• All cards will be grouped by set and imported in one operation</p>
           <p>• Required columns: SET, Name, Card Number</p>
           <p>• Optional: Rarity, Description, Variation, Is Insert, Front Image URL, Back Image URL, Estimated Value</p>
+          <p className="text-blue-700 font-medium mt-2">• Optimized for large datasets (handles 11,000+ rows efficiently)</p>
+          <p className="text-blue-700">• Batch processing with progress tracking for reliable imports</p>
         </div>
       </div>
 
