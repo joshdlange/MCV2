@@ -696,7 +696,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No CSV file uploaded" });
       }
 
-      const csvContent = fs.readFileSync(req.file.path, 'utf-8');
+      const csvContent = req.file.buffer.toString('utf-8');
       const results: any[] = [];
       
       // Parse CSV with streaming for memory efficiency
@@ -711,9 +711,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (results.length === 0) {
         return res.status(400).json({ message: "CSV file is empty or invalid" });
       }
-
-      // Clean up uploaded file immediately
-      fs.unlinkSync(req.file.path);
 
       const errors: string[] = [];
       const setCache = new Map<string, number>(); // setName -> setId
