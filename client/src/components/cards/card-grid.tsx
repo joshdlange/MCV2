@@ -299,10 +299,10 @@ export function CardGrid({
           ))}
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {cards.map((card) => (
             <Card key={card.id} className="group hover:shadow-md transition-all duration-200 cursor-pointer" onClick={() => handleCardClick(card)}>
-              <CardContent className="p-4 md:p-6">
+              <CardContent className="p-3">
                 <div className="flex items-center gap-4 md:gap-6">
                   {/* Card Thumbnail */}
                   <div className="w-14 h-20 bg-gray-100 rounded overflow-hidden flex-shrink-0">
