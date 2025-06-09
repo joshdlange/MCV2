@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { CardValue } from "@/components/cards/card-value";
-import { Star, Heart, Check, ShoppingCart, Trash2, Search, Grid3X3, List, Filter, X } from "lucide-react";
+import { Star, Heart, Check, ShoppingCart, Trash2, Search, Grid3X3, List, Filter, X, Plus } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";

@@ -305,18 +305,18 @@ export function CardGrid({
               <CardContent className="p-4 md:p-6">
                 <div className="flex items-center gap-4 md:gap-6">
                   {/* Card Thumbnail */}
-                  <div className="w-16 h-20 md:w-20 md:h-28 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                  <div className="w-14 h-20 bg-gray-100 rounded overflow-hidden flex-shrink-0">
                     {card.frontImageUrl ? (
                       <img
                         src={card.frontImageUrl}
                         alt={card.name}
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-cover"
                         loading="lazy"
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
                         <span className="text-red-600 font-bold text-xs text-center px-1">
-                          {card.name.substring(0, 10)}
+                          {card.name.substring(0, 8)}
                         </span>
                       </div>
                     )}
@@ -324,70 +324,59 @@ export function CardGrid({
 
                   {/* Card Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-gray-900 text-lg md:text-base truncate">
-                          {card.name} #{card.cardNumber}
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0 pr-2">
+                        <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-1">
+                          {card.name}
                         </h3>
-                        <p className="text-sm text-gray-600 mt-1">{card.set.name}</p>
-                        
-                        {/* Status indicators and insert badge */}
-                        <div className="flex items-center gap-2 mt-3">
+                        <p className="text-xs text-gray-500 mb-1">
+                          {card.set.year} {card.set.name}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-gray-600">
+                            #{card.cardNumber}
+                          </span>
                           {card.isInsert && (
-                            <span className="text-xs text-white px-2 py-1 rounded bg-purple-600 font-bold shadow-lg">
-                              INSERT
-                            </span>
+                            <div className="bg-purple-600 text-white rounded-full w-4 h-4 flex items-center justify-center">
+                              <span className="text-[10px]">💎</span>
+                            </div>
                           )}
-                          <div className="flex gap-1">
-                            {isInCollection(card.id) && (
-                              <div className="bg-green-500 text-white rounded-full p-1">
-                                <Check className="w-3 h-3" />
-                              </div>
-                            )}
-                            {isInWishlist(card.id) && (
-                              <div className="bg-pink-500 text-white rounded-full p-1">
-                                <Heart className="w-3 h-3 fill-current" />
-                              </div>
-                            )}
-                            {isFavorite(card.id) && (
-                              <div className="bg-yellow-500 text-white rounded-full p-1">
-                                <Star className="w-3 h-3 fill-current" />
-                              </div>
-                            )}
-                          </div>
                         </div>
                       </div>
 
-                      {/* Actions */}
-                      <div className="flex items-center gap-2 md:ml-4">
-                        {showAddToCollection && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 hover:bg-green-100 text-gray-400 hover:text-green-600"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAddToCollection(card.id);
-                            }}
-                            title="Add to Collection"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {showAddToWishlist && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 hover:bg-pink-100 text-gray-400 hover:text-pink-600"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAddToWishlist(card.id);
-                            }}
-                            title="Add to Wishlist"
-                          >
-                            <Heart className="w-4 h-4" />
-                          </Button>
-                        )}
+                      {/* Card Value and Actions */}
+                      <div className="flex flex-col items-end gap-1">
+                        <CardPricing cardId={card.id} className="text-sm font-medium" />
+                        
+                        <div className="flex items-center gap-2">
+                          {isInCollection(card.id) && (
+                            <div className="p-1 rounded-full bg-green-500 text-white">
+                              <Check className="w-3 h-3" />
+                            </div>
+                          )}
+                          {showAddToCollection && !isInCollection(card.id) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddToCollection(card.id);
+                              }}
+                              className="p-1 rounded-full bg-gray-200 text-gray-600 hover:bg-green-100 hover:text-green-600"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          )}
+                          {showAddToWishlist && !isInWishlist(card.id) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddToWishlist(card.id);
+                              }}
+                              className="p-1 rounded-full bg-gray-200 text-gray-600 hover:bg-pink-100 hover:text-pink-600"
+                            >
+                              <Heart className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
