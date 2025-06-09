@@ -555,15 +555,15 @@ export default function MyCollection() {
         </div>
       ) : (
             // List View
-            <div className="space-y-2">
+            <div className="space-y-3">
               {filteredCards.map((item) => (
                 <Card 
                   key={item.id} 
                   className="group hover:shadow-md transition-all duration-200 cursor-pointer"
                   onClick={() => handleCardClick(item)}
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-4">
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-3">
                       {/* Selection Checkbox */}
                       {isSelectionMode && (
                         <div 
@@ -580,7 +580,7 @@ export default function MyCollection() {
                       )}
 
                       {/* Card Thumbnail */}
-                      <div className="w-16 h-22 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                      <div className="w-14 h-20 bg-gray-100 rounded overflow-hidden flex-shrink-0">
                         {('card' in item ? item.card.frontImageUrl : item.frontImageUrl) ? (
                           <img
                             src={'card' in item ? item.card.frontImageUrl : item.frontImageUrl}
@@ -590,7 +590,7 @@ export default function MyCollection() {
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
                             <span className="text-red-600 font-bold text-xs text-center px-1">
-                              {('card' in item ? item.card.name : item.name).substring(0, 10)}
+                              {('card' in item ? item.card.name : item.name).substring(0, 8)}
                             </span>
                           </div>
                         )}
@@ -599,80 +599,73 @@ export default function MyCollection() {
                       {/* Card Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-gray-900 truncate">
+                          <div className="flex-1 min-w-0 pr-2">
+                            <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-1">
                               {'card' in item ? item.card.name : item.name}
                             </h3>
-                            <p className="text-sm text-gray-600">
-                              {'card' in item ? item.card.set.name : item.set.name} #{'card' in item ? item.card.cardNumber : item.cardNumber}
+                            <p className="text-xs text-gray-500 mb-1">
+                              {'card' in item ? item.card.set.year + ' ' + item.card.set.name : item.set.year + ' ' + item.set.name}
                             </p>
-                            <div className="flex items-center gap-2 mt-1">
-                              {'card' in item ? (
-                                <Badge className="bg-blue-100 text-blue-800 text-xs">
-                                  {formatCondition(item.condition)}
-                                </Badge>
-                              ) : (
-                                <Badge className="bg-red-100 text-red-800 text-xs">
-                                  Missing
-                                </Badge>
-                              )}
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-medium text-gray-600">
+                                #{'card' in item ? item.card.cardNumber : item.cardNumber}
+                              </span>
                               {('card' in item ? item.card.isInsert : item.isInsert) && (
                                 <div className="bg-purple-600 text-white rounded-full w-4 h-4 flex items-center justify-center">
-                                  <span className="text-xs">💎</span>
+                                  <span className="text-[10px]">💎</span>
                                 </div>
                               )}
                               {'card' in item && item.quantity > 1 && (
-                                <Badge className="bg-orange-100 text-orange-800 text-xs">
-                                  Qty: {item.quantity}
+                                <Badge className="bg-orange-100 text-orange-800 text-[10px] px-1 py-0">
+                                  x{item.quantity}
                                 </Badge>
                               )}
                             </div>
                           </div>
 
-                          {/* Card Value and Actions */}
-                          <div className="flex items-center gap-3 ml-4">
-                            {/* Card Value */}
-                            <CardValue cardId={'card' in item ? item.card.id : item.id} showRefresh={true} />
+                          {/* Card Value and Status */}
+                          <div className="flex flex-col items-end gap-1">
+                            <CardValue 
+                              cardId={'card' in item ? item.card.id : item.id} 
+                              estimatedValue={getEstimatedValue(item)}
+                              currentPrice={getCurrentPrice(item)}
+                              showRefresh={false}
+                              className="text-sm font-medium"
+                            />
                             
-                            {/* Show different icons for owned vs missing cards */}
-                            {'card' in item ? (
-                              <div className="p-1 rounded-full bg-green-500 text-white">
-                                <Check className="w-4 h-4" />
-                              </div>
-                            ) : (
-                              <div className="p-1 rounded-full bg-red-500 text-white">
-                                <X className="w-4 h-4" />
-                              </div>
-                            )}
-                            {'card' in item && item.isForSale && (
-                              <Badge className="bg-green-100 text-green-800 text-xs">For Sale</Badge>
-                            )}
-                            {'card' in item && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleToggleFavorite(item);
-                                }}
-                                className={`p-1 rounded-full transition-colors ${
-                                  item.isFavorite 
-                                    ? 'bg-yellow-500 text-white' 
-                                    : 'bg-gray-100 text-gray-400 hover:text-yellow-500'
-                                }`}
-                              >
-                                <Star className={`w-4 h-4 ${item.isFavorite ? 'fill-current' : ''}`} />
-                              </button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveFromCollection(item.id);
-                              }}
-                              className="h-8 w-8 p-0 hover:bg-red-100"
-                            >
-                              <Trash2 className="h-4 w-4 text-gray-400 hover:text-red-600" />
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              {'card' in item ? (
+                                <div className="p-1 rounded-full bg-green-500 text-white">
+                                  <Check className="w-3 h-3" />
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    // Add to wishlist logic
+                                  }}
+                                  className="p-1 rounded-full bg-gray-200 text-gray-600 hover:bg-red-100 hover:text-red-600"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                </button>
+                              )}
+                              
+                              {'card' in item && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleFavorite(item);
+                                  }}
+                                  className={`p-1 rounded-full transition-colors ${
+                                    item.isFavorite 
+                                      ? 'bg-yellow-500 text-white' 
+                                      : 'bg-gray-200 text-gray-400 hover:text-yellow-500'
+                                  }`}
+                                >
+                                  <Star className={`w-3 h-3 ${item.isFavorite ? 'fill-current' : ''}`} />
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
