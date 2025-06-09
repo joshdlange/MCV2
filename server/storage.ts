@@ -76,6 +76,9 @@ interface IStorage {
   // Pricing
   getCardPricing(cardId: number): Promise<{ avgPrice: number; salesCount: number; lastFetched: Date } | null>;
   updateCardPricing(cardId: number, avgPrice: number, salesCount: number, recentSales: string[]): Promise<void>;
+  
+  // Admin Functions
+  clearAllData(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
