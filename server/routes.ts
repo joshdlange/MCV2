@@ -751,20 +751,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const rowNum = startIndex + i + 2; // Account for header row
           
           try {
-            // Required fields validation
-            if (!row.SET || !row.Name || !row['Card Number']) {
+            // Required fields validation - handle multiple column name formats
+            const setName = row.SET?.trim();
+            const cardName = row.Name?.trim() || row.name?.trim();
+            const cardNumber = row['Card Number']?.toString().trim() || row.cardNumber?.toString().trim();
+            
+            if (!setName || !cardName || !cardNumber) {
               console.log(`Row ${rowNum} missing fields:`, {
-                SET: !!row.SET,
-                Name: !!row.Name,
-                CardNumber: !!row['Card Number'],
+                SET: !!setName,
+                Name: !!cardName,
+                CardNumber: !!cardNumber,
                 availableColumns: Object.keys(row)
               });
               errors.push(`Row ${rowNum}: Missing required fields (SET, Name, Card Number)`);
               continue;
             }
 
-            console.log(`Processing row ${rowNum}: ${row.Name} from ${row.SET} #${row['Card Number']}`);
-            const setName = row.SET.trim();
+            console.log(`Processing row ${rowNum}: ${cardName} from ${setName} #${cardNumber}`);
             let setId: number;
 
             // Check if set already exists in cache or database
@@ -789,19 +792,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
               setsCreated++;
             }
 
-            // Prepare card data
+            // Prepare card data - handle multiple column name formats
             const cardData = {
-              name: row.Name.trim(),
+              name: cardName,
               setId,
-              cardNumber: row['Card Number'].toString().trim(),
-              rarity: row.Rarity?.trim() || 'Common',
-              description: row.Description?.trim() || null,
+              cardNumber: cardNumber,
+              rarity: row.Rarity?.trim() || row.rarity?.trim() || 'Common',
+              description: row.Description?.trim() || row.description?.trim() || null,
               variation: row.Variation?.trim() || null,
-              isInsert: row['Is Insert'] === 'true' || row['Is Insert'] === '1' || false,
-              frontImageUrl: row['Front Image URL']?.trim() || null,
-              backImageUrl: row['Back Image URL']?.trim() || null,
-              // Only use estimated value from CSV if provided, pricing system will fill missing values
-              estimatedValue: row['Estimated Value']?.trim() || null
+              isInsert: row['Is Insert'] === 'true' || row['Is Insert'] === '1' || row.isInsert === 'true' || row.isInsert === '1' || false,
+              frontImageUrl: row['Front Image URL']?.trim() || row.frontImageUrl?.trim() || null,
+              backImageUrl: row['Back Image URL']?.trim() || row.backImageUrl?.trim() || null,
+              // Handle estimated value from multiple possible column names
+              estimatedValue: row['Estimated Value']?.trim() || row.Price?.trim() || null
             };
 
             // Efficient duplicate checking using cache
