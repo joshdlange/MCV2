@@ -856,9 +856,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     } catch (error: any) {
       console.error('Bulk import error:', error);
+      console.error('Error stack:', error.stack);
       res.status(500).json({ 
         message: "Failed to process bulk import", 
-        error: error.message 
+        error: error.message,
+        stack: error.stack
       });
     }
   });
