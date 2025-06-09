@@ -548,6 +548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const frontImageUrl = row.frontImageUrl || row.frontimageur || row.frontImageURL || row.FrontImageUrl;
           const backImageUrl = row.backImageUrl || row.backimageurl || row.backImageURL || row.BackImageUrl;
           const description = row.description || row.Description || row.DESCRIPTION;
+          const price = row.price || row.Price || row.PRICE;
 
           // Check for duplicate cards (same setId, cardNumber, and name)
           const existingCard = await storage.getCardBySetAndNumber(setId, cardNumber.trim(), name.trim());
@@ -573,6 +574,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const card = await storage.createCard(validatedData);
           createdCards.push(card);
 
+          // If price is provided, populate the price cache to skip eBay lookup
+          if (price && !isNaN(parseFloat(price))) {
+            const priceValue = parseFloat(price);
+            console.log(`Populating price cache for ${card.name}: $${priceValue}`);
+            await storage.updateCardPricing(card.id, priceValue, 1, [`CSV Upload: $${priceValue}`]);
+          }
+
         } catch (error) {
           console.error(`Error processing row ${rowNumber}:`, error);
           if (error instanceof z.ZodError) {
@@ -583,31 +591,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Start background pricing fetch for newly created cards
+      // Start background pricing fetch for newly created cards that don't have cached prices
       if (createdCards.length > 0) {
-        console.log(`Starting background pricing fetch for ${createdCards.length} newly uploaded cards`);
         setImmediate(async () => {
           try {
-            for (let i = 0; i < createdCards.length; i++) {
-              const card = createdCards[i];
-              try {
-                console.log(`Fetching initial pricing for card ${card.id}: ${card.name} (${i + 1}/${createdCards.length})`);
-                await ebayPricingService.fetchAndCacheCardPricing(card.id);
-                
-                // Rate limit: 3 seconds between requests
-                if (i < createdCards.length - 1) {
-                  await new Promise(resolve => setTimeout(resolve, 3000));
-                }
-              } catch (error: any) {
-                console.error(`Failed to fetch initial pricing for card ${card.id}:`, error.message);
+            // Filter cards that need eBay pricing (no price was provided in CSV)
+            const cardsNeedingPricing = [];
+            
+            for (const card of createdCards) {
+              const existingPrice = await storage.getCardPricing(card.id);
+              if (!existingPrice) {
+                cardsNeedingPricing.push(card);
+              }
+            }
+            
+            if (cardsNeedingPricing.length > 0) {
+              console.log(`Starting background pricing fetch for ${cardsNeedingPricing.length} cards without cached prices`);
+              
+              for (let i = 0; i < cardsNeedingPricing.length; i++) {
+                const card = cardsNeedingPricing[i];
+                try {
+                  console.log(`Fetching initial pricing for card ${card.id}: ${card.name} (${i + 1}/${cardsNeedingPricing.length})`);
+                  await ebayPricingService.fetchAndCacheCardPricing(card.id);
+                  
+                  // Rate limit: 3 seconds between requests
+                  if (i < cardsNeedingPricing.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                  }
+                } catch (error: any) {
+                  console.error(`Failed to fetch initial pricing for card ${card.id}:`, error.message);
                 
                 // If rate limited, pause longer
                 if (error.message.includes('Rate limit')) {
                   await new Promise(resolve => setTimeout(resolve, 60000)); // 1 minute pause
                 }
               }
+              }
+            } else {
+              console.log('All uploaded cards have cached prices, skipping eBay lookup');
             }
-            console.log(`Background pricing fetch completed for ${createdCards.length} cards`);
+            
+            console.log(`Background pricing fetch completed for ${cardsNeedingPricing.length} cards`);
           } catch (error: any) {
             console.error(`Background pricing fetch failed:`, error.message);
           }

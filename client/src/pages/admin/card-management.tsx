@@ -457,10 +457,11 @@ function CSVUploadForm({ cardSets }: { cardSets: CardSet[] }) {
         <div className="text-sm text-blue-800 space-y-1">
           <p>Your CSV file should include the following columns:</p>
           <code className="block bg-blue-100 p-2 rounded text-xs">
-            name,cardNumber,isInsert,rarity,frontImageUrl,backImageUrl,description
+            name,cardNumber,isInsert,rarity,frontImageUrl,backImageUrl,description,price
           </code>
           <p className="mt-2"><strong>Required:</strong> name, cardNumber, isInsert (true/false)</p>
-          <p><strong>Optional:</strong> rarity, frontImageUrl, backImageUrl, description</p>
+          <p><strong>Optional:</strong> rarity, frontImageUrl, backImageUrl, description, price</p>
+          <p className="mt-2"><strong>Price field:</strong> If provided, will populate price cache and skip eBay lookup. Leave empty to fetch from eBay.</p>
         </div>
       </div>
 
