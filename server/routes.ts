@@ -792,6 +792,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               setsCreated++;
             }
 
+            // Helper function to parse currency values
+            const parseCurrency = (value: string | undefined | null): string | null => {
+              if (!value || typeof value !== 'string') return null;
+              const cleaned = value.trim().replace(/[$,]/g, ''); // Remove $ and commas
+              const parsed = parseFloat(cleaned);
+              return isNaN(parsed) ? null : parsed.toString();
+            };
+
             // Prepare card data - handle multiple column name formats
             const cardData = {
               name: cardName,
@@ -803,8 +811,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               isInsert: row['Is Insert'] === 'true' || row['Is Insert'] === '1' || row.isInsert === 'true' || row.isInsert === '1' || false,
               frontImageUrl: row['Front Image URL']?.trim() || row.frontImageUrl?.trim() || null,
               backImageUrl: row['Back Image URL']?.trim() || row.backImageUrl?.trim() || null,
-              // Handle estimated value from multiple possible column names
-              estimatedValue: row['Estimated Value']?.trim() || row.Price?.trim() || null
+              // Handle estimated value from multiple possible column names - parse currency
+              estimatedValue: parseCurrency(row['Estimated Value']) || parseCurrency(row.Price) || parseCurrency(row.price) || null
             };
 
             // Efficient duplicate checking using cache
@@ -823,11 +831,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
 
             // Create card
-            await storage.createCard(cardData);
+            const createdCard = await storage.createCard(cardData);
             cardsAdded++;
 
             // Add to cache to prevent duplicates within the same import
             existingCardsCache.get(setKey)!.add(duplicateKey);
+
+            // If price data exists in CSV, cache it to avoid eBay API calls
+            const priceValue = parseCurrency(row['Estimated Value']) || parseCurrency(row.Price) || parseCurrency(row.price);
+            if (priceValue) {
+              const numericPrice = parseFloat(priceValue);
+              if (!isNaN(numericPrice)) {
+                await storage.updateCardPricing(createdCard.id, numericPrice, 1, [`CSV Import: $${numericPrice}`]);
+                console.log(`Cached price for ${createdCard.name}: $${numericPrice}`);
+              }
+            }
 
           } catch (error: any) {
             errors.push(`Row ${rowNum}: ${error.message}`);
