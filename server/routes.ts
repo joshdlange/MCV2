@@ -1592,6 +1592,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Repair pricing data from original CSV (fixes currency validation errors)
+  app.post("/api/repair-csv-pricing", upload.single('csvFile'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "Upload your original CSV file to repair pricing data" });
+      }
+
+      const csvContent = req.file.buffer.toString('utf-8');
+      const results: any[] = [];
+      
+      await new Promise((resolve, reject) => {
+        const stream = Readable.from([csvContent])
+          .pipe(csv())
+          .on('data', (data) => results.push(data))
+          .on('end', resolve)
+          .on('error', reject);
+      });
+
+      if (results.length === 0) {
+        return res.status(400).json({ message: "CSV file is empty" });
+      }
+
+      // Helper to parse currency values (removes $ and commas)
+      const parseCurrency = (value: string | undefined | null): number | null => {
+        if (!value || typeof value !== 'string') return null;
+        const cleaned = value.trim().replace(/[$,]/g, '');
+        const parsed = parseFloat(cleaned);
+        return isNaN(parsed) ? null : parsed;
+      };
+
+      let pricesRepaired = 0;
+      let estimatedValuesUpdated = 0;
+      let notFound = 0;
+
+      console.log(`Repairing pricing data from ${results.length} CSV rows...`);
+
+      for (let i = 0; i < results.length; i++) {
+        const row = results[i];
+        
+        try {
+          const setName = row.SET?.trim();
+          const cardName = row.Name?.trim() || row.name?.trim();
+          const cardNumber = row['Card Number']?.toString().trim() || row.cardNumber?.toString().trim();
+          
+          if (!setName || !cardName || !cardNumber) continue;
+
+          // Extract price from various possible column names
+          const priceValue = parseCurrency(row['Estimated Value']) || 
+                           parseCurrency(row.Price) || 
+                           parseCurrency(row.price) ||
+                           parseCurrency(row['Current Value']) ||
+                           parseCurrency(row.Value);
+
+          if (priceValue && priceValue > 0) {
+            // Find the matching card in database
+            const existingSets = await storage.getCardSets();
+            const matchingSet = existingSets.find(set => set.name === setName);
+            
+            if (matchingSet) {
+              const existingCard = await storage.getCardBySetAndNumber(matchingSet.id, cardNumber, cardName);
+              
+              if (existingCard) {
+                // Check if card already has pricing data
+                const existingPrice = await storage.getCardPricing(existingCard.id);
+                
+                if (!existingPrice) {
+                  await storage.updateCardPricing(
+                    existingCard.id,
+                    priceValue,
+                    1,
+                    [`CSV Data: $${priceValue}`]
+                  );
+                  pricesRepaired++;
+                }
+
+                // Update estimated_value if not set
+                if (!existingCard.estimatedValue) {
+                  await storage.updateCard(existingCard.id, {
+                    estimatedValue: priceValue.toString()
+                  });
+                  estimatedValuesUpdated++;
+                }
+              } else {
+                notFound++;
+              }
+            } else {
+              notFound++;
+            }
+          }
+        } catch (error) {
+          // Continue processing other rows
+          console.error(`Error processing row ${i + 1}:`, error);
+        }
+
+        // Progress logging for large files
+        if (i > 0 && i % 1000 === 0) {
+          console.log(`Progress: ${i}/${results.length} rows processed`);
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Pricing repair completed successfully.`,
+        pricesRepaired,
+        estimatedValuesUpdated,
+        notFound,
+        totalRowsProcessed: results.length
+      });
+
+    } catch (error) {
+      console.error('Pricing repair error:', error);
+      res.status(500).json({ message: "Failed to repair pricing data from CSV" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
