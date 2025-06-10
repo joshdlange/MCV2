@@ -626,16 +626,16 @@ function BulkImportForm() {
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h4 className="font-semibold text-blue-900 mb-2">Enhanced Bulk Import Instructions</h4>
         <div className="text-sm text-blue-800 space-y-1">
-          <p>• Upload a master CSV with <strong>setName</strong> and <strong>year</strong> columns</p>
-          <p>• Sets will be auto-created from unique setName + year combinations</p>
-          <p>• <strong>NEW:</strong> Year column is now supported for accurate set dating</p>
+          <p>• Upload a master CSV with <strong>SET</strong> and <strong>Year</strong> columns</p>
+          <p>• Sets will be auto-created from unique SET + Year combinations</p>
+          <p>• <strong>NEW:</strong> Supports your exact CSV format with proper column mapping</p>
           <p>• All cards will be grouped by set and imported in batches of 1000</p>
-          <p>• <strong>Required columns:</strong> setName, year, name, cardNumber</p>
-          <p>• <strong>Optional:</strong> rarity, description, variation, isInsert, frontImageUrl, backImageUrl, price</p>
+          <p>• <strong>Required columns:</strong> SET, Year, name, cardNumber</p>
+          <p>• <strong>Optional:</strong> IsInsert, Image, description, Price</p>
           <p className="text-blue-700 font-medium mt-2">• Optimized for massive datasets (handles 80,000+ rows efficiently)</p>
           <p className="text-blue-700">• Background processing with immediate response and progress logging</p>
           <p className="text-green-700 font-medium">• Automatically skips duplicate cards and preserves existing sets</p>
-          <p className="text-orange-700 font-medium">• Processing happens in background - check server logs for progress</p>
+          <p className="text-orange-700 font-medium">• Fixed column mapping - your CSV format is now fully supported!</p>
         </div>
       </div>
 

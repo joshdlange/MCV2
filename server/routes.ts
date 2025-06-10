@@ -576,16 +576,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
 
-          // Extract fields with case variations
-          const setName = (row.setName || row.setname || row.SetName || row.SETNAME || '').trim();
-          const year = parseInt(row.year || row.Year || row.YEAR) || new Date().getFullYear();
+          // Extract fields with case variations - handle your CSV format
+          const setName = (row.SET || row.set || row.setName || row.setname || row.SetName || row.SETNAME || '').trim();
+          const year = parseInt(row.Year || row.year || row.YEAR) || new Date().getFullYear();
           const cardName = (row.name || row.Name || row.NAME || '').trim();
           const cardNumber = (row.cardNumber || row.cardnumber || row.CardNumber || row.CARDNUMBER || '').trim();
           const rarity = (row.rarity || row.Rarity || row.RARITY || 'Common').trim();
-          const frontImageUrl = (row.frontImageUrl || row.frontimageur || row.frontImageURL || row.FrontImageUrl || '').trim();
+          const frontImageUrl = (row.Image || row.image || row.frontImageUrl || row.frontimageur || row.frontImageURL || row.FrontImageUrl || '').trim();
           const backImageUrl = (row.backImageUrl || row.backimageurl || row.backImageURL || row.BackImageUrl || '').trim();
           const description = (row.description || row.Description || row.DESCRIPTION || '').trim();
-          const price = row.price || row.Price || row.PRICE;
+          const price = row.Price || row.price || row.PRICE;
 
           // Skip if missing essential data
           if (!setName || !cardName || !cardNumber) {
@@ -644,9 +644,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             continue;
           }
 
-          // Handle boolean parsing for isInsert
+          // Handle boolean parsing for isInsert - support your CSV format
           let isInsert = false;
-          const isInsertValue = row.isInsert || row.isinsert || row.IsInsert || row.ISINSERT;
+          const isInsertValue = row.IsInsert || row.isInsert || row.isinsert || row.ISINSERT;
           if (isInsertValue !== undefined && isInsertValue !== null && isInsertValue !== '') {
             if (typeof isInsertValue === 'string') {
               isInsert = isInsertValue.toLowerCase() === 'true';
