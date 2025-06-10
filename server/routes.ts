@@ -14,6 +14,9 @@ import Stripe from "stripe";
 import { ebayPricingService } from "./ebay-pricing";
 import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
+import { db } from "./db";
+import { cards } from "@shared/schema";
+import { sql } from "drizzle-orm";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -893,64 +896,214 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Background CSV processing function for resume functionality
+  async function processCsvInBackground(results: any[], skipRows: number) {
+    console.log(`Background processing starting: ${results.length} total rows, skipping first ${skipRows}`);
+    
+    const errors: string[] = [];
+    const setCache = new Map<string, number>();
+    const existingCardsCache = new Map<string, Set<string>>();
+    let setsCreated = 0;
+    let cardsAdded = 0;
+    
+    // Extract year from set name
+    const extractYear = (setName: string): number => {
+      const yearMatch = setName.match(/\b(19|20)\d{2}\b/);
+      return yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear();
+    };
+    
+    // Helper function to parse currency values
+    const parseCurrency = (value: string | undefined | null): string | null => {
+      if (!value || typeof value !== 'string') return null;
+      const cleaned = value.trim().replace(/[$,]/g, ''); // Remove $ and commas
+      const parsed = parseFloat(cleaned);
+      return isNaN(parsed) ? null : parsed.toString();
+    };
+    
+    // Pre-load existing sets
+    const existingSets = await storage.getCardSets();
+    const setsByName = new Map(existingSets.map(set => [set.name, set]));
+    
+    // Process rows starting from skipRows
+    const rowsToProcess = results.slice(skipRows);
+    const batchSize = 100;
+    const totalBatches = Math.ceil(rowsToProcess.length / batchSize);
+    
+    console.log(`Processing ${rowsToProcess.length} rows in ${totalBatches} batches`);
+    
+    for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+      const startIdx = batchIndex * batchSize;
+      const endIdx = Math.min(startIdx + batchSize, rowsToProcess.length);
+      const batch = rowsToProcess.slice(startIdx, endIdx);
+      
+      console.log(`Processing batch ${batchIndex + 1}/${totalBatches}`);
+      
+      for (let i = 0; i < batch.length; i++) {
+        const row = batch[i];
+        const rowNum = skipRows + startIdx + i + 1;
+        
+        try {
+          // Required fields validation - handle multiple column name formats
+          const setName = row.SET?.trim();
+          const cardName = row.Name?.trim() || row.name?.trim();
+          const cardNumber = row['Card Number']?.toString().trim() || row.cardNumber?.toString().trim();
+          
+          if (!setName || !cardName || !cardNumber) {
+            errors.push(`Row ${rowNum}: Missing required fields (SET, Name, Card Number)`);
+            continue;
+          }
+          
+          let setId: number;
+          
+          // Check if set already exists in cache or database
+          if (setCache.has(setName)) {
+            setId = setCache.get(setName)!;
+          } else if (setsByName.has(setName)) {
+            // Use existing set
+            setId = setsByName.get(setName)!.id;
+            setCache.set(setName, setId);
+          } else {
+            // Create new set
+            const year = extractYear(setName);
+            const newSet = await storage.createCardSet({
+              name: setName,
+              year,
+              description: `Trading card set from ${year}`,
+              imageUrl: null
+            });
+            setId = newSet.id;
+            setCache.set(setName, setId);
+            setsByName.set(setName, newSet);
+            setsCreated++;
+          }
+          
+          // Check for duplicate cards
+          if (!existingCardsCache.has(setId.toString())) {
+            const existingCards = await storage.getCardsBySet(setId);
+            const cardKeys = new Set(existingCards.map(card => `${card.cardNumber}:${card.name}`));
+            existingCardsCache.set(setId.toString(), cardKeys);
+          }
+          
+          const cardKey = `${cardNumber}:${cardName}`;
+          if (existingCardsCache.get(setId.toString())?.has(cardKey)) {
+            continue; // Skip duplicate
+          }
+          
+          // Create new card
+          const cardData = {
+            name: cardName,
+            setId,
+            cardNumber: cardNumber,
+            rarity: row.Rarity?.trim() || row.rarity?.trim() || 'Common',
+            description: row.Description?.trim() || row.description?.trim() || null,
+            variation: row.Variation?.trim() || null,
+            isInsert: row['Is Insert'] === 'true' || row['Is Insert'] === '1' || row.isInsert === 'true' || row.isInsert === '1' || false,
+            frontImageUrl: row['Front Image URL']?.trim() || row.frontImageUrl?.trim() || null,
+            backImageUrl: row['Back Image URL']?.trim() || row.backImageUrl?.trim() || null,
+            estimatedValue: parseCurrency(row['Estimated Value']) || parseCurrency(row.Price) || parseCurrency(row.price) || null
+          };
+          
+          await storage.createCard(cardData);
+          existingCardsCache.get(setId.toString())?.add(cardKey);
+          cardsAdded++;
+          
+        } catch (error) {
+          console.error(`Error processing row ${rowNum}:`, error);
+          errors.push(`Row ${rowNum}: ${error}`);
+        }
+      }
+      
+      // Log progress
+      const progress = Math.round(((batchIndex + 1) / totalBatches) * 100);
+      console.log(`Background import progress: ${progress}% (${cardsAdded} cards added, ${setsCreated} sets created)`);
+      
+      // Small delay to prevent overwhelming the database
+      if (batchIndex % 10 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+    
+    console.log(`Background processing complete: ${cardsAdded} cards added, ${setsCreated} sets created`);
+    
+    // Process images after completion
+    if (cardsAdded > 0) {
+      import("./image-processor").then(({ processImages }) => {
+        processImages().catch(console.error);
+      });
+    }
+  }
+
   // Resume bulk import from last processed position
   app.post("/api/resume-bulk-import", async (req, res) => {
     try {
-      // Check if original CSV file still exists in uploads directory
-      const fs = require('fs');
-      const path = require('path');
+      console.log('Checking for stalled bulk import processing...');
+      
+      // Get current card count
+      const currentCountResult = await db.select({ 
+        count: sql<number>`count(*)` 
+      }).from(cards);
+      const currentCount = currentCountResult[0].count;
+      
+      console.log(`Current cards in database: ${currentCount}`);
+      
+      if (currentCount >= 50000) {
+        return res.json({ 
+          message: "Import appears complete", 
+          totalCards: currentCount 
+        });
+      }
+      
+      // Check if there's a saved CSV file to resume from
       const csvPath = path.join(__dirname, '../uploads/bulk-import-temp.csv');
       
       if (!fs.existsSync(csvPath)) {
-        return res.status(404).json({ message: "Original CSV file not found. Please re-upload." });
+        return res.status(404).json({ 
+          message: "No saved CSV file found. Please re-upload your CSV file to continue.",
+          currentCards: currentCount
+        });
       }
       
-      console.log('Resuming bulk import from CSV file...');
+      console.log('Found saved CSV file, resuming import...');
       
-      // Get current card count to determine where to resume
-      const currentCount = await storage.getTotalCardCount();
-      console.log(`Current cards in database: ${currentCount}`);
-      
-      // Process the CSV file from where we left off
+      // Read and parse the CSV file using the same method as bulk-import
       const csvContent = fs.readFileSync(csvPath, 'utf8');
-      const results = csvContent.split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0)
-        .map((line, index) => {
-          if (index === 0) {
-            // Header row
-            const headers = line.split(',').map(h => h.trim().replace(/"/g, ''));
-            return headers;
-          }
-          // Data rows
-          const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
-          const headers = csvContent.split('\n')[0].split(',').map(h => h.trim().replace(/"/g, ''));
-          const row = {};
-          headers.forEach((header, i) => {
-            row[header] = values[i] || '';
-          });
-          return row;
-        });
+      const results: any[] = [];
       
-      const headers = results[0];
-      const dataRows = results.slice(1);
+      // Parse CSV with streaming for memory efficiency
+      await new Promise((resolve, reject) => {
+        const stream = Readable.from([csvContent])
+          .pipe(csv())
+          .on('data', (data) => results.push(data))
+          .on('end', resolve)
+          .on('error', reject);
+      });
       
-      console.log(`Total rows in CSV: ${dataRows.length}`);
-      console.log(`Resuming from row: ${currentCount - 400}`); // Account for existing data
+      if (results.length === 0) {
+        return res.status(400).json({ message: "CSV file appears empty or invalid" });
+      }
       
-      // Start processing in background
+      const totalRows = results.length;
+      const skipRows = Math.max(0, currentCount - 400); // Account for existing data
+      const remainingRows = Math.max(0, totalRows - skipRows);
+      
+      console.log(`CSV contains ${totalRows} total rows, skipping ${skipRows}, processing ${remainingRows} remaining`);
+      
+      // Start background processing from where we left off
       setImmediate(async () => {
         try {
-          await processBulkImportBatch(dataRows, currentCount - 400, storage);
+          console.log('Starting background CSV processing...');
+          await processCsvInBackground(results, skipRows);
         } catch (error) {
-          console.error('Resume bulk import error:', error);
+          console.error('Background processing error:', error);
         }
       });
       
       res.json({ 
-        message: `Resuming bulk import processing. ${dataRows.length - (currentCount - 400)} rows remaining.`,
-        totalRows: dataRows.length,
-        resumeFromRow: currentCount - 400
+        message: `Resuming bulk import processing from ${currentCount} cards`,
+        totalRows,
+        currentCards: currentCount,
+        remainingRows,
+        skipRows
       });
       
     } catch (error) {
