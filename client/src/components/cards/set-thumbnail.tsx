@@ -89,26 +89,18 @@ export function SetThumbnail({ setId, setName, setImageUrl, className }: SetThum
     );
   }
 
-  // Fallback to default "no image" placeholder - use direct download link
-  const defaultNoImageUrl = "https://drive.google.com/uc?export=download&id=1ZcGcRer-EEmpbUgDivHKVqU4Ck_G5TiF";
+  // Use Marvel Card Vault logo for sets with no images
+  const marvelVaultLogoUrl = '/uploads/marvel-card-vault-logo.svg';
   
   return (
     <img
-      src={defaultNoImageUrl}
-      alt={`${setName} - No Image Available`}
+      src={marvelVaultLogoUrl}
+      alt={`${setName} - Marvel Card Vault`}
       className={className}
       onError={(e) => {
-        // If Google Drive link fails, use a simple placeholder
+        // If local logo fails, use embedded SVG
         const target = e.target as HTMLImageElement;
-        target.style.background = 'linear-gradient(135deg, #e2e8f0, #cbd5e1)';
-        target.style.display = 'flex';
-        target.style.alignItems = 'center';
-        target.style.justifyContent = 'center';
-        target.style.color = '#64748b';
-        target.style.fontSize = '12px';
-        target.style.fontWeight = '500';
-        target.alt = 'Image Unavailable';
-        target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjFmNWY5Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzY0NzQ4YiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg==';
+        target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImNhcmRHcmFkaWVudCIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6I2RjMjYyNjtzdG9wLW9wYWNpdHk6MSIgLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiM5OTFiMWI7c3RvcC1vcGFjaXR5OjEiIC8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNjYXJkR3JhZGllbnQpIiBzdHJva2U9IiM3ZjFkMWQiIHN0cm9rZS13aWR0aD0iMyIgcng9IjEyIi8+PHJlY3QgeD0iOCIgeT0iOCIgd2lkdGg9IjE4NCIgaGVpZ2h0PSIyODQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZiYmYyNCIgc3Ryb2tlLXdpZHRoPSIyIiByeD0iOCIvPjx0ZXh0IHg9IjEwMCIgeT0iNDAiIGZvbnQtZmFtaWx5PSJBcmlhbCBCbGFjaywgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiNmZmZmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPk1BUlZFTDwvdGV4dD48dGV4dCB4PSIxMDAiIHk9IjYwIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiNmYmJmMjQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkNBUkQgVkFVTFQ8L3RleHQ+PGNpcmNsZSBjeD0iMTAwIiBjeT0iMTUwIiByPSI0NSIgZmlsbD0iI2ZmZmZmZiIgb3BhY2l0eT0iMC45Ii8+PGNpcmNsZSBjeD0iMTAwIiBjeT0iMTUwIiByPSI0MCIgZmlsbD0iI2RjMjYyNiIvPjxwYXRoIGQ9Ik0xMDAgMTIwIEw4NSAxMzAgTDg1IDE3MCBMMTAWIE4MCBMMTE1IDE3MCBMMTE1IDEzMCBaIiBmaWxsPSIjZmZmZmZmIi8+PGNpcmNsZSBjeD0iMTAwIiBjeT0iMTU1IiByPSI4IiBmaWxsPSIjZGMyNjI2Ii8+PHJlY3QgeD0iOTYiIHk9IjE1NSIgd2lkdGg9IjgiIGhlaWdodD0iMTUiIGZpbGw9IiNkYzI2MjYiLz48dGV4dCB4PSIxMDAiIHk9IjIyMCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwIiBmaWxsPSIjZmZmZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5UUkFESU5HIENBUkQ8L3RleHQ+PHRleHQgeD0iMTAwIiB5PSIyMzUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMCIgZmlsbD0iI2ZiYmYyNCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q09MTEVDVElPTjwvdGV4dD48cG9seWdvbiBwb2ludHM9IjIwLDIwIDM1LDIwIDIwLDM1IiBmaWxsPSIjZmJiZjI0Ii8+PHBvbHlnb24gcG9pbnRzPSIxODAsMjAgMTgwLDM1IDE2NSwyMCIgZmlsbD0iI2ZiYmYyNCIvPjxwb2x5Z29uIHBvaW50cz0iMjAsMjgwIDIwLDI2NSAzNSwyODAiIGZpbGw9IiNmYmJmMjQiLz48cG9seWdvbiBwb2ludHM9IjE4MCwyODAgMTY1LDI4MCAxODAsMjY1IiBmaWxsPSIjZmJiZjI0Ii8+PC9zdmc+';
       }}
     />
   );
