@@ -672,9 +672,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const card = await storage.createCard(cardData);
           totalCreatedCards++;
 
+          if (totalProcessed <= 5) { // Debug first 5 successful creations
+            console.log(`Card created successfully: ${cardName} #${cardNumber} in set ${set.name}`);
+          }
+
           // Handle price if provided
-          if (price && !isNaN(parseFloat(price))) {
-            const priceValue = parseFloat(price);
+          if (price && !isNaN(parseFloat(price.replace('$', '')))) {
+            const priceValue = parseFloat(price.replace('$', ''));
             await storage.updateCardPricing(card.id, priceValue, 1, [`CSV Upload: $${priceValue}`]);
           }
 
