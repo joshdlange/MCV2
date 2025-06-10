@@ -160,7 +160,14 @@ export function OptimizedImage({
   }, []);
 
   // Use default "no image" placeholder when no image is available
-  if (!src || src.trim() === '' || src === 'No Image' || hasError) {
+  const shouldUseFallback = !src || 
+    src.trim() === '' || 
+    src === 'No Image' || 
+    src === 'null' || 
+    src === 'undefined' ||
+    hasError;
+    
+  if (shouldUseFallback) {
     const superheroFallbackUrl = "/uploads/superhero-fallback.svg";
     
     return (
