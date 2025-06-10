@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Star, ArrowLeft, Plus, Edit, Filter, Grid3X3, List, X, Save } from "lucide-react";
 import { CardGrid } from "@/components/cards/card-grid";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
+import { SetThumbnail } from "@/components/cards/set-thumbnail";
 import { useToast } from "@/hooks/use-toast";
 import { useAppStore } from "@/lib/store";
 import { apiRequest } from "@/lib/queryClient";
@@ -53,28 +54,7 @@ export default function BrowseCards() {
     queryKey: ["/api/wishlist"],
   });
 
-  // Function to get the first card image for a set (numerically by card number)
-  const getSetThumbnailImage = async (setId: number): Promise<string | null> => {
-    try {
-      const response = await fetch(`/api/cards?setId=${setId}&limit=1`);
-      const cards = await response.json();
-      
-      if (cards.length > 0) {
-        // Sort cards numerically by card number to get the true "first" card
-        const sortedCards = cards.sort((a: any, b: any) => {
-          const numA = parseInt(a.cardNumber) || 999999;
-          const numB = parseInt(b.cardNumber) || 999999;
-          return numA - numB;
-        });
-        
-        return sortedCards[0].frontImageUrl;
-      }
-      return null;
-    } catch (error) {
-      console.error('Failed to fetch set thumbnail:', error);
-      return null;
-    }
-  };
+
 
   // Add to collection mutation
   const addToCollectionMutation = useMutation({
