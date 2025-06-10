@@ -20,6 +20,7 @@ interface CardFilters {
   search?: string;
   rarity?: string;
   isInsert?: boolean;
+  year?: number;
 }
 
 export default function BrowseCards() {
@@ -51,6 +52,29 @@ export default function BrowseCards() {
   const { data: wishlist } = useQuery<any[]>({
     queryKey: ["/api/wishlist"],
   });
+
+  // Function to get the first card image for a set (numerically by card number)
+  const getSetThumbnailImage = async (setId: number): Promise<string | null> => {
+    try {
+      const response = await fetch(`/api/cards?setId=${setId}&limit=1`);
+      const cards = await response.json();
+      
+      if (cards.length > 0) {
+        // Sort cards numerically by card number to get the true "first" card
+        const sortedCards = cards.sort((a: any, b: any) => {
+          const numA = parseInt(a.cardNumber) || 999999;
+          const numB = parseInt(b.cardNumber) || 999999;
+          return numA - numB;
+        });
+        
+        return sortedCards[0].frontImageUrl;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to fetch set thumbnail:', error);
+      return null;
+    }
+  };
 
   // Add to collection mutation
   const addToCollectionMutation = useMutation({
@@ -413,8 +437,12 @@ export default function BrowseCards() {
     );
   }
 
-  // Filter and sort sets based on search query (newest year first)
+  // Filter and sort sets based on search query and year filter (newest year first)
   const filteredSets = cardSets?.filter(set => {
+    // Year filter
+    if (filters.year && set.year !== filters.year) return false;
+    
+    // Search query filter
     if (!setSearchQuery) return true;
     const query = setSearchQuery.toLowerCase();
     return set.name.toLowerCase().includes(query) || 
@@ -443,15 +471,36 @@ export default function BrowseCards() {
             </div>
           </div>
           
-          {/* Set Search Bar */}
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="Search sets by name or year..."
-              value={setSearchQuery}
-              onChange={(e) => setSetSearchQuery(e.target.value)}
-              className="pl-10 bg-white text-gray-900 placeholder:text-gray-500"
-            />
+          {/* Set Search Bar and Year Filter */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Search sets by name or year..."
+                value={setSearchQuery}
+                onChange={(e) => setSetSearchQuery(e.target.value)}
+                className="pl-10 bg-white text-gray-900 placeholder:text-gray-500"
+              />
+            </div>
+            <Select 
+              value={filters.year?.toString() || "all"} 
+              onValueChange={(value) => setFilters(prev => ({ 
+                ...prev, 
+                year: value === "all" ? undefined : parseInt(value)
+              }))}
+            >
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="All Years" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Years</SelectItem>
+                {Array.from(new Set(cardSets?.map(set => set.year).filter(Boolean)))
+                  .sort((a, b) => (b || 0) - (a || 0))
+                  .map(year => (
+                    <SelectItem key={year} value={year!.toString()}>{year}</SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
