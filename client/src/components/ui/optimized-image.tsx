@@ -144,17 +144,21 @@ export function OptimizedImage({
     const urls = generateImageUrls(src);
     const nextAttempt = fallbackAttempts + 1;
     
+    console.log(`Image failed to load: ${currentSrc}, attempt ${nextAttempt}/${urls.length}`);
+    
     if (nextAttempt < urls.length) {
       // Try next URL in fallback chain
+      console.log(`Trying fallback URL: ${urls[nextAttempt]}`);
       setCurrentSrc(urls[nextAttempt]);
       setFallbackAttempts(nextAttempt);
       setIsLoading(true);
     } else {
       // All fallbacks failed
+      console.log(`All ${urls.length} image URLs failed for: ${src}`);
       setIsLoading(false);
       setHasError(true);
     }
-  }, [src, fallbackAttempts, generateImageUrls]);
+  }, [src, fallbackAttempts, generateImageUrls, currentSrc]);
 
   // Handle successful image load
   const handleImageLoad = useCallback(() => {
