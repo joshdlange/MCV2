@@ -893,6 +893,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Resume bulk import from last processed position
+  app.post("/api/resume-bulk-import", async (req, res) => {
+    try {
+      // Check if original CSV file still exists in uploads directory
+      const fs = require('fs');
+      const path = require('path');
+      const csvPath = path.join(__dirname, '../uploads/bulk-import-temp.csv');
+      
+      if (!fs.existsSync(csvPath)) {
+        return res.status(404).json({ message: "Original CSV file not found. Please re-upload." });
+      }
+      
+      console.log('Resuming bulk import from CSV file...');
+      
+      // Get current card count to determine where to resume
+      const currentCount = await storage.getTotalCardCount();
+      console.log(`Current cards in database: ${currentCount}`);
+      
+      // Process the CSV file from where we left off
+      const csvContent = fs.readFileSync(csvPath, 'utf8');
+      const results = csvContent.split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .map((line, index) => {
+          if (index === 0) {
+            // Header row
+            const headers = line.split(',').map(h => h.trim().replace(/"/g, ''));
+            return headers;
+          }
+          // Data rows
+          const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+          const headers = csvContent.split('\n')[0].split(',').map(h => h.trim().replace(/"/g, ''));
+          const row = {};
+          headers.forEach((header, i) => {
+            row[header] = values[i] || '';
+          });
+          return row;
+        });
+      
+      const headers = results[0];
+      const dataRows = results.slice(1);
+      
+      console.log(`Total rows in CSV: ${dataRows.length}`);
+      console.log(`Resuming from row: ${currentCount - 400}`); // Account for existing data
+      
+      // Start processing in background
+      setImmediate(async () => {
+        try {
+          await processBulkImportBatch(dataRows, currentCount - 400, storage);
+        } catch (error) {
+          console.error('Resume bulk import error:', error);
+        }
+      });
+      
+      res.json({ 
+        message: `Resuming bulk import processing. ${dataRows.length - (currentCount - 400)} rows remaining.`,
+        totalRows: dataRows.length,
+        resumeFromRow: currentCount - 400
+      });
+      
+    } catch (error) {
+      console.error('Resume bulk import error:', error);
+      res.status(500).json({ message: "Failed to resume bulk import" });
+    }
+  });
+
   // Bulk Import Route - optimized for large datasets (11k+ rows)
   app.post("/api/bulk-import", upload.single('csvFile'), async (req, res) => {
     try {

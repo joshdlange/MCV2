@@ -120,6 +120,18 @@ export function OptimizedImage({
 
   // Initialize image loading
   useEffect(() => {
+    const shouldUseFallback = !src || 
+      src.trim() === '' || 
+      src === 'No Image' || 
+      src === 'null' || 
+      src === 'undefined';
+      
+    if (shouldUseFallback) {
+      setIsLoading(false);
+      setHasError(true);
+      return;
+    }
+    
     if (src) {
       setIsLoading(true);
       setHasError(false);
