@@ -161,7 +161,7 @@ export function OptimizedImage({
 
   // Use default "no image" placeholder when no image is available
   if (!src || hasError) {
-    const defaultNoImageUrl = "https://drive.google.com/uc?export=view&id=1ZcGcRer-EEmpbUgDivHKVqU4Ck_G5TiF";
+    const defaultNoImageUrl = "https://drive.google.com/uc?export=download&id=1ZcGcRer-EEmpbUgDivHKVqU4Ck_G5TiF";
     
     return (
       <img
@@ -170,6 +170,11 @@ export function OptimizedImage({
         className={cn(className)}
         onClick={onClick}
         onLoad={handleImageLoad}
+        onError={(e) => {
+          // If Google Drive link fails, use inline SVG placeholder
+          const target = e.target as HTMLImageElement;
+          target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjFmNWY5IiBzdHJva2U9IiNlMmU4ZjAiIHN0cm9rZS13aWR0aD0iMiIvPjx0ZXh0IHg9IjUwJSIgeT0iNDUlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM2NDc0OGIiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlRyYWRpbmc8L3RleHQ+PHRleHQgeD0iNTAlIiB5PSI1NSUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzY0NzQ4YiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q2FyZDwvdGV4dD48L3N2Zz4=';
+        }}
       />
     );
   }

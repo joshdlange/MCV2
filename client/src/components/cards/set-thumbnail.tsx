@@ -32,8 +32,13 @@ export function SetThumbnail({ setId, setName, setImageUrl, className }: SetThum
           return numA - numB;
         });
         
-        // Find the first card with an image
-        const cardWithImage = sortedCards.find((card: any) => card.frontImageUrl);
+        // Find the first card with a real image (not the default fallback)
+        const defaultFallbackUrl = "https://drive.google.com/uc?export=view&id=1ZcGcRer-EEmpbUgDivHKVqU4Ck_G5TiF";
+        const cardWithImage = sortedCards.find((card: any) => 
+          card.frontImageUrl && 
+          card.frontImageUrl !== defaultFallbackUrl &&
+          !card.frontImageUrl.includes('1ZcGcRer-EEmpbUgDivHKVqU4Ck_G5TiF')
+        );
         
         if (cardWithImage) {
           setFirstCardImage(cardWithImage.frontImageUrl);
@@ -84,14 +89,27 @@ export function SetThumbnail({ setId, setName, setImageUrl, className }: SetThum
     );
   }
 
-  // Fallback to default "no image" placeholder
-  const defaultNoImageUrl = "https://drive.google.com/uc?export=view&id=1ZcGcRer-EEmpbUgDivHKVqU4Ck_G5TiF";
+  // Fallback to default "no image" placeholder - use direct download link
+  const defaultNoImageUrl = "https://drive.google.com/uc?export=download&id=1ZcGcRer-EEmpbUgDivHKVqU4Ck_G5TiF";
   
   return (
     <img
       src={defaultNoImageUrl}
       alt={`${setName} - No Image Available`}
       className={className}
+      onError={(e) => {
+        // If Google Drive link fails, use a simple placeholder
+        const target = e.target as HTMLImageElement;
+        target.style.background = 'linear-gradient(135deg, #e2e8f0, #cbd5e1)';
+        target.style.display = 'flex';
+        target.style.alignItems = 'center';
+        target.style.justifyContent = 'center';
+        target.style.color = '#64748b';
+        target.style.fontSize = '12px';
+        target.style.fontWeight = '500';
+        target.alt = 'Image Unavailable';
+        target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjFmNWY5Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzY0NzQ4YiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg==';
+      }}
     />
   );
 }
