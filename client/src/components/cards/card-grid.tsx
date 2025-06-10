@@ -9,7 +9,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
 import type { CardWithSet, CollectionItem, WishlistItem } from "@/types/schema";
-import { OptimizedImage } from "@/components/ui/optimized-image";
+import SimpleImage from "@/components/ui/simple-image";
 import { CardFilters } from "@/types";
 
 interface CardGridProps {
@@ -210,19 +210,11 @@ export function CardGrid({
               <CardContent className="p-0">
                 <div className="relative">
                   <div className="w-full aspect-[5/7] bg-gray-200 rounded-t-lg overflow-hidden">
-                    {card.frontImageUrl ? (
-                      <OptimizedImage
-                        src={card.frontImageUrl}
-                        alt={card.name}
-                        size="thumbnail"
-                        className="w-full h-full object-contain"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <span className="text-gray-400 text-xs">No Image</span>
-                      </div>
-                    )}
+                    <SimpleImage
+                      src={card.frontImageUrl || ''}
+                      alt={card.name}
+                      className="w-full h-full object-contain"
+                    />
                   </div>
                   
                   {/* Status indicators */}
