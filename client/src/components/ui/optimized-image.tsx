@@ -96,6 +96,14 @@ export function OptimizedImage({
       return urls;
     }
     
+    // For external storage URLs (like PriceCharting/Google Storage), use image proxy
+    if (originalUrl.includes('storage.googleapis.com') || originalUrl.includes('pricecharting.com')) {
+      // These URLs have CORS restrictions, so use our proxy
+      const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(originalUrl)}`;
+      urls.push(proxyUrl);
+      return urls;
+    }
+    
     // For Google Drive URLs, create fallback chain
     if (originalUrl.includes('drive.google.com')) {
       const fileId = extractGoogleDriveFileId(originalUrl);
@@ -115,7 +123,7 @@ export function OptimizedImage({
         }
       }
     } else {
-      // For non-Google Drive URLs
+      // For other URLs, try Cloudinary optimization first, then direct
       urls.push(buildCloudinaryUrl(originalUrl, config));
       if (originalUrl !== urls[0]) {
         urls.push(originalUrl);

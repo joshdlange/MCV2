@@ -13,6 +13,7 @@ import { fileURLToPath } from "url";
 import Stripe from "stripe";
 import { ebayPricingService } from "./ebay-pricing";
 import admin from "firebase-admin";
+import { proxyImage } from "./image-proxy";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -79,6 +80,9 @@ const requireAdmin = (req: any, res: any, next: any) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Image proxy route to handle CORS issues with external images
+  app.get("/api/image-proxy", proxyImage);
+
   // Test route to create your admin user
   app.post("/api/create-admin", async (req, res) => {
     try {
