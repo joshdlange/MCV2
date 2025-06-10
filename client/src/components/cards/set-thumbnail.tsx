@@ -58,10 +58,9 @@ export function SetThumbnail({ setId, setName, setImageUrl, className }: SetThum
 
   if (setImageUrl) {
     return (
-      <OptimizedImage
+      <img
         src={convertGoogleDriveUrl(setImageUrl)}
         alt={setName}
-        size="set"
         className={className}
       />
     );
@@ -77,10 +76,9 @@ export function SetThumbnail({ setId, setName, setImageUrl, className }: SetThum
 
   if (firstCardImage) {
     return (
-      <OptimizedImage
+      <img
         src={convertGoogleDriveUrl(firstCardImage)}
         alt={`${setName} - First Card`}
-        size="set"
         className={className}
       />
     );
