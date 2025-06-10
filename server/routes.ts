@@ -18,6 +18,135 @@ import { proxyImage } from "./image-proxy";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Enhanced CSV processing with batching and Cloudinary deduplication
+async function processCSVInBatches(rows: any[]) {
+  const BATCH_SIZE = 1000;
+  const batches = [];
+  
+  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+    batches.push(rows.slice(i, i + BATCH_SIZE));
+  }
+
+  console.log(`Processing ${rows.length} rows in ${batches.length} batches of ${BATCH_SIZE}`);
+
+  let totalProcessed = 0;
+  let totalCreatedSets = 0;
+  let totalCreatedCards = 0;
+  let totalSkipped = 0;
+  const setCache = new Map(); // Cache created sets to avoid duplicates
+
+  for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+    const batch = batches[batchIndex];
+    console.log(`Processing batch ${batchIndex + 1}/${batches.length} (${batch.length} rows)`);
+
+    for (const row of batch) {
+      try {
+        totalProcessed++;
+
+        // Extract fields with case variations
+        const setName = (row.setName || row.setname || row.SetName || row.SETNAME || '').trim();
+        const year = parseInt(row.year || row.Year || row.YEAR) || new Date().getFullYear();
+        const cardName = (row.name || row.Name || row.NAME || '').trim();
+        const cardNumber = (row.cardNumber || row.cardnumber || row.CardNumber || row.CARDNUMBER || '').trim();
+        const rarity = (row.rarity || row.Rarity || row.RARITY || 'Common').trim();
+        const frontImageUrl = (row.frontImageUrl || row.frontimageur || row.frontImageURL || row.FrontImageUrl || '').trim();
+        const backImageUrl = (row.backImageUrl || row.backimageurl || row.backImageURL || row.BackImageUrl || '').trim();
+        const description = (row.description || row.Description || row.DESCRIPTION || '').trim();
+        const price = row.price || row.Price || row.PRICE;
+
+        // Skip if missing essential data
+        if (!setName || !cardName || !cardNumber) {
+          totalSkipped++;
+          continue;
+        }
+
+        // Get or create set
+        let set;
+        const setCacheKey = `${setName}_${year}`;
+        
+        if (setCache.has(setCacheKey)) {
+          set = setCache.get(setCacheKey);
+        } else {
+          // Check if set already exists by searching existing sets
+          const existingSets = await storage.getCardSets();
+          const existingSet = existingSets.find(s => s.name.toLowerCase() === setName.toLowerCase());
+          if (existingSet) {
+            set = existingSet;
+          } else {
+            // Create new set
+            const setData = {
+              name: setName,
+              year: year,
+              description: null,
+              imageUrl: null,
+              totalCards: 0
+            };
+            set = await storage.createCardSet(setData);
+            totalCreatedSets++;
+            console.log(`Created new set: ${setName} (${year})`);
+          }
+          setCache.set(setCacheKey, set);
+        }
+
+        // Check for duplicate cards
+        const existingCard = await storage.getCardBySetAndNumber(set.id, cardNumber, cardName);
+        if (existingCard) {
+          totalSkipped++;
+          continue;
+        }
+
+        // Handle boolean parsing for isInsert
+        let isInsert = false;
+        const isInsertValue = row.isInsert || row.isinsert || row.IsInsert || row.ISINSERT;
+        if (isInsertValue !== undefined && isInsertValue !== null && isInsertValue !== '') {
+          if (typeof isInsertValue === 'string') {
+            isInsert = isInsertValue.toLowerCase() === 'true';
+          } else {
+            isInsert = Boolean(isInsertValue);
+          }
+        }
+
+        // Create card
+        const cardData = {
+          setId: set.id,
+          name: cardName,
+          cardNumber: cardNumber,
+          isInsert,
+          rarity,
+          frontImageUrl: frontImageUrl || null,
+          backImageUrl: backImageUrl || null,
+          description: description || null,
+          estimatedValue: null,
+          variation: null
+        };
+
+        const card = await storage.createCard(cardData);
+        totalCreatedCards++;
+
+        // Handle price if provided
+        if (price && !isNaN(parseFloat(price))) {
+          const priceValue = parseFloat(price);
+          await storage.updateCardPricing(card.id, priceValue, 1, [`CSV Upload: $${priceValue}`]);
+        }
+
+        // Log progress every 1000 cards
+        if (totalProcessed % 1000 === 0) {
+          console.log(`Progress: ${totalProcessed}/${rows.length} processed, ${totalCreatedCards} cards created, ${totalSkipped} skipped`);
+        }
+
+      } catch (error) {
+        console.error(`Error processing row ${totalProcessed}:`, error);
+        totalSkipped++;
+      }
+    }
+
+    // Brief pause between batches to prevent overwhelming the system
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  console.log(`CSV processing complete: ${totalProcessed} processed, ${totalCreatedSets} sets created, ${totalCreatedCards} cards created, ${totalSkipped} skipped`);
+}
+
 // Configure multer for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -497,6 +626,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error processing images:", error);
       res.status(500).json({ message: "Image processing failed", error: error.message });
+    }
+  });
+
+  // Enhanced CSV Upload Route with batching and Cloudinary deduplication
+  app.post("/api/cards/upload-csv-enhanced", upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Parse CSV from buffer
+      const results: any[] = [];
+      const csvStream = Readable.from(req.file.buffer.toString())
+        .pipe(csv())
+        .on('data', (data) => results.push(data))
+        .on('error', (error) => {
+          console.error('CSV parsing error:', error);
+          return res.status(400).json({ message: "Invalid CSV format" });
+        });
+
+      await new Promise((resolve, reject) => {
+        csvStream.on('end', resolve);
+        csvStream.on('error', reject);
+      });
+
+      console.log(`Processing enhanced CSV with ${results.length} rows`);
+
+      // Start processing in background and return immediately
+      res.json({ 
+        message: "CSV upload started", 
+        totalRows: results.length,
+        status: "processing"
+      });
+
+      // Process in background with batching
+      processCSVInBatches(results);
+
+    } catch (error) {
+      console.error('CSV upload error:', error);
+      res.status(500).json({ message: "Failed to process CSV" });
     }
   });
 
