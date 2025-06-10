@@ -522,17 +522,12 @@ export default function BrowseCards() {
                     <Card key={set.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSetClick(set)}>
                       <CardContent className="p-0">
                         <div className="relative">
-                          {set.imageUrl ? (
-                            <img 
-                              src={convertGoogleDriveUrl(set.imageUrl)} 
-                              alt={set.name}
-                              className="w-full h-32 md:h-48 object-cover rounded-t-lg"
-                            />
-                          ) : (
-                            <div className="w-full h-32 md:h-48 bg-gradient-to-br from-marvel-red to-red-700 rounded-t-lg flex items-center justify-center">
-                              <span className="text-white text-sm md:text-lg font-bold text-center px-2 md:px-4">{set.name}</span>
-                            </div>
-                          )}
+                          <SetThumbnail
+                            setId={set.id}
+                            setName={set.name}
+                            setImageUrl={set.imageUrl}
+                            className="w-full h-32 md:h-48 object-cover rounded-t-lg"
+                          />
                         </div>
                         <div className="p-3 md:p-4">
                           <h3 className="font-semibold text-gray-900 mb-1 md:mb-2 text-sm md:text-base line-clamp-2">{set.name}</h3>
@@ -615,17 +610,12 @@ export default function BrowseCards() {
                     <Card key={set.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSetClick(set)}>
                       <CardContent className="p-0">
                         <div className="relative">
-                          {set.imageUrl ? (
-                            <img 
-                              src={convertGoogleDriveUrl(set.imageUrl)} 
-                              alt={set.name}
-                              className="w-full h-32 md:h-48 object-cover rounded-t-lg"
-                            />
-                          ) : (
-                            <div className="w-full h-32 md:h-48 bg-gradient-to-br from-marvel-red to-red-700 rounded-t-lg flex items-center justify-center">
-                              <span className="text-white text-sm md:text-lg font-bold text-center px-2 md:px-4">{set.name}</span>
-                            </div>
-                          )}
+                          <SetThumbnail
+                            setId={set.id}
+                            setName={set.name}
+                            setImageUrl={set.imageUrl}
+                            className="w-full h-32 md:h-48 object-cover rounded-t-lg"
+                          />
                           <div className="absolute top-2 right-2 flex gap-1">
                             {isAdminMode && (
                               <Button
@@ -687,17 +677,12 @@ export default function BrowseCards() {
                   <Card key={set.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSetClick(set)}>
                     <CardContent className="p-0">
                       <div className="relative">
-                        {set.imageUrl ? (
-                          <img 
-                            src={convertGoogleDriveUrl(set.imageUrl)} 
-                            alt={set.name}
-                            className="w-full h-32 md:h-48 object-cover rounded-t-lg"
-                          />
-                        ) : (
-                          <div className="w-full h-32 md:h-48 bg-gradient-to-br from-marvel-red to-red-700 rounded-t-lg flex items-center justify-center">
-                            <span className="text-white text-sm md:text-lg font-bold text-center px-2 md:px-4">{set.name}</span>
-                          </div>
-                        )}
+                        <SetThumbnail
+                          setId={set.id}
+                          setName={set.name}
+                          setImageUrl={set.imageUrl}
+                          className="w-full h-32 md:h-48 object-cover rounded-t-lg"
+                        />
                         <div className="absolute top-2 right-2 flex gap-1">
                           {isAdminMode && (
                             <Button
