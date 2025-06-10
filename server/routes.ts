@@ -1033,12 +1033,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  // Resume bulk import from last processed position
-  app.post("/api/resume-bulk-import", async (req, res) => {
+  // Continue bulk import with new CSV file from where we left off
+  app.post("/api/continue-bulk-import", upload.single('csvFile'), async (req, res) => {
     try {
-      console.log('Checking for stalled bulk import processing...');
+      if (!req.file) {
+        return res.status(400).json({ message: "No CSV file uploaded" });
+      }
+
+      console.log('Continuing bulk import with new CSV file...');
       
-      // Get current card count
+      // Get current card count to determine where to resume
       const currentCountResult = await db.select({ 
         count: sql<number>`count(*)` 
       }).from(cards);
@@ -1052,21 +1056,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalCards: currentCount 
         });
       }
-      
-      // Check if there's a saved CSV file to resume from
-      const csvPath = path.join(__dirname, '../uploads/bulk-import-temp.csv');
-      
-      if (!fs.existsSync(csvPath)) {
-        return res.status(404).json({ 
-          message: "No saved CSV file found. Please re-upload your CSV file to continue.",
-          currentCards: currentCount
-        });
-      }
-      
-      console.log('Found saved CSV file, resuming import...');
-      
-      // Read and parse the CSV file using the same method as bulk-import
-      const csvContent = fs.readFileSync(csvPath, 'utf8');
+
+      const csvContent = req.file.buffer.toString('utf-8');
       const results: any[] = [];
       
       // Parse CSV with streaming for memory efficiency
@@ -1077,16 +1068,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .on('end', resolve)
           .on('error', reject);
       });
-      
+
       if (results.length === 0) {
-        return res.status(400).json({ message: "CSV file appears empty or invalid" });
+        return res.status(400).json({ message: "CSV file is empty or invalid" });
       }
-      
+
       const totalRows = results.length;
-      const skipRows = Math.max(0, currentCount - 400); // Account for existing data
+      const skipRows = Math.max(0, currentCount - 400); // Account for existing data and potential duplicates
       const remainingRows = Math.max(0, totalRows - skipRows);
       
-      console.log(`CSV contains ${totalRows} total rows, skipping ${skipRows}, processing ${remainingRows} remaining`);
+      console.log(`CSV contains ${totalRows} total rows, skipping first ${skipRows}, processing ${remainingRows} remaining`);
+      
+      // Save CSV for potential future resumes
+      const csvPath = path.join(__dirname, '../uploads/bulk-import-temp.csv');
+      fs.writeFileSync(csvPath, csvContent);
       
       // Start background processing from where we left off
       setImmediate(async () => {
@@ -1099,16 +1094,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.json({ 
-        message: `Resuming bulk import processing from ${currentCount} cards`,
+        message: `Continuing bulk import processing from ${currentCount} cards`,
         totalRows,
         currentCards: currentCount,
         remainingRows,
-        skipRows
+        skipRows,
+        instructions: "Import is now running in the background. Check the console logs for progress updates."
       });
       
     } catch (error) {
-      console.error('Resume bulk import error:', error);
-      res.status(500).json({ message: "Failed to resume bulk import" });
+      console.error('Continue bulk import error:', error);
+      res.status(500).json({ message: "Failed to continue bulk import" });
     }
   });
 
