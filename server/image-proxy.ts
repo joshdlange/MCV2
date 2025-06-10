@@ -13,6 +13,14 @@ export async function proxyImage(req: Request, res: Response) {
       return res.status(400).json({ error: 'Image URL is required' });
     }
 
+    // Convert Google Drive URLs to direct download format
+    if (imageUrl.includes('drive.google.com')) {
+      const fileIdMatch = imageUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+      if (fileIdMatch) {
+        imageUrl = `https://drive.google.com/uc?export=view&id=${fileIdMatch[1]}`;
+      }
+    }
+
     // Validate URL to prevent abuse
     const allowedDomains = [
       'storage.googleapis.com',

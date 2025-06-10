@@ -96,33 +96,18 @@ export function OptimizedImage({
       return urls;
     }
     
-    // For external storage URLs (like PriceCharting/Google Storage), use image proxy
-    if (originalUrl.includes('storage.googleapis.com') || originalUrl.includes('pricecharting.com')) {
+    // For external storage URLs (like PriceCharting/Google Storage/Google Drive), use image proxy
+    if (originalUrl.includes('storage.googleapis.com') || 
+        originalUrl.includes('pricecharting.com') || 
+        originalUrl.includes('drive.google.com')) {
       // These URLs have CORS restrictions, so use our proxy
       const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(originalUrl)}`;
       urls.push(proxyUrl);
       return urls;
     }
     
-    // For Google Drive URLs, create fallback chain
-    if (originalUrl.includes('drive.google.com')) {
-      const fileId = extractGoogleDriveFileId(originalUrl);
-      if (fileId) {
-        // 1. First try Cloudinary optimized
-        urls.push(buildCloudinaryUrl(originalUrl, config));
-        
-        // 2. Fallback to direct Google Drive view
-        urls.push(`https://drive.google.com/uc?export=view&id=${fileId}`);
-        
-        // 3. Alternative Google Drive thumbnail (smaller, more reliable on mobile)
-        urls.push(`https://drive.google.com/thumbnail?id=${fileId}&sz=w${config.w || 400}`);
-        
-        // 4. Last resort: original URL
-        if (originalUrl !== urls[urls.length - 1]) {
-          urls.push(originalUrl);
-        }
-      }
-    } else {
+    // For other URLs (not handled by proxy above)
+    {
       // For other URLs, try Cloudinary optimization first, then direct
       urls.push(buildCloudinaryUrl(originalUrl, config));
       if (originalUrl !== urls[0]) {
