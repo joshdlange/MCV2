@@ -77,6 +77,9 @@ interface IStorage {
   getCardPricing(cardId: number): Promise<{ avgPrice: number; salesCount: number; lastFetched: Date } | null>;
   updateCardPricing(cardId: number, avgPrice: number, salesCount: number, recentSales: string[]): Promise<void>;
   
+  // Image Management
+  getCardsWithoutImages(limit: number): Promise<CardWithSet[]>;
+  
   // Admin Functions
   clearAllData(): Promise<void>;
 }
@@ -1049,6 +1052,64 @@ export class DatabaseStorage implements IStorage {
       return popularCards.map(card => card.cardId);
     } catch (error) {
       console.error('Error getting popular cards from collections:', error);
+      return [];
+    }
+  }
+
+  async getCardsWithoutImages(limit: number): Promise<CardWithSet[]> {
+    try {
+      const results = await db
+        .select({
+          id: cards.id,
+          setId: cards.setId,
+          cardNumber: cards.cardNumber,
+          name: cards.name,
+          variation: cards.variation,
+          isInsert: cards.isInsert,
+          frontImageUrl: cards.frontImageUrl,
+          backImageUrl: cards.backImageUrl,
+          description: cards.description,
+          rarity: cards.rarity,
+          estimatedValue: cards.estimatedValue,
+          createdAt: cards.createdAt,
+          set: {
+            id: cardSets.id,
+            name: cardSets.name,
+            year: cardSets.year,
+            description: cardSets.description,
+            imageUrl: cardSets.imageUrl,
+            totalCards: cardSets.totalCards,
+            createdAt: cardSets.createdAt,
+          }
+        })
+        .from(cards)
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+        .where(
+          or(
+            isNull(cards.frontImageUrl),
+            eq(cards.frontImageUrl, '')
+          )
+        )
+        .orderBy(desc(cards.createdAt))
+        .limit(limit);
+
+      return results.map(row => ({
+        id: row.id,
+        setId: row.setId,
+        cardNumber: row.cardNumber,
+        name: row.name,
+        variation: row.variation,
+        isInsert: row.isInsert,
+        frontImageUrl: row.frontImageUrl,
+        backImageUrl: row.backImageUrl,
+        description: row.description,
+        rarity: row.rarity,
+        estimatedValue: row.estimatedValue,
+        createdAt: row.createdAt,
+        set: row.set
+      }));
+    } catch (error) {
+      console.error('Error getting cards without images:', error);
       return [];
     }
   }

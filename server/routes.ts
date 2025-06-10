@@ -17,6 +17,7 @@ import { proxyImage } from "./image-proxy";
 import { db } from "./db";
 import { cards } from "@shared/schema";
 import { sql } from "drizzle-orm";
+import { findAndUpdateCardImage, batchUpdateCardImages, testImageFinder } from "./ebay-image-finder";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -2123,6 +2124,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Pricing repair error:', error);
       res.status(500).json({ message: "Failed to repair pricing data from CSV" });
+    }
+  });
+
+  // eBay Image Automation Endpoints (Admin Only)
+  
+  // Test the image finder with sample data
+  app.post("/api/admin/test-image-finder", async (req, res) => {
+    try {
+      console.log('Testing eBay image finder...');
+      const results = await testImageFinder();
+      res.json({ 
+        success: true, 
+        message: "Image finder test completed",
+        results 
+      });
+    } catch (error) {
+      console.error('Test image finder error:', error);
+      res.status(500).json({ message: "Failed to test image finder" });
+    }
+  });
+
+  // Find and update image for a specific card
+  app.post("/api/admin/find-card-image/:cardId", async (req, res) => {
+    try {
+      const cardId = parseInt(req.params.cardId);
+      if (!cardId) {
+        return res.status(400).json({ message: "Invalid card ID" });
+      }
+
+      // Get card details
+      const card = await storage.getCard(cardId);
+      if (!card) {
+        return res.status(404).json({ message: "Card not found" });
+      }
+
+      console.log(`Finding image for card ${cardId}: ${card.name}`);
+      
+      const result = await findAndUpdateCardImage(
+        cardId,
+        card.set.name,
+        card.name,
+        card.cardNumber,
+        card.description || undefined
+      );
+
+      res.json({ 
+        success: result.success,
+        message: result.success ? "Image updated successfully" : "Failed to find image",
+        result 
+      });
+    } catch (error) {
+      console.error('Find card image error:', error);
+      res.status(500).json({ message: "Failed to find card image" });
+    }
+  });
+
+  // Batch update images for cards missing images
+  app.post("/api/admin/batch-update-images", async (req, res) => {
+    try {
+      const { maxCards = 25 } = req.body;
+      
+      if (maxCards > 100) {
+        return res.status(400).json({ message: "Maximum 100 cards per batch to respect API limits" });
+      }
+
+      console.log(`Starting batch image update for up to ${maxCards} cards`);
+      
+      // Start batch processing
+      setImmediate(async () => {
+        try {
+          await batchUpdateCardImages(maxCards);
+        } catch (error) {
+          console.error('Background batch update error:', error);
+        }
+      });
+
+      res.json({ 
+        success: true,
+        message: `Batch image update started for up to ${maxCards} cards. Check console logs for progress.`,
+        maxCards,
+        rateLimited: "Processing at 1 request per second to respect eBay API limits"
+      });
+    } catch (error) {
+      console.error('Batch update images error:', error);
+      res.status(500).json({ message: "Failed to start batch image update" });
+    }
+  });
+
+  // Get cards without images for review
+  app.get("/api/admin/cards-without-images", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const cards = await storage.getCardsWithoutImages(Math.min(limit, 200));
+      
+      res.json({ 
+        success: true,
+        count: cards.length,
+        cards: cards.map(card => ({
+          id: card.id,
+          name: card.name,
+          cardNumber: card.cardNumber,
+          setName: card.set.name,
+          description: card.description,
+          currentImageUrl: card.frontImageUrl
+        }))
+      });
+    } catch (error) {
+      console.error('Get cards without images error:', error);
+      res.status(500).json({ message: "Failed to get cards without images" });
     }
   });
 
