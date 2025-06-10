@@ -159,31 +159,18 @@ export function OptimizedImage({
     setHasError(false);
   }, []);
 
-  // Render placeholder for missing or failed images
+  // Use default "no image" placeholder when no image is available
   if (!src || hasError) {
+    const defaultNoImageUrl = "https://drive.google.com/uc?export=view&id=1ZcGcRer-EEmpbUgDivHKVqU4Ck_G5TiF";
+    
     return (
-      <div 
-        className={cn(
-          "bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm",
-          className
-        )}
-        style={{ 
-          width: config.w, 
-          height: config.h,
-          aspectRatio: config.w && config.h ? `${config.w}/${config.h}` : undefined
-        }}
+      <img
+        src={defaultNoImageUrl}
+        alt="No image available"
+        className={cn(className)}
         onClick={onClick}
-      >
-        <div className="text-center p-2">
-          <div className="w-8 h-8 mx-auto mb-1 opacity-40">
-            {/* Simple card icon SVG */}
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
-              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-7-2l-4-5 1.41-1.41L12 13.17l2.59-2.58L16 12l-4 5z"/>
-            </svg>
-          </div>
-          <div className="text-xs opacity-75">Image unavailable</div>
-        </div>
-      </div>
+        onLoad={handleImageLoad}
+      />
     );
   }
   

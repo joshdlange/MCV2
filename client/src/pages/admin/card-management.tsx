@@ -575,9 +575,9 @@ function BulkImportForm() {
 
     try {
       const formData = new FormData();
-      formData.append('csvFile', csvFile);
+      formData.append('file', csvFile);
 
-      const response = await fetch('/api/bulk-import', {
+      const response = await fetch('/api/cards/upload-csv-enhanced', {
         method: 'POST',
         body: formData
       });
@@ -588,15 +588,21 @@ function BulkImportForm() {
         throw new Error(result.message || 'Upload failed');
       }
 
-      setUploadStats(result);
+      // Enhanced endpoint returns immediate response, processing happens in background
+      setUploadStats({
+        totalRows: result.totalRows,
+        setsCreated: 0,
+        cardsAdded: 0,
+        errors: []
+      });
       
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/card-sets'] });
       queryClient.invalidateQueries({ queryKey: ['/api/cards'] });
       
       toast({
-        title: "Bulk Import Successful!",
-        description: `Created ${result.setsCreated} sets and added ${result.cardsAdded} cards from ${result.totalRows} rows.`
+        title: "Bulk Import Started!",
+        description: `Processing ${result.totalRows} rows in background. Check server logs for progress.`
       });
 
       // Reset form
@@ -618,17 +624,18 @@ function BulkImportForm() {
   return (
     <div className="space-y-6">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-semibold text-blue-900 mb-2">Bulk Import Instructions</h4>
+        <h4 className="font-semibold text-blue-900 mb-2">Enhanced Bulk Import Instructions</h4>
         <div className="text-sm text-blue-800 space-y-1">
-          <p>• Upload a master CSV with a <strong>SET</strong> column containing set names</p>
-          <p>• Sets will be auto-created from unique SET values</p>
-          <p>• Years will be extracted from set names (e.g., "1992 Marvel Masterpieces")</p>
-          <p>• All cards will be grouped by set and imported in one operation</p>
-          <p>• Required columns: SET, Name, Card Number</p>
-          <p>• Optional: Rarity, Description, Variation, Is Insert, Front Image URL, Back Image URL, Estimated Value</p>
-          <p className="text-blue-700 font-medium mt-2">• Optimized for large datasets (handles 11,000+ rows efficiently)</p>
-          <p className="text-blue-700">• Batch processing with progress tracking for reliable imports</p>
-          <p className="text-green-700 font-medium">• Automatically skips existing sets to prevent duplicates</p>
+          <p>• Upload a master CSV with <strong>setName</strong> and <strong>year</strong> columns</p>
+          <p>• Sets will be auto-created from unique setName + year combinations</p>
+          <p>• <strong>NEW:</strong> Year column is now supported for accurate set dating</p>
+          <p>• All cards will be grouped by set and imported in batches of 1000</p>
+          <p>• <strong>Required columns:</strong> setName, year, name, cardNumber</p>
+          <p>• <strong>Optional:</strong> rarity, description, variation, isInsert, frontImageUrl, backImageUrl, price</p>
+          <p className="text-blue-700 font-medium mt-2">• Optimized for massive datasets (handles 80,000+ rows efficiently)</p>
+          <p className="text-blue-700">• Background processing with immediate response and progress logging</p>
+          <p className="text-green-700 font-medium">• Automatically skips duplicate cards and preserves existing sets</p>
+          <p className="text-orange-700 font-medium">• Processing happens in background - check server logs for progress</p>
         </div>
       </div>
 

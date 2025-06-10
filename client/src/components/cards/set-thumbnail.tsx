@@ -84,10 +84,14 @@ export function SetThumbnail({ setId, setName, setImageUrl, className }: SetThum
     );
   }
 
-  // Fallback to gradient with set name
+  // Fallback to default "no image" placeholder
+  const defaultNoImageUrl = "https://drive.google.com/uc?export=view&id=1ZcGcRer-EEmpbUgDivHKVqU4Ck_G5TiF";
+  
   return (
-    <div className={`${className} bg-gradient-to-br from-marvel-red to-red-700 flex items-center justify-center`}>
-      <span className="text-white text-sm md:text-lg font-bold text-center px-2 md:px-4">{setName}</span>
-    </div>
+    <img
+      src={defaultNoImageUrl}
+      alt={`${setName} - No Image Available`}
+      className={className}
+    />
   );
 }
