@@ -160,13 +160,13 @@ export function OptimizedImage({
   }, []);
 
   // Use default "no image" placeholder when no image is available
-  if (!src || src.trim() === '' || hasError) {
-    const defaultNoImageUrl = "https://drive.google.com/uc?export=download&id=1ZcGcRer-EEmpbUgDivHKVqU4Ck_G5TiF";
+  if (!src || src.trim() === '' || src === 'No Image' || hasError) {
+    const superheroFallbackUrl = "/uploads/superhero-fallback.svg";
     
     return (
       <img
-        src={defaultNoImageUrl}
-        alt="Trading Card"
+        src={superheroFallbackUrl}
+        alt="Image Coming Soon"
         className={cn(className)}
         onClick={onClick}
         onLoad={handleImageLoad}

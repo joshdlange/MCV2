@@ -89,13 +89,13 @@ export function SetThumbnail({ setId, setName, setImageUrl, className }: SetThum
     );
   }
 
-  // Use Marvel Card Vault logo for sets with no images
-  const marvelVaultLogoUrl = '/uploads/marvel-card-vault-logo.svg';
+  // Use superhero logo for sets with no images  
+  const superheroLogoUrl = '/uploads/superhero-fallback.svg';
   
   return (
     <img
-      src={marvelVaultLogoUrl}
-      alt={`${setName} - Marvel Card Vault`}
+      src={superheroLogoUrl}
+      alt={`${setName} - Image Coming Soon`}
       className={className}
       onError={(e) => {
         // If local logo fails, use embedded SVG
