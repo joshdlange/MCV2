@@ -567,6 +567,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           totalProcessed++;
 
+          // Debug first few rows to understand CSV structure
+          if (totalProcessed <= 3) {
+            console.log(`Row ${totalProcessed} columns:`, Object.keys(row));
+            console.log(`Row ${totalProcessed} sample data:`, {
+              firstFewKeys: Object.keys(row).slice(0, 10),
+              firstFewValues: Object.keys(row).slice(0, 10).map(key => row[key]).slice(0, 10)
+            });
+          }
+
           // Extract fields with case variations
           const setName = (row.setName || row.setname || row.SetName || row.SETNAME || '').trim();
           const year = parseInt(row.year || row.Year || row.YEAR) || new Date().getFullYear();
@@ -580,6 +589,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Skip if missing essential data
           if (!setName || !cardName || !cardNumber) {
+            if (totalProcessed <= 5) { // Debug first 5 rows
+              console.log(`Row ${totalProcessed} skipped - missing data:`, {
+                setName: setName || 'MISSING',
+                cardName: cardName || 'MISSING', 
+                cardNumber: cardNumber || 'MISSING',
+                originalRow: Object.keys(row).slice(0, 5) // Show first 5 column names
+              });
+            }
             totalSkipped++;
             continue;
           }
@@ -615,6 +632,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Check for duplicate cards
           const existingCard = await storage.getCardBySetAndNumber(set.id, cardNumber, cardName);
           if (existingCard) {
+            if (totalProcessed <= 5) { // Debug first 5 duplicates
+              console.log(`Row ${totalProcessed} skipped - duplicate found:`, {
+                setName: set.name,
+                cardName,
+                cardNumber,
+                existingCardId: existingCard.id
+              });
+            }
             totalSkipped++;
             continue;
           }
