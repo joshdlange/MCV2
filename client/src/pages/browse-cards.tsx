@@ -70,18 +70,36 @@ export default function BrowseCards() {
       limit: cardsPerPage,
       ...filters 
     }],
-    enabled: !!selectedSet && !!selectedMainSet, // Only load cards when we have both mainSet and specific set selected
+    enabled: !!selectedSet, // Only load cards when we have a specific set selected
+    queryFn: async () => {
+      if (!selectedSet) throw new Error('No set selected');
+      
+      const params = new URLSearchParams({
+        setId: selectedSet.id.toString(),
+        page: currentPage.toString(),
+        limit: Math.min(cardsPerPage, 50).toString(), // Ensure max 50 cards per request
+        ...Object.fromEntries(Object.entries(filters).map(([k, v]) => [k, String(v)]))
+      });
+      
+      const response = await fetch(`/api/cards?${params}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch cards');
+      }
+      return response.json();
+    },
     select: (data: any) => {
       // Add performance logging and debug info
       console.time(`Card list load (Set ${selectedSet?.id})`);
-      console.log(`VIEW MODE: card | mainSetId: ${selectedMainSet?.id || 'none'} | setId: ${selectedSet?.id || 'none'} | cardCount loaded: ${data?.length || 0}`);
+      console.log(`VIEW MODE: card | mainSetId: ${selectedMainSet?.id || 'none'} | setId: ${selectedSet?.id || 'none'} | cardCount loaded: ${data?.cards?.length || data?.length || 0}`);
       const result = {
-        cards: data || [],
-        totalCount: data?.length || 0
+        cards: data?.cards || data || [],
+        totalCount: data?.totalCount || data?.length || 0
       };
       console.timeEnd(`Card list load (Set ${selectedSet?.id})`);
       return result;
-    }
+    },
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    refetchOnWindowFocus: false
   });
 
   // Subsets query for selected mainSet
@@ -343,8 +361,9 @@ export default function BrowseCards() {
             </div>
 
             {cardsLoading ? (
-              <div className="flex justify-center py-12">
+              <div className="flex flex-col items-center justify-center py-12 space-y-4">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-marvel-red"></div>
+                <p className="text-gray-600 font-medium">Loading cards...</p>
               </div>
             ) : cardsData?.cards && cardsData.cards.length > 0 ? (
               <>

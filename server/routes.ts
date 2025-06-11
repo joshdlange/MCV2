@@ -362,17 +362,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all cards with filters
+  // Get all cards with filters and pagination
   app.get("/api/cards", async (req, res) => {
     try {
       const filters: any = {};
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 50); // Enforce max 50 cards per request
       
       if (req.query.setId) filters.setId = parseInt(req.query.setId as string);
       if (req.query.search) filters.search = req.query.search as string;
       if (req.query.rarity) filters.rarity = req.query.rarity as string;
       if (req.query.isInsert) filters.isInsert = req.query.isInsert === 'true';
       
-      const cards = await storage.getCards(filters);
+      const cards = await storage.getCardsPaginated(filters, page, limit);
       res.json(cards);
     } catch (error) {
       console.error('Get cards error:', error);

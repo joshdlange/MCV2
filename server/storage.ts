@@ -371,6 +371,118 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getCardsPaginated(filters: any = {}, page: number = 1, limit: number = 50): Promise<{cards: CardWithSet[], totalCount: number}> {
+    try {
+      // Build base query for counting
+      let countQuery = db
+        .select({ count: count() })
+        .from(cards)
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id));
+
+      // Build main query for data
+      let dataQuery = db
+        .select({
+          id: cards.id,
+          setId: cards.setId,
+          cardNumber: cards.cardNumber,
+          name: cards.name,
+          variation: cards.variation,
+          isInsert: cards.isInsert,
+          frontImageUrl: cards.frontImageUrl,
+          backImageUrl: cards.backImageUrl,
+          description: cards.description,
+          rarity: cards.rarity,
+          estimatedValue: cards.estimatedValue,
+          createdAt: cards.createdAt,
+          set: {
+            id: cardSets.id,
+            name: cardSets.name,
+            year: cardSets.year,
+            description: cardSets.description,
+            imageUrl: cardSets.imageUrl,
+            totalCards: cardSets.totalCards,
+            mainSetId: cardSets.mainSetId,
+            createdAt: cardSets.createdAt,
+          }
+        })
+        .from(cards)
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id));
+
+      // Apply filters to both queries
+      const conditions = [];
+      if (filters?.setId) {
+        conditions.push(eq(cards.setId, filters.setId));
+      }
+      if (filters?.search) {
+        conditions.push(
+          or(
+            ilike(cards.name, `%${filters.search}%`),
+            ilike(cards.description, `%${filters.search}%`),
+            ilike(cards.cardNumber, `%${filters.search}%`)
+          )
+        );
+      }
+      if (filters?.rarity) {
+        conditions.push(eq(cards.rarity, filters.rarity));
+      }
+      if (filters?.isInsert !== undefined) {
+        conditions.push(eq(cards.isInsert, filters.isInsert));
+      }
+
+      if (conditions.length > 0) {
+        const combinedConditions = and(...conditions);
+        countQuery = countQuery.where(combinedConditions) as any;
+        dataQuery = dataQuery.where(combinedConditions) as any;
+      }
+
+      // Add sorting and pagination
+      if (filters?.setId) {
+        dataQuery = dataQuery.orderBy(sql`
+          CASE 
+            WHEN ${cards.cardNumber} ~ '^[0-9]+$' THEN LPAD(${cards.cardNumber}, 10, '0')
+            ELSE ${cards.cardNumber}
+          END
+        `) as any;
+      } else {
+        dataQuery = dataQuery.orderBy(cards.createdAt) as any;
+      }
+
+      const offset = (page - 1) * limit;
+      dataQuery = dataQuery.limit(limit).offset(offset) as any;
+
+      // Execute both queries
+      const [countResult, dataResults] = await Promise.all([
+        countQuery,
+        dataQuery
+      ]);
+
+      const totalCount = countResult[0]?.count || 0;
+      const cardsData = dataResults.map(row => ({
+        id: row.id,
+        setId: row.setId,
+        cardNumber: row.cardNumber,
+        name: row.name,
+        variation: row.variation,
+        isInsert: row.isInsert,
+        frontImageUrl: row.frontImageUrl,
+        backImageUrl: row.backImageUrl,
+        description: row.description,
+        rarity: row.rarity,
+        estimatedValue: row.estimatedValue,
+        createdAt: row.createdAt,
+        set: row.set
+      }));
+
+      return {
+        cards: cardsData,
+        totalCount: Number(totalCount)
+      };
+    } catch (error) {
+      console.error('Error getting paginated cards:', error);
+      return { cards: [], totalCount: 0 };
+    }
+  }
+
   async getCard(id: number): Promise<CardWithSet | undefined> {
     try {
       const result = await db
