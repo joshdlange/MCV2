@@ -879,7 +879,7 @@ export class DatabaseStorage implements IStorage {
 
   async getTrendingCards(limit: number): Promise<CardWithSet[]> {
     try {
-      // Get trending cards: prioritize inserts and cards with images from recent collections
+      // Get trending cards: only cards with actual pricing data
       const results = await db
         .select({
           id: cards.id,
@@ -905,19 +905,18 @@ export class DatabaseStorage implements IStorage {
         })
         .from(cards)
         .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+        .innerJoin(cardPriceCache, eq(cards.id, cardPriceCache.cardId))
         .where(
           and(
             isNotNull(cards.frontImageUrl), // Only cards with images
-            or(
-              eq(cards.isInsert, true), // Prioritize inserts
-              gte(cardSets.year, 2020) // Or recent sets
-            )
+            isNotNull(cardPriceCache.avgPrice), // Only cards with pricing data
+            gte(cardPriceCache.avgPrice, 1.0) // Cards worth at least $1
           )
         )
         .orderBy(
-          desc(cards.isInsert), // Inserts first
-          desc(cardSets.year), // Newer sets
-          desc(cards.createdAt) // Recently added cards
+          desc(cardPriceCache.avgPrice), // Highest value first
+          desc(cards.isInsert), // Then prioritize inserts
+          desc(cardSets.year) // Then newer sets
         )
         .limit(limit);
 
