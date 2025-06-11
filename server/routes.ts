@@ -206,6 +206,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get subsets for a main set
+  app.get("/api/card-sets/:id/subsets", async (req, res) => {
+    try {
+      const mainSetId = parseInt(req.params.id);
+      const subsets = await storage.getSubsets(mainSetId);
+      res.json(subsets);
+    } catch (error) {
+      console.error('Get subsets error:', error);
+      res.status(500).json({ message: "Failed to fetch subsets" });
+    }
+  });
+
   // Search card sets
   app.get("/api/card-sets/search", async (req, res) => {
     try {

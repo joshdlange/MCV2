@@ -243,6 +243,44 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getSubsets(mainSetId: number): Promise<CardSet[]> {
+    try {
+      const subsets = await db
+        .select({
+          id: cardSets.id,
+          name: cardSets.name,
+          year: cardSets.year,
+          description: cardSets.description,
+          imageUrl: cardSets.imageUrl,
+          totalCards: sql<number>`COALESCE(COUNT(${cards.id}), 0)`,
+          createdAt: cardSets.createdAt,
+          parentSetId: cardSets.parentSetId,
+          isMainSet: cardSets.isMainSet,
+          subsetType: cardSets.subsetType
+        })
+        .from(cardSets)
+        .leftJoin(cards, eq(cardSets.id, cards.setId))
+        .where(eq(cardSets.parentSetId, mainSetId))
+        .groupBy(
+          cardSets.id, 
+          cardSets.name, 
+          cardSets.year, 
+          cardSets.description, 
+          cardSets.imageUrl, 
+          cardSets.createdAt,
+          cardSets.parentSetId,
+          cardSets.isMainSet,
+          cardSets.subsetType
+        )
+        .orderBy(cardSets.subsetType, cardSets.name);
+      
+      return subsets;
+    } catch (error) {
+      console.error('Error getting subsets:', error);
+      return [];
+    }
+  }
+
   async createCardSet(insertCardSet: InsertCardSet): Promise<CardSet> {
     const [cardSet] = await db
       .insert(cardSets)
