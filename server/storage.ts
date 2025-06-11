@@ -203,19 +203,21 @@ export class DatabaseStorage implements IStorage {
 
   async getCardSets(): Promise<CardSet[]> {
     try {
-      const sets = await db.select().from(cardSets);
-      
-      // Calculate actual total cards for each set
-      const setsWithCounts = await Promise.all(sets.map(async (set) => {
-        const [{ count }] = await db.select({ count: sql<number>`count(*)` })
-          .from(cards)
-          .where(eq(cards.setId, set.id));
-        
-        return {
-          ...set,
-          totalCards: count || 0
-        };
-      }));
+      // Optimized single query with JOIN and GROUP BY instead of N+1 queries
+      const setsWithCounts = await db
+        .select({
+          id: cardSets.id,
+          name: cardSets.name,
+          year: cardSets.year,
+          description: cardSets.description,
+          imageUrl: cardSets.imageUrl,
+          totalCards: sql<number>`COALESCE(COUNT(${cards.id}), 0)`,
+          createdAt: cardSets.createdAt
+        })
+        .from(cardSets)
+        .leftJoin(cards, eq(cardSets.id, cards.setId))
+        .groupBy(cardSets.id, cardSets.name, cardSets.year, cardSets.description, cardSets.imageUrl, cardSets.createdAt)
+        .orderBy(desc(cardSets.year), cardSets.name);
       
       return setsWithCounts;
     } catch (error) {
