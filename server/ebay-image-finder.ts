@@ -401,6 +401,9 @@ export async function batchUpdateCardImages(maxCards: number = 50): Promise<Card
     const rateLimitCount = results.filter(r => r.error?.includes('rate limit')).length;
     console.log(`Batch update complete: ${successCount}/${results.length} cards updated successfully${rateLimitCount > 0 ? `, ${rateLimitCount} stopped due to rate limit` : ''}`);
     
+    // Log total API calls made during this batch run
+    console.log(`Total eBay API calls made this run: ${ebayCallCount}`);
+    
     return results;
 
   } catch (error) {
