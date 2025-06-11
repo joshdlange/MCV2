@@ -1181,6 +1181,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get mainSets with their related sets
+  app.get('/api/main-sets-with-details', requireAuth, async (req, res) => {
+    try {
+      // Get all mainSets with their linked sets
+      const mainSetsWithSets = await db
+        .select({
+          mainSetId: mainSets.id,
+          mainSetName: mainSets.name,
+          mainSetYear: mainSets.year,
+          mainSetDescription: mainSets.description,
+          setId: cardSets.id,
+          setName: cardSets.name,
+          setYear: cardSets.year,
+          setTotalCards: cardSets.totalCards,
+          setImageUrl: cardSets.imageUrl,
+        })
+        .from(mainSets)
+        .leftJoin(cardSets, eq(cardSets.mainSetId, mainSets.id))
+        .orderBy(mainSets.name, cardSets.name);
+
+      // Get unlinked sets
+      const unlinkedSets = await db
+        .select({
+          id: cardSets.id,
+          name: cardSets.name,
+          year: cardSets.year,
+          totalCards: cardSets.totalCards,
+          imageUrl: cardSets.imageUrl,
+        })
+        .from(cardSets)
+        .where(isNull(cardSets.mainSetId))
+        .orderBy(cardSets.name);
+
+      // Group the results by mainSet
+      const mainSetsMap = new Map();
+      
+      for (const row of mainSetsWithSets) {
+        if (!mainSetsMap.has(row.mainSetId)) {
+          mainSetsMap.set(row.mainSetId, {
+            id: row.mainSetId,
+            name: row.mainSetName,
+            year: row.mainSetYear,
+            description: row.mainSetDescription,
+            totalCards: 0,
+            subsetCount: 0,
+            sets: []
+          });
+        }
+        
+        const mainSet = mainSetsMap.get(row.mainSetId);
+        
+        // Only add set if it exists (not null from left join)
+        if (row.setId) {
+          mainSet.sets.push({
+            id: row.setId,
+            name: row.setName,
+            year: row.setYear,
+            cardCount: row.setTotalCards,
+            thumbnailImageUrl: row.setImageUrl
+          });
+          mainSet.totalCards += row.setTotalCards;
+          mainSet.subsetCount += 1;
+        }
+      }
+
+      // Convert map to array and filter out mainSets with no associated sets
+      const mainSetsWithDetails = Array.from(mainSetsMap.values()).filter(mainSet => mainSet.subsetCount > 0);
+
+      res.json({
+        mainSets: mainSetsWithDetails,
+        unlinkedSets: unlinkedSets.map(set => ({
+          id: set.id,
+          name: set.name,
+          year: set.year,
+          cardCount: set.totalCards,
+          thumbnailImageUrl: set.imageUrl
+        }))
+      });
+    } catch (error) {
+      console.error('Error fetching mainSets with details:', error);
+      res.status(500).json({ message: 'Failed to fetch mainSets with details' });
+    }
+  });
+
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);
 

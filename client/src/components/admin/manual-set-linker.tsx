@@ -121,7 +121,7 @@ export function ManualSetLinker() {
           onClick={() => refetchSets()}
           variant="outline"
           size="sm"
-          className="self-start"
+          className="self-start bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
         >
           <RefreshCw className="w-4 h-4 mr-2" />
           Refresh
@@ -151,12 +151,16 @@ export function ManualSetLinker() {
                     value={selectedMainSets[set.id]?.toString() || ""}
                     onValueChange={(value) => handleSelectMainSet(set.id, value)}
                   >
-                    <SelectTrigger className="w-[300px]">
-                      <SelectValue placeholder="Select a mainSet..." />
+                    <SelectTrigger className="w-[300px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">
+                      <SelectValue placeholder="Select a mainSet..." className="text-gray-900 dark:text-gray-100" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
                       {mainSets.map((mainSet) => (
-                        <SelectItem key={mainSet.id} value={mainSet.id.toString()}>
+                        <SelectItem 
+                          key={mainSet.id} 
+                          value={mainSet.id.toString()}
+                          className="text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
                           {mainSet.name} ({mainSet.year})
                         </SelectItem>
                       ))}
@@ -167,6 +171,7 @@ export function ManualSetLinker() {
                     onClick={() => handleLinkSet(set.id)}
                     disabled={!selectedMainSets[set.id] || linkSetMutation.isPending}
                     size="sm"
+                    className="bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:border-blue-700 disabled:bg-gray-400 disabled:text-gray-200 disabled:border-gray-400"
                   >
                     {linkSetMutation.isPending && linkSetMutation.variables?.setId === set.id ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
