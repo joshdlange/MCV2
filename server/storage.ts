@@ -21,7 +21,7 @@ import {
   type CollectionStats
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, ilike, and, count, sum, desc, sql, isNull, isNotNull, or, lt, gte, gt, inArray } from "drizzle-orm";
+import { eq, ilike, and, count, sum, desc, sql, isNull, isNotNull, or, lt, gte, gt } from "drizzle-orm";
 
 interface IStorage {
   // Users
@@ -36,7 +36,6 @@ interface IStorage {
   // Card Sets
   getCardSets(): Promise<CardSet[]>;
   getCardSet(id: number): Promise<CardSet | undefined>;
-  getSubsets(mainSetId: number): Promise<CardSet[]>;
   createCardSet(insertCardSet: InsertCardSet): Promise<CardSet>;
   updateCardSet(id: number, updates: Partial<InsertCardSet>): Promise<CardSet | undefined>;
   searchCardSets(query: string): Promise<CardSet[]>;
@@ -204,29 +203,23 @@ export class DatabaseStorage implements IStorage {
 
   async getCardSets(): Promise<CardSet[]> {
     try {
-      // Only return main sets with subset counts and total card counts
-      const mainSetsWithCounts = await db
+      // Optimized single query with JOIN and GROUP BY instead of N+1 queries
+      const setsWithCounts = await db
         .select({
           id: cardSets.id,
           name: cardSets.name,
           year: cardSets.year,
           description: cardSets.description,
           imageUrl: cardSets.imageUrl,
-          totalCards: sql<number>`COALESCE(
-            (SELECT COALESCE(SUM(
-              (SELECT COUNT(*) FROM ${cards} WHERE ${cards.setId} = subset.id)
-            ), 0) FROM ${cardSets} subset WHERE subset.parent_set_id = ${cardSets.id})
-          , 0)`,
-          createdAt: cardSets.createdAt,
-          parentSetId: cardSets.parentSetId,
-          isMainSet: cardSets.isMainSet,
-          subsetType: cardSets.subsetType
+          totalCards: sql<number>`COALESCE(COUNT(${cards.id}), 0)`,
+          createdAt: cardSets.createdAt
         })
         .from(cardSets)
-        .where(eq(cardSets.isMainSet, true))
+        .leftJoin(cards, eq(cardSets.id, cards.setId))
+        .groupBy(cardSets.id, cardSets.name, cardSets.year, cardSets.description, cardSets.imageUrl, cardSets.createdAt)
         .orderBy(desc(cardSets.year), cardSets.name);
       
-      return mainSetsWithCounts;
+      return setsWithCounts;
     } catch (error) {
       console.error('Error getting card sets:', error);
       return [];
@@ -240,71 +233,6 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error getting card set:', error);
       return undefined;
-    }
-  }
-
-  async getSubsets(mainSetId: number): Promise<CardSet[]> {
-    try {
-      const subsets = await db
-        .select({
-          id: cardSets.id,
-          name: cardSets.name,
-          year: cardSets.year,
-          description: cardSets.description,
-          imageUrl: sql<string>`COALESCE(${cardSets.imageUrl}, 
-            (SELECT ${cards.frontImageUrl} 
-             FROM ${cards} 
-             WHERE ${cards.setId} = ${cardSets.id} 
-               AND ${cards.frontImageUrl} IS NOT NULL 
-             LIMIT 1))`,
-          totalCards: sql<number>`COALESCE(COUNT(${cards.id}), 0)`,
-          createdAt: cardSets.createdAt,
-          parentSetId: cardSets.parentSetId,
-          isMainSet: cardSets.isMainSet,
-          subsetType: cardSets.subsetType
-        })
-        .from(cardSets)
-        .leftJoin(cards, eq(cardSets.id, cards.setId))
-        .where(eq(cardSets.parentSetId, mainSetId))
-        .groupBy(
-          cardSets.id, 
-          cardSets.name, 
-          cardSets.year, 
-          cardSets.description, 
-          cardSets.imageUrl, 
-          cardSets.createdAt,
-          cardSets.parentSetId,
-          cardSets.isMainSet,
-          cardSets.subsetType
-        )
-        .orderBy(
-          sql`CASE WHEN LOWER(${cardSets.name}) = LOWER((SELECT name FROM ${cardSets} main WHERE main.id = ${mainSetId})) THEN 0 ELSE 1 END`,
-          cardSets.name
-        );
-      
-      return subsets;
-    } catch (error) {
-      console.error('Error getting subsets:', error);
-      return [];
-    }
-  }
-
-  async getMainSetWithCounts(mainSetId: number): Promise<{ subsetCount: number; totalCards: number } | null> {
-    try {
-      const [result] = await db
-        .select({
-          subsetCount: sql<number>`COUNT(DISTINCT ${cardSets.id})`,
-          totalCards: sql<number>`COALESCE(SUM(
-            (SELECT COUNT(*) FROM ${cards} WHERE ${cards.setId} = ${cardSets.id})
-          ), 0)`
-        })
-        .from(cardSets)
-        .where(eq(cardSets.parentSetId, mainSetId));
-      
-      return result || null;
-    } catch (error) {
-      console.error('Error getting main set counts:', error);
-      return null;
     }
   }
 
@@ -356,23 +284,7 @@ export class DatabaseStorage implements IStorage {
       const conditions = [];
 
       if (filters?.setId) {
-        // Check if this is a main set - if so, get cards from all its subsets
-        const [mainSet] = await db.select().from(cardSets).where(eq(cardSets.id, filters.setId));
-        if (mainSet?.isMainSet) {
-          // Get all subset IDs for this main set
-          const subsets = await db.select({ id: cardSets.id }).from(cardSets).where(eq(cardSets.parentSetId, filters.setId));
-          const subsetIds = subsets.map(s => s.id);
-          if (subsetIds.length > 0) {
-            // Include cards from all subsets
-            conditions.push(inArray(cards.setId, subsetIds));
-          } else {
-            // If no subsets, return empty result for main sets without cards
-            conditions.push(eq(cards.setId, -1)); // Non-existent setId to return empty
-          }
-        } else {
-          // Regular subset - get cards directly
-          conditions.push(eq(cards.setId, filters.setId));
-        }
+        conditions.push(eq(cards.setId, filters.setId));
       }
 
       if (filters?.search) {
@@ -417,7 +329,6 @@ export class DatabaseStorage implements IStorage {
         cardNumber: row.cardNumber,
         name: row.name,
         variation: row.variation,
-        subsetName: row.set.subsetType,
         isInsert: row.isInsert,
         frontImageUrl: row.frontImageUrl,
         backImageUrl: row.backImageUrl,
@@ -1038,7 +949,6 @@ export class DatabaseStorage implements IStorage {
         cardNumber: row.cardNumber,
         name: row.name,
         variation: row.variation,
-        subsetName: row.setSubsetType,
         isInsert: row.isInsert,
         frontImageUrl: row.frontImageUrl,
         backImageUrl: row.backImageUrl,
@@ -1267,21 +1177,6 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error searching card sets:', error);
       return [];
-    }
-  }
-
-  async clearAllData(): Promise<void> {
-    try {
-      // Delete in order of dependencies
-      await db.delete(userCollections);
-      await db.delete(userWishlists);
-      await db.delete(cardPriceCache);
-      await db.delete(cards);
-      await db.delete(cardSets);
-      await db.delete(users);
-    } catch (error) {
-      console.error('Error clearing all data:', error);
-      throw error;
     }
   }
 }

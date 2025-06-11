@@ -206,18 +206,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get subsets for a main set
-  app.get("/api/card-sets/:id/subsets", async (req, res) => {
-    try {
-      const mainSetId = parseInt(req.params.id);
-      const subsets = await storage.getSubsets(mainSetId);
-      res.json(subsets);
-    } catch (error) {
-      console.error('Get subsets error:', error);
-      res.status(500).json({ message: "Failed to fetch subsets" });
-    }
-  });
-
   // Search card sets
   app.get("/api/card-sets/search", async (req, res) => {
     try {
@@ -832,34 +820,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Recent v2 error:', error);
       res.status(500).json({ message: "Failed to fetch recent cards" });
-    }
-  });
-
-  // Card Set Consolidation Migration (Admin only)
-  app.post("/api/admin/consolidate-card-sets", authenticateUser, async (req: any, res) => {
-    try {
-      if (!req.user.isAdmin) {
-        return res.status(403).json({ message: 'Admin access required' });
-      }
-
-      console.log('Starting card set consolidation migration...');
-      
-      const { runCardSetConsolidation } = await import('./card-set-consolidation-migration');
-      
-      const result = await runCardSetConsolidation();
-      
-      res.json({
-        success: true,
-        message: 'Card set consolidation completed successfully',
-        result
-      });
-    } catch (error) {
-      console.error('Card set consolidation error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Card set consolidation failed',
-        error: error instanceof Error ? error.message : String(error)
-      });
     }
   });
 
