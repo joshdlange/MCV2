@@ -203,23 +203,30 @@ export class DatabaseStorage implements IStorage {
 
   async getCardSets(): Promise<CardSet[]> {
     try {
-      // Optimized single query with JOIN and GROUP BY instead of N+1 queries
-      const setsWithCounts = await db
+      // Only return main sets (parent sets) with aggregated card counts from all subsets
+      const mainSetsWithCounts = await db
         .select({
           id: cardSets.id,
           name: cardSets.name,
           year: cardSets.year,
           description: cardSets.description,
           imageUrl: cardSets.imageUrl,
-          totalCards: sql<number>`COALESCE(COUNT(${cards.id}), 0)`,
-          createdAt: cardSets.createdAt
+          totalCards: sql<number>`COALESCE(
+            (SELECT COUNT(*) FROM ${cards} WHERE ${cards.setId} = ${cardSets.id}) +
+            (SELECT COALESCE(SUM(
+              (SELECT COUNT(*) FROM ${cards} WHERE ${cards.setId} = subset.id)
+            ), 0) FROM ${cardSets} subset WHERE subset.parent_set_id = ${cardSets.id})
+          , 0)`,
+          createdAt: cardSets.createdAt,
+          parentSetId: cardSets.parentSetId,
+          isMainSet: cardSets.isMainSet,
+          subsetType: cardSets.subsetType
         })
         .from(cardSets)
-        .leftJoin(cards, eq(cardSets.id, cards.setId))
-        .groupBy(cardSets.id, cardSets.name, cardSets.year, cardSets.description, cardSets.imageUrl, cardSets.createdAt)
+        .where(or(eq(cardSets.isMainSet, true), isNull(cardSets.parentSetId)))
         .orderBy(desc(cardSets.year), cardSets.name);
       
-      return setsWithCounts;
+      return mainSetsWithCounts;
     } catch (error) {
       console.error('Error getting card sets:', error);
       return [];
