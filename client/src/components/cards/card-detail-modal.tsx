@@ -174,6 +174,16 @@ export function CardDetailModal({
                 ) : (
                   <>
                     <Button
+                      onClick={() => updateImageMutation.mutate(card.id)}
+                      disabled={updateImageMutation.isPending}
+                      variant="outline"
+                      size="sm"
+                      className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                    >
+                      <Image className="w-4 h-4 mr-1" />
+                      {updateImageMutation.isPending ? 'Updating...' : 'Update Image'}
+                    </Button>
+                    <Button
                       onClick={startEditing}
                       variant="outline"
                       size="sm"
