@@ -1,6 +1,68 @@
 import fetch from 'node-fetch';
 import { v2 as cloudinary } from 'cloudinary';
 import { storage } from './storage';
+import fs from 'fs';
+import path from 'path';
+
+// Global API call counter for tracking calls per session
+let ebayCallCount = 0;
+
+// Path for persistent daily API call tracking
+const apiCallLogPath = path.join(process.cwd(), 'api-call-log.json');
+
+/**
+ * Get today's date in YYYY-MM-DD format
+ */
+function getTodayDate(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+/**
+ * Read daily API call log from file
+ */
+function readDailyCallLog(): Record<string, number> {
+  try {
+    if (fs.existsSync(apiCallLogPath)) {
+      const data = fs.readFileSync(apiCallLogPath, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Error reading API call log:', error);
+  }
+  return {};
+}
+
+/**
+ * Write daily API call log to file
+ */
+function writeDailyCallLog(log: Record<string, number>): void {
+  try {
+    fs.writeFileSync(apiCallLogPath, JSON.stringify(log, null, 2));
+  } catch (error) {
+    console.error('Error writing API call log:', error);
+  }
+}
+
+/**
+ * Increment and track daily API call count
+ */
+function trackDailyApiCall(): void {
+  const today = getTodayDate();
+  const log = readDailyCallLog();
+  
+  // Initialize today's count if it doesn't exist
+  if (!log[today]) {
+    log[today] = 0;
+  }
+  
+  // Increment count
+  log[today]++;
+  
+  // Write back to file
+  writeDailyCallLog(log);
+  
+  console.log(`Daily eBay API calls for ${today}: ${log[today]}`);
+}
 
 // Configure Cloudinary
 cloudinary.config({
@@ -69,8 +131,8 @@ async function searchEBayForCardImage(
 
   } catch (error) {
     console.error('eBay search error:', error);
-    // Re-throw rate limit errors so they can be handled properly upstream
-    if (error instanceof Error && error.message === 'RATE_LIMIT_EXCEEDED') {
+    // Re-throw eBay API errors so they can be handled properly upstream
+    if (error instanceof Error && (error.message === 'RATE_LIMIT_EXCEEDED' || error.message.startsWith('EBAY_API_ERROR:'))) {
       throw error;
     }
     return null;
@@ -79,6 +141,12 @@ async function searchEBayForCardImage(
 
 async function performEBaySearch(searchTerms: string): Promise<string | null> {
   try {
+    // Increment session and daily API call counters
+    ebayCallCount++;
+    trackDailyApiCall();
+    
+    console.log(`eBay API call #${ebayCallCount} — keywords: "${searchTerms}"`);
+    
     const ebayApiUrl = 'https://svcs.ebay.com/services/search/FindingService/v1';
     const params = new URLSearchParams({
       'OPERATION-NAME': 'findItemsByKeywords',
@@ -107,10 +175,11 @@ async function performEBaySearch(searchTerms: string): Promise<string | null> {
       return null;
     }
     
-    // Check for rate limit errors first (can come with HTTP 500)
-    if (data.errorMessage?.[0]?.error?.[0]?.errorId?.[0] === '10001') {
-      console.error('eBay API rate limit exceeded (error 10001)');
-      throw new Error('RATE_LIMIT_EXCEEDED');
+    // Improved eBay API error logging - capture full error response
+    const ebayError = data?.errorMessage?.[0]?.error?.[0];
+    if (ebayError) {
+      console.error('eBay API error:', JSON.stringify(ebayError, null, 2));
+      throw new Error(`EBAY_API_ERROR: ${ebayError.errorId?.[0]} - ${ebayError.message?.[0]}`);
     }
     
     if (!response.ok) {
@@ -241,9 +310,17 @@ export async function findAndUpdateCardImage(
     return result;
 
   } catch (error) {
-    if (error instanceof Error && error.message === 'RATE_LIMIT_EXCEEDED') {
-      result.error = 'eBay API daily rate limit exceeded (10,000 requests/day). Please try again tomorrow.';
-      console.error(`eBay API rate limit exceeded for card ${cardId}`);
+    if (error instanceof Error) {
+      if (error.message === 'RATE_LIMIT_EXCEEDED') {
+        result.error = 'eBay API daily rate limit exceeded (10,000 requests/day). Please try again tomorrow.';
+        console.error(`eBay API rate limit exceeded for card ${cardId}`);
+      } else if (error.message.startsWith('EBAY_API_ERROR:')) {
+        result.error = error.message.replace('EBAY_API_ERROR: ', 'eBay API Error: ');
+        console.error(`eBay API error for card ${cardId}: ${error.message}`);
+      } else {
+        result.error = `Error: ${error.message}`;
+        console.error(`Error updating card ${cardId}:`, error);
+      }
     } else {
       result.error = `Error: ${error}`;
       console.error(`Error updating card ${cardId}:`, error);
@@ -312,10 +389,11 @@ export async function batchUpdateCardImages(maxCards: number = 50): Promise<Card
         throw error;
       }
       
-      // Rate limiting: 1 request per second
+      // Dynamic rate limiting: configurable wait time between requests
       if (i < cardsWithoutImages.length - 1) {
-        console.log('Waiting 1 second before next request...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        const waitMs = parseInt(process.env.EBAY_RATE_LIMIT_MS || '1000', 10);
+        console.log(`Waiting ${waitMs}ms before next request...`);
+        await new Promise(resolve => setTimeout(resolve, waitMs));
       }
     }
 
