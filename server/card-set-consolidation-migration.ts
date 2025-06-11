@@ -189,7 +189,7 @@ export class CardSetConsolidationMigration {
   /**
    * Create or find parent set
    */
-  private async createOrFindParentSet(parentName: string, year: number): Promise<number> {
+  private async createOrFindParentSet(parentName: string, year: number, subsets: any[]): Promise<number> {
     // Check if parent set already exists
     const existingParent = await db
       .select({ id: cardSets.id })
@@ -203,7 +203,41 @@ export class CardSetConsolidationMigration {
       return existingParent[0].id;
     }
 
-    // Create new parent set
+    // If no exact parent exists, find the subset with the most cards to become the parent
+    // or the one that matches the parent name most closely (base set)
+    let baseSet = subsets.find(s => s.name.toLowerCase() === parentName.toLowerCase());
+    
+    if (!baseSet) {
+      // Find subset with most cards to promote to parent
+      let maxCards = 0;
+      for (const subset of subsets) {
+        const cardCount = await db
+          .select({ count: sql<number>`COUNT(*)` })
+          .from(cards)
+          .where(eq(cards.setId, subset.id));
+        
+        if (cardCount[0].count > maxCards) {
+          maxCards = cardCount[0].count;
+          baseSet = subset;
+        }
+      }
+    }
+
+    if (baseSet) {
+      // Update the base set to become the parent
+      await db
+        .update(cardSets)
+        .set({
+          name: parentName,
+          description: `Consolidated set containing all variations of ${parentName}`
+        })
+        .where(eq(cardSets.id, baseSet.id));
+      
+      console.log(`✅ Promoted existing set to parent: ${parentName} (${year})`);
+      return baseSet.id;
+    }
+
+    // Create new parent set as fallback
     const newParent = await db
       .insert(cardSets)
       .values({
@@ -216,7 +250,7 @@ export class CardSetConsolidationMigration {
       })
       .returning({ id: cardSets.id });
 
-    console.log(`✅ Created parent set: ${parentName} (${year})`);
+    console.log(`✅ Created new parent set: ${parentName} (${year})`);
     return newParent[0].id;
   }
 
@@ -284,7 +318,7 @@ export class CardSetConsolidationMigration {
         console.log(`   Sets to consolidate: ${group.sets.length}`);
 
         // Create or find parent set
-        const parentSetId = await this.createOrFindParentSet(group.parentName, group.year);
+        const parentSetId = await this.createOrFindParentSet(group.parentName, group.year, group.sets);
         
         // Check if this is a newly created parent set
         const isNewParent = await this.isNewlyCreatedParent(parentSetId, group.sets);
@@ -297,8 +331,16 @@ export class CardSetConsolidationMigration {
 
         // Migrate cards from each subset to parent
         for (const subset of group.sets) {
-          if (subset.totalCards > 0) {
-            console.log(`   Migrating ${subset.totalCards} cards from: ${subset.name}`);
+          // Check actual card count, not just the totalCards field which may be outdated
+          const actualCardCount = await db
+            .select({ count: sql<number>`COUNT(*)` })
+            .from(cards)
+            .where(eq(cards.setId, subset.id));
+
+          const actualCount = actualCardCount[0].count;
+          
+          if (actualCount > 0) {
+            console.log(`   Migrating ${actualCount} cards from: ${subset.name}`);
             
             const cardsMigrated = await this.migrateCards(
               subset.id,
@@ -309,6 +351,8 @@ export class CardSetConsolidationMigration {
             groupCardsUpdated += cardsMigrated;
             consolidatedSetNames.push(subset.name);
             result.setsConsolidated++;
+          } else {
+            console.log(`   Skipping ${subset.name} (no cards)`);
           }
         }
 
