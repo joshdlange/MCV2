@@ -232,6 +232,7 @@ async function performEBaySearch(searchTerms: string): Promise<string | null> {
     return null;
 
   } catch (error) {
+    // Let EBAY_API_ERROR and RATE_LIMIT_EXCEEDED propagate up immediately
     if (error instanceof Error && (error.message === 'RATE_LIMIT_EXCEEDED' || error.message.startsWith('EBAY_API_ERROR:'))) {
       throw error;
     }
