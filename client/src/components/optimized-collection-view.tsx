@@ -1,17 +1,13 @@
-/**
- * High-performance collection view with virtual scrolling and optimized rendering
- * Handles 60,000+ cards with minimal memory footprint
- */
-
-import React, { useMemo, useState, useCallback } from 'react';
-import { VirtualCardGrid } from '@/components/ui/virtual-list';
-import { CardImage } from '@/components/ui/optimized-image';
-import { useOptimizedCollection } from '@/hooks/use-optimized-collection';
-import { Input } from '@/components/ui/input';
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Search, Filter, Grid, List } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Search, Filter, Calendar, DollarSign } from 'lucide-react';
 
 interface CollectionItem {
   id: number;
@@ -19,227 +15,361 @@ interface CollectionItem {
   condition: string;
   acquiredDate: string;
   personalValue: string | null;
-  card: {
-    id: number;
-    name: string;
-    cardNumber: string;
-    frontImageUrl: string | null;
-    setId: number;
-    isInsert: boolean;
-    set: {
-      name: string;
-      year: number;
-    };
-  };
+  notes: string | null;
+  cardName: string;
+  cardNumber: string;
+  frontImageUrl: string | null;
+  setName: string;
+  setYear: number;
+  isInsert: boolean;
+  rarity: string;
+}
+
+interface PaginatedCollectionResponse {
+  items: CollectionItem[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
 }
 
 export function OptimizedCollectionView() {
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState({
-    condition: '',
-    setId: '',
-    isInsert: '',
+  const [conditionFilter, setConditionFilter] = useState('');
+  const [sortBy, setSortBy] = useState('acquired_date');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const pageSize = 50;
+
+  // Debounced search
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, conditionFilter, sortBy, sortOrder]);
+
+  // Build query parameters
+  const queryParams = new URLSearchParams({
+    page: currentPage.toString(),
+    pageSize: pageSize.toString(),
+    sortBy,
+    sortOrder
   });
 
-  const {
-    items,
-    totalCount,
-    isLoading,
-    search,
-    metrics,
-  } = useOptimizedCollection({
-    pageSize: 50,
-    enableVirtualization: true,
-    prefetchPages: 3,
-    filters,
+  if (debouncedSearch.length >= 2) {
+    queryParams.append('search', debouncedSearch);
+  }
+  if (conditionFilter) {
+    queryParams.append('condition', conditionFilter);
+  }
+
+  // Fetch collection data
+  const { data, isLoading, error, isFetching } = useQuery<PaginatedCollectionResponse>({
+    queryKey: ['/api/v2/collection', queryParams.toString()],
+    queryFn: async () => {
+      const response = await fetch(`/api/v2/collection?${queryParams}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch collection');
+      }
+      return response.json();
+    },
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    refetchOnWindowFocus: false
   });
 
-  // Memoized filtered items for search
-  const filteredItems = useMemo(() => {
-    if (!searchTerm) return items;
-    
-    const term = searchTerm.toLowerCase();
-    return items.filter((item: CollectionItem) =>
-      item.card.name.toLowerCase().includes(term) ||
-      item.card.set.name.toLowerCase().includes(term) ||
-      item.card.cardNumber.includes(term)
-    );
-  }, [items, searchTerm]);
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
-  const handleSearch = useCallback((value: string) => {
-    setSearchTerm(value);
-    search(value);
-  }, [search]);
+  const formatCurrency = (value: string | null) => {
+    if (!value) return 'Not set';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(parseFloat(value));
+  };
 
-  // Render individual card item
-  const renderCardItem = useCallback((item: CollectionItem, index: number) => {
-    if (viewMode === 'grid') {
-      return (
-        <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-          <CardContent className="p-4">
-            <CardImage
-              src={item.card.frontImageUrl}
-              alt={item.card.name}
-              cardNumber={item.card.cardNumber}
-              setName={item.card.set.name}
-              isInsert={item.card.isInsert}
-              className="mb-3"
-            />
-            <div className="space-y-2">
-              <h3 className="font-semibold text-sm truncate">{item.card.name}</h3>
-              <div className="flex items-center justify-between text-xs text-gray-600">
-                <span>{item.card.set.year}</span>
-                <Badge variant={item.card.isInsert ? 'default' : 'secondary'}>
-                  {item.card.isInsert ? 'INSERT' : 'BASE'}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-500">Condition:</span>
-                <span className="font-medium">{item.condition}</span>
-              </div>
-              {item.personalValue && (
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-500">Value:</span>
-                  <span className="font-medium text-green-600">${item.personalValue}</span>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      );
-    }
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
 
-    // List view - more compact
+  if (error) {
     return (
-      <Card key={item.id} className="mb-2">
-        <CardContent className="p-3">
-          <div className="flex items-center space-x-4">
-            <CardImage
-              src={item.card.frontImageUrl}
-              alt={item.card.name}
-              cardNumber={item.card.cardNumber}
-              isInsert={item.card.isInsert}
-              className="w-16 h-20 flex-shrink-0"
-            />
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold truncate">{item.card.name}</h3>
-              <p className="text-sm text-gray-600 truncate">
-                {item.card.set.name} ({item.card.set.year})
-              </p>
-              <div className="flex items-center gap-4 mt-2 text-xs">
-                <span>#{item.card.cardNumber}</span>
-                <span>Condition: {item.condition}</span>
-                {item.personalValue && (
-                  <span className="text-green-600 font-medium">${item.personalValue}</span>
-                )}
-                {item.card.isInsert && (
-                  <Badge variant="default" className="h-5">INSERT</Badge>
-                )}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }, [viewMode]);
-
-  if (isLoading && items.length === 0) {
-    return (
-      <div className="space-y-4">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded mb-4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div key={i} className="h-80 bg-gray-200 rounded"></div>
-            ))}
-          </div>
+      <Card className="p-6">
+        <div className="text-center text-red-600">
+          Failed to load your collection. Please try again.
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header with search and controls */}
-      <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-        <div className="flex-1 max-w-md">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search your collection..."
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          {/* Performance metrics */}
-          <div className="text-xs text-gray-500 hidden md:block">
-            {metrics.loadedItems.toLocaleString()} of {metrics.totalItems.toLocaleString()} cards
-            {metrics.cacheHitRate > 0 && (
-              <span className="ml-2">• Cache: {(metrics.cacheHitRate * 100).toFixed(1)}%</span>
-            )}
-          </div>
-          
-          {/* View toggle */}
-          <div className="flex items-center bg-gray-100 rounded-lg p-1">
-            <Button
-              variant={viewMode === 'grid' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('grid')}
-              className="h-8 px-3"
-            >
-              <Grid className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('list')}
-              className="h-8 px-3"
-            >
-              <List className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* Collection Header */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            My Collection
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* Filters and Search */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search collection..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
 
-      {/* Results summary */}
-      <div className="flex items-center justify-between text-sm text-gray-600">
-        <span>
-          {searchTerm ? `${filteredItems.length} results` : `${totalCount.toLocaleString()} total cards`}
-        </span>
-      </div>
+            <Select value={conditionFilter} onValueChange={setConditionFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Conditions" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Conditions</SelectItem>
+                <SelectItem value="Mint">Mint</SelectItem>
+                <SelectItem value="Near Mint">Near Mint</SelectItem>
+                <SelectItem value="Excellent">Excellent</SelectItem>
+                <SelectItem value="Good">Good</SelectItem>
+                <SelectItem value="Fair">Fair</SelectItem>
+                <SelectItem value="Poor">Poor</SelectItem>
+              </SelectContent>
+            </Select>
 
-      {/* Virtual scrolled collection */}
-      {viewMode === 'grid' ? (
-        <VirtualCardGrid
-          items={filteredItems}
-          itemHeight={320}
-          itemsPerRow={4}
-          containerHeight={600}
-          renderItem={renderCardItem}
-          className="bg-white dark:bg-gray-900"
-        />
-      ) : (
-        <VirtualCardGrid
-          items={filteredItems}
-          itemHeight={100}
-          itemsPerRow={1}
-          containerHeight={600}
-          renderItem={renderCardItem}
-          className="bg-white dark:bg-gray-900"
-        />
-      )}
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="acquired_date">Date Acquired</SelectItem>
+                <SelectItem value="card_name">Card Name</SelectItem>
+                <SelectItem value="set_name">Set Name</SelectItem>
+                <SelectItem value="personal_value">Personal Value</SelectItem>
+                <SelectItem value="condition">Condition</SelectItem>
+              </SelectContent>
+            </Select>
 
-      {/* Loading indicator for infinite scroll */}
-      {isLoading && items.length > 0 && (
-        <div className="flex justify-center py-4">
-          <div className="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full" />
-        </div>
-      )}
+            <Select value={sortOrder} onValueChange={setSortOrder}>
+              <SelectTrigger>
+                <SelectValue placeholder="Order" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desc">Descending</SelectItem>
+                <SelectItem value="asc">Ascending</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className="flex-1"
+              >
+                Grid
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="flex-1"
+              >
+                List
+              </Button>
+            </div>
+          </div>
+
+          {/* Results Summary */}
+          {data && (
+            <div className="flex justify-between items-center mb-4">
+              <div className="text-sm text-gray-600">
+                Showing {data.items.length} of {data.totalCount.toLocaleString()} cards
+                {isFetching && <span className="ml-2">• Updating...</span>}
+              </div>
+              <div className="text-sm text-gray-600">
+                Page {data.page} of {data.totalPages}
+              </div>
+            </div>
+          )}
+
+          {/* Collection Grid/List */}
+          {isLoading ? (
+            <div className={viewMode === 'grid' 
+              ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
+              : "space-y-4"
+            }>
+              {Array.from({ length: pageSize }).map((_, i) => (
+                <Skeleton key={i} className="h-64 w-full" />
+              ))}
+            </div>
+          ) : (
+            <div className={viewMode === 'grid'
+              ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
+              : "space-y-4"
+            }>
+              {data?.items.map((item) => (
+                <Card key={item.id} className="hover:shadow-lg transition-shadow">
+                  <CardContent className="p-4">
+                    {viewMode === 'grid' ? (
+                      <>
+                        <div className="aspect-[3/4] mb-3 bg-gray-100 rounded-lg overflow-hidden">
+                          {item.frontImageUrl ? (
+                            <img
+                              src={item.frontImageUrl}
+                              alt={item.cardName}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400">
+                              No Image
+                            </div>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <h3 className="font-semibold text-sm line-clamp-2">{item.cardName}</h3>
+                          <p className="text-xs text-gray-600">#{item.cardNumber}</p>
+                          <p className="text-xs text-gray-500">{item.setName} ({item.setYear})</p>
+                          <div className="flex gap-1 flex-wrap">
+                            <Badge variant="secondary" className="text-xs">
+                              {item.condition}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {item.rarity}
+                            </Badge>
+                            {item.isInsert && (
+                              <Badge variant="outline" className="text-xs">
+                                Insert
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-xs space-y-1">
+                            <p className="text-gray-500">Acquired: {formatDate(item.acquiredDate)}</p>
+                            {item.personalValue && (
+                              <p className="font-medium text-green-600">
+                                {formatCurrency(item.personalValue)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex gap-4">
+                        <div className="w-16 h-20 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                          {item.frontImageUrl ? (
+                            <img
+                              src={item.frontImageUrl}
+                              alt={item.cardName}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                              No Image
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold truncate">{item.cardName}</h3>
+                          <p className="text-sm text-gray-600">#{item.cardNumber}</p>
+                          <p className="text-sm text-gray-500">{item.setName} ({item.setYear})</p>
+                          <div className="flex gap-2 mt-2 flex-wrap">
+                            <Badge variant="secondary" className="text-xs">
+                              {item.condition}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {item.rarity}
+                            </Badge>
+                            {item.isInsert && (
+                              <Badge variant="outline" className="text-xs">
+                                Insert
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex justify-between items-center mt-2">
+                            <span className="text-xs text-gray-500">
+                              {formatDate(item.acquiredDate)}
+                            </span>
+                            {item.personalValue && (
+                              <span className="text-sm font-medium text-green-600">
+                                {formatCurrency(item.personalValue)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {data && data.totalPages > 1 && (
+            <div className="flex justify-center gap-2 mt-6">
+              <Button
+                variant="outline"
+                disabled={!data.hasPrevious}
+                onClick={() => handlePageChange(currentPage - 1)}
+              >
+                Previous
+              </Button>
+              
+              {/* Page Numbers */}
+              {Array.from({ length: Math.min(5, data.totalPages) }, (_, i) => {
+                const pageNum = Math.max(1, Math.min(
+                  data.totalPages - 4,
+                  currentPage - 2
+                )) + i;
+                
+                if (pageNum <= data.totalPages) {
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={pageNum === currentPage ? "default" : "outline"}
+                      onClick={() => handlePageChange(pageNum)}
+                      className="min-w-[40px]"
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                }
+                return null;
+              })}
+              
+              <Button
+                variant="outline"
+                disabled={!data.hasNext}
+                onClick={() => handlePageChange(currentPage + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

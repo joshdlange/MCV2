@@ -58,28 +58,7 @@ export class OptimizedStorage {
       pageSize = Math.min(pageSize, 100);
       const offset = (page - 1) * pageSize;
 
-      // Build base query with optimized selects
-      let query = db
-        .select({
-          id: cards.id,
-          name: cards.name,
-          cardNumber: cards.cardNumber,
-          frontImageUrl: cards.frontImageUrl,
-          setName: cardSets.name,
-          setYear: cardSets.year,
-          isInsert: cards.isInsert,
-          rarity: cards.rarity
-        })
-        .from(cards)
-        .innerJoin(cardSets, eq(cards.setId, cardSets.id));
-
-      // Build count query
-      let countQuery = db
-        .select({ count: count() })
-        .from(cards)
-        .innerJoin(cardSets, eq(cards.setId, cardSets.id));
-
-      // Apply filters
+      // Build conditions array
       const conditions = [];
 
       if (filters.setId) {
@@ -111,22 +90,38 @@ export class OptimizedStorage {
         );
       }
 
-      // Apply conditions to both queries
-      if (conditions.length > 0) {
-        query = query.where(and(...conditions));
-        countQuery = countQuery.where(and(...conditions));
-      }
+      // Build the where condition
+      const whereCondition = conditions.length > 0 ? and(...conditions) : undefined;
 
-      // Order by setId and cardNumber for better performance
-      query = query
-        .orderBy(cards.setId, cards.cardNumber)
-        .limit(pageSize)
-        .offset(offset);
+      // Build main query
+      const baseQuery = db
+        .select({
+          id: cards.id,
+          name: cards.name,
+          cardNumber: cards.cardNumber,
+          frontImageUrl: cards.frontImageUrl,
+          setName: cardSets.name,
+          setYear: cardSets.year,
+          isInsert: cards.isInsert,
+          rarity: cards.rarity
+        })
+        .from(cards)
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id));
 
-      // Execute both queries concurrently
+      // Build count query
+      const countQuery = db
+        .select({ count: count() })
+        .from(cards)
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id));
+
+      // Apply where conditions and execute queries
       const [items, totalResult] = await Promise.all([
-        query,
-        countQuery
+        whereCondition 
+          ? baseQuery.where(whereCondition).orderBy(cards.setId, cards.cardNumber).limit(pageSize).offset(offset)
+          : baseQuery.orderBy(cards.setId, cards.cardNumber).limit(pageSize).offset(offset),
+        whereCondition 
+          ? countQuery.where(whereCondition)
+          : countQuery
       ]);
 
       const totalCount = totalResult[0]?.count || 0;
