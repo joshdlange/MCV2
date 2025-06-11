@@ -105,9 +105,10 @@ export function HierarchicalCardSets({
                 >
                   {viewMode === "grid" && (
                     <SetThumbnail 
-                      set={set} 
-                      size="sm"
-                      className="flex-shrink-0"
+                      setId={set.id}
+                      setName={set.name}
+                      setImageUrl={set.imageUrl}
+                      className="w-12 h-12 rounded object-cover flex-shrink-0"
                     />
                   )}
                   

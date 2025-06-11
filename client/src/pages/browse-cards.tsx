@@ -11,6 +11,7 @@ import { Search, Star, ArrowLeft, Plus, Edit, Filter, Grid3X3, List, X, Save } f
 import { CardGrid } from "@/components/cards/card-grid";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { SetThumbnail } from "@/components/cards/set-thumbnail";
+import { HierarchicalCardSets } from "@/components/cards/hierarchical-card-sets";
 import { useToast } from "@/hooks/use-toast";
 import { useAppStore } from "@/lib/store";
 import { apiRequest } from "@/lib/queryClient";
@@ -667,70 +668,35 @@ export default function BrowseCards() {
               </div>
             )}
 
-            {/* All Sets */}
+            {/* All Sets - Hierarchical Display */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                {favoritesets.length > 0 ? 'All Sets' : 'Card Sets'}
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-                {otherSets.map((set) => (
-                  <Card key={set.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSetClick(set)}>
-                    <CardContent className="p-0">
-                      <div className="relative">
-                        <SetThumbnail
-                          setId={set.id}
-                          setName={set.name}
-                          setImageUrl={set.imageUrl}
-                          className="w-full h-32 md:h-48 object-cover rounded-t-lg"
-                        />
-                        <div className="absolute top-2 right-2 flex gap-1">
-                          {isAdminMode && (
-                            <Button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditSet(set.id);
-                              }}
-                              variant="outline"
-                              size="sm"
-                              className="bg-white/90 hover:bg-white"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                          )}
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleFavoriteSet(set.id);
-                            }}
-                            variant="outline"
-                            size="sm"
-                            className="bg-white/90 hover:bg-white"
-                          >
-                            <Star className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-semibold text-gray-900 mb-2">{set.name}</h3>
-                        <p className="text-xs text-gray-500 mb-3">{set.totalCards} cards • {set.year}</p>
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAddAllToCollection(set.id);
-                            }}
-                            size="sm"
-                            className="flex-1 bg-marvel-red hover:bg-red-700"
-                          >
-                            <Plus className="w-3 h-3 mr-1" />
-                            Add All
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {favoritesets.length > 0 ? 'All Sets' : 'Card Sets'}
+                </h3>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+                    className="flex items-center gap-2"
+                  >
+                    {viewMode === "grid" ? <List className="w-4 h-4" /> : <Grid3X3 className="w-4 h-4" />}
+                    {viewMode === "grid" ? "List View" : "Grid View"}
+                  </Button>
+                </div>
               </div>
+              
+              <HierarchicalCardSets
+                cardSets={otherSets}
+                selectedSet={selectedSet}
+                onSetSelect={handleSetClick}
+                favoriteSetIds={favoriteSetIds}
+                onToggleFavorite={handleFavoriteSet}
+                viewMode={viewMode}
+                isAdminMode={isAdminMode}
+                onEditSet={(set) => handleEditSet(set.id)}
+              />
             </div>
           </>
         )}
