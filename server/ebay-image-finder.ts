@@ -41,14 +41,18 @@ async function searchEBayForCardImage(
   try {
     // Create multiple search strategies with decreasing specificity
     const searchStrategies = [
-      // Strategy 1: Full search with all terms
+      // Strategy 1: COMC with full terms (highest quality scans)
+      [setName, cardName, cardNumber, 'comc'].filter(Boolean).join(' '),
+      // Strategy 2: COMC with set + card name + card number
+      [setName, cardName, cardNumber, 'comc_consignment'].filter(Boolean).join(' '),
+      // Strategy 3: Full search with all terms (original approach)
       [setName, cardName, cardNumber, description].filter(Boolean).join(' '),
-      // Strategy 2: Set name + card name + card number
+      // Strategy 4: Set name + card name + card number
       [setName, cardName, cardNumber].filter(Boolean).join(' '),
-      // Strategy 3: Just card name + set year/brand (extract year from set name)
+      // Strategy 5: Just card name + set year/brand
       [cardName, setName.split(' ').slice(0, 2).join(' ')].filter(Boolean).join(' '),
-      // Strategy 4: Just card name + "marvel" (since this is a Marvel app)
-      [cardName, 'marvel'].join(' ')
+      // Strategy 6: Card name + "marvel comc" (COMC fallback)
+      [cardName, 'marvel', 'comc'].join(' ')
     ].map(query => query.replace(/\s+/g, ' ').trim());
 
     for (let i = 0; i < searchStrategies.length; i++) {
@@ -282,10 +286,10 @@ export async function testImageFinder() {
   const sampleCards = [
     {
       id: 999999, // Test ID
-      setName: '1992 Marvel Masterpieces',
-      cardName: 'Spider-Man',
-      cardNumber: '1',
-      description: 'Web Slinger'
+      setName: '2016 Marvel Masterpieces',
+      cardName: 'Multiple Man',
+      cardNumber: '10',
+      description: 'Madrox the Multiple Man'
     }
   ];
 
