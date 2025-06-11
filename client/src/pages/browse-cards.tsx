@@ -516,7 +516,7 @@ export default function BrowseCards() {
                 Search Results for "{setSearchQuery}"
               </h3>
               <div className="text-sm text-gray-600">
-                {searchResults.sets.length} sets, {searchResults.cards.length > 0 && (
+                {searchResults?.sets?.length || 0} sets, {searchResults?.cards?.length > 0 && (
                   <button
                     onClick={() => {
                       const element = document.getElementById('individual-cards-section');
@@ -529,12 +529,12 @@ export default function BrowseCards() {
                     {searchResults.cards.length} cards
                   </button>
                 )}
-                {searchResults.cards.length === 0 && `${searchResults.cards.length} cards`}
+                {(!searchResults?.cards?.length || searchResults.cards.length === 0) && `${searchResults?.cards?.length || 0} cards`}
               </div>
             </div>
 
             {/* Card Sets Results */}
-            {searchResults.sets.length > 0 && (
+            {searchResults?.sets && searchResults.sets.length > 0 && (
               <div>
                 <h4 className="text-md font-semibold text-gray-900 mb-4">Card Sets</h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
@@ -561,7 +561,7 @@ export default function BrowseCards() {
             )}
 
             {/* Individual Cards Results */}
-            {searchResults.cards.length > 0 && (
+            {searchResults?.cards && searchResults.cards.length > 0 && (
               <div id="individual-cards-section">
                 <h4 className="text-md font-semibold text-gray-900 mb-4">Individual Cards</h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
@@ -606,7 +606,7 @@ export default function BrowseCards() {
             )}
 
             {/* No Results */}
-            {searchResults.sets.length === 0 && searchResults.cards.length === 0 && (
+            {(!searchResults?.sets || searchResults.sets.length === 0) && (!searchResults?.cards || searchResults.cards.length === 0) && (
               <div className="text-center py-12">
                 <div className="text-gray-400 mb-4">
                   <Search className="w-16 h-16 mx-auto" />
@@ -714,7 +714,7 @@ export default function BrowseCards() {
                                 <div>
                                   <h4 className="text-lg font-semibold text-gray-900">{mainSet.name}</h4>
                                   <p className="text-sm text-gray-600">
-                                    {mainSet.totalCards} total cards • {mainSet.subsetCount} subset{mainSet.subsetCount !== 1 ? 's' : ''}
+                                    {mainSet.subsetCount} subset{mainSet.subsetCount !== 1 ? 's' : ''} • {mainSet.totalCards} cards
                                   </p>
                                 </div>
                               </div>
@@ -815,7 +815,7 @@ export default function BrowseCards() {
                 {/* Unlinked Sets */}
                 {mainSetsData.unlinkedSets && mainSetsData.unlinkedSets.length > 0 && (
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Individual Sets</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Marvel Card Sets</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
                       {mainSetsData.unlinkedSets.map((set: any) => (
                         <Card key={set.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSetClick(set)}>
