@@ -79,7 +79,7 @@ async function performEBaySearch(searchTerms: string): Promise<string | null> {
     const params = new URLSearchParams({
       'OPERATION-NAME': 'findItemsByKeywords',
       'SERVICE-VERSION': '1.0.0',
-      'SECURITY-APPNAME': process.env.EBAY_APP_ID || '',
+      'SECURITY-APPNAME': process.env.EBAY_APP_ID_PROD || process.env.EBAY_APP_ID || '',
       'RESPONSE-DATA-FORMAT': 'JSON',
       'REST-PAYLOAD': '',
       'keywords': searchTerms,
@@ -87,19 +87,24 @@ async function performEBaySearch(searchTerms: string): Promise<string | null> {
       'sortOrder': 'BestMatch',
       'paginationInput.entriesPerPage': '15',
       'paginationInput.pageNumber': '1',
-      'itemFilter(0).name': 'Condition',
-      'itemFilter(0).value': 'New',
-      'itemFilter(1).name': 'ListingType',
-      'itemFilter(1).value': 'FixedPrice',
       'outputSelector(0)': 'PictureURLSuperSize',
       'outputSelector(1)': 'PictureURLLarge',
       'outputSelector(2)': 'GalleryInfo'
     });
 
+    console.log(`Full eBay API URL: ${ebayApiUrl}?${params}`);
     const response = await fetch(`${ebayApiUrl}?${params}`);
+    
+    if (!response.ok) {
+      console.error(`eBay API HTTP error: ${response.status} ${response.statusText}`);
+      return null;
+    }
+    
     const data = await response.json() as any;
+    console.log(`eBay API response for "${searchTerms}":`, JSON.stringify(data, null, 2));
 
     if (!data.findItemsByKeywordsResponse?.[0]?.searchResult?.[0]?.item) {
+      console.log(`No items found in eBay response for "${searchTerms}"`);
       return null;
     }
 
