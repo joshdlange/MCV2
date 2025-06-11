@@ -45,6 +45,7 @@ interface IStorage {
   
   // Main Sets
   createMainSet(insertMainSet: InsertMainSet): Promise<MainSet>;
+  getMainSets(): Promise<MainSet[]>;
   
   // Cards
   getCards(filters?: { setId?: number; search?: string; rarity?: string; isInsert?: boolean }): Promise<CardWithSet[]>;

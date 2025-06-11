@@ -1082,6 +1082,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Link existing sets to their corresponding mainSets
+  app.post("/api/admin/link-sets-to-main-sets", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      console.log('Linking sets to main sets...');
+      
+      // Get all sets and mainSets from database
+      const allSets = await storage.getCardSets();
+      const allMainSets = await storage.getMainSets();
+      
+      console.log(`Found ${allSets.length} sets and ${allMainSets.length} main sets`);
+      
+      let linkedCount = 0;
+      let skippedSingleSetMainSets = 0;
+      const singleSetMainSets = [];
+      
+      // Process each set to find its corresponding mainSet
+      for (const set of allSets) {
+        // Skip if already linked
+        if (set.mainSetId) {
+          continue;
+        }
+        
+        // Find matching mainSet using case-insensitive startsWith
+        const matchingMainSet = allMainSets.find(mainSet => 
+          set.name.toLowerCase().startsWith(mainSet.name.toLowerCase())
+        );
+        
+        if (matchingMainSet) {
+          // Update the set with the mainSetId
+          await storage.updateCardSet(set.id, { mainSetId: matchingMainSet.id });
+          linkedCount++;
+          
+          console.log(`Linked set "${set.name}" to main set "${matchingMainSet.name}"`);
+        }
+      }
+      
+      // Check for single-set mainSets that we might want to skip or flag
+      for (const mainSet of allMainSets) {
+        const linkedSets = allSets.filter(set => set.mainSetId === mainSet.id);
+        if (linkedSets.length === 1) {
+          singleSetMainSets.push(mainSet.name);
+          skippedSingleSetMainSets++;
+        }
+      }
+      
+      const linkedMainSetsCount = allMainSets.length - skippedSingleSetMainSets;
+      
+      console.log(`Linked ${linkedCount} sets to ${linkedMainSetsCount} mainSets`);
+      console.log(`Skipped ${skippedSingleSetMainSets} single-set mainSets`);
+      
+      res.json({
+        message: `Linked ${linkedCount} sets to ${linkedMainSetsCount} mainSets`,
+        linkedSets: linkedCount,
+        linkedMainSets: linkedMainSetsCount,
+        skippedSingleSetMainSets: skippedSingleSetMainSets,
+        singleSetMainSets: singleSetMainSets
+      });
+      
+    } catch (error) {
+      console.error('Error linking sets to main sets:', error);
+      res.status(500).json({ message: 'Failed to link sets to main sets' });
+    }
+  });
+
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);
 
