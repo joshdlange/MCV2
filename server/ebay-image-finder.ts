@@ -101,6 +101,13 @@ async function performEBaySearch(searchTerms: string): Promise<string | null> {
     }
     
     const data = await response.json() as any;
+    
+    // Check for rate limit errors
+    if (data.errorMessage?.[0]?.error?.[0]?.errorId?.[0] === '10001') {
+      console.error('eBay API rate limit exceeded');
+      throw new Error('RATE_LIMIT_EXCEEDED');
+    }
+    
     console.log(`eBay API response for "${searchTerms}":`, JSON.stringify(data, null, 2));
 
     if (!data.findItemsByKeywordsResponse?.[0]?.searchResult?.[0]?.item) {
@@ -135,6 +142,9 @@ async function performEBaySearch(searchTerms: string): Promise<string | null> {
     return null;
 
   } catch (error) {
+    if (error instanceof Error && error.message === 'RATE_LIMIT_EXCEEDED') {
+      throw error;
+    }
     console.error('eBay search error:', error);
     return null;
   }
@@ -220,8 +230,13 @@ export async function findAndUpdateCardImage(
     return result;
 
   } catch (error) {
-    result.error = `Error: ${error}`;
-    console.error(`Error updating card ${cardId}:`, error);
+    if (error instanceof Error && error.message === 'RATE_LIMIT_EXCEEDED') {
+      result.error = 'eBay API daily rate limit exceeded (10,000 requests/day). Please try again tomorrow.';
+      console.error(`eBay API rate limit exceeded for card ${cardId}`);
+    } else {
+      result.error = `Error: ${error}`;
+      console.error(`Error updating card ${cardId}:`, error);
+    }
     return result;
   }
 }
@@ -252,15 +267,39 @@ export async function batchUpdateCardImages(maxCards: number = 50): Promise<Card
       
       console.log(`Processing card ${i + 1}/${cardsWithoutImages.length}: ${card.name}`);
       
-      const result = await findAndUpdateCardImage(
-        card.id,
-        card.set.name || '',
-        card.name,
-        card.cardNumber,
-        card.description || undefined
-      );
-      
-      results.push(result);
+      try {
+        const result = await findAndUpdateCardImage(
+          card.id,
+          card.set.name || '',
+          card.name,
+          card.cardNumber,
+          card.description || undefined
+        );
+        
+        results.push(result);
+        
+        // If we hit rate limit, stop processing and return what we have
+        if (result.error?.includes('rate limit exceeded')) {
+          console.log('Rate limit exceeded, stopping batch processing');
+          break;
+        }
+        
+      } catch (error) {
+        if (error instanceof Error && error.message === 'RATE_LIMIT_EXCEEDED') {
+          console.log('Rate limit exceeded, stopping batch processing');
+          results.push({
+            cardId: card.id,
+            setName: card.set.name || '',
+            cardName: card.name,
+            cardNumber: card.cardNumber,
+            description: card.description || undefined,
+            success: false,
+            error: 'eBay API daily rate limit exceeded (10,000 requests/day). Please try again tomorrow.'
+          });
+          break;
+        }
+        throw error;
+      }
       
       // Rate limiting: 1 request per second
       if (i < cardsWithoutImages.length - 1) {
@@ -270,7 +309,8 @@ export async function batchUpdateCardImages(maxCards: number = 50): Promise<Card
     }
 
     const successCount = results.filter(r => r.success).length;
-    console.log(`Batch update complete: ${successCount}/${results.length} cards updated successfully`);
+    const rateLimitCount = results.filter(r => r.error?.includes('rate limit')).length;
+    console.log(`Batch update complete: ${successCount}/${results.length} cards updated successfully${rateLimitCount > 0 ? `, ${rateLimitCount} stopped due to rate limit` : ''}`);
     
     return results;
 
