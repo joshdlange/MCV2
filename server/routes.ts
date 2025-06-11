@@ -949,6 +949,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Populate mainSet table with grouped prefixes
+  app.post("/api/admin/populate-main-sets", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      console.log('Populating main sets table...');
+      
+      // Get all sets from database (reuse same logic as analyzer)
+      const allSets = await storage.getCardSets();
+      console.log(`Found ${allSets.length} sets to process`);
+
+      // Same variant keywords and processing logic as analyzer
+      const variantKeywords = [
+        'Gold Foil', 'Blue Foil', 'Silver Foil', 'Foil', 'Chrome',
+        'Promo', 'Promos', 'Promotional',
+        'Signature', 'Signatures', 'Autographs', 'Auto',
+        'Holograms', 'Hologram', 'Holo',
+        'Base Set', 'Base',
+        'Inserts', 'Insert',
+        'Parallels', 'Parallel',
+        'Chase', 'Special',
+        'Sketch', 'Sketches',
+        'Artist Proof', 'Artist Proofs',
+        'Refractor', 'Refractors',
+        'Canvas', 'Metal',
+        'Die-Cut', 'Die Cut',
+        'Embossed', 'Textured',
+        'Redemption', 'Exchange'
+      ];
+
+      const extractBaseName = (setName: string): string => {
+        let baseName = setName.trim();
+        const sortedKeywords = [...variantKeywords].sort((a, b) => b.length - a.length);
+        
+        for (const keyword of sortedKeywords) {
+          const patterns = [
+            new RegExp(`\\s+${keyword}\\s*$`, 'i'),
+            new RegExp(`\\s+${keyword}\\s+`, 'i'),
+            new RegExp(`^${keyword}\\s+`, 'i'),
+          ];
+          
+          for (const pattern of patterns) {
+            if (pattern.test(baseName)) {
+              baseName = baseName.replace(pattern, ' ').trim();
+              break;
+            }
+          }
+        }
+        
+        return baseName;
+      };
+
+      // Group sets by their base name
+      const groupings: { [key: string]: string[] } = {};
+      
+      for (const set of allSets) {
+        const baseName = extractBaseName(set.name);
+        
+        if (!groupings[baseName]) {
+          groupings[baseName] = [];
+        }
+        groupings[baseName].push(set.name);
+      }
+
+      // Filter meaningful groupings
+      const meaningfulGroupings: { [key: string]: string[] } = {};
+      
+      for (const [baseName, setNames] of Object.entries(groupings)) {
+        if (setNames.length > 1) {
+          meaningfulGroupings[baseName] = setNames.sort();
+        } else if (setNames.length === 1) {
+          const originalName = setNames[0];
+          const hasVariantKeyword = variantKeywords.some(keyword => 
+            originalName.toLowerCase().includes(keyword.toLowerCase())
+          );
+          
+          if (hasVariantKeyword && baseName !== originalName) {
+            meaningfulGroupings[baseName] = setNames;
+          }
+        }
+      }
+
+      // Calculate totals for each main set and insert into database
+      const insertedSets = [];
+      const skippedSets = [];
+      
+      for (const [baseName, setNames] of Object.entries(meaningfulGroupings)) {
+        try {
+          // Find the actual set objects for these names
+          const relatedSets = allSets.filter(set => setNames.includes(set.name));
+          const totalCards = relatedSets.reduce((sum, set) => sum + set.totalCards, 0);
+          
+          const mainSetData = {
+            name: baseName,
+            totalCards: totalCards,
+            subsetCount: setNames.length
+          };
+          
+          const result = await storage.createMainSet(mainSetData);
+          insertedSets.push(result);
+          console.log(`Created main set: ${baseName} (${setNames.length} subsets, ${totalCards} cards)`);
+          
+        } catch (error: any) {
+          // Skip duplicates (unique constraint violation)
+          if (error.message?.includes('unique') || error.message?.includes('duplicate')) {
+            skippedSets.push(baseName);
+            console.log(`Skipped duplicate main set: ${baseName}`);
+          } else {
+            console.error(`Error creating main set ${baseName}:`, error);
+            throw error;
+          }
+        }
+      }
+      
+      console.log(`Populated ${insertedSets.length} main sets, skipped ${skippedSets.length} duplicates`);
+      
+      res.json({
+        message: `Successfully populated ${insertedSets.length} main sets`,
+        totalAnalyzed: Object.keys(meaningfulGroupings).length,
+        inserted: insertedSets.length,
+        skipped: skippedSets.length,
+        insertedSets: insertedSets.map(set => set.name),
+        skippedSets: skippedSets
+      });
+      
+    } catch (error) {
+      console.error('Error populating main sets:', error);
+      res.status(500).json({ message: 'Failed to populate main sets' });
+    }
+  });
+
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);
 

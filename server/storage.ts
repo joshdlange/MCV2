@@ -1,5 +1,6 @@
 import { 
   users, 
+  mainSets,
   cardSets, 
   cards, 
   userCollections, 
@@ -7,6 +8,8 @@ import {
   cardPriceCache,
   type User, 
   type InsertUser,
+  type MainSet,
+  type InsertMainSet,
   type CardSet,
   type InsertCardSet,
   type Card,
@@ -39,6 +42,9 @@ interface IStorage {
   createCardSet(insertCardSet: InsertCardSet): Promise<CardSet>;
   updateCardSet(id: number, updates: Partial<InsertCardSet>): Promise<CardSet | undefined>;
   searchCardSets(query: string): Promise<CardSet[]>;
+  
+  // Main Sets
+  createMainSet(insertMainSet: InsertMainSet): Promise<MainSet>;
   
   // Cards
   getCards(filters?: { setId?: number; search?: string; rarity?: string; isInsert?: boolean }): Promise<CardWithSet[]>;
@@ -242,6 +248,14 @@ export class DatabaseStorage implements IStorage {
       .values(insertCardSet)
       .returning();
     return cardSet;
+  }
+
+  async createMainSet(insertMainSet: InsertMainSet): Promise<MainSet> {
+    const [mainSet] = await db
+      .insert(mainSets)
+      .values(insertMainSet)
+      .returning();
+    return mainSet;
   }
 
   async updateCardSet(id: number, updates: Partial<InsertCardSet>): Promise<CardSet | undefined> {
