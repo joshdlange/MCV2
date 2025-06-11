@@ -21,7 +21,7 @@ import {
   type CollectionStats
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, ilike, and, count, sum, desc, sql, isNull, isNotNull, or, lt, gte } from "drizzle-orm";
+import { eq, ilike, and, count, sum, desc, sql, isNull, isNotNull, or, lt, gte, gt } from "drizzle-orm";
 
 interface IStorage {
   // Users
@@ -909,8 +909,7 @@ export class DatabaseStorage implements IStorage {
         .where(
           and(
             isNotNull(cards.frontImageUrl), // Only cards with images
-            isNotNull(cardPriceCache.avgPrice), // Only cards with pricing data
-            gte(cardPriceCache.avgPrice, 1.0) // Cards worth at least $1
+            isNotNull(cardPriceCache.avgPrice) // Only cards with pricing data
           )
         )
         .orderBy(
