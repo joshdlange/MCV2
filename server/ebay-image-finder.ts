@@ -39,15 +39,40 @@ async function searchEBayForCardImage(
   description?: string
 ): Promise<string | null> {
   try {
-    // Clean and build search query
-    const searchTerms = [setName, cardName, cardNumber, description]
-      .filter(Boolean)
-      .join(' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    // Create multiple search strategies with decreasing specificity
+    const searchStrategies = [
+      // Strategy 1: Full search with all terms
+      [setName, cardName, cardNumber, description].filter(Boolean).join(' '),
+      // Strategy 2: Set name + card name + card number
+      [setName, cardName, cardNumber].filter(Boolean).join(' '),
+      // Strategy 3: Just card name + set year/brand (extract year from set name)
+      [cardName, setName.split(' ').slice(0, 2).join(' ')].filter(Boolean).join(' '),
+      // Strategy 4: Just card name + "marvel" (since this is a Marvel app)
+      [cardName, 'marvel'].join(' ')
+    ].map(query => query.replace(/\s+/g, ' ').trim());
 
-    console.log(`Searching eBay for: "${searchTerms}"`);
+    for (let i = 0; i < searchStrategies.length; i++) {
+      const searchTerms = searchStrategies[i];
+      console.log(`eBay search attempt ${i + 1}: "${searchTerms}"`);
 
+      const result = await performEBaySearch(searchTerms);
+      if (result) {
+        console.log(`Found image using search strategy ${i + 1}`);
+        return result;
+      }
+    }
+
+    console.log('No eBay results found with any search strategy');
+    return null;
+
+  } catch (error) {
+    console.error('eBay search error:', error);
+    return null;
+  }
+}
+
+async function performEBaySearch(searchTerms: string): Promise<string | null> {
+  try {
     const ebayApiUrl = 'https://svcs.ebay.com/services/search/FindingService/v1';
     const params = new URLSearchParams({
       'OPERATION-NAME': 'findItemsByKeywords',
@@ -58,7 +83,7 @@ async function searchEBayForCardImage(
       'keywords': searchTerms,
       'categoryId': '183454', // Sports Trading Cards category
       'sortOrder': 'BestMatch',
-      'paginationInput.entriesPerPage': '10',
+      'paginationInput.entriesPerPage': '15',
       'paginationInput.pageNumber': '1',
       'itemFilter(0).name': 'Condition',
       'itemFilter(0).value': 'New',
@@ -73,7 +98,6 @@ async function searchEBayForCardImage(
     const data = await response.json() as any;
 
     if (!data.findItemsByKeywordsResponse?.[0]?.searchResult?.[0]?.item) {
-      console.log('No eBay results found for search terms');
       return null;
     }
 
