@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useQuery } from '@tanstack/react-query';
-import { Loader2, Download } from 'lucide-react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, Download, Database } from 'lucide-react';
 
 interface GroupingResult {
   groupings: { [key: string]: string[] };
@@ -11,18 +13,52 @@ interface GroupingResult {
   ungroupedSets: number;
 }
 
+interface PopulateResult {
+  message: string;
+  totalAnalyzed: number;
+  inserted: number;
+  skipped: number;
+  insertedSets: string[];
+  skippedSets: string[];
+}
+
 export function SetGroupingAnalyzer() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const { toast } = useToast();
   
   const { data: result, refetch, isLoading } = useQuery<GroupingResult>({
     queryKey: ['/api/admin/analyze-set-groupings'],
     enabled: false, // Don't auto-fetch
   });
 
+  const populateMutation = useMutation({
+    mutationFn: async (): Promise<PopulateResult> => {
+      const response = await apiRequest('POST', '/api/admin/populate-main-sets');
+      return response.json();
+    },
+    onSuccess: (data: PopulateResult) => {
+      toast({
+        title: "Success",
+        description: `${data.message}. Inserted: ${data.inserted}, Skipped: ${data.skipped}`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to populate main sets table",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleAnalyze = async () => {
     setIsAnalyzing(true);
     await refetch();
     setIsAnalyzing(false);
+  };
+
+  const handlePopulate = () => {
+    populateMutation.mutate();
   };
 
   const downloadResults = () => {
@@ -61,14 +97,26 @@ export function SetGroupingAnalyzer() {
             </Button>
             
             {result && (
-              <Button 
-                onClick={downloadResults}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Download JSON
-              </Button>
+              <>
+                <Button 
+                  onClick={downloadResults}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Download JSON
+                </Button>
+                
+                <Button 
+                  onClick={handlePopulate}
+                  disabled={populateMutation.isPending}
+                  className="flex items-center gap-2"
+                >
+                  {populateMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <Database className="w-4 h-4" />
+                  Populate MainSet Table
+                </Button>
+              </>
             )}
           </div>
         </CardContent>
