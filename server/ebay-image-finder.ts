@@ -69,6 +69,10 @@ async function searchEBayForCardImage(
 
   } catch (error) {
     console.error('eBay search error:', error);
+    // Re-throw rate limit errors so they can be handled properly upstream
+    if (error instanceof Error && error.message === 'RATE_LIMIT_EXCEEDED') {
+      throw error;
+    }
     return null;
   }
 }
@@ -98,17 +102,14 @@ async function performEBaySearch(searchTerms: string): Promise<string | null> {
     let data: any;
     try {
       data = await response.json();
-      console.log('Raw eBay API response data:', JSON.stringify(data, null, 2));
     } catch (parseError) {
       console.error(`Failed to parse eBay API response: ${parseError}`);
       return null;
     }
     
     // Check for rate limit errors first (can come with HTTP 500)
-    console.log('Checking for error 10001. Error path:', data.errorMessage?.[0]?.error?.[0]?.errorId?.[0]);
     if (data.errorMessage?.[0]?.error?.[0]?.errorId?.[0] === '10001') {
       console.error('eBay API rate limit exceeded (error 10001)');
-      console.error('Full error response:', JSON.stringify(data, null, 2));
       throw new Error('RATE_LIMIT_EXCEEDED');
     }
     
