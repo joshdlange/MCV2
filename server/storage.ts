@@ -204,7 +204,7 @@ export class DatabaseStorage implements IStorage {
 
   async getCardSets(): Promise<CardSet[]> {
     try {
-      // Only return main sets (parent sets) with aggregated card counts from all subsets
+      // Only return main sets with subset counts and total card counts
       const mainSetsWithCounts = await db
         .select({
           id: cardSets.id,
@@ -213,7 +213,6 @@ export class DatabaseStorage implements IStorage {
           description: cardSets.description,
           imageUrl: cardSets.imageUrl,
           totalCards: sql<number>`COALESCE(
-            (SELECT COUNT(*) FROM ${cards} WHERE ${cards.setId} = ${cardSets.id}) +
             (SELECT COALESCE(SUM(
               (SELECT COUNT(*) FROM ${cards} WHERE ${cards.setId} = subset.id)
             ), 0) FROM ${cardSets} subset WHERE subset.parent_set_id = ${cardSets.id})
@@ -224,7 +223,7 @@ export class DatabaseStorage implements IStorage {
           subsetType: cardSets.subsetType
         })
         .from(cardSets)
-        .where(or(eq(cardSets.isMainSet, true), isNull(cardSets.parentSetId)))
+        .where(eq(cardSets.isMainSet, true))
         .orderBy(desc(cardSets.year), cardSets.name);
       
       return mainSetsWithCounts;
@@ -252,7 +251,12 @@ export class DatabaseStorage implements IStorage {
           name: cardSets.name,
           year: cardSets.year,
           description: cardSets.description,
-          imageUrl: cardSets.imageUrl,
+          imageUrl: sql<string>`COALESCE(${cardSets.imageUrl}, 
+            (SELECT ${cards.frontImageUrl} 
+             FROM ${cards} 
+             WHERE ${cards.setId} = ${cardSets.id} 
+               AND ${cards.frontImageUrl} IS NOT NULL 
+             LIMIT 1))`,
           totalCards: sql<number>`COALESCE(COUNT(${cards.id}), 0)`,
           createdAt: cardSets.createdAt,
           parentSetId: cardSets.parentSetId,
@@ -273,12 +277,34 @@ export class DatabaseStorage implements IStorage {
           cardSets.isMainSet,
           cardSets.subsetType
         )
-        .orderBy(cardSets.subsetType, cardSets.name);
+        .orderBy(
+          sql`CASE WHEN LOWER(${cardSets.name}) = LOWER((SELECT name FROM ${cardSets} main WHERE main.id = ${mainSetId})) THEN 0 ELSE 1 END`,
+          cardSets.name
+        );
       
       return subsets;
     } catch (error) {
       console.error('Error getting subsets:', error);
       return [];
+    }
+  }
+
+  async getMainSetWithCounts(mainSetId: number): Promise<{ subsetCount: number; totalCards: number } | null> {
+    try {
+      const [result] = await db
+        .select({
+          subsetCount: sql<number>`COUNT(DISTINCT ${cardSets.id})`,
+          totalCards: sql<number>`COALESCE(SUM(
+            (SELECT COUNT(*) FROM ${cards} WHERE ${cards.setId} = ${cardSets.id})
+          ), 0)`
+        })
+        .from(cardSets)
+        .where(eq(cardSets.parentSetId, mainSetId));
+      
+      return result || null;
+    } catch (error) {
+      console.error('Error getting main set counts:', error);
+      return null;
     }
   }
 
