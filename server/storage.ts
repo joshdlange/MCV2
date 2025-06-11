@@ -21,7 +21,7 @@ import {
   type CollectionStats
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, ilike, and, count, sum, desc, sql, isNull, isNotNull, or, lt, gte, gt } from "drizzle-orm";
+import { eq, ilike, and, count, sum, desc, sql, isNull, isNotNull, or, lt, gte, gt, inArray } from "drizzle-orm";
 
 interface IStorage {
   // Users
@@ -330,7 +330,23 @@ export class DatabaseStorage implements IStorage {
       const conditions = [];
 
       if (filters?.setId) {
-        conditions.push(eq(cards.setId, filters.setId));
+        // Check if this is a main set - if so, get cards from all its subsets
+        const [mainSet] = await db.select().from(cardSets).where(eq(cardSets.id, filters.setId));
+        if (mainSet?.isMainSet) {
+          // Get all subset IDs for this main set
+          const subsets = await db.select({ id: cardSets.id }).from(cardSets).where(eq(cardSets.parentSetId, filters.setId));
+          const subsetIds = subsets.map(s => s.id);
+          if (subsetIds.length > 0) {
+            // Include cards from all subsets using Drizzle's inArray
+            conditions.push(inArray(cards.setId, subsetIds));
+          } else {
+            // Fallback to main set if no subsets found
+            conditions.push(eq(cards.setId, filters.setId));
+          }
+        } else {
+          // Regular set - get cards directly
+          conditions.push(eq(cards.setId, filters.setId));
+        }
       }
 
       if (filters?.search) {
