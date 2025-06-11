@@ -21,7 +21,7 @@ import {
   type CollectionStats
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, ilike, and, count, sum, desc, sql, isNull, or, lt, gte } from "drizzle-orm";
+import { eq, ilike, and, count, sum, desc, sql, isNull, isNotNull, or, lt, gte } from "drizzle-orm";
 
 interface IStorage {
   // Users
@@ -879,7 +879,7 @@ export class DatabaseStorage implements IStorage {
 
   async getTrendingCards(limit: number): Promise<CardWithSet[]> {
     try {
-      // Get featured cards: mix of high-value cards and inserts, ordered by collection popularity
+      // Get trending cards: prioritize inserts and cards with images from recent collections
       const results = await db
         .select({
           id: cards.id,
@@ -894,7 +894,6 @@ export class DatabaseStorage implements IStorage {
           rarity: cards.rarity,
           estimatedValue: cards.estimatedValue,
           createdAt: cards.createdAt,
-          collectionCount: count(userCollections.id),
           set: {
             id: cardSets.id,
             name: cardSets.name,
@@ -907,19 +906,19 @@ export class DatabaseStorage implements IStorage {
         })
         .from(cards)
         .innerJoin(cardSets, eq(cards.setId, cardSets.id))
-        .leftJoin(userCollections, eq(cards.id, userCollections.cardId))
-        .leftJoin(cardPriceCache, eq(cards.id, cardPriceCache.cardId))
         .where(
-          or(
-            eq(cards.isInsert, true), // Include all inserts
-            sql`CAST(${cardPriceCache.avgPrice} AS DECIMAL) >= 3.0` // Include cards worth $3+
+          and(
+            isNotNull(cards.frontImageUrl), // Only cards with images
+            or(
+              eq(cards.isInsert, true), // Prioritize inserts
+              gte(cardSets.year, 2020) // Or recent sets
+            )
           )
         )
-        .groupBy(cards.id, cardSets.id)
         .orderBy(
-          desc(count(userCollections.id)), // Most collected first
-          desc(cardSets.year), // Newer sets preferred
-          desc(cards.isInsert) // Inserts preferred
+          desc(cards.isInsert), // Inserts first
+          desc(cardSets.year), // Newer sets
+          desc(cards.createdAt) // Recently added cards
         )
         .limit(limit);
 
