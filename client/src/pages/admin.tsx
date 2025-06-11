@@ -112,6 +112,9 @@ export default function AdminPage() {
         <Badge variant="secondary">Admin Only</Badge>
       </div>
 
+      {/* Set Grouping Analysis Tool */}
+      <SetGroupingAnalyzer />
+
       {/* Control Panel */}
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
