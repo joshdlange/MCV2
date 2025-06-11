@@ -206,6 +206,7 @@ export type InsertCardPriceCache = z.infer<typeof insertCardPriceCacheSchema>;
 // Extended types for API responses
 export type CardWithSet = Card & {
   set: CardSet;
+  subsetName?: string | null;
 };
 
 export type CollectionItem = UserCollection & {

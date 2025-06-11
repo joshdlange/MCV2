@@ -8,7 +8,7 @@ import { CardPricing } from "@/components/cards/card-pricing";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
-import type { CardWithSet, CollectionItem, WishlistItem } from "@/types/schema";
+import type { CardWithSet, CollectionItem, WishlistItem } from "@shared/schema";
 import SimpleImage from "@/components/ui/simple-image";
 import { CardFilters } from "@/types";
 
@@ -33,7 +33,9 @@ export function CardGrid({
   const { toast } = useToast();
   
   const queryParams = new URLSearchParams();
-  if (filters.setId) queryParams.set('setId', filters.setId.toString());
+  // Use setId prop if provided, otherwise use filters.setId
+  if (setId) queryParams.set('setId', setId.toString());
+  else if (filters.setId) queryParams.set('setId', filters.setId.toString());
   if (filters.search) queryParams.set('search', filters.search);
   if (filters.rarity) queryParams.set('rarity', filters.rarity);
   if (filters.isInsert !== undefined) queryParams.set('isInsert', filters.isInsert.toString());
