@@ -134,21 +134,13 @@ export function RecentCards() {
               </div>
               
               {/* Card info below image */}
-              <div className="p-2">
+              <div className="p-1">
                 <p className="font-medium text-card-foreground text-xs truncate">
                   {item.card.name}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
                   {item.card.set.name}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  #{item.card.cardNumber}
-                </p>
-                {item.card.estimatedValue && (
-                  <p className="text-xs font-semibold text-green-600 mt-1">
-                    ${parseFloat(item.card.estimatedValue).toFixed(2)}
-                  </p>
-                )}
               </div>
             </div>
           ))}

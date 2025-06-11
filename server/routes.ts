@@ -506,7 +506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/trending", async (req, res) => {
+  app.get("/api/trending-cards", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
       const trendingCards = await storage.getTrendingCards(limit);

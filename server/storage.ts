@@ -894,15 +894,14 @@ export class DatabaseStorage implements IStorage {
           rarity: cards.rarity,
           estimatedValue: cards.estimatedValue,
           createdAt: cards.createdAt,
-          set: {
-            id: cardSets.id,
-            name: cardSets.name,
-            year: cardSets.year,
-            description: cardSets.description,
-            imageUrl: cardSets.imageUrl,
-            totalCards: cardSets.totalCards,
-            createdAt: cardSets.createdAt,
-          }
+          // Set fields with aliases
+          setId_alias: cardSets.id,
+          setName: cardSets.name,
+          setYear: cardSets.year,
+          setDescription: cardSets.description,
+          setImageUrl: cardSets.imageUrl,
+          setTotalCards: cardSets.totalCards,
+          setCreatedAt: cardSets.createdAt,
         })
         .from(cards)
         .innerJoin(cardSets, eq(cards.setId, cardSets.id))
@@ -935,7 +934,15 @@ export class DatabaseStorage implements IStorage {
         rarity: row.rarity,
         estimatedValue: row.estimatedValue,
         createdAt: row.createdAt,
-        set: row.set
+        set: {
+          id: row.setId_alias,
+          name: row.setName,
+          year: row.setYear,
+          description: row.setDescription,
+          imageUrl: row.setImageUrl,
+          totalCards: row.setTotalCards,
+          createdAt: row.setCreatedAt,
+        }
       }));
     } catch (error) {
       console.error('Error getting trending cards:', error);
