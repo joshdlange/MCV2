@@ -76,11 +76,10 @@ app.use((req, res, next) => {
   }
 
   // Use Railway's dynamic port in production, fallback to 5000 for development
-  const port = process.env.PORT || 5000;
+  const port = parseInt(process.env.PORT || "5000");
   server.listen({
     port,
     host: "0.0.0.0",
-    reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
     
