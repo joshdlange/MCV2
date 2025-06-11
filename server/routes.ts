@@ -555,6 +555,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Card pricing endpoint
+  app.get("/api/card-pricing/:cardId", async (req, res) => {
+    try {
+      const cardId = parseInt(req.params.cardId);
+      if (isNaN(cardId)) {
+        return res.status(400).json({ message: "Invalid card ID" });
+      }
+
+      const pricing = await storage.getCardPricing(cardId);
+      if (!pricing) {
+        return res.status(404).json({ message: "No pricing data found" });
+      }
+
+      res.json({
+        avgPrice: parseFloat(pricing.avgPrice || "0"),
+        salesCount: pricing.salesCount || 0,
+        lastFetched: pricing.lastFetched || new Date()
+      });
+    } catch (error) {
+      console.error("Error fetching card pricing:", error);
+      res.status(500).json({ message: "Failed to fetch pricing data" });
+    }
+  });
+
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);
 
