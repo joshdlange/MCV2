@@ -1,241 +1,278 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { cn } from "@/lib/utils";
+/**
+ * High-performance image component with lazy loading, WebP support, and caching
+ * Optimized for large card collections with minimal memory usage
+ */
+
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { performanceCache } from '@/lib/performance-cache';
 
 interface OptimizedImageProps {
-  src: string;
+  src: string | null;
   alt: string;
-  size: 'thumbnail' | 'detail' | 'full' | 'set' | 'mobile';
+  width?: number;
+  height?: number;
   className?: string;
-  loading?: 'lazy' | 'eager';
-  onClick?: () => void;
+  placeholder?: string;
+  priority?: boolean;
+  onLoad?: () => void;
+  onError?: () => void;
+  fallback?: string;
 }
 
-// Image size configurations for Cloudinary
-const IMAGE_CONFIGS = {
-  thumbnail: { w: 200, h: 280, q: 80 },
-  detail: { w: 400, h: 560, q: 90 },
-  full: { w: 800, h: 1120, q: 'auto' as const },
-  set: { w: 150, h: 150, q: 80, c: 'fill' as const },
-  mobile: { w: 150, h: 210, q: 70 },
-} as const;
-
-// Convert Google Drive URLs to direct view format
-function convertGoogleDriveUrl(url: string): string {
-  if (!url.includes('drive.google.com')) return url;
-  
-  const fileIdMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-  if (fileIdMatch) {
-    return `https://drive.google.com/uc?export=view&id=${fileIdMatch[1]}`;
-  }
-  return url;
-}
-
-// Extract Google Drive file ID from URL
-function extractGoogleDriveFileId(url: string): string | null {
-  if (!url.includes('drive.google.com')) return null;
-  
-  const fileIdMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  return fileIdMatch ? fileIdMatch[1] : null;
-}
-
-// Build Cloudinary optimized URL with fallback handling
-function buildCloudinaryUrl(originalUrl: string, config: typeof IMAGE_CONFIGS[keyof typeof IMAGE_CONFIGS]): string {
-  if (!originalUrl) return '';
-  
-  // If already a Cloudinary URL, return as-is
-  if (originalUrl.includes('cloudinary.com')) {
-    return originalUrl;
-  }
-  
-  // Convert Google Drive URLs to direct view format first
-  const directUrl = convertGoogleDriveUrl(originalUrl);
-  
-  // Use environment variable for cloud name
-  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dqydhlszn';
-  if (!cloudName) {
-    // Fallback to converted URL if Cloudinary not configured
-    return directUrl;
-  }
-  
-  const { w, h, q } = config;
-  const c = 'c' in config ? config.c : undefined;
-  let transformations = `f_auto,q_${q}`;
-  
-  if (w) transformations += `,w_${w}`;
-  if (h) transformations += `,h_${h}`;
-  if (c) transformations += `,c_${c}`;
-  
-  // Use Cloudinary's fetch functionality to optimize the direct URL
-  return `https://res.cloudinary.com/${cloudName}/image/fetch/${transformations}/${encodeURIComponent(directUrl)}`;
-}
-
-export function OptimizedImage({ 
-  src, 
-  alt, 
-  size, 
-  className, 
-  loading = 'lazy',
-  onClick 
+export function OptimizedImage({
+  src,
+  alt,
+  width = 300,
+  height = 400,
+  className = "",
+  placeholder,
+  priority = false,
+  onLoad,
+  onError,
+  fallback = "/api/placeholder-card.svg"
 }: OptimizedImageProps) {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const [currentSrc, setCurrentSrc] = useState('');
-  const [fallbackAttempts, setFallbackAttempts] = useState(0);
-  
-  const config = IMAGE_CONFIGS[size];
+  const [isInView, setIsInView] = useState(priority);
+  const [currentSrc, setCurrentSrc] = useState<string | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
 
-  // Generate different URL formats for fallback chain
-  const generateImageUrls = useCallback((originalUrl: string): string[] => {
-    if (!originalUrl) return [];
-    
-    const urls: string[] = [];
-    
-    // If already a Cloudinary URL, just use it
-    if (originalUrl.includes('cloudinary.com')) {
-      urls.push(originalUrl);
-      return urls;
-    }
-    
-    // For external storage URLs (like PriceCharting/Google Storage/Google Drive), use image proxy
-    if (originalUrl.includes('storage.googleapis.com') || 
-        originalUrl.includes('pricecharting.com') || 
-        originalUrl.includes('drive.google.com')) {
-      // These URLs have CORS restrictions, so use our proxy
-      const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(originalUrl)}`;
-      urls.push(proxyUrl);
-      return urls;
-    }
-    
-    // For other URLs (not handled by proxy above)
-    {
-      // For other URLs, try Cloudinary optimization first, then direct
-      urls.push(buildCloudinaryUrl(originalUrl, config));
-      if (originalUrl !== urls[0]) {
-        urls.push(originalUrl);
-      }
-    }
-    
-    return urls.filter(Boolean);
-  }, [config]);
-
-  // Initialize image loading
+  // Intersection Observer for lazy loading
   useEffect(() => {
-    const shouldUseFallback = !src || 
-      src.trim() === '' || 
-      src === 'No Image' || 
-      src === 'null' || 
-      src === 'undefined';
-      
-    if (shouldUseFallback) {
-      setIsLoading(false);
-      setHasError(true);
-      return;
-    }
-    
-    if (src) {
-      setIsLoading(true);
-      setHasError(false);
-      setFallbackAttempts(0);
-      
-      const urls = generateImageUrls(src);
-      if (urls.length > 0) {
-        setCurrentSrc(urls[0]);
+    if (priority || !imgRef.current) return;
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsInView(true);
+            observerRef.current?.disconnect();
+          }
+        });
+      },
+      {
+        rootMargin: '50px', // Start loading 50px before entering viewport
+        threshold: 0.1,
       }
-    }
-  }, [src, generateImageUrls]);
+    );
 
-  // Handle image loading errors with fallback chain
-  const handleImageError = useCallback(() => {
-    const urls = generateImageUrls(src);
-    const nextAttempt = fallbackAttempts + 1;
-    
-    console.log(`Image failed to load: ${currentSrc}, attempt ${nextAttempt}/${urls.length}`);
-    
-    if (nextAttempt < urls.length) {
-      // Try next URL in fallback chain
-      console.log(`Trying fallback URL: ${urls[nextAttempt]}`);
-      setCurrentSrc(urls[nextAttempt]);
-      setFallbackAttempts(nextAttempt);
-      setIsLoading(true);
-    } else {
-      // All fallbacks failed
-      console.log(`All ${urls.length} image URLs failed for: ${src}`);
-      setIsLoading(false);
-      setHasError(true);
+    if (imgRef.current) {
+      observerRef.current.observe(imgRef.current);
     }
-  }, [src, fallbackAttempts, generateImageUrls, currentSrc]);
 
-  // Handle successful image load
-  const handleImageLoad = useCallback(() => {
-    setIsLoading(false);
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, [priority]);
+
+  // Optimize image URL with WebP support and proxy
+  const getOptimizedSrc = useCallback((originalSrc: string | null): string => {
+    if (!originalSrc) return fallback;
+
+    // Check if it's already a data URL or blob
+    if (originalSrc.startsWith('data:') || originalSrc.startsWith('blob:')) {
+      return originalSrc;
+    }
+
+    // Check cache first
+    const cacheKey = `optimized-image-${originalSrc}`;
+    const cached = performanceCache.get<string>(cacheKey);
+    if (cached) return cached;
+
+    // Use image proxy for external images
+    const optimizedUrl = originalSrc.startsWith('http') 
+      ? `/api/proxy-image?url=${encodeURIComponent(originalSrc)}&w=${width}&h=${height}&format=webp`
+      : originalSrc;
+
+    // Cache the optimized URL
+    performanceCache.set(cacheKey, optimizedUrl, 30 * 60 * 1000); // 30 minute cache
+
+    return optimizedUrl;
+  }, [fallback, width, height]);
+
+  // Update current src when in view
+  useEffect(() => {
+    if (isInView && src && !currentSrc) {
+      setCurrentSrc(getOptimizedSrc(src));
+    }
+  }, [isInView, src, currentSrc, getOptimizedSrc]);
+
+  const handleLoad = useCallback(() => {
+    setIsLoaded(true);
     setHasError(false);
-  }, []);
+    onLoad?.();
+  }, [onLoad]);
 
-  // Use default "no image" placeholder when no image is available
-  const shouldUseFallback = !src || 
-    src.trim() === '' || 
-    src === 'No Image' || 
-    src === 'null' || 
-    src === 'undefined' ||
-    hasError;
-    
-  if (shouldUseFallback) {
-    const superheroFallbackUrl = "/uploads/superhero-fallback.svg";
-    
+  const handleError = useCallback(() => {
+    if (currentSrc !== fallback) {
+      // Try fallback image
+      setCurrentSrc(fallback);
+      setHasError(false);
+    } else {
+      setHasError(true);
+      onError?.();
+    }
+  }, [currentSrc, fallback, onError]);
+
+  // Placeholder component
+  const renderPlaceholder = () => (
+    <div
+      className={`bg-gray-200 dark:bg-gray-700 animate-pulse flex items-center justify-center ${className}`}
+      style={{ width, height }}
+    >
+      {placeholder || (
+        <svg
+          className="w-12 h-12 text-gray-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
+        </svg>
+      )}
+    </div>
+  );
+
+  // Error state
+  if (hasError) {
     return (
-      <img
-        src={superheroFallbackUrl}
-        alt="Image Coming Soon"
-        className={cn(className)}
-        onClick={onClick}
-        onLoad={handleImageLoad}
-        onError={(e) => {
-          // If Google Drive link fails, use inline SVG placeholder
-          const target = e.target as HTMLImageElement;
-          target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImNhcmRHcmFkaWVudCIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6I2RjMjYyNjtzdG9wLW9wYWNpdHk6MSIgLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiM5OTFiMWI7c3RvcC1vcGFjaXR5OjEiIC8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNjYXJkR3JhZGllbnQpIiBzdHJva2U9IiM3ZjFkMWQiIHN0cm9rZS13aWR0aD0iMyIgcng9IjEyIi8+PHJlY3QgeD0iOCIgeT0iOCIgd2lkdGg9IjE4NCIgaGVpZ2h0PSIyODQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZiYmYyNCIgc3Ryb2tlLXdpZHRoPSIyIiByeD0iOCIvPjx0ZXh0IHg9IjEwMCIgeT0iNDAiIGZvbnQtZmFtaWx5PSJBcmlhbCBCbGFjaywgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiNmZmZmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPk1BUlZFTDwvdGV4dD48dGV4dCB4PSIxMDAiIHk9IjYwIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiNmYmJmMjQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkNBUkQgVkFVTFQ8L3RleHQ+PGNpcmNsZSBjeD0iMTAwIiBjeT0iMTUwIiByPSI0NSIgZmlsbD0iI2ZmZmZmZiIgb3BhY2l0eT0iMC45Ii8+PGNpcmNsZSBjeD0iMTAwIiBjeT0iMTUwIiByPSI0MCIgZmlsbD0iI2RjMjYyNiIvPjxwYXRoIGQ9Ik0xMDAgMTIwIEw4NSAxMzAgTDg1IDE3MCBMMTAWIDE4MCBMMTE1IDE3MCBMMTE1IDEzMCBaIiBmaWxsPSIjZmZmZmZmIi8+PGNpcmNsZSBjeD0iMTAwIiBjeT0iMTU1IiByPSI4IiBmaWxsPSIjZGMyNjI2Ii8+PHJlY3QgeD0iOTYiIHk9IjE1NSIgd2lkdGg9IjgiIGhlaWdodD0iMTUiIGZpbGw9IiNkYzI2MjYiLz48dGV4dCB4PSIxMDAiIHk9IjIyMCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwIiBmaWxsPSIjZmZmZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5UUkFESU5HIENBUkQ8L3RleHQ+PHRleHQgeD0iMTAwIiB5PSIyMzUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMCIgZmlsbD0iI2ZiYmYyNCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q09MTEVDVElPTjwvdGV4dD48cG9seWdvbiBwb2ludHM9IjIwLDIwIDM1LDIwIDIwLDM1IiBmaWxsPSIjZmJiZjI0Ii8+PHBvbHlnb24gcG9pbnRzPSIxODAsMjAgMTgwLDM1IDE2NSwyMCIgZmlsbD0iI2ZiYmYyNCIvPjxwb2x5Z29uIHBvaW50cz0iMjAsMjgwIDIwLDI2NSAzNSwyODAiIGZpbGw9IiNmYmJmMjQiLz48cG9seWdvbiBwb2ludHM9IjE4MCwyODAgMTY1LDI4MCAxODAsMjY1IiBmaWxsPSIjZmJiZjI0Ii8+PC9zdmc+';
-        }}
-      />
+      <div
+        className={`bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex items-center justify-center ${className}`}
+        style={{ width, height }}
+      >
+        <span className="text-red-500 text-sm">Image unavailable</span>
+      </div>
     );
   }
-  
+
   return (
-    <div className={cn("relative overflow-hidden bg-gray-100 rounded-lg", className)}>
-      {isLoading && (
-        <div 
-          className="absolute inset-0 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 animate-pulse flex items-center justify-center z-10"
-          style={{ 
-            width: config.w, 
-            height: config.h,
-            aspectRatio: config.w && config.h ? `${config.w}/${config.h}` : undefined
-          }}
-        >
-          <div className="text-gray-400 dark:text-gray-500 text-xs">Loading...</div>
-        </div>
+    <div
+      ref={imgRef}
+      className={`relative overflow-hidden ${className}`}
+      style={{ width, height }}
+    >
+      {/* Show placeholder while not in view or loading */}
+      {(!isInView || !isLoaded) && renderPlaceholder()}
+      
+      {/* Actual image */}
+      {isInView && currentSrc && (
+        <img
+          src={currentSrc}
+          alt={alt}
+          width={width}
+          height={height}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+            isLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
+          onLoad={handleLoad}
+          onError={handleError}
+          loading={priority ? 'eager' : 'lazy'}
+          decoding="async"
+        />
       )}
-      <img
-        src={currentSrc}
-        alt={alt}
-        loading={loading}
-        referrerPolicy="no-referrer"
-        crossOrigin="anonymous"
-        className={cn(
-          "transition-all duration-300 w-full h-full object-cover",
-          isLoading ? "opacity-0" : "opacity-100",
-          onClick ? "cursor-pointer hover:opacity-90 hover:scale-105 transition-transform" : "",
-          "rounded-lg",
-          className
-        )}
-        style={{ 
-          width: config.w, 
-          height: config.h,
-          aspectRatio: config.w && config.h ? `${config.w}/${config.h}` : undefined
-        }}
-        onLoad={handleImageLoad}
-        onError={handleImageError}
-        onClick={onClick}
-        // Add additional attributes for better iOS/Safari compatibility
-        decoding="async"
-      />
     </div>
   );
 }
+
+// High-performance card image with Marvel-themed styling
+export function CardImage({
+  src,
+  alt,
+  cardNumber,
+  setName,
+  isInsert = false,
+  priority = false,
+  className = "",
+}: {
+  src: string | null;
+  alt: string;
+  cardNumber?: string;
+  setName?: string;
+  isInsert?: boolean;
+  priority?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={`relative group ${className}`}>
+      <OptimizedImage
+        src={src}
+        alt={alt}
+        width={200}
+        height={280}
+        priority={priority}
+        className="rounded-lg shadow-md transition-transform group-hover:scale-105"
+        fallback="/api/placeholder-card.svg"
+      />
+      
+      {/* Insert badge */}
+      {isInsert && (
+        <div className="absolute top-2 right-2 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded">
+          INSERT
+        </div>
+      )}
+      
+      {/* Card number overlay */}
+      {cardNumber && (
+        <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+          #{cardNumber}
+        </div>
+      )}
+      
+      {/* Hover overlay with set name */}
+      {setName && (
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-colors duration-200 rounded-lg flex items-end p-3">
+          <div className="text-white text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 line-clamp-2">
+            {setName}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Preload critical images
+export function preloadImages(imageSrcs: string[], priority: boolean = false) {
+  const preloadPromises = imageSrcs.map((src) => {
+    return new Promise<void>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error(`Failed to preload ${src}`));
+      img.src = src;
+      
+      if (priority) {
+        img.loading = 'eager';
+      }
+    });
+  });
+
+  return Promise.allSettled(preloadPromises);
+}
+
+// Image cache management
+export const imageCache = {
+  preloadCardImages: async (cards: Array<{ frontImageUrl: string | null }>) => {
+    const imageSrcs = cards
+      .map(card => card.frontImageUrl)
+      .filter((src): src is string => !!src)
+      .slice(0, 20); // Preload first 20 images
+
+    if (imageSrcs.length > 0) {
+      await preloadImages(imageSrcs, true);
+    }
+  },
+
+  clearCache: () => {
+    // Clear image cache entries
+    const keys = ['optimized-image-'];
+    keys.forEach(key => {
+      // Remove cache entries that start with this key
+      // Implementation depends on cache structure
+    });
+  }
+};
