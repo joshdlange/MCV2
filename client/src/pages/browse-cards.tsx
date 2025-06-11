@@ -70,7 +70,7 @@ export default function BrowseCards() {
       limit: cardsPerPage,
       ...filters 
     }],
-    enabled: !!selectedSet, // Only load cards when we have a specific set selected
+    enabled: !!selectedSet && !!selectedMainSet, // Only load cards when we have BOTH mainSet and specific subset selected
     queryFn: async () => {
       if (!selectedSet) throw new Error('No set selected');
       
@@ -90,7 +90,8 @@ export default function BrowseCards() {
     select: (data: any) => {
       // Add performance logging and debug info
       console.time(`Card list load (Set ${selectedSet?.id})`);
-      console.log(`VIEW MODE: card | mainSetId: ${selectedMainSet?.id || 'none'} | setId: ${selectedSet?.id || 'none'} | cardCount loaded: ${data?.cards?.length || data?.length || 0}`);
+      const cardCount = data?.cards?.length || data?.length || 0;
+      console.log(`VIEW MODE: card | mainSetId: ${selectedMainSet?.id} | setId: ${selectedSet?.id} | cardCount loaded: ${cardCount}`);
       const result = {
         cards: data?.cards || data || [],
         totalCount: data?.totalCount || data?.length || 0
@@ -145,8 +146,9 @@ export default function BrowseCards() {
 
   const handleSubsetClick = (subset: CardSet) => {
     console.time(`Subset selected (${subset.name})`);
+    console.log(`VIEW MODE: card | mainSetId: ${selectedMainSet?.id || 'none'} | setId: ${subset.id} | cardCount loaded: 0`);
     setSelectedSet(subset);
-    setSelectedMainSet(null);
+    // KEEP selectedMainSet for proper hierarchy - DO NOT clear it
     setCurrentPage(1);
     console.timeEnd(`Subset selected (${subset.name})`);
   };
@@ -163,8 +165,10 @@ export default function BrowseCards() {
   };
 
   const handleSetClick = (set: CardSet) => {
+    // This function should NOT be used for subset navigation
+    // Use handleSubsetClick instead to maintain hierarchy
     setSelectedSet(set);
-    setSelectedMainSet(null);
+    // Do NOT clear selectedMainSet here - breaks hierarchy
     setCurrentPage(1);
   };
 
@@ -340,7 +344,68 @@ export default function BrowseCards() {
 
       {/* Main Content Area */}
       <div className="p-6">
-        {/* View 1: Selected Set Cards (Final Level) */}
+        {/* View 1: Subsets from MainSet (Second Level) */}
+        {selectedMainSet && !selectedSet && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">{selectedMainSet.name} Subsets</h3>
+                <p className="text-gray-600">
+                  {subsetsData?.length || 0} subsets found
+                </p>
+              </div>
+              <Button
+                onClick={handleBackToMainSets}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Main Sets
+              </Button>
+            </div>
+
+            {subsetsLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-marvel-red"></div>
+                <p className="text-gray-600 font-medium">Loading subsets...</p>
+              </div>
+            ) : subsetsData && subsetsData.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {subsetsData.map((subset) => (
+                  <Card 
+                    key={subset.id} 
+                    className="cursor-pointer hover:shadow-lg transition-shadow duration-200 border-2 hover:border-marvel-red"
+                    onClick={() => handleSubsetClick(subset)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex flex-col space-y-3">
+                        <div className="aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100">
+                          <SetThumbnail 
+                            setId={subset.id}
+                            setName={subset.name}
+                            setImageUrl={subset.imageUrl}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="text-center">
+                          <h4 className="font-semibold text-gray-900 text-sm truncate">{subset.name}</h4>
+                          <p className="text-xs text-gray-500">{subset.totalCards || 0} cards</p>
+                          <p className="text-xs text-gray-500">{subset.year}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500">No subsets found for this main set.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* View 2: Selected Set Cards (Final Level) */}
         {selectedSet && selectedMainSet && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
