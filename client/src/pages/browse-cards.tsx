@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Star, ArrowLeft, Plus, Edit, Filter, Grid3X3, List, X, Save } from "lucide-react";
+import { Search, Star, ArrowLeft, Plus, Edit, Filter, Grid3X3, List, X, Save, ChevronDown, ChevronRight } from "lucide-react";
 import { CardGrid } from "@/components/cards/card-grid";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { SetThumbnail } from "@/components/cards/set-thumbnail";
@@ -38,12 +38,17 @@ export default function BrowseCards() {
     imageUrl: ''
   });
   const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
+  const [expandedMainSets, setExpandedMainSets] = useState<Set<number>>(new Set());
   const { toast } = useToast();
   const { isAdminMode } = useAppStore();
   const queryClient = useQueryClient();
 
   const { data: cardSets } = useQuery<CardSet[]>({
     queryKey: ["/api/card-sets"],
+  });
+
+  const { data: mainSetsData } = useQuery({
+    queryKey: ["/api/main-sets-with-details"],
   });
 
   const { data: collection } = useQuery<CollectionItem[]>({
@@ -293,6 +298,21 @@ export default function BrowseCards() {
   const handleCancelEdit = () => {
     setEditingSet(null);
     setEditFormData({ name: '', year: 0, description: '', imageUrl: '' });
+  };
+
+  // MainSet expansion handlers
+  const toggleMainSetExpansion = (mainSetId: number) => {
+    const newExpanded = new Set(expandedMainSets);
+    if (newExpanded.has(mainSetId)) {
+      newExpanded.delete(mainSetId);
+    } else {
+      newExpanded.add(mainSetId);
+    }
+    setExpandedMainSets(newExpanded);
+  };
+
+  const isMainSetExpanded = (mainSetId: number) => {
+    return expandedMainSets.has(mainSetId);
   };
 
   // Show individual cards if a set is selected
@@ -667,71 +687,196 @@ export default function BrowseCards() {
               </div>
             )}
 
-            {/* All Sets */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                {favoritesets.length > 0 ? 'All Sets' : 'Card Sets'}
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-                {otherSets.map((set) => (
-                  <Card key={set.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSetClick(set)}>
-                    <CardContent className="p-0">
-                      <div className="relative">
-                        <SetThumbnail
-                          setId={set.id}
-                          setName={set.name}
-                          setImageUrl={set.imageUrl}
-                          className="w-full h-32 md:h-48 object-cover rounded-t-lg"
-                        />
-                        <div className="absolute top-2 right-2 flex gap-1">
-                          {isAdminMode && (
-                            <Button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditSet(set.id);
-                              }}
-                              variant="outline"
-                              size="sm"
-                              className="bg-white/90 hover:bg-white"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
+            {/* MainSets with Nested Structure */}
+            {mainSetsData && (
+              <div className="space-y-6">
+                {/* MainSets */}
+                {mainSetsData.mainSets && mainSetsData.mainSets.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Main Sets</h3>
+                    <div className="space-y-4">
+                      {mainSetsData.mainSets.map((mainSet: any) => (
+                        <div key={mainSet.id} className="bg-white rounded-lg border border-gray-200 shadow-sm">
+                          {/* MainSet Header */}
+                          <div
+                            className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
+                              mainSet.subsetCount === 1 ? 'rounded-lg' : 'border-b border-gray-200'
+                            }`}
+                            onClick={() => mainSet.subsetCount > 1 ? toggleMainSetExpansion(mainSet.id) : handleSetClick(mainSet.sets[0])}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                <img
+                                  src={mainSet.thumbnailImageUrl}
+                                  alt={mainSet.name}
+                                  className="w-16 h-16 object-cover rounded-lg"
+                                />
+                                <div>
+                                  <h4 className="text-lg font-semibold text-gray-900">{mainSet.name}</h4>
+                                  <p className="text-sm text-gray-600">
+                                    {mainSet.totalCards} total cards • {mainSet.subsetCount} subset{mainSet.subsetCount !== 1 ? 's' : ''}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {mainSet.subsetCount > 1 && (
+                                  <Button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      // Add all cards from all subsets
+                                      mainSet.sets.forEach((subset: any) => handleAddAllToCollection(subset.id));
+                                    }}
+                                    size="sm"
+                                    className="bg-marvel-red hover:bg-red-700"
+                                  >
+                                    <Plus className="w-3 h-3 mr-1" />
+                                    Add All
+                                  </Button>
+                                )}
+                                {mainSet.subsetCount > 1 && (
+                                  isMainSetExpanded(mainSet.id) ? (
+                                    <ChevronDown className="w-5 h-5 text-gray-400" />
+                                  ) : (
+                                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Expanded Subsets */}
+                          {mainSet.subsetCount > 1 && isMainSetExpanded(mainSet.id) && (
+                            <div className="p-4 bg-gray-50">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+                                {mainSet.sets.map((subset: any) => (
+                                  <Card key={subset.id} className="group cursor-pointer hover:shadow-lg transition-shadow bg-white" onClick={() => handleSetClick(subset)}>
+                                    <CardContent className="p-0">
+                                      <div className="relative">
+                                        <SetThumbnail
+                                          setId={subset.id}
+                                          setName={subset.name}
+                                          setImageUrl={subset.imageUrl}
+                                          className="w-full h-32 md:h-40 object-cover rounded-t-lg"
+                                        />
+                                        <div className="absolute top-2 right-2 flex gap-1">
+                                          {isAdminMode && (
+                                            <Button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleEditSet(subset.id);
+                                              }}
+                                              variant="outline"
+                                              size="sm"
+                                              className="bg-white/90 hover:bg-white"
+                                            >
+                                              <Edit className="w-4 h-4" />
+                                            </Button>
+                                          )}
+                                          <Button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleFavoriteSet(subset.id);
+                                            }}
+                                            variant="outline"
+                                            size="sm"
+                                            className="bg-white/90 hover:bg-white"
+                                          >
+                                            <Star className={`w-4 h-4 ${favoriteSetIds.includes(subset.id) ? 'text-yellow-500 fill-current' : ''}`} />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                      <div className="p-3">
+                                        <h5 className="font-semibold text-gray-900 mb-1 text-sm line-clamp-2">{subset.name}</h5>
+                                        <p className="text-xs text-gray-500 mb-2">{subset.totalCards} cards • {subset.year}</p>
+                                        <Button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleAddAllToCollection(subset.id);
+                                          }}
+                                          size="sm"
+                                          className="w-full bg-marvel-red hover:bg-red-700"
+                                        >
+                                          <Plus className="w-3 h-3 mr-1" />
+                                          Add All
+                                        </Button>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                              </div>
+                            </div>
                           )}
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleFavoriteSet(set.id);
-                            }}
-                            variant="outline"
-                            size="sm"
-                            className="bg-white/90 hover:bg-white"
-                          >
-                            <Star className="w-4 h-4" />
-                          </Button>
                         </div>
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-semibold text-gray-900 mb-2">{set.name}</h3>
-                        <p className="text-xs text-gray-500 mb-3">{set.totalCards} cards • {set.year}</p>
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAddAllToCollection(set.id);
-                            }}
-                            size="sm"
-                            className="flex-1 bg-marvel-red hover:bg-red-700"
-                          >
-                            <Plus className="w-3 h-3 mr-1" />
-                            Add All
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Unlinked Sets */}
+                {mainSetsData.unlinkedSets && mainSetsData.unlinkedSets.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Individual Sets</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+                      {mainSetsData.unlinkedSets.map((set: any) => (
+                        <Card key={set.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSetClick(set)}>
+                          <CardContent className="p-0">
+                            <div className="relative">
+                              <SetThumbnail
+                                setId={set.id}
+                                setName={set.name}
+                                setImageUrl={set.imageUrl}
+                                className="w-full h-32 md:h-48 object-cover rounded-t-lg"
+                              />
+                              <div className="absolute top-2 right-2 flex gap-1">
+                                {isAdminMode && (
+                                  <Button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditSet(set.id);
+                                    }}
+                                    variant="outline"
+                                    size="sm"
+                                    className="bg-white/90 hover:bg-white"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                )}
+                                <Button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleFavoriteSet(set.id);
+                                  }}
+                                  variant="outline"
+                                  size="sm"
+                                  className="bg-white/90 hover:bg-white"
+                                >
+                                  <Star className={`w-4 h-4 ${favoriteSetIds.includes(set.id) ? 'text-yellow-500 fill-current' : ''}`} />
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="p-4">
+                              <h3 className="font-semibold text-gray-900 mb-2">{set.name}</h3>
+                              <p className="text-xs text-gray-500 mb-3">{set.totalCards} cards • {set.year}</p>
+                              <Button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAddAllToCollection(set.id);
+                                }}
+                                size="sm"
+                                className="w-full bg-marvel-red hover:bg-red-700"
+                              >
+                                <Plus className="w-3 h-3 mr-1" />
+                                Add All
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
+            )}
           </>
         )}
       </div>
