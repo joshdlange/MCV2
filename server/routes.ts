@@ -15,8 +15,8 @@ import { ebayPricingService } from "./ebay-pricing";
 import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
 import { db } from "./db";
-import { cards } from "@shared/schema";
-import { sql } from "drizzle-orm";
+import { cards, cardSets } from "@shared/schema";
+import { sql, isNull } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages, testImageFinder } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
 
@@ -1147,6 +1147,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error linking sets to main sets:', error);
       res.status(500).json({ message: 'Failed to link sets to main sets' });
+    }
+  });
+
+  // Get all sets that have mainSetId = null (unlinked sets)
+  app.get("/api/admin/unlinked-sets", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      const unlinkedSets = await db
+        .select()
+        .from(cardSets)
+        .where(isNull(cardSets.mainSetId))
+        .orderBy(cardSets.name);
+      
+      res.json(unlinkedSets);
+    } catch (error) {
+      console.error('Error fetching unlinked sets:', error);
+      res.status(500).json({ message: 'Failed to fetch unlinked sets' });
     }
   });
 

@@ -32,6 +32,7 @@ export const users = pgTable("users", {
 export const mainSets = pgTable("main_sets", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
+  year: integer("year").default(2024).notNull(),
   totalCards: integer("total_cards").default(0).notNull(),
   subsetCount: integer("subset_count").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
