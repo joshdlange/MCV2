@@ -392,7 +392,9 @@ export class DatabaseStorage implements IStorage {
             name: cardSets.name,
             year: cardSets.year,
             description: cardSets.description,
+            imageUrl: cardSets.imageUrl,
             totalCards: cardSets.totalCards,
+            mainSetId: cardSets.mainSetId,
             createdAt: cardSets.createdAt,
           }
         })
@@ -928,6 +930,7 @@ export class DatabaseStorage implements IStorage {
           setDescription: cardSets.description,
           setImageUrl: cardSets.imageUrl,
           setTotalCards: cardSets.totalCards,
+          setMainSetId: cardSets.mainSetId,
           setCreatedAt: cardSets.createdAt,
           collectionCount: count(userCollections.id).as('collection_count'),
           latestAddition: sql<Date>`MAX(${userCollections.acquiredDate})`.as('latest_addition')
@@ -960,6 +963,7 @@ export class DatabaseStorage implements IStorage {
           cardSets.description,
           cardSets.imageUrl,
           cardSets.totalCards,
+          cardSets.mainSetId,
           cardSets.createdAt
         )
         .orderBy(
