@@ -95,17 +95,19 @@ async function performEBaySearch(searchTerms: string): Promise<string | null> {
     console.log(`Full eBay API URL: ${ebayApiUrl}?${params}`);
     const response = await fetch(`${ebayApiUrl}?${params}`);
     
-    if (!response.ok) {
-      console.error(`eBay API HTTP error: ${response.status} ${response.statusText}`);
-      return null;
-    }
-    
+    // Always try to parse JSON response, even for HTTP errors
     const data = await response.json() as any;
     
-    // Check for rate limit errors
+    // Check for rate limit errors first (can come with HTTP 500)
     if (data.errorMessage?.[0]?.error?.[0]?.errorId?.[0] === '10001') {
-      console.error('eBay API rate limit exceeded');
+      console.error('eBay API rate limit exceeded (error 10001)');
       throw new Error('RATE_LIMIT_EXCEEDED');
+    }
+    
+    if (!response.ok) {
+      console.error(`eBay API HTTP error: ${response.status} ${response.statusText}`);
+      console.error('Response body:', JSON.stringify(data, null, 2));
+      return null;
     }
     
     console.log(`eBay API response for "${searchTerms}":`, JSON.stringify(data, null, 2));
