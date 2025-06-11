@@ -20,8 +20,8 @@ export function MainSetTile({ mainSet, onSetClick }: MainSetTileProps) {
     queryKey: ['/api/card-sets', mainSet.id, 'subsets'],
   });
 
-  const thumbnailUrl = mainSet.imageUrl || cards?.[0]?.frontImageUrl || '/placeholder-card.jpg';
-  const subsetCount = subsets?.length || 0;
+  const thumbnailUrl = mainSet.imageUrl || (cards && cards.length > 0 ? cards[0]?.frontImageUrl : null) || '/placeholder-card.jpg';
+  const subsetCount = (subsets && subsets.length) || 0;
   const totalCards = mainSet.totalCards || 0;
 
   return (

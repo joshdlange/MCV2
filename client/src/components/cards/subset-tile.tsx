@@ -15,7 +15,7 @@ export function SubsetTile({ subset, onSubsetClick }: SubsetTileProps) {
     enabled: !subset.imageUrl,
   });
 
-  const thumbnailUrl = subset.imageUrl || cards?.[0]?.frontImageUrl || '/placeholder-card.jpg';
+  const thumbnailUrl = subset.imageUrl || (cards && cards.length > 0 ? cards[0]?.frontImageUrl : null) || '/placeholder-card.jpg';
   const totalCards = subset.totalCards || 0;
 
   return (
