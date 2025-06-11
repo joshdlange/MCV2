@@ -36,6 +36,7 @@ interface IStorage {
   // Card Sets
   getCardSets(): Promise<CardSet[]>;
   getCardSet(id: number): Promise<CardSet | undefined>;
+  getSubsets(mainSetId: number): Promise<CardSet[]>;
   createCardSet(insertCardSet: InsertCardSet): Promise<CardSet>;
   updateCardSet(id: number, updates: Partial<InsertCardSet>): Promise<CardSet | undefined>;
   searchCardSets(query: string): Promise<CardSet[]>;
@@ -1222,6 +1223,21 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error searching card sets:', error);
       return [];
+    }
+  }
+
+  async clearAllData(): Promise<void> {
+    try {
+      // Delete in order of dependencies
+      await db.delete(userCollections);
+      await db.delete(userWishlists);
+      await db.delete(cardPriceCache);
+      await db.delete(cards);
+      await db.delete(cardSets);
+      await db.delete(users);
+    } catch (error) {
+      console.error('Error clearing all data:', error);
+      throw error;
     }
   }
 }
