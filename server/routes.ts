@@ -105,28 +105,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth Routes - Sync Firebase user with backend
   app.post("/api/auth/sync", async (req, res) => {
     try {
-      const { uid, email, displayName } = req.body;
+      const { firebaseUid, email, displayName } = req.body;
       
-      if (!uid || !email) {
-        return res.status(400).json({ message: 'UID and email are required' });
+      if (!firebaseUid || !email) {
+        return res.status(400).json({ message: 'Firebase UID and email are required' });
       }
 
+      console.log('Auth sync request for:', firebaseUid, email);
+
       // Check if user exists
-      let user = await storage.getUserByFirebaseUid(uid);
+      let user = await storage.getUserByFirebaseUid(firebaseUid);
       
       if (!user) {
-        // Create new user
+        // Create new user - check if this should be an admin user
+        const isAdminEmail = email === 'joshdlange045@gmail.com';
         const userData = {
-          firebaseUid: uid,
+          firebaseUid,
           username: email.split('@')[0],
           email,
           displayName: displayName || email.split('@')[0],
-          isAdmin: false,
+          isAdmin: isAdminEmail,
           plan: 'SIDE_KICK',
           subscriptionStatus: 'active'
         };
         
         user = await storage.createUser(userData);
+        console.log('Created new user:', user.id, 'isAdmin:', user.isAdmin);
+      } else {
+        console.log('Found existing user:', user.id, 'isAdmin:', user.isAdmin);
+        
+        // Ensure admin status is correct for known admin users
+        if (email === 'joshdlange045@gmail.com' && !user.isAdmin) {
+          await storage.updateUser(user.id, { isAdmin: true });
+          user = await storage.getUserByFirebaseUid(firebaseUid);
+          console.log('Updated user admin status:', user?.isAdmin);
+        }
       }
       
       res.json({ user });
