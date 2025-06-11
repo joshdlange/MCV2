@@ -235,6 +235,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all card sets
+  app.get("/api/card-sets", async (req, res) => {
+    try {
+      const cardSets = await storage.getCardSets();
+      res.json(cardSets);
+    } catch (error) {
+      console.error('Get card sets error:', error);
+      res.status(500).json({ message: "Failed to fetch card sets" });
+    }
+  });
+
+  // Get sets filtered by mainSetId
+  app.get("/api/sets", async (req, res) => {
+    try {
+      const mainSetId = req.query.mainSetId ? parseInt(req.query.mainSetId as string) : null;
+      
+      if (mainSetId === null || isNaN(mainSetId)) {
+        return res.status(400).json({ message: "Valid mainSetId parameter required" });
+      }
+      
+      const cardSets = await storage.getCardSets();
+      const filteredSets = cardSets.filter(set => set.mainSetId === mainSetId);
+      
+      res.json(filteredSets);
+    } catch (error) {
+      console.error('Get sets by mainSetId error:', error);
+      res.status(500).json({ message: "Failed to fetch sets" });
+    }
+  });
+
   // Get card set by ID
   app.get("/api/card-sets/:id", async (req, res) => {
     try {
