@@ -29,6 +29,14 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const mainSets = pgTable("main_sets", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  totalCards: integer("total_cards").default(0).notNull(),
+  subsetCount: integer("subset_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const cardSets = pgTable("card_sets", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -146,6 +154,11 @@ export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
 });
 
+export const insertMainSetSchema = createInsertSchema(mainSets).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertCardSetSchema = createInsertSchema(cardSets).omit({
   id: true,
   createdAt: true,
@@ -176,6 +189,9 @@ export const insertCardPriceCacheSchema = createInsertSchema(cardPriceCache).omi
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+
+export type MainSet = typeof mainSets.$inferSelect;
+export type InsertMainSet = z.infer<typeof insertMainSetSchema>;
 
 export type CardSet = typeof cardSets.$inferSelect;
 export type InsertCardSet = z.infer<typeof insertCardSetSchema>;
