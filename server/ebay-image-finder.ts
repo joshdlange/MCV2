@@ -40,28 +40,17 @@ async function searchEBayForCardImage(
 ): Promise<string | null> {
   try {
     // Create multiple search strategies with decreasing specificity
-    // Extract year and brand from set name for better eBay matching
-    const setWords = setName.split(' ');
-    const year = setWords.find(word => /^\d{4}$/.test(word)) || '';
-    const brand = setWords.find(word => /^(marvel|dc|topps|panini|upper|fleer|skybox)$/i.test(word)) || 'marvel';
-    
     const searchStrategies = [
-      // Strategy 1: eBay-style format with hash (#) - matches actual listings
-      [year, brand, setName.replace(/\d{4}/, '').trim(), `#${cardNumber}`, cardName].filter(Boolean).join(' '),
-      // Strategy 2: COMC with full terms (highest quality scans)
-      [setName, cardName, cardNumber, 'comc'].filter(Boolean).join(' '),
-      // Strategy 3: eBay-style with "card" keyword
-      [year, brand, setName.replace(/\d{4}/, '').trim(), cardName, 'card', cardNumber].filter(Boolean).join(' '),
-      // Strategy 4: COMC consignment format
-      [setName, cardName, cardNumber, 'comc_consignment'].filter(Boolean).join(' '),
-      // Strategy 5: Standard format with all terms
-      [setName, cardName, cardNumber, description].filter(Boolean).join(' '),
-      // Strategy 6: Simplified eBay format
-      [brand, year, cardName, cardNumber].filter(Boolean).join(' '),
-      // Strategy 7: Set name + card name + card number
+      // Strategy 1: Set name + card name + card number (as requested)
       [setName, cardName, cardNumber].filter(Boolean).join(' '),
-      // Strategy 8: Card name + "marvel comc" (COMC fallback)
-      [cardName, 'marvel', 'comc'].join(' ')
+      // Strategy 2: COMC with set + card name + card number
+      [setName, cardName, cardNumber, 'comc'].filter(Boolean).join(' '),
+      // Strategy 3: COMC consignment format
+      [setName, cardName, cardNumber, 'comc_consignment'].filter(Boolean).join(' '),
+      // Strategy 4: Card name + set name + card number (reordered)
+      [cardName, setName, cardNumber].filter(Boolean).join(' '),
+      // Strategy 5: Just card name + "marvel"
+      [cardName, 'marvel'].join(' ')
     ].map(query => query.replace(/\s+/g, ' ').trim());
 
     for (let i = 0; i < searchStrategies.length; i++) {
@@ -295,10 +284,10 @@ export async function testImageFinder() {
   const sampleCards = [
     {
       id: 999999, // Test ID
-      setName: '2016 Marvel Masterpieces',
+      setName: 'Marvel 2024 skybox masterpieces xl Gold Foil',
       cardName: 'Multiple Man',
       cardNumber: '10',
-      description: 'Madrox the Multiple Man'
+      description: 'Gold Foil'
     }
   ];
 
