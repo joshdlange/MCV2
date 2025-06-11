@@ -670,6 +670,159 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Optimized API endpoints - v2
+  
+  // Paginated cards with lightweight payload
+  app.get("/api/v2/cards", async (req, res) => {
+    const performanceStart = Date.now();
+    
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const pageSize = Math.min(parseInt(req.query.pageSize as string) || 50, 100);
+      const setId = req.query.setId ? parseInt(req.query.setId as string) : undefined;
+      const rarity = req.query.rarity as string;
+      const isInsert = req.query.isInsert ? req.query.isInsert === 'true' : undefined;
+      const hasImage = req.query.hasImage ? req.query.hasImage === 'true' : undefined;
+      const search = req.query.search as string;
+
+      const { optimizedStorage } = await import('./optimized-storage');
+      
+      const result = await optimizedStorage.getCardsPaginated(page, pageSize, {
+        setId,
+        rarity,
+        isInsert,
+        hasImage,
+        search
+      });
+
+      const performanceDuration = Date.now() - performanceStart;
+      
+      res.setHeader('X-Performance-Time', performanceDuration.toString());
+      res.json(result);
+    } catch (error) {
+      console.error('Get cards v2 error:', error);
+      res.status(500).json({ message: "Failed to fetch cards" });
+    }
+  });
+
+  // Optimized user collection with pagination
+  app.get("/api/v2/collection", authenticateUser, async (req: any, res) => {
+    const performanceStart = Date.now();
+    
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const pageSize = Math.min(parseInt(req.query.pageSize as string) || 50, 100);
+
+      const { optimizedStorage } = await import('./optimized-storage');
+      
+      const result = await optimizedStorage.getUserCollectionPaginated(
+        req.user.id,
+        page,
+        pageSize
+      );
+
+      const performanceDuration = Date.now() - performanceStart;
+      
+      res.setHeader('X-Performance-Time', performanceDuration.toString());
+      res.json(result);
+    } catch (error) {
+      console.error('Get collection v2 error:', error);
+      res.status(500).json({ message: "Failed to fetch collection" });
+    }
+  });
+
+  // Optimized dashboard stats
+  app.get("/api/v2/stats", authenticateUser, async (req: any, res) => {
+    const performanceStart = Date.now();
+    
+    try {
+      const { optimizedStorage } = await import('./optimized-storage');
+      
+      const stats = await optimizedStorage.getUserStatsOptimized(req.user.id);
+
+      const performanceDuration = Date.now() - performanceStart;
+      
+      res.setHeader('X-Performance-Time', performanceDuration.toString());
+      res.json(stats);
+    } catch (error) {
+      console.error('Get stats v2 error:', error);
+      res.status(500).json({ message: "Failed to fetch stats" });
+    }
+  });
+
+  // Optimized search endpoint
+  app.get("/api/v2/search", async (req, res) => {
+    const performanceStart = Date.now();
+    
+    try {
+      const query = req.query.q as string;
+      const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+      const setId = req.query.setId ? parseInt(req.query.setId as string) : undefined;
+      const isInsert = req.query.isInsert ? req.query.isInsert === 'true' : undefined;
+
+      if (!query || query.length < 2) {
+        return res.json([]);
+      }
+
+      const { optimizedStorage } = await import('./optimized-storage');
+      
+      const results = await optimizedStorage.searchCardsOptimized(query, limit, {
+        setId,
+        isInsert
+      });
+
+      const performanceDuration = Date.now() - performanceStart;
+      
+      res.setHeader('X-Performance-Time', performanceDuration.toString());
+      res.json(results);
+    } catch (error) {
+      console.error('Search v2 error:', error);
+      res.status(500).json({ message: "Failed to search cards" });
+    }
+  });
+
+  // Optimized trending cards
+  app.get("/api/v2/trending", async (req, res) => {
+    const performanceStart = Date.now();
+    
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 10, 20);
+
+      const { optimizedStorage } = await import('./optimized-storage');
+      
+      const results = await optimizedStorage.getTrendingCardsOptimized(limit);
+
+      const performanceDuration = Date.now() - performanceStart;
+      
+      res.setHeader('X-Performance-Time', performanceDuration.toString());
+      res.json(results);
+    } catch (error) {
+      console.error('Trending v2 error:', error);
+      res.status(500).json({ message: "Failed to fetch trending cards" });
+    }
+  });
+
+  // Optimized recent cards for user
+  app.get("/api/v2/recent", authenticateUser, async (req: any, res) => {
+    const performanceStart = Date.now();
+    
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 10, 20);
+
+      const { optimizedStorage } = await import('./optimized-storage');
+      
+      const results = await optimizedStorage.getRecentCardsOptimized(req.user.id, limit);
+
+      const performanceDuration = Date.now() - performanceStart;
+      
+      res.setHeader('X-Performance-Time', performanceDuration.toString());
+      res.json(results);
+    } catch (error) {
+      console.error('Recent v2 error:', error);
+      res.status(500).json({ message: "Failed to fetch recent cards" });
+    }
+  });
+
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);
 

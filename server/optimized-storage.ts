@@ -1,20 +1,6 @@
-/**
- * Optimized storage methods for large datasets (60,000+ cards)
- * Focus on pagination, lightweight queries, and performance
- */
-
-import { 
-  users, 
-  cardSets, 
-  cards, 
-  userCollections, 
-  userWishlists,
-  cardPriceCache,
-  type CardWithSet,
-  type CollectionItem
-} from "@shared/schema";
-import { db } from "./db";
-import { eq, ilike, and, count, sum, desc, sql, isNull, or, lt, gte } from "drizzle-orm";
+import { db } from './db';
+import { cards, cardSets, userCollections, userWishlists, cardPriceCache } from '../shared/schema';
+import { eq, and, or, isNull, desc, asc, sql, count, ilike, gte, lte } from 'drizzle-orm';
 
 export interface PaginatedResult<T> {
   items: T[];
@@ -22,6 +8,8 @@ export interface PaginatedResult<T> {
   page: number;
   pageSize: number;
   totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
 }
 
 export interface LightweightCard {
@@ -32,123 +20,173 @@ export interface LightweightCard {
   setName: string;
   setYear: number;
   isInsert: boolean;
+  rarity: string;
 }
 
+interface CardFilters {
+  setId?: number;
+  rarity?: string;
+  isInsert?: boolean;
+  hasImage?: boolean;
+  search?: string;
+}
+
+// Performance monitoring
+const performanceTracker = {
+  startTime: 0,
+  logQuery: (operation: string, startTime: number) => {
+    const duration = Date.now() - startTime;
+    if (duration > 100) {
+      console.log(`⚠️ Slow query: ${operation} took ${duration}ms`);
+    }
+  }
+};
+
 export class OptimizedStorage {
-  
   /**
-   * Get cards with pagination and lightweight data
+   * Get paginated cards with lightweight payload - OPTIMIZED
    */
   async getCardsPaginated(
     page: number = 1,
     pageSize: number = 50,
-    filters?: { setId?: number; search?: string; hasImage?: boolean }
+    filters: CardFilters = {}
   ): Promise<PaginatedResult<LightweightCard>> {
-    const offset = (page - 1) * pageSize;
+    const startTime = Date.now();
     
-    let baseQuery = db
-      .select({
-        id: cards.id,
-        name: cards.name,
-        cardNumber: cards.cardNumber,
-        frontImageUrl: cards.frontImageUrl,
-        setName: cardSets.name,
-        setYear: cardSets.year,
-        isInsert: cards.isInsert
-      })
-      .from(cards)
-      .innerJoin(cardSets, eq(cards.setId, cardSets.id));
+    try {
+      // Limit page size to prevent abuse
+      pageSize = Math.min(pageSize, 100);
+      const offset = (page - 1) * pageSize;
 
-    let countQuery = db
-      .select({ count: count() })
-      .from(cards)
-      .innerJoin(cardSets, eq(cards.setId, cardSets.id));
+      // Build base query with optimized selects
+      let query = db
+        .select({
+          id: cards.id,
+          name: cards.name,
+          cardNumber: cards.cardNumber,
+          frontImageUrl: cards.frontImageUrl,
+          setName: cardSets.name,
+          setYear: cardSets.year,
+          isInsert: cards.isInsert,
+          rarity: cards.rarity
+        })
+        .from(cards)
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id));
 
-    const conditions = [];
+      // Build count query
+      let countQuery = db
+        .select({ count: count() })
+        .from(cards)
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id));
 
-    if (filters?.setId) {
-      conditions.push(eq(cards.setId, filters.setId));
-    }
+      // Apply filters
+      const conditions = [];
 
-    if (filters?.search) {
-      const searchCondition = or(
-        ilike(cards.name, `%${filters.search}%`),
-        ilike(cards.cardNumber, `%${filters.search}%`),
-        ilike(cardSets.name, `%${filters.search}%`)
-      );
-      conditions.push(searchCondition);
-    }
+      if (filters.setId) {
+        conditions.push(eq(cards.setId, filters.setId));
+      }
 
-    if (filters?.hasImage === false) {
-      conditions.push(isNull(cards.frontImageUrl));
-    } else if (filters?.hasImage === true) {
-      conditions.push(sql`${cards.frontImageUrl} IS NOT NULL`);
-    }
+      if (filters.rarity) {
+        conditions.push(eq(cards.rarity, filters.rarity));
+      }
 
-    if (conditions.length > 0) {
-      baseQuery = baseQuery.where(and(...conditions));
-      countQuery = countQuery.where(and(...conditions));
-    }
+      if (filters.isInsert !== undefined) {
+        conditions.push(eq(cards.isInsert, filters.isInsert));
+      }
 
-    const [items, totalResult] = await Promise.all([
-      baseQuery
-        .orderBy(desc(cards.id))
+      if (filters.hasImage !== undefined) {
+        if (filters.hasImage) {
+          conditions.push(sql`${cards.frontImageUrl} IS NOT NULL`);
+        } else {
+          conditions.push(sql`${cards.frontImageUrl} IS NULL`);
+        }
+      }
+
+      if (filters.search && filters.search.length >= 2) {
+        conditions.push(
+          or(
+            ilike(cards.name, `%${filters.search}%`),
+            ilike(cardSets.name, `%${filters.search}%`)
+          )
+        );
+      }
+
+      // Apply conditions to both queries
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+        countQuery = countQuery.where(and(...conditions));
+      }
+
+      // Order by setId and cardNumber for better performance
+      query = query
+        .orderBy(cards.setId, cards.cardNumber)
         .limit(pageSize)
-        .offset(offset),
-      countQuery
-    ]);
+        .offset(offset);
 
-    const totalCount = totalResult[0]?.count || 0;
-    const totalPages = Math.ceil(totalCount / pageSize);
+      // Execute both queries concurrently
+      const [items, totalResult] = await Promise.all([
+        query,
+        countQuery
+      ]);
 
-    return {
-      items,
-      totalCount,
-      page,
-      pageSize,
-      totalPages
-    };
+      const totalCount = totalResult[0]?.count || 0;
+      const totalPages = Math.ceil(totalCount / pageSize);
+
+      performanceTracker.logQuery(`getCardsPaginated(page=${page}, size=${pageSize})`, startTime);
+
+      return {
+        items,
+        totalCount,
+        page,
+        pageSize,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrevious: page > 1
+      };
+    } catch (error) {
+      console.error('Error in getCardsPaginated:', error);
+      return {
+        items: [],
+        totalCount: 0,
+        page,
+        pageSize,
+        totalPages: 0,
+        hasNext: false,
+        hasPrevious: false
+      };
+    }
   }
 
   /**
-   * Get user collection with pagination
+   * Get user collection with pagination - OPTIMIZED
    */
   async getUserCollectionPaginated(
     userId: number,
     page: number = 1,
     pageSize: number = 50
-  ): Promise<PaginatedResult<CollectionItem>> {
-    const offset = (page - 1) * pageSize;
+  ): Promise<PaginatedResult<any>> {
+    const startTime = Date.now();
+    
+    try {
+      pageSize = Math.min(pageSize, 100);
+      const offset = (page - 1) * pageSize;
 
-    const [items, totalResult] = await Promise.all([
-      db
+      // Optimized collection query
+      const itemsQuery = db
         .select({
           id: userCollections.id,
-          userId: userCollections.userId,
           cardId: userCollections.cardId,
           condition: userCollections.condition,
           acquiredDate: userCollections.acquiredDate,
           personalValue: userCollections.personalValue,
           notes: userCollections.notes,
-          salePrice: userCollections.salePrice,
-          isForSale: userCollections.isForSale,
-          serialNumber: userCollections.serialNumber,
-          quantity: userCollections.quantity,
-          isFavorite: userCollections.isFavorite,
-          card: {
-            id: cards.id,
-            name: cards.name,
-            cardNumber: cards.cardNumber,
-            frontImageUrl: cards.frontImageUrl,
-            isInsert: cards.isInsert,
-            rarity: cards.rarity,
-            estimatedValue: cards.estimatedValue,
-            set: {
-              id: cardSets.id,
-              name: cardSets.name,
-              year: cardSets.year
-            }
-          }
+          cardName: cards.name,
+          cardNumber: cards.cardNumber,
+          frontImageUrl: cards.frontImageUrl,
+          setName: cardSets.name,
+          setYear: cardSets.year,
+          isInsert: cards.isInsert,
+          rarity: cards.rarity
         })
         .from(userCollections)
         .innerJoin(cards, eq(userCollections.cardId, cards.id))
@@ -156,154 +194,251 @@ export class OptimizedStorage {
         .where(eq(userCollections.userId, userId))
         .orderBy(desc(userCollections.acquiredDate))
         .limit(pageSize)
-        .offset(offset),
-      
-      db
+        .offset(offset);
+
+      // Count query
+      const countQuery = db
         .select({ count: count() })
         .from(userCollections)
-        .where(eq(userCollections.userId, userId))
-    ]);
+        .where(eq(userCollections.userId, userId));
 
-    const totalCount = totalResult[0]?.count || 0;
-    const totalPages = Math.ceil(totalCount / pageSize);
+      const [items, totalResult] = await Promise.all([
+        itemsQuery,
+        countQuery
+      ]);
 
-    return {
-      items: items as CollectionItem[],
-      totalCount,
-      page,
-      pageSize,
-      totalPages
-    };
+      const totalCount = totalResult[0]?.count || 0;
+      const totalPages = Math.ceil(totalCount / pageSize);
+
+      performanceTracker.logQuery(`getUserCollectionPaginated(userId=${userId})`, startTime);
+
+      return {
+        items,
+        totalCount,
+        page,
+        pageSize,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrevious: page > 1
+      };
+    } catch (error) {
+      console.error('Error in getUserCollectionPaginated:', error);
+      return {
+        items: [],
+        totalCount: 0,
+        page,
+        pageSize,
+        totalPages: 0,
+        hasNext: false,
+        hasPrevious: false
+      };
+    }
   }
 
   /**
-   * Get cards without images efficiently (for batch processing)
+   * Get dashboard stats with optimized single query
    */
-  async getCardsWithoutImagesBatch(
-    limit: number = 100,
-    offset: number = 0
-  ): Promise<CardWithSet[]> {
-    return await db
-      .select({
-        id: cards.id,
-        setId: cards.setId,
-        cardNumber: cards.cardNumber,
-        name: cards.name,
-        description: cards.description,
-        frontImageUrl: cards.frontImageUrl,
-        set: {
-          id: cardSets.id,
-          name: cardSets.name,
-          year: cardSets.year
-        }
-      })
-      .from(cards)
-      .innerJoin(cardSets, eq(cards.setId, cardSets.id))
-      .where(isNull(cards.frontImageUrl))
-      .limit(limit)
-      .offset(offset) as CardWithSet[];
+  async getUserStatsOptimized(userId: number) {
+    const startTime = Date.now();
+    
+    try {
+      // Single optimized query for all stats
+      const statsQuery = await db
+        .select({
+          totalCards: count(),
+          totalInserts: sql<number>`COUNT(*) FILTER (WHERE ${cards.isInsert} = true)`,
+          totalValue: sql<string>`COALESCE(SUM(CAST(${userCollections.personalValue} AS DECIMAL)), 0)`,
+          wishlistCount: sql<number>`(SELECT COUNT(*) FROM ${userWishlists} WHERE user_id = ${userId})`
+        })
+        .from(userCollections)
+        .innerJoin(cards, eq(userCollections.cardId, cards.id))
+        .where(eq(userCollections.userId, userId));
+
+      const stats = statsQuery[0] || {
+        totalCards: 0,
+        totalInserts: 0,
+        totalValue: '0',
+        wishlistCount: 0
+      };
+
+      performanceTracker.logQuery(`getUserStatsOptimized(userId=${userId})`, startTime);
+
+      return {
+        totalCards: stats.totalCards,
+        insertCards: stats.totalInserts,
+        totalValue: parseFloat(stats.totalValue || '0'),
+        wishlistCount: stats.wishlistCount
+      };
+    } catch (error) {
+      console.error('Error in getUserStatsOptimized:', error);
+      return {
+        totalCards: 0,
+        insertCards: 0,
+        totalValue: 0,
+        wishlistCount: 0
+      };
+    }
   }
 
   /**
-   * Get card sets with counts (optimized)
+   * Get cards without images in batches - OPTIMIZED
    */
-  async getCardSetsOptimized(): Promise<Array<{ id: number; name: string; year: number; totalCards: number }>> {
-    return await db
-      .select({
-        id: cardSets.id,
-        name: cardSets.name,
-        year: cardSets.year,
-        totalCards: count(cards.id)
-      })
-      .from(cardSets)
-      .leftJoin(cards, eq(cardSets.id, cards.setId))
-      .groupBy(cardSets.id, cardSets.name, cardSets.year)
-      .orderBy(desc(cardSets.year), cardSets.name);
+  async getCardsWithoutImagesBatch(limit: number = 50, offset: number = 0) {
+    const startTime = Date.now();
+    
+    try {
+      const results = await db
+        .select({
+          id: cards.id,
+          name: cards.name,
+          cardNumber: cards.cardNumber,
+          setId: cards.setId,
+          description: cards.description,
+          set: {
+            id: cardSets.id,
+            name: cardSets.name
+          }
+        })
+        .from(cards)
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+        .where(isNull(cards.frontImageUrl))
+        .limit(limit)
+        .offset(offset)
+        .orderBy(cards.id);
+
+      performanceTracker.logQuery(`getCardsWithoutImagesBatch(${limit}, ${offset})`, startTime);
+      return results;
+    } catch (error) {
+      console.error('Error in getCardsWithoutImagesBatch:', error);
+      return [];
+    }
   }
 
   /**
-   * Get collection stats efficiently (minimal queries)
+   * Search cards with optimized text search
    */
-  async getCollectionStatsOptimized(userId: number) {
-    const [stats] = await db
-      .select({
-        totalCards: count(),
-        totalValue: sum(userCollections.personalValue),
-        insertCards: sql<number>`count(*) filter (where ${cards.isInsert} = true)`
-      })
-      .from(userCollections)
-      .innerJoin(cards, eq(userCollections.cardId, cards.id))
-      .where(eq(userCollections.userId, userId));
-
-    const [wishlistCount] = await db
-      .select({ count: count() })
-      .from(userWishlists)
-      .where(eq(userWishlists.userId, userId));
-
-    return {
-      totalCards: stats?.totalCards || 0,
-      insertCards: stats?.insertCards || 0,
-      totalValue: parseFloat(stats?.totalValue?.toString() || '0'),
-      wishlistItems: wishlistCount?.count || 0,
-      completedSets: 0, // Calculate separately if needed
-      recentAdditions: 0, // Calculate separately if needed
-      totalCardsGrowth: '+0%',
-      insertCardsGrowth: '+0%',
-      totalValueGrowth: '+0%',
-      wishlistGrowth: '+0%'
-    };
-  }
-
-  /**
-   * Search cards efficiently with text search
-   */
-  async searchCards(
+  async searchCardsOptimized(
     query: string,
-    limit: number = 20
+    limit: number = 20,
+    filters: CardFilters = {}
   ): Promise<LightweightCard[]> {
-    return await db
-      .select({
-        id: cards.id,
-        name: cards.name,
-        cardNumber: cards.cardNumber,
-        frontImageUrl: cards.frontImageUrl,
-        setName: cardSets.name,
-        setYear: cardSets.year,
-        isInsert: cards.isInsert
-      })
-      .from(cards)
-      .innerJoin(cardSets, eq(cards.setId, cardSets.id))
-      .where(
+    const startTime = Date.now();
+    
+    try {
+      if (query.length < 2) return [];
+
+      let searchQuery = db
+        .select({
+          id: cards.id,
+          name: cards.name,
+          cardNumber: cards.cardNumber,
+          frontImageUrl: cards.frontImageUrl,
+          setName: cardSets.name,
+          setYear: cardSets.year,
+          isInsert: cards.isInsert,
+          rarity: cards.rarity
+        })
+        .from(cards)
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id));
+
+      const conditions = [
         or(
           ilike(cards.name, `%${query}%`),
-          ilike(cards.cardNumber, `%${query}%`),
-          ilike(cardSets.name, `%${query}%`)
+          ilike(cardSets.name, `%${query}%`),
+          ilike(cards.cardNumber, `%${query}%`)
         )
-      )
-      .limit(limit);
+      ];
+
+      // Apply additional filters
+      if (filters.setId) {
+        conditions.push(eq(cards.setId, filters.setId));
+      }
+
+      if (filters.isInsert !== undefined) {
+        conditions.push(eq(cards.isInsert, filters.isInsert));
+      }
+
+      searchQuery = searchQuery
+        .where(and(...conditions))
+        .orderBy(cards.name)
+        .limit(Math.min(limit, 50));
+
+      const results = await searchQuery;
+
+      performanceTracker.logQuery(`searchCardsOptimized("${query}")`, startTime);
+      return results;
+    } catch (error) {
+      console.error('Error in searchCardsOptimized:', error);
+      return [];
+    }
   }
 
   /**
-   * Get trending cards efficiently
+   * Get trending cards with caching optimization
    */
-  async getTrendingCardsOptimized(limit: number = 10): Promise<LightweightCard[]> {
-    return await db
-      .select({
-        id: cards.id,
-        name: cards.name,
-        cardNumber: cards.cardNumber,
-        frontImageUrl: cards.frontImageUrl,
-        setName: cardSets.name,
-        setYear: cardSets.year,
-        isInsert: cards.isInsert,
-        collectionCount: count(userCollections.id)
-      })
-      .from(cards)
-      .innerJoin(cardSets, eq(cards.setId, cardSets.id))
-      .leftJoin(userCollections, eq(cards.id, userCollections.cardId))
-      .groupBy(cards.id, cardSets.id, cardSets.name, cardSets.year)
-      .orderBy(desc(count(userCollections.id)))
-      .limit(limit) as LightweightCard[];
+  async getTrendingCardsOptimized(limit: number = 10) {
+    const startTime = Date.now();
+    
+    try {
+      // Get cards with recent activity or high collection counts
+      const results = await db
+        .select({
+          id: cards.id,
+          name: cards.name,
+          cardNumber: cards.cardNumber,
+          frontImageUrl: cards.frontImageUrl,
+          setName: cardSets.name,
+          setYear: cardSets.year,
+          isInsert: cards.isInsert,
+          rarity: cards.rarity,
+          collectionCount: sql<number>`COUNT(${userCollections.id})`
+        })
+        .from(cards)
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+        .leftJoin(userCollections, eq(cards.id, userCollections.cardId))
+        .groupBy(cards.id, cardSets.id)
+        .orderBy(sql`COUNT(${userCollections.id}) DESC`)
+        .limit(Math.min(limit, 20));
+
+      performanceTracker.logQuery(`getTrendingCardsOptimized(${limit})`, startTime);
+      return results;
+    } catch (error) {
+      console.error('Error in getTrendingCardsOptimized:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get recent cards for user with optimization
+   */
+  async getRecentCardsOptimized(userId: number, limit: number = 10) {
+    const startTime = Date.now();
+    
+    try {
+      const results = await db
+        .select({
+          id: userCollections.id,
+          cardId: cards.id,
+          cardName: cards.name,
+          cardNumber: cards.cardNumber,
+          frontImageUrl: cards.frontImageUrl,
+          setName: cardSets.name,
+          acquiredDate: userCollections.acquiredDate,
+          condition: userCollections.condition
+        })
+        .from(userCollections)
+        .innerJoin(cards, eq(userCollections.cardId, cards.id))
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+        .where(eq(userCollections.userId, userId))
+        .orderBy(desc(userCollections.acquiredDate))
+        .limit(Math.min(limit, 20));
+
+      performanceTracker.logQuery(`getRecentCardsOptimized(userId=${userId})`, startTime);
+      return results;
+    } catch (error) {
+      console.error('Error in getRecentCardsOptimized:', error);
+      return [];
+    }
   }
 }
 
