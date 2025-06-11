@@ -92,7 +92,8 @@ interface CardImageUpdate {
 }
 
 /**
- * Search eBay for card images using the Finding API
+ * Search eBay for card images using the Finding API - SIMPLIFIED VERSION
+ * Uses only the specific format: ${setName} ${cardName} ${cardNumber} comc
  */
 async function searchEBayForCardImage(
   setName: string,
@@ -101,51 +102,23 @@ async function searchEBayForCardImage(
   description?: string
 ): Promise<string | null> {
   try {
-    // Create multiple search strategies with decreasing specificity
-    const searchStrategies = [
-      // Strategy 1: Set name + card name + card number (as requested)
-      [setName, cardName, cardNumber].filter(Boolean).join(' '),
-      // Strategy 2: COMC with set + card name + card number
-      [setName, cardName, cardNumber, 'comc'].filter(Boolean).join(' '),
-      // Strategy 3: COMC consignment format
-      [setName, cardName, cardNumber, 'comc_consignment'].filter(Boolean).join(' '),
-      // Strategy 4: Card name + set name + card number (reordered)
-      [cardName, setName, cardNumber].filter(Boolean).join(' '),
-      // Strategy 5: Just card name + "marvel"
-      [cardName, 'marvel'].join(' ')
-    ].map(query => query.replace(/\s+/g, ' ').trim());
+    // Use only the specific search format requested
+    const searchTerms = `${setName} ${cardName} ${cardNumber} comc`.replace(/\s+/g, ' ').trim();
+    console.log(`eBay search with specific format: "${searchTerms}"`);
 
-    for (let i = 0; i < searchStrategies.length; i++) {
-      const searchTerms = searchStrategies[i];
-      console.log(`eBay search attempt ${i + 1}: "${searchTerms}"`);
-
-      try {
-        const result = await performEBaySearch(searchTerms);
-        if (result) {
-          console.log(`Found image using search strategy ${i + 1}`);
-          return result;
-        }
-      } catch (error) {
-        // If it's an API error (like rate limit), stop immediately and re-throw
-        if (error instanceof Error && error.message.startsWith('EBAY_API_ERROR:')) {
-          console.log(`EBAY_API_ERROR caught in search loop, stopping search attempts`);
-          throw error;
-        }
-        // For other errors, continue to next search strategy
-        console.log(`Search strategy ${i + 1} failed, trying next...`);
-      }
+    const result = await performEBaySearch(searchTerms);
+    if (result) {
+      console.log(`✅ Found image using COMC format search`);
+      return result;
     }
 
-    console.log('No eBay results found with any search strategy');
+    console.log(`❌ No eBay results found with COMC format search`);
     return null;
 
   } catch (error) {
     console.error('eBay search error:', error);
-    // Re-throw eBay API errors so they can be handled properly upstream
-    if (error instanceof Error && (error.message === 'RATE_LIMIT_EXCEEDED' || error.message.startsWith('EBAY_API_ERROR:'))) {
-      throw error;
-    }
-    return null;
+    // Re-throw all errors to maintain error handling upstream
+    throw error;
   }
 }
 
@@ -155,13 +128,16 @@ async function performEBaySearch(searchTerms: string): Promise<string | null> {
     ebayCallCount++;
     trackDailyApiCall();
     
-    console.log(`eBay API call #${ebayCallCount} — keywords: "${searchTerms}"`);
+    // Get the App ID being used and log it for debugging
+    const appId = process.env.EBAY_APP_ID_PROD || process.env.EBAY_APP_ID || '';
+    console.log(`🔍 eBay API call #${ebayCallCount} — keywords: "${searchTerms}"`);
+    console.log(`🔑 Using SECURITY-APPNAME: ${appId ? appId.substring(0, 20) + '...' : 'NOT SET'}`);
     
     const ebayApiUrl = 'https://svcs.ebay.com/services/search/FindingService/v1';
     const params = new URLSearchParams({
       'OPERATION-NAME': 'findItemsByKeywords',
       'SERVICE-VERSION': '1.0.0',
-      'SECURITY-APPNAME': process.env.EBAY_APP_ID_PROD || process.env.EBAY_APP_ID || '',
+      'SECURITY-APPNAME': appId,
       'RESPONSE-DATA-FORMAT': 'JSON',
       'REST-PAYLOAD': '',
       'keywords': searchTerms,
@@ -174,69 +150,98 @@ async function performEBaySearch(searchTerms: string): Promise<string | null> {
       'outputSelector(2)': 'GalleryInfo'
     });
 
-    console.log(`Full eBay API URL: ${ebayApiUrl}?${params}`);
+    console.log(`📡 Full eBay API URL: ${ebayApiUrl}?${params}`);
     const response = await fetch(`${ebayApiUrl}?${params}`);
     
     let data: any;
     try {
       data = await response.json();
     } catch (parseError) {
-      console.error(`Failed to parse eBay API response: ${parseError}`);
+      console.error(`❌ Failed to parse eBay API response: ${parseError}`);
       return null;
     }
     
-    // Improved eBay API error logging - capture full error response
+    // Enhanced error logging for error code 10001 and others
     const ebayError = data?.errorMessage?.[0]?.error?.[0];
     if (ebayError) {
-      console.error('eBay API error:', JSON.stringify(ebayError, null, 2));
+      console.error('🚨 eBay API error detected:');
+      console.error('📋 Full error response:', JSON.stringify(data, null, 2));
+      console.error(`🔑 SECURITY-APPNAME used: ${appId}`);
+      console.error(`🆔 Error ID: ${ebayError.errorId?.[0]}`);
+      console.error(`📝 Error Message: ${ebayError.message?.[0]}`);
+      console.error(`🏷️ Error Domain: ${ebayError.domain?.[0]}`);
+      console.error(`⚠️ Error Severity: ${ebayError.severity?.[0]}`);
+      
+      // Special handling for error 10001 (rate limit)
+      if (ebayError.errorId?.[0] === '10001') {
+        console.error('🚫 Rate limit error detected - this is error code 10001');
+        console.error('🔍 Verify App ID is production and not sandbox/expired');
+      }
+      
       throw new Error(`EBAY_API_ERROR: ${ebayError.errorId?.[0]} - ${ebayError.message?.[0]}`);
     }
     
     if (!response.ok) {
-      console.error(`eBay API HTTP error: ${response.status} ${response.statusText}`);
-      console.error('Response body:', JSON.stringify(data, null, 2));
+      console.error(`❌ eBay API HTTP error: ${response.status} ${response.statusText}`);
+      console.error('📋 Response body:', JSON.stringify(data, null, 2));
       return null;
     }
     
-    console.log(`eBay API response for "${searchTerms}":`, JSON.stringify(data, null, 2));
+    console.log(`✅ eBay API successful response for "${searchTerms}"`);
+    
+    // Only log full response in debug mode to reduce noise
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📋 Full eBay response:', JSON.stringify(data, null, 2));
+    }
 
     if (!data.findItemsByKeywordsResponse?.[0]?.searchResult?.[0]?.item) {
-      console.log(`No items found in eBay response for "${searchTerms}"`);
+      console.log(`❌ No items found in eBay response for "${searchTerms}"`);
       return null;
     }
 
     const items = data.findItemsByKeywordsResponse[0].searchResult[0].item;
+    console.log(`🔍 Found ${items.length} items, checking for high-quality images...`);
     
     // Find the first item with a high-quality image
-    for (const item of items) {
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      console.log(`📷 Checking item ${i + 1}: "${item.title?.[0] || 'Unknown title'}"`);
+      
       // Prefer pictureURLSuperSize
       if (item.pictureURLSuperSize?.[0]) {
-        console.log(`Found super size image for "${searchTerms}"`);
+        console.log(`✅ Found SUPER SIZE image for item ${i + 1}`);
+        console.log(`🖼️ Image URL: ${item.pictureURLSuperSize[0]}`);
         return item.pictureURLSuperSize[0];
       }
       
       // Fallback to pictureURLLarge
       if (item.pictureURLLarge?.[0]) {
-        console.log(`Found large image for "${searchTerms}"`);
+        console.log(`✅ Found LARGE image for item ${i + 1}`);
+        console.log(`🖼️ Image URL: ${item.pictureURLLarge[0]}`);
         return item.pictureURLLarge[0];
       }
       
       // Final fallback to galleryURL
       if (item.galleryURL?.[0]) {
-        console.log(`Found gallery image for "${searchTerms}"`);
+        console.log(`✅ Found GALLERY image for item ${i + 1}`);
+        console.log(`🖼️ Image URL: ${item.galleryURL[0]}`);
         return item.galleryURL[0];
       }
+      
+      console.log(`❌ Item ${i + 1} has no usable images`);
     }
 
-    console.log('No quality images found in eBay results');
+    console.log('❌ No quality images found in any eBay results');
     return null;
 
   } catch (error) {
+    // Enhanced error logging
+    console.error('🚨 eBay search error caught:', error);
+    
     // Let EBAY_API_ERROR and RATE_LIMIT_EXCEEDED propagate up immediately
     if (error instanceof Error && (error.message === 'RATE_LIMIT_EXCEEDED' || error.message.startsWith('EBAY_API_ERROR:'))) {
       throw error;
     }
-    console.error('eBay search error:', error);
     return null;
   }
 }
@@ -246,7 +251,14 @@ async function performEBaySearch(searchTerms: string): Promise<string | null> {
  */
 async function uploadImageToCloudinary(imageUrl: string, cardId: number): Promise<string | null> {
   try {
-    console.log(`Uploading image to Cloudinary for card ${cardId}`);
+    console.log(`☁️ Starting Cloudinary upload for card ${cardId}`);
+    console.log(`📎 Source image URL: ${imageUrl}`);
+    
+    // Validate Cloudinary configuration
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      console.error('❌ Cloudinary configuration missing - check environment variables');
+      return null;
+    }
     
     const result = await cloudinary.uploader.upload(imageUrl, {
       folder: 'marvel-cards',
@@ -257,17 +269,19 @@ async function uploadImageToCloudinary(imageUrl: string, cardId: number): Promis
       ]
     });
 
-    console.log(`Successfully uploaded to Cloudinary: ${result.secure_url}`);
+    console.log(`✅ Successfully uploaded to Cloudinary for card ${cardId}`);
+    console.log(`🔗 Cloudinary URL: ${result.secure_url}`);
     return result.secure_url;
 
   } catch (error) {
-    console.error('Cloudinary upload error:', error);
+    console.error(`❌ Cloudinary upload failed for card ${cardId}:`, error);
+    console.error(`📎 Failed image URL: ${imageUrl}`);
     return null;
   }
 }
 
 /**
- * Find and update a single card's image
+ * Find and update a single card's image - ENHANCED WITH DETAILED LOGGING
  */
 export async function findAndUpdateCardImage(
   cardId: number,
@@ -285,28 +299,39 @@ export async function findAndUpdateCardImage(
     success: false
   };
 
+  console.log(`🎯 Starting image find and update for card ${cardId}`);
+  console.log(`📋 Card details: Set="${setName}", Name="${cardName}", Number="${cardNumber}"`);
+  console.log(`📝 Description: ${description || 'None'}`);
+
   try {
-    // Search eBay for image
+    // Step 1: Search eBay for image
+    console.log(`📡 Step 1: Searching eBay for card image...`);
     const ebayImageUrl = await searchEBayForCardImage(setName, cardName, cardNumber, description);
     
     if (!ebayImageUrl) {
-      result.error = 'No image found on eBay';
+      console.log(`❌ Step 1 FAILED: No image found on eBay`);
+      result.error = 'No image found on eBay with COMC format search';
       return result;
     }
 
+    console.log(`✅ Step 1 SUCCESS: Found eBay image`);
     result.originalImageUrl = ebayImageUrl;
 
-    // Upload to Cloudinary
+    // Step 2: Upload to Cloudinary
+    console.log(`☁️ Step 2: Uploading image to Cloudinary...`);
     const cloudinaryUrl = await uploadImageToCloudinary(ebayImageUrl, cardId);
     
     if (!cloudinaryUrl) {
-      result.error = 'Failed to upload to Cloudinary';
+      console.log(`❌ Step 2 FAILED: Cloudinary upload failed`);
+      result.error = 'Image found on eBay but failed to upload to Cloudinary';
       return result;
     }
 
+    console.log(`✅ Step 2 SUCCESS: Image uploaded to Cloudinary`);
     result.newImageUrl = cloudinaryUrl;
 
-    // Update card in database
+    // Step 3: Update database
+    console.log(`💾 Step 3: Updating database with new image URL...`);
     await storage.updateCard(cardId, {
       name: cardName,
       setId: 0, // Will be ignored in update
@@ -315,26 +340,29 @@ export async function findAndUpdateCardImage(
       frontImageUrl: cloudinaryUrl
     });
 
+    console.log(`✅ Step 3 SUCCESS: Database updated`);
     result.success = true;
-    console.log(`Successfully updated card ${cardId} with new image`);
+    console.log(`🎉 COMPLETE SUCCESS: Card ${cardId} updated with new image`);
     
     return result;
 
   } catch (error) {
+    console.log(`🚨 ERROR during image update process for card ${cardId}`);
+    
     if (error instanceof Error) {
       if (error.message === 'RATE_LIMIT_EXCEEDED') {
         result.error = 'eBay API daily rate limit exceeded (10,000 requests/day). Please try again tomorrow.';
-        console.error(`eBay API rate limit exceeded for card ${cardId}`);
+        console.error(`🚫 eBay API rate limit exceeded for card ${cardId}`);
       } else if (error.message.startsWith('EBAY_API_ERROR:')) {
         result.error = error.message.replace('EBAY_API_ERROR: ', 'eBay API Error: ');
-        console.error(`eBay API error for card ${cardId}: ${error.message}`);
+        console.error(`🚨 eBay API error for card ${cardId}: ${error.message}`);
       } else {
-        result.error = `Error: ${error.message}`;
-        console.error(`Error updating card ${cardId}:`, error);
+        result.error = `Unexpected error: ${error.message}`;
+        console.error(`❌ Unexpected error updating card ${cardId}:`, error);
       }
     } else {
-      result.error = `Error: ${error}`;
-      console.error(`Error updating card ${cardId}:`, error);
+      result.error = `Unknown error: ${error}`;
+      console.error(`❓ Unknown error updating card ${cardId}:`, error);
     }
     return result;
   }
@@ -424,37 +452,58 @@ export async function batchUpdateCardImages(maxCards: number = 50): Promise<Card
 }
 
 /**
- * Test function with sample card data
+ * Check eBay and Cloudinary configuration
  */
-export async function testImageFinder() {
-  console.log('Testing image finder with sample data...');
+export function checkConfiguration(): void {
+  console.log('🔧 Checking eBay and Cloudinary configuration...');
   
-  const sampleCards = [
-    {
-      id: 999999, // Test ID
-      setName: 'Marvel 2024 skybox masterpieces xl Gold Foil',
-      cardName: 'Multiple Man',
-      cardNumber: '10',
-      description: 'Gold Foil'
-    }
-  ];
-
-  const results = [];
-  
-  for (const card of sampleCards) {
-    const result = await findAndUpdateCardImage(
-      card.id,
-      card.setName,
-      card.cardName,
-      card.cardNumber,
-      card.description
-    );
-    results.push(result);
-    
-    // Rate limiting
-    await new Promise(resolve => setTimeout(resolve, 1000));
+  // Check eBay configuration
+  const ebayAppId = process.env.EBAY_APP_ID_PROD || process.env.EBAY_APP_ID || '';
+  console.log(`🔑 eBay App ID configured: ${ebayAppId ? 'YES' : 'NO'}`);
+  if (ebayAppId) {
+    console.log(`🔑 eBay App ID (first 20 chars): ${ebayAppId.substring(0, 20)}...`);
+    console.log(`🔑 eBay App ID length: ${ebayAppId.length} characters`);
   }
+  
+  // Check Cloudinary configuration
+  const cloudinaryName = process.env.CLOUDINARY_CLOUD_NAME || '';
+  const cloudinaryKey = process.env.CLOUDINARY_API_KEY || '';
+  const cloudinarySecret = process.env.CLOUDINARY_API_SECRET || '';
+  
+  console.log(`☁️ Cloudinary Cloud Name: ${cloudinaryName ? 'YES' : 'NO'}`);
+  console.log(`☁️ Cloudinary API Key: ${cloudinaryKey ? 'YES' : 'NO'}`);
+  console.log(`☁️ Cloudinary API Secret: ${cloudinarySecret ? 'YES' : 'NO'}`);
+  
+  if (cloudinaryName) {
+    console.log(`☁️ Cloudinary Cloud Name: ${cloudinaryName}`);
+  }
+}
 
-  console.log('Test results:', results);
-  return results;
+/**
+ * Test eBay integration with a single card - SIMPLIFIED
+ */
+export async function testSingleCard(): Promise<CardImageUpdate> {
+  console.log('🧪 Testing eBay integration with single test card...');
+  
+  // Check configuration first
+  checkConfiguration();
+  
+  const testCard = {
+    id: 999999, // Test ID that won't conflict with real cards
+    setName: 'Marvel 2024 skybox masterpieces xl',
+    cardName: 'Multiple Man',
+    cardNumber: '10'
+  };
+
+  console.log(`🧪 Test card: ${testCard.setName} ${testCard.cardName} ${testCard.cardNumber}`);
+  
+  const result = await findAndUpdateCardImage(
+    testCard.id,
+    testCard.setName,
+    testCard.cardName,
+    testCard.cardNumber
+  );
+
+  console.log('🧪 Test complete. Result:', result);
+  return result;
 }

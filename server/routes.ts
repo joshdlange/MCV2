@@ -644,6 +644,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test eBay integration with simplified logic
+  app.post("/api/admin/test-ebay-integration", async (req, res) => {
+    try {
+      const { testSingleCard, checkConfiguration } = await import('./ebay-image-finder');
+      
+      // Check configuration first
+      checkConfiguration();
+      
+      // Run the test
+      const result = await testSingleCard();
+      
+      res.json({
+        success: result.success,
+        message: result.success ? "eBay integration test successful" : "eBay integration test failed",
+        details: result
+      });
+    } catch (error) {
+      console.error('eBay integration test error:', error);
+      res.status(500).json({ 
+        success: false,
+        message: "eBay integration test failed with error",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);
 
