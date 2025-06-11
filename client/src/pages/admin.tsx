@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Image, Search, RefreshCw } from "lucide-react";
 import { SetGroupingAnalyzer } from "@/components/admin/set-grouping-analyzer";
+import { ManualSetLinker } from "@/components/admin/manual-set-linker";
 
 interface CardWithoutImage {
   id: number;
@@ -172,6 +173,9 @@ export default function AdminPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Manual Set Linker */}
+      <ManualSetLinker />
 
       {/* Cards Without Images */}
       <Card>

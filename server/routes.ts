@@ -1043,8 +1043,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const relatedSets = allSets.filter(set => setNames.includes(set.name));
           const totalCards = relatedSets.reduce((sum, set) => sum + set.totalCards, 0);
           
+          // Calculate the most common year from related sets
+          const years = relatedSets.map(set => set.year);
+          const yearCounts = years.reduce((acc, year) => {
+            acc[year] = (acc[year] || 0) + 1;
+            return acc;
+          }, {} as Record<number, number>);
+          const mostCommonYear = Object.keys(yearCounts).reduce((a, b) => 
+            yearCounts[parseInt(a)] > yearCounts[parseInt(b)] ? a : b
+          );
+          
           const mainSetData = {
             name: baseName,
+            year: parseInt(mostCommonYear),
             totalCards: totalCards,
             subsetCount: setNames.length
           };
