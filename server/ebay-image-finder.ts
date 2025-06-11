@@ -119,10 +119,20 @@ async function searchEBayForCardImage(
       const searchTerms = searchStrategies[i];
       console.log(`eBay search attempt ${i + 1}: "${searchTerms}"`);
 
-      const result = await performEBaySearch(searchTerms);
-      if (result) {
-        console.log(`Found image using search strategy ${i + 1}`);
-        return result;
+      try {
+        const result = await performEBaySearch(searchTerms);
+        if (result) {
+          console.log(`Found image using search strategy ${i + 1}`);
+          return result;
+        }
+      } catch (error) {
+        // If it's an API error (like rate limit), stop immediately and re-throw
+        if (error instanceof Error && error.message.startsWith('EBAY_API_ERROR:')) {
+          console.log(`EBAY_API_ERROR caught in search loop, stopping search attempts`);
+          throw error;
+        }
+        // For other errors, continue to next search strategy
+        console.log(`Search strategy ${i + 1} failed, trying next...`);
       }
     }
 
@@ -222,7 +232,7 @@ async function performEBaySearch(searchTerms: string): Promise<string | null> {
     return null;
 
   } catch (error) {
-    if (error instanceof Error && error.message === 'RATE_LIMIT_EXCEEDED') {
+    if (error instanceof Error && (error.message === 'RATE_LIMIT_EXCEEDED' || error.message.startsWith('EBAY_API_ERROR:'))) {
       throw error;
     }
     console.error('eBay search error:', error);
