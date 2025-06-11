@@ -879,7 +879,7 @@ export class DatabaseStorage implements IStorage {
 
   async getTrendingCards(limit: number): Promise<CardWithSet[]> {
     try {
-      // Get trending cards: only cards with actual pricing data
+      // Get trending cards: cards recently added to user collections
       const results = await db
         .select({
           id: cards.id,
@@ -902,20 +902,44 @@ export class DatabaseStorage implements IStorage {
           setImageUrl: cardSets.imageUrl,
           setTotalCards: cardSets.totalCards,
           setCreatedAt: cardSets.createdAt,
+          collectionCount: count(userCollections.id).as('collection_count'),
+          latestAddition: sql<Date>`MAX(${userCollections.acquiredDate})`.as('latest_addition')
         })
         .from(cards)
         .innerJoin(cardSets, eq(cards.setId, cardSets.id))
-        .innerJoin(cardPriceCache, eq(cards.id, cardPriceCache.cardId))
+        .innerJoin(userCollections, eq(cards.id, userCollections.cardId))
         .where(
           and(
             isNotNull(cards.frontImageUrl), // Only cards with images
-            isNotNull(cardPriceCache.avgPrice) // Only cards with pricing data
+            gte(userCollections.acquiredDate, sql`NOW() - INTERVAL '30 days'`) // Added in last 30 days
           )
         )
+        .groupBy(
+          cards.id,
+          cards.setId,
+          cards.cardNumber,
+          cards.name,
+          cards.variation,
+          cards.isInsert,
+          cards.frontImageUrl,
+          cards.backImageUrl,
+          cards.description,
+          cards.rarity,
+          cards.estimatedValue,
+          cards.createdAt,
+          cardSets.id,
+          cardSets.name,
+          cardSets.year,
+          cardSets.description,
+          cardSets.imageUrl,
+          cardSets.totalCards,
+          cardSets.createdAt
+        )
         .orderBy(
-          desc(cardPriceCache.avgPrice), // Highest value first
-          desc(cards.isInsert), // Then prioritize inserts
-          desc(cardSets.year) // Then newer sets
+          desc(sql`collection_count`), // Most collected first
+          desc(sql`latest_addition`), // Most recently added
+          desc(cards.isInsert), // Prioritize inserts
+          desc(cardSets.year) // Newer sets
         )
         .limit(limit);
 
