@@ -569,7 +569,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({
-        avgPrice: parseFloat(pricing.avgPrice || "0"),
+        avgPrice: parseFloat(pricing.avgPrice.toString() || "0"),
         salesCount: pricing.salesCount || 0,
         lastFetched: pricing.lastFetched || new Date()
       });

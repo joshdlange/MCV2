@@ -97,7 +97,7 @@ export function RecentCards() {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-          {recentCards.map((item) => (
+          {recentCards.filter(item => item.card && item.card.name).map((item) => (
             <div 
               key={item.id} 
               className="bg-card rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow cursor-pointer border relative"

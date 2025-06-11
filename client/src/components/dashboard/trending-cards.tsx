@@ -24,8 +24,8 @@ function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
   const ebayPrice = pricing?.avgPrice || 0;
   const databasePrice = card.estimatedValue ? parseFloat(card.estimatedValue) : 0;
   const currentValue = ebayPrice > 0 ? ebayPrice : databasePrice;
-  const hasEbayPricing = pricing && pricing.avgPrice > 0;
-  const hasDatabasePricing = databasePrice > 0;
+  const hasEbayPricing = Boolean(pricing && pricing.avgPrice && pricing.avgPrice > 0);
+  const hasDatabasePricing = Boolean(!hasEbayPricing && databasePrice > 0);
   
   // Calculate mock price change for trending effect
   const priceChange = Math.floor(Math.random() * 20) + 5;
@@ -184,11 +184,7 @@ export function TrendingCards() {
         isForSale: false,
         isFavorite: false,
       };
-      return apiRequest("/api/collection", {
-        method: "POST",
-        body: JSON.stringify(insertData),
-        headers: { "Content-Type": "application/json" },
-      });
+      return apiRequest("POST", "/api/collection", insertData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/collection"] });
@@ -209,11 +205,7 @@ export function TrendingCards() {
         priority: 1,
         maxPrice: null,
       };
-      return apiRequest("/api/wishlist", {
-        method: "POST",
-        body: JSON.stringify(insertData),
-        headers: { "Content-Type": "application/json" },
-      });
+      return apiRequest("POST", "/api/wishlist", insertData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
