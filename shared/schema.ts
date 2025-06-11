@@ -36,6 +36,9 @@ export const cardSets = pgTable("card_sets", {
   description: text("description"),
   imageUrl: text("image_url"),
   totalCards: integer("total_cards").default(0).notNull(),
+  parentSetId: integer("parent_set_id"),
+  isMainSet: boolean("is_main_set").default(true).notNull(),
+  subsetType: text("subset_type"), // e.g., "Gold Refractor", "Laser Refractor", etc.
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -90,8 +93,15 @@ export const cardPriceCache = pgTable("card_price_cache", {
 });
 
 // Relations
-export const cardSetsRelations = relations(cardSets, ({ many }) => ({
+export const cardSetsRelations = relations(cardSets, ({ one, many }) => ({
   cards: many(cards),
+  parentSet: one(cardSets, {
+    fields: [cardSets.parentSetId],
+    references: [cardSets.id],
+  }),
+  subsets: many(cardSets, {
+    relationName: "parentSubset",
+  }),
 }));
 
 export const cardsRelations = relations(cards, ({ one, many }) => ({
