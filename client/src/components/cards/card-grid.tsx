@@ -14,6 +14,7 @@ import { CardFilters } from "@/types";
 
 interface CardGridProps {
   filters?: CardFilters;
+  setId?: number | null;
   showAddToCollection?: boolean;
   showAddToWishlist?: boolean;
   viewMode?: "grid" | "list";
@@ -21,6 +22,7 @@ interface CardGridProps {
 
 export function CardGrid({ 
   filters = {}, 
+  setId,
   showAddToCollection = true, 
   showAddToWishlist = true,
   viewMode = "grid"

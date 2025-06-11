@@ -33,7 +33,7 @@ export function HierarchicalCardBrowser({
   });
 
   // Filter to get only main sets
-  const mainSets = allSets?.filter(set => set.isMainSet) || [];
+  const mainSets = allSets?.filter((set: CardSet) => set.isMainSet) || [];
 
   // Fetch subsets for selected main set
   const { data: subsets, isLoading: loadingSubsets } = useQuery({
@@ -42,7 +42,7 @@ export function HierarchicalCardBrowser({
   });
 
   const handleMainSetClick = (setId: number) => {
-    const mainSet = mainSets?.find(set => set.id === setId);
+    const mainSet = mainSets?.find((set: CardSet) => set.id === setId);
     if (mainSet) {
       setSelectedMainSet(mainSet);
       setMainSetId(setId);
@@ -149,7 +149,7 @@ export function HierarchicalCardBrowser({
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {mainSets?.map((mainSet) => (
+            {mainSets?.map((mainSet: CardSet) => (
               <MainSetTile
                 key={mainSet.id}
                 mainSet={mainSet}
@@ -184,7 +184,7 @@ export function HierarchicalCardBrowser({
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {subsets?.map((subset) => (
+            {subsets?.map((subset: CardSet) => (
               <SubsetTile
                 key={subset.id}
                 subset={subset}
