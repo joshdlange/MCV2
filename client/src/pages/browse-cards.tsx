@@ -62,7 +62,7 @@ export default function BrowseCards() {
     queryKey: ["/api/wishlist"],
   });
 
-  // Paginated cards query for selected set
+  // Paginated cards query for selected set (ONLY when set is selected, not mainSet)
   const { data: cardsData, isLoading: cardsLoading } = useQuery<{cards: CardWithSet[], totalCount: number}>({
     queryKey: ["/api/cards", { 
       setId: selectedSet?.id, 
@@ -70,10 +70,11 @@ export default function BrowseCards() {
       limit: cardsPerPage,
       ...filters 
     }],
-    enabled: !!selectedSet && !selectedMainSet,
+    enabled: !!selectedSet && !!selectedMainSet, // Only load cards when we have both mainSet and specific set selected
     select: (data: any) => {
-      // Add performance logging
+      // Add performance logging and debug info
       console.time(`Card list load (Set ${selectedSet?.id})`);
+      console.log(`VIEW MODE: card | mainSetId: ${selectedMainSet?.id || 'none'} | setId: ${selectedSet?.id || 'none'} | cardCount loaded: ${data?.length || 0}`);
       const result = {
         cards: data || [],
         totalCount: data?.length || 0
@@ -85,14 +86,16 @@ export default function BrowseCards() {
 
   // Subsets query for selected mainSet
   const { data: subsetsData, isLoading: subsetsLoading } = useQuery<CardSet[]>({
-    queryKey: ["/api/card-sets", { mainSetId: selectedMainSet?.id }],
+    queryKey: ["/api/card-sets"],
     enabled: !!selectedMainSet,
     select: (data: any) => {
-      // Add performance logging
+      // Add performance logging and debug info
       console.time(`Subset load (MainSet ${selectedMainSet?.id})`);
-      const result = data?.filter((set: CardSet) => set.mainSetId === selectedMainSet.id) || [];
+      const filteredSets = data?.filter((set: CardSet) => set.mainSetId === selectedMainSet.id) || [];
+      console.log(`VIEW MODE: subset | mainSetId: ${selectedMainSet?.id || 'none'} | setId: none | cardCount loaded: 0`);
+      console.log(`Found ${filteredSets.length} subsets for mainSet ${selectedMainSet?.id}`);
       console.timeEnd(`Subset load (MainSet ${selectedMainSet?.id})`);
-      return result;
+      return filteredSets;
     }
   });
 
@@ -105,6 +108,7 @@ export default function BrowseCards() {
   // Navigation handlers for hierarchy
   const handleMainSetClick = (mainSet: any) => {
     console.time(`MainSet load (${mainSet.name})`);
+    console.log(`VIEW MODE: mainSet | mainSetId: ${mainSet.id} | setId: none | cardCount loaded: 0`);
     setSelectedMainSet(mainSet);
     setSelectedSet(null);
     setCurrentPage(1);
@@ -309,7 +313,7 @@ export default function BrowseCards() {
       {/* Main Content Area */}
       <div className="p-6">
         {/* View 1: Selected Set Cards (Final Level) */}
-        {selectedSet && !selectedMainSet && (
+        {selectedSet && selectedMainSet && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
