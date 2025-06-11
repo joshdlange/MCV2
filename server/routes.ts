@@ -497,7 +497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/recent-cards", authenticateUser, async (req: any, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 10;
+      const limit = parseInt(req.query.limit as string) || 24; // Increased to fill dashboard space
       const recentCards = await storage.getRecentCards(req.user.id, limit);
       res.json(recentCards);
     } catch (error) {
