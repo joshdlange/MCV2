@@ -40,9 +40,9 @@ const getNavigationItems = (userPlan: string): NavigationItem[] => [
 ];
 
 const adminItems: NavigationItem[] = [
-  { href: "/admin", label: "Image Automation", icon: "Settings" },
-  { href: "/admin/cards", label: "Add Cards", icon: "PlusCircle" },
   { href: "/admin/users", label: "Manage Users", icon: "Users" },
+  { href: "/admin/cards", label: "Add Cards", icon: "PlusCircle" },
+  { href: "/admin", label: "Image Automation", icon: "Settings" },
 ];
 
 const iconMap = {
