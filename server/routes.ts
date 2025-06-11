@@ -15,8 +15,8 @@ import { ebayPricingService } from "./ebay-pricing";
 import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
 import { db } from "./db";
-import { cards, cardSets } from "@shared/schema";
-import { sql, isNull } from "drizzle-orm";
+import { cards, cardSets, mainSets } from "@shared/schema";
+import { sql, isNull, eq, and, isNotNull } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages, testImageFinder } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
 
@@ -1182,15 +1182,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get mainSets with their related sets
-  app.get('/api/main-sets-with-details', requireAuth, async (req, res) => {
+  app.get('/api/main-sets-with-details', authenticateUser, async (req: any, res) => {
     try {
+      const defaultThumbnail = '/images/image-coming-soon.png';
+      
       // Get all mainSets with their linked sets
       const mainSetsWithSets = await db
         .select({
           mainSetId: mainSets.id,
           mainSetName: mainSets.name,
           mainSetYear: mainSets.year,
-          mainSetDescription: mainSets.description,
           setId: cardSets.id,
           setName: cardSets.name,
           setYear: cardSets.year,
@@ -1214,40 +1215,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(isNull(cardSets.mainSetId))
         .orderBy(cardSets.name);
 
-      // Group the results by mainSet
+      // Function to get first card image for a set
+      const getSetThumbnail = async (setId: number): Promise<string> => {
+        const firstCard = await db
+          .select({ frontImageUrl: cards.frontImageUrl })
+          .from(cards)
+          .where(and(eq(cards.setId, setId), isNotNull(cards.frontImageUrl)))
+          .orderBy(cards.cardNumber)
+          .limit(1);
+        
+        return firstCard.length > 0 && firstCard[0].frontImageUrl 
+          ? firstCard[0].frontImageUrl 
+          : defaultThumbnail;
+      };
+
+      // Group the results by mainSet and get thumbnails
       const mainSetsMap = new Map();
+      const setThumbnails = new Map<number, string>();
       
+      // First pass: group mainSets and collect set IDs
+      const allSetIds = new Set<number>();
       for (const row of mainSetsWithSets) {
         if (!mainSetsMap.has(row.mainSetId)) {
           mainSetsMap.set(row.mainSetId, {
             id: row.mainSetId,
             name: row.mainSetName,
             year: row.mainSetYear,
-            description: row.mainSetDescription,
             totalCards: 0,
             subsetCount: 0,
-            sets: []
+            sets: [],
+            firstSetWithImage: null
           });
         }
         
+        if (row.setId) {
+          allSetIds.add(row.setId);
+        }
+      }
+
+      // Get thumbnails for all sets (including unlinked)
+      for (const setId of Array.from(allSetIds)) {
+        setThumbnails.set(setId, await getSetThumbnail(setId));
+      }
+
+      // Get thumbnails for unlinked sets
+      for (const set of unlinkedSets) {
+        if (!setThumbnails.has(set.id)) {
+          setThumbnails.set(set.id, await getSetThumbnail(set.id));
+        }
+      }
+
+      // Second pass: build final structure with thumbnails
+      for (const row of mainSetsWithSets) {
         const mainSet = mainSetsMap.get(row.mainSetId);
         
-        // Only add set if it exists (not null from left join)
         if (row.setId) {
+          const setThumbnail = setThumbnails.get(row.setId) || defaultThumbnail;
+          
           mainSet.sets.push({
             id: row.setId,
             name: row.setName,
             year: row.setYear,
             cardCount: row.setTotalCards,
-            thumbnailImageUrl: row.setImageUrl
+            thumbnailImageUrl: setThumbnail
           });
+          
           mainSet.totalCards += row.setTotalCards;
           mainSet.subsetCount += 1;
+          
+          // Track first set with a real image for mainSet thumbnail
+          if (!mainSet.firstSetWithImage && setThumbnail !== defaultThumbnail) {
+            mainSet.firstSetWithImage = setThumbnail;
+          }
         }
       }
 
       // Convert map to array and filter out mainSets with no associated sets
-      const mainSetsWithDetails = Array.from(mainSetsMap.values()).filter(mainSet => mainSet.subsetCount > 0);
+      const mainSetsWithDetails = Array.from(mainSetsMap.values())
+        .filter(mainSet => mainSet.subsetCount > 0)
+        .map(mainSet => ({
+          id: mainSet.id,
+          name: mainSet.name,
+          year: mainSet.year,
+          totalCards: mainSet.totalCards,
+          subsetCount: mainSet.subsetCount,
+          thumbnailImageUrl: mainSet.firstSetWithImage || defaultThumbnail,
+          sets: mainSet.sets
+        }));
 
       res.json({
         mainSets: mainSetsWithDetails,
@@ -1256,7 +1310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: set.name,
           year: set.year,
           cardCount: set.totalCards,
-          thumbnailImageUrl: set.imageUrl
+          thumbnailImageUrl: setThumbnails.get(set.id) || defaultThumbnail
         }))
       });
     } catch (error) {
