@@ -579,6 +579,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Refresh card pricing endpoint
+  app.post("/api/card-pricing/:cardId/refresh", async (req, res) => {
+    try {
+      const cardId = parseInt(req.params.cardId);
+      if (isNaN(cardId)) {
+        return res.status(400).json({ message: "Invalid card ID" });
+      }
+
+      console.log(`Refreshing pricing for card ${cardId}`);
+      const result = await ebayPricingService.forceRefreshCardPricing(cardId);
+      
+      if (result) {
+        res.json({
+          avgPrice: result.avgPrice,
+          salesCount: result.salesCount,
+          lastFetched: result.lastFetched
+        });
+      } else {
+        res.json({
+          avgPrice: 0,
+          salesCount: 0,
+          lastFetched: new Date()
+        });
+      }
+    } catch (error) {
+      console.error("Error refreshing card pricing:", error);
+      res.status(500).json({ message: "Failed to refresh pricing data" });
+    }
+  });
+
+  // Find and update card image endpoint
+  app.post("/api/admin/find-card-image/:cardId", async (req, res) => {
+    try {
+      const cardId = parseInt(req.params.cardId);
+      if (isNaN(cardId)) {
+        return res.status(400).json({ message: "Invalid card ID" });
+      }
+
+      // Get card details
+      const card = await storage.getCard(cardId);
+      if (!card) {
+        return res.status(404).json({ message: "Card not found" });
+      }
+
+      console.log(`Finding image for card ${cardId}: ${card.name}`);
+      
+      const result = await findAndUpdateCardImage(
+        cardId,
+        card.set.name,
+        card.name,
+        card.cardNumber,
+        card.description || undefined
+      );
+
+      res.json({ 
+        success: result.success,
+        message: result.success ? "Image updated successfully" : "Failed to find image",
+        result 
+      });
+    } catch (error) {
+      console.error('Find card image error:', error);
+      res.status(500).json({ message: "Failed to find card image" });
+    }
+  });
+
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);
 
