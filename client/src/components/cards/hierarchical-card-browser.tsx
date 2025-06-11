@@ -27,10 +27,13 @@ export function HierarchicalCardBrowser({
   const [mainSetId, setMainSetId] = useState<number | null>(initialMainSetId || null);
   const [subsetId, setSubsetId] = useState<number | null>(initialSubsetId || null);
 
-  // Fetch main sets
-  const { data: mainSets, isLoading: loadingMainSets } = useQuery({
+  // Fetch main sets - only those marked as main sets
+  const { data: allSets, isLoading: loadingMainSets } = useQuery({
     queryKey: ['/api/card-sets'],
   });
+
+  // Filter to get only main sets
+  const mainSets = allSets?.filter(set => set.isMainSet) || [];
 
   // Fetch subsets for selected main set
   const { data: subsets, isLoading: loadingSubsets } = useQuery({

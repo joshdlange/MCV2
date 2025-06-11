@@ -9,15 +9,15 @@ interface MainSetTileProps {
 }
 
 export function MainSetTile({ mainSet, onSetClick }: MainSetTileProps) {
-  // Get first card image for thumbnail
-  const { data: cards } = useQuery({
-    queryKey: ['/api/cards', { setId: mainSet.id, limit: 1 }],
-    enabled: !mainSet.imageUrl,
-  });
-
   // Get subset count for this main set
   const { data: subsets } = useQuery({
     queryKey: ['/api/card-sets', mainSet.id, 'subsets'],
+  });
+
+  // Get first card image for thumbnail from any subset
+  const { data: cards } = useQuery({
+    queryKey: ['/api/cards', { setId: mainSet.id, limit: 1 }],
+    enabled: !mainSet.imageUrl && subsets && subsets.length > 0,
   });
 
   const thumbnailUrl = mainSet.imageUrl || (cards && cards.length > 0 ? cards[0]?.frontImageUrl : null) || '/placeholder-card.jpg';

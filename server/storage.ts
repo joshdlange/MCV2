@@ -363,14 +363,14 @@ export class DatabaseStorage implements IStorage {
           const subsets = await db.select({ id: cardSets.id }).from(cardSets).where(eq(cardSets.parentSetId, filters.setId));
           const subsetIds = subsets.map(s => s.id);
           if (subsetIds.length > 0) {
-            // Include cards from all subsets using Drizzle's inArray
+            // Include cards from all subsets
             conditions.push(inArray(cards.setId, subsetIds));
           } else {
-            // Fallback to main set if no subsets found
-            conditions.push(eq(cards.setId, filters.setId));
+            // If no subsets, return empty result for main sets without cards
+            conditions.push(eq(cards.setId, -1)); // Non-existent setId to return empty
           }
         } else {
-          // Regular set - get cards directly
+          // Regular subset - get cards directly
           conditions.push(eq(cards.setId, filters.setId));
         }
       }
