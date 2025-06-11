@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Image, Search, RefreshCw } from "lucide-react";
+import { SetGroupingAnalyzer } from "@/components/admin/set-grouping-analyzer";
 
 interface CardWithoutImage {
   id: number;

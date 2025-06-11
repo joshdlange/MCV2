@@ -836,6 +836,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Set grouping analysis tool
+  app.get("/api/admin/analyze-set-groupings", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      console.log('Analyzing set groupings...');
+      
+      // Get all sets from database
+      const allSets = await storage.getCardSets();
+      console.log(`Found ${allSets.length} sets to analyze`);
+
+      // Keywords that typically indicate set variants/subsets
+      const variantKeywords = [
+        'Gold Foil', 'Blue Foil', 'Silver Foil', 'Foil', 'Chrome',
+        'Promo', 'Promos', 'Promotional',
+        'Signature', 'Signatures', 'Autographs', 'Auto',
+        'Holograms', 'Hologram', 'Holo',
+        'Base Set', 'Base',
+        'Inserts', 'Insert',
+        'Parallels', 'Parallel',
+        'Chase', 'Special',
+        'Sketch', 'Sketches',
+        'Artist Proof', 'Artist Proofs',
+        'Refractor', 'Refractors',
+        'Canvas', 'Metal',
+        'Die-Cut', 'Die Cut',
+        'Embossed', 'Textured',
+        'Redemption', 'Exchange'
+      ];
+
+      // Function to extract base name by removing variant keywords
+      const extractBaseName = (setName: string): string => {
+        let baseName = setName.trim();
+        
+        // Sort keywords by length (longest first) to avoid partial matches
+        const sortedKeywords = [...variantKeywords].sort((a, b) => b.length - a.length);
+        
+        for (const keyword of sortedKeywords) {
+          // Create regex patterns for different positions
+          const patterns = [
+            new RegExp(`\\s+${keyword}\\s*$`, 'i'), // End of string
+            new RegExp(`\\s+${keyword}\\s+`, 'i'),  // Middle with spaces
+            new RegExp(`^${keyword}\\s+`, 'i'),     // Beginning
+          ];
+          
+          for (const pattern of patterns) {
+            if (pattern.test(baseName)) {
+              baseName = baseName.replace(pattern, ' ').trim();
+              break; // Only remove one keyword per iteration
+            }
+          }
+        }
+        
+        return baseName;
+      };
+
+      // Group sets by their base name
+      const groupings: { [key: string]: string[] } = {};
+      
+      for (const set of allSets) {
+        const baseName = extractBaseName(set.name);
+        
+        if (!groupings[baseName]) {
+          groupings[baseName] = [];
+        }
+        groupings[baseName].push(set.name);
+      }
+
+      // Filter out single-set groups unless they're clearly part of a series
+      const meaningfulGroupings: { [key: string]: string[] } = {};
+      
+      for (const [baseName, setNames] of Object.entries(groupings)) {
+        // Include groups with multiple sets, or single sets that look like they should be grouped
+        if (setNames.length > 1) {
+          meaningfulGroupings[baseName] = setNames.sort();
+        } else if (setNames.length === 1) {
+          // Check if the single set has variant keywords, suggesting it's part of a larger series
+          const originalName = setNames[0];
+          const hasVariantKeyword = variantKeywords.some(keyword => 
+            originalName.toLowerCase().includes(keyword.toLowerCase())
+          );
+          
+          if (hasVariantKeyword && baseName !== originalName) {
+            meaningfulGroupings[baseName] = setNames;
+          }
+        }
+      }
+
+      // Sort by base name for consistent output
+      const sortedGroupings: { [key: string]: string[] } = {};
+      Object.keys(meaningfulGroupings)
+        .sort()
+        .forEach(key => {
+          sortedGroupings[key] = meaningfulGroupings[key];
+        });
+
+      console.log(`Generated ${Object.keys(sortedGroupings).length} meaningful groupings`);
+
+      res.json({
+        groupings: sortedGroupings,
+        totalSets: allSets.length,
+        groupedSets: Object.values(sortedGroupings).flat().length,
+        ungroupedSets: allSets.length - Object.values(sortedGroupings).flat().length
+      });
+
+    } catch (error) {
+      console.error('Error analyzing set groupings:', error);
+      res.status(500).json({ message: 'Failed to analyze set groupings' });
+    }
+  });
+
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);
 
