@@ -18,6 +18,7 @@ import { db } from "./db";
 import { cards } from "@shared/schema";
 import { sql } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages, testImageFinder } from "./ebay-image-finder";
+import { registerPerformanceRoutes } from "./performance-routes";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -811,51 +812,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Start background pricing fetch for newly created cards that don't have cached prices
+      // Disabled automatic pricing fetch to prevent blocking operations
+      // Use admin interface or background jobs for pricing updates
       if (createdCards.length > 0) {
-        setImmediate(async () => {
-          try {
-            // Filter cards that need eBay pricing (no price was provided in CSV)
-            const cardsNeedingPricing = [];
-            
-            for (const card of createdCards) {
-              const existingPrice = await storage.getCardPricing(card.id);
-              if (!existingPrice) {
-                cardsNeedingPricing.push(card);
-              }
-            }
-            
-            if (cardsNeedingPricing.length > 0) {
-              console.log(`Starting background pricing fetch for ${cardsNeedingPricing.length} cards without cached prices`);
-              
-              for (let i = 0; i < cardsNeedingPricing.length; i++) {
-                const card = cardsNeedingPricing[i];
-                try {
-                  console.log(`Fetching initial pricing for card ${card.id}: ${card.name} (${i + 1}/${cardsNeedingPricing.length})`);
-                  await ebayPricingService.fetchAndCacheCardPricing(card.id);
-                  
-                  // Rate limit: 3 seconds between requests
-                  if (i < cardsNeedingPricing.length - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 3000));
-                  }
-                } catch (error: any) {
-                  console.error(`Failed to fetch initial pricing for card ${card.id}:`, error.message);
-                  
-                  // If rate limited, pause longer
-                  if (error.message.includes('Rate limit')) {
-                    await new Promise(resolve => setTimeout(resolve, 60000)); // 1 minute pause
-                  }
-                }
-              }
-            } else {
-              console.log('All uploaded cards have cached prices, skipping eBay lookup');
-            }
-            
-            console.log(`Background pricing fetch completed for ${cardsNeedingPricing.length} cards`);
-          } catch (error: any) {
-            console.error(`Background pricing fetch failed:`, error.message);
-          }
-        });
+        console.log(`Created ${createdCards.length} cards. Use admin interface for pricing updates.`);
       }
 
       const skippedCount = results.length - createdCards.length - errors.length;
@@ -2235,6 +2195,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to get cards without images" });
     }
   });
+
+  // Register performance-optimized routes
+  registerPerformanceRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;
