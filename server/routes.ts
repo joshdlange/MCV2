@@ -272,6 +272,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update card set (admin only)
+  app.patch("/api/card-sets/:id", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid card set ID" });
+      }
+      
+      // Validate the updates - allow partial updates
+      const allowedUpdates = ['name', 'year', 'description', 'imageUrl', 'mainSetId'];
+      const updates: any = {};
+      
+      for (const key of allowedUpdates) {
+        if (req.body[key] !== undefined) {
+          updates[key] = req.body[key];
+        }
+      }
+      
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ message: "No valid updates provided" });
+      }
+      
+      const updatedCardSet = await storage.updateCardSet(id, updates);
+      
+      if (!updatedCardSet) {
+        return res.status(404).json({ message: "Card set not found" });
+      }
+      
+      res.json(updatedCardSet);
+    } catch (error) {
+      console.error('Update card set error:', error);
+      res.status(500).json({ message: "Failed to update card set" });
+    }
+  });
+
+  // Update card set (admin only)
   app.put("/api/card-sets/:id", authenticateUser, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) {
@@ -578,13 +617,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const pricing = await storage.getCardPricing(cardId);
       if (!pricing) {
+        console.log(`💰 No pricing data found for card ${cardId} - will need eBay API call`);
         return res.status(404).json({ message: "No pricing data found" });
       }
+
+      // Calculate data age
+      const dataAge = new Date().getTime() - new Date(pricing.lastFetched).getTime();
+      const hoursOld = Math.round(dataAge / (1000 * 60 * 60));
+      
+      console.log(`💰 Pricing data for card ${cardId}: $${pricing.avgPrice} (${hoursOld}h old) - FROM DATABASE`);
 
       res.json({
         avgPrice: parseFloat(pricing.avgPrice.toString() || "0"),
         salesCount: pricing.salesCount || 0,
-        lastFetched: pricing.lastFetched || new Date()
+        lastFetched: pricing.lastFetched || new Date(),
+        // Development indicators
+        source: 'database',
+        dataAgeHours: hoursOld
       });
     } catch (error) {
       console.error("Error fetching card pricing:", error);
