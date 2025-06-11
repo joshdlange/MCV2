@@ -22,6 +22,14 @@ interface PopulateResult {
   skippedSets: string[];
 }
 
+interface LinkingResult {
+  message: string;
+  linkedSets: number;
+  linkedMainSets: number;
+  skippedSingleSetMainSets: number;
+  singleSetMainSets: string[];
+}
+
 export function SetGroupingAnalyzer() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { toast } = useToast();
@@ -51,6 +59,26 @@ export function SetGroupingAnalyzer() {
     },
   });
 
+  const linkingMutation = useMutation({
+    mutationFn: async (): Promise<LinkingResult> => {
+      const response = await apiRequest('POST', '/api/admin/link-sets-to-main-sets');
+      return response.json();
+    },
+    onSuccess: (data: LinkingResult) => {
+      toast({
+        title: "Linking Complete",
+        description: `${data.message}. Skipped ${data.skippedSingleSetMainSets} single-set mainSets`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to link sets to main sets",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleAnalyze = async () => {
     setIsAnalyzing(true);
     await refetch();
@@ -59,6 +87,10 @@ export function SetGroupingAnalyzer() {
 
   const handlePopulate = () => {
     populateMutation.mutate();
+  };
+
+  const handleLinking = () => {
+    linkingMutation.mutate();
   };
 
   const downloadResults = () => {

@@ -218,6 +218,7 @@ export class DatabaseStorage implements IStorage {
           year: cardSets.year,
           description: cardSets.description,
           imageUrl: cardSets.imageUrl,
+          mainSetId: cardSets.mainSetId,
           totalCards: sql<number>`COALESCE(COUNT(${cards.id}), 0)`,
           createdAt: cardSets.createdAt
         })
@@ -259,6 +260,15 @@ export class DatabaseStorage implements IStorage {
     return mainSet;
   }
 
+  async getMainSets(): Promise<MainSet[]> {
+    try {
+      return await db.select().from(mainSets).orderBy(mainSets.name);
+    } catch (error) {
+      console.error('Error getting main sets:', error);
+      return [];
+    }
+  }
+
   async updateCardSet(id: number, updates: Partial<InsertCardSet>): Promise<CardSet | undefined> {
     const [cardSet] = await db
       .update(cardSets)
@@ -289,7 +299,9 @@ export class DatabaseStorage implements IStorage {
             name: cardSets.name,
             year: cardSets.year,
             description: cardSets.description,
+            imageUrl: cardSets.imageUrl,
             totalCards: cardSets.totalCards,
+            mainSetId: cardSets.mainSetId,
             createdAt: cardSets.createdAt,
           }
         })
