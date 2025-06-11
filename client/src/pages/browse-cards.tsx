@@ -86,15 +86,17 @@ export default function BrowseCards() {
 
   // Subsets query for selected mainSet
   const { data: subsetsData, isLoading: subsetsLoading } = useQuery<CardSet[]>({
-    queryKey: ["/api/card-sets"],
+    queryKey: ["/api/card-sets", selectedMainSet?.id],
     enabled: !!selectedMainSet,
     select: (data: any) => {
+      if (!selectedMainSet) return [];
+      
       // Add performance logging and debug info
-      console.time(`Subset load (MainSet ${selectedMainSet?.id})`);
+      console.time(`Subset load (MainSet ${selectedMainSet.id})`);
       const filteredSets = data?.filter((set: CardSet) => set.mainSetId === selectedMainSet.id) || [];
-      console.log(`VIEW MODE: subset | mainSetId: ${selectedMainSet?.id || 'none'} | setId: none | cardCount loaded: 0`);
-      console.log(`Found ${filteredSets.length} subsets for mainSet ${selectedMainSet?.id}`);
-      console.timeEnd(`Subset load (MainSet ${selectedMainSet?.id})`);
+      console.log(`VIEW MODE: subset | mainSetId: ${selectedMainSet.id} | setId: none | cardCount loaded: 0`);
+      console.log(`Found ${filteredSets.length} subsets for mainSet ${selectedMainSet.id}`);
+      console.timeEnd(`Subset load (MainSet ${selectedMainSet.id})`);
       return filteredSets;
     }
   });
