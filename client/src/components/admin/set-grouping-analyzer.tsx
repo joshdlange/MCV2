@@ -148,6 +148,17 @@ export function SetGroupingAnalyzer() {
                   <Database className="w-4 h-4" />
                   Populate MainSet Table
                 </Button>
+                
+                <Button 
+                  onClick={handleLinking}
+                  disabled={linkingMutation.isPending}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  {linkingMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <Database className="w-4 h-4" />
+                  Link Sets to MainSets
+                </Button>
               </>
             )}
           </div>
