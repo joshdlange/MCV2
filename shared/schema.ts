@@ -45,6 +45,7 @@ export const cards = pgTable("cards", {
   cardNumber: text("card_number").notNull(),
   name: text("name").notNull(),
   variation: text("variation"),
+  subsetName: text("subset_name"),
   isInsert: boolean("is_insert").default(false).notNull(),
   frontImageUrl: text("front_image_url"),
   backImageUrl: text("back_image_url"),

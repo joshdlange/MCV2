@@ -823,6 +823,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Card Set Consolidation Migration (Admin only)
+  app.post("/api/admin/consolidate-card-sets", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      console.log('Starting card set consolidation migration...');
+      
+      const { runCardSetConsolidation } = await import('./card-set-consolidation-migration');
+      
+      const result = await runCardSetConsolidation();
+      
+      res.json({
+        success: true,
+        message: 'Card set consolidation completed successfully',
+        result
+      });
+    } catch (error) {
+      console.error('Card set consolidation error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Card set consolidation failed',
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);
 
