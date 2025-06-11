@@ -50,11 +50,13 @@ app.use((req, res, next) => {
 
   // Start background services
   console.log('Starting background services...');
-  startImageProcessor();
+  // Image processor disabled to prevent automatic mass processing
+  // Only run when explicitly needed via admin interface
+  // startImageProcessor();
   // Background pricing disabled to conserve eBay API calls
   // Only run when explicitly needed via admin interface
   // startBackgroundPricing();
-  console.log('Background services started successfully (pricing service disabled)');
+  console.log('Background services started successfully (image and pricing services disabled)');
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
