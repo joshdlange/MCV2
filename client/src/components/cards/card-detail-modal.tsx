@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Check, Heart, Star, RotateCcw, Edit, Trash2, Save, X, RefreshCw, ExternalLink } from "lucide-react";
+import { Check, Heart, Star, RotateCcw, Edit, Trash2, Save, X, RefreshCw, ExternalLink, Image } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -84,6 +84,32 @@ export function CardDetailModal({
     },
     onError: () => {
       toast({ title: "Failed to delete card", variant: "destructive" });
+    }
+  });
+
+  // Admin image update mutation
+  const updateImageMutation = useMutation({
+    mutationFn: async (cardId: number) => {
+      return apiRequest('POST', `/api/admin/find-card-image/${cardId}`).then(res => res.json());
+    },
+    onSuccess: (data: { success: boolean; message: string }) => {
+      toast({
+        title: data.success ? "Image Updated" : "No Image Found",
+        description: data.message,
+        variant: data.success ? "default" : "destructive",
+      });
+      if (data.success) {
+        // Refresh card data to show new image
+        queryClient.invalidateQueries({ queryKey: ['/api/cards'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/cards/search'] });
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update card image",
+        variant: "destructive",
+      });
     }
   });
 

@@ -18,6 +18,7 @@ import Marketplace from "@/pages/marketplace";
 import Profile from "@/pages/profile";
 import AdminCardManagement from "@/pages/admin/card-management";
 import AdminUsers from "@/pages/admin/users";
+import AdminPage from "@/pages/admin";
 import CardSearch from "@/pages/card-search";
 import MarketTrends from "@/pages/market-trends";
 import SubscriptionSuccess from "@/pages/subscription-success";
@@ -92,6 +93,7 @@ function Router() {
       <Route path="/marketplace" component={Marketplace} />
       <Route path="/trends" component={MarketTrends} />
       <Route path="/profile" component={Profile} />
+      <Route path="/admin" component={AdminPage} />
       <Route path="/admin/cards" component={AdminCardManagement} />
       <Route path="/admin/users" component={AdminUsers} />
       <Route path="/subscription-success" component={SubscriptionSuccess} />
