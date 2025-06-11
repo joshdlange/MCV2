@@ -224,7 +224,7 @@ export class DatabaseStorage implements IStorage {
         })
         .from(cardSets)
         .leftJoin(cards, eq(cardSets.id, cards.setId))
-        .groupBy(cardSets.id, cardSets.name, cardSets.year, cardSets.description, cardSets.imageUrl, cardSets.createdAt)
+        .groupBy(cardSets.id, cardSets.name, cardSets.year, cardSets.description, cardSets.imageUrl, cardSets.mainSetId, cardSets.createdAt)
         .orderBy(desc(cardSets.year), cardSets.name);
       
       return setsWithCounts;
@@ -990,6 +990,7 @@ export class DatabaseStorage implements IStorage {
           description: row.setDescription,
           imageUrl: row.setImageUrl,
           totalCards: row.setTotalCards,
+          mainSetId: row.setMainSetId,
           createdAt: row.setCreatedAt,
         }
       }));
