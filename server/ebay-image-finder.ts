@@ -40,18 +40,27 @@ async function searchEBayForCardImage(
 ): Promise<string | null> {
   try {
     // Create multiple search strategies with decreasing specificity
+    // Extract year and brand from set name for better eBay matching
+    const setWords = setName.split(' ');
+    const year = setWords.find(word => /^\d{4}$/.test(word)) || '';
+    const brand = setWords.find(word => /^(marvel|dc|topps|panini|upper|fleer|skybox)$/i.test(word)) || 'marvel';
+    
     const searchStrategies = [
-      // Strategy 1: COMC with full terms (highest quality scans)
+      // Strategy 1: eBay-style format with hash (#) - matches actual listings
+      [year, brand, setName.replace(/\d{4}/, '').trim(), `#${cardNumber}`, cardName].filter(Boolean).join(' '),
+      // Strategy 2: COMC with full terms (highest quality scans)
       [setName, cardName, cardNumber, 'comc'].filter(Boolean).join(' '),
-      // Strategy 2: COMC with set + card name + card number
+      // Strategy 3: eBay-style with "card" keyword
+      [year, brand, setName.replace(/\d{4}/, '').trim(), cardName, 'card', cardNumber].filter(Boolean).join(' '),
+      // Strategy 4: COMC consignment format
       [setName, cardName, cardNumber, 'comc_consignment'].filter(Boolean).join(' '),
-      // Strategy 3: Full search with all terms (original approach)
+      // Strategy 5: Standard format with all terms
       [setName, cardName, cardNumber, description].filter(Boolean).join(' '),
-      // Strategy 4: Set name + card name + card number
+      // Strategy 6: Simplified eBay format
+      [brand, year, cardName, cardNumber].filter(Boolean).join(' '),
+      // Strategy 7: Set name + card name + card number
       [setName, cardName, cardNumber].filter(Boolean).join(' '),
-      // Strategy 5: Just card name + set year/brand
-      [cardName, setName.split(' ').slice(0, 2).join(' ')].filter(Boolean).join(' '),
-      // Strategy 6: Card name + "marvel comc" (COMC fallback)
+      // Strategy 8: Card name + "marvel comc" (COMC fallback)
       [cardName, 'marvel', 'comc'].join(' ')
     ].map(query => query.replace(/\s+/g, ' ').trim());
 
