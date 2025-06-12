@@ -113,6 +113,7 @@ function CreateMainSetDialog() {
                     <Input 
                       placeholder="https://example.com/image.jpg"
                       {...field}
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormMessage />
