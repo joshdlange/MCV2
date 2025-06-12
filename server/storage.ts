@@ -1,5 +1,6 @@
 import { 
   users, 
+  mainSets,
   cardSets, 
   cards, 
   userCollections, 
@@ -7,6 +8,8 @@ import {
   cardPriceCache,
   type User, 
   type InsertUser,
+  type MainSet,
+  type InsertMainSet,
   type CardSet,
   type InsertCardSet,
   type Card,
@@ -33,6 +36,13 @@ interface IStorage {
   updateUser(id: number, insertUser: Partial<InsertUser>): Promise<User | undefined>;
   deleteUser(id: number): Promise<void>;
   
+  // Main Sets
+  getMainSets(): Promise<MainSet[]>;
+  getMainSet(id: number): Promise<MainSet | undefined>;
+  createMainSet(insertMainSet: InsertMainSet): Promise<MainSet>;
+  updateMainSet(id: number, updates: Partial<InsertMainSet>): Promise<MainSet | undefined>;
+  deleteMainSet(id: number): Promise<void>;
+
   // Card Sets
   getCardSets(): Promise<CardSet[]>;
   getCardSet(id: number): Promise<CardSet | undefined>;
