@@ -266,11 +266,12 @@ export class DatabaseStorage implements IStorage {
           description: cardSets.description,
           imageUrl: cardSets.imageUrl,
           totalCards: sql<number>`COALESCE(COUNT(${cards.id}), 0)`,
+          mainSetId: cardSets.mainSetId,
           createdAt: cardSets.createdAt
         })
         .from(cardSets)
         .leftJoin(cards, eq(cardSets.id, cards.setId))
-        .groupBy(cardSets.id, cardSets.name, cardSets.year, cardSets.description, cardSets.imageUrl, cardSets.createdAt)
+        .groupBy(cardSets.id, cardSets.name, cardSets.year, cardSets.description, cardSets.imageUrl, cardSets.mainSetId, cardSets.createdAt)
         .orderBy(desc(cardSets.year), cardSets.name);
       
       return setsWithCounts;

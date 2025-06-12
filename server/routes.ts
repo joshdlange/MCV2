@@ -294,6 +294,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update card set assignments to main set
+  app.patch("/api/main-sets/:id/assign-sets", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const mainSetId = parseInt(req.params.id);
+      const { cardSetIds } = req.body;
+      
+      if (!Array.isArray(cardSetIds)) {
+        return res.status(400).json({ message: "cardSetIds must be an array" });
+      }
+      
+      // Update all provided card sets to reference this main set
+      for (const cardSetId of cardSetIds) {
+        await storage.updateCardSet(cardSetId, { mainSetId });
+      }
+      
+      res.json({ message: "Card sets assigned successfully" });
+    } catch (error) {
+      console.error('Assign sets error:', error);
+      res.status(500).json({ message: "Failed to assign sets" });
+    }
+  });
+
+  // Remove card set assignments from main set
+  app.patch("/api/main-sets/:id/unassign-sets", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { cardSetIds } = req.body;
+      
+      if (!Array.isArray(cardSetIds)) {
+        return res.status(400).json({ message: "cardSetIds must be an array" });
+      }
+      
+      // Remove main set reference from provided card sets
+      for (const cardSetId of cardSetIds) {
+        await storage.updateCardSet(cardSetId, { mainSetId: null });
+      }
+      
+      res.json({ message: "Card sets unassigned successfully" });
+    } catch (error) {
+      console.error('Unassign sets error:', error);
+      res.status(500).json({ message: "Failed to unassign sets" });
+    }
+  });
+
   // Get all card sets with optimized counting
   app.get("/api/card-sets", async (req, res) => {
     try {

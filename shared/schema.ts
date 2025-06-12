@@ -44,6 +44,7 @@ export const cardSets = pgTable("card_sets", {
   description: text("description"),
   imageUrl: text("image_url"),
   totalCards: integer("total_cards").default(0).notNull(),
+  mainSetId: integer("main_set_id").references(() => mainSets.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
