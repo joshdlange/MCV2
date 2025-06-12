@@ -22,6 +22,9 @@ export function SetThumbnail({ setId, setName, setImageUrl, className }: SetThum
   const fetchFirstCardImage = async () => {
     try {
       const response = await fetch(`/api/cards?setId=${setId}&limit=50`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const cards = await response.json();
       
       if (cards.length > 0) {

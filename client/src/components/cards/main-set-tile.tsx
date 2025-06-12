@@ -77,12 +77,7 @@ export function MainSetTile({ mainSet, assignedSets }: MainSetTileProps) {
               </p>
             )}
             
-            <div className="flex items-center justify-between text-sm text-gray-500">
-              <div className="flex items-center">
-                <Calendar className="w-4 h-4 mr-1" />
-                Created {new Date(mainSet.createdAt).getFullYear()}
-              </div>
-              
+            <div className="text-right">
               <div className="font-medium text-gray-700">
                 {totalCards.toLocaleString()} cards
               </div>

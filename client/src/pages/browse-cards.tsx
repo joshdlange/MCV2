@@ -682,7 +682,7 @@ export default function BrowseCards() {
             {!isMainSetView && mainSetTiles.length > 0 && (
               <div className="mb-8">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Main Collections
+                  Master Sets
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {mainSetTiles.map(({ mainSet, assignedSets }) => (
