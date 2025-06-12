@@ -23,9 +23,10 @@ export function MainSetTile({ mainSet, assignedSets }: MainSetTileProps) {
 
   const validSetId = assignedSets.length > 0 ? assignedSets[0].id : null;
 
+  // ✅ Always run the hook, conditionally enable it
   const { data: firstSetCards } = useQuery<CardWithSet[]>({
-    queryKey: validSetId ? ["/api/cards", { setId: validSetId }] : [],
-    enabled: !!validSetId && !mainSet.thumbnailImageUrl,
+    queryKey: ["/api/cards", { setId: validSetId }],
+    enabled: Boolean(validSetId && !mainSet.thumbnailImageUrl),
   });
 
   useEffect(() => {

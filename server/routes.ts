@@ -15,9 +15,9 @@ import { ebayPricingService } from "./ebay-pricing";
 import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
 import { db } from "./db";
-import { cards } from "@shared/schema";
-import { sql } from "drizzle-orm";
-import { findAndUpdateCardImage, batchUpdateCardImages, testImageFinder } from "./ebay-image-finder";
+import { cards, cardSets } from "@shared/schema";
+import { sql, eq, ilike } from "drizzle-orm";
+import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
 
 const __filename = fileURLToPath(import.meta.url);
