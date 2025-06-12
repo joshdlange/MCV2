@@ -252,8 +252,9 @@ function EditMainSetDialog({ mainSet }: { mainSet: MainSet }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Edit className="h-4 w-4" />
+        <Button variant="outline" size="sm" className="bg-white text-gray-700 border-gray-300 hover:bg-gray-50">
+          <Edit className="h-4 w-4 mr-1" />
+          Edit
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
@@ -428,8 +429,9 @@ function DeleteMainSetDialog({ mainSet }: { mainSet: MainSet }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Trash2 className="h-4 w-4" />
+        <Button variant="outline" size="sm" className="bg-white text-red-600 border-red-300 hover:bg-red-50">
+          <Trash2 className="h-4 w-4 mr-1" />
+          Delete
         </Button>
       </DialogTrigger>
       <DialogContent>

@@ -371,6 +371,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get unassigned card sets (mainSetId IS NULL)
+  app.get("/api/card-sets/unassigned", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const unassignedSets = await storage.getUnassignedCardSets();
+      res.json(unassignedSets);
+    } catch (error) {
+      console.error('Get unassigned card sets error:', error);
+      res.status(500).json({ message: "Failed to fetch unassigned card sets" });
+    }
+  });
+
   // Search card sets
   app.get("/api/card-sets/search", async (req, res) => {
     try {

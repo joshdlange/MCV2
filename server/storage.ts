@@ -49,6 +49,7 @@ interface IStorage {
   createCardSet(insertCardSet: InsertCardSet): Promise<CardSet>;
   updateCardSet(id: number, updates: Partial<InsertCardSet>): Promise<CardSet | undefined>;
   searchCardSets(query: string): Promise<CardSet[]>;
+  getUnassignedCardSets(): Promise<CardSet[]>;
   
   // Cards
   getCards(filters?: { setId?: number; search?: string; rarity?: string; isInsert?: boolean }): Promise<CardWithSet[]>;
@@ -277,6 +278,32 @@ export class DatabaseStorage implements IStorage {
       return setsWithCounts;
     } catch (error) {
       console.error('Error getting card sets:', error);
+      return [];
+    }
+  }
+
+  async getUnassignedCardSets(): Promise<CardSet[]> {
+    try {
+      const unassignedSets = await db
+        .select({
+          id: cardSets.id,
+          name: cardSets.name,
+          year: cardSets.year,
+          description: cardSets.description,
+          imageUrl: cardSets.imageUrl,
+          totalCards: sql<number>`COALESCE(COUNT(${cards.id}), 0)`,
+          mainSetId: cardSets.mainSetId,
+          createdAt: cardSets.createdAt
+        })
+        .from(cardSets)
+        .leftJoin(cards, eq(cardSets.id, cards.setId))
+        .where(isNull(cardSets.mainSetId))
+        .groupBy(cardSets.id, cardSets.name, cardSets.year, cardSets.description, cardSets.imageUrl, cardSets.mainSetId, cardSets.createdAt)
+        .orderBy(desc(cardSets.year), cardSets.name);
+      
+      return unassignedSets;
+    } catch (error) {
+      console.error('Error getting unassigned card sets:', error);
       return [];
     }
   }
