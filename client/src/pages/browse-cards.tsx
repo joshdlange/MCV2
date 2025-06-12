@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,14 +7,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Star, ArrowLeft, Plus, Edit, Filter, Grid3X3, List, X, Save } from "lucide-react";
+import { Search, Star, ArrowLeft, Plus, Edit, Filter, Grid3X3, List, X, Save, Home } from "lucide-react";
 import { CardGrid } from "@/components/cards/card-grid";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { SetThumbnail } from "@/components/cards/set-thumbnail";
+import { MainSetTile } from "@/components/cards/main-set-tile";
 import { useToast } from "@/hooks/use-toast";
 import { useAppStore } from "@/lib/store";
 import { apiRequest } from "@/lib/queryClient";
-import type { CardSet, CardWithSet, CollectionItem } from "@shared/schema";
+import { useLocation, useParams, Link } from "wouter";
+import type { CardSet, CardWithSet, CollectionItem, MainSet } from "@shared/schema";
 
 interface CardFilters {
   setId?: number;
@@ -41,9 +43,19 @@ export default function BrowseCards() {
   const { toast } = useToast();
   const { isAdminMode } = useAppStore();
   const queryClient = useQueryClient();
+  const [location] = useLocation();
+  const params = useParams<{ mainSetId?: string }>();
+  
+  // Determine if we're viewing a specific main set
+  const isMainSetView = location.startsWith('/browse/main-set/');
+  const mainSetId = params.mainSetId ? parseInt(params.mainSetId) : null;
 
   const { data: cardSets } = useQuery<CardSet[]>({
     queryKey: ["/api/card-sets"],
+  });
+
+  const { data: mainSets } = useQuery<MainSet[]>({
+    queryKey: ["/api/main-sets"],
   });
 
   const { data: collection } = useQuery<CollectionItem[]>({
@@ -53,6 +65,41 @@ export default function BrowseCards() {
   const { data: wishlist } = useQuery<any[]>({
     queryKey: ["/api/wishlist"],
   });
+
+  // Get current main set if viewing a specific one
+  const currentMainSet = useMemo(() => {
+    if (!isMainSetView || !mainSetId || !mainSets) return null;
+    return mainSets.find(ms => ms.id === mainSetId) || null;
+  }, [isMainSetView, mainSetId, mainSets]);
+
+  // Filter sets based on current view
+  const { unassignedSets, assignedSetsGrouped, currentViewSets } = useMemo(() => {
+    if (!cardSets) return { unassignedSets: [], assignedSetsGrouped: new Map(), currentViewSets: [] };
+
+    const unassigned = cardSets.filter(set => !set.mainSetId);
+    
+    // Group assigned sets by main set ID
+    const grouped = new Map<number, CardSet[]>();
+    cardSets.forEach(set => {
+      if (set.mainSetId) {
+        if (!grouped.has(set.mainSetId)) {
+          grouped.set(set.mainSetId, []);
+        }
+        grouped.get(set.mainSetId)!.push(set);
+      }
+    });
+
+    // For main set view, show only sets assigned to current main set
+    const currentView = isMainSetView && mainSetId 
+      ? (grouped.get(mainSetId) || [])
+      : unassigned;
+
+    return { 
+      unassignedSets: unassigned, 
+      assignedSetsGrouped: grouped, 
+      currentViewSets: currentView 
+    };
+  }, [cardSets, isMainSetView, mainSetId]);
 
 
 
@@ -417,25 +464,39 @@ export default function BrowseCards() {
     );
   }
 
-  // Filter and sort sets based on search query and year filter (newest year first)
-  const filteredSets = cardSets?.filter(set => {
-    // Year filter
-    if (filters.year && set.year !== filters.year) return false;
+  // Filter sets for display based on current view
+  const filteredDisplaySets = useMemo(() => {
+    if (!currentViewSets) return [];
     
-    // Search query filter
-    if (!setSearchQuery) return true;
-    const query = setSearchQuery.toLowerCase();
-    return set.name.toLowerCase().includes(query) || 
-           set.year?.toString().includes(query) ||
-           set.description?.toLowerCase().includes(query);
-  }).sort((a, b) => (b.year || 0) - (a.year || 0)) || [];
+    return currentViewSets.filter(set => {
+      // Year filter
+      if (filters.year && set.year !== filters.year) return false;
+      
+      // Search query filter
+      if (!setSearchQuery) return true;
+      const query = setSearchQuery.toLowerCase();
+      return set.name.toLowerCase().includes(query) || 
+             set.year?.toString().includes(query) ||
+             set.description?.toLowerCase().includes(query);
+    }).sort((a, b) => (b.year || 0) - (a.year || 0));
+  }, [currentViewSets, filters.year, setSearchQuery]);
 
   // Show search results when user is searching
   const shouldShowSearchResults = setSearchQuery.length >= 2 && searchResults;
 
+  // For main overview: create main set tiles with their assigned sets
+  const mainSetTiles = useMemo(() => {
+    if (!mainSets || isMainSetView) return [];
+    
+    return mainSets.map(mainSet => {
+      const assignedSets = assignedSetsGrouped.get(mainSet.id) || [];
+      return { mainSet, assignedSets };
+    }).filter(({ assignedSets }) => assignedSets.length > 0); // Only show main sets with assigned sets
+  }, [mainSets, assignedSetsGrouped, isMainSetView]);
+
   // Show card sets grid (sort favorites by year too)
-  const favoritesets = filteredSets.filter(set => favoriteSetIds.includes(set.id));
-  const otherSets = filteredSets.filter(set => !favoriteSetIds.includes(set.id));
+  const favoritesets = filteredDisplaySets.filter(set => favoriteSetIds.includes(set.id));
+  const otherSets = filteredDisplaySets.filter(set => !favoriteSetIds.includes(set.id));
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -444,10 +505,29 @@ export default function BrowseCards() {
         <div className="flex flex-col space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">BROWSE CARD SETS</h2>
-              <p className="text-sm text-gray-600 font-roboto">
-                Choose a card set to explore individual cards
-              </p>
+              {isMainSetView && currentMainSet ? (
+                <div className="flex items-center space-x-3">
+                  <Link href="/browse">
+                    <Button variant="outline" size="sm">
+                      <ArrowLeft className="h-4 w-4 mr-2" />
+                      Back to Browse
+                    </Button>
+                  </Link>
+                  <div>
+                    <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">{currentMainSet.name}</h2>
+                    <p className="text-sm text-gray-600 font-roboto">
+                      {currentViewSets.length} set{currentViewSets.length !== 1 ? 's' : ''} in this collection
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">BROWSE CARD SETS</h2>
+                  <p className="text-sm text-gray-600 font-roboto">
+                    Choose a collection or set to explore individual cards
+                  </p>
+                </div>
+              )}
             </div>
           </div>
           
