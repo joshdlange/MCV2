@@ -245,6 +245,16 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getMainSetBySlug(slug: string): Promise<MainSet | undefined> {
+    try {
+      const [mainSet] = await db.select().from(mainSets).where(eq(mainSets.slug, slug));
+      return mainSet || undefined;
+    } catch (error) {
+      console.error('Error getting main set by slug:', error);
+      return undefined;
+    }
+  }
+
   async createMainSet(insertMainSet: InsertMainSet): Promise<MainSet> {
     const [mainSet] = await db.insert(mainSets).values(insertMainSet).returning();
     return mainSet;
