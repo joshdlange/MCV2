@@ -32,6 +32,7 @@ export const users = pgTable("users", {
 export const mainSets = pgTable("main_sets", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
   notes: text("notes"),
   thumbnailImageUrl: text("thumbnail_image_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -40,6 +41,7 @@ export const mainSets = pgTable("main_sets", {
 export const cardSets = pgTable("card_sets", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
   year: integer("year").notNull(),
   description: text("description"),
   imageUrl: text("image_url"),

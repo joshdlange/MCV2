@@ -26,6 +26,17 @@ import {
 import { db } from "./db";
 import { eq, ilike, and, count, sum, desc, sql, isNull, isNotNull, or, lt, gte, gt } from "drizzle-orm";
 
+// Utility function to generate slugs
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+}
+
 interface IStorage {
   // Users
   getUser(id: number): Promise<User | undefined>;
@@ -39,6 +50,7 @@ interface IStorage {
   // Main Sets
   getMainSets(): Promise<MainSet[]>;
   getMainSet(id: number): Promise<MainSet | undefined>;
+  getMainSetBySlug(slug: string): Promise<MainSet | undefined>;
   createMainSet(insertMainSet: InsertMainSet): Promise<MainSet>;
   updateMainSet(id: number, updates: Partial<InsertMainSet>): Promise<MainSet | undefined>;
   deleteMainSet(id: number): Promise<void>;
@@ -46,6 +58,7 @@ interface IStorage {
   // Card Sets
   getCardSets(): Promise<CardSet[]>;
   getCardSet(id: number): Promise<CardSet | undefined>;
+  getCardSetBySlug(slug: string): Promise<CardSet | undefined>;
   createCardSet(insertCardSet: InsertCardSet): Promise<CardSet>;
   updateCardSet(id: number, updates: Partial<InsertCardSet>): Promise<CardSet | undefined>;
   searchCardSets(query: string): Promise<CardSet[]>;
