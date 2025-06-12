@@ -50,8 +50,10 @@ export default function BrowseCards() {
   const params = useParams<{ mainSetSlug?: string; setSlug?: string }>();
   
   // Route determination
-  const isMainSetView = location.startsWith('/browse/main-set/');
-  const mainSetId = params.mainSetId ? parseInt(params.mainSetId) : null;
+  const isMainSetView = params.mainSetSlug !== undefined;
+  const isSpecificSetView = params.setSlug !== undefined;
+  const mainSetSlug = params.mainSetSlug;
+  const setSlug = params.setSlug;
 
   // All queries
   const { data: cardSets } = useQuery<CardSet[]>({
@@ -211,9 +213,9 @@ export default function BrowseCards() {
 
   // Get current main set if viewing a specific one
   const currentMainSet = useMemo(() => {
-    if (!isMainSetView || !mainSetId || !mainSets) return null;
-    return mainSets.find(ms => ms.id === mainSetId) || null;
-  }, [isMainSetView, mainSetId, mainSets]);
+    if (!isMainSetView || !mainSetSlug || !mainSets) return null;
+    return mainSets.find(ms => ms.slug === mainSetSlug) || null;
+  }, [isMainSetView, mainSetSlug, mainSets]);
 
   // Filter sets based on current view
   const { unassignedSets, assignedSetsGrouped, currentViewSets } = useMemo(() => {
@@ -231,8 +233,8 @@ export default function BrowseCards() {
       }
     });
 
-    const currentView = isMainSetView && mainSetId 
-      ? (grouped.get(mainSetId) || [])
+    const currentView = isMainSetView && currentMainSet 
+      ? (grouped.get(currentMainSet.id) || [])
       : unassigned;
 
     return { 
@@ -240,7 +242,7 @@ export default function BrowseCards() {
       assignedSetsGrouped: grouped, 
       currentViewSets: currentView 
     };
-  }, [cardSets, isMainSetView, mainSetId]);
+  }, [cardSets, isMainSetView, currentMainSet]);
 
   // Filter sets for display based on current view
   const filteredDisplaySets = useMemo(() => {
@@ -615,7 +617,7 @@ export default function BrowseCards() {
                       </div>
                       <div className="p-2">
                         <p className="text-xs font-medium text-gray-900 truncate">{card.name}</p>
-                        <p className="text-xs text-gray-600">{card.setName}</p>
+                        <p className="text-xs text-gray-600">{card.set.name}</p>
                         <p className="text-xs text-gray-500">#{card.cardNumber}</p>
                       </div>
                     </div>

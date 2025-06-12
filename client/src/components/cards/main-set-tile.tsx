@@ -39,7 +39,7 @@ export function MainSetTile({ mainSet, assignedSets }: MainSetTileProps) {
   }, [mainSet.thumbnailImageUrl, firstSetCards]);
 
   return (
-    <Link href={`/browse/main-set/${mainSet.id}`}>
+    <Link href={`/browse/${mainSet.slug}`}>
       <Card className="group cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all bg-white border border-gray-200">
         <CardContent className="p-0">
           <div className="relative aspect-[3/4] overflow-hidden rounded-t-lg">
