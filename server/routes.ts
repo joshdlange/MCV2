@@ -1262,6 +1262,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all main sets for dropdown
+  app.get("/api/main-sets", async (req, res) => {
+    try {
+      const allMainSets = await db
+        .select()
+        .from(mainSets)
+        .orderBy(mainSets.name);
+      
+      res.json(allMainSets);
+    } catch (error) {
+      console.error('Error fetching main sets:', error);
+      res.status(500).json({ message: 'Failed to fetch main sets' });
+    }
+  });
+
   // Get mainSets with their related sets
   app.get('/api/main-sets-with-details', authenticateUser, async (req: any, res) => {
     try {
