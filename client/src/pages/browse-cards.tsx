@@ -498,6 +498,112 @@ export default function BrowseCards() {
   const favoritesets = filteredDisplaySets.filter(set => favoriteSetIds.includes(set.id));
   const otherSets = filteredDisplaySets.filter(set => !favoriteSetIds.includes(set.id));
 
+  // Show individual cards if a set is selected
+  if (selectedSet) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* Page Header */}
+        <div className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-4">
+          <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                onClick={handleBackToSets}
+                className="flex items-center gap-2 text-sm"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Back to Sets</span>
+                <span className="sm:hidden">Back</span>
+              </Button>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-xl md:text-2xl font-bebas text-gray-900 tracking-wide truncate">{selectedSet.name}</h2>
+                <p className="text-sm text-gray-600 font-roboto">
+                  Explore cards from this set
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                onClick={() => handleFavoriteSet(selectedSet.id)}
+                variant="outline"
+                size="sm"
+                className={`flex items-center gap-2 ${
+                  favoriteSetIds.includes(selectedSet.id) 
+                    ? 'bg-yellow-50 text-yellow-700 border-yellow-300' 
+                    : ''
+                }`}
+              >
+                <Star className={`w-4 h-4 ${favoriteSetIds.includes(selectedSet.id) ? 'fill-current' : ''}`} />
+                <span className="hidden sm:inline">{favoriteSetIds.includes(selectedSet.id) ? 'Favorited' : 'Favorite Set'}</span>
+                <span className="sm:hidden">{favoriteSetIds.includes(selectedSet.id) ? 'Favorited' : 'Favorite'}</span>
+              </Button>
+              <Button
+                onClick={() => handleAddAllToCollection(selectedSet.id)}
+                disabled={addAllMutation.isPending}
+                size="sm"
+                className="bg-marvel-red hover:bg-red-700 flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">{addAllMutation.isPending ? 'Adding All Cards...' : 'Add All to Collection'}</span>
+                <span className="sm:hidden">{addAllMutation.isPending ? 'Adding...' : 'Add All'}</span>
+              </Button>
+              <Select 
+                value={filters.isInsert === undefined ? "all" : filters.isInsert.toString()} 
+                onValueChange={handleInsertFilter}
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="false">Base Cards</SelectItem>
+                  <SelectItem value="true">Insert Cards</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant={viewMode === "grid" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+                className="h-10 w-12 md:h-8 md:w-8 p-0"
+              >
+                <Grid3X3 className="h-5 w-5 md:h-4 md:w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className="h-10 w-12 md:h-8 md:w-8 p-0"
+              >
+                <List className="h-5 w-5 md:h-4 md:w-4" />
+              </Button>
+            </div>
+
+            {Object.keys(filters).filter(key => key !== 'setId').length > 0 && (
+              <Button 
+                variant="outline" 
+                onClick={clearFilters}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                <Filter className="w-4 h-4 mr-2" />
+                Clear
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Cards Grid */}
+        <div className="p-6">
+          <CardGrid filters={filters} viewMode={viewMode} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Page Header */}
