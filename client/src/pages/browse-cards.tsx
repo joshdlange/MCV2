@@ -27,7 +27,7 @@ interface CardFilters {
 }
 
 export default function BrowseCards() {
-  const [selectedSet, setSelectedSet] = useState<CardSet | null>(null);
+
   const [filters, setFilters] = useState<CardFilters>({});
   const [favoriteSetIds, setFavoriteSetIds] = useState<number[]>([]);
   const [setSearchQuery, setSetSearchQuery] = useState("");
@@ -71,6 +71,12 @@ export default function BrowseCards() {
     if (!isMainSetView || !mainSetId || !mainSets) return null;
     return mainSets.find(ms => ms.id === mainSetId) || null;
   }, [isMainSetView, mainSetId, mainSets]);
+
+  // Get search results query  
+  const { data: globalSearchResults } = useQuery<{ sets: CardSet[], cards: CardWithSet[] }>({
+    queryKey: ["/api/search", setSearchQuery],
+    enabled: setSearchQuery.length >= 2,
+  });
 
   // Filter sets based on current view
   const { unassignedSets, assignedSetsGrouped, currentViewSets } = useMemo(() => {
@@ -174,12 +180,7 @@ export default function BrowseCards() {
     return wishlist?.some((item: any) => item.cardId === cardId) || false;
   };
 
-  // Global search for both sets and cards
-  const { data: searchResults } = useQuery<{ sets: CardSet[], cards: CardWithSet[] }>({
-    queryKey: ["/api/search", setSearchQuery],
-    queryFn: () => fetch(`/api/search?q=${encodeURIComponent(setSearchQuery)}`).then(res => res.json()),
-    enabled: setSearchQuery.length >= 2,
-  });
+
 
   const handleSearchChange = (search: string) => {
     setFilters(prev => ({ ...prev, search: search || undefined }));
@@ -498,7 +499,7 @@ export default function BrowseCards() {
   const favoritesets = filteredDisplaySets.filter(set => favoriteSetIds.includes(set.id));
   const otherSets = filteredDisplaySets.filter(set => !favoriteSetIds.includes(set.id));
 
-  // Show individual cards if a set is selected
+  // Render logic based on selected set
   if (selectedSet) {
     return (
       <div className="min-h-screen bg-gray-50">
