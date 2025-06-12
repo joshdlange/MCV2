@@ -1054,10 +1054,12 @@ export class DatabaseStorage implements IStorage {
           cards.createdAt,
           cardSets.id,
           cardSets.name,
+          cardSets.slug,
           cardSets.year,
           cardSets.description,
           cardSets.imageUrl,
           cardSets.totalCards,
+          cardSets.mainSetId,
           cardSets.createdAt
         )
         .orderBy(
@@ -1232,10 +1234,12 @@ export class DatabaseStorage implements IStorage {
           set: {
             id: cardSets.id,
             name: cardSets.name,
+            slug: cardSets.slug,
             year: cardSets.year,
             description: cardSets.description,
             imageUrl: cardSets.imageUrl,
             totalCards: cardSets.totalCards,
+            mainSetId: cardSets.mainSetId,
             createdAt: cardSets.createdAt,
           }
         })
@@ -1304,6 +1308,22 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error searching card sets:', error);
       return [];
+    }
+  }
+
+  async clearAllData(): Promise<void> {
+    try {
+      // Delete in order to respect foreign key constraints
+      await db.delete(userWishlists);
+      await db.delete(userCollections);
+      await db.delete(cardPriceCache);
+      await db.delete(cards);
+      await db.delete(cardSets);
+      await db.delete(mainSets);
+      await db.delete(users);
+    } catch (error) {
+      console.error('Error clearing all data:', error);
+      throw new Error('Failed to clear all data');
     }
   }
 }

@@ -47,7 +47,7 @@ export default function BrowseCards() {
   const { isAdminMode } = useAppStore();
   const queryClient = useQueryClient();
   const [location] = useLocation();
-  const params = useParams<{ mainSetId?: string }>();
+  const params = useParams<{ mainSetSlug?: string; setSlug?: string }>();
   
   // Route determination
   const isMainSetView = location.startsWith('/browse/main-set/');

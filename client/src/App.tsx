@@ -90,7 +90,8 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/browse" component={BrowseCards} />
-      <Route path="/browse/main-set/:mainSetId" component={BrowseCards} />
+      <Route path="/browse/:mainSetSlug" component={BrowseCards} />
+      <Route path="/browse/:mainSetSlug/:setSlug" component={BrowseCards} />
       <Route path="/card-search" component={CardSearch} />
       <Route path="/my-collection" component={MyCollection} />
       <Route path="/wishlist" component={Wishlist} />
