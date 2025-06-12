@@ -27,6 +27,7 @@ interface CardFilters {
 }
 
 export default function BrowseCards() {
+  // All state hooks first
   const [selectedSet, setSelectedSet] = useState<CardSet | null>(null);
   const [filters, setFilters] = useState<CardFilters>({});
   const [favoriteSetIds, setFavoriteSetIds] = useState<number[]>([]);
@@ -40,16 +41,19 @@ export default function BrowseCards() {
     imageUrl: ''
   });
   const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
+
+  // All hooks
   const { toast } = useToast();
   const { isAdminMode } = useAppStore();
   const queryClient = useQueryClient();
   const [location] = useLocation();
   const params = useParams<{ mainSetId?: string }>();
   
-  // Determine if we're viewing a specific main set
+  // Route determination
   const isMainSetView = location.startsWith('/browse/main-set/');
   const mainSetId = params.mainSetId ? parseInt(params.mainSetId) : null;
 
+  // All queries
   const { data: cardSets } = useQuery<CardSet[]>({
     queryKey: ["/api/card-sets"],
   });
@@ -66,44 +70,13 @@ export default function BrowseCards() {
     queryKey: ["/api/wishlist"],
   });
 
-  // Get current main set if viewing a specific one
-  const currentMainSet = useMemo(() => {
-    if (!isMainSetView || !mainSetId || !mainSets) return null;
-    return mainSets.find(ms => ms.id === mainSetId) || null;
-  }, [isMainSetView, mainSetId, mainSets]);
+  const { data: searchResults } = useQuery<{ sets: CardSet[], cards: CardWithSet[] }>({
+    queryKey: ["/api/search", setSearchQuery],
+    queryFn: () => fetch(`/api/search?q=${encodeURIComponent(setSearchQuery)}`).then(res => res.json()),
+    enabled: setSearchQuery.length >= 2,
+  });
 
-  // Filter sets based on current view
-  const { unassignedSets, assignedSetsGrouped, currentViewSets } = useMemo(() => {
-    if (!cardSets) return { unassignedSets: [], assignedSetsGrouped: new Map(), currentViewSets: [] };
-
-    const unassigned = cardSets.filter(set => !set.mainSetId);
-    
-    // Group assigned sets by main set ID
-    const grouped = new Map<number, CardSet[]>();
-    cardSets.forEach(set => {
-      if (set.mainSetId) {
-        if (!grouped.has(set.mainSetId)) {
-          grouped.set(set.mainSetId, []);
-        }
-        grouped.get(set.mainSetId)!.push(set);
-      }
-    });
-
-    // For main set view, show only sets assigned to current main set
-    const currentView = isMainSetView && mainSetId 
-      ? (grouped.get(mainSetId) || [])
-      : unassigned;
-
-    return { 
-      unassignedSets: unassigned, 
-      assignedSetsGrouped: grouped, 
-      currentViewSets: currentView 
-    };
-  }, [cardSets, isMainSetView, mainSetId]);
-
-
-
-  // Add to collection mutation
+  // All mutations
   const addToCollectionMutation = useMutation({
     mutationFn: (cardId: number) => 
       apiRequest("POST", "/api/collection", { cardId, condition: "Near Mint" }),
@@ -116,7 +89,6 @@ export default function BrowseCards() {
     },
   });
 
-  // Add to wishlist mutation
   const addToWishlistMutation = useMutation({
     mutationFn: (cardId: number) => 
       apiRequest("POST", "/api/wishlist", { cardId, priority: 1 }),
@@ -129,7 +101,6 @@ export default function BrowseCards() {
     },
   });
 
-  // Remove from collection mutation
   const removeFromCollectionMutation = useMutation({
     mutationFn: (cardId: number) => {
       const collectionItem = collection?.find(item => item.cardId === cardId);
@@ -147,7 +118,6 @@ export default function BrowseCards() {
     },
   });
 
-  // Remove from wishlist mutation
   const removeFromWishlistMutation = useMutation({
     mutationFn: (cardId: number) => {
       const wishlistItem = wishlist?.find((item: any) => item.cardId === cardId);
@@ -165,7 +135,146 @@ export default function BrowseCards() {
     },
   });
 
-  // Helper functions to check if card is in collection/wishlist
+  const addAllMutation = useMutation({
+    mutationFn: async (setId: number) => {
+      const cardsResponse = await fetch(`/api/cards?setId=${setId}`);
+      const cards: CardWithSet[] = await cardsResponse.json();
+      
+      const collectionCardIds = collection?.map(item => item.cardId) || [];
+      const newCards = cards.filter(card => !collectionCardIds.includes(card.id));
+      
+      if (newCards.length === 0) {
+        throw new Error('All cards from this set are already in your collection!');
+      }
+      
+      const promises = newCards.map(card => {
+        const insertData = {
+          cardId: card.id,
+          condition: 'near_mint',
+          quantity: 1
+        };
+        return apiRequest('POST', '/api/collection', insertData);
+      });
+      
+      await Promise.all(promises);
+      return { addedCount: newCards.length, totalCards: cards.length };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/recent-cards'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/trending-cards'] });
+      
+      toast({
+        title: "Cards Added Successfully!",
+        description: `Added ${data.addedCount} new cards to your collection (${data.totalCards - data.addedCount} were already owned).`
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error Adding Cards",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const updateSetMutation = useMutation({
+    mutationFn: async ({ setId, updates }: { setId: number, updates: any }) => {
+      const response = await fetch(`/api/card-sets/${setId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updates)
+      });
+      if (!response.ok) throw new Error('Failed to update set');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/card-sets'] });
+      setEditingSet(null);
+      setEditFormData({ name: '', year: 0, description: '', imageUrl: '' });
+      toast({
+        title: "Set Updated",
+        description: "Card set has been updated successfully."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error Updating Set",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Get current main set if viewing a specific one
+  const currentMainSet = useMemo(() => {
+    if (!isMainSetView || !mainSetId || !mainSets) return null;
+    return mainSets.find(ms => ms.id === mainSetId) || null;
+  }, [isMainSetView, mainSetId, mainSets]);
+
+  // Filter sets based on current view
+  const { unassignedSets, assignedSetsGrouped, currentViewSets } = useMemo(() => {
+    if (!cardSets) return { unassignedSets: [], assignedSetsGrouped: new Map(), currentViewSets: [] };
+
+    const unassigned = cardSets.filter(set => !set.mainSetId);
+    
+    const grouped = new Map<number, CardSet[]>();
+    cardSets.forEach(set => {
+      if (set.mainSetId) {
+        if (!grouped.has(set.mainSetId)) {
+          grouped.set(set.mainSetId, []);
+        }
+        grouped.get(set.mainSetId)!.push(set);
+      }
+    });
+
+    const currentView = isMainSetView && mainSetId 
+      ? (grouped.get(mainSetId) || [])
+      : unassigned;
+
+    return { 
+      unassignedSets: unassigned, 
+      assignedSetsGrouped: grouped, 
+      currentViewSets: currentView 
+    };
+  }, [cardSets, isMainSetView, mainSetId]);
+
+  // Filter sets for display based on current view
+  const filteredDisplaySets = useMemo(() => {
+    if (!currentViewSets) return [];
+    
+    return currentViewSets.filter(set => {
+      if (filters.year && set.year !== filters.year) return false;
+      
+      if (!setSearchQuery) return true;
+      const query = setSearchQuery.toLowerCase();
+      return set.name.toLowerCase().includes(query) || 
+             set.year?.toString().includes(query) ||
+             set.description?.toLowerCase().includes(query);
+    }).sort((a, b) => (b.year || 0) - (a.year || 0));
+  }, [currentViewSets, filters.year, setSearchQuery]);
+
+  // Show search results when user is searching
+  const shouldShowSearchResults = setSearchQuery.length >= 2 && searchResults;
+
+  // For main overview: create main set tiles with their assigned sets
+  const mainSetTiles = useMemo(() => {
+    if (!mainSets || isMainSetView) return [];
+    
+    return mainSets.map(mainSet => {
+      const assignedSets = assignedSetsGrouped.get(mainSet.id) || [];
+      return { mainSet, assignedSets };
+    }).filter(({ assignedSets }) => assignedSets.length > 0);
+  }, [mainSets, assignedSetsGrouped, isMainSetView]);
+
+  // Show card sets grid (sort favorites by year too)
+  const favoritesets = filteredDisplaySets.filter(set => favoriteSetIds.includes(set.id));
+  const otherSets = filteredDisplaySets.filter(set => !favoriteSetIds.includes(set.id));
+
+  // Helper functions
   const isCardInCollection = (cardId: number) => {
     return collection?.some(item => item.cardId === cardId) || false;
   };
@@ -173,13 +282,6 @@ export default function BrowseCards() {
   const isCardInWishlist = (cardId: number) => {
     return wishlist?.some((item: any) => item.cardId === cardId) || false;
   };
-
-  // Global search for both sets and cards
-  const { data: searchResults } = useQuery<{ sets: CardSet[], cards: CardWithSet[] }>({
-    queryKey: ["/api/search", setSearchQuery],
-    queryFn: () => fetch(`/api/search?q=${encodeURIComponent(setSearchQuery)}`).then(res => res.json()),
-    enabled: setSearchQuery.length >= 2,
-  });
 
   const handleSearchChange = (search: string) => {
     setFilters(prev => ({ ...prev, search: search || undefined }));
@@ -225,57 +327,6 @@ export default function BrowseCards() {
     return url;
   };
 
-  const addAllMutation = useMutation({
-    mutationFn: async (setId: number) => {
-      // Get cards for this set
-      const cardsResponse = await fetch(`/api/cards?setId=${setId}`);
-      const cards: CardWithSet[] = await cardsResponse.json();
-      
-      // Get cards already in collection for this set
-      const collectionCardIds = collection?.map(item => item.cardId) || [];
-      
-      // Filter out cards already in collection
-      const newCards = cards.filter(card => !collectionCardIds.includes(card.id));
-      
-      if (newCards.length === 0) {
-        throw new Error('All cards from this set are already in your collection!');
-      }
-      
-      // Add each new card to collection
-      const promises = newCards.map(card => {
-        const insertData = {
-          cardId: card.id,
-          condition: 'near_mint',
-          quantity: 1
-        };
-        
-        return apiRequest('POST', '/api/collection', insertData);
-      });
-      
-      await Promise.all(promises);
-      return { addedCount: newCards.length, totalCards: cards.length };
-    },
-    onSuccess: (data) => {
-      // Invalidate all related queries for immediate updates
-      queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/recent-cards'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/trending-cards'] });
-      
-      toast({
-        title: "Cards Added Successfully!",
-        description: `Added ${data.addedCount} new cards to your collection (${data.totalCards - data.addedCount} were already owned).`
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error Adding Cards",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  });
-
   const handleAddAllToCollection = (setId: number) => {
     addAllMutation.mutate(setId);
   };
@@ -292,36 +343,6 @@ export default function BrowseCards() {
       });
     }
   };
-
-  const updateSetMutation = useMutation({
-    mutationFn: async ({ setId, updates }: { setId: number, updates: any }) => {
-      const response = await fetch(`/api/card-sets/${setId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(updates)
-      });
-      if (!response.ok) throw new Error('Failed to update set');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/card-sets'] });
-      setEditingSet(null);
-      setEditFormData({ name: '', year: 0, description: '', imageUrl: '' });
-      toast({
-        title: "Set Updated",
-        description: "Card set has been updated successfully."
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error Updating Set",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  });
 
   const handleSaveSet = () => {
     if (editingSet && editFormData.name.trim()) {
@@ -346,7 +367,6 @@ export default function BrowseCards() {
   if (selectedSet) {
     return (
       <div className="min-h-screen bg-gray-50">
-        {/* Page Header */}
         <div className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-4">
           <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-4">
@@ -408,7 +428,6 @@ export default function BrowseCards() {
           </div>
         </div>
 
-        {/* Filters for individual cards */}
         <div className="bg-white border-b border-gray-200 px-4 md:px-6 py-4">
           <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:flex-wrap md:items-center gap-4">
             <div className="flex-1 min-w-64">
@@ -423,7 +442,6 @@ export default function BrowseCards() {
               </div>
             </div>
 
-            {/* Layout Toggle - Larger on mobile */}
             <div className="flex gap-1">
               <Button
                 variant={viewMode === "grid" ? "default" : "outline"}
@@ -456,7 +474,6 @@ export default function BrowseCards() {
           </div>
         </div>
 
-        {/* Cards Grid */}
         <div className="p-6">
           <CardGrid filters={filters} viewMode={viewMode} />
         </div>
@@ -464,43 +481,8 @@ export default function BrowseCards() {
     );
   }
 
-  // Filter sets for display based on current view
-  const filteredDisplaySets = useMemo(() => {
-    if (!currentViewSets) return [];
-    
-    return currentViewSets.filter(set => {
-      // Year filter
-      if (filters.year && set.year !== filters.year) return false;
-      
-      // Search query filter
-      if (!setSearchQuery) return true;
-      const query = setSearchQuery.toLowerCase();
-      return set.name.toLowerCase().includes(query) || 
-             set.year?.toString().includes(query) ||
-             set.description?.toLowerCase().includes(query);
-    }).sort((a, b) => (b.year || 0) - (a.year || 0));
-  }, [currentViewSets, filters.year, setSearchQuery]);
-
-  // Show search results when user is searching
-  const shouldShowSearchResults = setSearchQuery.length >= 2 && searchResults;
-
-  // For main overview: create main set tiles with their assigned sets
-  const mainSetTiles = useMemo(() => {
-    if (!mainSets || isMainSetView) return [];
-    
-    return mainSets.map(mainSet => {
-      const assignedSets = assignedSetsGrouped.get(mainSet.id) || [];
-      return { mainSet, assignedSets };
-    }).filter(({ assignedSets }) => assignedSets.length > 0); // Only show main sets with assigned sets
-  }, [mainSets, assignedSetsGrouped, isMainSetView]);
-
-  // Show card sets grid (sort favorites by year too)
-  const favoritesets = filteredDisplaySets.filter(set => favoriteSetIds.includes(set.id));
-  const otherSets = filteredDisplaySets.filter(set => !favoriteSetIds.includes(set.id));
-
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Page Header */}
       <div className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-4">
         <div className="flex flex-col space-y-4">
           <div className="flex items-center justify-between">
@@ -531,7 +513,6 @@ export default function BrowseCards() {
             </div>
           </div>
           
-          {/* Set Search Bar and Year Filter */}
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -565,12 +546,9 @@ export default function BrowseCards() {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="p-6">
-        {/* Show Search Results */}
         {shouldShowSearchResults ? (
           <div className="space-y-8">
-            {/* Search Results Header */}
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">
                 Search Results for "{setSearchQuery}"
@@ -593,364 +571,205 @@ export default function BrowseCards() {
               </div>
             </div>
 
-            {/* Card Sets Results */}
             {searchResults.sets.length > 0 && (
               <div>
                 <h4 className="text-md font-semibold text-gray-900 mb-4">Card Sets</h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
                   {searchResults.sets.map((set) => (
-                    <Card key={set.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSetClick(set)}>
-                      <CardContent className="p-0">
-                        <div className="relative">
-                          <SetThumbnail
-                            setId={set.id}
-                            setName={set.name}
-                            setImageUrl={set.imageUrl}
-                            className="w-full h-32 md:h-48 object-cover rounded-t-lg"
-                          />
-                        </div>
-                        <div className="p-3 md:p-4">
-                          <h3 className="font-semibold text-gray-900 mb-1 md:mb-2 text-sm md:text-base line-clamp-2">{set.name}</h3>
-                          <p className="text-xs text-gray-500 mb-2 md:mb-3">{set.totalCards} cards • {set.year}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Individual Cards Results */}
-            {searchResults.cards.length > 0 && (
-              <div id="individual-cards-section">
-                <h4 className="text-md font-semibold text-gray-900 mb-4">Individual Cards</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
-                  {searchResults.cards.slice(0, 12).map((card) => (
-                    <Card key={card.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setSelectedCard(card)}>
-                      <CardContent className="p-0">
-                        <div className="relative">
-                          {card.frontImageUrl ? (
-                            <img 
-                              src={convertGoogleDriveUrl(card.frontImageUrl)} 
-                              alt={card.name}
-                              className="w-full h-32 md:h-40 object-cover rounded-t-lg"
-                            />
-                          ) : (
-                            <div className="w-full h-32 md:h-40 bg-gradient-to-br from-marvel-red to-red-700 rounded-t-lg flex items-center justify-center">
-                              <span className="text-white text-xs md:text-sm font-bold text-center px-2">{card.name}</span>
-                            </div>
-                          )}
-                          <div className="absolute top-2 right-2">
-                            <span className="bg-black/70 text-white text-xs px-2 py-1 rounded">
-                              #{card.cardNumber}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="p-2 md:p-3">
-                          <h3 className="font-semibold text-gray-900 text-xs md:text-sm line-clamp-2 mb-1">{card.name}</h3>
-                          <p className="text-xs text-gray-600 mb-1">{card.set.name}</p>
-                          <p className="text-xs text-gray-500">{card.rarity}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-                {searchResults.cards.length > 12 && (
-                  <div className="mt-4 text-center">
-                    <p className="text-sm text-gray-600">
-                      Showing 12 of {searchResults.cards.length} cards. Click on a set to see all cards.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* No Results */}
-            {searchResults.sets.length === 0 && searchResults.cards.length === 0 && (
-              <div className="text-center py-12">
-                <div className="text-gray-400 mb-4">
-                  <Search className="w-16 h-16 mx-auto" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No results found</h3>
-                <p className="text-gray-600">Try adjusting your search terms</p>
-              </div>
-            )}
-          </div>
-        ) : (
-          <>
-            {/* Main Sets Overview - Only show on main browse page */}
-            {!isMainSetView && mainSetTiles.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Master Sets
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {mainSetTiles.map(({ mainSet, assignedSets }) => (
-                    <MainSetTile 
-                      key={mainSet.id}
-                      mainSet={mainSet}
-                      assignedSets={assignedSets}
+                    <SetThumbnail
+                      key={set.id}
+                      set={set}
+                      onClick={() => handleSetClick(set)}
+                      isFavorite={favoriteSetIds.includes(set.id)}
+                      onFavorite={() => handleFavoriteSet(set.id)}
+                      showAdminControls={isAdminMode}
+                      onEdit={() => handleEditSet(set.id)}
                     />
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Standalone Sets - Only show unassigned sets on main browse page, or all sets in main set view */}
-            {filteredDisplaySets.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  {isMainSetView ? 'Sets in this Collection' : 'Individual Sets'}
-                </h3>
-
-                {/* Favorite Sets */}
-                {favoritesets.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="text-md font-medium text-gray-700 mb-3 flex items-center gap-2">
-                      <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                      Favorite Sets
-                    </h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-                      {favoritesets.map((set) => (
-                        <Card key={set.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSetClick(set)}>
-                          <CardContent className="p-0">
-                            <div className="relative">
-                              <SetThumbnail
-                                setId={set.id}
-                                setName={set.name}
-                                setImageUrl={set.imageUrl}
-                                className="w-full h-32 md:h-48 object-cover rounded-t-lg"
-                              />
-                              <div className="absolute top-2 right-2 flex gap-1">
-                                {isAdminMode && (
-                                  <Button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleEditSet(set.id);
-                                    }}
-                                    variant="outline"
-                                    size="sm"
-                                    className="bg-white/90 hover:bg-white"
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                  </Button>
-                                )}
-                                <Button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleFavoriteSet(set.id);
-                                  }}
-                                  variant="outline"
-                                  size="sm"
-                                  className="bg-white/90 hover:bg-white"
-                                >
-                                  <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                                </Button>
-                              </div>
-                            </div>
-                            <div className="p-3 md:p-4">
-                              <h3 className="font-semibold text-gray-900 mb-1 md:mb-2 text-sm md:text-base line-clamp-2">{set.name}</h3>
-                              <p className="text-xs text-gray-500 mb-2 md:mb-3">{set.totalCards} cards • {set.year}</p>
-                              <div className="flex gap-2">
-                                <Button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAddAllToCollection(set.id);
-                                  }}
-                                  size="sm"
-                                  className="flex-1 bg-marvel-red hover:bg-red-700"
-                                >
-                                  <Plus className="w-3 h-3 mr-1" />
-                                  {addAllMutation.isPending ? 'Adding...' : 'Add All'}
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+            {searchResults.cards.length > 0 && (
+              <div id="individual-cards-section">
+                <h4 className="text-md font-semibold text-gray-900 mb-4">Individual Cards</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2 md:gap-3">
+                  {searchResults.cards.map((card) => (
+                    <div
+                      key={card.id}
+                      className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => setSelectedCard(card)}
+                    >
+                      <div className="aspect-[2.5/3.5] bg-gray-100 rounded-t-lg overflow-hidden">
+                        {card.imageUrl ? (
+                          <img
+                            src={convertGoogleDriveUrl(card.imageUrl)}
+                            alt={card.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            No Image
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-2">
+                        <p className="text-xs font-medium text-gray-900 truncate">{card.name}</p>
+                        <p className="text-xs text-gray-600">{card.cardSet?.name}</p>
+                        <p className="text-xs text-gray-500">#{card.cardNumber}</p>
+                      </div>
                     </div>
-                  </div>
-                )}
-
-                {/* All Other Sets */}
-                {otherSets.length > 0 && (
-                  <div>
-                    <h4 className="text-md font-medium text-gray-700 mb-3">
-                      {favoritesets.length > 0 ? 'Other Sets' : 'All Sets'}
-                    </h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-                      {otherSets.map((set) => (
-                        <Card key={set.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSetClick(set)}>
-                          <CardContent className="p-0">
-                            <div className="relative">
-                              <SetThumbnail
-                                setId={set.id}
-                                setName={set.name}
-                                setImageUrl={set.imageUrl}
-                                className="w-full h-32 md:h-48 object-cover rounded-t-lg"
-                              />
-                              <div className="absolute top-2 right-2 flex gap-1">
-                                {isAdminMode && (
-                                  <Button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleEditSet(set.id);
-                                    }}
-                                    variant="outline"
-                                    size="sm"
-                                    className="bg-white/90 hover:bg-white"
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                  </Button>
-                                )}
-                                <Button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleFavoriteSet(set.id);
-                                  }}
-                                  variant="outline"
-                                  size="sm"
-                                  className="bg-white/90 hover:bg-white"
-                                >
-                                  <Star className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </div>
-                            <div className="p-4">
-                              <h3 className="font-semibold text-gray-900 mb-2">{set.name}</h3>
-                              <p className="text-xs text-gray-500 mb-3">{set.totalCards} cards • {set.year}</p>
-                              <div className="flex gap-2">
-                                <Button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAddAllToCollection(set.id);
-                                  }}
-                                  size="sm"
-                                  className="flex-1 bg-marvel-red hover:bg-red-700"
-                                >
-                                  <Plus className="w-3 h-3 mr-1" />
-                                  Add All
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Empty State */}
-            {!isMainSetView && mainSetTiles.length === 0 && filteredDisplaySets.length === 0 && (
-              <div className="text-center py-12">
-                <div className="text-gray-400 mb-4">
-                  <Home className="w-16 h-16 mx-auto" />
+                  ))}
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No collections or sets found</h3>
-                <p className="text-gray-600">Create some main sets and assign card sets to get started</p>
               </div>
             )}
-          </>
+          </div>
+        ) : !isMainSetView ? (
+          <div className="space-y-8">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Master Sets</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                {mainSetTiles.map(({ mainSet, assignedSets }) => (
+                  <MainSetTile
+                    key={mainSet.id}
+                    mainSet={mainSet}
+                    assignedSets={assignedSets}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {favoritesets.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <Star className="w-5 h-5 text-yellow-500 fill-current" />
+                  <h3 className="text-lg font-semibold text-gray-900">Favorite Sets</h3>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
+                  {favoritesets.map((set) => (
+                    <SetThumbnail
+                      key={set.id}
+                      set={set}
+                      onClick={() => handleSetClick(set)}
+                      isFavorite={true}
+                      onFavorite={() => handleFavoriteSet(set.id)}
+                      showAdminControls={isAdminMode}
+                      onEdit={() => handleEditSet(set.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {otherSets.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  {favoritesets.length > 0 ? 'Other Sets' : 'Card Sets'}
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
+                  {otherSets.map((set) => (
+                    <SetThumbnail
+                      key={set.id}
+                      set={set}
+                      onClick={() => handleSetClick(set)}
+                      isFavorite={false}
+                      onFavorite={() => handleFavoriteSet(set.id)}
+                      showAdminControls={isAdminMode}
+                      onEdit={() => handleEditSet(set.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
-      {/* Edit Set Modal */}
-      <Dialog open={!!editingSet} onOpenChange={() => handleCancelEdit()}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Card Set</DialogTitle>
-            <DialogDescription>
-              Update the details for this card set.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="name">Set Name</Label>
-              <Input
-                id="name"
-                value={editFormData.name}
-                onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Enter set name"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="year">Year</Label>
-              <Input
-                id="year"
-                type="number"
-                value={editFormData.year}
-                onChange={(e) => setEditFormData(prev => ({ ...prev, year: parseInt(e.target.value) || 0 }))}
-                placeholder="Enter year"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={editFormData.description}
-                onChange={(e) => setEditFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Enter set description"
-                rows={3}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="imageUrl">Image URL</Label>
-              <Input
-                id="imageUrl"
-                value={editFormData.imageUrl}
-                onChange={(e) => setEditFormData(prev => ({ ...prev, imageUrl: e.target.value }))}
-                placeholder="Enter image URL"
-              />
-            </div>
-          </div>
-          
-          <div className="flex justify-end gap-2 mt-6">
-            <Button variant="outline" onClick={handleCancelEdit}>
-              <X className="w-4 h-4 mr-1" />
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSaveSet}
-              disabled={!editFormData.name.trim() || updateSetMutation.isPending}
-              className="bg-marvel-red hover:bg-red-700"
-            >
-              <Save className="w-4 h-4 mr-1" />
-              {updateSetMutation.isPending ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {selectedCard && (
+        <CardDetailModal
+          card={selectedCard}
+          isOpen={!!selectedCard}
+          onClose={() => setSelectedCard(null)}
+          isInCollection={isCardInCollection(selectedCard.id)}
+          isInWishlist={isCardInWishlist(selectedCard.id)}
+          onAddToCollection={() => addToCollectionMutation.mutate(selectedCard.id)}
+          onRemoveFromCollection={() => removeFromCollectionMutation.mutate(selectedCard.id)}
+          onAddToWishlist={() => addToWishlistMutation.mutate(selectedCard.id)}
+          onRemoveFromWishlist={() => removeFromWishlistMutation.mutate(selectedCard.id)}
+        />
+      )}
 
-      {/* Full-Featured Card Details Modal */}
-      <CardDetailModal
-        card={selectedCard}
-        isOpen={!!selectedCard}
-        onClose={() => setSelectedCard(null)}
-        isInCollection={selectedCard ? isCardInCollection(selectedCard.id) : false}
-        isInWishlist={selectedCard ? isCardInWishlist(selectedCard.id) : false}
-        onAddToCollection={() => selectedCard && addToCollectionMutation.mutate(selectedCard.id)}
-        onAddToWishlist={() => selectedCard && addToWishlistMutation.mutate(selectedCard.id)}
-        onRemoveFromCollection={() => selectedCard && removeFromCollectionMutation.mutate(selectedCard.id)}
-        onRemoveFromWishlist={() => selectedCard && removeFromWishlistMutation.mutate(selectedCard.id)}
-      />
-
-      {/* Floating Set Navigation for Mobile */}
-      {selectedSet && (
-        <div className="fixed bottom-6 right-6 md:hidden z-40">
-          <Button
-            onClick={() => setSelectedSet(null)}
-            className="bg-marvel-red hover:bg-red-700 text-white rounded-full w-14 h-14 shadow-lg"
-            size="sm"
-          >
-            <Grid3X3 className="w-6 h-6" />
-          </Button>
-        </div>
+      {editingSet && (
+        <Dialog open={!!editingSet} onOpenChange={() => setEditingSet(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Set</DialogTitle>
+              <DialogDescription>
+                Update the details for this card set.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="name">Set Name</Label>
+                <Input
+                  id="name"
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter set name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="year">Year</Label>
+                <Input
+                  id="year"
+                  type="number"
+                  value={editFormData.year || ''}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, year: parseInt(e.target.value) || 0 }))}
+                  placeholder="Enter year"
+                />
+              </div>
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={editFormData.description}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Enter description (optional)"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <Label htmlFor="imageUrl">Image URL</Label>
+                <Input
+                  id="imageUrl"
+                  value={editFormData.imageUrl}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, imageUrl: e.target.value }))}
+                  placeholder="Enter image URL (optional)"
+                />
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button
+                  onClick={handleSaveSet}
+                  disabled={!editFormData.name.trim() || updateSetMutation.isPending}
+                  className="flex-1"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {updateSetMutation.isPending ? 'Saving...' : 'Save Changes'}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleCancelEdit}
+                  disabled={updateSetMutation.isPending}
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
