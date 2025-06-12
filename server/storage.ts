@@ -286,6 +286,7 @@ export class DatabaseStorage implements IStorage {
         .select({
           id: cardSets.id,
           name: cardSets.name,
+          slug: cardSets.slug,
           year: cardSets.year,
           description: cardSets.description,
           imageUrl: cardSets.imageUrl,
@@ -295,7 +296,7 @@ export class DatabaseStorage implements IStorage {
         })
         .from(cardSets)
         .leftJoin(cards, eq(cardSets.id, cards.setId))
-        .groupBy(cardSets.id, cardSets.name, cardSets.year, cardSets.description, cardSets.imageUrl, cardSets.mainSetId, cardSets.createdAt)
+        .groupBy(cardSets.id, cardSets.name, cardSets.slug, cardSets.year, cardSets.description, cardSets.imageUrl, cardSets.mainSetId, cardSets.createdAt)
         .orderBy(desc(cardSets.year), cardSets.name);
       
       return setsWithCounts;
@@ -311,6 +312,7 @@ export class DatabaseStorage implements IStorage {
         .select({
           id: cardSets.id,
           name: cardSets.name,
+          slug: cardSets.slug,
           year: cardSets.year,
           description: cardSets.description,
           imageUrl: cardSets.imageUrl,
@@ -321,7 +323,7 @@ export class DatabaseStorage implements IStorage {
         .from(cardSets)
         .leftJoin(cards, eq(cardSets.id, cards.setId))
         .where(isNull(cardSets.mainSetId))
-        .groupBy(cardSets.id, cardSets.name, cardSets.year, cardSets.description, cardSets.imageUrl, cardSets.mainSetId, cardSets.createdAt)
+        .groupBy(cardSets.id, cardSets.name, cardSets.slug, cardSets.year, cardSets.description, cardSets.imageUrl, cardSets.mainSetId, cardSets.createdAt)
         .orderBy(desc(cardSets.year), cardSets.name);
       
       return unassignedSets;
@@ -337,6 +339,16 @@ export class DatabaseStorage implements IStorage {
       return cardSet || undefined;
     } catch (error) {
       console.error('Error getting card set:', error);
+      return undefined;
+    }
+  }
+
+  async getCardSetBySlug(slug: string): Promise<CardSet | undefined> {
+    try {
+      const [cardSet] = await db.select().from(cardSets).where(eq(cardSets.slug, slug));
+      return cardSet || undefined;
+    } catch (error) {
+      console.error('Error getting card set by slug:', error);
       return undefined;
     }
   }

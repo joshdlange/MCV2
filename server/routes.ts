@@ -223,14 +223,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/main-sets/:id", authenticateUser, async (req: any, res) => {
+  app.get("/api/main-sets/:identifier", authenticateUser, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) {
         return res.status(403).json({ message: "Admin access required" });
       }
       
-      const id = parseInt(req.params.id);
-      const mainSet = await storage.getMainSet(id);
+      const identifier = req.params.identifier;
+      let mainSet;
+      
+      // Check if identifier is numeric (ID) or slug
+      if (/^\d+$/.test(identifier)) {
+        const id = parseInt(identifier);
+        mainSet = await storage.getMainSet(id);
+      } else {
+        mainSet = await storage.getMainSetBySlug(identifier);
+      }
       
       if (!mainSet) {
         return res.status(404).json({ message: "Main set not found" });
