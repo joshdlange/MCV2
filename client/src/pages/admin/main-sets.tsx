@@ -35,7 +35,7 @@ function CreateMainSetDialog() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: InsertMainSet) => apiRequest("/api/main-sets", "POST", data),
+    mutationFn: (data: InsertMainSet) => apiRequest("POST", "/api/main-sets", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/main-sets"] });
       toast({
@@ -178,7 +178,7 @@ function EditMainSetDialog({ mainSet }: { mainSet: MainSet }) {
 
   const updateMutation = useMutation({
     mutationFn: (data: Partial<InsertMainSet>) => 
-      apiRequest(`/api/main-sets/${mainSet.id}`, "PATCH", data),
+      apiRequest("PATCH", `/api/main-sets/${mainSet.id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/main-sets"] });
       toast({
@@ -197,7 +197,7 @@ function EditMainSetDialog({ mainSet }: { mainSet: MainSet }) {
 
   const assignSetsMutation = useMutation({
     mutationFn: (cardSetIds: number[]) =>
-      apiRequest(`/api/main-sets/${mainSet.id}/assign-sets`, "PATCH", { cardSetIds }),
+      apiRequest("PATCH", `/api/main-sets/${mainSet.id}/assign-sets`, { cardSetIds }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/card-sets"] });
       toast({
@@ -408,7 +408,7 @@ function DeleteMainSetDialog({ mainSet }: { mainSet: MainSet }) {
   const { toast } = useToast();
 
   const deleteMutation = useMutation({
-    mutationFn: () => apiRequest(`/api/main-sets/${mainSet.id}`, "DELETE"),
+    mutationFn: () => apiRequest("DELETE", `/api/main-sets/${mainSet.id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/main-sets"] });
       toast({
