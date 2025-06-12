@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { insertMainSetSchema, type MainSet, type InsertMainSet, type CardSet } from "../../../shared/schema";
+import { insertMainSetSchema, type MainSet, type InsertMainSet, type CardSet } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, Search, Save } from "lucide-react";
@@ -96,6 +96,7 @@ function CreateMainSetDialog() {
                       placeholder="Optional notes about this main set"
                       className="resize-none"
                       {...field}
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormMessage />
@@ -159,14 +160,14 @@ function EditMainSetDialog({ mainSet }: { mainSet: MainSet }) {
   });
 
   // Initialize assigned sets when dialog opens
-  useState(() => {
+  React.useEffect(() => {
     if (open && cardSets.length > 0) {
       const assigned = cardSets
         .filter(set => set.mainSetId === mainSet.id)
         .map(set => set.id);
       setAssignedSets(assigned);
     }
-  });
+  }, [open, cardSets, mainSet.id]);
 
   // Filter card sets based on search term
   const filteredSets = cardSets.filter(set =>
