@@ -42,6 +42,7 @@ const getNavigationItems = (userPlan: string): NavigationItem[] => [
 const adminItems: NavigationItem[] = [
   { href: "/admin/users", label: "Manage Users", icon: "Users" },
   { href: "/admin/main-sets", label: "Manage Main Sets", icon: "FolderOpen" },
+  { href: "/admin/unassigned-sets", label: "Unassigned Sets", icon: "Edit" },
   { href: "/admin/cards", label: "Add Cards", icon: "PlusCircle" },
   { href: "/admin", label: "Image Automation", icon: "Settings" },
 ];
