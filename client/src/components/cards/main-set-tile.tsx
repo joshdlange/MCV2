@@ -43,46 +43,48 @@ export function MainSetTile({ mainSet, assignedSets }: MainSetTileProps) {
   }, [mainSet.thumbnailImageUrl, firstSetCards]);
 
   return (
-    <Card className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] bg-white border border-gray-200">
-      <CardContent className="p-0">
-        <div className="relative aspect-[3/4] overflow-hidden rounded-t-lg">
-          <img
-            src={thumbnailUrl || "/images/image-coming-soon.png"}
-            alt={mainSet.name}
-            className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.src = "/images/image-coming-soon.png";
-            }}
-          />
-          
-          {/* Overlay with set count */}
-          <div className="absolute top-2 right-2">
-            <Badge variant="secondary" className="bg-black/70 text-white border-none">
-              <Layers className="w-3 h-3 mr-1" />
-              {assignedSets.length} {assignedSets.length === 1 ? 'Set' : 'Sets'}
-            </Badge>
-          </div>
-        </div>
-        
-        <div className="p-4">
-          <h3 className="font-semibold text-lg text-gray-900 mb-2 line-clamp-2 group-hover:text-red-600 transition-colors">
-            {mainSet.name}
-          </h3>
-          
-          {mainSet.notes && (
-            <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-              {mainSet.notes}
-            </p>
-          )}
-          
-          <div className="text-right">
-            <div className="font-medium text-gray-700">
-              {totalCards.toLocaleString()} cards
+    <Link href={`/browse/main-set/${mainSet.id}`}>
+      <Card className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] bg-white border border-gray-200">
+        <CardContent className="p-0">
+          <div className="relative aspect-[3/4] overflow-hidden rounded-t-lg">
+            <img
+              src={thumbnailUrl || "/images/image-coming-soon.png"}
+              alt={mainSet.name}
+              className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = "/images/image-coming-soon.png";
+              }}
+            />
+            
+            {/* Overlay with set count */}
+            <div className="absolute top-2 right-2">
+              <Badge variant="secondary" className="bg-black/70 text-white border-none">
+                <Layers className="w-3 h-3 mr-1" />
+                {assignedSets.length} {assignedSets.length === 1 ? 'Set' : 'Sets'}
+              </Badge>
             </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+          
+          <div className="p-4">
+            <h3 className="font-semibold text-lg text-gray-900 mb-2 line-clamp-2 group-hover:text-red-600 transition-colors">
+              {mainSet.name}
+            </h3>
+            
+            {mainSet.notes && (
+              <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                {mainSet.notes}
+              </p>
+            )}
+            
+            <div className="text-right">
+              <div className="font-medium text-gray-700">
+                {totalCards.toLocaleString()} cards
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
