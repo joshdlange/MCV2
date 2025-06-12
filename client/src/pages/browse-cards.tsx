@@ -3,13 +3,11 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Star, Plus, Grid3X3, List, Filter, Edit, Eye, Users, Calendar, MoreVertical, ArrowLeft } from "lucide-react";
-import { CardGrid } from "@/components/cards/card-grid";
+import { Search, Star, Grid3X3, List, Filter, ArrowLeft } from "lucide-react";
 import { MainSetTile } from "@/components/cards/main-set-tile";
 import { SetThumbnail } from "@/components/cards/set-thumbnail";
 import { useToast } from "@/hooks/use-toast";
@@ -57,7 +55,7 @@ export default function BrowseCards() {
     queryKey: ["/api/collection"],
   });
 
-  const { data: wishlist } = useQuery<Wishlist[]>({
+  const { data: wishlist } = useQuery<any[]>({
     queryKey: ["/api/wishlist"],
   });
 
@@ -145,32 +143,9 @@ export default function BrowseCards() {
     }
   });
 
-  const addAllMutation = useMutation({
-    mutationFn: async (setId: number) => {
-      const response = await fetch('/api/collection/add-all', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ setId }),
-      });
-      if (!response.ok) throw new Error('Failed to add all cards');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/collection"] });
-      toast({ title: "All cards added to collection!" });
-    }
-  });
-
   // Event handlers
   const handleYearFilter = (year: string) => {
     setFilters({ year: year === "all" ? undefined : parseInt(year) });
-  };
-
-  const handleInsertFilter = (isInsert: string) => {
-    setFilters(prev => ({ 
-      ...prev, 
-      isInsert: isInsert === "all" ? undefined : isInsert === "true" 
-    }));
   };
 
   const handleFavoriteSet = (setId: number) => {
@@ -182,32 +157,12 @@ export default function BrowseCards() {
     );
   };
 
-  const handleAddAllToCollection = (setId: number) => {
-    addAllMutation.mutate(setId);
-  };
-
   const isCardInCollection = (cardId: number) => {
     return collection?.some((item: any) => item.cardId === cardId) || false;
   };
 
   const isCardInWishlist = (cardId: number) => {
     return wishlist?.some((item: any) => item.cardId === cardId) || false;
-  };
-
-  const handleSearchChange = (search: string) => {
-    setFilters(prev => ({ ...prev, search: search || undefined }));
-  };
-
-  const handleSetClick = (set: CardSet) => {
-    setFilters({ setId: set.id });
-  };
-
-  const handleBackToSets = () => {
-    setFilters({});
-  };
-
-  const clearFilters = () => {
-    setFilters(prev => ({ setId: prev.setId }));
   };
 
   const handleEditSet = (set: CardSet) => {
@@ -480,15 +435,15 @@ export default function BrowseCards() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {mainSetTiles.map(({ mainSet, assignedSets }) => (
-                      <MainSetTile
-                        key={mainSet.id}
-                        mainSet={mainSet}
-                        assignedSets={assignedSets}
-                        onClick={() => {
-                          setMainSetId(mainSet.id);
-                          setCurrentTab("master-sets");
-                        }}
-                      />
+                      <div key={mainSet.id} onClick={() => {
+                        setMainSetId(mainSet.id);
+                        setCurrentTab("master-sets");
+                      }} className="cursor-pointer">
+                        <MainSetTile
+                          mainSet={mainSet}
+                          assignedSets={assignedSets}
+                        />
+                      </div>
                     ))}
                   </div>
                 )}
@@ -527,11 +482,9 @@ export default function BrowseCards() {
                           {favoritesets.map(set => (
                             <SetThumbnail
                               key={set.id}
-                              set={set}
-                              isFavorited={true}
-                              onFavorite={() => handleFavoriteSet(set.id)}
-                              onEdit={() => handleEditSet(set)}
-                              onClick={() => handleSetClick(set)}
+                              setId={set.id}
+                              setName={set.name}
+                              setImageUrl={set.imageUrl}
                             />
                           ))}
                         </div>
@@ -548,11 +501,9 @@ export default function BrowseCards() {
                           {otherSets.map(set => (
                             <SetThumbnail
                               key={set.id}
-                              set={set}
-                              isFavorited={false}
-                              onFavorite={() => handleFavoriteSet(set.id)}
-                              onEdit={() => handleEditSet(set)}
-                              onClick={() => handleSetClick(set)}
+                              setId={set.id}
+                              setName={set.name}
+                              setImageUrl={set.imageUrl}
                             />
                           ))}
                         </div>
@@ -595,11 +546,9 @@ export default function BrowseCards() {
                           {favoritesets.map(set => (
                             <SetThumbnail
                               key={set.id}
-                              set={set}
-                              isFavorited={true}
-                              onFavorite={() => handleFavoriteSet(set.id)}
-                              onEdit={() => handleEditSet(set)}
-                              onClick={() => handleSetClick(set)}
+                              setId={set.id}
+                              setName={set.name}
+                              setImageUrl={set.imageUrl}
                             />
                           ))}
                         </div>
@@ -616,11 +565,9 @@ export default function BrowseCards() {
                           {otherSets.map(set => (
                             <SetThumbnail
                               key={set.id}
-                              set={set}
-                              isFavorited={false}
-                              onFavorite={() => handleFavoriteSet(set.id)}
-                              onEdit={() => handleEditSet(set)}
-                              onClick={() => handleSetClick(set)}
+                              setId={set.id}
+                              setName={set.name}
+                              setImageUrl={set.imageUrl}
                             />
                           ))}
                         </div>
