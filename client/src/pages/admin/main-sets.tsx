@@ -36,11 +36,21 @@ function CreateMainSetDialog() {
 
   const createMutation = useMutation({
     mutationFn: (data: InsertMainSet) => apiRequest("POST", "/api/main-sets", data),
-    onSuccess: () => {
+    onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/main-sets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/card-sets"] });
+      
+      let description = "Main set created successfully";
+      if (response.suggestedAssignments?.length > 0) {
+        description += `. Auto-assigned ${response.suggestedAssignments.length} matching base set(s).`;
+      }
+      if (response.matchingBaseSets?.length > 0) {
+        description += ` Found ${response.matchingBaseSets.length} similar set(s) already assigned elsewhere.`;
+      }
+      
       toast({
         title: "Success",
-        description: "Main set created successfully",
+        description,
       });
       setOpen(false);
       form.reset();

@@ -325,6 +325,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug endpoint to analyze set assignment exclusions
+  app.get("/api/main-sets/:id/assignable-debug", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const mainSetId = parseInt(req.params.id);
+      const { search } = req.query;
+      
+      const allSets = await storage.getCardSets();
+      const mainSet = await storage.getMainSet(mainSetId);
+      
+      const analysis = allSets.map(set => ({
+        id: set.id,
+        name: set.name,
+        mainSetId: set.mainSetId,
+        status: !set.mainSetId ? 'unassigned' : 
+                set.mainSetId === mainSetId ? 'assigned_to_this' : 'assigned_to_other',
+        matchesSearch: search ? set.name.toLowerCase().includes((search as string).toLowerCase()) : true,
+        isBaseSetsCandidate: set.name.toLowerCase().includes(mainSet?.name.toLowerCase() || '') && 
+                           set.name.length <= (mainSet?.name.length || 0) + 20
+      }));
+      
+      res.json({
+        mainSet,
+        totalSets: allSets.length,
+        unassigned: analysis.filter(s => s.status === 'unassigned').length,
+        assignedToThis: analysis.filter(s => s.status === 'assigned_to_this').length,
+        assignedToOther: analysis.filter(s => s.status === 'assigned_to_other').length,
+        baseSetsCandidate: analysis.filter(s => s.isBaseSetsCandidate),
+        analysis
+      });
+    } catch (error) {
+      console.error('Debug assignable sets error:', error);
+      res.status(500).json({ message: "Failed to analyze assignable sets" });
+    }
+  });
+
   // Update card set assignments to main set
   app.patch("/api/main-sets/:id/assign-sets", authenticateUser, async (req: any, res) => {
     try {

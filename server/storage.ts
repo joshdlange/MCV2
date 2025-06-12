@@ -279,6 +279,35 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async findMatchingBaseSets(mainSetName: string): Promise<CardSet[]> {
+    try {
+      // Look for card sets that match the main set name exactly or are very similar
+      // This helps identify potential base sets for auto-assignment
+      const cleanName = mainSetName.toLowerCase().trim();
+      
+      const matchingSets = await db
+        .select()
+        .from(cardSets)
+        .where(
+          or(
+            sql`LOWER(${cardSets.name}) = ${cleanName}`,
+            sql`LOWER(${cardSets.name}) LIKE ${cleanName + '%'}`,
+            sql`LOWER(${cardSets.name}) LIKE ${'%' + cleanName + '%'}`
+          )
+        )
+        .orderBy(
+          // Exact matches first, then by name length (shorter = more likely to be base set)
+          sql`CASE WHEN LOWER(${cardSets.name}) = ${cleanName} THEN 0 ELSE 1 END`,
+          sql`LENGTH(${cardSets.name})`
+        );
+      
+      return matchingSets;
+    } catch (error) {
+      console.error('Error finding matching base sets:', error);
+      return [];
+    }
+  }
+
   async deleteMainSet(id: number): Promise<void> {
     try {
       await db.delete(mainSets).where(eq(mainSets.id, id));
