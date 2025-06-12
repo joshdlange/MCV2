@@ -256,13 +256,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMainSet(insertMainSet: InsertMainSet): Promise<MainSet> {
-    const [mainSet] = await db.insert(mainSets).values(insertMainSet).returning();
+    const dataWithSlug = {
+      ...insertMainSet,
+      slug: generateSlug(insertMainSet.name)
+    };
+    const [mainSet] = await db.insert(mainSets).values(dataWithSlug).returning();
     return mainSet;
   }
 
   async updateMainSet(id: number, updates: Partial<InsertMainSet>): Promise<MainSet | undefined> {
     try {
-      const [mainSet] = await db.update(mainSets).set(updates).where(eq(mainSets.id, id)).returning();
+      // If name is being updated, regenerate slug
+      const updatesWithSlug = updates.name 
+        ? { ...updates, slug: generateSlug(updates.name) }
+        : updates;
+      
+      const [mainSet] = await db.update(mainSets).set(updatesWithSlug).where(eq(mainSets.id, id)).returning();
       return mainSet || undefined;
     } catch (error) {
       console.error('Error updating main set:', error);
@@ -354,17 +363,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCardSet(insertCardSet: InsertCardSet): Promise<CardSet> {
+    const dataWithSlug = {
+      ...insertCardSet,
+      slug: generateSlug(insertCardSet.name)
+    };
     const [cardSet] = await db
       .insert(cardSets)
-      .values(insertCardSet)
+      .values(dataWithSlug)
       .returning();
     return cardSet;
   }
 
   async updateCardSet(id: number, updates: Partial<InsertCardSet>): Promise<CardSet | undefined> {
+    // If name is being updated, regenerate slug
+    const updatesWithSlug = updates.name 
+      ? { ...updates, slug: generateSlug(updates.name) }
+      : updates;
+    
     const [cardSet] = await db
       .update(cardSets)
-      .set(updates)
+      .set(updatesWithSlug)
       .where(eq(cardSets.id, id))
       .returning();
     return cardSet || undefined;
