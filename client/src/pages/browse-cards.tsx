@@ -565,7 +565,7 @@ export default function BrowseCards() {
         </div>
       </div>
 
-      {/* Search Results or Card Sets Grid */}
+      {/* Main Content */}
       <div className="p-6">
         {/* Show Search Results */}
         {shouldShowSearchResults ? (
@@ -678,140 +678,180 @@ export default function BrowseCards() {
           </div>
         ) : (
           <>
-            {/* Favorite Sets */}
-            {favoritesets.length > 0 && (
+            {/* Main Sets Overview - Only show on main browse page */}
+            {!isMainSetView && mainSetTiles.length > 0 && (
               <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <Star className="w-5 h-5 text-yellow-500 fill-current" />
-                  Favorite Sets
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Main Collections
                 </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-                  {favoritesets.map((set) => (
-                    <Card key={set.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSetClick(set)}>
-                      <CardContent className="p-0">
-                        <div className="relative">
-                          <SetThumbnail
-                            setId={set.id}
-                            setName={set.name}
-                            setImageUrl={set.imageUrl}
-                            className="w-full h-32 md:h-48 object-cover rounded-t-lg"
-                          />
-                          <div className="absolute top-2 right-2 flex gap-1">
-                            {isAdminMode && (
-                              <Button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditSet(set.id);
-                                }}
-                                variant="outline"
-                                size="sm"
-                                className="bg-white/90 hover:bg-white"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                            )}
-                            <Button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleFavoriteSet(set.id);
-                              }}
-                              variant="outline"
-                              size="sm"
-                              className="bg-white/90 hover:bg-white"
-                            >
-                              <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="p-3 md:p-4">
-                          <h3 className="font-semibold text-gray-900 mb-1 md:mb-2 text-sm md:text-base line-clamp-2">{set.name}</h3>
-                          <p className="text-xs text-gray-500 mb-2 md:mb-3">{set.totalCards} cards • {set.year}</p>
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAddAllToCollection(set.id);
-                              }}
-                              size="sm"
-                              className="flex-1 bg-marvel-red hover:bg-red-700"
-                            >
-                              <Plus className="w-3 h-3 mr-1" />
-                              {addAllMutation.isPending ? 'Adding...' : 'Add All'}
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {mainSetTiles.map(({ mainSet, assignedSets }) => (
+                    <MainSetTile 
+                      key={mainSet.id}
+                      mainSet={mainSet}
+                      assignedSets={assignedSets}
+                    />
                   ))}
                 </div>
               </div>
             )}
 
-            {/* All Sets */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                {favoritesets.length > 0 ? 'All Sets' : 'Card Sets'}
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-                {otherSets.map((set) => (
-                  <Card key={set.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSetClick(set)}>
-                    <CardContent className="p-0">
-                      <div className="relative">
-                        <SetThumbnail
-                          setId={set.id}
-                          setName={set.name}
-                          setImageUrl={set.imageUrl}
-                          className="w-full h-32 md:h-48 object-cover rounded-t-lg"
-                        />
-                        <div className="absolute top-2 right-2 flex gap-1">
-                          {isAdminMode && (
-                            <Button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditSet(set.id);
-                              }}
-                              variant="outline"
-                              size="sm"
-                              className="bg-white/90 hover:bg-white"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                          )}
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleFavoriteSet(set.id);
-                            }}
-                            variant="outline"
-                            size="sm"
-                            className="bg-white/90 hover:bg-white"
-                          >
-                            <Star className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-semibold text-gray-900 mb-2">{set.name}</h3>
-                        <p className="text-xs text-gray-500 mb-3">{set.totalCards} cards • {set.year}</p>
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAddAllToCollection(set.id);
-                            }}
-                            size="sm"
-                            className="flex-1 bg-marvel-red hover:bg-red-700"
-                          >
-                            <Plus className="w-3 h-3 mr-1" />
-                            Add All
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+            {/* Standalone Sets - Only show unassigned sets on main browse page, or all sets in main set view */}
+            {filteredDisplaySets.length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  {isMainSetView ? 'Sets in this Collection' : 'Individual Sets'}
+                </h3>
+
+                {/* Favorite Sets */}
+                {favoritesets.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-md font-medium text-gray-700 mb-3 flex items-center gap-2">
+                      <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                      Favorite Sets
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+                      {favoritesets.map((set) => (
+                        <Card key={set.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSetClick(set)}>
+                          <CardContent className="p-0">
+                            <div className="relative">
+                              <SetThumbnail
+                                setId={set.id}
+                                setName={set.name}
+                                setImageUrl={set.imageUrl}
+                                className="w-full h-32 md:h-48 object-cover rounded-t-lg"
+                              />
+                              <div className="absolute top-2 right-2 flex gap-1">
+                                {isAdminMode && (
+                                  <Button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditSet(set.id);
+                                    }}
+                                    variant="outline"
+                                    size="sm"
+                                    className="bg-white/90 hover:bg-white"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                )}
+                                <Button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleFavoriteSet(set.id);
+                                  }}
+                                  variant="outline"
+                                  size="sm"
+                                  className="bg-white/90 hover:bg-white"
+                                >
+                                  <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="p-3 md:p-4">
+                              <h3 className="font-semibold text-gray-900 mb-1 md:mb-2 text-sm md:text-base line-clamp-2">{set.name}</h3>
+                              <p className="text-xs text-gray-500 mb-2 md:mb-3">{set.totalCards} cards • {set.year}</p>
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAddAllToCollection(set.id);
+                                  }}
+                                  size="sm"
+                                  className="flex-1 bg-marvel-red hover:bg-red-700"
+                                >
+                                  <Plus className="w-3 h-3 mr-1" />
+                                  {addAllMutation.isPending ? 'Adding...' : 'Add All'}
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* All Other Sets */}
+                {otherSets.length > 0 && (
+                  <div>
+                    <h4 className="text-md font-medium text-gray-700 mb-3">
+                      {favoritesets.length > 0 ? 'Other Sets' : 'All Sets'}
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+                      {otherSets.map((set) => (
+                        <Card key={set.id} className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSetClick(set)}>
+                          <CardContent className="p-0">
+                            <div className="relative">
+                              <SetThumbnail
+                                setId={set.id}
+                                setName={set.name}
+                                setImageUrl={set.imageUrl}
+                                className="w-full h-32 md:h-48 object-cover rounded-t-lg"
+                              />
+                              <div className="absolute top-2 right-2 flex gap-1">
+                                {isAdminMode && (
+                                  <Button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditSet(set.id);
+                                    }}
+                                    variant="outline"
+                                    size="sm"
+                                    className="bg-white/90 hover:bg-white"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                )}
+                                <Button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleFavoriteSet(set.id);
+                                  }}
+                                  variant="outline"
+                                  size="sm"
+                                  className="bg-white/90 hover:bg-white"
+                                >
+                                  <Star className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="p-4">
+                              <h3 className="font-semibold text-gray-900 mb-2">{set.name}</h3>
+                              <p className="text-xs text-gray-500 mb-3">{set.totalCards} cards • {set.year}</p>
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAddAllToCollection(set.id);
+                                  }}
+                                  size="sm"
+                                  className="flex-1 bg-marvel-red hover:bg-red-700"
+                                >
+                                  <Plus className="w-3 h-3 mr-1" />
+                                  Add All
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
+            )}
+
+            {/* Empty State */}
+            {!isMainSetView && mainSetTiles.length === 0 && filteredDisplaySets.length === 0 && (
+              <div className="text-center py-12">
+                <div className="text-gray-400 mb-4">
+                  <Home className="w-16 h-16 mx-auto" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No collections or sets found</h3>
+                <p className="text-gray-600">Create some main sets and assign card sets to get started</p>
+              </div>
+            )}
           </>
         )}
       </div>
