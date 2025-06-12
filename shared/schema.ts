@@ -159,11 +159,13 @@ export const insertUserSchema = createInsertSchema(users).omit({
 
 export const insertMainSetSchema = createInsertSchema(mainSets).omit({
   id: true,
+  slug: true,
   createdAt: true,
 });
 
 export const insertCardSetSchema = createInsertSchema(cardSets).omit({
   id: true,
+  slug: true,
   createdAt: true,
   totalCards: true,
 });
