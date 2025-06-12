@@ -389,9 +389,12 @@ export class DatabaseStorage implements IStorage {
           set: {
             id: cardSets.id,
             name: cardSets.name,
+            slug: cardSets.slug,
             year: cardSets.year,
             description: cardSets.description,
+            imageUrl: cardSets.imageUrl,
             totalCards: cardSets.totalCards,
+            mainSetId: cardSets.mainSetId,
             createdAt: cardSets.createdAt,
           }
         })
@@ -480,9 +483,12 @@ export class DatabaseStorage implements IStorage {
           set: {
             id: cardSets.id,
             name: cardSets.name,
+            slug: cardSets.slug,
             year: cardSets.year,
             description: cardSets.description,
+            imageUrl: cardSets.imageUrl,
             totalCards: cardSets.totalCards,
+            mainSetId: cardSets.mainSetId,
             createdAt: cardSets.createdAt,
           }
         })
@@ -1014,10 +1020,12 @@ export class DatabaseStorage implements IStorage {
           // Set fields with aliases
           setId_alias: cardSets.id,
           setName: cardSets.name,
+          setSlug: cardSets.slug,
           setYear: cardSets.year,
           setDescription: cardSets.description,
           setImageUrl: cardSets.imageUrl,
           setTotalCards: cardSets.totalCards,
+          setMainSetId: cardSets.mainSetId,
           setCreatedAt: cardSets.createdAt,
           collectionCount: count(userCollections.id).as('collection_count'),
           latestAddition: sql<Date>`MAX(${userCollections.acquiredDate})`.as('latest_addition')
@@ -1076,10 +1084,12 @@ export class DatabaseStorage implements IStorage {
         set: {
           id: row.setId_alias,
           name: row.setName,
+          slug: row.setSlug,
           year: row.setYear,
           description: row.setDescription,
           imageUrl: row.setImageUrl,
           totalCards: row.setTotalCards,
+          mainSetId: row.setMainSetId,
           createdAt: row.setCreatedAt,
         }
       }));

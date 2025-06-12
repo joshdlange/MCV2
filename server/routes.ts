@@ -439,11 +439,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get card set by ID
-  app.get("/api/card-sets/:id", async (req, res) => {
+  // Get card set by ID or slug
+  app.get("/api/card-sets/:identifier", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const cardSet = await storage.getCardSet(id);
+      const identifier = req.params.identifier;
+      let cardSet;
+      
+      // Check if identifier is numeric (ID) or slug
+      if (/^\d+$/.test(identifier)) {
+        const id = parseInt(identifier);
+        cardSet = await storage.getCardSet(id);
+      } else {
+        cardSet = await storage.getCardSetBySlug(identifier);
+      }
       
       if (!cardSet) {
         return res.status(404).json({ message: "Card set not found" });
