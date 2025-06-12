@@ -44,6 +44,9 @@ function CreateMainSetDialog() {
       if (response.suggestedAssignments?.length > 0) {
         description += `. Auto-assigned ${response.suggestedAssignments.length} matching base set(s).`;
       }
+      if (response.conflictingSets?.length > 0) {
+        description += ` Warning: ${response.conflictingSets.length} exact name match(es) already assigned to other main sets.`;
+      }
       if (response.matchingBaseSets?.length > 0) {
         description += ` Found ${response.matchingBaseSets.length} similar set(s) already assigned elsewhere.`;
       }
@@ -180,11 +183,42 @@ function EditMainSetDialog({ mainSet }: { mainSet: MainSet }) {
     }
   }, [open, cardSets, mainSet.id]);
 
-  // Filter card sets based on search term
-  const filteredSets = cardSets.filter(set =>
-    set.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    set.year.toString().includes(searchTerm)
-  );
+  // Filter card sets based on search term with comprehensive logging
+  const filteredSets = React.useMemo(() => {
+    if (!cardSets.length) return [];
+    
+    const filtered = cardSets.filter(set => {
+      const matchesSearch = !searchTerm || 
+        set.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        set.year.toString().includes(searchTerm);
+      
+      // Log exclusion reasons for debugging
+      if (!matchesSearch && searchTerm) {
+        console.debug(`Set excluded from assignment - Search filter: ${set.name} (ID: ${set.id})`);
+      }
+      
+      return matchesSearch;
+    });
+    
+    // Log assignment status for main set name matches
+    const mainSetNameLower = mainSet.name.toLowerCase().trim();
+    const exactMatches = filtered.filter(set => 
+      set.name.toLowerCase().trim() === mainSetNameLower
+    );
+    
+    if (exactMatches.length > 0) {
+      exactMatches.forEach(set => {
+        const status = !set.mainSetId ? 'AVAILABLE_FOR_ASSIGNMENT' :
+                     set.mainSetId === mainSet.id ? 'ALREADY_ASSIGNED_TO_THIS' :
+                     'ASSIGNED_TO_OTHER_MAIN_SET';
+        console.log(`Base set candidate: ${set.name} (ID: ${set.id}) - Status: ${status}`);
+      });
+    } else {
+      console.log(`No exact name matches found for main set: ${mainSet.name}`);
+    }
+    
+    return filtered;
+  }, [cardSets, searchTerm, mainSet.name, mainSet.id]);
 
   const updateMutation = useMutation({
     mutationFn: (data: Partial<InsertMainSet>) => 

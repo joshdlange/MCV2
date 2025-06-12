@@ -260,9 +260,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertMainSetSchema.parse(req.body);
       const mainSet = await storage.createMainSet(validatedData);
       
-      // Auto-suggest matching base sets
+      // Auto-suggest and assign matching base sets
       const matchingBaseSets = await storage.findMatchingBaseSets(validatedData.name);
       let suggestedAssignments = [];
+      let conflictingSets = [];
       
       if (matchingBaseSets.length > 0) {
         console.log(`Found ${matchingBaseSets.length} potential base sets for "${validatedData.name}":`, 
@@ -270,17 +271,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Auto-assign exact matches that are unassigned
         for (const baseSet of matchingBaseSets) {
-          if (!baseSet.mainSetId && baseSet.name.toLowerCase() === validatedData.name.toLowerCase()) {
+          const isExactMatch = baseSet.name.toLowerCase().trim() === validatedData.name.toLowerCase().trim();
+          
+          if (isExactMatch && !baseSet.mainSetId) {
             await storage.updateCardSet(baseSet.id, { mainSetId: mainSet.id });
             suggestedAssignments.push(baseSet);
-            console.log(`Auto-assigned base set "${baseSet.name}" (ID: ${baseSet.id}) to main set "${mainSet.name}" (ID: ${mainSet.id})`);
+            console.log(`AUTO-ASSIGNED: Base set "${baseSet.name}" (ID: ${baseSet.id}) to main set "${mainSet.name}" (ID: ${mainSet.id})`);
+          } else if (isExactMatch && baseSet.mainSetId) {
+            conflictingSets.push({ ...baseSet, reason: `Already assigned to main set ID ${baseSet.mainSetId}` });
+            console.warn(`CONFLICT: Base set "${baseSet.name}" (ID: ${baseSet.id}) already assigned to main set ID ${baseSet.mainSetId}`);
           }
         }
+      } else {
+        console.log(`No matching base sets found for main set: "${validatedData.name}"`);
       }
       
       res.status(201).json({ 
         mainSet, 
         suggestedAssignments,
+        conflictingSets,
         matchingBaseSets: matchingBaseSets.filter(set => set.mainSetId !== null)
       });
     } catch (error) {
@@ -338,23 +347,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allSets = await storage.getCardSets();
       const mainSet = await storage.getMainSet(mainSetId);
       
-      const analysis = allSets.map(set => ({
-        id: set.id,
-        name: set.name,
-        mainSetId: set.mainSetId,
-        status: !set.mainSetId ? 'unassigned' : 
-                set.mainSetId === mainSetId ? 'assigned_to_this' : 'assigned_to_other',
-        matchesSearch: search ? set.name.toLowerCase().includes((search as string).toLowerCase()) : true,
-        isBaseSetsCandidate: set.name.toLowerCase().includes(mainSet?.name.toLowerCase() || '') && 
-                           set.name.length <= (mainSet?.name.length || 0) + 20
-      }));
+      if (!mainSet) {
+        return res.status(404).json({ message: "Main set not found" });
+      }
+      
+      console.log(`\n=== ASSIGNMENT DEBUG for Main Set: "${mainSet.name}" (ID: ${mainSetId}) ===`);
+      
+      const analysis = allSets.map(set => {
+        const isExactMatch = set.name.toLowerCase().trim() === mainSet.name.toLowerCase().trim();
+        const matchesSearch = !search || set.name.toLowerCase().includes((search as string).toLowerCase());
+        
+        const status = !set.mainSetId ? 'unassigned' : 
+                      set.mainSetId === mainSetId ? 'assigned_to_this' : 'assigned_to_other';
+        
+        const exclusionReasons = [];
+        if (!matchesSearch) exclusionReasons.push('search_filter');
+        if (set.mainSetId && set.mainSetId !== mainSetId) exclusionReasons.push('assigned_elsewhere');
+        
+        const result = {
+          id: set.id,
+          name: set.name,
+          mainSetId: set.mainSetId,
+          status,
+          isExactMatch,
+          matchesSearch,
+          exclusionReasons,
+          isBaseSetsCandidate: isExactMatch || (
+            set.name.toLowerCase().includes(mainSet.name.toLowerCase()) && 
+            set.name.length <= mainSet.name.length + 20
+          )
+        };
+        
+        // Log exact matches and their status
+        if (isExactMatch) {
+          console.log(`EXACT MATCH: "${set.name}" (ID: ${set.id}) - Status: ${status.toUpperCase()}${exclusionReasons.length > 0 ? ` - Excluded: ${exclusionReasons.join(', ')}` : ''}`);
+        }
+        
+        return result;
+      });
+      
+      const exactMatches = analysis.filter(s => s.isExactMatch);
+      const availableForAssignment = analysis.filter(s => s.status === 'unassigned' && s.matchesSearch);
+      
+      console.log(`Total sets: ${allSets.length}`);
+      console.log(`Exact name matches: ${exactMatches.length}`);
+      console.log(`Available for assignment: ${availableForAssignment.length}`);
+      console.log(`=== END DEBUG ===\n`);
       
       res.json({
         mainSet,
+        searchTerm: search || null,
         totalSets: allSets.length,
+        exactMatches: exactMatches.length,
         unassigned: analysis.filter(s => s.status === 'unassigned').length,
         assignedToThis: analysis.filter(s => s.status === 'assigned_to_this').length,
         assignedToOther: analysis.filter(s => s.status === 'assigned_to_other').length,
+        availableForAssignment: availableForAssignment.length,
         baseSetsCandidate: analysis.filter(s => s.isBaseSetsCandidate),
         analysis
       });
