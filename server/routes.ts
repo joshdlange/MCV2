@@ -259,7 +259,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = insertMainSetSchema.parse(req.body);
       const mainSet = await storage.createMainSet(validatedData);
-      res.status(201).json(mainSet);
+      
+      // Auto-suggest matching base sets
+      const matchingBaseSets = await storage.findMatchingBaseSets(validatedData.name);
+      let suggestedAssignments = [];
+      
+      if (matchingBaseSets.length > 0) {
+        console.log(`Found ${matchingBaseSets.length} potential base sets for "${validatedData.name}":`, 
+          matchingBaseSets.map(set => ({ id: set.id, name: set.name, mainSetId: set.mainSetId })));
+        
+        // Auto-assign exact matches that are unassigned
+        for (const baseSet of matchingBaseSets) {
+          if (!baseSet.mainSetId && baseSet.name.toLowerCase() === validatedData.name.toLowerCase()) {
+            await storage.updateCardSet(baseSet.id, { mainSetId: mainSet.id });
+            suggestedAssignments.push(baseSet);
+            console.log(`Auto-assigned base set "${baseSet.name}" (ID: ${baseSet.id}) to main set "${mainSet.name}" (ID: ${mainSet.id})`);
+          }
+        }
+      }
+      
+      res.status(201).json({ 
+        mainSet, 
+        suggestedAssignments,
+        matchingBaseSets: matchingBaseSets.filter(set => set.mainSetId !== null)
+      });
     } catch (error) {
       console.error('Create main set error:', error);
       res.status(500).json({ message: "Failed to create main set" });
