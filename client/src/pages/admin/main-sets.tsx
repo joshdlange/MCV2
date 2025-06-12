@@ -209,7 +209,7 @@ function EditMainSetDialog({ mainSet }: { mainSet: MainSet }) {
 
   const unassignSetsMutation = useMutation({
     mutationFn: (cardSetIds: number[]) =>
-      apiRequest(`/api/main-sets/${mainSet.id}/unassign-sets`, "PATCH", { cardSetIds }),
+      apiRequest("PATCH", `/api/main-sets/${mainSet.id}/unassign-sets`, { cardSetIds }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/card-sets"] });
       toast({

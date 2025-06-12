@@ -379,10 +379,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const unassignedSets = await storage.getUnassignedCardSets();
+      console.log(`DEBUG: Found ${unassignedSets.length} unassigned sets:`, unassignedSets.slice(0, 5).map(s => ({id: s.id, name: s.name, year: s.year})));
       res.json(unassignedSets);
     } catch (error) {
       console.error('Get unassigned card sets error:', error);
       res.status(500).json({ message: "Failed to fetch unassigned card sets" });
+    }
+  });
+
+  // Debug endpoint to check set assignments by name pattern
+  app.get("/api/debug/sets-by-name/:pattern", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const pattern = req.params.pattern;
+      const sets = await db.select({
+        id: cardSets.id,
+        name: cardSets.name,
+        year: cardSets.year,
+        mainSetId: cardSets.mainSetId,
+        totalCards: sql<number>`COALESCE(COUNT(${cards.id}), 0)`
+      })
+      .from(cardSets)
+      .leftJoin(cards, eq(cardSets.id, cards.setId))
+      .where(ilike(cardSets.name, `%${pattern}%`))
+      .groupBy(cardSets.id, cardSets.name, cardSets.year, cardSets.mainSetId)
+      .orderBy(cardSets.name);
+      
+      res.json(sets);
+    } catch (error) {
+      console.error('Debug sets by name error:', error);
+      res.status(500).json({ message: "Failed to fetch sets by name" });
     }
   });
 
