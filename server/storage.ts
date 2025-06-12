@@ -211,6 +211,50 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // Main Sets methods
+  async getMainSets(): Promise<MainSet[]> {
+    try {
+      return await db.select().from(mainSets).orderBy(desc(mainSets.createdAt));
+    } catch (error) {
+      console.error('Error getting main sets:', error);
+      return [];
+    }
+  }
+
+  async getMainSet(id: number): Promise<MainSet | undefined> {
+    try {
+      const [mainSet] = await db.select().from(mainSets).where(eq(mainSets.id, id));
+      return mainSet || undefined;
+    } catch (error) {
+      console.error('Error getting main set:', error);
+      return undefined;
+    }
+  }
+
+  async createMainSet(insertMainSet: InsertMainSet): Promise<MainSet> {
+    const [mainSet] = await db.insert(mainSets).values(insertMainSet).returning();
+    return mainSet;
+  }
+
+  async updateMainSet(id: number, updates: Partial<InsertMainSet>): Promise<MainSet | undefined> {
+    try {
+      const [mainSet] = await db.update(mainSets).set(updates).where(eq(mainSets.id, id)).returning();
+      return mainSet || undefined;
+    } catch (error) {
+      console.error('Error updating main set:', error);
+      return undefined;
+    }
+  }
+
+  async deleteMainSet(id: number): Promise<void> {
+    try {
+      await db.delete(mainSets).where(eq(mainSets.id, id));
+    } catch (error) {
+      console.error('Error deleting main set:', error);
+      throw new Error('Failed to delete main set');
+    }
+  }
+
   async getCardSets(): Promise<CardSet[]> {
     try {
       // Optimized single query with JOIN and GROUP BY instead of N+1 queries

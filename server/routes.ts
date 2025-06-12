@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCardSetSchema, insertCardSchema, insertUserCollectionSchema, insertUserWishlistSchema, insertUserSchema } from "@shared/schema";
+import { insertCardSetSchema, insertCardSchema, insertUserCollectionSchema, insertUserWishlistSchema, insertUserSchema, insertMainSetSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import csv from "csv-parser";
@@ -205,6 +205,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Delete user error:', error);
       res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // Main Sets Routes
+  app.get("/api/main-sets", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const mainSets = await storage.getMainSets();
+      res.json(mainSets);
+    } catch (error) {
+      console.error('Get main sets error:', error);
+      res.status(500).json({ message: "Failed to fetch main sets" });
+    }
+  });
+
+  app.get("/api/main-sets/:id", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const id = parseInt(req.params.id);
+      const mainSet = await storage.getMainSet(id);
+      
+      if (!mainSet) {
+        return res.status(404).json({ message: "Main set not found" });
+      }
+      
+      res.json(mainSet);
+    } catch (error) {
+      console.error('Get main set error:', error);
+      res.status(500).json({ message: "Failed to fetch main set" });
+    }
+  });
+
+  app.post("/api/main-sets", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const validatedData = insertMainSetSchema.parse(req.body);
+      const mainSet = await storage.createMainSet(validatedData);
+      res.status(201).json(mainSet);
+    } catch (error) {
+      console.error('Create main set error:', error);
+      res.status(500).json({ message: "Failed to create main set" });
+    }
+  });
+
+  app.put("/api/main-sets/:id", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const id = parseInt(req.params.id);
+      const validatedData = insertMainSetSchema.partial().parse(req.body);
+      const mainSet = await storage.updateMainSet(id, validatedData);
+      
+      if (!mainSet) {
+        return res.status(404).json({ message: "Main set not found" });
+      }
+      
+      res.json(mainSet);
+    } catch (error) {
+      console.error('Update main set error:', error);
+      res.status(500).json({ message: "Failed to update main set" });
+    }
+  });
+
+  app.delete("/api/main-sets/:id", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const id = parseInt(req.params.id);
+      await storage.deleteMainSet(id);
+      res.json({ message: "Main set deleted successfully" });
+    } catch (error) {
+      console.error('Delete main set error:', error);
+      res.status(500).json({ message: "Failed to delete main set" });
     }
   });
 
