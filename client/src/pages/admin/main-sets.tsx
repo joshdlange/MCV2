@@ -500,10 +500,10 @@ export default function AdminMainSets() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Notes</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="text-gray-900 font-semibold">Name</TableHead>
+                  <TableHead className="text-gray-900 font-semibold">Notes</TableHead>
+                  <TableHead className="text-gray-900 font-semibold">Created</TableHead>
+                  <TableHead className="text-gray-900 font-semibold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

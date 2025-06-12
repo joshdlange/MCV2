@@ -107,10 +107,10 @@ export default function AdminUnassignedSets() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Year</TableHead>
-                  <TableHead>Cards</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="text-gray-900 font-semibold">Name</TableHead>
+                  <TableHead className="text-gray-900 font-semibold">Year</TableHead>
+                  <TableHead className="text-gray-900 font-semibold">Cards</TableHead>
+                  <TableHead className="text-gray-900 font-semibold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
