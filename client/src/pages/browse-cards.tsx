@@ -55,6 +55,15 @@ export default function BrowseCards() {
   const mainSetSlug = params.mainSetSlug;
   const setSlug = params.setSlug;
 
+  // Reset state when route changes to prevent crashes
+  useEffect(() => {
+    setSelectedSet(null);
+    setFilters({});
+    setSelectedCard(null);
+    setEditingSet(null);
+    setSetSearchQuery("");
+  }, [location]);
+
   // All queries
   const { data: cardSets } = useQuery<CardSet[]>({
     queryKey: ["/api/card-sets"],

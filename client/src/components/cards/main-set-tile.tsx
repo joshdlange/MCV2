@@ -17,7 +17,10 @@ export function MainSetTile({ mainSet, assignedSets }: MainSetTileProps) {
 
   // Calculate total cards
   useEffect(() => {
-    const total = assignedSets.reduce((sum, set) => sum + (set.totalCards || 0), 0);
+    const total = assignedSets.reduce((sum, set) => {
+      const cardCount = Number(set.totalCards) || 0;
+      return sum + cardCount;
+    }, 0);
     setTotalCards(total);
   }, [assignedSets]);
 

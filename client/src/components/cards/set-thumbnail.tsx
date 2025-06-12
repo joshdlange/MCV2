@@ -142,7 +142,7 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
 
       {/* Set Info */}
       <div className="p-3">
-        <h3 className="font-medium text-gray-900 text-sm truncate mb-1">
+        <h3 className="font-medium text-gray-900 text-xs leading-tight mb-1 line-clamp-2 min-h-[2.5rem]">
           {set.name}
         </h3>
         <div className="flex items-center justify-between text-xs text-gray-600">
