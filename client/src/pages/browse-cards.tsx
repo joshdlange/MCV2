@@ -601,9 +601,9 @@ export default function BrowseCards() {
                       onClick={() => setSelectedCard(card)}
                     >
                       <div className="aspect-[2.5/3.5] bg-gray-100 rounded-t-lg overflow-hidden">
-                        {card.imageUrl ? (
+                        {card.frontImageUrl ? (
                           <img
-                            src={convertGoogleDriveUrl(card.imageUrl)}
+                            src={convertGoogleDriveUrl(card.frontImageUrl)}
                             alt={card.name}
                             className="w-full h-full object-cover"
                           />
@@ -615,7 +615,7 @@ export default function BrowseCards() {
                       </div>
                       <div className="p-2">
                         <p className="text-xs font-medium text-gray-900 truncate">{card.name}</p>
-                        <p className="text-xs text-gray-600">{card.cardSet?.name}</p>
+                        <p className="text-xs text-gray-600">{card.setName}</p>
                         <p className="text-xs text-gray-500">#{card.cardNumber}</p>
                       </div>
                     </div>
