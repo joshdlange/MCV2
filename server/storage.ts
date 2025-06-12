@@ -1,6 +1,5 @@
 import { 
   users, 
-  mainSets,
   cardSets, 
   cards, 
   userCollections, 
@@ -8,8 +7,6 @@ import {
   cardPriceCache,
   type User, 
   type InsertUser,
-  type MainSet,
-  type InsertMainSet,
   type CardSet,
   type InsertCardSet,
   type Card,
@@ -42,10 +39,6 @@ interface IStorage {
   createCardSet(insertCardSet: InsertCardSet): Promise<CardSet>;
   updateCardSet(id: number, updates: Partial<InsertCardSet>): Promise<CardSet | undefined>;
   searchCardSets(query: string): Promise<CardSet[]>;
-  
-  // Main Sets
-  createMainSet(insertMainSet: InsertMainSet): Promise<MainSet>;
-  getMainSets(): Promise<MainSet[]>;
   
   // Cards
   getCards(filters?: { setId?: number; search?: string; rarity?: string; isInsert?: boolean }): Promise<CardWithSet[]>;
@@ -218,13 +211,12 @@ export class DatabaseStorage implements IStorage {
           year: cardSets.year,
           description: cardSets.description,
           imageUrl: cardSets.imageUrl,
-          mainSetId: cardSets.mainSetId,
           totalCards: sql<number>`COALESCE(COUNT(${cards.id}), 0)`,
           createdAt: cardSets.createdAt
         })
         .from(cardSets)
         .leftJoin(cards, eq(cardSets.id, cards.setId))
-        .groupBy(cardSets.id, cardSets.name, cardSets.year, cardSets.description, cardSets.imageUrl, cardSets.mainSetId, cardSets.createdAt)
+        .groupBy(cardSets.id, cardSets.name, cardSets.year, cardSets.description, cardSets.imageUrl, cardSets.createdAt)
         .orderBy(desc(cardSets.year), cardSets.name);
       
       return setsWithCounts;
@@ -250,23 +242,6 @@ export class DatabaseStorage implements IStorage {
       .values(insertCardSet)
       .returning();
     return cardSet;
-  }
-
-  async createMainSet(insertMainSet: InsertMainSet): Promise<MainSet> {
-    const [mainSet] = await db
-      .insert(mainSets)
-      .values(insertMainSet)
-      .returning();
-    return mainSet;
-  }
-
-  async getMainSets(): Promise<MainSet[]> {
-    try {
-      return await db.select().from(mainSets).orderBy(mainSets.name);
-    } catch (error) {
-      console.error('Error getting main sets:', error);
-      return [];
-    }
   }
 
   async updateCardSet(id: number, updates: Partial<InsertCardSet>): Promise<CardSet | undefined> {
@@ -299,9 +274,7 @@ export class DatabaseStorage implements IStorage {
             name: cardSets.name,
             year: cardSets.year,
             description: cardSets.description,
-            imageUrl: cardSets.imageUrl,
             totalCards: cardSets.totalCards,
-            mainSetId: cardSets.mainSetId,
             createdAt: cardSets.createdAt,
           }
         })
@@ -371,118 +344,6 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getCardsPaginated(filters: any = {}, page: number = 1, limit: number = 50): Promise<{cards: CardWithSet[], totalCount: number}> {
-    try {
-      // Build base query for counting
-      let countQuery = db
-        .select({ count: count() })
-        .from(cards)
-        .innerJoin(cardSets, eq(cards.setId, cardSets.id));
-
-      // Build main query for data
-      let dataQuery = db
-        .select({
-          id: cards.id,
-          setId: cards.setId,
-          cardNumber: cards.cardNumber,
-          name: cards.name,
-          variation: cards.variation,
-          isInsert: cards.isInsert,
-          frontImageUrl: cards.frontImageUrl,
-          backImageUrl: cards.backImageUrl,
-          description: cards.description,
-          rarity: cards.rarity,
-          estimatedValue: cards.estimatedValue,
-          createdAt: cards.createdAt,
-          set: {
-            id: cardSets.id,
-            name: cardSets.name,
-            year: cardSets.year,
-            description: cardSets.description,
-            imageUrl: cardSets.imageUrl,
-            totalCards: cardSets.totalCards,
-            mainSetId: cardSets.mainSetId,
-            createdAt: cardSets.createdAt,
-          }
-        })
-        .from(cards)
-        .innerJoin(cardSets, eq(cards.setId, cardSets.id));
-
-      // Apply filters to both queries
-      const conditions = [];
-      if (filters?.setId) {
-        conditions.push(eq(cards.setId, filters.setId));
-      }
-      if (filters?.search) {
-        conditions.push(
-          or(
-            ilike(cards.name, `%${filters.search}%`),
-            ilike(cards.description, `%${filters.search}%`),
-            ilike(cards.cardNumber, `%${filters.search}%`)
-          )
-        );
-      }
-      if (filters?.rarity) {
-        conditions.push(eq(cards.rarity, filters.rarity));
-      }
-      if (filters?.isInsert !== undefined) {
-        conditions.push(eq(cards.isInsert, filters.isInsert));
-      }
-
-      if (conditions.length > 0) {
-        const combinedConditions = and(...conditions);
-        countQuery = countQuery.where(combinedConditions) as any;
-        dataQuery = dataQuery.where(combinedConditions) as any;
-      }
-
-      // Add sorting and pagination
-      if (filters?.setId) {
-        dataQuery = dataQuery.orderBy(sql`
-          CASE 
-            WHEN ${cards.cardNumber} ~ '^[0-9]+$' THEN LPAD(${cards.cardNumber}, 10, '0')
-            ELSE ${cards.cardNumber}
-          END
-        `) as any;
-      } else {
-        dataQuery = dataQuery.orderBy(cards.createdAt) as any;
-      }
-
-      const offset = (page - 1) * limit;
-      dataQuery = dataQuery.limit(limit).offset(offset) as any;
-
-      // Execute both queries
-      const [countResult, dataResults] = await Promise.all([
-        countQuery,
-        dataQuery
-      ]);
-
-      const totalCount = countResult[0]?.count || 0;
-      const cardsData = dataResults.map(row => ({
-        id: row.id,
-        setId: row.setId,
-        cardNumber: row.cardNumber,
-        name: row.name,
-        variation: row.variation,
-        isInsert: row.isInsert,
-        frontImageUrl: row.frontImageUrl,
-        backImageUrl: row.backImageUrl,
-        description: row.description,
-        rarity: row.rarity,
-        estimatedValue: row.estimatedValue,
-        createdAt: row.createdAt,
-        set: row.set
-      }));
-
-      return {
-        cards: cardsData,
-        totalCount: Number(totalCount)
-      };
-    } catch (error) {
-      console.error('Error getting paginated cards:', error);
-      return { cards: [], totalCount: 0 };
-    }
-  }
-
   async getCard(id: number): Promise<CardWithSet | undefined> {
     try {
       const result = await db
@@ -504,9 +365,7 @@ export class DatabaseStorage implements IStorage {
             name: cardSets.name,
             year: cardSets.year,
             description: cardSets.description,
-            imageUrl: cardSets.imageUrl,
             totalCards: cardSets.totalCards,
-            mainSetId: cardSets.mainSetId,
             createdAt: cardSets.createdAt,
           }
         })
@@ -1042,7 +901,6 @@ export class DatabaseStorage implements IStorage {
           setDescription: cardSets.description,
           setImageUrl: cardSets.imageUrl,
           setTotalCards: cardSets.totalCards,
-          setMainSetId: cardSets.mainSetId,
           setCreatedAt: cardSets.createdAt,
           collectionCount: count(userCollections.id).as('collection_count'),
           latestAddition: sql<Date>`MAX(${userCollections.acquiredDate})`.as('latest_addition')
@@ -1075,7 +933,6 @@ export class DatabaseStorage implements IStorage {
           cardSets.description,
           cardSets.imageUrl,
           cardSets.totalCards,
-          cardSets.mainSetId,
           cardSets.createdAt
         )
         .orderBy(
@@ -1106,7 +963,6 @@ export class DatabaseStorage implements IStorage {
           description: row.setDescription,
           imageUrl: row.setImageUrl,
           totalCards: row.setTotalCards,
-          mainSetId: row.setMainSetId,
           createdAt: row.setCreatedAt,
         }
       }));

@@ -12,13 +12,12 @@ export function SetThumbnail({ setId, setName, setImageUrl, className }: SetThum
   const [firstCardImage, setFirstCardImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // DISABLED: This was causing 40+ simultaneous API calls and extreme performance issues
-  // useEffect(() => {
-  //   if (!setImageUrl && setId) {
-  //     setLoading(true);
-  //     fetchFirstCardImage();
-  //   }
-  // }, [setId, setImageUrl]);
+  useEffect(() => {
+    if (!setImageUrl && setId) {
+      setLoading(true);
+      fetchFirstCardImage();
+    }
+  }, [setId, setImageUrl]);
 
   const fetchFirstCardImage = async () => {
     try {
