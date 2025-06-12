@@ -345,6 +345,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all main sets
+  app.get("/api/main-sets", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const mainSets = await storage.getMainSets();
+      res.json(mainSets);
+    } catch (error) {
+      console.error('Get main sets error:', error);
+      res.status(500).json({ message: "Failed to fetch main sets" });
+    }
+  });
+
   // Get all card sets with optimized counting
   app.get("/api/card-sets", async (req, res) => {
     try {
