@@ -231,8 +231,9 @@ async function attemptCOMCSearch(searchTerms: string): Promise<string | null> {
       // Generic image pattern as backup
       const genericPattern = /https:\/\/[^"'\s<>]*\.(jpg|jpeg|png)/gi;
       const genericMatches = [];
-      while ((match = genericPattern.exec(html)) !== null && genericMatches.length < 10) {
-        const imageUrl = match[0];
+      let genericMatch;
+      while ((genericMatch = genericPattern.exec(html)) !== null && genericMatches.length < 10) {
+        const imageUrl = genericMatch[0];
         if (imageUrl.includes(site.baseUrl.replace('https://', '').replace('www.', '')) &&
             !imageUrl.includes('logo') &&
             !imageUrl.includes('icon') &&
@@ -302,13 +303,106 @@ async function attemptGoogleImagesSearch(
 
 async function performEBaySearch(searchTerms: string): Promise<string | null> {
   try {
-    // Skip eBay API entirely due to App ID restriction (error 10001)
-    console.log(`⚠️ Skipping eBay API due to App ID restrictions (error 10001)`);
-    console.log(`🔄 Proceeding directly to COMC fallback for: "${searchTerms}"`);
+    // Use modern eBay Browse API with OAuth2
+    const accessToken = await getEBayAccessToken();
+    if (!accessToken) {
+      console.log('Failed to get eBay access token, skipping eBay search');
+      return null;
+    }
+
+    const browseApiUrl = 'https://api.ebay.com/buy/browse/v1/item_summary/search';
+    const params = new URLSearchParams({
+      'q': searchTerms,
+      'category_ids': '183454', // Sports Trading Cards
+      'limit': '10',
+      'fieldgroups': 'EXTENDED'
+    });
+
+    console.log(`🔍 eBay Browse API search: "${searchTerms}"`);
+    console.log(`📡 API URL: ${browseApiUrl}?${params}`);
+
+    const response = await fetch(`${browseApiUrl}?${params}`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      console.error(`eBay Browse API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('Error details:', errorText);
+      return null;
+    }
+
+    const data = await response.json();
+    console.log(`✅ eBay Browse API response received`);
+
+    if (!data.itemSummaries || data.itemSummaries.length === 0) {
+      console.log('No items found in eBay Browse API response');
+      return null;
+    }
+
+    // Find best quality image from results
+    for (const item of data.itemSummaries) {
+      if (item.image) {
+        // Prioritize by image size as ChatGPT suggested
+        if (item.image.imageUrl) {
+          console.log(`✅ Found high-quality image: ${item.image.imageUrl}`);
+          return item.image.imageUrl;
+        }
+        if (item.additionalImages && item.additionalImages.length > 0) {
+          console.log(`✅ Found additional image: ${item.additionalImages[0].imageUrl}`);
+          return item.additionalImages[0].imageUrl;
+        }
+      }
+    }
+
+    console.log('No quality images found in eBay Browse API results');
     return null;
 
   } catch (error) {
-    console.error('eBay search error:', error);
+    console.error('eBay Browse API search error:', error);
+    return null;
+  }
+}
+
+async function getEBayAccessToken(): Promise<string | null> {
+  try {
+    const clientId = process.env.EBAY_CLIENT_ID;
+    const clientSecret = process.env.EBAY_CLIENT_SECRET;
+    
+    if (!clientId || !clientSecret) {
+      console.error('eBay OAuth credentials missing');
+      return null;
+    }
+
+    const tokenUrl = 'https://api.ebay.com/identity/v1/oauth2/token';
+    const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+
+    const response = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${credentials}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json'
+      },
+      body: 'grant_type=client_credentials&scope=https://api.ebay.com/oauth/api_scope'
+    });
+
+    if (!response.ok) {
+      console.error(`eBay OAuth error: ${response.status}`);
+      return null;
+    }
+
+    const tokenData = await response.json();
+    console.log('✅ eBay OAuth token obtained successfully');
+    return tokenData.access_token;
+
+  } catch (error) {
+    console.error('eBay OAuth error:', error);
     return null;
   }
 }
