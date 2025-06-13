@@ -25,6 +25,7 @@ interface CardDetailModalProps {
   onAddToWishlist?: () => void;
   onRemoveFromCollection?: () => void;
   onRemoveFromWishlist?: () => void;
+  onCardUpdate?: (updatedCard: CardWithSet) => void;
 }
 
 export function CardDetailModal({
@@ -37,6 +38,7 @@ export function CardDetailModal({
   onAddToWishlist,
   onRemoveFromCollection,
   onRemoveFromWishlist,
+  onCardUpdate,
 }: CardDetailModalProps) {
   const [showBack, setShowBack] = useState(false);
   const [salePrice, setSalePrice] = useState("");
@@ -92,16 +94,26 @@ export function CardDetailModal({
     mutationFn: async (cardId: number) => {
       return apiRequest('POST', `/api/admin/find-card-image/${cardId}`).then(res => res.json());
     },
-    onSuccess: (data: { success: boolean; message: string }) => {
+    onSuccess: async (data: { success: boolean; message: string; result?: any }) => {
       toast({
         title: data.success ? "Image Updated" : "No Image Found",
         description: data.message,
         variant: data.success ? "default" : "destructive",
       });
-      if (data.success) {
+      if (data.success && card?.id) {
         // Refresh card data to show new image
         queryClient.invalidateQueries({ queryKey: ['/api/cards'] });
         queryClient.invalidateQueries({ queryKey: ['/api/cards/search'] });
+        
+        // Fetch the updated card data
+        try {
+          const updatedCard = await apiRequest('GET', `/api/cards/${card.id}`).then(res => res.json());
+          if (onCardUpdate) {
+            onCardUpdate(updatedCard);
+          }
+        } catch (error) {
+          console.error('Failed to fetch updated card data:', error);
+        }
       }
     },
     onError: () => {

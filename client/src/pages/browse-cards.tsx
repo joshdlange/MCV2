@@ -732,6 +732,7 @@ export default function BrowseCards() {
           onRemoveFromCollection={() => removeFromCollectionMutation.mutate(selectedCard.id)}
           onAddToWishlist={() => addToWishlistMutation.mutate(selectedCard.id)}
           onRemoveFromWishlist={() => removeFromWishlistMutation.mutate(selectedCard.id)}
+          onCardUpdate={(updatedCard) => setSelectedCard(updatedCard)}
         />
       )}
 
