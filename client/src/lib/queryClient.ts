@@ -1,5 +1,6 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { auth } from "./firebase";
+import type { Auth } from "firebase/auth";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -13,25 +14,22 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
     "Content-Type": "application/json",
   };
 
-  // Wait for auth to be ready
-  return new Promise((resolve) => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      unsubscribe();
-      if (user) {
-        user.getIdToken().then((token) => {
-          headers['Authorization'] = `Bearer ${token}`;
-          headers['x-firebase-uid'] = user.uid;
-          headers['x-user-email'] = user.email || '';
-          headers['x-display-name'] = user.displayName || '';
-          headers['x-photo-url'] = user.photoURL || '';
-          headers['x-user-name'] = user.displayName || user.email?.split('@')[0] || 'User';
-          resolve(headers);
-        });
-      } else {
-        resolve(headers);
-      }
-    });
-  });
+  try {
+    const user = (auth as any)?.currentUser;
+    if (user) {
+      const token = await user.getIdToken();
+      headers['Authorization'] = `Bearer ${token}`;
+      headers['x-firebase-uid'] = user.uid;
+      headers['x-user-email'] = user.email || '';
+      headers['x-display-name'] = user.displayName || '';
+      headers['x-photo-url'] = user.photoURL || '';
+      headers['x-user-name'] = user.displayName || user.email?.split('@')[0] || 'User';
+    }
+  } catch (error) {
+    console.error('Error getting auth headers:', error);
+  }
+
+  return headers;
 }
 
 export async function apiRequest(
