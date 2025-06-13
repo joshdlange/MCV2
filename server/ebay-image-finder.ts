@@ -92,9 +92,7 @@ interface CardImageUpdate {
 }
 
 /**
- * Search for card images using multiple sources
- * Primary: eBay with ${setName} ${cardName} ${cardNumber} comc format
- * Fallback: COMC.com direct search when eBay fails
+ * Search eBay for card images using the exact format: ${setName} ${cardName} ${cardNumber} comc
  */
 async function searchEBayForCardImage(
   setName: string,
@@ -103,203 +101,26 @@ async function searchEBayForCardImage(
   description?: string
 ): Promise<string | null> {
   try {
-    // Primary: eBay search with COMC format
+    // Use exact search format as specified
     const searchTerms = `${setName} ${cardName} ${cardNumber} comc`.replace(/\s+/g, ' ').trim();
-    console.log(`Primary search - eBay with COMC format: "${searchTerms}"`);
+    console.log(`eBay search with exact format: "${searchTerms}"`);
 
     const ebayResult = await performEBaySearch(searchTerms);
     if (ebayResult) {
-      console.log(`✅ Found image using eBay COMC format search`);
+      console.log(`✅ Found image using eBay search`);
       return ebayResult;
     }
 
-    // Fallback: Direct COMC.com search
-    console.log(`eBay failed, trying COMC.com direct search...`);
-    const comcResult = await searchCOMCForCardImage(setName, cardName, cardNumber);
-    if (comcResult) {
-      console.log(`✅ Found image using COMC.com direct search`);
-      return comcResult;
-    }
-
-    console.log(`❌ No images found from either eBay or COMC sources`);
+    console.log(`❌ No image found on eBay`);
     return null;
 
   } catch (error) {
-    console.error('Image search error:', error);
-    // For eBay API errors, try COMC fallback
-    if (error instanceof Error && error.message.startsWith('EBAY_API_ERROR:')) {
-      console.log(`eBay API error, trying COMC fallback...`);
-      try {
-        const comcResult = await searchCOMCForCardImage(setName, cardName, cardNumber);
-        if (comcResult) {
-          console.log(`✅ Fallback successful: Found image using COMC.com`);
-          return comcResult;
-        }
-      } catch (fallbackError) {
-        console.error('COMC fallback also failed:', fallbackError);
-      }
-    }
+    console.error('eBay search error:', error);
     throw error;
   }
 }
 
-/**
- * Search COMC.com for card images using exact format: ${setName} ${cardName} ${cardNumber}
- */
-async function searchCOMCForCardImage(
-  setName: string,
-  cardName: string,
-  cardNumber: string
-): Promise<string | null> {
-  try {
-    // Use EXACT format as specified: setName cardName cardNumber
-    const searchTerms = `${setName} ${cardName} ${cardNumber}`.replace(/\s+/g, ' ').trim();
-    console.log(`🔍 COMC search with exact format: "${searchTerms}"`);
-    
-    return await attemptCOMCSearch(searchTerms);
-  } catch (error) {
-    console.error('COMC search error:', error);
-    return null;
-  }
-}
-
-async function attemptCOMCSearch(searchTerms: string): Promise<string | null> {
-  // Try multiple trading card sites for image discovery
-  const sites = [
-    {
-      name: 'CardboardConnection',
-      baseUrl: 'https://www.cardboardconnection.com/',
-      searchUrl: (query: string) => `https://www.google.com/search?q=site:cardboardconnection.com+${encodeURIComponent(query)}+card+image`,
-      imagePattern: /https:\/\/[^"'\s<>]*cardboardconnection[^"'\s<>]*\.(jpg|jpeg|png)/gi
-    },
-    {
-      name: 'TradingCardDB',
-      baseUrl: 'https://www.tradingcarddb.com/',
-      searchUrl: (query: string) => `https://www.google.com/search?q=site:tradingcarddb.com+${encodeURIComponent(query)}`,
-      imagePattern: /https:\/\/[^"'\s<>]*tradingcarddb[^"'\s<>]*\.(jpg|jpeg|png)/gi
-    },
-    {
-      name: 'PSA Card Facts',
-      baseUrl: 'https://www.psacard.com/',
-      searchUrl: (query: string) => `https://www.google.com/search?q=site:psacard.com+${encodeURIComponent(query)}+card`,
-      imagePattern: /https:\/\/[^"'\s<>]*psacard[^"'\s<>]*\.(jpg|jpeg|png)/gi
-    }
-  ];
-
-  const cleanTerms = searchTerms.replace(/[^\w\s-]/g, ' ').trim();
-  
-  for (const site of sites) {
-    try {
-      console.log(`🔍 Searching ${site.name} for: ${cleanTerms}`);
-      
-      const searchUrl = site.searchUrl(cleanTerms);
-      const response = await fetch(searchUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.9',
-        }
-      });
-
-      if (!response.ok) continue;
-
-      const html = await response.text();
-      
-      // Extract image URLs using site-specific patterns AND eBay images from Google results
-      const allImagePatterns = [
-        site.imagePattern,
-        /https:\/\/i\.ebayimg\.com\/images\/[^"'\s<>]+\.(jpg|jpeg|png)/gi,
-        /https:\/\/[^"'\s<>]*ebay[^"'\s<>]*\.(jpg|jpeg|png)/gi
-      ];
-      
-      for (const pattern of allImagePatterns) {
-        let match;
-        while ((match = pattern.exec(html)) !== null) {
-          const imageUrl = match[0];
-          if (imageUrl && imageUrl.length > 30 && 
-              !imageUrl.includes('logo') && 
-              !imageUrl.includes('icon') && 
-              !imageUrl.includes('avatar') &&
-              !imageUrl.includes('thumb-950') && // Skip box images
-              (imageUrl.includes('card') || imageUrl.includes('image') || imageUrl.includes('ebayimg'))) {
-            console.log(`✅ Found image from ${site.name}: ${imageUrl}`);
-            return imageUrl;
-          }
-        }
-      }
-      
-      // Generic image pattern as backup
-      const genericPattern = /https:\/\/[^"'\s<>]*\.(jpg|jpeg|png)/gi;
-      const genericMatches = [];
-      let genericMatch;
-      while ((genericMatch = genericPattern.exec(html)) !== null && genericMatches.length < 10) {
-        const imageUrl = genericMatch[0];
-        if (imageUrl.includes(site.baseUrl.replace('https://', '').replace('www.', '')) &&
-            !imageUrl.includes('logo') &&
-            !imageUrl.includes('icon') &&
-            imageUrl.length > 40) {
-          genericMatches.push(imageUrl);
-        }
-      }
-      
-      if (genericMatches.length > 0) {
-        console.log(`✅ Found generic image from ${site.name}: ${genericMatches[0]}`);
-        return genericMatches[0];
-      }
-      
-    } catch (error) {
-      console.log(`❌ Error searching ${site.name}:`, error);
-      continue;
-    }
-  }
-
-  return null;
-}
-
-async function attemptGoogleImagesSearch(
-  setName: string,
-  cardName: string,
-  cardNumber: string
-): Promise<string | null> {
-  try {
-    // Create a focused search query for Google Images
-    const query = `"${setName}" "${cardName}" card ${cardNumber}`.replace(/\s+/g, '+');
-    const searchUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(query)}`;
-    
-    console.log(`🔍 Google Images search: ${searchUrl}`);
-    
-    const response = await fetch(searchUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-      }
-    });
-
-    if (!response.ok) return null;
-
-    const html = await response.text();
-    
-    // Extract image URLs from Google Images results
-    const imagePattern = /"ou":"([^"]+)"/g;
-    let match;
-    
-    while ((match = imagePattern.exec(html)) !== null) {
-      const imageUrl = decodeURIComponent(match[1]);
-      // Prefer eBay, COMC, or other trading card sites
-      if (imageUrl.includes('ebay.com') || imageUrl.includes('comc.com') || 
-          imageUrl.includes('cardboard') || imageUrl.includes('.jpg')) {
-        console.log(`Found Google Images result: ${imageUrl}`);
-        return imageUrl;
-      }
-    }
-
-    return null;
-  } catch (error) {
-    console.log('Google Images search failed:', error);
-    return null;
-  }
-}
+// Remove all extra search methods - only use eBay with the exact format specified
 
 async function performEBaySearch(searchTerms: string): Promise<string | null> {
   try {
@@ -319,7 +140,6 @@ async function performEBaySearch(searchTerms: string): Promise<string | null> {
     });
 
     console.log(`🔍 eBay Browse API search: "${searchTerms}"`);
-    console.log(`📡 API URL: ${browseApiUrl}?${params}`);
 
     const response = await fetch(`${browseApiUrl}?${params}`, {
       headers: {
@@ -337,7 +157,7 @@ async function performEBaySearch(searchTerms: string): Promise<string | null> {
       return null;
     }
 
-    const data = await response.json();
+    const data: any = await response.json();
     console.log(`✅ eBay Browse API response received`);
 
     if (!data.itemSummaries || data.itemSummaries.length === 0) {
@@ -345,18 +165,24 @@ async function performEBaySearch(searchTerms: string): Promise<string | null> {
       return null;
     }
 
-    // Find best quality image from results
+    // Find best quality image from results - prioritize by size
     for (const item of data.itemSummaries) {
       if (item.image) {
-        // Prioritize by image size as ChatGPT suggested
+        // Primary: main image URL
         if (item.image.imageUrl) {
-          console.log(`✅ Found high-quality image: ${item.image.imageUrl}`);
+          console.log(`✅ Found main image: ${item.image.imageUrl}`);
           return item.image.imageUrl;
         }
-        if (item.additionalImages && item.additionalImages.length > 0) {
-          console.log(`✅ Found additional image: ${item.additionalImages[0].imageUrl}`);
-          return item.additionalImages[0].imageUrl;
+        // Secondary: alternative image URL
+        if (item.image.imageAltUrl) {
+          console.log(`✅ Found alternative image: ${item.image.imageAltUrl}`);
+          return item.image.imageAltUrl;
         }
+      }
+      // Tertiary: additional images array
+      if (item.additionalImages && item.additionalImages.length > 0) {
+        console.log(`✅ Found additional image: ${item.additionalImages[0].imageUrl}`);
+        return item.additionalImages[0].imageUrl;
       }
     }
 
@@ -394,10 +220,12 @@ async function getEBayAccessToken(): Promise<string | null> {
 
     if (!response.ok) {
       console.error(`eBay OAuth error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('OAuth error details:', errorText);
       return null;
     }
 
-    const tokenData = await response.json();
+    const tokenData: any = await response.json();
     console.log('✅ eBay OAuth token obtained successfully');
     return tokenData.access_token;
 
@@ -470,8 +298,8 @@ export async function findAndUpdateCardImage(
     const ebayImageUrl = await searchEBayForCardImage(setName, cardName, cardNumber, description);
     
     if (!ebayImageUrl) {
-      console.log(`❌ Step 1 FAILED: No image found from any source`);
-      result.error = 'No image found from eBay or COMC sources';
+      console.log(`❌ Step 1 FAILED: No image found on eBay`);
+      result.error = 'No image found on eBay';
       return result;
     }
 
