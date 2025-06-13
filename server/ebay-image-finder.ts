@@ -164,41 +164,91 @@ async function searchCOMCForCardImage(
 }
 
 async function attemptCOMCSearch(searchTerms: string): Promise<string | null> {
-  const cleanSearch = searchTerms.replace(/[^\w\s-]/g, ' ').replace(/\s+/g, '+');
-  const comcUrl = `https://www.comc.com/Cards/Trading_Card_Singles,sr,i100?sq=${encodeURIComponent(cleanSearch)}`;
-  
-  const response = await fetch(comcUrl, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Cache-Control': 'no-cache',
+  // Try multiple trading card sites for image discovery
+  const sites = [
+    {
+      name: 'CardboardConnection',
+      baseUrl: 'https://www.cardboardconnection.com/',
+      searchUrl: (query: string) => `https://www.google.com/search?q=site:cardboardconnection.com+${encodeURIComponent(query)}+card+image`,
+      imagePattern: /https:\/\/[^"'\s<>]*cardboardconnection[^"'\s<>]*\.(jpg|jpeg|png)/gi
+    },
+    {
+      name: 'TradingCardDB',
+      baseUrl: 'https://www.tradingcarddb.com/',
+      searchUrl: (query: string) => `https://www.google.com/search?q=site:tradingcarddb.com+${encodeURIComponent(query)}`,
+      imagePattern: /https:\/\/[^"'\s<>]*tradingcarddb[^"'\s<>]*\.(jpg|jpeg|png)/gi
+    },
+    {
+      name: 'PSA Card Facts',
+      baseUrl: 'https://www.psacard.com/',
+      searchUrl: (query: string) => `https://www.google.com/search?q=site:psacard.com+${encodeURIComponent(query)}+card`,
+      imagePattern: /https:\/\/[^"'\s<>]*psacard[^"'\s<>]*\.(jpg|jpeg|png)/gi
     }
-  });
-
-  if (!response.ok) return null;
-
-  const html = await response.text();
-  
-  // Enhanced pattern matching for COMC images
-  const patterns = [
-    // CloudFront primary
-    /https:\/\/d2t1xqejof9utc\.cloudfront\.net\/pictures\/files\/[^"'\s<>]+\.(jpg|jpeg|png)/gi,
-    // CloudFront alternative
-    /https:\/\/[^"'\s<>]*\.cloudfront\.net\/[^"'\s<>]+\.(jpg|jpeg|png)/gi,
-    // Any COMC image URL
-    /https:\/\/[^"'\s<>]*comc[^"'\s<>]*\.(jpg|jpeg|png)/gi,
-    // Generic trading card image patterns
-    /https:\/\/[^"'\s<>]*\/card[^"'\s<>]*\.(jpg|jpeg|png)/gi
   ];
 
-  for (const pattern of patterns) {
-    let match;
-    while ((match = pattern.exec(html)) !== null) {
-      const imageUrl = match[0];
-      if (imageUrl && imageUrl.length > 20 && !imageUrl.includes('logo') && !imageUrl.includes('icon')) {
-        return imageUrl;
+  const cleanTerms = searchTerms.replace(/[^\w\s-]/g, ' ').trim();
+  
+  for (const site of sites) {
+    try {
+      console.log(`🔍 Searching ${site.name} for: ${cleanTerms}`);
+      
+      const searchUrl = site.searchUrl(cleanTerms);
+      const response = await fetch(searchUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+        }
+      });
+
+      if (!response.ok) continue;
+
+      const html = await response.text();
+      
+      // Extract image URLs using site-specific patterns AND eBay images from Google results
+      const allImagePatterns = [
+        site.imagePattern,
+        /https:\/\/i\.ebayimg\.com\/images\/[^"'\s<>]+\.(jpg|jpeg|png)/gi,
+        /https:\/\/[^"'\s<>]*ebay[^"'\s<>]*\.(jpg|jpeg|png)/gi
+      ];
+      
+      for (const pattern of allImagePatterns) {
+        let match;
+        while ((match = pattern.exec(html)) !== null) {
+          const imageUrl = match[0];
+          if (imageUrl && imageUrl.length > 30 && 
+              !imageUrl.includes('logo') && 
+              !imageUrl.includes('icon') && 
+              !imageUrl.includes('avatar') &&
+              !imageUrl.includes('thumb-950') && // Skip box images
+              (imageUrl.includes('card') || imageUrl.includes('image') || imageUrl.includes('ebayimg'))) {
+            console.log(`✅ Found image from ${site.name}: ${imageUrl}`);
+            return imageUrl;
+          }
+        }
       }
+      
+      // Generic image pattern as backup
+      const genericPattern = /https:\/\/[^"'\s<>]*\.(jpg|jpeg|png)/gi;
+      const genericMatches = [];
+      while ((match = genericPattern.exec(html)) !== null && genericMatches.length < 10) {
+        const imageUrl = match[0];
+        if (imageUrl.includes(site.baseUrl.replace('https://', '').replace('www.', '')) &&
+            !imageUrl.includes('logo') &&
+            !imageUrl.includes('icon') &&
+            imageUrl.length > 40) {
+          genericMatches.push(imageUrl);
+        }
+      }
+      
+      if (genericMatches.length > 0) {
+        console.log(`✅ Found generic image from ${site.name}: ${genericMatches[0]}`);
+        return genericMatches[0];
+      }
+      
+    } catch (error) {
+      console.log(`❌ Error searching ${site.name}:`, error);
+      continue;
     }
   }
 
@@ -252,127 +302,13 @@ async function attemptGoogleImagesSearch(
 
 async function performEBaySearch(searchTerms: string): Promise<string | null> {
   try {
-    // Increment session and daily API call counters
-    ebayCallCount++;
-    trackDailyApiCall();
-    
-    // Get the App ID being used and log it for debugging
-    const appId = process.env.EBAY_APP_ID_PROD || process.env.EBAY_APP_ID || '';
-    console.log(`🔍 eBay API call #${ebayCallCount} — keywords: "${searchTerms}"`);
-    console.log(`🔑 Using SECURITY-APPNAME: ${appId ? appId.substring(0, 20) + '...' : 'NOT SET'}`);
-    
-    const ebayApiUrl = 'https://svcs.ebay.com/services/search/FindingService/v1';
-    const params = new URLSearchParams({
-      'OPERATION-NAME': 'findItemsByKeywords',
-      'SERVICE-VERSION': '1.0.0',
-      'SECURITY-APPNAME': appId,
-      'RESPONSE-DATA-FORMAT': 'JSON',
-      'REST-PAYLOAD': '',
-      'keywords': searchTerms,
-      'categoryId': '183454', // Sports Trading Cards category
-      'sortOrder': 'BestMatch',
-      'paginationInput.entriesPerPage': '15',
-      'paginationInput.pageNumber': '1',
-      'outputSelector(0)': 'PictureURLSuperSize',
-      'outputSelector(1)': 'PictureURLLarge',
-      'outputSelector(2)': 'GalleryInfo'
-    });
-
-    console.log(`📡 Full eBay API URL: ${ebayApiUrl}?${params}`);
-    const response = await fetch(`${ebayApiUrl}?${params}`);
-    
-    let data: any;
-    try {
-      data = await response.json();
-    } catch (parseError) {
-      console.error(`❌ Failed to parse eBay API response: ${parseError}`);
-      return null;
-    }
-    
-    // Enhanced error logging for error code 10001 and others
-    const ebayError = data?.errorMessage?.[0]?.error?.[0];
-    if (ebayError) {
-      console.error('🚨 eBay API error detected:');
-      console.error('📋 Full error response:', JSON.stringify(data, null, 2));
-      console.error(`🔑 SECURITY-APPNAME used: ${appId}`);
-      console.error(`🆔 Error ID: ${ebayError.errorId?.[0]}`);
-      console.error(`📝 Error Message: ${ebayError.message?.[0]}`);
-      console.error(`🏷️ Error Domain: ${ebayError.domain?.[0]}`);
-      console.error(`⚠️ Error Severity: ${ebayError.severity?.[0]}`);
-      
-      // Special handling for error 10001 (App ID rate limit/restriction)
-      if (ebayError.errorId?.[0] === '10001') {
-        console.error('🚫 eBay App ID rate limit/restriction detected (error 10001)');
-        console.error('🔍 App ID may be restricted, expired, or using sandbox credentials');
-        console.error('💡 Suggestion: Check eBay Developer Account for App ID status');
-        // Don't throw error immediately - try alternative image sources
-        return null;
-      }
-      
-      throw new Error(`EBAY_API_ERROR: ${ebayError.errorId?.[0]} - ${ebayError.message?.[0]}`);
-    }
-    
-    if (!response.ok) {
-      console.error(`❌ eBay API HTTP error: ${response.status} ${response.statusText}`);
-      console.error('📋 Response body:', JSON.stringify(data, null, 2));
-      return null;
-    }
-    
-    console.log(`✅ eBay API successful response for "${searchTerms}"`);
-    
-    // Only log full response in debug mode to reduce noise
-    if (process.env.NODE_ENV === 'development') {
-      console.log('📋 Full eBay response:', JSON.stringify(data, null, 2));
-    }
-
-    if (!data.findItemsByKeywordsResponse?.[0]?.searchResult?.[0]?.item) {
-      console.log(`❌ No items found in eBay response for "${searchTerms}"`);
-      return null;
-    }
-
-    const items = data.findItemsByKeywordsResponse[0].searchResult[0].item;
-    console.log(`🔍 Found ${items.length} items, checking for high-quality images...`);
-    
-    // Find the first item with a high-quality image
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      console.log(`📷 Checking item ${i + 1}: "${item.title?.[0] || 'Unknown title'}"`);
-      
-      // Prefer pictureURLSuperSize
-      if (item.pictureURLSuperSize?.[0]) {
-        console.log(`✅ Found SUPER SIZE image for item ${i + 1}`);
-        console.log(`🖼️ Image URL: ${item.pictureURLSuperSize[0]}`);
-        return item.pictureURLSuperSize[0];
-      }
-      
-      // Fallback to pictureURLLarge
-      if (item.pictureURLLarge?.[0]) {
-        console.log(`✅ Found LARGE image for item ${i + 1}`);
-        console.log(`🖼️ Image URL: ${item.pictureURLLarge[0]}`);
-        return item.pictureURLLarge[0];
-      }
-      
-      // Final fallback to galleryURL
-      if (item.galleryURL?.[0]) {
-        console.log(`✅ Found GALLERY image for item ${i + 1}`);
-        console.log(`🖼️ Image URL: ${item.galleryURL[0]}`);
-        return item.galleryURL[0];
-      }
-      
-      console.log(`❌ Item ${i + 1} has no usable images`);
-    }
-
-    console.log('❌ No quality images found in any eBay results');
+    // Skip eBay API entirely due to App ID restriction (error 10001)
+    console.log(`⚠️ Skipping eBay API due to App ID restrictions (error 10001)`);
+    console.log(`🔄 Proceeding directly to COMC fallback for: "${searchTerms}"`);
     return null;
 
   } catch (error) {
-    // Enhanced error logging
-    console.error('🚨 eBay search error caught:', error);
-    
-    // Let EBAY_API_ERROR and RATE_LIMIT_EXCEEDED propagate up immediately
-    if (error instanceof Error && (error.message === 'RATE_LIMIT_EXCEEDED' || error.message.startsWith('EBAY_API_ERROR:'))) {
-      throw error;
-    }
+    console.error('eBay search error:', error);
     return null;
   }
 }

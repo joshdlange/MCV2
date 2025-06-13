@@ -1,0 +1,68 @@
+EBAY IMAGE SEARCH API - DEBUG INFORMATION
+==========================================
+
+PROBLEM: eBay API returning error 10001 "Service call has exceeded the number of times the operation is allowed to be called"
+
+CURRENT CONFIGURATION:
+- App ID: JoshLang-Beholdmy-PRD-3d24c057b-e723ca5f (Production)
+- API Endpoint: https://svcs.ebay.com/services/search/FindingService/v1
+- Operation: findItemsByKeywords
+- Service Version: 1.0.0
+
+CURRENT API CALL STRUCTURE:
+```
+const params = new URLSearchParams({
+  'OPERATION-NAME': 'findItemsByKeywords',
+  'SERVICE-VERSION': '1.0.0',
+  'SECURITY-APPNAME': appId,
+  'RESPONSE-DATA-FORMAT': 'JSON',
+  'REST-PAYLOAD': '',
+  'keywords': searchTerms,
+  'categoryId': '183454', // Sports Trading Cards category
+  'sortOrder': 'BestMatch',
+  'paginationInput.entriesPerPage': '15',
+  'paginationInput.pageNumber': '1',
+  'outputSelector(0)': 'PictureURLSuperSize',
+  'outputSelector(1)': 'PictureURLLarge',
+  'outputSelector(2)': 'GalleryInfo'
+});
+```
+
+EXAMPLE FAILING REQUEST:
+https://svcs.ebay.com/services/search/FindingService/v1?OPERATION-NAME=findItemsByKeywords&SERVICE-VERSION=1.0.0&SECURITY-APPNAME=JoshLang-Beholdmy-PRD-3d24c057b-e723ca5f&RESPONSE-DATA-FORMAT=JSON&REST-PAYLOAD=&keywords=2024+skybox+metal+universe+avengers+Gold+FX+Wasp+1+comc&categoryId=183454&sortOrder=BestMatch&paginationInput.entriesPerPage=15&paginationInput.pageNumber=1&outputSelector%280%29=PictureURLSuperSize&outputSelector%281%29=PictureURLLarge&outputSelector%282%29=GalleryInfo
+
+ERROR RESPONSE:
+{
+  "errorMessage": [
+    {
+      "error": [
+        {
+          "errorId": ["10001"],
+          "domain": ["Security"],
+          "severity": ["Error"],
+          "category": ["System"],
+          "message": ["Service call has exceeded the number of times the operation is allowed to be called"],
+          "subdomain": ["RateLimiter"],
+          "parameter": [
+            {"@name": "Param1", "__value__": "findItemsByKeywords"},
+            {"@name": "Param2", "__value__": "FindingService"}
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+NOTES:
+- User confirms API limits have NOT been reached
+- This appears to be an App ID configuration issue
+- Error 10001 suggests App ID restrictions rather than daily limits
+- Same error occurs consistently across different search terms
+- App ID appears to be production-level based on prefix
+
+QUESTIONS FOR CHATGPT:
+1. What could cause eBay error 10001 beyond daily rate limits?
+2. Is there an issue with the API call structure?
+3. Could this be an App ID permission/status issue?
+4. Are there alternative eBay API endpoints that might work?
+5. What debugging steps should be taken to resolve this?
