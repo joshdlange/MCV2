@@ -134,7 +134,6 @@ async function performEBaySearch(searchTerms: string): Promise<string | null> {
     const browseApiUrl = 'https://api.ebay.com/buy/browse/v1/item_summary/search';
     const params = new URLSearchParams({
       'q': searchTerms,
-      'category_ids': '183454', // Sports Trading Cards
       'limit': '10',
       'fieldgroups': 'EXTENDED'
     });
