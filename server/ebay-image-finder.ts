@@ -92,8 +92,9 @@ interface CardImageUpdate {
 }
 
 /**
- * Search eBay for card images using the Finding API - SIMPLIFIED VERSION
- * Uses only the specific format: ${setName} ${cardName} ${cardNumber} comc
+ * Search for card images using multiple sources
+ * Primary: eBay with ${setName} ${cardName} ${cardNumber} comc format
+ * Fallback: COMC.com direct search when eBay fails
  */
 async function searchEBayForCardImage(
   setName: string,
@@ -102,23 +103,121 @@ async function searchEBayForCardImage(
   description?: string
 ): Promise<string | null> {
   try {
-    // Use only the specific search format requested
+    // Primary: eBay search with COMC format
     const searchTerms = `${setName} ${cardName} ${cardNumber} comc`.replace(/\s+/g, ' ').trim();
-    console.log(`eBay search with specific format: "${searchTerms}"`);
+    console.log(`Primary search - eBay with COMC format: "${searchTerms}"`);
 
-    const result = await performEBaySearch(searchTerms);
-    if (result) {
-      console.log(`✅ Found image using COMC format search`);
-      return result;
+    const ebayResult = await performEBaySearch(searchTerms);
+    if (ebayResult) {
+      console.log(`✅ Found image using eBay COMC format search`);
+      return ebayResult;
     }
 
-    console.log(`❌ No eBay results found with COMC format search`);
+    // Fallback: Direct COMC.com search
+    console.log(`eBay failed, trying COMC.com direct search...`);
+    const comcResult = await searchCOMCForCardImage(setName, cardName, cardNumber);
+    if (comcResult) {
+      console.log(`✅ Found image using COMC.com direct search`);
+      return comcResult;
+    }
+
+    console.log(`❌ No images found from either eBay or COMC sources`);
     return null;
 
   } catch (error) {
-    console.error('eBay search error:', error);
-    // Re-throw all errors to maintain error handling upstream
+    console.error('Image search error:', error);
+    // For eBay API errors, try COMC fallback
+    if (error instanceof Error && error.message.startsWith('EBAY_API_ERROR:')) {
+      console.log(`eBay API error, trying COMC fallback...`);
+      try {
+        const comcResult = await searchCOMCForCardImage(setName, cardName, cardNumber);
+        if (comcResult) {
+          console.log(`✅ Fallback successful: Found image using COMC.com`);
+          return comcResult;
+        }
+      } catch (fallbackError) {
+        console.error('COMC fallback also failed:', fallbackError);
+      }
+    }
     throw error;
+  }
+}
+
+/**
+ * Search COMC.com for card images as fallback source
+ */
+async function searchCOMCForCardImage(
+  setName: string,
+  cardName: string,
+  cardNumber: string
+): Promise<string | null> {
+  try {
+    // Clean and format search terms for COMC
+    const cleanSetName = setName.replace(/[^\w\s-]/g, '').trim();
+    const cleanCardName = cardName.replace(/[^\w\s-]/g, '').trim();
+    const cleanCardNumber = cardNumber.replace(/[^\w\s-]/g, '').trim();
+    
+    const searchQuery = `${cleanSetName} ${cleanCardName} ${cleanCardNumber}`.replace(/\s+/g, '+');
+    const comcUrl = `https://www.comc.com/Cards/Trading_Card_Singles,sr,i100?sq=${encodeURIComponent(searchQuery)}`;
+    
+    console.log(`🔍 COMC search URL: ${comcUrl}`);
+    
+    const response = await fetch(comcUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+      }
+    });
+
+    if (!response.ok) {
+      console.log(`❌ COMC HTTP error: ${response.status}`);
+      return null;
+    }
+
+    const html = await response.text();
+    
+    // Extract first card image from COMC HTML
+    // Look for common COMC image patterns
+    // Extract first card image from COMC HTML with improved patterns
+    const imagePatterns = [
+      // Primary CloudFront images
+      /https:\/\/d2t1xqejof9utc\.cloudfront\.net\/pictures\/files\/[^"'\s]+\.jpg/g,
+      // Alternative COMC image patterns
+      /https:\/\/[^"'\s]*\.cloudfront\.net\/[^"'\s]+\.jpg/g,
+      // Data-src patterns
+      /data-src=["']([^"']*cloudfront[^"']*\.jpg)["']/g,
+      // Src patterns
+      /src=["']([^"']*cloudfront[^"']*\.jpg)["']/g,
+      // Direct image URLs in various formats
+      /["'](https:\/\/[^"'\s]*comc[^"'\s]*\.(jpg|jpeg|png))["']/g
+    ];
+
+    for (const pattern of imagePatterns) {
+      const matches = [...html.matchAll(pattern)];
+      for (const match of matches) {
+        let imageUrl = match[1] || match[0];
+        
+        // Clean up the URL
+        imageUrl = imageUrl.replace(/^["']|["']$/g, '');
+        imageUrl = imageUrl.replace(/data-src=|src=/g, '');
+        
+        if (imageUrl.startsWith('http') && (imageUrl.includes('.jpg') || imageUrl.includes('.jpeg') || imageUrl.includes('.png'))) {
+          console.log(`Found COMC image: ${imageUrl}`);
+          return imageUrl;
+        }
+      }
+    }
+
+    console.log(`❌ No valid images found in COMC response`);
+    return null;
+
+  } catch (error) {
+    console.error('COMC search error:', error);
+    return null;
   }
 }
 
@@ -172,10 +271,13 @@ async function performEBaySearch(searchTerms: string): Promise<string | null> {
       console.error(`🏷️ Error Domain: ${ebayError.domain?.[0]}`);
       console.error(`⚠️ Error Severity: ${ebayError.severity?.[0]}`);
       
-      // Special handling for error 10001 (rate limit)
+      // Special handling for error 10001 (App ID rate limit/restriction)
       if (ebayError.errorId?.[0] === '10001') {
-        console.error('🚫 Rate limit error detected - this is error code 10001');
-        console.error('🔍 Verify App ID is production and not sandbox/expired');
+        console.error('🚫 eBay App ID rate limit/restriction detected (error 10001)');
+        console.error('🔍 App ID may be restricted, expired, or using sandbox credentials');
+        console.error('💡 Suggestion: Check eBay Developer Account for App ID status');
+        // Don't throw error immediately - try alternative image sources
+        return null;
       }
       
       throw new Error(`EBAY_API_ERROR: ${ebayError.errorId?.[0]} - ${ebayError.message?.[0]}`);
@@ -309,8 +411,8 @@ export async function findAndUpdateCardImage(
     const ebayImageUrl = await searchEBayForCardImage(setName, cardName, cardNumber, description);
     
     if (!ebayImageUrl) {
-      console.log(`❌ Step 1 FAILED: No image found on eBay`);
-      result.error = 'No image found on eBay with COMC format search';
+      console.log(`❌ Step 1 FAILED: No image found from any source`);
+      result.error = 'No image found from eBay or COMC sources';
       return result;
     }
 
