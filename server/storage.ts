@@ -666,9 +666,11 @@ export class DatabaseStorage implements IStorage {
             set: {
               id: cardSets.id,
               name: cardSets.name,
+              slug: cardSets.slug,
               year: cardSets.year,
               description: cardSets.description,
               totalCards: cardSets.totalCards,
+              mainSetId: cardSets.mainSetId,
               createdAt: cardSets.createdAt,
               imageUrl: cardSets.imageUrl,
             }
@@ -770,9 +772,11 @@ export class DatabaseStorage implements IStorage {
           set: {
             id: cardSets.id,
             name: cardSets.name,
+            slug: cardSets.slug,
             year: cardSets.year,
             description: cardSets.description,
             totalCards: cardSets.totalCards,
+            mainSetId: cardSets.mainSetId,
             createdAt: cardSets.createdAt,
           }
         }
@@ -824,14 +828,13 @@ export class DatabaseStorage implements IStorage {
         .where(eq(userWishlists.userId, userId));
 
       return results.map(row => ({
-        id: row.id,
-        userId: row.userId,
-        cardId: row.cardId,
-        priority: row.priority,
-        maxPrice: row.maxPrice,
-        notes: row.notes,
-        createdAt: row.createdAt,
-        card: row.card
+        id: row.id as number,
+        userId: row.userId as number,
+        cardId: row.cardId as number,
+        priority: row.priority as number,
+        maxPrice: row.maxPrice as string | null,
+        addedDate: row.addedDate as Date,
+        card: row.card as any
       }));
     } catch (error) {
       console.error('Error getting user wishlist:', error);
