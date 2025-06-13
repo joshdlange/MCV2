@@ -271,14 +271,37 @@ export default function BrowseCards() {
   // Show search results when user is searching
   const shouldShowSearchResults = setSearchQuery.length >= 2 && searchResults;
 
-  // For main overview: create main set tiles with their assigned sets
+  // For main overview: create main set tiles with their assigned sets, sorted by year descending
   const mainSetTiles = useMemo(() => {
     if (!mainSets || isMainSetView) return [];
     
     return mainSets.map(mainSet => {
       const assignedSets = assignedSetsGrouped.get(mainSet.id) || [];
       return { mainSet, assignedSets };
-    }).filter(({ assignedSets }) => assignedSets.length > 0);
+    })
+    .filter(({ assignedSets }) => assignedSets.length > 0)
+    .sort((a, b) => {
+      // Extract year from main set name (e.g., "2024 Skybox..." or "Marvel 1992...")
+      const getYear = (name: string): number => {
+        const yearMatch = name.match(/\b(19|20)\d{2}\b/);
+        return yearMatch ? parseInt(yearMatch[0]) : 0;
+      };
+      
+      const yearA = getYear(a.mainSet.name);
+      const yearB = getYear(b.mainSet.name);
+      
+      // If both have years, sort by year descending
+      if (yearA && yearB) {
+        return yearB - yearA;
+      }
+      
+      // If only one has a year, prioritize the one with year
+      if (yearA && !yearB) return -1;
+      if (!yearA && yearB) return 1;
+      
+      // If neither has a year, sort alphabetically
+      return a.mainSet.name.localeCompare(b.mainSet.name);
+    });
   }, [mainSets, assignedSetsGrouped, isMainSetView]);
 
   // Show card sets grid (sort favorites by year too)
@@ -638,8 +661,8 @@ export default function BrowseCards() {
         ) : !isMainSetView ? (
           <div className="space-y-8">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Master Sets</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-6">Master Sets</h3>
+              <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 md:gap-4">
                 {mainSetTiles.map(({ mainSet, assignedSets }) => (
                   <MainSetTile
                     key={mainSet.id}

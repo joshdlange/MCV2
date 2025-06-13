@@ -45,34 +45,31 @@ export function MainSetTile({ mainSet, assignedSets }: MainSetTileProps) {
     <Link href={`/browse/${mainSet.slug}`}>
       <Card className="group cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all bg-white border border-gray-200">
         <CardContent className="p-0">
-          <div className="relative aspect-[3/4] overflow-hidden rounded-t-lg">
+          <div className="relative aspect-[2.5/3.5] overflow-hidden rounded-t-lg">
             <img
               src={thumbnailUrl}
               alt={mainSet.name}
               className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+              loading="lazy"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.src = "/images/image-coming-soon.png";
               }}
             />
-            <div className="absolute top-2 right-2">
-              <Badge variant="secondary" className="bg-black/70 text-white border-none">
-                <Layers className="w-3 h-3 mr-1" />
-                {assignedSets.length} {assignedSets.length === 1 ? "Set" : "Sets"}
+            <div className="absolute top-1.5 right-1.5">
+              <Badge variant="secondary" className="bg-black/70 text-white border-none text-xs px-1.5 py-0.5">
+                <Layers className="w-2.5 h-2.5 mr-1" />
+                {assignedSets.length}
               </Badge>
             </div>
           </div>
-          <div className="p-4">
-            <h3 className="font-semibold text-lg text-gray-900 mb-2 line-clamp-2 group-hover:text-red-600 transition-colors">
+          <div className="p-2.5">
+            <h3 className="font-medium text-xs text-gray-900 mb-1.5 line-clamp-2 leading-tight group-hover:text-red-600 transition-colors min-h-[2rem]">
               {mainSet.name}
             </h3>
-            {mainSet.notes && (
-              <p className="text-sm text-gray-600 mb-3 line-clamp-2">{mainSet.notes}</p>
-            )}
-            <div className="text-right">
-              <div className="font-medium text-gray-700">
-                {totalCards.toLocaleString()} cards
-              </div>
+            <div className="flex items-center justify-between text-xs text-gray-600">
+              <span className="truncate">{totalCards.toLocaleString()} cards</span>
+              <span className="text-gray-500 flex-shrink-0 ml-1">{assignedSets.length} sets</span>
             </div>
           </div>
         </CardContent>
