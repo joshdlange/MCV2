@@ -913,6 +913,7 @@ export default function MyCollection() {
             }
           }
         }}
+        onCardUpdate={(updatedCard) => setSelectedCard(updatedCard)}
       />
     </div>
   );

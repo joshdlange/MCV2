@@ -385,6 +385,7 @@ export default function Wishlist() {
             }
           }
         }}
+        onCardUpdate={(updatedCard) => setSelectedCard(updatedCard)}
       />
     </div>
   );
