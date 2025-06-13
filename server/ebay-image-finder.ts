@@ -144,7 +144,7 @@ async function searchEBayForCardImage(
 }
 
 /**
- * Search COMC.com for card images as fallback source
+ * Search COMC.com for card images using exact format: ${setName} ${cardName} ${cardNumber}
  */
 async function searchCOMCForCardImage(
   setName: string,
@@ -152,71 +152,100 @@ async function searchCOMCForCardImage(
   cardNumber: string
 ): Promise<string | null> {
   try {
-    // Clean and format search terms for COMC
-    const cleanSetName = setName.replace(/[^\w\s-]/g, '').trim();
-    const cleanCardName = cardName.replace(/[^\w\s-]/g, '').trim();
-    const cleanCardNumber = cardNumber.replace(/[^\w\s-]/g, '').trim();
+    // Use EXACT format as specified: setName cardName cardNumber
+    const searchTerms = `${setName} ${cardName} ${cardNumber}`.replace(/\s+/g, ' ').trim();
+    console.log(`🔍 COMC search with exact format: "${searchTerms}"`);
     
-    const searchQuery = `${cleanSetName} ${cleanCardName} ${cleanCardNumber}`.replace(/\s+/g, '+');
-    const comcUrl = `https://www.comc.com/Cards/Trading_Card_Singles,sr,i100?sq=${encodeURIComponent(searchQuery)}`;
+    return await attemptCOMCSearch(searchTerms);
+  } catch (error) {
+    console.error('COMC search error:', error);
+    return null;
+  }
+}
+
+async function attemptCOMCSearch(searchTerms: string): Promise<string | null> {
+  const cleanSearch = searchTerms.replace(/[^\w\s-]/g, ' ').replace(/\s+/g, '+');
+  const comcUrl = `https://www.comc.com/Cards/Trading_Card_Singles,sr,i100?sq=${encodeURIComponent(cleanSearch)}`;
+  
+  const response = await fetch(comcUrl, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Cache-Control': 'no-cache',
+    }
+  });
+
+  if (!response.ok) return null;
+
+  const html = await response.text();
+  
+  // Enhanced pattern matching for COMC images
+  const patterns = [
+    // CloudFront primary
+    /https:\/\/d2t1xqejof9utc\.cloudfront\.net\/pictures\/files\/[^"'\s<>]+\.(jpg|jpeg|png)/gi,
+    // CloudFront alternative
+    /https:\/\/[^"'\s<>]*\.cloudfront\.net\/[^"'\s<>]+\.(jpg|jpeg|png)/gi,
+    // Any COMC image URL
+    /https:\/\/[^"'\s<>]*comc[^"'\s<>]*\.(jpg|jpeg|png)/gi,
+    // Generic trading card image patterns
+    /https:\/\/[^"'\s<>]*\/card[^"'\s<>]*\.(jpg|jpeg|png)/gi
+  ];
+
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(html)) !== null) {
+      const imageUrl = match[0];
+      if (imageUrl && imageUrl.length > 20 && !imageUrl.includes('logo') && !imageUrl.includes('icon')) {
+        return imageUrl;
+      }
+    }
+  }
+
+  return null;
+}
+
+async function attemptGoogleImagesSearch(
+  setName: string,
+  cardName: string,
+  cardNumber: string
+): Promise<string | null> {
+  try {
+    // Create a focused search query for Google Images
+    const query = `"${setName}" "${cardName}" card ${cardNumber}`.replace(/\s+/g, '+');
+    const searchUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(query)}`;
     
-    console.log(`🔍 COMC search URL: ${comcUrl}`);
+    console.log(`🔍 Google Images search: ${searchUrl}`);
     
-    const response = await fetch(comcUrl, {
+    const response = await fetch(searchUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
       }
     });
 
-    if (!response.ok) {
-      console.log(`❌ COMC HTTP error: ${response.status}`);
-      return null;
-    }
+    if (!response.ok) return null;
 
     const html = await response.text();
     
-    // Extract first card image from COMC HTML
-    // Look for common COMC image patterns
-    // Extract first card image from COMC HTML with improved patterns
-    const imagePatterns = [
-      // Primary CloudFront images
-      /https:\/\/d2t1xqejof9utc\.cloudfront\.net\/pictures\/files\/[^"'\s]+\.jpg/g,
-      // Alternative COMC image patterns
-      /https:\/\/[^"'\s]*\.cloudfront\.net\/[^"'\s]+\.jpg/g,
-      // Data-src patterns
-      /data-src=["']([^"']*cloudfront[^"']*\.jpg)["']/g,
-      // Src patterns
-      /src=["']([^"']*cloudfront[^"']*\.jpg)["']/g,
-      // Direct image URLs in various formats
-      /["'](https:\/\/[^"'\s]*comc[^"'\s]*\.(jpg|jpeg|png))["']/g
-    ];
-
-    for (const pattern of imagePatterns) {
-      const matches = [...html.matchAll(pattern)];
-      for (const match of matches) {
-        let imageUrl = match[1] || match[0];
-        
-        // Clean up the URL
-        imageUrl = imageUrl.replace(/^["']|["']$/g, '');
-        imageUrl = imageUrl.replace(/data-src=|src=/g, '');
-        
-        if (imageUrl.startsWith('http') && (imageUrl.includes('.jpg') || imageUrl.includes('.jpeg') || imageUrl.includes('.png'))) {
-          console.log(`Found COMC image: ${imageUrl}`);
-          return imageUrl;
-        }
+    // Extract image URLs from Google Images results
+    const imagePattern = /"ou":"([^"]+)"/g;
+    let match;
+    
+    while ((match = imagePattern.exec(html)) !== null) {
+      const imageUrl = decodeURIComponent(match[1]);
+      // Prefer eBay, COMC, or other trading card sites
+      if (imageUrl.includes('ebay.com') || imageUrl.includes('comc.com') || 
+          imageUrl.includes('cardboard') || imageUrl.includes('.jpg')) {
+        console.log(`Found Google Images result: ${imageUrl}`);
+        return imageUrl;
       }
     }
 
-    console.log(`❌ No valid images found in COMC response`);
     return null;
-
   } catch (error) {
-    console.error('COMC search error:', error);
+    console.log('Google Images search failed:', error);
     return null;
   }
 }
