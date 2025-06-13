@@ -7,7 +7,7 @@ const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 export async function proxyImage(req: Request, res: Response) {
   try {
-    const imageUrl = req.query.url as string;
+    let imageUrl = req.query.url as string;
     
     if (!imageUrl) {
       return res.status(400).json({ error: 'Image URL is required' });

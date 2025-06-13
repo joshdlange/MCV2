@@ -169,6 +169,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin users endpoint - matches frontend expectation
+  app.get("/api/admin/users", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error('Get admin users error:', error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
   // Update user
   app.put("/api/users/:id", authenticateUser, async (req: any, res) => {
     try {
