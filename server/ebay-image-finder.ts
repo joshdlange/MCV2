@@ -320,13 +320,7 @@ export async function findAndUpdateCardImage(
 
     // Step 3: Update database
     console.log(`💾 Step 3: Updating database with new image URL...`);
-    await storage.updateCard(cardId, {
-      name: cardName,
-      setId: 0, // Will be ignored in update
-      cardNumber,
-      rarity: '', // Will be ignored in update
-      frontImageUrl: cloudinaryUrl
-    });
+    await storage.updateCardImage(cardId, cloudinaryUrl);
 
     console.log(`✅ Step 3 SUCCESS: Database updated`);
     result.success = true;

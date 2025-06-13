@@ -618,6 +618,20 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async updateCardImage(id: number, imageUrl: string): Promise<Card | undefined> {
+    try {
+      const [card] = await db
+        .update(cards)
+        .set({ frontImageUrl: imageUrl })
+        .where(eq(cards.id, id))
+        .returning();
+      return card || undefined;
+    } catch (error) {
+      console.error('Error updating card image:', error);
+      return undefined;
+    }
+  }
+
   async deleteCard(id: number): Promise<void> {
     try {
       // First, delete any user collection items that reference this card
