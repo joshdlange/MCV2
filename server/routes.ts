@@ -1173,6 +1173,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Background image processing endpoints
+  app.post("/api/admin/background-images/start", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { batchUpdateCardImages } = await import('./ebay-image-finder');
+      
+      // Start background processing with limit of 2000 cards
+      console.log('Starting background image processing for up to 2000 cards...');
+      
+      // Run asynchronously
+      batchUpdateCardImages(2000).then((results) => {
+        console.log(`Background processing complete: ${results.length} cards processed`);
+        console.log(`Successful: ${results.filter(r => r.success).length}`);
+        console.log(`Failed: ${results.filter(r => !r.success).length}`);
+      }).catch((error) => {
+        console.error('Background processing error:', error);
+      });
+      
+      res.json({ 
+        message: "Background image processing started", 
+        maxCards: 2000,
+        status: "running" 
+      });
+    } catch (error) {
+      console.error('Start background processing error:', error);
+      res.status(500).json({ message: "Failed to start background processing" });
+    }
+  });
+
+  app.get("/api/admin/background-images/status", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      // Check current status by querying missing images
+      const missingImagesResult = await db.execute(sql`
+        SELECT COUNT(*) as count 
+        FROM cards 
+        WHERE front_image_url IS NULL OR front_image_url = ''
+      `);
+      
+      const missingCount = missingImagesResult.rows[0]?.count || 0;
+      
+      res.json({
+        missingImages: missingCount,
+        totalCards: await db.execute(sql`SELECT COUNT(*) as count FROM cards`).then(r => r.rows[0]?.count || 0),
+        status: "Available for processing"
+      });
+    } catch (error) {
+      console.error('Background status error:', error);
+      res.status(500).json({ message: "Failed to get processing status" });
+    }
+  });
+
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);
 
