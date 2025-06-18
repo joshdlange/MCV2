@@ -535,7 +535,7 @@ export default function BrowseCards() {
                     </Button>
                   </Link>
                   <div>
-                    <h2 className="text-xl md:text-2xl font-bebas text-gray-900 tracking-wide truncate">{currentMainSet.name}</h2>
+                    <h2 className="text-lg sm:text-xl md:text-2xl font-bebas text-gray-900 tracking-wide truncate">{currentMainSet.name}</h2>
                     <p className="text-sm text-gray-600 font-roboto">
                       {currentViewSets.length} set{currentViewSets.length !== 1 ? 's' : ''} in this collection
                     </p>
@@ -543,7 +543,7 @@ export default function BrowseCards() {
                 </div>
               ) : (
                 <div>
-                  <h2 className="text-xl md:text-2xl font-bebas text-gray-900 tracking-wide">BROWSE CARD SETS</h2>
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-bebas text-gray-900 tracking-wide">BROWSE CARD SETS</h2>
                   <p className="text-sm text-gray-600 font-roboto">
                     Choose a collection or set to explore individual cards
                   </p>

@@ -74,7 +74,10 @@ export default function MyCollection() {
 
   // Get filtered cards based on view mode (owned vs missing)
   const filteredCards = (() => {
-    if (cardsViewMode === "missing" && missingCards) {
+    if (cardsViewMode === "missing") {
+      if (missingCardsLoading) return [];
+      if (!missingCards) return [];
+      
       let filtered = missingCards;
       
       if (searchQuery.trim()) {
@@ -338,7 +341,7 @@ export default function MyCollection() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">MY COLLECTION</h2>
+          <h2 className="text-lg sm:text-xl md:text-2xl font-bebas text-gray-900 tracking-wide">MY COLLECTION</h2>
           
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
@@ -449,7 +452,25 @@ export default function MyCollection() {
 
       <div className="p-6">
         {collectionView === "cards" ? (
-          viewMode === "grid" ? (
+          cardsViewMode === "missing" && missingCardsLoading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              {[...Array(8)].map((_, i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardContent className="p-0">
+                    <div className="w-full h-64 bg-gray-200 rounded-t-lg"></div>
+                    <div className="p-4 space-y-2">
+                      <div className="h-4 bg-gray-200 rounded"></div>
+                      <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : cardsViewMode === "missing" && (!missingCards || missingCards.length === 0) ? (
+            <div className="text-center py-12">
+              <p className="text-gray-600">No missing cards found for this set.</p>
+            </div>
+          ) : viewMode === "grid" ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {filteredCards.map((item) => (
             <Card 
