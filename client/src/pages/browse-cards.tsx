@@ -285,7 +285,22 @@ export default function BrowseCards() {
       const assignedSets = assignedSetsGrouped.get(mainSet.id) || [];
       return { mainSet, assignedSets };
     })
-    .filter(({ assignedSets }) => assignedSets.length > 0)
+    .filter(({ assignedSets, mainSet }) => {
+      if (assignedSets.length === 0) return false;
+      
+      // Apply year filter to main sets
+      if (filters.year) {
+        const getYear = (name: string): number => {
+          const yearMatch = name.match(/\b(19|20)\d{2}\b/);
+          return yearMatch ? parseInt(yearMatch[0]) : 0;
+        };
+        
+        const mainSetYear = getYear(mainSet.name);
+        if (mainSetYear !== filters.year) return false;
+      }
+      
+      return true;
+    })
     .sort((a, b) => {
       // Extract year from main set name (e.g., "2024 Skybox..." or "Marvel 1992...")
       const getYear = (name: string): number => {
@@ -308,7 +323,7 @@ export default function BrowseCards() {
       // If neither has a year, sort alphabetically
       return a.mainSet.name.localeCompare(b.mainSet.name);
     });
-  }, [mainSets, assignedSetsGrouped, isMainSetView]);
+  }, [mainSets, assignedSetsGrouped, isMainSetView, filters.year]);
 
   // Show card sets grid (sort favorites by year too)
   const favoritesets = filteredDisplaySets.filter(set => favoriteSetIds.includes(set.id));
@@ -668,7 +683,7 @@ export default function BrowseCards() {
           <div className="space-y-8">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-6">Master Sets</h3>
-              <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 md:gap-4">
+              <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-2 md:gap-3">
                 {mainSetTiles.map(({ mainSet, assignedSets }) => (
                   <MainSetTile
                     key={mainSet.id}

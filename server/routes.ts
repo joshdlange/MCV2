@@ -819,7 +819,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         AND cards.id NOT IN (
           SELECT card_id FROM user_collections WHERE user_id = ${userId}
         )
-        ORDER BY cards.card_number::integer ASC
+        ORDER BY 
+          CASE 
+            WHEN cards.card_number ~ '^[0-9]+$' THEN cards.card_number::integer
+            ELSE 999999
+          END ASC,
+          cards.card_number ASC
       `);
       
       const missingCards = result.rows.map((row: any) => ({
