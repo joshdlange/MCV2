@@ -58,10 +58,11 @@ export default function BrowseCards() {
   // Reset state when route changes to prevent crashes
   useEffect(() => {
     setSelectedSet(null);
-    setFilters({});
     setSelectedCard(null);
     setEditingSet(null);
     setSetSearchQuery("");
+    // Don't reset filters.year to preserve the year filter selection
+    setFilters(prev => ({ year: prev.year }));
   }, [location]);
 
   // All queries

@@ -45,7 +45,7 @@ export function MainSetTile({ mainSet, assignedSets }: MainSetTileProps) {
     <Link href={`/browse/${mainSet.slug}`}>
       <Card className="group cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all bg-white border border-gray-200">
         <CardContent className="p-0">
-          <div className="relative aspect-[2.5/3.5] overflow-hidden rounded-t-lg">
+          <div className="relative aspect-[3/4] sm:aspect-[2.5/3.5] overflow-hidden rounded-t-lg">
             <img
               src={thumbnailUrl}
               alt={mainSet.name}

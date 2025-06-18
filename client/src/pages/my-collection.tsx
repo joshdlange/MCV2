@@ -55,12 +55,16 @@ export default function MyCollection() {
       const totalCards = cardSets?.find(s => s.id === setId)?.totalCards || 0;
       const completionPercentage = totalCards > 0 ? Math.round((ownedCards / totalCards) * 100) : 0;
       
+      // Try to find a card image from collection, then fallback to any card from the set
+      const collectionCard = collection?.find(item => item.card.set.id === setId && item.card.frontImageUrl);
+      const setFromCardSets = cardSets?.find(s => s.id === setId);
+      
       return {
         ...set,
         ownedCards,
         totalCards,
         completionPercentage,
-        firstCardImage: collection?.find(item => item.card.set.id === setId)?.card.frontImageUrl
+        firstCardImage: collectionCard?.card.frontImageUrl || setFromCardSets?.imageUrl
       };
     })
     .filter((set): set is NonNullable<typeof set> => set !== null)
