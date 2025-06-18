@@ -257,15 +257,20 @@ export default function BrowseCards() {
   const filteredDisplaySets = useMemo(() => {
     if (!currentViewSets) return [];
     
-    return currentViewSets.filter(set => {
+    let filtered = currentViewSets.filter(set => {
+      // Apply year filter
       if (filters.year && set.year !== filters.year) return false;
       
+      // Apply search filter
       if (!setSearchQuery) return true;
       const query = setSearchQuery.toLowerCase();
       return set.name.toLowerCase().includes(query) || 
              set.year?.toString().includes(query) ||
              set.description?.toLowerCase().includes(query);
-    }).sort((a, b) => (b.year || 0) - (a.year || 0));
+    });
+    
+    // Sort by year descending
+    return filtered.sort((a, b) => (b.year || 0) - (a.year || 0));
   }, [currentViewSets, filters.year, setSearchQuery]);
 
   // Show search results when user is searching
@@ -530,7 +535,7 @@ export default function BrowseCards() {
                     </Button>
                   </Link>
                   <div>
-                    <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">{currentMainSet.name}</h2>
+                    <h2 className="text-xl md:text-2xl font-bebas text-gray-900 tracking-wide truncate">{currentMainSet.name}</h2>
                     <p className="text-sm text-gray-600 font-roboto">
                       {currentViewSets.length} set{currentViewSets.length !== 1 ? 's' : ''} in this collection
                     </p>
@@ -538,7 +543,7 @@ export default function BrowseCards() {
                 </div>
               ) : (
                 <div>
-                  <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">BROWSE CARD SETS</h2>
+                  <h2 className="text-xl md:text-2xl font-bebas text-gray-900 tracking-wide">BROWSE CARD SETS</h2>
                   <p className="text-sm text-gray-600 font-roboto">
                     Choose a collection or set to explore individual cards
                   </p>

@@ -170,18 +170,31 @@ export default function MyCollection() {
   };
 
   const handleCardClick = (item: CardWithSet | CollectionItem) => {
-    // Convert CollectionItem to CardWithSet format for the modal
-    const cardData: CardWithSet = 'card' in item ? item : {
-      id: item.id,
-      name: item.name,
-      cardNumber: item.cardNumber,
-      frontImageUrl: item.frontImageUrl,
-      estimatedValue: item.estimatedValue,
-      isInsert: item.isInsert,
-      rarity: item.rarity,
-      description: item.description || '',
-      set: item.set
-    };
+    // Handle both CardWithSet (missing cards) and CollectionItem (owned cards)
+    let cardData: CardWithSet;
+    
+    if ('card' in item) {
+      // This is a CollectionItem
+      cardData = {
+        id: item.card.id,
+        name: item.card.name,
+        cardNumber: item.card.cardNumber,
+        frontImageUrl: item.card.frontImageUrl,
+        estimatedValue: item.card.estimatedValue,
+        isInsert: item.card.isInsert,
+        rarity: item.card.rarity,
+        description: '',
+        createdAt: new Date(),
+        setId: item.card.set.id,
+        variation: null,
+        backImageUrl: null,
+        set: item.card.set
+      };
+    } else {
+      // This is already a CardWithSet (missing cards)
+      cardData = item;
+    }
+    
     setSelectedCard(cardData);
     setIsModalOpen(true);
   };
