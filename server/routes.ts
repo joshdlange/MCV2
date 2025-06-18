@@ -794,6 +794,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get missing cards for a specific set
+  app.get("/api/missing-cards/:setId", authenticateUser, async (req: any, res) => {
+    try {
+      const setId = parseInt(req.params.setId);
+      const userId = req.user.id;
+      
+      const result = await db.execute(sql`
+        SELECT 
+          cards.id,
+          cards.name,
+          cards.card_number,
+          cards.front_image_url,
+          cards.estimated_value,
+          cards.is_insert,
+          cards.rarity,
+          cards.description,
+          card_sets.name as set_name,
+          card_sets.year,
+          card_sets.id as set_id
+        FROM cards
+        JOIN card_sets ON cards.set_id = card_sets.id
+        WHERE cards.set_id = ${setId}
+        AND cards.id NOT IN (
+          SELECT card_id FROM collection WHERE user_id = ${userId}
+        )
+        ORDER BY cards.card_number::integer ASC
+      `);
+      
+      const missingCards = result.rows.map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        cardNumber: row.card_number,
+        frontImageUrl: row.front_image_url,
+        estimatedValue: row.estimated_value,
+        isInsert: row.is_insert,
+        rarity: row.rarity,
+        description: row.description,
+        set: {
+          id: row.set_id,
+          name: row.set_name,
+          year: row.year
+        }
+      }));
+      
+      res.json(missingCards);
+    } catch (error) {
+      console.error('Missing cards fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch missing cards" });
+    }
+  });
+
   // User wishlist routes
   app.get("/api/wishlist", authenticateUser, async (req: any, res) => {
     try {

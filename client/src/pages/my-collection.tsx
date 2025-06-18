@@ -40,7 +40,7 @@ export default function MyCollection() {
   });
 
   // Query for missing cards when in missing view mode
-  const { data: missingCards } = useQuery<CardWithSet[]>({
+  const { data: missingCards, isLoading: missingCardsLoading } = useQuery<CardWithSet[]>({
     queryKey: [`/api/missing-cards/${selectedSet}`],
     enabled: collectionView === "cards" && cardsViewMode === "missing" && selectedSet !== "all",
   });
@@ -171,7 +171,17 @@ export default function MyCollection() {
 
   const handleCardClick = (item: CardWithSet | CollectionItem) => {
     // Convert CollectionItem to CardWithSet format for the modal
-    const cardData: CardWithSet = 'card' in item ? item.card : item;
+    const cardData: CardWithSet = 'card' in item ? item : {
+      id: item.id,
+      name: item.name,
+      cardNumber: item.cardNumber,
+      frontImageUrl: item.frontImageUrl,
+      estimatedValue: item.estimatedValue,
+      isInsert: item.isInsert,
+      rarity: item.rarity,
+      description: item.description || '',
+      set: item.set
+    };
     setSelectedCard(cardData);
     setIsModalOpen(true);
   };
