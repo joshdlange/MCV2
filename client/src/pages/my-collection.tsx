@@ -443,7 +443,7 @@ export default function MyCollection() {
             </>
           )}
           <span>•</span>
-          <span>{collection?.filter(item => item.isForSale).length || 0} listed for sale</span>
+          <span>{collection?.filter(item => 'isForSale' in item ? item.isForSale : false).length || 0} listed for sale</span>
         </div>
       </div>
 
@@ -453,7 +453,7 @@ export default function MyCollection() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {filteredCards.map((item) => (
             <Card 
-              key={item.id || item.card?.id} 
+              key={getCardId(item)} 
               className="group hover:shadow-lg transition-all duration-200 cursor-pointer relative"
               onClick={() => handleCardClick(item)}
             >
@@ -502,7 +502,7 @@ export default function MyCollection() {
                 <div className="relative aspect-[2.5/3.5] bg-gray-100 rounded-t-lg overflow-hidden">
                   {getImageUrl(item) ? (
                     <img
-                      src={getImageUrl(item)}
+                      src={getImageUrl(item) ?? ''}
                       alt={getCardName(item)}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                     />
@@ -606,7 +606,7 @@ export default function MyCollection() {
                       <div className="w-14 h-20 bg-gray-100 rounded overflow-hidden flex-shrink-0">
                         {('card' in item ? item.card.frontImageUrl : item.frontImageUrl) ? (
                           <img
-                            src={'card' in item ? item.card.frontImageUrl : item.frontImageUrl}
+                            src={('card' in item ? item.card.frontImageUrl : item.frontImageUrl) ?? ''}
                             alt={'card' in item ? item.card.name : item.name}
                             className="w-full h-full object-cover"
                           />
@@ -648,13 +648,14 @@ export default function MyCollection() {
 
                           {/* Card Value and Status */}
                           <div className="flex flex-col items-end gap-1">
-                            <CardValue 
-                              cardId={'card' in item ? item.card.id : item.id} 
-                              estimatedValue={getEstimatedValue(item)}
-                              currentPrice={getCurrentPrice(item)}
-                              showRefresh={false}
-                              className="text-sm font-medium"
-                            />
+                            <div className="text-sm font-medium">
+                              <CardValue 
+                                cardId={'card' in item ? item.card.id : item.id} 
+                                estimatedValue={getEstimatedValue(item)}
+                                currentPrice={getCurrentPrice(item)}
+                                showRefresh={false}
+                              />
+                            </div>
                             
                             <div className="flex items-center gap-2">
                               {'card' in item ? (
