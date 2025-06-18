@@ -817,7 +817,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         JOIN card_sets ON cards.set_id = card_sets.id
         WHERE cards.set_id = ${setId}
         AND cards.id NOT IN (
-          SELECT card_id FROM user_collection WHERE user_id = ${userId}
+          SELECT card_id FROM user_collections WHERE user_id = ${userId}
         )
         ORDER BY cards.card_number::integer ASC
       `);
