@@ -360,7 +360,7 @@ export function CardDetailModal({
               <>
                 <div>
                   <h3 className="text-lg font-semibold text-card-foreground">{card.name}</h3>
-                  <p className="text-muted-foreground">{card.set.name}</p>
+                  <p className="text-muted-foreground">{card.set?.name || card.setName || 'Unknown Set'}</p>
                   <div className="flex items-center gap-4 mt-2">
                     <Badge variant="outline">#{card.cardNumber}</Badge>
                     {card.variation && <Badge variant="outline">{card.variation}</Badge>}

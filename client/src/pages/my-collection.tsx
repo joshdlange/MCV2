@@ -46,17 +46,17 @@ export default function MyCollection() {
   });
 
   // Get unique sets from collection with completion data
-  const collectionSets = Array.from(new Set(collection?.map(item => item.card.set.id) || []))
+  const collectionSets = Array.from(new Set(collection?.map(item => item.card?.set?.id || item.setId) || []))
     .map(setId => {
-      const set = collection?.find(item => item.card.set.id === setId)?.card.set;
+      const set = collection?.find(item => (item.card?.set?.id || item.setId) === setId)?.card?.set;
       if (!set) return null;
       
-      const ownedCards = collection?.filter(item => item.card.set.id === setId).length || 0;
+      const ownedCards = collection?.filter(item => (item.card?.set?.id || item.setId) === setId).length || 0;
       const totalCards = cardSets?.find(s => s.id === setId)?.totalCards || 0;
       const completionPercentage = totalCards > 0 ? Math.round((ownedCards / totalCards) * 100) : 0;
       
       // Try to find a card image from collection, then fallback to any card from the set
-      const collectionCard = collection?.find(item => item.card.set.id === setId && item.card.frontImageUrl);
+      const collectionCard = collection?.find(item => (item.card?.set?.id || item.setId) === setId && (item.card?.frontImageUrl || item.frontImageUrl));
       const setFromCardSets = cardSets?.find(s => s.id === setId);
       
       return {
@@ -64,7 +64,7 @@ export default function MyCollection() {
         ownedCards,
         totalCards,
         completionPercentage,
-        firstCardImage: collectionCard?.card.frontImageUrl || setFromCardSets?.imageUrl
+        firstCardImage: collectionCard?.card?.frontImageUrl || collectionCard?.frontImageUrl || setFromCardSets?.imageUrl
       };
     })
     .filter((set): set is NonNullable<typeof set> => set !== null)
