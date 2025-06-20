@@ -384,28 +384,13 @@ export class OptimizedStorage {
   }
 
   /**
-   * Get trending cards with enhanced algorithm: median pricing, quality images, insert preference, master set variety
+   * Get trending cards with caching optimization and pricing data
    */
   async getTrendingCardsOptimized(limit: number = 10) {
     const startTime = Date.now();
     
     try {
-      // First, get price statistics to determine median range
-      const priceStats = await db
-        .select({
-          percentile25: sql<number>`PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY ${cardPriceCache.avgPrice})`,
-          percentile75: sql<number>`PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY ${cardPriceCache.avgPrice})`,
-          median: sql<number>`PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ${cardPriceCache.avgPrice})`
-        })
-        .from(cardPriceCache)
-        .where(sql`${cardPriceCache.avgPrice} > 0`);
-
-      const { percentile25, percentile75, median } = priceStats[0] || { percentile25: 1, percentile75: 10, median: 3 };
-
-      // Time-based seed for rotation (changes every 6 hours)
-      const rotationSeed = Math.floor(Date.now() / (6 * 60 * 60 * 1000));
-
-      // Get qualified trending cards with enhanced scoring
+      // Get cards with recent activity or high collection counts, including pricing data
       const results = await db
         .select({
           id: cards.id,
@@ -416,63 +401,23 @@ export class OptimizedStorage {
           setYear: cardSets.year,
           isInsert: cards.isInsert,
           rarity: cards.rarity,
+          collectionCount: sql<number>`COUNT(${userCollections.id})`,
           avgPrice: cardPriceCache.avgPrice,
-          priceDate: cardPriceCache.createdAt,
-          mainSetId: cardSets.mainSetId,
-          // Enhanced scoring algorithm
-          trendingScore: sql<number>`
-            (
-              -- Base collection popularity score
-              COALESCE(COUNT(${userCollections.id}), 0) * 1.0 +
-              
-              -- Insert card bonus (2x multiplier)
-              CASE WHEN ${cards.isInsert} = true THEN 10.0 ELSE 0.0 END +
-              
-              -- Price quality score (median range preferred)
-              CASE 
-                WHEN ${cardPriceCache.avgPrice} BETWEEN ${percentile25} AND ${percentile75} THEN 8.0
-                WHEN ${cardPriceCache.avgPrice} IS NOT NULL THEN 4.0
-                ELSE 0.0
-              END +
-              
-              -- Image quality bonus
-              CASE WHEN ${cards.frontImageUrl} IS NOT NULL THEN 5.0 ELSE 0.0 END +
-              
-              -- Rotation factor for variety (time-based pseudo-random)
-              (CAST(${cards.id} AS FLOAT) * 0.1 * ${rotationSeed}) % 10.0
-            )
-          `
+          priceDate: cardPriceCache.createdAt
         })
         .from(cards)
         .innerJoin(cardSets, eq(cards.setId, cardSets.id))
         .leftJoin(userCollections, eq(cards.id, userCollections.cardId))
         .leftJoin(cardPriceCache, eq(cards.id, cardPriceCache.cardId))
-        .where(
-          and(
-            isNotNull(cards.frontImageUrl), // Must have image
-            or(
-              isNotNull(cardPriceCache.avgPrice), // Has pricing data
-              eq(cards.isInsert, true) // Or is an insert
-            )
-          )
-        )
-        .groupBy(
-          cards.id, cardSets.id, cardSets.name, cardSets.year, cards.name, 
-          cards.cardNumber, cards.frontImageUrl, cards.isInsert, cards.rarity, 
-          cardPriceCache.avgPrice, cardPriceCache.createdAt, cardSets.mainSetId
-        )
-        .orderBy(sql`trendingScore DESC`)
-        .limit(Math.min(limit * 3, 50)); // Get more candidates for diversity filtering
-
-      // Ensure master set variety - select diverse cards from different master sets
-      const diverseResults = this.ensureMasterSetDiversity(results, limit);
+        .groupBy(cards.id, cardSets.id, cardSets.name, cardSets.year, cards.name, cards.cardNumber, cards.frontImageUrl, cards.isInsert, cards.rarity, cardPriceCache.avgPrice, cardPriceCache.createdAt)
+        .orderBy(sql`COUNT(${userCollections.id}) DESC`)
+        .limit(Math.min(limit, 20));
 
       performanceTracker.logQuery(`getTrendingCardsOptimized(${limit})`, startTime);
-      return diverseResults;
+      return results;
     } catch (error) {
       console.error('Error in getTrendingCardsOptimized:', error);
-      // Fallback to simple query if enhanced algorithm fails
-      return this.getTrendingCardsFallback(limit);
+      return [];
     }
   }
 
@@ -540,7 +485,7 @@ export class OptimizedStorage {
         .innerJoin(cardSets, eq(cards.setId, cardSets.id))
         .leftJoin(userCollections, eq(cards.id, userCollections.cardId))
         .leftJoin(cardPriceCache, eq(cards.id, cardPriceCache.cardId))
-        .where(isNotNull(cards.frontImageUrl))
+        .where(sql`${cards.frontImageUrl} IS NOT NULL`)
         .groupBy(cards.id, cardSets.id, cardSets.name, cardSets.year, cards.name, cards.cardNumber, cards.frontImageUrl, cards.isInsert, cards.rarity, cardPriceCache.avgPrice, cardPriceCache.createdAt)
         .orderBy(sql`COUNT(${userCollections.id}) DESC`)
         .limit(Math.min(limit, 20));
