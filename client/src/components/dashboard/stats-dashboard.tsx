@@ -28,13 +28,17 @@ export function StatsDashboard() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[...Array(4)].map((_, i) => (
-          <Card key={i} className="animate-pulse stat-card-hover">
-            <CardContent className="p-6">
-              <div className="h-20 bg-gray-200 rounded"></div>
-            </CardContent>
-          </Card>
+          <div key={i} className="bg-gradient-to-br from-[#1f2022] to-[#2a2d32] rounded-2xl p-6 border border-gray-800/50 animate-pulse">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-10 h-10 bg-gray-600 rounded-xl"></div>
+              <div className="w-4 h-4 bg-gray-600 rounded-full"></div>
+            </div>
+            <div className="h-4 bg-gray-600 rounded w-20 mb-2"></div>
+            <div className="h-8 bg-gray-600 rounded w-16 mb-3"></div>
+            <div className="h-5 bg-gray-600 rounded w-12"></div>
+          </div>
         ))}
       </div>
     );
@@ -105,51 +109,62 @@ export function StatsDashboard() {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
       {statCards.map((stat, index) => (
-        <Card 
+        <div
           key={index}
-          className="comic-border cursor-pointer hover:shadow-lg transition-shadow duration-200"
+          className="group relative bg-gradient-to-br from-[#1f2022] to-[#2a2d32] rounded-2xl p-6 cursor-pointer transition-all duration-300 hover:shadow-2xl hover:shadow-black/20 hover:scale-[1.02] border border-gray-800/50"
           onClick={stat.onClick}
         >
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                  {stat.tooltip && (
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <button 
-                          className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Info className="w-3 h-3 text-gray-500" />
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent className="max-w-xs p-3 bg-slate-800 text-white border-slate-700">
-                        <p className="text-sm">{stat.tooltip}</p>
-                      </PopoverContent>
-                    </Popover>
-                  )}
-                </div>
-                <p className="text-3xl font-bebas text-card-foreground mt-1">{stat.value}</p>
-                <div className="flex items-center mt-2">
-                  <span className={`text-xs font-medium flex items-center gap-1 ${
-                    String(stat.change || '0').startsWith('+') ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {getTrendIcon(stat.change)}
-                    {stat.change || '0'}
-                  </span>
-                  <span className="text-xs text-muted-foreground ml-1">from last month</span>
-                </div>
-              </div>
-              <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center`}>
+          {/* Gradient overlay for depth */}
+          <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/10 rounded-2xl"></div>
+          
+          {/* Content */}
+          <div className="relative z-10">
+            {/* Icon and Info */}
+            <div className="flex items-center justify-between mb-4">
+              <div className={`w-10 h-10 ${stat.color} rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow`}>
                 {getIcon(stat.icon)}
               </div>
+              {stat.tooltip && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button 
+                      className="p-1.5 hover:bg-white/10 rounded-full transition-colors opacity-60 hover:opacity-100"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Info className="w-3.5 h-3.5 text-gray-300" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="max-w-xs p-3 bg-slate-900 text-white border-slate-700/80 rounded-xl shadow-2xl">
+                    <p className="text-sm leading-relaxed">{stat.tooltip}</p>
+                  </PopoverContent>
+                </Popover>
+              )}
             </div>
-          </CardContent>
-        </Card>
+
+            {/* Title */}
+            <p className="text-sm font-medium text-gray-300 mb-2">{stat.label}</p>
+            
+            {/* Main Value */}
+            <p className="text-2xl lg:text-3xl font-bold text-white mb-3 tracking-tight">{stat.value}</p>
+            
+            {/* Growth Indicator */}
+            <div className="flex items-center">
+              <span className={`text-xs font-medium flex items-center gap-1 px-2 py-1 rounded-full ${
+                String(stat.change || '0').startsWith('+') 
+                  ? 'text-emerald-400 bg-emerald-400/10' 
+                  : 'text-red-400 bg-red-400/10'
+              }`}>
+                {getTrendIcon(stat.change)}
+                {stat.change || '0'}
+              </span>
+            </div>
+          </div>
+
+          {/* Subtle shine effect on hover */}
+          <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
+        </div>
       ))}
     </div>
   );
