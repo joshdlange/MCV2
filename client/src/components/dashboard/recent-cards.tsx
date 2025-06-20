@@ -6,13 +6,25 @@ import { Check, Heart, Star } from "lucide-react";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { convertGoogleDriveUrl } from "@/lib/utils";
 import type { CollectionItem } from "@shared/schema";
+
+interface RecentCardItem {
+  id: number;
+  cardId: number;
+  cardName: string;
+  cardNumber: string;
+  frontImageUrl: string | null;
+  setName: string;
+  isInsert?: boolean;
+  acquiredDate: string;
+  condition: string;
+}
 import { useLocation } from "wouter";
 
 export function RecentCards() {
   const [selectedCard, setSelectedCard] = useState<CollectionItem | null>(null);
   const [, setLocation] = useLocation();
   
-  const { data: recentCards, isLoading } = useQuery<CollectionItem[]>({
+  const { data: recentCards, isLoading } = useQuery<RecentCardItem[]>({
     queryKey: ["/api/recent-cards"],
   });
 
@@ -97,18 +109,18 @@ export function RecentCards() {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-12 gap-2">
-          {recentCards.filter(item => item.card && item.card.name).map((item) => (
+          {recentCards.filter(item => item.cardName).map((item) => (
             <div 
               key={item.id} 
               className="bg-card rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow cursor-pointer border relative"
-              onClick={() => setSelectedCard(item)}
+              onClick={() => setSelectedCard(item as any)}
             >
               {/* Trading card with proper 2.5:3.5 aspect ratio */}
               <div className="aspect-[2.5/3.5] relative">
-                {item.card.frontImageUrl ? (
+                {item.frontImageUrl ? (
                   <img 
-                    src={convertGoogleDriveUrl(item.card.frontImageUrl)} 
-                    alt={item.card.name}
+                    src={convertGoogleDriveUrl(item.frontImageUrl)} 
+                    alt={item.cardName}
                     className="w-full h-full object-contain"
                     onError={(e) => {
                       e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzlkYTNhZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIEVycm9yPC90ZXh0Pjwvc3ZnPg==';
@@ -125,7 +137,7 @@ export function RecentCards() {
                   <div className="bg-green-500 text-white rounded-full p-1 shadow-lg">
                     <Check className="w-3 h-3" />
                   </div>
-                  {item.card.isInsert && (
+                  {item.isInsert && (
                     <div className="bg-purple-600 text-white rounded-full w-5 h-5 flex items-center justify-center shadow-lg">
                       <span className="text-xs">💎</span>
                     </div>
@@ -136,10 +148,10 @@ export function RecentCards() {
               {/* Card info below image */}
               <div className="p-1">
                 <p className="font-medium text-card-foreground text-xs truncate">
-                  {item.card.name}
+                  {item.cardName}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {item.card.set.name}
+                  {item.setName}
                 </p>
               </div>
             </div>
