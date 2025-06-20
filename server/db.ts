@@ -11,11 +11,10 @@ if (!process.env.DATABASE_URL) {
 // Create optimized PostgreSQL connection pool for Replit
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  max: 5,
-  idleTimeoutMillis: 10000,
-  connectionTimeoutMillis: 3000,
-  query_timeout: 5000,
-  statement_timeout: 5000,
+  max: 3,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 export const db = drizzle(pool, { schema });
