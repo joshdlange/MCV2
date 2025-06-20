@@ -932,9 +932,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
       
-      // Try database first, fallback to temporary sample data if connection fails
+      // Use optimized storage with pricing data
       try {
-        const trendingCards = await storage.getTrendingCards(limit);
+        const { optimizedStorage } = await import('./optimized-storage');
+        const trendingCards = await optimizedStorage.getTrendingCardsOptimized(limit);
         res.json(trendingCards);
       } catch (dbError) {
         console.error('Database connection failed for trending cards:', dbError);
