@@ -745,12 +745,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User collection routes - OPTIMIZED
+  // User collection routes - FIXED to use proper nested structure
   app.get("/api/collection", authenticateUser, async (req: any, res) => {
     try {
-      const { optimizedStorage } = await import('./optimized-storage');
-      const result = await optimizedStorage.getUserCollectionPaginated(req.user.id, 1, 1000);
-      res.json(result.items);
+      const collection = await storage.getUserCollection(req.user.id);
+      res.json(collection);
     } catch (error) {
       console.error('Get collection error:', error);
       res.status(500).json({ message: "Failed to fetch collection" });
