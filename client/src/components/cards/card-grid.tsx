@@ -83,7 +83,7 @@ export function CardGrid({
 
   const removeFromCollectionMutation = useMutation({
     mutationFn: async (cardId: number) => {
-      const collectionItem = collection?.find(item => item.card.id === cardId);
+      const collectionItem = collection?.find(item => (item.card?.id || item.cardId) === cardId);
       if (!collectionItem) throw new Error('Card not in collection');
       return apiRequest('DELETE', `/api/collection/${collectionItem.id}`);
     },

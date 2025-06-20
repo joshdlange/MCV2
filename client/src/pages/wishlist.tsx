@@ -367,7 +367,7 @@ export default function Wishlist() {
         isInWishlist={true}
         onAddToCollection={() => {
           if (selectedCard) {
-            const wishlistItem = wishlist.find(item => item.card.id === selectedCard.id);
+            const wishlistItem = wishlist.find(item => (item.card?.id || item.cardId) === selectedCard.id);
             if (wishlistItem) {
               handleMoveToCollection(wishlistItem);
               setIsModalOpen(false);
@@ -377,7 +377,7 @@ export default function Wishlist() {
         }}
         onRemoveFromWishlist={() => {
           if (selectedCard) {
-            const wishlistItem = wishlist.find(item => item.card.id === selectedCard.id);
+            const wishlistItem = wishlist.find(item => (item.card?.id || item.cardId) === selectedCard.id);
             if (wishlistItem) {
               handleRemoveFromWishlist(wishlistItem.id);
               setIsModalOpen(false);

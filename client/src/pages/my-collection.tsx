@@ -180,8 +180,8 @@ export default function MyCollection() {
     // Handle both CardWithSet (missing cards) and CollectionItem (owned cards)
     let cardData: CardWithSet;
     
-    if ('card' in item) {
-      // This is a CollectionItem
+    if ('card' in item && item.card) {
+      // This is a CollectionItem with nested card data
       cardData = {
         id: item.card.id,
         name: item.card.name,
@@ -196,6 +196,33 @@ export default function MyCollection() {
         variation: null,
         backImageUrl: null,
         set: item.card.set
+      };
+    } else if ('cardId' in item) {
+      // This is a CollectionItem with flat structure
+      cardData = {
+        id: item.cardId,
+        name: item.cardName,
+        cardNumber: item.cardNumber,
+        frontImageUrl: item.frontImageUrl,
+        estimatedValue: item.estimatedValue,
+        isInsert: item.isInsert,
+        rarity: item.rarity,
+        description: '',
+        createdAt: new Date(),
+        setId: item.setId,
+        variation: null,
+        backImageUrl: null,
+        set: {
+          id: item.setId,
+          name: item.setName,
+          description: null,
+          slug: '',
+          year: item.setYear || 0,
+          imageUrl: null,
+          totalCards: 0,
+          createdAt: new Date(),
+          mainSetId: null
+        }
       };
     } else {
       // This is already a CardWithSet (missing cards)
