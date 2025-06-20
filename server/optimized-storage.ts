@@ -114,11 +114,21 @@ export class OptimizedStorage {
         .from(cards)
         .innerJoin(cardSets, eq(cards.setId, cardSets.id));
 
-      // Apply where conditions and execute queries
+      // Apply where conditions and execute queries with proper numerical sorting
       const [items, totalResult] = await Promise.all([
         whereCondition 
-          ? baseQuery.where(whereCondition).orderBy(cards.setId, cards.cardNumber).limit(pageSize).offset(offset)
-          : baseQuery.orderBy(cards.setId, cards.cardNumber).limit(pageSize).offset(offset),
+          ? baseQuery.where(whereCondition).orderBy(cards.setId, sql`
+              CASE 
+                WHEN ${cards.cardNumber} ~ '^[0-9]+$' THEN LPAD(${cards.cardNumber}, 10, '0')
+                ELSE ${cards.cardNumber}
+              END
+            `).limit(pageSize).offset(offset)
+          : baseQuery.orderBy(cards.setId, sql`
+              CASE 
+                WHEN ${cards.cardNumber} ~ '^[0-9]+$' THEN LPAD(${cards.cardNumber}, 10, '0')
+                ELSE ${cards.cardNumber}
+              END
+            `).limit(pageSize).offset(offset),
         whereCondition 
           ? countQuery.where(whereCondition)
           : countQuery
