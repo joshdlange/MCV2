@@ -23,14 +23,12 @@ export function useCardPricing(cardId: number, autoFetch: boolean = false) {
       }
       return response.json() as Promise<CardPricing>;
     },
-    enabled: cardId > 0 && autoFetch, // Disabled auto-fetch to reduce API calls
-    staleTime: 1000 * 60 * 30, // 30 minutes - longer cache for better performance
-    retry: (failureCount, error) => {
-      // Retry up to 2 times for network errors, but not for 404s
-      return failureCount < 2 && !error.message.includes('404');
-    },
+    enabled: false, // Never auto-fetch - only fetch when explicitly requested or refreshed
+    staleTime: Infinity, // Never mark as stale - data persists until manually refreshed
+    gcTime: Infinity, // Never garbage collect - keep cached forever
+    retry: false, // Don't retry automatically
     refetchOnWindowFocus: false, // Don't refetch when window gains focus
-    refetchOnMount: true, // Always fetch when component mounts
+    refetchOnMount: false, // Don't refetch when component mounts
   });
 }
 

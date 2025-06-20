@@ -1011,6 +1011,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Batch pricing endpoint for performance optimization
+  app.post("/api/card-pricing/batch", async (req, res) => {
+    try {
+      const { cardIds } = req.body;
+      
+      if (!Array.isArray(cardIds) || cardIds.length === 0) {
+        return res.status(400).json({ message: "cardIds array is required" });
+      }
+
+      if (cardIds.length > 50) {
+        return res.status(400).json({ message: "Maximum 50 cards per batch request" });
+      }
+
+      const pricingResults: Record<number, any> = {};
+      
+      // Process all pricing requests in parallel
+      await Promise.all(
+        cardIds.map(async (cardId: number) => {
+          try {
+            const pricing = await ebayPricingService.getCardPricing(cardId);
+            pricingResults[cardId] = {
+              avgPrice: pricing?.avgPrice || 0,
+              salesCount: pricing?.salesCount || 0,
+              lastFetched: pricing?.lastFetched || new Date()
+            };
+          } catch (error) {
+            console.error(`Error fetching pricing for card ${cardId}:`, error);
+            pricingResults[cardId] = {
+              avgPrice: 0,
+              salesCount: 0,
+              lastFetched: new Date()
+            };
+          }
+        })
+      );
+
+      res.json(pricingResults);
+    } catch (error) {
+      console.error("Error in batch pricing:", error);
+      res.status(500).json({ message: "Failed to fetch batch pricing data" });
+    }
+  });
+
   // Find and update card image endpoint
   app.post("/api/admin/find-card-image/:cardId", async (req, res) => {
     try {
