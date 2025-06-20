@@ -886,10 +886,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Stats and analytics
+  // Stats and analytics - OPTIMIZED
   app.get("/api/stats", authenticateUser, async (req: any, res) => {
+    const performanceStart = Date.now();
+    
     try {
-      const stats = await storage.getCollectionStats(req.user.id);
+      const { optimizedStorage } = await import('./optimized-storage');
+      const stats = await optimizedStorage.getUserStatsOptimized(req.user.id);
+      
+      const performanceDuration = Date.now() - performanceStart;
+      res.setHeader('X-Performance-Time', performanceDuration.toString());
       res.json(stats);
     } catch (error) {
       console.error('Get stats error:', error);

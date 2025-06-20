@@ -18,7 +18,7 @@ interface TrendingCardProps {
 
 function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
-  const { data: pricing } = useCardPricing(card.id, true);
+  const { data: pricing } = useCardPricing(card.id, false);
 
   // Use eBay pricing first, then database pricing, then estimated value
   const ebayPrice = pricing?.avgPrice || 0;
