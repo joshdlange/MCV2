@@ -411,12 +411,10 @@ export class OptimizedStorage {
         conditions.push(eq(cards.isInsert, filters.isInsert));
       }
 
-      searchQuery = searchQuery
+      const results = await searchQuery
         .where(and(...conditions))
         .orderBy(cards.name)
         .limit(Math.min(limit, 50));
-
-      const results = await searchQuery;
 
       performanceTracker.logQuery(`searchCardsOptimized("${query}")`, startTime);
       return results;

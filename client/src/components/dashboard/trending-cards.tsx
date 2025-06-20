@@ -158,12 +158,12 @@ export function TrendingCards() {
 
   // Helper function to check if a card is in the collection
   const isCardInCollection = (cardId: number) => {
-    return collection?.some(item => item.cardId === cardId) || false;
+    return collection?.some(item => item.card?.id === cardId) || false;
   };
 
   // Helper function to check if a card is in the wishlist
   const isCardInWishlist = (cardId: number) => {
-    return wishlist?.some(item => item.cardId === cardId) || false;
+    return wishlist?.some(item => item.card?.id === cardId) || false;
   };
 
   // Handle card click to open modal
