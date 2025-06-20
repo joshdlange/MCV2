@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
+import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { convertGoogleDriveUrl } from "@/lib/utils";
+import type { CollectionItem } from "@shared/schema";
 
 interface RecentCardItem {
   id: number;
@@ -18,6 +21,7 @@ interface RecentCardItem {
 import { useLocation } from "wouter";
 
 export function RecentCards() {
+  const [selectedCard, setSelectedCard] = useState<RecentCardItem | null>(null);
   const [, setLocation] = useLocation();
   
   const { data: recentCards, isLoading } = useQuery<RecentCardItem[]>({
@@ -112,7 +116,7 @@ export function RecentCards() {
             <div 
               key={item.id} 
               className="bg-card rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow cursor-pointer border relative"
-              onClick={() => setLocation(`/cards/${item.cardId}`)}
+              onClick={() => setSelectedCard(item)}
             >
               {/* Trading card with proper 2.5:3.5 aspect ratio */}
               <div className="aspect-[2.5/3.5] relative">
@@ -157,6 +161,27 @@ export function RecentCards() {
           ))}
         </div>
       </CardContent>
+      
+      {/* Card Detail Modal */}
+      <CardDetailModal
+        card={selectedCard ? {
+          id: selectedCard.cardId,
+          name: selectedCard.cardName,
+          cardNumber: selectedCard.cardNumber,
+          frontImageUrl: selectedCard.frontImageUrl,
+          setName: selectedCard.setName,
+          isInsert: selectedCard.isInsert || false,
+          rarity: '',
+          description: '',
+          setId: 0,
+          backImageUrl: null,
+          createdAt: new Date().toISOString(),
+        } as any : null}
+        isOpen={!!selectedCard}
+        onClose={() => setSelectedCard(null)}
+        isInCollection={true}
+        isInWishlist={false}
+      />
     </Card>
   );
 }
