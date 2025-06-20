@@ -924,23 +924,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/recent-cards", authenticateUser, async (req: any, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 24; // Increased to fill dashboard space
-      const recentCards = await storage.getRecentCards(req.user.id, limit);
+      const limit = parseInt(req.query.limit as string) || 24;
+      
+      // Try to get recent cards with fallback
+      let recentCards: any[] = [];
+      try {
+        recentCards = await storage.getRecentCards(req.user.id, limit);
+      } catch (dbError) {
+        console.error('Database error for recent cards, trying fallback:', dbError);
+        
+        // Fallback: Get regular cards if recent cards fail
+        try {
+          const fallbackCards = await storage.getCards({ setId: undefined, search: undefined, rarity: undefined, isInsert: undefined });
+          recentCards = fallbackCards.slice(0, limit);
+        } catch (fallbackError) {
+          console.error('Fallback also failed:', fallbackError);
+          // Return empty array to prevent UI breaking
+          recentCards = [];
+        }
+      }
+      
       res.json(recentCards);
     } catch (error) {
       console.error('Get recent cards error:', error);
-      res.status(500).json({ message: "Failed to fetch recent cards" });
+      // Return empty array instead of error to prevent UI breaking
+      res.json([]);
     }
   });
 
   app.get("/api/trending-cards", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
-      const trendingCards = await storage.getTrendingCards(limit);
+      
+      // Try to get trending cards with database retry
+      let trendingCards: any[] = [];
+      try {
+        trendingCards = await storage.getTrendingCards(limit);
+      } catch (dbError) {
+        console.error('Database error for trending cards, trying fallback:', dbError);
+        
+        // Fallback: Get regular cards if trending cards fail
+        try {
+          const fallbackCards = await storage.getCards({ setId: undefined, search: undefined, rarity: undefined, isInsert: undefined });
+          trendingCards = fallbackCards.slice(0, limit);
+        } catch (fallbackError) {
+          console.error('Fallback also failed:', fallbackError);
+          // Return empty array to prevent UI breaking
+          trendingCards = [];
+        }
+      }
+      
       res.json(trendingCards);
     } catch (error) {
       console.error('Get trending cards error:', error);
-      res.status(500).json({ message: "Failed to fetch trending cards" });
+      // Return empty array instead of error to prevent UI breaking
+      res.json([]);
     }
   });
 

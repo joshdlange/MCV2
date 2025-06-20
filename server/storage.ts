@@ -23,7 +23,7 @@ import {
   type WishlistItem,
   type CollectionStats
 } from "@shared/schema";
-import { db } from "./db";
+import { db, withDatabaseRetry } from "./db";
 import { eq, ilike, and, count, sum, desc, sql, isNull, isNotNull, or, lt, gte, gt } from "drizzle-orm";
 
 // Utility function to generate slugs
