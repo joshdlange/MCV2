@@ -1,5 +1,5 @@
 import { db } from './db';
-import { cards, cardSets, userCollections, userWishlists, cardPriceCache } from '../shared/schema';
+import { cards, cardSets, userCollections, userWishlists, cardPriceCache, type CardWithSet } from '../shared/schema';
 import { eq, and, or, isNull, isNotNull, desc, asc, sql, count, ilike, gte, lte } from 'drizzle-orm';
 
 export interface PaginatedResult<T> {
@@ -50,7 +50,7 @@ export class OptimizedStorage {
     page: number = 1,
     pageSize: number = 50,
     filters: CardFilters = {}
-  ): Promise<PaginatedResult<LightweightCard>> {
+  ): Promise<PaginatedResult<CardWithSet>> {
     const startTime = Date.now();
     
     try {
@@ -97,13 +97,28 @@ export class OptimizedStorage {
       const baseQuery = db
         .select({
           id: cards.id,
+          setId: cards.setId,
           name: cards.name,
           cardNumber: cards.cardNumber,
-          frontImageUrl: cards.frontImageUrl,
-          setName: cardSets.name,
-          setYear: cardSets.year,
+          variation: cards.variation,
           isInsert: cards.isInsert,
-          rarity: cards.rarity
+          frontImageUrl: cards.frontImageUrl,
+          backImageUrl: cards.backImageUrl,
+          description: cards.description,
+          rarity: cards.rarity,
+          estimatedValue: cards.estimatedValue,
+          createdAt: cards.createdAt,
+          set: {
+            id: cardSets.id,
+            name: cardSets.name,
+            slug: cardSets.slug,
+            year: cardSets.year,
+            description: cardSets.description,
+            imageUrl: cardSets.imageUrl,
+            totalCards: cardSets.totalCards,
+            mainSetId: cardSets.mainSetId,
+            createdAt: cardSets.createdAt,
+          }
         })
         .from(cards)
         .innerJoin(cardSets, eq(cards.setId, cardSets.id));
@@ -139,8 +154,25 @@ export class OptimizedStorage {
 
       performanceTracker.logQuery(`getCardsPaginated(page=${page}, size=${pageSize})`, startTime);
 
+      // Map results to proper CardWithSet structure
+      const mappedItems = items.map(row => ({
+        id: row.id,
+        setId: row.setId,
+        cardNumber: row.cardNumber,
+        name: row.name,
+        variation: row.variation,
+        isInsert: row.isInsert,
+        frontImageUrl: row.frontImageUrl,
+        backImageUrl: row.backImageUrl,
+        description: row.description,
+        rarity: row.rarity,
+        estimatedValue: row.estimatedValue,
+        createdAt: row.createdAt,
+        set: row.set
+      }));
+
       return {
-        items,
+        items: mappedItems,
         totalCount,
         page,
         pageSize,
