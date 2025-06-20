@@ -755,10 +755,10 @@ export default function BrowseCards() {
           onClose={() => setSelectedCard(null)}
           isInCollection={isCardInCollection(selectedCard.id)}
           isInWishlist={isCardInWishlist(selectedCard.id)}
-          onAddToCollection={() => addToCollectionMutation.mutate(selectedCard.id)}
-          onRemoveFromCollection={() => removeFromCollectionMutation.mutate(selectedCard.id)}
-          onAddToWishlist={() => addToWishlistMutation.mutate(selectedCard.id)}
-          onRemoveFromWishlist={() => removeFromWishlistMutation.mutate(selectedCard.id)}
+          onAddToCollection={user ? () => addToCollectionMutation.mutate(selectedCard.id) : undefined}
+          onRemoveFromCollection={user ? () => removeFromCollectionMutation.mutate(selectedCard.id) : undefined}
+          onAddToWishlist={user ? () => addToWishlistMutation.mutate(selectedCard.id) : undefined}
+          onRemoveFromWishlist={user ? () => removeFromWishlistMutation.mutate(selectedCard.id) : undefined}
           onCardUpdate={(updatedCard) => setSelectedCard(updatedCard)}
         />
       )}

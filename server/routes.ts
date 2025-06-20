@@ -224,12 +224,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Main Sets Routes
-  app.get("/api/main-sets", authenticateUser, async (req: any, res) => {
+  app.get("/api/main-sets", async (req, res) => {
     try {
-      if (!req.user.isAdmin) {
-        return res.status(403).json({ message: "Admin access required" });
-      }
-      
       const mainSets = await storage.getMainSets();
       res.json(mainSets);
     } catch (error) {
