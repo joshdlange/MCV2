@@ -76,6 +76,25 @@ const authenticateUser = async (req: any, res: any, next: any) => {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
+  // Health check endpoints for deployment
+  app.get("/", (req, res) => {
+    res.json({ 
+      status: "healthy",
+      message: "Marvel Card Vault API is running",
+      timestamp: new Date().toISOString(),
+      version: "1.0.0"
+    });
+  });
+
+  app.get("/health", (req, res) => {
+    res.json({ 
+      status: "healthy",
+      message: "Marvel Card Vault API is running",
+      timestamp: new Date().toISOString(),
+      version: "1.0.0"
+    });
+  });
+  
   // Create admin user endpoint (only for initial setup)
   app.post("/api/admin/create-user", async (req, res) => {
     try {
