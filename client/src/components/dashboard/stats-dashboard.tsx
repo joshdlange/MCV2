@@ -22,6 +22,8 @@ export function StatsDashboard() {
   const [, setLocation] = useLocation();
   const { data: stats, isLoading } = useQuery<CollectionStats>({
     queryKey: ["/api/stats"],
+    staleTime: 0, // Always fetch fresh data for stats
+    refetchOnWindowFocus: true,
   });
 
   if (isLoading) {
