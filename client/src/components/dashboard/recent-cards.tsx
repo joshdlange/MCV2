@@ -108,7 +108,10 @@ export function RecentCards() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-12 gap-2">
+        <div className="grid gap-2" style={{
+          gridTemplateColumns: `repeat(auto-fill, minmax(120px, 1fr))`,
+          maxWidth: '100%'
+        }}>
           {recentCards.filter(item => item.cardName).map((item) => (
             <div 
               key={item.id} 
