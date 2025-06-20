@@ -20,7 +20,8 @@ function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
 
   // Use pricing data directly from the card object (now included in backend response)
-  const backendPrice = (card as any).avgPrice || 0;
+  const backendPriceStr = (card as any).avgPrice;
+  const backendPrice = backendPriceStr ? parseFloat(backendPriceStr) : 0;
   const databasePrice = card.estimatedValue ? parseFloat(card.estimatedValue) : 0;
   const currentValue = backendPrice > 0 ? backendPrice : databasePrice;
   const hasBackendPricing = Boolean(backendPrice > 0);

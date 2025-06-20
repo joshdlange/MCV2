@@ -636,18 +636,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all cards with filters
+  // Get all cards with filters - OPTIMIZED
   app.get("/api/cards", async (req, res) => {
     try {
-      const filters: any = {};
+      const { optimizedStorage } = await import('./optimized-storage');
+      const page = parseInt(req.query.page as string) || 1;
+      const pageSize = Math.min(parseInt(req.query.pageSize as string) || 50, 100);
       
+      const filters: any = {};
       if (req.query.setId) filters.setId = parseInt(req.query.setId as string);
-      if (req.query.search) filters.search = req.query.search as string;
       if (req.query.rarity) filters.rarity = req.query.rarity as string;
       if (req.query.isInsert) filters.isInsert = req.query.isInsert === 'true';
       
-      const cards = await storage.getCards(filters);
-      res.json(cards);
+      const result = await optimizedStorage.getCardsPaginated(page, pageSize, filters);
+      res.json(result.items);
     } catch (error) {
       console.error('Get cards error:', error);
       res.status(500).json({ message: "Failed to fetch cards" });
@@ -743,11 +745,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User collection routes
+  // User collection routes - OPTIMIZED
   app.get("/api/collection", authenticateUser, async (req: any, res) => {
     try {
-      const collection = await storage.getUserCollection(req.user.id);
-      res.json(collection);
+      const { optimizedStorage } = await import('./optimized-storage');
+      const result = await optimizedStorage.getUserCollectionPaginated(req.user.id, 1, 1000);
+      res.json(result.items);
     } catch (error) {
       console.error('Get collection error:', error);
       res.status(500).json({ message: "Failed to fetch collection" });
@@ -856,7 +859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User wishlist routes
+  // User wishlist routes - OPTIMIZED  
   app.get("/api/wishlist", authenticateUser, async (req: any, res) => {
     try {
       const wishlist = await storage.getUserWishlist(req.user.id);
@@ -917,8 +920,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = parseInt(req.query.limit as string) || 24;
       
-      // Try to get recent cards
-      const recentCards = await storage.getRecentCards(req.user.id, limit);
+      const { optimizedStorage } = await import('./optimized-storage');
+      const recentCards = await optimizedStorage.getRecentCardsOptimized(req.user.id, limit);
       
       res.json(recentCards);
     } catch (error) {
