@@ -1,11 +1,8 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Heart, Star } from "lucide-react";
-import { CardDetailModal } from "@/components/cards/card-detail-modal";
+import { Check } from "lucide-react";
 import { convertGoogleDriveUrl } from "@/lib/utils";
-import type { CollectionItem } from "@shared/schema";
 
 interface RecentCardItem {
   id: number;
@@ -21,7 +18,6 @@ interface RecentCardItem {
 import { useLocation } from "wouter";
 
 export function RecentCards() {
-  const [selectedCard, setSelectedCard] = useState<CollectionItem | null>(null);
   const [, setLocation] = useLocation();
   
   const { data: recentCards, isLoading } = useQuery<RecentCardItem[]>({
@@ -116,7 +112,7 @@ export function RecentCards() {
             <div 
               key={item.id} 
               className="bg-card rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow cursor-pointer border relative"
-              onClick={() => setSelectedCard(item as any)}
+              onClick={() => setLocation(`/cards/${item.cardId}`)}
             >
               {/* Trading card with proper 2.5:3.5 aspect ratio */}
               <div className="aspect-[2.5/3.5] relative">
@@ -161,15 +157,6 @@ export function RecentCards() {
           ))}
         </div>
       </CardContent>
-      
-      {/* Card Detail Modal */}
-      <CardDetailModal
-        card={selectedCard?.card || null}
-        isOpen={!!selectedCard}
-        onClose={() => setSelectedCard(null)}
-        isInCollection={true}
-        isInWishlist={false}
-      />
     </Card>
   );
 }
