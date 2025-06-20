@@ -49,8 +49,8 @@ export function StatsDashboard() {
   const statCards: StatCard[] = [
     {
       label: "Total Cards",
-      value: stats.totalCards.toLocaleString(),
-      change: stats.totalCardsGrowth,
+      value: (stats.totalCards || 0).toLocaleString(),
+      change: String(stats.totalCardsGrowth || '+0%'),
       icon: "layers",
       color: "bg-marvel-red",
       tooltip: "The total amount of cards you've added to your collection. Add more individually, or if you have sets easily add the whole set to your collection from the browse cards page.",
@@ -58,8 +58,8 @@ export function StatsDashboard() {
     },
     {
       label: "Insert Cards", 
-      value: stats.insertCards.toLocaleString(),
-      change: stats.insertCardsGrowth,
+      value: (stats.insertCards || 0).toLocaleString(),
+      change: String(stats.insertCardsGrowth || '+0%'),
       icon: "star",
       color: "bg-marvel-gold",
       tooltip: "What's an insert card? These cards are typically rarer and more valuable than base cards, have unique designs and/or themes, and may have their own numbering systems. Examples include autographed cards, memorabilia cards, foil cards, and special edition cards.",
@@ -67,8 +67,8 @@ export function StatsDashboard() {
     },
     {
       label: "Total Value",
-      value: `$${parseFloat(stats.totalValue.toString()).toFixed(2)}`,
-      change: stats.totalValueGrowth,
+      value: `$${(stats.totalValue ? parseFloat(stats.totalValue.toString()) : 0).toFixed(2)}`,
+      change: String(stats.totalValueGrowth || '+0%'),
       icon: "dollar",
       color: "bg-green-500",
       tooltip: "We've taken a look at your collection and have averaged the last 5 eBay sales of every card within your collection. This is how much your collection is worth today. Check back daily to see the changes over time.",
@@ -76,8 +76,8 @@ export function StatsDashboard() {
     },
     {
       label: "Wishlist Items",
-      value: stats.wishlistItems.toLocaleString(),
-      change: stats.wishlistGrowth,
+      value: ((stats as any).wishlistItems || (stats as any).wishlistCount || 0).toLocaleString(),
+      change: String((stats as any).wishlistGrowth || '+0%'),
       icon: "heart",
       color: "bg-pink-500",
       tooltip: "Your wishlist is a great place to track the cards you're currently chasing - browse sets or cards and if you don't have it add it to your wishlist. You can easily add it to your collection once you have it in person.",
@@ -95,8 +95,9 @@ export function StatsDashboard() {
     }
   };
 
-  const getTrendIcon = (change: string) => {
-    return change.startsWith('+') ? 
+  const getTrendIcon = (change: string | number) => {
+    const changeStr = String(change || '0');
+    return changeStr.startsWith('+') ? 
       <TrendingUp className="w-3 h-3" /> : 
       <TrendingDown className="w-3 h-3" />;
   };
@@ -133,10 +134,10 @@ export function StatsDashboard() {
                 <p className="text-3xl font-bebas text-card-foreground mt-1">{stat.value}</p>
                 <div className="flex items-center mt-2">
                   <span className={`text-xs font-medium flex items-center gap-1 ${
-                    stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'
+                    String(stat.change || '0').startsWith('+') ? 'text-green-600' : 'text-red-600'
                   }`}>
                     {getTrendIcon(stat.change)}
-                    {stat.change}
+                    {stat.change || '0'}
                   </span>
                   <span className="text-xs text-muted-foreground ml-1">from last month</span>
                 </div>
