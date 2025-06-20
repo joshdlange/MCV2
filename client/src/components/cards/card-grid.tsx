@@ -118,11 +118,11 @@ export function CardGrid({
 
   // Helper functions to check card status
   const isInCollection = (cardId: number) => {
-    return collection?.some(item => (item.card?.id || item.cardId) === cardId) ?? false;
+    return collection?.some(item => item.card?.id === cardId) ?? false;
   };
 
   const isInWishlist = (cardId: number) => {
-    return wishlist?.some(item => (item.card?.id || item.cardId) === cardId) ?? false;
+    return wishlist?.some(item => item.card?.id === cardId) ?? false;
   };
 
   const isFavorite = (cardId: number) => {

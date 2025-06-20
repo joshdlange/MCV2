@@ -53,19 +53,23 @@ export type InsertUser = {
 export type CardSet = {
   id: number;
   name: string;
+  slug: string;
   year: number;
   description: string | null;
   imageUrl: string | null;
   totalCards: number;
+  mainSetId: number | null;
   createdAt: Date;
 };
 
 export type InsertCardSet = {
   name: string;
+  slug: string;
   year: number;
   description?: string | null;
   imageUrl?: string | null;
   totalCards?: number;
+  mainSetId?: number | null;
 };
 
 // Card types

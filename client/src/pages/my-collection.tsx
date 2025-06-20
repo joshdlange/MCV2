@@ -197,13 +197,10 @@ export default function MyCollection() {
         backImageUrl: null,
         set: item.card.set
       };
-    } else if ('cardId' in item) {
-      // This should not happen with proper nested structure - fallback
-      console.warn('Unexpected flat data structure in collection item:', item);
-      return null;
     } else {
-      // This is already a CardWithSet (missing cards)
-      cardData = item;
+      // This should not happen with proper nested structure
+      console.warn('Unexpected data structure in collection item:', item);
+      return;
     }
     
     setSelectedCard(cardData);
