@@ -88,7 +88,7 @@ function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
             <div className="space-y-1 md:space-y-3 text-xs md:text-sm">
               <div>
                 <span className="text-gray-300">Set:</span>
-                <span className="ml-1 md:ml-2 text-xs">{card.set.name}</span>
+                <span className="ml-1 md:ml-2 text-xs">{(card as any).setName || card.set?.name}</span>
               </div>
 
               <div>
