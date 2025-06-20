@@ -439,7 +439,7 @@ export class OptimizedStorage {
               CASE WHEN ${cards.frontImageUrl} IS NOT NULL THEN 5.0 ELSE 0.0 END +
               
               -- Rotation factor for variety (time-based pseudo-random)
-              (CAST(${cards.id} AS FLOAT) * 0.1 * ${rotationSeed}) % 10.0
+              (${cards.id} * ${rotationSeed} % 100) * 0.1
             )
           `
         })
