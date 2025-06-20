@@ -1,5 +1,6 @@
 import { db } from './db';
-import { cards, cardSets, userCollections, userWishlists, cardPriceCache, type CardWithSet } from '../shared/schema';
+import { cards, cardSets, userCollections, userWishlists, cardPriceCache } from '../shared/schema';
+import type { CardWithSet } from '../shared/schema';
 import { eq, and, or, isNull, isNotNull, desc, asc, sql, count, ilike, gte, lte } from 'drizzle-orm';
 
 export interface PaginatedResult<T> {
