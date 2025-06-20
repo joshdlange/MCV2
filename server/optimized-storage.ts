@@ -384,13 +384,13 @@ export class OptimizedStorage {
   }
 
   /**
-   * Get trending cards with caching optimization
+   * Get trending cards with caching optimization and pricing data
    */
   async getTrendingCardsOptimized(limit: number = 10) {
     const startTime = Date.now();
     
     try {
-      // Get cards with recent activity or high collection counts
+      // Get cards with recent activity or high collection counts, including pricing data
       const results = await db
         .select({
           id: cards.id,
@@ -401,12 +401,15 @@ export class OptimizedStorage {
           setYear: cardSets.year,
           isInsert: cards.isInsert,
           rarity: cards.rarity,
-          collectionCount: sql<number>`COUNT(${userCollections.id})`
+          collectionCount: sql<number>`COUNT(${userCollections.id})`,
+          avgPrice: cardPriceCache.avgPrice,
+          priceDate: cardPriceCache.createdAt
         })
         .from(cards)
         .innerJoin(cardSets, eq(cards.setId, cardSets.id))
         .leftJoin(userCollections, eq(cards.id, userCollections.cardId))
-        .groupBy(cards.id, cardSets.id)
+        .leftJoin(cardPriceCache, eq(cards.id, cardPriceCache.cardId))
+        .groupBy(cards.id, cardSets.id, cardSets.name, cardSets.year, cards.name, cards.cardNumber, cards.frontImageUrl, cards.isInsert, cards.rarity, cardPriceCache.avgPrice, cardPriceCache.createdAt)
         .orderBy(sql`COUNT(${userCollections.id}) DESC`)
         .limit(Math.min(limit, 20));
 

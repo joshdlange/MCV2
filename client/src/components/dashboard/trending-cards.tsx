@@ -18,14 +18,13 @@ interface TrendingCardProps {
 
 function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
-  const { data: pricing } = useCardPricing(card.id, false);
 
-  // Use eBay pricing first, then database pricing, then estimated value
-  const ebayPrice = pricing?.avgPrice || 0;
+  // Use pricing data directly from the card object (now included in backend response)
+  const backendPrice = (card as any).avgPrice || 0;
   const databasePrice = card.estimatedValue ? parseFloat(card.estimatedValue) : 0;
-  const currentValue = ebayPrice > 0 ? ebayPrice : databasePrice;
-  const hasEbayPricing = Boolean(pricing && pricing.avgPrice && pricing.avgPrice > 0);
-  const hasDatabasePricing = Boolean(!hasEbayPricing && databasePrice > 0);
+  const currentValue = backendPrice > 0 ? backendPrice : databasePrice;
+  const hasBackendPricing = Boolean(backendPrice > 0);
+  const hasDatabasePricing = Boolean(!hasBackendPricing && databasePrice > 0);
   
   // Calculate mock price change for trending effect
   const priceChange = Math.floor(Math.random() * 20) + 5;
@@ -100,7 +99,7 @@ function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
               <div className="text-center">
                 <span className="text-gray-300 block text-xs mb-1">Market Value</span>
                 <div>
-                  {hasEbayPricing ? (
+                  {hasBackendPricing ? (
                     <div className="flex items-center justify-center gap-1">
                       <span className="font-bold text-green-400 text-lg md:text-2xl">
                         ${currentValue.toFixed(2)}
@@ -120,9 +119,9 @@ function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
                     </span>
                   )}
                 </div>
-                {hasEbayPricing && pricing && pricing.salesCount > 0 && (
+                {hasBackendPricing && (
                   <span className="text-xs text-blue-300 block mt-1">
-                    {pricing.salesCount} recent sales
+                    Market price
                   </span>
                 )}
               </div>
