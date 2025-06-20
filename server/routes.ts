@@ -955,30 +955,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/trending-cards", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
-      
-      // Try to get trending cards with database retry
-      let trendingCards: any[] = [];
-      try {
-        trendingCards = await storage.getTrendingCards(limit);
-      } catch (dbError) {
-        console.error('Database error for trending cards, trying fallback:', dbError);
-        
-        // Fallback: Get regular cards if trending cards fail
-        try {
-          const fallbackCards = await storage.getCards({ setId: undefined, search: undefined, rarity: undefined, isInsert: undefined });
-          trendingCards = fallbackCards.slice(0, limit);
-        } catch (fallbackError) {
-          console.error('Fallback also failed:', fallbackError);
-          // Return empty array to prevent UI breaking
-          trendingCards = [];
-        }
-      }
-      
+      const trendingCards = await storage.getTrendingCards(limit);
       res.json(trendingCards);
     } catch (error) {
       console.error('Get trending cards error:', error);
-      // Return empty array instead of error to prevent UI breaking
-      res.json([]);
+      res.status(500).json({ message: "Failed to fetch trending cards" });
     }
   });
 
