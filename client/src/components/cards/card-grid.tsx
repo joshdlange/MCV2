@@ -246,7 +246,7 @@ export function CardGrid({
                   <h3 className="font-medium text-gray-900 text-xs truncate">
                     {card.name} #{card.cardNumber}
                   </h3>
-                  <p className="text-xs text-gray-500 mb-2">{card.set?.name || card.setName || 'Unknown Set'}</p>
+                  <p className="text-xs text-gray-500 mb-2">{card.set?.name || 'Unknown Set'}</p>
                   
                   <div className="flex items-center justify-between mb-2">
                     {card.isInsert && (
