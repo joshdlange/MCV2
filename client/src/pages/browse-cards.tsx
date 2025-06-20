@@ -14,6 +14,7 @@ import { SetThumbnail } from "@/components/cards/set-thumbnail";
 import { MainSetTile } from "@/components/cards/main-set-tile";
 import { useToast } from "@/hooks/use-toast";
 import { useAppStore } from "@/lib/store";
+import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation, useParams, Link } from "wouter";
 import type { CardSet, CardWithSet, CollectionItem, MainSet } from "@shared/schema";
@@ -45,6 +46,7 @@ export default function BrowseCards() {
   // All hooks
   const { toast } = useToast();
   const { isAdminMode } = useAppStore();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [location] = useLocation();
   const params = useParams<{ mainSetSlug?: string; setSlug?: string }>();
@@ -76,10 +78,12 @@ export default function BrowseCards() {
 
   const { data: collection } = useQuery<CollectionItem[]>({
     queryKey: ["/api/collection"],
+    enabled: !!user,
   });
 
   const { data: wishlist } = useQuery<any[]>({
     queryKey: ["/api/wishlist"],
+    enabled: !!user,
   });
 
   const { data: searchResults } = useQuery<{ sets: CardSet[], cards: CardWithSet[] }>({
@@ -331,11 +335,13 @@ export default function BrowseCards() {
 
   // Helper functions
   const isCardInCollection = (cardId: number) => {
-    return collection?.some(item => item.cardId === cardId) || false;
+    if (!user || !collection) return false;
+    return collection.some(item => item.cardId === cardId);
   };
 
   const isCardInWishlist = (cardId: number) => {
-    return wishlist?.some((item: any) => item.cardId === cardId) || false;
+    if (!user || !wishlist) return false;
+    return wishlist.some((item: any) => item.cardId === cardId);
   };
 
   const handleSearchChange = (search: string) => {
