@@ -23,7 +23,7 @@ export function useCardPricing(cardId: number, autoFetch: boolean = false) {
       }
       return response.json() as Promise<CardPricing>;
     },
-    enabled: false, // Never auto-fetch - only fetch when explicitly requested or refreshed
+    enabled: autoFetch && cardId > 0, // Enable auto-fetch when explicitly requested
     staleTime: Infinity, // Never mark as stale - data persists until manually refreshed
     gcTime: Infinity, // Never garbage collect - keep cached forever
     retry: false, // Don't retry automatically
