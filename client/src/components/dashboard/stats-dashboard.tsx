@@ -28,10 +28,10 @@ export function StatsDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-full bg-gradient-to-r from-gray-800/80 to-gray-900/80 border border-gray-700/50 animate-pulse">
-            <div className="w-5 h-5 bg-gray-600 rounded-full flex-shrink-0"></div>
+          <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-full bg-gradient-to-r from-gray-800/80 to-gray-900/80 border border-gray-700/50 animate-pulse w-full justify-center">
+            <div className="w-6 h-6 bg-gray-600 rounded-full flex-shrink-0"></div>
             <div className="flex flex-col gap-1">
               <div className="h-3 bg-gray-600 rounded w-16"></div>
               <div className="h-4 bg-gray-600 rounded w-12"></div>
@@ -107,15 +107,15 @@ export function StatsDashboard() {
   };
 
   return (
-    <div className="flex flex-wrap gap-2 mb-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
       {statCards.map((stat, index) => (
         <div
           key={index}
-          className="group flex items-center gap-2 px-3 py-2 rounded-full cursor-pointer transition-all duration-200 hover:scale-105 border border-gray-700/50 bg-gradient-to-r from-gray-800/80 to-gray-900/80 hover:from-gray-700/80 hover:to-gray-800/80"
+          className="group flex items-center gap-3 px-4 py-3 rounded-full cursor-pointer transition-all duration-200 hover:scale-105 border border-gray-700/50 bg-gradient-to-r from-gray-800/80 to-gray-900/80 hover:from-gray-700/80 hover:to-gray-800/80 w-full justify-center"
           onClick={stat.onClick}
         >
           {/* Icon */}
-          <div className={`w-5 h-5 ${stat.color} rounded-full flex items-center justify-center flex-shrink-0`}>
+          <div className={`w-6 h-6 ${stat.color} rounded-full flex items-center justify-center flex-shrink-0`}>
             {getIcon(stat.icon)}
           </div>
           
