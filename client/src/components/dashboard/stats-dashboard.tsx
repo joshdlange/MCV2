@@ -30,9 +30,9 @@ export function StatsDashboard() {
     return (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-full bg-gradient-to-r from-gray-800/80 to-gray-900/80 border border-gray-700/50 animate-pulse w-full justify-center">
-            <div className="w-6 h-6 bg-gray-600 rounded-full flex-shrink-0"></div>
-            <div className="flex flex-col gap-1">
+          <div key={i} className="flex items-center gap-2 px-3 py-2.5 rounded-full bg-gradient-to-r from-gray-800/80 to-gray-900/80 border border-gray-700/50 animate-pulse w-full justify-center">
+            <div className="w-5 h-5 bg-gray-600 rounded-full flex-shrink-0"></div>
+            <div className="flex flex-col gap-0.5">
               <div className="h-3 bg-gray-600 rounded w-16"></div>
               <div className="h-4 bg-gray-600 rounded w-12"></div>
             </div>
@@ -111,19 +111,19 @@ export function StatsDashboard() {
       {statCards.map((stat, index) => (
         <div
           key={index}
-          className="group flex items-center gap-3 px-4 py-3 rounded-full cursor-pointer transition-all duration-200 hover:scale-105 border border-gray-700/50 bg-gradient-to-r from-gray-800/80 to-gray-900/80 hover:from-gray-700/80 hover:to-gray-800/80 w-full justify-center"
+          className="group flex items-center gap-2 px-3 py-2.5 rounded-full cursor-pointer transition-all duration-200 hover:scale-105 border border-gray-700/50 bg-gradient-to-r from-gray-800/80 to-gray-900/80 hover:from-gray-700/80 hover:to-gray-800/80 w-full justify-center"
           onClick={stat.onClick}
         >
           {/* Icon */}
-          <div className={`w-6 h-6 ${stat.color} rounded-full flex items-center justify-center flex-shrink-0`}>
+          <div className={`w-5 h-5 ${stat.color} rounded-full flex items-center justify-center flex-shrink-0`}>
             {getIcon(stat.icon)}
           </div>
           
           {/* Content */}
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0">
             <div className="flex flex-col min-w-0">
-              <span className="text-xs font-medium text-gray-300 truncate">{stat.label}</span>
-              <span className="text-sm font-bold text-white">{stat.value}</span>
+              <span className="text-xs font-medium text-gray-300 truncate leading-tight">{stat.label}</span>
+              <span className="text-base font-bold text-white leading-tight">{stat.value}</span>
             </div>
             
             {/* Info tooltip */}

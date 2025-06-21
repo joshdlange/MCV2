@@ -223,8 +223,8 @@ export function TrendingCards() {
           <CardTitle className="font-bebas text-xl tracking-wide">TOP TRENDING CARDS</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-            {[...Array(12)].map((_, i) => (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[...Array(8)].map((_, i) => (
               <div key={i} className="aspect-[2.5/3.5] bg-gray-200 rounded-lg animate-pulse"></div>
             ))}
           </div>
@@ -258,8 +258,8 @@ export function TrendingCards() {
           </p>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-            {trendingCards.slice(0, 12).map((card) => (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {trendingCards.slice(0, 8).map((card) => (
               <TrendingCard
                 key={card.id}
                 card={card}
