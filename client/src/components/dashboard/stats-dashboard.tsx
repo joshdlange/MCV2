@@ -28,16 +28,14 @@ export function StatsDashboard() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="flex flex-wrap gap-2 mb-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-gradient-to-br from-[#1f2022] to-[#2a2d32] rounded-xl p-4 border border-gray-800/50 animate-pulse">
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-8 h-8 bg-gray-600 rounded-lg"></div>
-              <div className="w-3 h-3 bg-gray-600 rounded-full"></div>
+          <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-full bg-gradient-to-r from-gray-800/80 to-gray-900/80 border border-gray-700/50 animate-pulse">
+            <div className="w-5 h-5 bg-gray-600 rounded-full flex-shrink-0"></div>
+            <div className="flex flex-col gap-1">
+              <div className="h-3 bg-gray-600 rounded w-16"></div>
+              <div className="h-4 bg-gray-600 rounded w-12"></div>
             </div>
-            <div className="h-3 bg-gray-600 rounded w-16 mb-1"></div>
-            <div className="h-5 bg-gray-600 rounded w-12 mb-2"></div>
-            <div className="h-3 bg-gray-600 rounded w-8"></div>
           </div>
         ))}
       </div>
@@ -109,56 +107,42 @@ export function StatsDashboard() {
   };
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+    <div className="flex flex-wrap gap-2 mb-4">
       {statCards.map((stat, index) => (
         <div
           key={index}
-          className="group relative bg-gradient-to-br from-[#1f2022] to-[#2a2d32] rounded-xl p-4 cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-black/20 hover:scale-[1.02] border border-gray-800/50"
+          className="group flex items-center gap-2 px-3 py-2 rounded-full cursor-pointer transition-all duration-200 hover:scale-105 border border-gray-700/50 bg-gradient-to-r from-gray-800/80 to-gray-900/80 hover:from-gray-700/80 hover:to-gray-800/80"
           onClick={stat.onClick}
         >
-          {/* Content */}
-          <div className="relative z-10">
-            {/* Header with Icon and Info */}
-            <div className="flex items-center justify-between mb-3">
-              <div className={`w-8 h-8 ${stat.color} rounded-lg flex items-center justify-center shadow-md`}>
-                {getIcon(stat.icon)}
-              </div>
-              {stat.tooltip && (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button 
-                      className="p-1 hover:bg-white/10 rounded-full transition-colors opacity-60 hover:opacity-100"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Info className="w-3 h-3 text-gray-400" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="max-w-xs p-3 bg-slate-900 text-white border-slate-700/80 rounded-xl shadow-2xl">
-                    <p className="text-sm leading-relaxed">{stat.tooltip}</p>
-                  </PopoverContent>
-                </Popover>
-              )}
-            </div>
-
-            {/* Title */}
-            <p className="text-xs font-medium text-gray-400 mb-1">{stat.label}</p>
-            
-            {/* Main Value */}
-            <p className="text-xl font-bold text-white mb-2 tracking-tight">{stat.value}</p>
-            
-            {/* Growth Indicator */}
-            <span className={`text-xs font-medium flex items-center gap-1 ${
-              String(stat.change || '0').startsWith('+') 
-                ? 'text-emerald-400' 
-                : 'text-red-400'
-            }`}>
-              {getTrendIcon(stat.change)}
-              {stat.change || '0'}
-            </span>
+          {/* Icon */}
+          <div className={`w-5 h-5 ${stat.color} rounded-full flex items-center justify-center flex-shrink-0`}>
+            {getIcon(stat.icon)}
           </div>
-
-          {/* Subtle shine effect on hover */}
-          <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
+          
+          {/* Content */}
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-medium text-gray-300 truncate">{stat.label}</span>
+              <span className="text-sm font-bold text-white">{stat.value}</span>
+            </div>
+            
+            {/* Info tooltip */}
+            {stat.tooltip && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button 
+                    className="p-0.5 hover:bg-white/10 rounded-full transition-colors opacity-60 hover:opacity-100 flex-shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Info className="w-3 h-3 text-gray-400" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="max-w-xs p-3 bg-slate-900 text-white border-slate-700/80 rounded-xl shadow-2xl">
+                  <p className="text-sm leading-relaxed">{stat.tooltip}</p>
+                </PopoverContent>
+              </Popover>
+            )}
+          </div>
         </div>
       ))}
     </div>
