@@ -28,14 +28,16 @@ export function StatsDashboard() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-8 py-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="flex flex-col items-center text-center animate-pulse">
-            <div className="w-12 h-12 bg-gray-400 rounded-full mb-3"></div>
-            <div className="h-4 bg-gray-400 rounded w-16 mb-1"></div>
-            <div className="h-8 bg-gray-400 rounded w-20"></div>
-          </div>
-        ))}
+      <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 mb-8 border border-gray-200/50 shadow-sm">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="flex flex-col items-center text-center animate-pulse">
+              <div className="w-12 h-12 bg-gray-300 rounded-full mb-3"></div>
+              <div className="h-4 bg-gray-300 rounded w-16 mb-1"></div>
+              <div className="h-8 bg-gray-300 rounded w-20"></div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -114,55 +116,57 @@ export function StatsDashboard() {
   };
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-8 py-4">
-      {statCards.map((stat, index) => (
-        <div
-          key={index}
-          className="group flex flex-col items-center text-center cursor-pointer transition-all duration-300 hover:scale-110 hover:-translate-y-1"
-          onClick={stat.onClick}
-        >
-          {/* Comic Style Icon */}
-          <div className="relative mb-3 group-hover:animate-pulse">
-            {getIcon(stat.icon, stat.color)}
+    <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 mb-8 border border-gray-200/50 shadow-sm">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+        {statCards.map((stat, index) => (
+          <div
+            key={index}
+            className="group flex flex-col items-center text-center cursor-pointer transition-all duration-300 hover:scale-110 hover:-translate-y-1"
+            onClick={stat.onClick}
+          >
+            {/* Comic Style Icon */}
+            <div className="relative mb-3 group-hover:animate-pulse">
+              {getIcon(stat.icon, stat.color)}
+              
+              {/* Comic shadow effect */}
+              <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-black/10 rounded-full blur-sm -z-10"></div>
+            </div>
             
-            {/* Comic shadow effect */}
-            <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-black/20 rounded-full blur-sm -z-10"></div>
-          </div>
-          
-          {/* Comic Style Label */}
-          <div className="flex flex-col items-center">
-            <span className="text-sm font-bold text-gray-600 uppercase tracking-wider mb-1 group-hover:text-gray-500 transition-colors">
-              {stat.label}
-            </span>
+            {/* Comic Style Label */}
+            <div className="flex flex-col items-center">
+              <span className="text-sm font-bold text-gray-600 uppercase tracking-wider mb-1 group-hover:text-gray-500 transition-colors">
+                {stat.label}
+              </span>
+              
+              {/* Comic Style Number */}
+              <span className="text-3xl font-black text-gray-900 group-hover:text-gray-800 transition-colors tracking-tight" 
+                    style={{ fontFamily: 'Impact, "Arial Black", sans-serif', textShadow: '1px 1px 0px rgba(0,0,0,0.15)' }}>
+                {stat.value}
+              </span>
+            </div>
             
-            {/* Comic Style Number */}
-            <span className="text-3xl font-black text-gray-900 group-hover:text-gray-800 transition-colors tracking-tight" 
-                  style={{ fontFamily: 'Impact, "Arial Black", sans-serif', textShadow: '2px 2px 0px rgba(0,0,0,0.1)' }}>
-              {stat.value}
-            </span>
+            {/* Hidden tooltip for speech bubble effect */}
+            {stat.tooltip && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button 
+                    className="absolute top-0 right-0 w-4 h-4 bg-blue-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Info className="w-2.5 h-2.5" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="max-w-xs p-3 bg-yellow-300 text-black border-2 border-black rounded-lg shadow-lg relative">
+                  {/* Speech bubble tail */}
+                  <div className="absolute -top-2 left-4 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-yellow-300"></div>
+                  <div className="absolute -top-3 left-4 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-black"></div>
+                  <p className="text-sm font-medium leading-relaxed">{stat.tooltip}</p>
+                </PopoverContent>
+              </Popover>
+            )}
           </div>
-          
-          {/* Hidden tooltip for speech bubble effect */}
-          {stat.tooltip && (
-            <Popover>
-              <PopoverTrigger asChild>
-                <button 
-                  className="absolute top-0 right-0 w-4 h-4 bg-blue-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Info className="w-2.5 h-2.5" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="max-w-xs p-3 bg-yellow-300 text-black border-2 border-black rounded-lg shadow-lg relative">
-                {/* Speech bubble tail */}
-                <div className="absolute -top-2 left-4 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-yellow-300"></div>
-                <div className="absolute -top-3 left-4 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-black"></div>
-                <p className="text-sm font-medium leading-relaxed">{stat.tooltip}</p>
-              </PopoverContent>
-            </Popover>
-          )}
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
