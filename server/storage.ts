@@ -567,12 +567,63 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getCardsBySet(setId: number): Promise<Card[]> {
+  async getCardsBySet(setId: number): Promise<CardWithSet[]> {
     try {
-      return await db
-        .select()
+      const result = await db
+        .select({
+          // Card fields
+          id: cards.id,
+          setId: cards.setId,
+          cardNumber: cards.cardNumber,
+          name: cards.name,
+          variation: cards.variation,
+          isInsert: cards.isInsert,
+          frontImageUrl: cards.frontImageUrl,
+          backImageUrl: cards.backImageUrl,
+          description: cards.description,
+          rarity: cards.rarity,
+          estimatedValue: cards.estimatedValue,
+          createdAt: cards.createdAt,
+          // Set fields
+          setName: cardSets.name,
+          setSlug: cardSets.slug,
+          setYear: cardSets.year,
+          setDescription: cardSets.description,
+          setImageUrl: cardSets.imageUrl,
+          setTotalCards: cardSets.totalCards,
+          setMainSetId: cardSets.mainSetId,
+          setCreatedAt: cardSets.createdAt,
+        })
         .from(cards)
+        .leftJoin(cardSets, eq(cards.setId, cardSets.id))
         .where(eq(cards.setId, setId));
+      
+      // Transform the result to match CardWithSet structure
+      return result.map(row => ({
+        id: row.id,
+        setId: row.setId,
+        cardNumber: row.cardNumber,
+        name: row.name,
+        variation: row.variation,
+        isInsert: row.isInsert,
+        frontImageUrl: row.frontImageUrl,
+        backImageUrl: row.backImageUrl,
+        description: row.description,
+        rarity: row.rarity,
+        estimatedValue: row.estimatedValue,
+        createdAt: row.createdAt,
+        set: {
+          id: row.setId,
+          name: row.setName,
+          slug: row.setSlug,
+          year: row.setYear,
+          description: row.setDescription,
+          imageUrl: row.setImageUrl,
+          totalCards: row.setTotalCards,
+          mainSetId: row.setMainSetId,
+          createdAt: row.setCreatedAt,
+        }
+      }));
     } catch (error) {
       console.error('Error getting cards by set:', error);
       return [];
