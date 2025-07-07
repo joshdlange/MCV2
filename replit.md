@@ -116,6 +116,14 @@ The application implements comprehensive performance optimizations for handling 
 
 ```
 Changelog:
+- July 7, 2025: Implemented bulk image update system with eBay Browse API integration
+  - Added bulk-image-updater.ts for processing missing card images
+  - Created standalone script (scripts/update-missing-images.ts) for command-line execution
+  - Added admin endpoints /api/admin/update-missing-images and /api/admin/missing-images-count
+  - Built admin interface (BulkImageUpdater component) with real-time progress tracking
+  - Implemented proper rate limiting (configurable, default 1000ms between requests)
+  - Added comprehensive error handling and progress reporting
+  - Improved database connection stability with better timeout settings
 - June 17, 2025. Initial setup
 ```
 

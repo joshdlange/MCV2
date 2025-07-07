@@ -1445,6 +1445,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk image update endpoints
+  app.post("/api/admin/update-missing-images", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { bulkUpdateMissingImages, checkBulkUpdateConfiguration } = await import('./bulk-image-updater');
+      
+      // Check configuration
+      const config = checkBulkUpdateConfiguration();
+      if (!config.ready) {
+        return res.status(400).json({ 
+          message: "Configuration error", 
+          missingConfig: config.missingConfig 
+        });
+      }
+
+      const { limit, rateLimitMs } = req.body;
+      const actualLimit = limit ? Math.min(parseInt(limit), 1000) : 50; // Max 1000 cards per request
+      const actualRateLimit = rateLimitMs ? Math.max(parseInt(rateLimitMs), 500) : config.rateLimitMs; // Min 500ms
+      
+      console.log(`Starting bulk image update with limit: ${actualLimit}, rate limit: ${actualRateLimit}ms`);
+      
+      // Stream progress updates
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      
+      let progressData = {
+        totalProcessed: 0,
+        successCount: 0,
+        failureCount: 0,
+        current: 0,
+        total: 0
+      };
+      
+      const result = await bulkUpdateMissingImages({
+        limit: actualLimit,
+        rateLimitMs: actualRateLimit,
+        onProgress: (progress) => {
+          progressData = {
+            totalProcessed: progress.current,
+            successCount: progressData.successCount + (progress.status === 'success' ? 1 : 0),
+            failureCount: progressData.failureCount + (progress.status === 'failure' ? 1 : 0),
+            current: progress.current,
+            total: progress.total
+          };
+          
+          res.write(`data: ${JSON.stringify({
+            type: 'progress',
+            ...progressData,
+            cardId: progress.cardId,
+            cardName: progress.cardName,
+            status: progress.status,
+            message: progress.message
+          })}\n\n`);
+        }
+      });
+      
+      // Send final result
+      res.write(`data: ${JSON.stringify({
+        type: 'complete',
+        ...result
+      })}\n\n`);
+      
+      res.end();
+      
+    } catch (error) {
+      console.error('Bulk update error:', error);
+      res.status(500).json({ message: "Failed to update missing images" });
+    }
+  });
+
+  app.get("/api/admin/missing-images-count", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { findCardsNeedingImages, checkBulkUpdateConfiguration } = await import('./bulk-image-updater');
+      
+      const config = checkBulkUpdateConfiguration();
+      const cardsNeedingImages = await findCardsNeedingImages();
+      
+      res.json({
+        count: cardsNeedingImages.length,
+        configReady: config.ready,
+        missingConfig: config.missingConfig,
+        rateLimitMs: config.rateLimitMs,
+        sampleCards: cardsNeedingImages.slice(0, 5).map(card => ({
+          id: card.id,
+          name: card.name,
+          setName: card.setName,
+          cardNumber: card.cardNumber
+        }))
+      });
+    } catch (error) {
+      console.error('Missing images count error:', error);
+      res.status(500).json({ message: "Failed to get missing images count" });
+    }
+  });
+
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);
 

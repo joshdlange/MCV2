@@ -22,6 +22,7 @@ import AdminMainSets from "@/pages/admin/main-sets";
 import AdminUnassignedSets from "@/pages/admin/unassigned-sets";
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminPage from "@/pages/admin";
+import AdminAutomation from "@/pages/admin/automation";
 import CardSearch from "@/pages/card-search";
 import MarketTrends from "@/pages/market-trends";
 import SubscriptionSuccess from "@/pages/subscription-success";
@@ -99,7 +100,7 @@ function Router() {
       <Route path="/trends" component={MarketTrends} />
       <Route path="/profile" component={Profile} />
       <Route path="/admin" component={AdminDashboard} />
-      <Route path="/admin/automation" component={AdminPage} />
+      <Route path="/admin/automation" component={AdminAutomation} />
       <Route path="/admin/cards" component={AdminCardManagement} />
       <Route path="/admin/users" component={AdminUsers} />
       <Route path="/admin/main-sets" component={AdminMainSets} />
