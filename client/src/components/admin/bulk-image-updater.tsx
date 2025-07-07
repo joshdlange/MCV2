@@ -62,8 +62,9 @@ export default function BulkImageUpdater() {
   const fetchMissingInfo = async () => {
     setLoading(true);
     try {
-      const response = await apiRequest('/api/admin/missing-images-count');
-      setMissingInfo(response);
+      const response = await apiRequest('GET', '/api/admin/missing-images-count');
+      const data = await response.json();
+      setMissingInfo(data);
     } catch (error) {
       console.error('Error fetching missing images info:', error);
       toast({
@@ -213,7 +214,7 @@ export default function BulkImageUpdater() {
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Missing configuration: {missingInfo.missingConfig.join(', ')}
+                Missing configuration: {missingInfo.missingConfig?.join(', ') || 'Unknown configuration error'}
               </AlertDescription>
             </Alert>
           )}
