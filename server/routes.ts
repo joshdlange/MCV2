@@ -1548,6 +1548,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Background scheduler endpoints
+  app.get("/api/admin/scheduler/status", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { backgroundScheduler } = await import('./background-scheduler');
+      const status = backgroundScheduler.getStatus();
+      res.json(status);
+    } catch (error) {
+      console.error('Scheduler status error:', error);
+      res.status(500).json({ message: "Failed to get scheduler status" });
+    }
+  });
+
+  app.post("/api/admin/scheduler/config", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { backgroundScheduler } = await import('./background-scheduler');
+      const config = req.body;
+      
+      backgroundScheduler.updateConfig(config);
+      res.json({ success: true, message: "Scheduler configuration updated" });
+    } catch (error) {
+      console.error('Scheduler config error:', error);
+      res.status(500).json({ message: "Failed to update scheduler configuration" });
+    }
+  });
+
+  app.post("/api/admin/scheduler/stop", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { backgroundScheduler } = await import('./background-scheduler');
+      backgroundScheduler.stopAllJobs();
+      res.json({ success: true, message: "All scheduled jobs stopped" });
+    } catch (error) {
+      console.error('Scheduler stop error:', error);
+      res.status(500).json({ message: "Failed to stop scheduler" });
+    }
+  });
+
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);
 

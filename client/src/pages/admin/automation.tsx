@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import BulkImageUpdater from "@/components/admin/bulk-image-updater";
+import SchedulerManager from "@/components/admin/scheduler-manager";
 import { Settings, Image, Zap } from "lucide-react";
 
 export default function AdminAutomation() {
@@ -69,6 +70,11 @@ export default function AdminAutomation() {
           </CardContent>
         </Card>
       </div>
+
+      <Separator />
+
+      {/* Background Scheduler */}
+      <SchedulerManager />
 
       <Separator />
 
