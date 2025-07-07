@@ -158,7 +158,7 @@ class BackgroundScheduler {
 
 // Default configuration
 const defaultConfig: SchedulerConfig = {
-  enabled: process.env.NODE_ENV === 'production',
+  enabled: true, // Enable scheduler in all environments for now
   dailyImageUpdates: {
     enabled: true,
     schedule: '0 2 * * *', // 2 AM daily
