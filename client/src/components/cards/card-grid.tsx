@@ -30,14 +30,19 @@ export function CardGrid({
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
+  // Use dedicated set endpoint for complete card list when filtering by set
+  const apiEndpoint = filters.setId ? `/api/sets/${filters.setId}/cards` : '/api/cards';
+  
   const queryParams = new URLSearchParams();
-  if (filters.setId) queryParams.set('setId', filters.setId.toString());
-  if (filters.search) queryParams.set('search', filters.search);
-  if (filters.rarity) queryParams.set('rarity', filters.rarity);
-  if (filters.isInsert !== undefined) queryParams.set('isInsert', filters.isInsert.toString());
+  if (!filters.setId) {
+    // Only apply these filters for general card search, not set-specific queries
+    if (filters.search) queryParams.set('search', filters.search);
+    if (filters.rarity) queryParams.set('rarity', filters.rarity);
+    if (filters.isInsert !== undefined) queryParams.set('isInsert', filters.isInsert.toString());
+  }
 
   const { data: cards, isLoading } = useQuery<CardWithSet[]>({
-    queryKey: [`/api/cards?${queryParams.toString()}`],
+    queryKey: [filters.setId ? apiEndpoint : `${apiEndpoint}?${queryParams.toString()}`],
   });
 
   // Fetch user's collection and wishlist to show status indicators

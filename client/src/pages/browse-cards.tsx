@@ -153,7 +153,7 @@ export default function BrowseCards() {
 
   const addAllMutation = useMutation({
     mutationFn: async (setId: number) => {
-      const cardsResponse = await fetch(`/api/cards?setId=${setId}`);
+      const cardsResponse = await fetch(`/api/sets/${setId}/cards`);
       const cards: CardWithSet[] = await cardsResponse.json();
       
       const collectionCardIds = collection?.map(item => item.cardId) || [];
