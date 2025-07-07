@@ -11,13 +11,29 @@ if (!process.env.DATABASE_URL) {
 // Create optimized PostgreSQL connection pool for Replit
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  max: 3,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+  max: 5,
+  idleTimeoutMillis: 60000,
+  connectionTimeoutMillis: 15000,
+  acquireTimeoutMillis: 20000,
+  allowExitOnIdle: false,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 export const db = drizzle(pool, { schema });
+
+// Add error handling for pool errors
+pool.on('error', (err) => {
+  console.error('Unexpected database pool error:', err);
+  console.log('Pool will automatically attempt to reconnect...');
+});
+
+pool.on('connect', () => {
+  console.log('Database connection established');
+});
+
+pool.on('remove', () => {
+  console.log('Database connection removed from pool');
+});
 
 // Database connection retry utility
 export async function withDatabaseRetry<T>(

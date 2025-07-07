@@ -93,4 +93,18 @@ app.use((req, res, next) => {
     //   startBackgroundPricingFetch();
     // });
   });
-})();
+  
+  // Handle uncaught exceptions and unhandled rejections to prevent crashes
+  process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+    console.log('Application will continue running...');
+  });
+
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    console.log('Application will continue running...');
+  });
+})().catch((error) => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
+});
