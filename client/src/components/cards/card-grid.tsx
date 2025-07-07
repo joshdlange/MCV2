@@ -155,6 +155,35 @@ export function CardGrid({
     removeFromWishlistMutation.mutate(cardId);
   };
 
+  // Natural sort function for card numbers
+  const sortCardsByNumber = (cards: CardWithSet[]) => {
+    return [...cards].sort((a, b) => {
+      const aNum = a.cardNumber;
+      const bNum = b.cardNumber;
+      
+      // Handle non-numeric card numbers (like "CG-1", "P1", etc.)
+      const aNumeric = aNum.match(/^\d+$/);
+      const bNumeric = bNum.match(/^\d+$/);
+      
+      if (aNumeric && bNumeric) {
+        // Both are pure numbers - compare numerically
+        return parseInt(aNum) - parseInt(bNum);
+      } else if (aNumeric && !bNumeric) {
+        // a is numeric, b is not - a comes first
+        return -1;
+      } else if (!aNumeric && bNumeric) {
+        // b is numeric, a is not - b comes first
+        return 1;
+      } else {
+        // Both are non-numeric - sort alphabetically
+        return aNum.localeCompare(bNum);
+      }
+    });
+  };
+
+  // Sort cards by card number in natural order
+  const sortedCards = cards ? sortCardsByNumber(cards) : [];
+
   if (isLoading) {
     return viewMode === "grid" ? (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
@@ -210,7 +239,7 @@ export function CardGrid({
     <>
       {viewMode === "grid" ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
-          {cards.map((card) => (
+          {sortedCards.map((card) => (
             <Card key={card.id} className="group comic-border card-hover cursor-pointer" onClick={() => handleCardClick(card)}>
               <CardContent className="p-0">
                 <div className="relative">
@@ -297,7 +326,7 @@ export function CardGrid({
         </div>
       ) : (
         <div className="space-y-3">
-          {cards.map((card) => (
+          {sortedCards.map((card) => (
             <Card key={card.id} className="group hover:shadow-md transition-all duration-200 cursor-pointer" onClick={() => handleCardClick(card)}>
               <CardContent className="p-3">
                 <div className="flex items-center gap-4 md:gap-6">
