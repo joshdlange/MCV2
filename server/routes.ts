@@ -1596,6 +1596,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PriceCharting import endpoint
+  app.post("/api/admin/import-pricecharting", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { limit = 50, rateLimitMs = 2000 } = req.body;
+      
+      // Validate parameters
+      if (typeof limit !== 'number' || limit < 1 || limit > 1000) {
+        return res.status(400).json({ message: "Limit must be between 1 and 1000" });
+      }
+      
+      if (typeof rateLimitMs !== 'number' || rateLimitMs < 1000) {
+        return res.status(400).json({ message: "Rate limit must be at least 1000ms" });
+      }
+
+      // Import the PriceCharting module
+      const { importPriceChartingData } = await import('../scripts/import-pricecharting.ts');
+      
+      // Execute the import
+      const result = await importPriceChartingData({
+        limit,
+        rateLimitMs,
+        logFile: 'pricecharting-import.log'
+      });
+
+      res.json({
+        success: true,
+        message: "PriceCharting import completed",
+        result
+      });
+
+    } catch (error) {
+      console.error('PriceCharting import error:', error);
+      res.status(500).json({ 
+        message: "Failed to import PriceCharting data",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // PriceCharting import status endpoint
+  app.get("/api/admin/pricecharting-config", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const missingConfig = [];
+      
+      if (!process.env.PRICECHARTING_API_TOKEN) {
+        missingConfig.push('PRICECHARTING_API_TOKEN');
+      }
+      
+      if (!process.env.CLOUDINARY_CLOUD_NAME) {
+        missingConfig.push('CLOUDINARY_CLOUD_NAME');
+      }
+      
+      if (!process.env.CLOUDINARY_API_KEY) {
+        missingConfig.push('CLOUDINARY_API_KEY');
+      }
+      
+      if (!process.env.CLOUDINARY_API_SECRET) {
+        missingConfig.push('CLOUDINARY_API_SECRET');
+      }
+
+      res.json({
+        ready: missingConfig.length === 0,
+        missingConfig,
+        hasToken: !!process.env.PRICECHARTING_API_TOKEN,
+        hasCloudinary: !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET)
+      });
+
+    } catch (error) {
+      console.error('PriceCharting config error:', error);
+      res.status(500).json({ message: "Failed to check PriceCharting configuration" });
+    }
+  });
+
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);
 
