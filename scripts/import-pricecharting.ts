@@ -294,6 +294,50 @@ async function findExistingSet(setName: string): Promise<any | null> {
 }
 
 /**
+ * Detect if a set name is a variant and find the base set
+ */
+async function findBaseSetForVariant(setName: string): Promise<{ isVariant: boolean; baseSet: any | null; variantType: string | null }> {
+  // Common variant patterns
+  const variantPatterns = [
+    { pattern: /\s+SP$/, type: 'Short Print' },
+    { pattern: /\s+Refractor\s+SP$/, type: 'Refractor Short Print' },
+    { pattern: /\s+SuperFractor\s+SP$/, type: 'SuperFractor Short Print' },
+    { pattern: /\s+Gold\s+Refractor\s+SP$/, type: 'Gold Refractor Short Print' },
+    { pattern: /\s+Red\s+Refractor\s+SP$/, type: 'Red Refractor Short Print' },
+    { pattern: /\s+Orange\s+Refractor\s+SP$/, type: 'Orange Refractor Short Print' },
+    { pattern: /\s+Laser\s+Refractor\s+SP$/, type: 'Laser Refractor Short Print' },
+    { pattern: /\s+X-Fractor\s+SP$/, type: 'X-Fractor Short Print' },
+    { pattern: /\s+Protector\s+Refractor\s+SP$/, type: 'Protector Refractor Short Print' },
+  ];
+
+  // Check if the set name matches any variant pattern
+  for (const { pattern, type } of variantPatterns) {
+    if (pattern.test(setName)) {
+      // Extract the base set name by removing the variant suffix
+      const baseSetName = setName.replace(pattern, '').trim();
+      
+      // Look for the base set in the database
+      const baseSet = await findExistingSet(baseSetName);
+      
+      if (baseSet) {
+        console.log(`🔍 Variant detected: "${setName}" → Base set: "${baseSetName}"`);
+        return {
+          isVariant: true,
+          baseSet: baseSet,
+          variantType: type
+        };
+      }
+    }
+  }
+
+  return {
+    isVariant: false,
+    baseSet: null,
+    variantType: null
+  };
+}
+
+/**
  * Check if a card exists in a set
  */
 async function findExistingCard(setId: number, cardNumber: string): Promise<any | null> {
@@ -332,7 +376,8 @@ async function insertCard(
   cardName: string,
   cardNumber: string,
   price: number,
-  imageUrl?: string
+  imageUrl?: string,
+  variantType?: string
 ): Promise<number> {
   const cloudinaryUrl = imageUrl ? await uploadImageToCloudinary(imageUrl, 0) : null;
   
@@ -343,9 +388,9 @@ async function insertCard(
     rarity: 'Unknown', // Required field, will be updated later
     estimatedValue: price.toString(),
     frontImageUrl: cloudinaryUrl,
-    variation: null,
+    variation: variantType || null,
     isInsert: false,
-    description: null,
+    description: variantType ? `${variantType} variant` : null,
     backImageUrl: null
   }).returning({ id: cards.id });
 
@@ -410,7 +455,7 @@ export async function importPriceChartingData(options: ImportOptions = {}): Prom
       
       console.log(`\n📦 Processing set: ${setName}`);
       
-      // Check if set already exists
+      // Check if set already exists or is a variant
       const existingSet = await findExistingSet(setName);
       let setId: number;
       
@@ -424,12 +469,30 @@ export async function importPriceChartingData(options: ImportOptions = {}): Prom
         });
         setId = existingSet.id;
       } else {
-        console.log(`➕ Creating new set: ${setName}`);
-        const year = extractYear(setName);
-        setId = await insertCardSet(setName, year);
-        result.setsInserted++;
-        console.log(`✅ Created set with ID: ${setId}`);
+        // Check if this is a variant that should be added to a base set
+        const variantInfo = await findBaseSetForVariant(setName);
+        
+        if (variantInfo.isVariant && variantInfo.baseSet) {
+          console.log(`🔀 Variant detected: Adding cards to base set "${variantInfo.baseSet.name}"`);
+          console.log(`📝 Variant type: ${variantInfo.variantType}`);
+          setId = variantInfo.baseSet.id;
+          result.setsSkipped++;
+          result.skippedItems.push({
+            type: 'set',
+            name: setName,
+            reason: `Variant - cards added to base set: ${variantInfo.baseSet.name}`
+          });
+        } else {
+          console.log(`➕ Creating new set: ${setName}`);
+          const year = extractYear(setName);
+          setId = await insertCardSet(setName, year);
+          result.setsInserted++;
+          console.log(`✅ Created set with ID: ${setId}`);
+        }
       }
+
+      // Store variant info for card processing
+      const currentVariantInfo = await findBaseSetForVariant(setName);
 
       // Step 3: Fetch and process cards for this set
       try {
@@ -469,7 +532,8 @@ export async function importPriceChartingData(options: ImportOptions = {}): Prom
               cardName,
               cardNumber,
               price,
-              cardData.image_url
+              cardData.image_url,
+              currentVariantInfo.variantType
             );
             result.cardsInserted++;
             console.log(`✅ Created card with ID: ${cardId}`);

@@ -116,6 +116,12 @@ The application implements comprehensive performance optimizations for handling 
 
 ```
 Changelog:
+- July 8, 2025: Enhanced PriceCharting import to handle card variants properly
+  - Added variant detection logic for Short Print (SP) and Refractor variants
+  - Modified import to merge SP variants into base sets instead of creating separate sets
+  - Updated card insertion to properly label variant types in the variation field
+  - Fixed card organization to match trading card industry standards
+  - Improved set structure to avoid duplicate variant sets (e.g., "X-Fractor SP" now adds to "X-Fractor" base set)
 - July 8, 2025: Optimized bulk image processing for improved reliability
   - Increased rate limiting from 1000ms to 3000ms between requests for better stability
   - Added memory cleanup every 100 cards to prevent resource buildup
