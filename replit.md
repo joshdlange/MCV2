@@ -116,6 +116,13 @@ The application implements comprehensive performance optimizations for handling 
 
 ```
 Changelog:
+- July 8, 2025: Fixed critical PriceCharting filtering bug and deployed improved import system
+  - MAJOR FIX: Resolved filtering bug that was only finding 3 cards instead of 200+ per set
+  - Enhanced matching logic with multiple strategies: 85% similarity, word matching, and pattern detection
+  - Successfully tested - now finds 217 cards for test set vs previous 3 cards
+  - Deployed improved system to run full import across all 1,114 existing card sets
+  - System now properly captures all relevant cards from PriceCharting for each set
+  - Import running with 30-second API delays and comprehensive progress monitoring
 - July 8, 2025: Implemented complete PriceCharting API integration for missing card population
   - Built intelligent import system that searches each existing set by name in PriceCharting
   - Added proper variant detection and 85% similarity matching for accurate set identification

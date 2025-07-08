@@ -192,9 +192,42 @@ async function importPriceChartingCards() {
             return false;
           }
           
-          // Check if the console name matches the set name (85% similarity)
-          const similarity = calculateSimilarity(cleanSetName(consoleName), cleanSetName(setNameLower));
-          return similarity >= 0.85;
+          // Multiple matching strategies for better coverage
+          const cleanedConsole = cleanSetName(consoleName);
+          const cleanedSet = cleanSetName(setNameLower);
+          
+          // Strategy 1: Direct similarity match (85% threshold)
+          const directSimilarity = calculateSimilarity(cleanedConsole, cleanedSet);
+          if (directSimilarity >= 0.85) {
+            return true;
+          }
+          
+          // Strategy 2: Check if key words from set name appear in console name
+          const setWords = cleanedSet.split(' ').filter(word => word.length > 2);
+          const consoleWords = cleanedConsole.split(' ');
+          const matchingWords = setWords.filter(word => consoleWords.includes(word));
+          const wordMatchRatio = matchingWords.length / setWords.length;
+          
+          if (wordMatchRatio >= 0.6) {
+            return true;
+          }
+          
+          // Strategy 3: Check for specific patterns (year, manufacturer, product line)
+          const yearMatch = /\d{4}/.exec(cleanedSet);
+          const manufacturerMatch = /(upper deck|topps|panini|fleer)/.exec(cleanedSet);
+          const productMatch = /(marvel|platinum|chrome|ultra|prizm)/.exec(cleanedSet);
+          
+          if (yearMatch && manufacturerMatch && productMatch) {
+            const hasYear = cleanedConsole.includes(yearMatch[0]);
+            const hasManufacturer = cleanedConsole.includes(manufacturerMatch[0]);
+            const hasProduct = cleanedConsole.includes(productMatch[0]);
+            
+            if (hasYear && hasManufacturer && hasProduct) {
+              return true;
+            }
+          }
+          
+          return false;
         });
         
         console.log(`📦 Found ${tradingCards.length} matching trading cards in PriceCharting`);
