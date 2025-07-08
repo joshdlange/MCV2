@@ -2,7 +2,7 @@
 
 import { db } from '../server/db';
 import { cardSets, cards } from '../shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 interface PriceChartingProduct {
   'product-name': string;
@@ -18,7 +18,7 @@ interface PriceChartingResponse {
   products: PriceChartingProduct[];
 }
 
-// Function to calculate string similarity
+// Calculate string similarity
 function calculateSimilarity(str1: string, str2: string): number {
   const longer = str1.length > str2.length ? str1 : str2;
   const shorter = str1.length > str2.length ? str2 : str1;
@@ -52,27 +52,13 @@ function getEditDistance(str1: string, str2: string): number {
   return matrix[str2.length][str1.length];
 }
 
-// Function to extract card number from product name
+// Extract card number from product name
 function extractCardNumber(productName: string): string | null {
-  // Look for patterns like "#123", "No. 123", or "Card 123"
-  const patterns = [
-    /#(\d+)/,
-    /No\.\s*(\d+)/i,
-    /Card\s*(\d+)/i,
-    /\b(\d+)\b/
-  ];
-  
-  for (const pattern of patterns) {
-    const match = productName.match(pattern);
-    if (match) {
-      return match[1];
-    }
-  }
-  
-  return null;
+  const match = productName.match(/#(\d+)/);
+  return match ? match[1] : null;
 }
 
-// Function to clean set name for matching
+// Clean set name for matching
 function cleanSetName(name: string): string {
   return name
     .toLowerCase()
@@ -81,12 +67,11 @@ function cleanSetName(name: string): string {
     .trim();
 }
 
-// Function to check if a product is a trading card
+// Check if product is a trading card
 function isTradingCard(product: PriceChartingProduct): boolean {
   const consoleName = product['console-name']?.toLowerCase() || '';
   const productName = product['product-name']?.toLowerCase() || '';
   
-  // Check for trading card indicators
   const tradingCardIndicators = [
     'trading card',
     'card',
@@ -103,7 +88,6 @@ function isTradingCard(product: PriceChartingProduct): boolean {
     'thor'
   ];
   
-  // Exclude video games and other non-card items
   const excludePatterns = [
     'playstation',
     'xbox',
@@ -129,7 +113,7 @@ function isTradingCard(product: PriceChartingProduct): boolean {
   return hasCardIndicator && !hasExcludePattern;
 }
 
-async function importPriceChartingCards() {
+async function runCompleteImport() {
   const apiToken = process.env.PRICECHARTING_API_TOKEN;
   
   if (!apiToken) {
@@ -137,11 +121,10 @@ async function importPriceChartingCards() {
     process.exit(1);
   }
   
-  console.log('🚀 Starting PriceCharting import for existing sets...');
-  
   try {
-    // Get existing card sets from database
+    console.log('🚀 Starting COMPLETE PriceCharting import for all sets...');
     console.log('📊 Loading existing card sets...');
+    
     const existingSets = await db.select().from(cardSets);
     console.log(`✅ Found ${existingSets.length} existing card sets`);
     
@@ -149,24 +132,27 @@ async function importPriceChartingCards() {
     let processedSets = 0;
     let setsWithMatches = 0;
     
-    // Process each existing set
-    for (const set of existingSets) {
-      console.log(`\n🔍 Processing set: "${set.name}"`);
+    // Process each set
+    for (let i = 0; i < existingSets.length; i++) {
+      const set = existingSets[i];
+      const setNumber = i + 1;
+      
+      console.log(`\n🔍 [${setNumber}/${existingSets.length}] Processing set: "${set.name}"`);
       processedSets++;
       
-      // Get existing cards for this set
-      const existingCards = await db.select().from(cards).where(eq(cards.setId, set.id));
-      const existingCardNames = new Set(existingCards.map(card => card.name.toLowerCase()));
-      
-      console.log(`📋 Set has ${existingCards.length} existing cards`);
-      
-      // Search PriceCharting for this specific set
-      const searchQuery = set.name;
-      const url = `https://www.pricecharting.com/api/products?t=${apiToken}&q=${encodeURIComponent(searchQuery)}`;
-      
-      console.log(`📡 Searching PriceCharting for: "${searchQuery}"`);
-      
       try {
+        // Get existing cards
+        const existingCards = await db.select().from(cards).where(eq(cards.setId, set.id));
+        const existingCardNames = new Set(existingCards.map(card => card.name.toLowerCase()));
+        
+        console.log(`📋 Set has ${existingCards.length} existing cards`);
+        
+        // Search PriceCharting
+        const searchQuery = set.name;
+        const url = `https://www.pricecharting.com/api/products?t=${apiToken}&q=${encodeURIComponent(searchQuery)}`;
+        
+        console.log(`📡 Searching PriceCharting for: "${searchQuery}"`);
+        
         const response = await fetch(url);
         
         if (!response.ok) {
@@ -202,7 +188,7 @@ async function importPriceChartingCards() {
             return true;
           }
           
-          // Strategy 2: Check if key words from set name appear in console name
+          // Strategy 2: Word-based matching (60% of words must match)
           const setWords = cleanedSet.split(' ').filter(word => word.length > 2);
           const consoleWords = cleanedConsole.split(' ');
           const matchingWords = setWords.filter(word => consoleWords.includes(word));
@@ -212,7 +198,7 @@ async function importPriceChartingCards() {
             return true;
           }
           
-          // Strategy 3: Check for specific patterns (year, manufacturer, product line)
+          // Strategy 3: Pattern-based matching for specific formats
           const yearMatch = /\d{4}/.exec(cleanedSet);
           const manufacturerMatch = /(upper deck|topps|panini|fleer)/.exec(cleanedSet);
           const productMatch = /(marvel|platinum|chrome|ultra|prizm)/.exec(cleanedSet);
@@ -232,29 +218,23 @@ async function importPriceChartingCards() {
         
         console.log(`📦 Found ${tradingCards.length} matching trading cards in PriceCharting`);
         
-        if (tradingCards.length === 0) {
-          console.log(`⚠️  No trading cards found for set "${set.name}"`);
-          continue;
+        if (tradingCards.length > 0) {
+          setsWithMatches++;
         }
         
-        setsWithMatches++;
         let newCardsForSet = 0;
         
-        // Process each card
+        // Add new cards
         for (const card of tradingCards) {
           const productName = card['product-name'];
-          const productNameLower = productName.toLowerCase();
           
-          // Check if card already exists
-          if (existingCardNames.has(productNameLower)) {
+          if (existingCardNames.has(productName.toLowerCase())) {
             console.log(`⏭️  Card "${productName}" already exists in set`);
             continue;
           }
           
-          // Extract card number
           const cardNumber = extractCardNumber(productName);
           
-          // Add new card
           await db.insert(cards).values({
             setId: set.id,
             name: productName,
@@ -274,9 +254,9 @@ async function importPriceChartingCards() {
         
         console.log(`✅ Added ${newCardsForSet} new cards to set "${set.name}"`);
         
-        // Rate limiting - wait 30 seconds between requests as per API requirements
-        if (processedSets < existingSets.length) {
-          console.log('⏱️  Waiting 30 seconds before next request...');
+        // Rate limiting - wait 30 seconds between requests
+        if (i < existingSets.length - 1) {
+          console.log(`⏱️  Waiting 30 seconds before next request... (${existingSets.length - i - 1} sets remaining)`);
           await new Promise(resolve => setTimeout(resolve, 30000));
         }
         
@@ -286,14 +266,12 @@ async function importPriceChartingCards() {
       }
     }
     
-    console.log('\n🎉 Import Summary:');
+    console.log('\n🎉 COMPLETE IMPORT SUMMARY:');
     console.log(`📊 Total sets processed: ${processedSets}`);
     console.log(`🎯 Sets with matching cards found: ${setsWithMatches}`);
     console.log(`➕ Total new cards added: ${totalNewCards}`);
     console.log(`⏭️  Sets with no matches: ${processedSets - setsWithMatches}`);
-    
-    // Close database connection
-    process.exit(0);
+    console.log(`✅ Import completed successfully!`);
     
   } catch (error) {
     console.error('❌ Error during import:', error);
@@ -301,16 +279,8 @@ async function importPriceChartingCards() {
   }
 }
 
-// Call the function and handle any unhandled promise rejections
-importPriceChartingCards().catch(error => {
+// Run the import
+runCompleteImport().catch(error => {
   console.error('❌ Unhandled error:', error);
   process.exit(1);
 });
-
-// Export the function for API use
-export { importPriceChartingCards };
-
-// Run the import when called directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  importPriceChartingCards();
-}
