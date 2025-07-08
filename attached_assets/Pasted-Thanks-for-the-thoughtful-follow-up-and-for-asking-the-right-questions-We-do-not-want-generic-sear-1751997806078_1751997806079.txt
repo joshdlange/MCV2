@@ -1,0 +1,80 @@
+Thanks for the thoughtful follow-up and for asking the right questions.
+
+We do not want generic searches or blind crawling of Marvel-related keywords. The point of this task is to intelligently fill in gaps in our existing database sets, because most of our data already came from PriceCharting and the set names are already close to theirs.
+
+Here is the correct strategy and answers to your questions:
+
+🎯 Correct Strategy: Fill Gaps in Existing Sets
+✅ Iterate through our database and get the list of all existing sets (their name and id).
+✅ For each set in our DB:
+
+Search PriceCharting for that exact set name.
+
+If an exact match is found → get the full list of cards from PriceCharting for that set.
+
+If no exact match is found → perform a fuzzy match (case-insensitive, trim spaces, ignore minor suffixes like “Base” or “SP”) to find the closest set.
+
+Compare our DB cards for that set with PriceCharting’s cards:
+
+Use set name + card number as the primary key to check if a card already exists in our DB.
+
+If a card does not exist in our DB → insert it.
+
+If the PriceCharting set is a significantly different variant (e.g., “Xyz Orange” vs. “Xyz Base”) → create a new subset in our DB and leave mainSetId as null (so I can manually organize it later).
+
+Do not create completely new sets unless we’re sure there’s no similar set already in our DB.
+
+When inserting missing cards:
+
+name → save to name.
+
+number → save to cardNumber.
+
+image (if available) → save to frontImageUrl.
+
+price → save to value or price field.
+
+Leave fields like description, rarity, condition blank for now.
+
+If a card already exists in our DB with the same set name + card number → skip it and don’t update anything.
+
+🔍 Answers to Your Specific Questions:
+1️⃣ PriceCharting API Mapping:
+Which endpoint? → Please use the PriceCharting endpoint that gives you cards for a specific set. If that requires a setID lookup first, do that step.
+
+Field mapping:
+
+PriceCharting name → our name
+
+PriceCharting number → our cardNumber
+
+PriceCharting price → our value
+
+PriceCharting image field → our frontImageUrl
+
+2️⃣ Database Schema:
+When creating a new subset: set mainSetId to null — I will manually assign it later.
+
+Do not populate description, rarity, or condition at this time.
+
+Use our standard price/value field for the price. Do not touch the separate price caching tables yet.
+
+3️⃣ Rate Limiting:
+Please check PriceCharting’s documentation for their rate limits. If nothing is specified, implement a modest delay (e.g., 3 requests per second) to avoid getting blocked.
+
+4️⃣ Image Processing:
+If PriceCharting provides an image URL, save it directly to frontImageUrl.
+
+If no image is available, leave it blank and let our eBay image script fill it later.
+
+Do not run the Cloudinary pipeline for PriceCharting images — save the URL as-is.
+
+5️⃣ Implementation:
+Please write this as a standalone script (e.g., scripts/import-pricecharting.ts) that I can run manually while we have API access.
+
+Do not build this into our regular app flow.
+
+📝 Notes:
+✅ This task is purely about intelligently filling in the missing cards within our current sets, without creating duplicates or unnecessary variants.
+✅ Please ask if you hit any edge cases (e.g., very ambiguous set names, or multiple PriceCharting sets matching equally well).
+✅ Do not make assumptions beyond the spec above — check back with me if something seems unclear.
