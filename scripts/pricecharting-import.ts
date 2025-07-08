@@ -2,7 +2,7 @@
 
 import { db } from '../server/db';
 import { cardSets, cards } from '../shared/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 interface PriceChartingProduct {
   'product-name': string;
@@ -137,7 +137,7 @@ async function importPriceChartingCards() {
     process.exit(1);
   }
   
-  console.log('🚀 Starting PriceCharting import...');
+  console.log('🚀 Starting PriceCharting import for existing sets...');
   
   try {
     // Get existing card sets from database
@@ -145,140 +145,119 @@ async function importPriceChartingCards() {
     const existingSets = await db.select().from(cardSets);
     console.log(`✅ Found ${existingSets.length} existing card sets`);
     
-    // Search for Marvel trading cards
-    console.log('🔍 Searching PriceCharting for Marvel trading cards...');
-    const searchQueries = [
-      'marvel',
-      'marvel trading card',
-      'marvel x-men',
-      'marvel spider-man',
-      'marvel avengers',
-      'marvel fantastic four'
-    ];
+    let totalNewCards = 0;
+    let processedSets = 0;
+    let setsWithMatches = 0;
     
-    let allTradingCards: PriceChartingProduct[] = [];
-    let processedUrls = new Set<string>();
-    
-    for (const query of searchQueries) {
-      console.log(`🔍 Searching for: "${query}"`);
+    // Process each existing set (limit to first 3 for testing)
+    for (const set of existingSets.slice(0, 3)) {
+      console.log(`\n🔍 Processing set: "${set.name}"`);
+      processedSets++;
       
-      const url = `https://www.pricecharting.com/api/products?t=${apiToken}&q=${encodeURIComponent(query)}`;
+      // Get existing cards for this set
+      const existingCards = await db.select().from(cards).where(eq(cards.setId, set.id));
+      const existingCardNames = new Set(existingCards.map(card => card.name.toLowerCase()));
       
-      // Skip if we've already processed this URL
-      if (processedUrls.has(url)) {
-        console.log('⏭️  Skipping duplicate URL');
-        continue;
-      }
-      processedUrls.add(url);
+      console.log(`📋 Set has ${existingCards.length} existing cards`);
       
-      const response = await fetch(url);
+      // Search PriceCharting for this specific set
+      const searchQuery = set.name;
+      const url = `https://www.pricecharting.com/api/products?t=${apiToken}&q=${encodeURIComponent(searchQuery)}`;
       
-      if (!response.ok) {
-        console.error(`❌ HTTP ${response.status}: ${response.statusText}`);
-        continue;
-      }
+      console.log(`📡 Searching PriceCharting for: "${searchQuery}"`);
       
-      const data: PriceChartingResponse = await response.json();
-      
-      if (data.status !== 'success') {
-        console.error(`❌ API Error: ${data.status}`);
-        continue;
-      }
-      
-      // Filter for trading cards
-      const tradingCards = data.products.filter(isTradingCard);
-      console.log(`📦 Found ${tradingCards.length} trading cards out of ${data.products.length} total products`);
-      
-      allTradingCards.push(...tradingCards);
-      
-      // Add delay between requests (5 minutes as per API docs)
-      console.log('⏱️  Waiting 30 seconds before next request...');
-      await new Promise(resolve => setTimeout(resolve, 30000));
-    }
-    
-    // Remove duplicates
-    const uniqueCards = allTradingCards.filter((card, index, self) => 
-      index === self.findIndex(c => c.id === card.id)
-    );
-    
-    console.log(`🎯 Found ${uniqueCards.length} unique trading cards`);
-    
-    // Match cards to existing sets
-    console.log('🔄 Matching cards to existing sets...');
-    let matchedCards = 0;
-    let newCardsAdded = 0;
-    
-    for (const card of uniqueCards) {
-      const consoleName = card['console-name'];
-      const productName = card['product-name'];
-      
-      // Find matching set with 85% similarity threshold
-      let bestMatch: typeof existingSets[0] | null = null;
-      let bestSimilarity = 0;
-      
-      for (const set of existingSets) {
-        const similarity = calculateSimilarity(
-          cleanSetName(consoleName),
-          cleanSetName(set.name)
-        );
+      try {
+        const response = await fetch(url);
         
-        if (similarity > bestSimilarity && similarity >= 0.85) {
-          bestMatch = set;
-          bestSimilarity = similarity;
+        if (!response.ok) {
+          console.error(`❌ HTTP ${response.status}: ${response.statusText} for set "${set.name}"`);
+          continue;
         }
-      }
-      
-      if (bestMatch) {
-        matchedCards++;
-        console.log(`✅ Matched "${productName}" to set "${bestMatch.name}" (${Math.round(bestSimilarity * 100)}% similarity)`);
         
-        // Extract card number
-        const cardNumber = extractCardNumber(productName);
+        const data: PriceChartingResponse = await response.json();
         
-        // Check if card already exists
-        const existingCard = await db.select().from(cards).where(
-          and(
-            eq(cards.cardSetId, bestMatch.id),
-            eq(cards.name, productName)
-          )
-        ).limit(1);
+        if (data.status !== 'success') {
+          console.error(`❌ API Error: ${data.status} for set "${set.name}"`);
+          continue;
+        }
         
-        if (existingCard.length === 0) {
+        // Filter for trading cards that match this set
+        const tradingCards = data.products.filter(product => {
+          const consoleName = product['console-name']?.toLowerCase() || '';
+          const productName = product['product-name']?.toLowerCase() || '';
+          const setNameLower = set.name.toLowerCase();
+          
+          // Check if this is a trading card
+          if (!isTradingCard(product)) {
+            return false;
+          }
+          
+          // Check if the console name matches the set name (85% similarity)
+          const similarity = calculateSimilarity(cleanSetName(consoleName), cleanSetName(setNameLower));
+          return similarity >= 0.85;
+        });
+        
+        console.log(`📦 Found ${tradingCards.length} matching trading cards in PriceCharting`);
+        
+        if (tradingCards.length === 0) {
+          console.log(`⚠️  No trading cards found for set "${set.name}"`);
+          continue;
+        }
+        
+        setsWithMatches++;
+        let newCardsForSet = 0;
+        
+        // Process each card
+        for (const card of tradingCards) {
+          const productName = card['product-name'];
+          const productNameLower = productName.toLowerCase();
+          
+          // Check if card already exists
+          if (existingCardNames.has(productNameLower)) {
+            console.log(`⏭️  Card "${productName}" already exists in set`);
+            continue;
+          }
+          
+          // Extract card number
+          const cardNumber = extractCardNumber(productName);
+          
           // Add new card
           await db.insert(cards).values({
-            cardSetId: bestMatch.id,
+            setId: set.id,
             name: productName,
             cardNumber: cardNumber || '',
-            frontImage: '',
-            backImage: '',
+            frontImageUrl: '',
+            backImageUrl: '',
             variation: '',
-            rarity: '',
-            artist: '',
+            rarity: 'Unknown',
             description: '',
-            releaseDate: '',
-            priceHistory: JSON.stringify([{
-              date: new Date().toISOString(),
-              price: card['loose-price'] || 0,
-              source: 'pricecharting'
-            }])
+            estimatedValue: card['loose-price'] || 0
           });
           
-          newCardsAdded++;
-          console.log(`➕ Added new card: "${productName}" to set "${bestMatch.name}"`);
-        } else {
-          console.log(`⏭️  Card "${productName}" already exists in set "${bestMatch.name}"`);
+          newCardsForSet++;
+          totalNewCards++;
+          console.log(`➕ Added new card: "${productName}" (${cardNumber || 'no number'})`);
         }
-      } else {
-        console.log(`⚠️  No matching set found for "${consoleName}" - "${productName}"`);
+        
+        console.log(`✅ Added ${newCardsForSet} new cards to set "${set.name}"`);
+        
+        // Rate limiting - wait 30 seconds between requests as per API requirements
+        if (processedSets < existingSets.length) {
+          console.log('⏱️  Waiting 30 seconds before next request...');
+          await new Promise(resolve => setTimeout(resolve, 30000));
+        }
+        
+      } catch (error) {
+        console.error(`❌ Error processing set "${set.name}":`, error);
+        continue;
       }
     }
     
     console.log('\n🎉 Import Summary:');
-    console.log(`📊 Total trading cards found: ${uniqueCards.length}`);
-    console.log(`🎯 Cards matched to existing sets: ${matchedCards}`);
-    console.log(`➕ New cards added: ${newCardsAdded}`);
-    console.log(`⏭️  Cards skipped (already exist): ${matchedCards - newCardsAdded}`);
-    console.log(`⚠️  Cards not matched: ${uniqueCards.length - matchedCards}`);
+    console.log(`📊 Total sets processed: ${processedSets}`);
+    console.log(`🎯 Sets with matching cards found: ${setsWithMatches}`);
+    console.log(`➕ Total new cards added: ${totalNewCards}`);
+    console.log(`⏭️  Sets with no matches: ${processedSets - setsWithMatches}`);
     
   } catch (error) {
     console.error('❌ Error during import:', error);
@@ -286,5 +265,10 @@ async function importPriceChartingCards() {
   }
 }
 
-// Run the import
-importPriceChartingCards();
+// Export the function for API use
+export { importPriceChartingCards };
+
+// Run the import when called directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  importPriceChartingCards();
+}

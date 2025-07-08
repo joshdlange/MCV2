@@ -132,7 +132,7 @@ export function PriceChartingImporter() {
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">PriceCharting API - Marvel Card Data Import</h2>
       </div>
       <div className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-        <strong>API Function:</strong> Fetches Marvel trading card sets and individual cards from PriceCharting database with intelligent variant handling
+        <strong>API Function:</strong> Searches PriceCharting for each existing card set by name to find and import missing cards only
       </div>
 
       {/* Configuration Status */}
@@ -201,24 +201,24 @@ export function PriceChartingImporter() {
             Import Settings & API Controls
           </CardTitle>
           <CardDescription className="text-gray-600 dark:text-gray-300">
-            Configure import parameters and API call limits for PriceCharting data fetch
+            Configure parameters for searching existing sets and importing missing cards
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="limit" className="text-gray-900 dark:text-white">Card Limit</Label>
+              <Label htmlFor="limit" className="text-gray-900 dark:text-white">Set Limit</Label>
               <Input
                 id="limit"
                 type="number"
                 value={limit}
                 onChange={(e) => setLimit(Number(e.target.value))}
                 min="1"
-                max="1000"
+                max="100"
                 disabled={isImporting}
                 className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
               />
-              <p className="text-xs text-gray-600 dark:text-gray-400">Maximum cards to process per run</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Maximum sets to process per run</p>
             </div>
             
             <div className="space-y-2">
@@ -250,7 +250,7 @@ export function PriceChartingImporter() {
             ) : (
               <>
                 <Download className="mr-2 h-4 w-4" />
-                Import Missing Cards (API: GET /products/marvel)
+                Import Missing Cards from Existing Sets
               </>
             )}
           </Button>
@@ -266,7 +266,7 @@ export function PriceChartingImporter() {
           <CardContent>
             <Progress value={progress} className="w-full" />
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-              Processing PriceCharting data...
+              Searching existing sets for missing cards...
             </p>
           </CardContent>
         </Card>

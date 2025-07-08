@@ -1615,14 +1615,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Import the PriceCharting module
-      const { importPriceChartingData } = await import('../scripts/import-pricecharting.ts');
+      const { importPriceChartingCards } = await import('../scripts/pricecharting-import.ts');
       
       // Execute the import
-      const result = await importPriceChartingData({
-        limit,
-        rateLimitMs,
-        logFile: 'pricecharting-import.log'
-      });
+      const result = await importPriceChartingCards();
 
       res.json({
         success: true,
