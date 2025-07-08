@@ -1,0 +1,92 @@
+We need to fix the PriceCharting integration.
+
+The goal is to fill in missing cards in our existing Marvel Card Vault database, using the PriceCharting API properly.
+
+We now understand that PriceCharting treats each individual card as a “product”.
+We will use the /api/products?platform=trading-card endpoint, and parse the product names to match them to our sets and cards.
+
+Here is the exact strategy you need to implement:
+
+🎯 Strategy:
+✅ Call the PriceCharting API:
+
+nginx
+Copy
+Edit
+GET https://www.pricecharting.com/api/products?platform=trading-card&prettyprint
+(with the API key in the request)
+
+✅ Iterate through the returned products[].
+
+✅ For each product:
+
+Parse product.name into:
+
+setName → the name of the set
+
+cardNumber → the number of the card (if present in the name)
+
+cardName → the character name
+
+Use fuzzy matching to find the closest card_sets.name in our DB.
+
+If it matches a set → proceed.
+
+If it’s a close variant (like XYZ SP) → assign it to that set.
+
+If it’s clearly a distinct variant (like XYZ Orange) → create a new subset with mainSetId = null.
+
+✅ Check if a card with this setName + cardNumber already exists in our DB:
+
+If yes → skip.
+
+If no → insert a new card with:
+
+name = parsed cardName
+
+cardNumber = parsed cardNumber
+
+frontImageUrl = product.image_url
+
+price = product.loose_price
+
+setId = matched card_set.id
+
+✅ Do not touch or update existing cards — only insert missing ones.
+
+📝 Notes:
+Store pricecharting_product_id in the DB for traceability.
+
+Leave mainSetId as null if creating a new subset.
+
+Do not attempt to fetch or process images via Cloudinary at this step.
+
+Do not process cards without a clear setName.
+
+🧪 Implementation:
+Write this as a standalone script, named:
+
+arduino
+Copy
+Edit
+scripts/import-pricecharting-products.ts
+It should log:
+
+How many products were processed.
+
+How many sets were matched.
+
+How many new cards were inserted.
+
+How many were skipped as duplicates.
+
+🚦 Questions you should ask me before proceeding if unclear:
+What rules to use when extracting setName and cardNumber from product.name?
+
+What threshold defines a “close” set name match vs. “different”?
+
+How to handle cards missing cardNumber?
+
+How to handle mainSetId if multiple possible matches?
+
+Do not assume anything beyond what’s above — ask me before guessing.
