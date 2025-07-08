@@ -411,7 +411,7 @@ export default function SchedulerManager() {
 
         {/* Control Actions */}
         <div className="flex items-center justify-between pt-4 border-t">
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 dark:text-gray-300">
             Schedule format: minute hour day month day-of-week
           </div>
           <div className="flex items-center gap-2">
@@ -419,6 +419,7 @@ export default function SchedulerManager() {
               onClick={() => refetch()}
               variant="outline"
               size="sm"
+              className="border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
             >
               Refresh
             </Button>
@@ -427,6 +428,7 @@ export default function SchedulerManager() {
               variant="destructive"
               size="sm"
               disabled={stopJobs.isPending}
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
               {stopJobs.isPending ? 'Stopping...' : 'Stop All'}
             </Button>
