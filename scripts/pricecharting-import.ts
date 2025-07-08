@@ -149,8 +149,8 @@ async function importPriceChartingCards() {
     let processedSets = 0;
     let setsWithMatches = 0;
     
-    // Process each existing set (limit to first 3 for testing)
-    for (const set of existingSets.slice(0, 3)) {
+    // Process each existing set
+    for (const set of existingSets) {
       console.log(`\n🔍 Processing set: "${set.name}"`);
       processedSets++;
       
