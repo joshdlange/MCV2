@@ -96,8 +96,12 @@ class BackgroundScheduler {
       
       const result = await bulkUpdateMissingImages({
         limit: batchSize,
-        rateLimit: 1000,
-        skipExisting: true
+        rateLimitMs: 3000, // 3 seconds between requests for reliability
+        onProgress: (progress) => {
+          if (progress.current % 10 === 0) {
+            logger.info(`Processing progress: ${progress.current}/${progress.total} (${progress.status})`);
+          }
+        }
       });
 
       this.dailyProcessedCount += result.successCount;
@@ -120,8 +124,12 @@ class BackgroundScheduler {
       
       const result = await bulkUpdateMissingImages({
         limit: this.config.weeklyMaintenance.batchSize,
-        rateLimit: 1000,
-        skipExisting: true
+        rateLimitMs: 3000, // 3 seconds between requests for reliability
+        onProgress: (progress) => {
+          if (progress.current % 10 === 0) {
+            logger.info(`Weekly maintenance progress: ${progress.current}/${progress.total} (${progress.status})`);
+          }
+        }
       });
 
       logger.info(`Weekly maintenance completed: ${result.successCount}/${result.totalProcessed} successful`);

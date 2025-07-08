@@ -129,7 +129,7 @@ async function processCard(card: {
 export async function bulkUpdateMissingImages(options: BulkUpdateOptions = {}): Promise<BulkUpdateResult> {
   const {
     limit,
-    rateLimitMs = parseInt(process.env.EBAY_RATE_LIMIT_MS || '1000'),
+    rateLimitMs = parseInt(process.env.EBAY_RATE_LIMIT_MS || '3000'),
     onProgress
   } = options;
 
@@ -239,10 +239,18 @@ export async function bulkUpdateMissingImages(options: BulkUpdateOptions = {}): 
         }
       }
       
-      // Rate limiting - wait between requests
+      // Rate limiting - wait between requests (always wait to be gentler on APIs)
       if (i < cardsToUpdate.length - 1) {
         console.log(`⏱️ Waiting ${rateLimitMs}ms before next request...`);
         await new Promise(resolve => setTimeout(resolve, rateLimitMs));
+      }
+      
+      // Force garbage collection every 100 cards to prevent memory buildup
+      if (i > 0 && i % 100 === 0) {
+        console.log(`🧹 Memory cleanup at card ${i + 1}/${cardsToUpdate.length}`);
+        if (global.gc) {
+          global.gc();
+        }
       }
     }
 

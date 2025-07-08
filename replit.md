@@ -116,6 +116,12 @@ The application implements comprehensive performance optimizations for handling 
 
 ```
 Changelog:
+- July 8, 2025: Optimized bulk image processing for improved reliability
+  - Increased rate limiting from 1000ms to 3000ms between requests for better stability
+  - Added memory cleanup every 100 cards to prevent resource buildup
+  - Enhanced database connection management to prevent EPIPE errors
+  - Updated background scheduler to use slower, more reliable processing
+  - Improved error handling and progress reporting for large batch operations
 - July 7, 2025: Implemented bulk image update system with eBay Browse API integration
   - Added bulk-image-updater.ts for processing missing card images
   - Created standalone script (scripts/update-missing-images.ts) for command-line execution

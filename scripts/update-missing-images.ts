@@ -20,7 +20,7 @@ async function main() {
   
   console.log(`📊 Configuration:`);
   console.log(`   - Limit: ${limit || 'No limit (all cards)'}`);
-  console.log(`   - Rate limit: ${process.env.EBAY_RATE_LIMIT_MS || 1000}ms between requests`);
+  console.log(`   - Rate limit: ${process.env.EBAY_RATE_LIMIT_MS || 3000}ms between requests`);
   
   // Check configuration
   const config = checkBulkUpdateConfiguration();
