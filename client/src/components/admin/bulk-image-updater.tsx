@@ -171,29 +171,37 @@ export default function BulkImageUpdater() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <Image className="h-5 w-5 text-blue-500" />
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">eBay Browse API - Bulk Image Processing</h2>
+      </div>
+      <div className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+        <strong>API Function:</strong> Searches eBay for missing card images using Browse API, processes in batches with rate limiting
+      </div>
+      
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
             <Image className="h-5 w-5" />
-            Bulk Image Updater
+            Image Processing Status & Controls
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Status Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Missing Images</Label>
+              <Label className="text-sm font-medium text-gray-900 dark:text-white">Missing Images</Label>
               <div className="flex items-center gap-2">
-                <Database className="h-4 w-4 text-muted-foreground" />
-                <span className="text-2xl font-bold">
+                <Database className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <span className="text-2xl font-bold text-gray-900 dark:text-white">
                   {loading ? '...' : missingInfo?.count || 0}
                 </span>
-                <span className="text-sm text-muted-foreground">cards</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">cards</span>
               </div>
             </div>
             
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Configuration Status</Label>
+              <Label className="text-sm font-medium text-gray-900 dark:text-white">Configuration Status</Label>
               <div className="flex items-center gap-2">
                 {loading ? (
                   <RefreshCw className="h-4 w-4 animate-spin" />
@@ -241,7 +249,7 @@ export default function BulkImageUpdater() {
           {/* Update Controls */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="limit">Limit (max cards to process)</Label>
+              <Label htmlFor="limit" className="text-gray-900 dark:text-white">Limit (max cards to process)</Label>
               <Input
                 id="limit"
                 type="number"
@@ -250,11 +258,12 @@ export default function BulkImageUpdater() {
                 value={limit}
                 onChange={(e) => setLimit(e.target.value)}
                 disabled={updating}
+                className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="rateLimitMs">Rate Limit (ms between requests)</Label>
+              <Label htmlFor="rateLimitMs" className="text-gray-900 dark:text-white">Rate Limit (ms between requests)</Label>
               <Input
                 id="rateLimitMs"
                 type="number"
@@ -263,6 +272,7 @@ export default function BulkImageUpdater() {
                 value={rateLimitMs}
                 onChange={(e) => setRateLimitMs(e.target.value)}
                 disabled={updating}
+                className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
               />
             </div>
           </div>
@@ -272,17 +282,17 @@ export default function BulkImageUpdater() {
             <Button
               onClick={startBulkUpdate}
               disabled={updating || !missingInfo?.configReady || (missingInfo?.count || 0) === 0}
-              className="flex-1"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white"
             >
               {updating ? (
                 <>
                   <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                  Processing...
+                  Processing Images via eBay Browse API...
                 </>
               ) : (
                 <>
                   <Image className="h-4 w-4 mr-2" />
-                  Start Bulk Update
+                  Start Bulk Update (API: GET /v1/browse/search)
                 </>
               )}
             </Button>

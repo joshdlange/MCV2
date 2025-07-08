@@ -129,17 +129,20 @@ export function PriceChartingImporter() {
     <div className="space-y-6">
       <div className="flex items-center gap-2">
         <Download className="h-5 w-5 text-blue-500" />
-        <h2 className="text-lg font-semibold">PriceCharting Importer</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">PriceCharting API - Marvel Card Data Import</h2>
+      </div>
+      <div className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+        <strong>API Function:</strong> Fetches Marvel trading card sets and individual cards from PriceCharting database with intelligent variant handling
       </div>
 
       {/* Configuration Status */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
             <Database className="h-4 w-4" />
             Configuration Status
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-gray-600 dark:text-gray-300">
             Check API credentials and system readiness
           </CardDescription>
         </CardHeader>
@@ -149,7 +152,7 @@ export function PriceChartingImporter() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-2">
                   {getStatusIcon(config.ready)}
-                  <span className="text-sm">Overall Status</span>
+                  <span className="text-sm text-gray-900 dark:text-white">Overall Status</span>
                   <Badge variant={getStatusColor(config.ready)}>
                     {config.ready ? 'Ready' : 'Not Ready'}
                   </Badge>
@@ -157,7 +160,7 @@ export function PriceChartingImporter() {
                 
                 <div className="flex items-center gap-2">
                   {getStatusIcon(config.hasToken)}
-                  <span className="text-sm">API Token</span>
+                  <span className="text-sm text-gray-900 dark:text-white">API Token</span>
                   <Badge variant={getStatusColor(config.hasToken)}>
                     {config.hasToken ? 'Configured' : 'Missing'}
                   </Badge>
@@ -165,7 +168,7 @@ export function PriceChartingImporter() {
                 
                 <div className="flex items-center gap-2">
                   {getStatusIcon(config.hasCloudinary)}
-                  <span className="text-sm">Cloudinary</span>
+                  <span className="text-sm text-gray-900 dark:text-white">Cloudinary</span>
                   <Badge variant={getStatusColor(config.hasCloudinary)}>
                     {config.hasCloudinary ? 'Configured' : 'Missing'}
                   </Badge>
@@ -182,7 +185,7 @@ export function PriceChartingImporter() {
               )}
             </>
           ) : (
-            <div className="flex items-center gap-2 text-gray-500">
+            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
               <Clock className="h-4 w-4" />
               <span>Loading configuration...</span>
             </div>
@@ -193,18 +196,18 @@ export function PriceChartingImporter() {
       {/* Import Settings */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
             <Zap className="h-4 w-4" />
-            Import Settings
+            Import Settings & API Controls
           </CardTitle>
-          <CardDescription>
-            Configure the import process parameters
+          <CardDescription className="text-gray-600 dark:text-gray-300">
+            Configure import parameters and API call limits for PriceCharting data fetch
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="limit">Card Limit</Label>
+              <Label htmlFor="limit" className="text-gray-900 dark:text-white">Card Limit</Label>
               <Input
                 id="limit"
                 type="number"
@@ -219,7 +222,7 @@ export function PriceChartingImporter() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="rateLimit">Rate Limit (ms)</Label>
+              <Label htmlFor="rateLimit" className="text-gray-900 dark:text-white">Rate Limit (ms)</Label>
               <Input
                 id="rateLimit"
                 type="number"
@@ -237,17 +240,17 @@ export function PriceChartingImporter() {
           <Button 
             onClick={startImport}
             disabled={!config?.ready || isImporting}
-            className="w-full"
+            className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white"
           >
             {isImporting ? (
               <>
                 <Clock className="mr-2 h-4 w-4 animate-spin" />
-                Importing...
+                Importing Marvel Cards from PriceCharting...
               </>
             ) : (
               <>
                 <Download className="mr-2 h-4 w-4" />
-                Start Import
+                Import Missing Cards (API: GET /products/marvel)
               </>
             )}
           </Button>
@@ -258,7 +261,7 @@ export function PriceChartingImporter() {
       {isImporting && (
         <Card>
           <CardHeader>
-            <CardTitle>Import Progress</CardTitle>
+            <CardTitle className="text-gray-900 dark:text-white">Import Progress</CardTitle>
           </CardHeader>
           <CardContent>
             <Progress value={progress} className="w-full" />
@@ -273,7 +276,7 @@ export function PriceChartingImporter() {
       {importResult && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
               <CheckCircle className="h-4 w-4 text-green-500" />
               Import Results
             </CardTitle>
@@ -281,7 +284,7 @@ export function PriceChartingImporter() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <h4 className="font-semibold text-sm">Sets</h4>
+                <h4 className="font-semibold text-sm text-gray-900 dark:text-white">Sets</h4>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-700 dark:text-gray-300">Processed:</span>
@@ -299,7 +302,7 @@ export function PriceChartingImporter() {
               </div>
               
               <div className="space-y-2">
-                <h4 className="font-semibold text-sm">Cards</h4>
+                <h4 className="font-semibold text-sm text-gray-900 dark:text-white">Cards</h4>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-700 dark:text-gray-300">Processed:</span>

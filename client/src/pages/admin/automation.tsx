@@ -12,8 +12,8 @@ export default function AdminAutomation() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bebas tracking-wide text-gray-900">Data & Image Automation</h1>
-          <p className="text-gray-600">Manage automated card data import, image processing, and bulk operations</p>
+          <h1 className="text-2xl font-bebas tracking-wide text-gray-900 dark:text-white">Data & Image Automation</h1>
+          <p className="text-gray-600 dark:text-gray-300">Manage automated card data import, image processing, and bulk operations</p>
         </div>
         <Badge variant="secondary" className="flex items-center gap-2">
           <Zap className="h-3 w-3" />
@@ -29,11 +29,11 @@ export default function AdminAutomation() {
               <div className="p-2 rounded-lg bg-purple-500">
                 <Download className="h-4 w-4 text-white" />
               </div>
-              <CardTitle className="text-sm">Data Import</CardTitle>
+              <CardTitle className="text-sm text-gray-900 dark:text-white">Data Import</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-gray-600 dark:text-gray-300">
               PriceCharting API integration for Marvel card data population
             </p>
           </CardContent>
@@ -45,11 +45,11 @@ export default function AdminAutomation() {
               <div className="p-2 rounded-lg bg-blue-500">
                 <Image className="h-4 w-4 text-white" />
               </div>
-              <CardTitle className="text-sm">Image Processing</CardTitle>
+              <CardTitle className="text-sm text-gray-900 dark:text-white">Image Processing</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-gray-600 dark:text-gray-300">
               Automated image finding and processing using eBay Browse API
             </p>
           </CardContent>
@@ -61,11 +61,11 @@ export default function AdminAutomation() {
               <div className="p-2 rounded-lg bg-green-500">
                 <Settings className="h-4 w-4 text-white" />
               </div>
-              <CardTitle className="text-sm">Rate Limiting</CardTitle>
+              <CardTitle className="text-sm text-gray-900 dark:text-white">Rate Limiting</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-gray-600 dark:text-gray-300">
               Configurable delays to respect API limits and prevent rate limiting
             </p>
           </CardContent>
@@ -77,11 +77,11 @@ export default function AdminAutomation() {
               <div className="p-2 rounded-lg bg-purple-500">
                 <Zap className="h-4 w-4 text-white" />
               </div>
-              <CardTitle className="text-sm">Bulk Operations</CardTitle>
+              <CardTitle className="text-sm text-gray-900 dark:text-white">Bulk Operations</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-gray-600 dark:text-gray-300">
               Process hundreds of cards with progress tracking and error reporting
             </p>
           </CardContent>
