@@ -208,14 +208,21 @@ async function fetchMarvelProducts(): Promise<PriceChartingProduct[]> {
             name.includes('fantastic four') ||
             name.includes('avengers');
             
-          // Check if it's a trading card or comic book
-          const isCard = console.includes('comic') || 
-            console.includes('card') || 
-            genre.includes('comic') ||
+          // Check if it's specifically a trading card (NOT comic books)
+          const isCard = console.includes('card') || 
+            genre.includes('card') ||
             name.includes('card') ||
-            name.includes('trading');
+            name.includes('trading') ||
+            name.includes('tcg');
             
-          return isMarvelRelated && isCard;
+          // Explicitly exclude comic books
+          const isComicBook = console.includes('comic book') || 
+            genre.includes('comic book') ||
+            name.includes('comic book') ||
+            name.includes('comic issue') ||
+            name.includes('#');
+            
+          return isMarvelRelated && isCard && !isComicBook;
         });
         
         allProducts.push(...marvelCards);
