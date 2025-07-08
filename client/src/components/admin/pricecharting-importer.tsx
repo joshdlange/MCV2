@@ -213,8 +213,9 @@ export function PriceChartingImporter() {
                 min="1"
                 max="1000"
                 disabled={isImporting}
+                className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
               />
-              <p className="text-xs text-gray-500">Maximum cards to process per run</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Maximum cards to process per run</p>
             </div>
             
             <div className="space-y-2">
@@ -227,8 +228,9 @@ export function PriceChartingImporter() {
                 min="1000"
                 max="10000"
                 disabled={isImporting}
+                className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
               />
-              <p className="text-xs text-gray-500">Delay between API requests</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Delay between API requests</p>
             </div>
           </div>
 
@@ -260,7 +262,7 @@ export function PriceChartingImporter() {
           </CardHeader>
           <CardContent>
             <Progress value={progress} className="w-full" />
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
               Processing PriceCharting data...
             </p>
           </CardContent>
@@ -282,16 +284,16 @@ export function PriceChartingImporter() {
                 <h4 className="font-semibold text-sm">Sets</h4>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span>Processed:</span>
-                    <span className="font-medium">{importResult.setsProcessed}</span>
+                    <span className="text-gray-700 dark:text-gray-300">Processed:</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{importResult.setsProcessed}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Inserted:</span>
-                    <span className="font-medium text-green-600">{importResult.setsInserted}</span>
+                    <span className="text-gray-700 dark:text-gray-300">Inserted:</span>
+                    <span className="font-medium text-green-600 dark:text-green-400">{importResult.setsInserted}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Skipped:</span>
-                    <span className="font-medium text-yellow-600">{importResult.setsSkipped}</span>
+                    <span className="text-gray-700 dark:text-gray-300">Skipped:</span>
+                    <span className="font-medium text-yellow-600 dark:text-yellow-400">{importResult.setsSkipped}</span>
                   </div>
                 </div>
               </div>
@@ -300,16 +302,16 @@ export function PriceChartingImporter() {
                 <h4 className="font-semibold text-sm">Cards</h4>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span>Processed:</span>
-                    <span className="font-medium">{importResult.cardsProcessed}</span>
+                    <span className="text-gray-700 dark:text-gray-300">Processed:</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{importResult.cardsProcessed}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Inserted:</span>
-                    <span className="font-medium text-green-600">{importResult.cardsInserted}</span>
+                    <span className="text-gray-700 dark:text-gray-300">Inserted:</span>
+                    <span className="font-medium text-green-600 dark:text-green-400">{importResult.cardsInserted}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Skipped:</span>
-                    <span className="font-medium text-yellow-600">{importResult.cardsSkipped}</span>
+                    <span className="text-gray-700 dark:text-gray-300">Skipped:</span>
+                    <span className="font-medium text-yellow-600 dark:text-yellow-400">{importResult.cardsSkipped}</span>
                   </div>
                 </div>
               </div>

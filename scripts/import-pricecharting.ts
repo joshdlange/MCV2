@@ -192,9 +192,9 @@ async function fetchMarvelProducts(): Promise<PriceChartingProduct[]> {
       if (data.products && Array.isArray(data.products)) {
         // Filter for trading cards and comic books (which include trading cards)
         const marvelCards = data.products.filter((product: PriceChartingProduct) => {
-          const name = product['product-name'].toLowerCase();
-          const console = product['console-name'].toLowerCase();
-          const genre = product.genre.toLowerCase();
+          const name = (product['product-name'] || '').toLowerCase();
+          const console = (product['console-name'] || '').toLowerCase();
+          const genre = (product.genre || '').toLowerCase();
           
           // Look for Marvel characters and trading cards or comic books
           const isMarvelRelated = name.includes('marvel') ||
