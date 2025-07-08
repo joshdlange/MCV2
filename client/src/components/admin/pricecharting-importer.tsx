@@ -48,8 +48,9 @@ export function PriceChartingImporter() {
 
   const checkConfig = async () => {
     try {
-      const response = await apiRequest('/api/admin/pricecharting-config');
-      setConfig(response);
+      const response = await apiRequest('GET', '/api/admin/pricecharting-config');
+      const data = await response.json();
+      setConfig(data);
     } catch (error) {
       console.error('Failed to check PriceCharting config:', error);
       toast({
@@ -75,20 +76,18 @@ export function PriceChartingImporter() {
     setProgress(0);
 
     try {
-      const response = await apiRequest('/api/admin/import-pricecharting', {
-        method: 'POST',
-        body: JSON.stringify({
-          limit,
-          rateLimitMs
-        })
+      const response = await apiRequest('POST', '/api/admin/import-pricecharting', {
+        limit,
+        rateLimitMs
       });
-
-      setImportResult(response.result);
+      
+      const data = await response.json();
+      setImportResult(data.result);
       setProgress(100);
       
       toast({
         title: "Import Complete",
-        description: `Successfully imported ${response.result.cardsInserted} cards from ${response.result.setsInserted} sets`,
+        description: `Successfully imported ${data.result.cardsInserted} cards from ${data.result.setsInserted} sets`,
         variant: "default",
       });
 
