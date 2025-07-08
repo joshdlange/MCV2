@@ -1,0 +1,78 @@
+Please build a server-side script or API endpoint that integrates with the PriceCharting API to fill in missing sets and cards in the Marvel Card Vault database, following these exact rules:
+
+🔷 Workflow Overview:
+1️⃣ Query the PriceCharting API for all trading card sets in the “Marvel” category/platform.
+2️⃣ For each set in the API response:
+
+Check if this set already exists in the card_sets table by name.
+
+If it does not exist yet:
+
+Insert it into the DB as a subset.
+
+If no master set exists yet for that subset, just create the subset and I will manually nest it later.
+
+If it does exist:
+
+Proceed to add cards under the existing subset.
+
+🔷 Card Logic:
+For each card in a set:
+
+If a card already exists in the DB for that set (setId or setName + cardNumber):
+
+✅ Skip and do nothing.
+
+If a card does not exist yet:
+
+✅ Insert it with these fields:
+
+Card Name
+
+Card Number
+
+Image URL (hosted) — follow existing logic (upload to Cloudinary and store Cloudinary URL)
+
+Price (from PriceCharting)
+
+🔷 Field Requirements:
+For sets:
+
+Store as subset.
+
+If no master set exists yet → I will manually assign later. Do NOT create master sets in this script.
+
+For cards:
+
+Store cardName, cardNumber, price, and frontImageUrl (hosted in Cloudinary, as current workflow dictates).
+
+🔷 Requirements:
+✅ Use the PRICECHARTING_API_TOKEN secret already set in Replit for authentication.
+
+✅ Log inserted records to console.
+
+✅ Log skipped cards/sets (already exist) to a JSON file for QA.
+
+✅ Include error handling for API failures and DB errors.
+
+✅ Ensure idempotent operation — running the script multiple times does not create duplicates.
+
+✅ Include a limit parameter for testing purposes (default: 50 cards per run).
+
+✅ Respect any documented PriceCharting rate limits.
+
+✅ Build as a one-off script (npm run import-pricecharting) or endpoint — whichever is easier.
+
+🔷 Ask First:
+🚨 Before making assumptions about:
+
+How to link new subsets to master sets
+
+How to handle any fields not explicitly listed above
+
+How to map PriceCharting’s fields to our DB schema
+
+Please ask clarifying questions and wait for my answers.
+
+✅ Thank you — please confirm understanding and ask me any follow-up questions before you start coding.
+
