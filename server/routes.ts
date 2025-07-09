@@ -1614,10 +1614,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Rate limit must be at least 1000ms" });
       }
 
-      // Import the PriceCharting module
-      const { importPriceChartingCards } = await import('../scripts/pricecharting-import.ts');
+      // Import the complete PriceCharting module
+      const { importPriceChartingCards } = await import('../scripts/complete-pricecharting-import.ts');
       
-      // Execute the import
+      // Execute the import for ALL sets
       const result = await importPriceChartingCards();
 
       res.json({
