@@ -1,380 +1,209 @@
-#!/usr/bin/env tsx
-
 import { db } from '../server/db';
 import { cardSets, cards } from '../shared/schema';
 import { eq } from 'drizzle-orm';
-import { writeFileSync, appendFileSync } from 'fs';
+import { writeFileSync } from 'fs';
 
 interface PriceChartingProduct {
+  id: string;
   'product-name': string;
   'console-name': string;
-  'loose-price': number;
-  'cib-price': number;
-  'new-price': number;
-  id: string;
+  'loose-price'?: number;
+  'cib-price'?: number;
+  'new-price'?: number;
+  image?: string;
 }
 
 interface PriceChartingResponse {
-  status: string;
   products: PriceChartingProduct[];
 }
 
-interface ImportStats {
-  totalProductsProcessed: number;
-  totalCardsAdded: number;
-  cardsSkipped: number;
-  setsSkipped: number;
-  setsProcessed: number;
-  errors: string[];
-}
-
-const LOG_FILE = 'complete-import.log';
-const isDryRun = process.argv.includes('--dry-run');
-
-function log(message: string) {
-  const timestamp = new Date().toISOString();
-  const logEntry = `${timestamp}: ${message}`;
-  console.log(logEntry);
+// Parse card name into components
+function parseCardName(fullName: string): { setName: string; cardNumber: string; cardName: string } {
+  // Example: "1992 Marvel Masterpieces #15 Spider-Man"
+  const match = fullName.match(/^(.+?)\s+#(\d+(?:\w+)?)\s+(.+)$/);
   
-  if (!isDryRun) {
-    try {
-      appendFileSync(LOG_FILE, logEntry + '\n');
-    } catch (error) {
-      console.error('Failed to write to log file:', error);
-    }
-  }
-}
-
-function calculateSimilarity(str1: string, str2: string): number {
-  const longer = str1.length > str2.length ? str1 : str2;
-  const shorter = str1.length > str2.length ? str2 : str1;
-  
-  if (longer.length === 0) return 1.0;
-  
-  const editDistance = getEditDistance(longer, shorter);
-  return (longer.length - editDistance) / longer.length;
-}
-
-function getEditDistance(str1: string, str2: string): number {
-  const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
-  
-  for (let i = 0; i <= str1.length; i++) matrix[0][i] = i;
-  for (let j = 0; j <= str2.length; j++) matrix[j][0] = j;
-  
-  for (let j = 1; j <= str2.length; j++) {
-    for (let i = 1; i <= str1.length; i++) {
-      if (str1[i - 1] === str2[j - 1]) {
-        matrix[j][i] = matrix[j - 1][i - 1];
-      } else {
-        matrix[j][i] = Math.min(
-          matrix[j - 1][i - 1] + 1,
-          matrix[j][i - 1] + 1,
-          matrix[j - 1][i] + 1
-        );
-      }
-    }
+  if (match) {
+    const [, setName, cardNumber, cardName] = match;
+    return {
+      setName: setName.trim(),
+      cardNumber: cardNumber.trim(),
+      cardName: cardName.trim()
+    };
   }
   
-  return matrix[str2.length][str1.length];
+  // Fallback: if no card number pattern found
+  return {
+    setName: fullName.trim(),
+    cardNumber: '',
+    cardName: fullName.trim()
+  };
 }
 
-function cleanSetName(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^\w\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function extractCardNumber(productName: string): string {
-  const patterns = [
-    /#(\d+)/,
-    /No\.\s*(\d+)/i,
-    /Card\s*(\d+)/i,
-    /\b(\d+)\b/
-  ];
+// Fuzzy match set name against database
+async function findMatchingSet(setName: string) {
+  const allSets = await db.select().from(cardSets);
+  const setNameLower = setName.toLowerCase();
   
-  for (const pattern of patterns) {
-    const match = productName.match(pattern);
-    if (match) {
-      return match[1];
-    }
-  }
+  // Try exact match first
+  const exactMatch = allSets.find(set => set.name.toLowerCase() === setNameLower);
+  if (exactMatch) return exactMatch;
   
-  return '';
-}
-
-function isTradingCard(product: PriceChartingProduct): boolean {
-  const consoleName = product['console-name']?.toLowerCase() || '';
-  const productName = product['product-name']?.toLowerCase() || '';
-  
-  const tradingCardIndicators = [
-    'trading card',
-    'card',
-    'marvel',
-    'x-men',
-    'spider-man',
-    'fantastic four',
-    'avengers',
-    'wolverine',
-    'deadpool',
-    'hulk',
-    'iron man',
-    'captain america',
-    'thor'
-  ];
-  
-  const excludePatterns = [
-    'playstation',
-    'xbox',
-    'nintendo',
-    'pc',
-    'game',
-    'video',
-    'dvd',
-    'blu-ray',
-    'figure',
-    'toy',
-    'funko'
-  ];
-  
-  const hasCardIndicator = tradingCardIndicators.some(indicator => 
-    consoleName.includes(indicator) || productName.includes(indicator)
+  // Try partial match (case-insensitive)
+  const partialMatch = allSets.find(set => 
+    set.name.toLowerCase().includes(setNameLower) || 
+    setNameLower.includes(set.name.toLowerCase())
   );
+  if (partialMatch) return partialMatch;
   
-  const hasExcludePattern = excludePatterns.some(pattern =>
-    consoleName.includes(pattern) || productName.includes(pattern)
-  );
+  // Try word matching
+  const setWords = setNameLower.split(' ').filter(w => w.length > 2);
+  const wordMatch = allSets.find(set => {
+    const setNameWords = set.name.toLowerCase().split(' ');
+    const matchedWords = setWords.filter(word => 
+      setNameWords.some(setWord => setWord.includes(word) || word.includes(setWord))
+    );
+    return matchedWords.length >= Math.min(2, setWords.length);
+  });
   
-  return hasCardIndicator && !hasExcludePattern;
+  return wordMatch || null;
 }
 
-function findMatchingSet(product: PriceChartingProduct, sets: any[]): any | null {
-  const consoleName = product['console-name']?.toLowerCase() || '';
-  
-  for (const set of sets) {
-    const setNameLower = set.name.toLowerCase();
-    const cleanedConsole = cleanSetName(consoleName);
-    const cleanedSet = cleanSetName(setNameLower);
-    
-    // Strategy 1: Direct similarity match (85% threshold)
-    const directSimilarity = calculateSimilarity(cleanedConsole, cleanedSet);
-    if (directSimilarity >= 0.85) {
-      return set;
-    }
-    
-    // Strategy 2: Word-based matching (60% of words must match)
-    const setWords = cleanedSet.split(' ').filter(word => word.length > 2);
-    const consoleWords = cleanedConsole.split(' ');
-    const matchingWords = setWords.filter(word => consoleWords.includes(word));
-    const wordMatchRatio = matchingWords.length / setWords.length;
-    
-    if (wordMatchRatio >= 0.6) {
-      return set;
-    }
-    
-    // Strategy 3: Pattern-based matching
-    const yearMatch = /\d{4}/.exec(cleanedSet);
-    const manufacturerMatch = /(upper deck|topps|panini|fleer)/.exec(cleanedSet);
-    const productMatch = /(marvel|platinum|chrome|ultra|prizm)/.exec(cleanedSet);
-    
-    if (yearMatch && manufacturerMatch && productMatch) {
-      const hasYear = cleanedConsole.includes(yearMatch[0]);
-      const hasManufacturer = cleanedConsole.includes(manufacturerMatch[0]);
-      const hasProduct = cleanedConsole.includes(productMatch[0]);
-      
-      if (hasYear && hasManufacturer && hasProduct) {
-        return set;
-      }
-    }
-  }
-  
-  return null;
-}
-
-async function runImport(): Promise<ImportStats> {
-  const apiToken = process.env.PRICECHARTING_API_TOKEN;
-  
-  if (!apiToken) {
+// Main import function
+async function runPriceChartingImport() {
+  const apiKey = process.env.PRICECHARTING_API_TOKEN;
+  if (!apiKey) {
     throw new Error('PRICECHARTING_API_TOKEN environment variable is required');
   }
   
-  const stats: ImportStats = {
-    totalProductsProcessed: 0,
-    totalCardsAdded: 0,
-    cardsSkipped: 0,
-    setsSkipped: 0,
-    setsProcessed: 0,
-    errors: []
-  };
+  console.log('Starting PriceCharting import...');
+  const log: string[] = [];
   
-  // Initialize log file
-  if (!isDryRun) {
-    writeFileSync(LOG_FILE, `=== PriceCharting Import Started at ${new Date().toISOString()} ===\n`);
-  }
-  
-  log(`Starting PriceCharting import${isDryRun ? ' (DRY RUN)' : ''}`);
-  
-  // Load all sets from database
-  log('Loading card sets from database...');
-  const allSets = await db.select().from(cardSets);
-  log(`Found ${allSets.length} card sets in database`);
-  
-  // Process each set individually by searching PriceCharting
-  log('Processing each set by searching PriceCharting...');
-  
-  const allProducts: PriceChartingProduct[] = [];
-  
-  for (const [setIndex, set] of allSets.entries()) {
-    const setNumber = setIndex + 1;
-    log(`[${setNumber}/${allSets.length}] Searching for: "${set.name}"`);
+  try {
+    // Call the correct PriceCharting API endpoint
+    const apiUrl = `https://www.pricecharting.com/api/products?t=${apiKey}&q=marvel`;
+    console.log('Calling PriceCharting API...');
+    log.push(`API Call: ${apiUrl.replace(apiKey, 'HIDDEN_KEY')}`);
     
-    try {
-      // Search for this specific set
-      const searchUrl = `https://www.pricecharting.com/api/products?t=${apiToken}&q=${encodeURIComponent(set.name)}`;
-      const searchResponse = await fetch(searchUrl);
-      
-      if (!searchResponse.ok) {
-        stats.errors.push(`HTTP ${searchResponse.status} for set "${set.name}"`);
-        continue;
-      }
-      
-      const searchData: PriceChartingResponse = await searchResponse.json();
-      if (searchData.status !== 'success') {
-        stats.errors.push(`API Error ${searchData.status} for set "${set.name}"`);
-        continue;
-      }
-      
-      // Filter for trading cards that match this set
-      const setTradingCards = searchData.products.filter(product => {
-        if (!isTradingCard(product)) return false;
+    const response = await fetch(apiUrl);
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    }
+    
+    const data: PriceChartingResponse = await response.json();
+    console.log(`Found ${data.products?.length || 0} products from PriceCharting`);
+    log.push(`Found ${data.products?.length || 0} products from PriceCharting`);
+    
+    if (!data.products || !Array.isArray(data.products)) {
+      throw new Error('Invalid API response format');
+    }
+    
+    let processedCount = 0;
+    let insertedCount = 0;
+    let skippedCount = 0;
+    
+    // Process each product
+    for (const product of data.products) {
+      try {
+        processedCount++;
         
-        const matchingSet = findMatchingSet(product, [set]);
-        return matchingSet !== null;
-      });
-      
-      log(`Found ${setTradingCards.length} matching cards for "${set.name}"`);
-      allProducts.push(...setTradingCards);
-      
-      // Add small delay between API calls
-      if (setIndex < allSets.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-      
-    } catch (error) {
-      const errorMessage = `Error searching for set "${set.name}": ${error instanceof Error ? error.message : String(error)}`;
-      stats.errors.push(errorMessage);
-      log(`ERROR: ${errorMessage}`);
-    }
-  }
-  
-  log(`Total products found across all sets: ${allProducts.length}`);
-  
-  // Process each product
-  for (const [index, product] of allProducts.entries()) {
-    const productNumber = index + 1;
-    stats.totalProductsProcessed++;
-    
-    if (productNumber % 100 === 0) {
-      log(`Progress: ${productNumber}/${allProducts.length} products processed`);
-    }
-    
-    try {
-      // Find matching set
-      const matchingSet = findMatchingSet(product, allSets);
-      
-      if (!matchingSet) {
-        stats.setsSkipped++;
-        continue;
-      }
-      
-      // Check if card already exists
-      const productName = product['product-name'];
-      const existingCard = await db.select().from(cards).where(
-        eq(cards.setId, matchingSet.id)
-      );
-      
-      const existingCardNames = new Set(existingCard.map(card => card.name.toLowerCase()));
-      
-      if (existingCardNames.has(productName.toLowerCase())) {
-        stats.cardsSkipped++;
-        continue;
-      }
-      
-      // Insert new card
-      const cardNumber = extractCardNumber(productName);
-      const estimatedValue = product['loose-price'] || product['cib-price'] || product['new-price'] || 0;
-      
-      if (!isDryRun) {
+        // Skip non-trading card products
+        const consoleName = product['console-name']?.toLowerCase() || '';
+        const productName = product['product-name']?.toLowerCase() || '';
+        
+        // Filter for trading cards only
+        const isTradingCard = consoleName.includes('trading') || 
+                             consoleName.includes('card') ||
+                             productName.includes('trading') ||
+                             productName.includes('card') ||
+                             consoleName.includes('marvel') ||
+                             productName.includes('marvel');
+        
+        if (!isTradingCard) {
+          skippedCount++;
+          continue;
+        }
+        
+        // Parse the product name
+        const parsed = parseCardName(product['product-name']);
+        console.log(`Processing: ${product['product-name']} -> Set: "${parsed.setName}", Card: "${parsed.cardName}", Number: "${parsed.cardNumber}"`);
+        
+        // Find matching set in database
+        const matchingSet = await findMatchingSet(parsed.setName);
+        
+        if (!matchingSet) {
+          console.log(`⚠️  No matching set found for: "${parsed.setName}"`);
+          log.push(`No matching set found for: "${parsed.setName}"`);
+          skippedCount++;
+          continue;
+        }
+        
+        console.log(`✅ Found matching set: "${matchingSet.name}" (ID: ${matchingSet.id})`);
+        
+        // Check if card already exists
+        const existingCard = await db
+          .select()
+          .from(cards)
+          .where(eq(cards.setId, matchingSet.id))
+          .where(eq(cards.cardNumber, parsed.cardNumber))
+          .limit(1);
+        
+        if (existingCard.length > 0) {
+          console.log(`   Card already exists: ${parsed.cardNumber}`);
+          skippedCount++;
+          continue;
+        }
+        
+        // Insert new card
         await db.insert(cards).values({
           setId: matchingSet.id,
-          name: productName,
-          cardNumber,
-          frontImageUrl: '',
-          backImageUrl: '',
-          variation: '',
-          rarity: 'Unknown',
-          description: '',
-          estimatedValue
+          cardNumber: parsed.cardNumber,
+          name: parsed.cardName,
+          frontImageUrl: product.image || null,
+          estimatedValue: product['loose-price'] ? product['loose-price'].toString() : null,
+          rarity: 'Common', // Default value to satisfy NOT NULL constraint
+          variation: null,
+          isInsert: false,
+          backImageUrl: null,
+          description: null,
+          createdAt: new Date()
         });
+        
+        console.log(`   ✅ Inserted card: "${parsed.cardName}" #${parsed.cardNumber}`);
+        log.push(`Inserted: "${parsed.cardName}" #${parsed.cardNumber} into "${matchingSet.name}"`);
+        insertedCount++;
+        
+      } catch (error) {
+        console.error(`❌ Error processing product "${product.name}":`, error);
+        log.push(`Error processing "${product.name}": ${error instanceof Error ? error.message : String(error)}`);
+        continue;
       }
-      
-      stats.totalCardsAdded++;
-      
-      if (stats.totalCardsAdded % 50 === 0) {
-        log(`Added ${stats.totalCardsAdded} cards so far...`);
-      }
-      
-    } catch (error) {
-      const errorMessage = `Error processing product "${product['product-name']}": ${error instanceof Error ? error.message : String(error)}`;
-      stats.errors.push(errorMessage);
-      log(`ERROR: ${errorMessage}`);
-    }
-  }
-  
-  return stats;
-}
-
-async function main() {
-  try {
-    log('=== PriceCharting Import Script ===');
-    log(`Mode: ${isDryRun ? 'DRY RUN' : 'LIVE'}`);
-    
-    const stats = await runImport();
-    
-    log('=== IMPORT COMPLETE ===');
-    log(`Total products processed: ${stats.totalProductsProcessed}`);
-    log(`Total cards added: ${stats.totalCardsAdded}`);
-    log(`Cards skipped (already exist): ${stats.cardsSkipped}`);
-    log(`Sets skipped (no match): ${stats.setsSkipped}`);
-    log(`Errors: ${stats.errors.length}`);
-    
-    if (stats.errors.length > 0) {
-      log('=== ERRORS ===');
-      stats.errors.forEach(error => log(`ERROR: ${error}`));
     }
     
-    log('=== SUMMARY ===');
-    console.log('\n🎯 Import Summary:');
-    console.log(`   Total products processed: ${stats.totalProductsProcessed}`);
-    console.log(`   Total cards added: ${stats.totalCardsAdded}`);
-    console.log(`   Cards skipped (already exist): ${stats.cardsSkipped}`);
-    console.log(`   Sets skipped (no match): ${stats.setsSkipped}`);
-    console.log(`   Errors: ${stats.errors.length}`);
+    // Final summary
+    console.log('\n🎉 Import completed!');
+    console.log(`Processed: ${processedCount} products`);
+    console.log(`Inserted: ${insertedCount} new cards`);
+    console.log(`Skipped: ${skippedCount} products`);
     
-    if (isDryRun) {
-      console.log('\n⚠️  This was a DRY RUN - no changes were made to the database');
-      console.log('Run without --dry-run to perform the actual import');
-    } else {
-      console.log(`\n📄 Full log written to: ${LOG_FILE}`);
-    }
+    log.push(`\nImport Summary:`);
+    log.push(`Processed: ${processedCount} products`);
+    log.push(`Inserted: ${insertedCount} new cards`);
+    log.push(`Skipped: ${skippedCount} products`);
+    
+    // Write log file
+    writeFileSync('import.log', log.join('\n'));
+    console.log('Import log written to import.log');
     
   } catch (error) {
-    console.error('❌ Fatal error:', error);
-    log(`FATAL ERROR: ${error instanceof Error ? error.message : String(error)}`);
-    process.exit(1);
+    console.error('Import failed:', error);
+    log.push(`Import failed: ${error instanceof Error ? error.message : String(error)}`);
+    writeFileSync('import.log', log.join('\n'));
+    throw error;
   }
 }
 
-// Run the script
-main();
+// Run the import
+runPriceChartingImport().catch(error => {
+  console.error('Script failed:', error);
+  process.exit(1);
+});

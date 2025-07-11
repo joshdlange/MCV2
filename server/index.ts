@@ -93,16 +93,7 @@ app.use((req, res, next) => {
     //   startBackgroundPricingFetch();
     // });
     
-    // Start reliable PriceCharting import
-    setTimeout(async () => {
-      try {
-        console.log('Auto-starting reliable PriceCharting import...');
-        const { reliableImporter } = await import('./reliable-background-import');
-        await reliableImporter.startImport();
-      } catch (error) {
-        console.error('Failed to auto-start reliable import:', error);
-      }
-    }, 3000);
+
   });
   
   // Handle uncaught exceptions and unhandled rejections to prevent crashes

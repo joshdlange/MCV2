@@ -1,0 +1,89 @@
+We need to fix and clean up the PriceCharting import implementation properly. Please follow these instructions carefully and do not make assumptions:
+
+🧹 Step 1 — Fix the API Call
+✅ In the current import code:
+
+Make sure the script calls the correct PriceCharting API endpoint:
+
+bash
+Copy
+Edit
+/api/products?platform=trading-card&apikey=YOUR_KEY
+This endpoint returns all trading card products, each representing an individual card.
+
+Make sure the request includes our secret API key from process.env.PRICECHARTING_API_KEY.
+
+Parse each product’s name field using the agreed logic:
+
+Example: "1992 Marvel Masterpieces #15 Spider-Man" →
+setName: "1992 Marvel Masterpieces"
+cardNumber: "15"
+cardName: "Spider-Man"
+
+Match the setName against our DB using a case-insensitive fuzzy match.
+
+If no good match exists, log it for manual review but skip creating a new set.
+
+Only insert cards that do not already exist (match on setId + cardNumber).
+
+For inserted cards, store:
+
+setId
+
+cardName
+
+cardNumber
+
+frontImageUrl (from PriceCharting image_url)
+
+price (from PriceCharting loose_price)
+
+Add console logs and write progress to import.log.
+
+🧹 Step 2 — Clean Up Unnecessary Files
+✅ Delete only files or classes that are unrelated or broken from the earlier attempts:
+
+PriceChartingImporter class file(s)
+
+Any file named:
+
+background-import.ts
+
+backgroundPriceImport.ts
+
+pricecharting-daemon.ts
+
+Any server initialization code that auto-starts PriceCharting import on boot
+
+Any progress-tracking JSON files like progress.json or complete-import.log (if left over)
+
+Do NOT touch:
+
+Any existing import/export tools unrelated to PriceCharting
+
+Any production database files
+
+Any unrelated API endpoints or routes
+
+🧹 Step 3 — Verify
+✅ After cleaning:
+
+Confirm no auto-start logic remains in server/index.ts or server/routes.ts.
+
+Confirm a single, manual, working import script remains (e.g., scripts/run-pricecharting-import.ts) which can be run with:
+
+arduino
+Copy
+Edit
+npx ts-node scripts/run-pricecharting-import.ts
+Run a test against just 1 or 2 sets and confirm cards are being inserted.
+
+🧹 Important Notes:
+🚫 Do not delete or rename unrelated files.
+🚫 Do not create new background processes.
+✅ Keep it simple and transparent.
+✅ Output a log of what files you cleaned up and what you changed.
+
+If you need me to re-state the card name parsing or set fuzzy-match logic, just ask before assuming anything. Please acknowledge each step is done before moving on.
+
+Thanks.
