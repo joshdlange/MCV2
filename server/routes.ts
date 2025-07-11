@@ -1387,6 +1387,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PriceCharting background import endpoints
+  app.post("/api/admin/pricecharting-import/start", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { priceChartingImporter } = await import('./background-pricecharting-import');
+      
+      await priceChartingImporter.startImport();
+      
+      res.json({ 
+        message: "PriceCharting import started successfully", 
+        status: "running" 
+      });
+    } catch (error) {
+      console.error('Start PriceCharting import error:', error);
+      res.status(500).json({ 
+        message: "Failed to start import", 
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  app.post("/api/admin/pricecharting-import/stop", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { priceChartingImporter } = await import('./background-pricecharting-import');
+      
+      priceChartingImporter.stopImport();
+      
+      res.json({ 
+        message: "PriceCharting import stopped successfully", 
+        status: "stopped" 
+      });
+    } catch (error) {
+      console.error('Stop PriceCharting import error:', error);
+      res.status(500).json({ message: "Failed to stop import" });
+    }
+  });
+
+  app.get("/api/admin/pricecharting-import/status", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { priceChartingImporter } = await import('./background-pricecharting-import');
+      
+      const progress = priceChartingImporter.getProgress();
+      
+      res.json(progress);
+    } catch (error) {
+      console.error('Get PriceCharting import status error:', error);
+      res.status(500).json({ message: "Failed to get import status" });
+    }
+  });
+
   // Background image processing endpoints
   app.post("/api/admin/background-images/start", authenticateUser, async (req: any, res) => {
     try {

@@ -33,13 +33,19 @@ interface ImportResult {
   }>;
 }
 
+interface ImportProgress {
+  isRunning: boolean;
+  currentSetIndex: number;
+  totalSets: number;
+  totalCardsAdded: number;
+  totalSetsProcessed: number;
+  currentSetName: string;
+  lastUpdated: string;
+  errors: string[];
+}
+
 export function PriceChartingImporter() {
-  const [config, setConfig] = useState<PriceChartingConfig | null>(null);
-  const [isImporting, setIsImporting] = useState(false);
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
-  const [limit, setLimit] = useState(25);
-  const [rateLimitMs, setRateLimitMs] = useState(2000);
-  const [progress, setProgress] = useState(0);
+  const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
