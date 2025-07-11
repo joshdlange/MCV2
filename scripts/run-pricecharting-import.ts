@@ -221,6 +221,13 @@ async function runPriceChartingImport() {
       console.log(`Total unique products found: ${allProducts.length}`);
       log.push(`Found ${allProducts.length} products for set "${set.name}" using multiple search strategies`);
       
+      // Log sets with zero matches for manual review
+      if (allProducts.length === 0) {
+        console.log(`  🚨 NO MATCHING PRODUCTS FOUND for "${set.name}" - logging for manual review`);
+        writeFileSync('zero-match-sets.log', `${set.name} (ID: ${set.id}) - No matching products found\n`, { flag: 'a' });
+        continue;
+      }
+      
       const products = allProducts;
       
       let setInsertedCount = 0;
