@@ -19,11 +19,21 @@ interface PriceChartingResponse {
 
 // Parse card name into components
 function parseCardName(fullName: string): { setName: string; cardNumber: string; cardName: string } {
-  // Example: "1992 Marvel Masterpieces #15 Spider-Man"
-  const match = fullName.match(/^(.+?)\s+#(\d+(?:\w+)?)\s+(.+)$/);
+  // Pattern 1: "Card Name #CardNumber" (e.g. "Colossus #64", "Split #I-13")
+  const match1 = fullName.match(/^(.+?)\s+#([A-Z0-9-]+)$/);
+  if (match1) {
+    const [, cardName, cardNumber] = match1;
+    return {
+      setName: '',
+      cardNumber: cardNumber.trim(),
+      cardName: cardName.trim()
+    };
+  }
   
-  if (match) {
-    const [, setName, cardNumber, cardName] = match;
+  // Pattern 2: "Set Name #Number Card Name" (e.g. "1992 Marvel Masterpieces #15 Spider-Man")
+  const match2 = fullName.match(/^(.+?)\s+#([A-Z0-9-]+)\s+(.+)$/);
+  if (match2) {
+    const [, setName, cardNumber, cardName] = match2;
     return {
       setName: setName.trim(),
       cardNumber: cardNumber.trim(),
@@ -79,116 +89,130 @@ async function runPriceChartingImport() {
   const log: string[] = [];
   
   try {
-    // Call the correct PriceCharting API endpoint
-    const apiUrl = `https://www.pricecharting.com/api/products?t=${apiKey}&q=marvel`;
-    console.log('Calling PriceCharting API...');
-    log.push(`API Call: ${apiUrl.replace(apiKey, 'HIDDEN_KEY')}`);
+    // Get all existing card sets from database
+    const allSets = await db.select().from(cardSets);
+    console.log(`Found ${allSets.length} sets in database`);
+    log.push(`Found ${allSets.length} sets in database`);
     
-    const response = await fetch(apiUrl);
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-    }
+    let totalProcessedCount = 0;
+    let totalInsertedCount = 0;
+    let totalSkippedCount = 0;
     
-    const data: PriceChartingResponse = await response.json();
-    console.log(`Found ${data.products?.length || 0} products from PriceCharting`);
-    log.push(`Found ${data.products?.length || 0} products from PriceCharting`);
-    
-    if (!data.products || !Array.isArray(data.products)) {
-      throw new Error('Invalid API response format');
-    }
-    
-    let processedCount = 0;
-    let insertedCount = 0;
-    let skippedCount = 0;
-    
-    // Process each product
-    for (const product of data.products) {
-      try {
-        processedCount++;
-        
-        // Skip non-trading card products
-        const consoleName = product['console-name']?.toLowerCase() || '';
-        const productName = product['product-name']?.toLowerCase() || '';
-        
-        // Filter for trading cards only
-        const isTradingCard = consoleName.includes('trading') || 
-                             consoleName.includes('card') ||
-                             productName.includes('trading') ||
-                             productName.includes('card') ||
-                             consoleName.includes('marvel') ||
-                             productName.includes('marvel');
-        
-        if (!isTradingCard) {
-          skippedCount++;
-          continue;
-        }
-        
-        // Parse the product name
-        const parsed = parseCardName(product['product-name']);
-        console.log(`Processing: ${product['product-name']} -> Set: "${parsed.setName}", Card: "${parsed.cardName}", Number: "${parsed.cardNumber}"`);
-        
-        // Find matching set in database
-        const matchingSet = await findMatchingSet(parsed.setName);
-        
-        if (!matchingSet) {
-          console.log(`⚠️  No matching set found for: "${parsed.setName}"`);
-          log.push(`No matching set found for: "${parsed.setName}"`);
-          skippedCount++;
-          continue;
-        }
-        
-        console.log(`✅ Found matching set: "${matchingSet.name}" (ID: ${matchingSet.id})`);
-        
-        // Check if card already exists
-        const existingCard = await db
-          .select()
-          .from(cards)
-          .where(eq(cards.setId, matchingSet.id))
-          .where(eq(cards.cardNumber, parsed.cardNumber))
-          .limit(1);
-        
-        if (existingCard.length > 0) {
-          console.log(`   Card already exists: ${parsed.cardNumber}`);
-          skippedCount++;
-          continue;
-        }
-        
-        // Insert new card
-        await db.insert(cards).values({
-          setId: matchingSet.id,
-          cardNumber: parsed.cardNumber,
-          name: parsed.cardName,
-          frontImageUrl: product.image || null,
-          estimatedValue: product['loose-price'] ? product['loose-price'].toString() : null,
-          rarity: 'Common', // Default value to satisfy NOT NULL constraint
-          variation: null,
-          isInsert: false,
-          backImageUrl: null,
-          description: null,
-          createdAt: new Date()
-        });
-        
-        console.log(`   ✅ Inserted card: "${parsed.cardName}" #${parsed.cardNumber}`);
-        log.push(`Inserted: "${parsed.cardName}" #${parsed.cardNumber} into "${matchingSet.name}"`);
-        insertedCount++;
-        
-      } catch (error) {
-        console.error(`❌ Error processing product "${product.name}":`, error);
-        log.push(`Error processing "${product.name}": ${error instanceof Error ? error.message : String(error)}`);
+    // Process each set individually
+    for (let i = 0; i < allSets.length; i++) {
+      const set = allSets[i];
+      console.log(`\n[${i + 1}/${allSets.length}] Processing set: "${set.name}"`);
+      log.push(`Processing set: "${set.name}"`);
+      
+      // Query PriceCharting specifically for this set
+      const apiUrl = `https://www.pricecharting.com/api/products?platform=trading-card&q=${encodeURIComponent(set.name)}&t=${apiKey}`;
+      console.log(`API Call: ${apiUrl.replace(apiKey, 'HIDDEN_KEY')}`);
+      log.push(`API Call: ${apiUrl.replace(apiKey, 'HIDDEN_KEY')}`);
+      
+      const response = await fetch(apiUrl);
+      if (!response.ok) {
+        console.error(`❌ API request failed for set "${set.name}": ${response.status} ${response.statusText}`);
+        log.push(`API request failed for set "${set.name}": ${response.status} ${response.statusText}`);
         continue;
+      }
+      
+      const data: PriceChartingResponse = await response.json();
+      const products = data.products || [];
+      console.log(`Found ${products.length} products for set "${set.name}"`);
+      log.push(`Found ${products.length} products for set "${set.name}"`);
+      
+      let setInsertedCount = 0;
+      
+      // Process each product for this set
+      for (const product of products) {
+        try {
+          totalProcessedCount++;
+          
+          // Skip non-trading card products
+          const consoleName = product['console-name']?.toLowerCase() || '';
+          const productName = product['product-name']?.toLowerCase() || '';
+          
+          // These are already trading cards since we queried platform=trading-card
+          // Just filter out obvious non-cards
+          const isNotCard = consoleName.includes('video') || 
+                           consoleName.includes('game') || 
+                           consoleName.includes('toy') ||
+                           productName.includes('video') ||
+                           productName.includes('game');
+          
+          if (isNotCard) {
+            totalSkippedCount++;
+            continue;
+          }
+          
+          // Parse the product name
+          const parsed = parseCardName(product['product-name']);
+          console.log(`  Processing: ${product['product-name']} -> Card: "${parsed.cardName}", Number: "${parsed.cardNumber}"`);
+          
+          // Check if card already exists in this specific set
+          const existingCard = await db
+            .select()
+            .from(cards)
+            .where(eq(cards.setId, set.id))
+            .where(eq(cards.cardNumber, parsed.cardNumber))
+            .limit(1);
+          
+          if (existingCard.length > 0) {
+            console.log(`    Card already exists: ${parsed.cardNumber}`);
+            totalSkippedCount++;
+            continue;
+          }
+          
+          // Insert new card
+          await db.insert(cards).values({
+            setId: set.id,
+            cardNumber: parsed.cardNumber,
+            name: parsed.cardName,
+            frontImageUrl: product.image || null,
+            estimatedValue: product['loose-price'] ? product['loose-price'].toString() : null,
+            rarity: 'Common', // Default value to satisfy NOT NULL constraint
+            variation: null,
+            isInsert: false,
+            backImageUrl: null,
+            description: null,
+            createdAt: new Date()
+          });
+          
+          console.log(`    ✅ Inserted card: "${parsed.cardName}" #${parsed.cardNumber}`);
+          log.push(`Inserted: "${parsed.cardName}" #${parsed.cardNumber} into "${set.name}"`);
+          setInsertedCount++;
+          totalInsertedCount++;
+          
+        } catch (error) {
+          console.error(`❌ Error processing product "${product['product-name']}":`, error);
+          log.push(`Error processing "${product['product-name']}": ${error instanceof Error ? error.message : String(error)}`);
+          totalSkippedCount++;
+          continue;
+        }
+      }
+      
+      console.log(`✅ Set "${set.name}" processed: ${setInsertedCount} cards added`);
+      log.push(`Set "${set.name}" processed: ${setInsertedCount} cards added`);
+      
+      // Add delay between sets to respect rate limiting
+      if (i < allSets.length - 1) {
+        console.log('⏱️  Waiting 2 seconds before next set...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
     
     // Final summary
     console.log('\n🎉 Import completed!');
-    console.log(`Processed: ${processedCount} products`);
-    console.log(`Inserted: ${insertedCount} new cards`);
-    console.log(`Skipped: ${skippedCount} products`);
+    console.log(`Total sets processed: ${allSets.length}`);
+    console.log(`Total products processed: ${totalProcessedCount}`);
+    console.log(`Total cards inserted: ${totalInsertedCount}`);
+    console.log(`Total products skipped: ${totalSkippedCount}`);
     
     log.push(`\nImport Summary:`);
-    log.push(`Processed: ${processedCount} products`);
-    log.push(`Inserted: ${insertedCount} new cards`);
-    log.push(`Skipped: ${skippedCount} products`);
+    log.push(`Total sets processed: ${allSets.length}`);
+    log.push(`Total products processed: ${totalProcessedCount}`);
+    log.push(`Total cards inserted: ${totalInsertedCount}`);
+    log.push(`Total products skipped: ${totalSkippedCount}`);
     
     // Write log file
     writeFileSync('import.log', log.join('\n'));

@@ -119,14 +119,17 @@ Changelog:
 - July 11, 2025: COMPLETED MANUAL PRICECHARTING IMPORT SCRIPT IMPLEMENTATION
   - Fixed and cleaned up all broken background import files and auto-start logic
   - Created proper manual import script at scripts/run-pricecharting-import.ts
-  - Fixed API call to use correct endpoint: /api/products?t=TOKEN&q=marvel
-  - Implemented proper card name parsing and fuzzy set matching
+  - MAJOR FIX: Changed from generic "marvel" search to specific set-by-set queries
+  - Fixed API call to use correct endpoint: /api/products?platform=trading-card&q=SPECIFIC_SET_NAME&t=TOKEN
+  - Implemented proper card name parsing for formats like "Colossus #64" and "Split #I-13"
+  - Fixed filtering to accept all trading card products (not just those with "trading" in name)
   - Added database constraint fixes (rarity field default value)
-  - Script successfully processes 400+ Marvel products from PriceCharting
+  - Script now processes each of the 1,114 existing sets individually
   - Only inserts cards that don't already exist in database
   - Script can be run manually with: npx tsx scripts/run-pricecharting-import.ts
   - All broken background processes and auto-start logic removed
   - System is now clean and follows manual approach as requested
+  - Verified working with test - found 400 products for "1995 fleer dc vs marvel impact" set
 - July 8, 2025: Fixed critical PriceCharting filtering bug and deployed improved import system
   - MAJOR FIX: Resolved filtering bug that was only finding 3 cards instead of 200+ per set
   - Enhanced matching logic with multiple strategies: 85% similarity, word matching, and pattern detection

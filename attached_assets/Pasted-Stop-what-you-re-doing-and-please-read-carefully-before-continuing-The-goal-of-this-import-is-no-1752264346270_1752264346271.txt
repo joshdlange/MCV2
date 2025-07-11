@@ -1,0 +1,71 @@
+Stop what you’re doing and please read carefully before continuing.
+
+✅ The goal of this import is not to pull generic “Marvel” products.
+✅ The goal is to:
+
+Take each existing set name in our database.
+
+Query PriceCharting specifically for products matching that set name.
+
+For each matching product, parse out card number and card name.
+
+Insert only cards that do not already exist in that set.
+
+📋 Correct Approach:
+For each card set in our database:
+1️⃣ Take its setName.
+2️⃣ Query PriceCharting API for products:
+
+bash
+Copy
+Edit
+/api/products?platform=trading-card&q=${encodeURIComponent(setName)}&t=${API_KEY}
+✅ This ensures we only get products relevant to that specific set.
+3️⃣ For each product returned:
+
+Parse the name field to extract:
+
+setName
+
+cardNumber
+
+cardName
+
+Check if a card with that setId + cardNumber already exists.
+
+If it does not exist, insert it.
+
+📄 Example Code Snippet for API Call:
+ts
+Copy
+Edit
+const response = await fetch(
+  `https://www.pricecharting.com/api/products?platform=trading-card&q=${encodeURIComponent(set.name)}&t=${API_KEY}`
+);
+const data = await response.json();
+const products = data.products || [];
+Then iterate products, parse and insert missing cards.
+
+🧹 Additionally:
+✅ Remove any fuzzy matching against unrelated products.
+✅ Do not match to video games or toys — the only products we care about are Marvel trading cards for that set name.
+✅ Do not assume “Marvel” alone is enough — always use the full set name as the query.
+
+✅ Fix This Now:
+Update the script to query per set using the correct endpoint and q=${setName}.
+
+Remove any fallback code that queries q=marvel globally.
+
+Remove any fuzzy matches to unrelated products.
+
+Run against just 1–2 sets and confirm it actually adds missing cards.
+
+Notes:
+🚫 Do not claim “no cards were added because they already existed” when you’re querying the wrong data.
+🚫 Do not fetch generic Marvel merchandise.
+✅ This is a per-set import that fills gaps based on specific set names.
+
+Please acknowledge each step is done before moving forward and show the exact API call being made in logs so I can verify it’s querying correctly.
+
+Thank you.
+
