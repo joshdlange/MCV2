@@ -116,22 +116,60 @@ async function runPriceChartingImport() {
       console.log(`\n[${i + 1}/${allSets.length}] Processing set: "${set.name}"`);
       log.push(`Processing set: "${set.name}"`);
       
-      // Query PriceCharting specifically for this set
-      const apiUrl = `https://www.pricecharting.com/api/products?platform=trading-card&q=${encodeURIComponent(set.name)}&t=${apiKey}`;
-      console.log(`API Call: ${apiUrl.replace(apiKey, 'HIDDEN_KEY')}`);
-      log.push(`API Call: ${apiUrl.replace(apiKey, 'HIDDEN_KEY')}`);
+      // Try multiple search strategies to find all cards for this set
+      const searchQueries = [
+        set.name, // Original exact name
+        set.name.replace(/\.\.\.$/, ''), // Remove trailing "..."
+        set.name.split(' ').slice(0, 3).join(' '), // First 3 words
+        set.name.split(' ').slice(1).join(' '), // Skip first word
+        set.name.replace(/\d{4}\s+/, ''), // Remove year
+      ];
       
-      const response = await fetch(apiUrl);
-      if (!response.ok) {
-        console.error(`❌ API request failed for set "${set.name}": ${response.status} ${response.statusText}`);
-        log.push(`API request failed for set "${set.name}": ${response.status} ${response.statusText}`);
-        continue;
+      let allProducts: PriceChartingProduct[] = [];
+      const uniqueProducts = new Set<string>();
+      
+      for (const query of searchQueries) {
+        const apiUrl = `https://www.pricecharting.com/api/products?platform=trading-card&q=${encodeURIComponent(query)}&t=${apiKey}`;
+        console.log(`  Trying query: "${query}"`);
+        
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+          console.log(`    Query failed: ${response.status}`);
+          continue;
+        }
+        
+        const data: PriceChartingResponse = await response.json();
+        const products = data.products || [];
+        
+        // Filter products that match this specific set
+        const matchingProducts = products.filter(product => {
+          const consoleName = product['console-name']?.toLowerCase() || '';
+          const setNameLower = set.name.toLowerCase();
+          
+          // Check if console name contains key parts of our set name
+          const setWords = setNameLower.split(' ').filter(word => word.length > 2);
+          const matchCount = setWords.filter(word => consoleName.includes(word)).length;
+          
+          return matchCount >= Math.min(3, setWords.length); // Match at least 3 words or all words if less than 3
+        });
+        
+        // Add unique products
+        matchingProducts.forEach(product => {
+          const key = `${product['product-name']}-${product['console-name']}`;
+          if (!uniqueProducts.has(key)) {
+            uniqueProducts.add(key);
+            allProducts.push(product);
+          }
+        });
+        
+        console.log(`    Found ${products.length} total, ${matchingProducts.length} matching`);
+        await new Promise(resolve => setTimeout(resolve, 500)); // Small delay between queries
       }
       
-      const data: PriceChartingResponse = await response.json();
-      const products = data.products || [];
-      console.log(`Found ${products.length} products for set "${set.name}"`);
-      log.push(`Found ${products.length} products for set "${set.name}"`);
+      console.log(`Total unique products found: ${allProducts.length}`);
+      log.push(`Found ${allProducts.length} products for set "${set.name}" using multiple search strategies`);
+      
+      const products = allProducts;
       
       let setInsertedCount = 0;
       
