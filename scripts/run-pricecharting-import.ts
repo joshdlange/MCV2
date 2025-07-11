@@ -98,9 +98,21 @@ async function runPriceChartingImport() {
     let totalInsertedCount = 0;
     let totalSkippedCount = 0;
     
+    // Skip these two sets that we've already processed
+    const setsToSkip = [
+      "2023 upper deck marvel platinum red rainbow autograph",
+      "1993 SkyBox Marvel Masterpieces"
+    ];
+    
     // Process each set individually
     for (let i = 0; i < allSets.length; i++) {
       const set = allSets[i];
+      
+      if (setsToSkip.includes(set.name)) {
+        console.log(`\n[${i + 1}/${allSets.length}] Skipping already processed set: "${set.name}"`);
+        continue;
+      }
+      
       console.log(`\n[${i + 1}/${allSets.length}] Processing set: "${set.name}"`);
       log.push(`Processing set: "${set.name}"`);
       
@@ -196,8 +208,8 @@ async function runPriceChartingImport() {
       
       // Add delay between sets to respect rate limiting
       if (i < allSets.length - 1) {
-        console.log('⏱️  Waiting 2 seconds before next set...');
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log('⏱️  Waiting 1 second before next set...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
     
