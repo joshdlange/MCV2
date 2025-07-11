@@ -1,7 +1,7 @@
 import { db } from './db';
 import { cardSets, cards } from '../shared/schema';
 import { eq } from 'drizzle-orm';
-import { writeFileSync, readFileSync } from 'fs';
+import { writeFileSync, readFileSync, existsSync } from 'fs';
 
 interface PriceChartingProduct {
   'product-name': string;
@@ -42,11 +42,33 @@ class PriceChartingImporter {
 
   private apiToken: string;
   private importInterval: NodeJS.Timeout | null = null;
+  private readonly progressFile = 'pricecharting-import-progress.json';
 
   constructor() {
     this.apiToken = process.env.PRICECHARTING_API_TOKEN || '';
     if (!this.apiToken) {
       throw new Error('PRICECHARTING_API_TOKEN environment variable is required');
+    }
+    this.loadProgress();
+  }
+
+  private loadProgress(): void {
+    try {
+      if (existsSync(this.progressFile)) {
+        const saved = JSON.parse(readFileSync(this.progressFile, 'utf8'));
+        this.progress = { ...this.progress, ...saved };
+        console.log(`Loaded progress: ${this.progress.totalCardsAdded} cards added, ${this.progress.currentSetIndex}/${this.progress.totalSets} sets processed`);
+      }
+    } catch (error) {
+      console.error('Failed to load progress:', error);
+    }
+  }
+
+  private saveProgress(): void {
+    try {
+      writeFileSync(this.progressFile, JSON.stringify(this.progress, null, 2));
+    } catch (error) {
+      console.error('Failed to save progress:', error);
     }
   }
 
@@ -151,6 +173,7 @@ class PriceChartingImporter {
       console.log(`✅ Added ${newCardsForSet} new cards to "${set.name}"`);
       this.progress.totalCardsAdded += newCardsForSet;
       this.progress.totalSetsProcessed++;
+      this.saveProgress();
 
     } catch (error) {
       const errorMsg = `Error processing set "${set.name}": ${error instanceof Error ? error.message : String(error)}`;
@@ -166,6 +189,7 @@ class PriceChartingImporter {
     // Move to next set
     this.progress.currentSetIndex++;
     this.progress.lastUpdated = new Date().toISOString();
+    this.saveProgress();
 
     // Schedule next processing with delay
     setTimeout(() => this.processNextSet(allSets), 2000); // 2 second delay between sets
@@ -316,3 +340,16 @@ class PriceChartingImporter {
 
 // Global instance
 export const priceChartingImporter = new PriceChartingImporter();
+
+// Auto-start if not complete
+setTimeout(async () => {
+  try {
+    const progress = priceChartingImporter.getProgress();
+    if (progress.totalSets === 0 || progress.currentSetIndex < progress.totalSets) {
+      console.log('Auto-starting PriceCharting import...');
+      await priceChartingImporter.startImport();
+    }
+  } catch (error) {
+    console.error('Failed to auto-start import:', error);
+  }
+}, 3000); // Wait 3 seconds for server to be ready
