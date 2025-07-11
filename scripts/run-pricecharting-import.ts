@@ -3,6 +3,30 @@ import { cardSets, cards } from '../shared/schema';
 import { eq } from 'drizzle-orm';
 import { writeFileSync } from 'fs';
 
+// Calculate similarity between two strings using Levenshtein distance
+function calculateSimilarity(str1: string, str2: string): number {
+  const len1 = str1.length;
+  const len2 = str2.length;
+  const matrix = Array(len1 + 1).fill(null).map(() => Array(len2 + 1).fill(null));
+  
+  for (let i = 0; i <= len1; i++) matrix[i][0] = i;
+  for (let j = 0; j <= len2; j++) matrix[0][j] = j;
+  
+  for (let i = 1; i <= len1; i++) {
+    for (let j = 1; j <= len2; j++) {
+      const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost
+      );
+    }
+  }
+  
+  const maxLength = Math.max(len1, len2);
+  return maxLength === 0 ? 1 : (maxLength - matrix[len1][len2]) / maxLength;
+}
+
 interface PriceChartingProduct {
   id: string;
   'product-name': string;
@@ -141,16 +165,44 @@ async function runPriceChartingImport() {
         const data: PriceChartingResponse = await response.json();
         const products = data.products || [];
         
-        // Filter products that match this specific set
+        // Filter products that match this specific set with high precision
         const matchingProducts = products.filter(product => {
           const consoleName = product['console-name']?.toLowerCase() || '';
           const setNameLower = set.name.toLowerCase();
+          const productNameLower = product['product-name']?.toLowerCase() || '';
           
-          // Check if console name contains key parts of our set name
-          const setWords = setNameLower.split(' ').filter(word => word.length > 2);
-          const matchCount = setWords.filter(word => consoleName.includes(word)).length;
+          // For What If subset, use specific subset matching
+          if (setNameLower.includes('what if')) {
+            // Product must contain "what if" in either console name or product name
+            const hasWhatIf = consoleName.includes('what if') || productNameLower.includes('what if');
+            
+            // Must also match the year and main set name
+            const hasYear = consoleName.includes('2020') || productNameLower.includes('2020');
+            const hasMasterpieces = consoleName.includes('masterpieces') || productNameLower.includes('masterpieces');
+            
+            return hasWhatIf && hasYear && hasMasterpieces;
+          }
           
-          return matchCount >= Math.min(3, setWords.length); // Match at least 3 words or all words if less than 3
+          // For other subsets, use general subset matching logic
+          if (setNameLower.includes('autograph') && !consoleName.includes('autograph') && !productNameLower.includes('autograph')) {
+            return false; // Reject base set when looking for Autograph subset
+          }
+          
+          if (setNameLower.includes('refractor') && !consoleName.includes('refractor') && !productNameLower.includes('refractor')) {
+            return false; // Reject base set when looking for Refractor subset
+          }
+          
+          if (setNameLower.includes('parallel') && !consoleName.includes('parallel') && !productNameLower.includes('parallel')) {
+            return false; // Reject base set when looking for Parallel subset
+          }
+          
+          if (setNameLower.includes('short print') && !consoleName.includes('short print') && !productNameLower.includes('short print')) {
+            return false; // Reject base set when looking for Short Print subset
+          }
+          
+          // For base sets, use similarity matching (lowered to 90% from 95%)
+          const similarity = calculateSimilarity(consoleName, setNameLower);
+          return similarity >= 0.90;
         });
         
         // Add unique products
