@@ -4,7 +4,7 @@ import { signInWithGoogle } from "@/lib/firebase";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { ArrowRight, Sparkles, Info } from "lucide-react";
-import heroLogoWhite from "@/assets/hero-logo.svg";
+import heroLogoWhite from "@assets/noun-super-hero-380874-FFFFFF.png";
 import { useAppStore } from "@/lib/store";
 
 export function Login() {

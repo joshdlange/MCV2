@@ -1,0 +1,68 @@
+Please update our existing Marvel Card Vault image finder TypeScript script with the following improvements to help us debug and track eBay API usage more effectively:
+
+🔹 1. Improve eBay API Error Logging
+In the performEBaySearch function:
+
+Capture and log the full eBay error response from the API when something fails.
+
+Instead of treating all 10001 errors as "rate limit exceeded," log the actual message provided by eBay.
+
+🔧 Add the following just after receiving the data from the response:
+
+ts
+Copy
+Edit
+const ebayError = data?.errorMessage?.[0]?.error?.[0];
+if (ebayError) {
+  console.error('eBay API error:', JSON.stringify(ebayError, null, 2));
+  throw new Error(`EBAY_API_ERROR: ${ebayError.errorId?.[0]} - ${ebayError.message?.[0]}`);
+}
+🔹 2. Add a Local API Call Counter
+At the top of the module, define a global:
+
+ts
+Copy
+Edit
+let ebayCallCount = 0;
+Then, increment and log it in performEBaySearch:
+
+ts
+Copy
+Edit
+ebayCallCount++;
+console.log(`eBay API call #${ebayCallCount} — keywords: "${searchTerms}"`);
+At the end of batchUpdateCardImages(), print:
+
+ts
+Copy
+Edit
+console.log(`Total eBay API calls made this run: ${ebayCallCount}`);
+🔹 3. Add Optional Persistent Daily Tracker (Optional if Low Lift)
+Track daily eBay API calls in a local JSON file like api-call-log.json
+
+On each call, update the file like:
+
+json
+Copy
+Edit
+{
+  "2024-06-10": 145,
+  "2024-06-11": 53
+}
+Reset each day automatically when a new date appears.
+
+Use fs to read/write and format today's date like YYYY-MM-DD.
+
+🔹 4. Make Rate Limiting Dynamic
+In batchUpdateCardImages(), replace the fixed 1000ms wait with:
+
+ts
+Copy
+Edit
+const waitMs = parseInt(process.env.EBAY_RATE_LIMIT_MS || '1000', 10);
+await new Promise(resolve => setTimeout(resolve, waitMs));
+And define EBAY_RATE_LIMIT_MS=1000 in your .env file so you can adjust without touching the code.
+
+🧠 Goal: This will help us determine whether we're truly exceeding rate limits, misconfigured, or hitting some other eBay quota. Please organize these changes cleanly and annotate with comments so we can revisit them in future debugging.
+
+Let me know once complete and I’ll test this against the failing image lookups.

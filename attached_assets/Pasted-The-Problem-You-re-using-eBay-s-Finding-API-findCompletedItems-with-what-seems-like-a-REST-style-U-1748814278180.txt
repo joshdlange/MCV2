@@ -1,0 +1,83 @@
+The Problem
+You're using eBay’s Finding API (findCompletedItems) with what seems like a REST-style URL + querystring, but this API is not REST — it's a SOAP-style GET request over HTTP with specific headers.
+
+This causes 500 errors because the endpoint is expecting specific formats (especially in headers), and it can’t interpret your query.
+
+✅ Fix: Use Proper Headers and Query Format
+Here's what you need to do to fix it:
+
+🔧 1. Correct URL and headers
+ts
+Copy
+Edit
+const baseUrl = 'https://svcs.ebay.com/services/search/FindingService/v1';
+
+const headers = {
+  'X-EBAY-SOA-OPERATION-NAME': 'findCompletedItems',
+  'X-EBAY-SOA-SERVICE-VERSION': '1.0.0',
+  'X-EBAY-SOA-SECURITY-APPNAME': process.env.EBAY_APP_ID_PROD,
+  'X-EBAY-SOA-RESPONSE-DATA-FORMAT': 'JSON',
+};
+📦 2. Correct querystring format
+ts
+Copy
+Edit
+const params = {
+  'keywords': searchQuery, // e.g., "SkyBox Marvel Masterpieces Apocalypse PB1"
+  'categoryId': '2536', // Non-Sport Trading Cards
+  'itemFilter(0).name': 'SoldItemsOnly',
+  'itemFilter(0).value': 'true',
+  'itemFilter(1).name': 'ListingType',
+  'itemFilter(1).value': 'AuctionWithBIN',
+  'itemFilter(2).name': 'ListingType',
+  'itemFilter(2).value': 'FixedPrice',
+  'sortOrder': 'EndTimeSoonest',
+  'paginationInput.entriesPerPage': '10',
+};
+Note: axios.get(baseUrl, { headers, params }) should work perfectly once those are in place.
+
+🧠 Additional Suggestions
+✅ Log the full response body and headers if the error continues — even 500s usually contain details.
+
+✅ Try the same call in Postman using these headers + params to validate eBay’s response.
+
+⚠️ Avoid unnecessary REST-PAYLOAD: '' — that key is unnecessary and may be confusing eBay's backend.
+
+🕵️‍♂️ Test with a simpler query like Marvel Spider-Man to ensure the query itself isn’t causing errors.
+
+✅ Summary: New Implementation Prompt for Replit
+Here's a prompt you can give Replit:
+
+🔧 Please fix the eBay API call in server/ebay-pricing.ts to follow eBay’s correct Finding API format. The current version is causing HTTP 500 errors.
+
+Use this endpoint: https://svcs.ebay.com/services/search/FindingService/v1
+
+Add these headers:
+
+ts
+Copy
+Edit
+{
+  'X-EBAY-SOA-OPERATION-NAME': 'findCompletedItems',
+  'X-EBAY-SOA-SERVICE-VERSION': '1.0.0',
+  'X-EBAY-SOA-SECURITY-APPNAME': process.env.EBAY_APP_ID_PROD,
+  'X-EBAY-SOA-RESPONSE-DATA-FORMAT': 'JSON'
+}
+Use the following query params in the request:
+
+ts
+Copy
+Edit
+{
+  'keywords': searchQuery,
+  'categoryId': '2536',
+  'itemFilter(0).name': 'SoldItemsOnly',
+  'itemFilter(0).value': 'true',
+  'itemFilter(1).name': 'ListingType',
+  'itemFilter(1).value': 'AuctionWithBIN',
+  'itemFilter(2).name': 'ListingType',
+  'itemFilter(2).value': 'FixedPrice',
+  'sortOrder': 'EndTimeSoonest',
+  'paginationInput.entriesPerPage': '10'
+}
+Use axios.get(baseUrl, { headers, params }) and log full errors if the call still fails. Let's verify this works for a basic keyword search like Marvel Spider-Man.
