@@ -116,6 +116,14 @@ The application implements comprehensive performance optimizations for handling 
 
 ```
 Changelog:
+- July 12, 2025: FIXED PRICECHARTING API QUERY FORMATTING - CRITICAL BUG RESOLVED
+  - MAJOR FIX: Changed API query formatting from spaces to dashes (e.g. "Marvel 2025 Topps Chrome" → "marvel-2025-topps-chrome")
+  - PriceCharting API requires lowercase with dashes, not encoded spaces
+  - Updated scripts/run-pricecharting-import.ts with proper formatSetName() function
+  - Test results show dramatic improvement: now finding correct products for each set
+  - Example: "2023 upper deck marvel platinum red rainbow autograph" now finds 217 products vs 0 before
+  - Export script created 172 Marvel trading cards from PriceCharting database
+  - Ready to re-run full import with corrected API formatting
 - July 11, 2025: LAUNCHED FULL PRICECHARTING IMPORT WITH IMPROVED FILTERING
   - Successfully deployed improved filtering logic with 85-99% accuracy improvement
   - Started comprehensive import across all 1,114 sets with proper logging

@@ -140,20 +140,25 @@ async function runPriceChartingImport() {
       console.log(`\n[${i + 1}/${allSets.length}] Processing set: "${set.name}"`);
       log.push(`Processing set: "${set.name}"`);
       
+      // Format set name for PriceCharting API (convert to lowercase with dashes)
+      const formatSetName = (name: string) => {
+        return name.toLowerCase().replace(/\s+/g, '-');
+      };
+      
       // Try multiple search strategies to find all cards for this set
       const searchQueries = [
-        set.name, // Original exact name
-        set.name.replace(/\.\.\.$/, ''), // Remove trailing "..."
-        set.name.split(' ').slice(0, 3).join(' '), // First 3 words
-        set.name.split(' ').slice(1).join(' '), // Skip first word
-        set.name.replace(/\d{4}\s+/, ''), // Remove year
+        formatSetName(set.name), // Full name formatted
+        formatSetName(set.name.replace(/\.\.\.$/, '')), // Remove trailing "..." and format
+        formatSetName(set.name.split(' ').slice(0, 3).join(' ')), // First 3 words formatted
+        formatSetName(set.name.split(' ').slice(1).join(' ')), // Skip first word and format
+        formatSetName(set.name.replace(/\d{4}\s+/, '')), // Remove year and format
       ];
       
       let allProducts: PriceChartingProduct[] = [];
       const uniqueProducts = new Set<string>();
       
       for (const query of searchQueries) {
-        const apiUrl = `https://www.pricecharting.com/api/products?platform=trading-card&q=${encodeURIComponent(query)}&t=${apiKey}`;
+        const apiUrl = `https://www.pricecharting.com/api/products?platform=trading-card&q=${query}&t=${apiKey}`;
         console.log(`  Trying query: "${query}"`);
         
         const response = await fetch(apiUrl);
