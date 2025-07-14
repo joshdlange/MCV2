@@ -1,0 +1,93 @@
+Starting PriceCharting import...
+Database connection established
+Found 1114 sets in database
+
+[1/1114] Skipping already processed set: "2023 upper deck marvel platinum red rainbow autograph"
+
+[2/1114] Skipping already processed set: "1993 SkyBox Marvel Masterpieces"
+
+[3/1114] Processing set: "marvel 2020 masterpieces What If..."
+  Trying query: "marvel-2020-masterpieces-what-if..."
+    Found 34 total, 34 matching
+  Trying query: "marvel-2020-masterpieces-what-if"
+    Found 34 total, 34 matching
+  Trying query: "marvel-2020-masterpieces"
+    Found 400 total, 34 matching
+  Trying query: "2020-masterpieces-what-if..."
+    Found 34 total, 34 matching
+  Trying query: "marvel-masterpieces-what-if..."
+    Found 400 total, 34 matching
+Total unique products found: 34
+  Processing: Thanos [What If] #47 -> Card: "Thanos [What If]", Number: "47"
+    Card already exists: 47
+  Processing: Black Cat [What If] #23 -> Card: "Black Cat [What If]", Number: "23"
+    Card already exists: 23
+  Processing: She-Hulk [What If] #19 -> Card: "She-Hulk [What If]", Number: "19"
+    Card already exists: 19
+  Processing: Moon Knight [What If...] #28 -> Card: "Moon Knight [What If...]", Number: "28"
+    Card already exists: 28
+  Processing: Professor X [What If] #11 -> Card: "Professor X [What If]", Number: "11"
+    Card already exists: 11
+  Processing: Ghost-Spider [What If] #59 -> Card: "Ghost-Spider [What If]", Number: "59"
+    Card already exists: 59
+  Processing: Ego the Living Planet [What If] #86 -> Card: "Ego the Living Planet [What If]", Number: "86"
+    Card already exists: 86
+  Processing: Punisher [What If] #16 -> Card: "Punisher [What If]", Number: "16"
+    Card already exists: 16
+  Processing: Captain America [What If] #35 -> Card: "Captain America [What If]", Number: "35"
+    Card already exists: 35
+  Processing: Captain Marvel [What If] #76 -> Card: "Captain Marvel [What If]", Number: "76"
+    Card already exists: 76
+  Processing: Namor [What If] #65 -> Card: "Namor [What If]", Number: "65"
+    Card already exists: 65
+  Processing: Pip the Troll [What If] #49 -> Card: "Pip the Troll [What If]", Number: "49"
+    Card already exists: 49
+  Processing: Fin Fang Foom [What If] #46 -> Card: "Fin Fang Foom [What If]", Number: "46"
+    Card already exists: 46
+  Processing: Mysterio [What If] #81 -> Card: "Mysterio [What If]", Number: "81"
+    Card already exists: 81
+  Processing: Jean Grey [What If] #75 -> Card: "Jean Grey [What If]", Number: "75"
+    Card already exists: 75
+  Processing: Spider-Man [What If] #29 -> Card: "Spider-Man [What If]", Number: "29"
+    Card already exists: 29
+  Processing: Deadpool [What If] #32 -> Card: "Deadpool [What If]", Number: "32"
+    Card already exists: 32
+  Processing: Man-Wolf [What If Autograph] #4 -> Card: "Man-Wolf [What If Autograph]", Number: "4"
+    Card already exists: 4
+  Processing: Colossus [What If] #74 -> Card: "Colossus [What If]", Number: "74"
+    Card already exists: 74
+  Processing: Ghost Rider [What If] #30 -> Card: "Ghost Rider [What If]", Number: "30"
+    Card already exists: 30
+  Processing: Jack O'Lantern [What If Autograph] #69 -> Card: "Jack O'Lantern [What If Autograph]", Number: "69"
+    Card already exists: 69
+  Processing: Storm [What If] #87 -> Card: "Storm [What If]", Number: "87"
+    Card already exists: 87
+  Processing: Hercules [What If Autograph] #56 -> Card: "Hercules [What If Autograph]", Number: "56"
+    Card already exists: 56
+  Processing: Kingpin [What If Autograph] #44 -> Card: "Kingpin [What If Autograph]", Number: "44"
+    Card already exists: 44
+  Processing: Cyclops [What If] #72 -> Card: "Cyclops [What If]", Number: "72"
+    Card already exists: 72
+  Processing: EX Nihilo [What If Autograph] #51 -> Card: "EX Nihilo [What If Autograph]", Number: "51"
+    Card already exists: 51
+  Processing: Thanos [What If Autograph] #47 -> Card: "Thanos [What If Autograph]", Number: "47"
+    Card already exists: 47
+  Processing: Hulk [What If] #58 -> Card: "Hulk [What If]", Number: "58"
+    Card already exists: 58
+  Processing: Black Widow [What If] #10 -> Card: "Black Widow [What If]", Number: "10"
+    Card already exists: 10
+  Processing: Killmonger [What If] #8 -> Card: "Killmonger [What If]", Number: "8"
+    Card already exists: 8
+  Processing: Thor [What If] #26 -> Card: "Thor [What If]", Number: "26"
+    Card already exists: 26
+  Processing: Green Goblin [What If] #31 -> Card: "Green Goblin [What If]", Number: "31"
+    Card already exists: 31
+  Processing: Black Panther [What If] #24 -> Card: "Black Panther [What If]", Number: "24"
+    Card already exists: 24
+  Processing: Iron Man [What If] #34 -> Card: "Iron Man [What If]", Number: "34"
+    Card already exists: 34
+✅ Set "marvel 2020 masterpieces What If..." processed: 0 cards added
+⏱️  Waiting 1 second before next set...
+
+[4/1114] Processing set: "marvel 2025 topps finest x men '97 previously on x men Gold Refractor"
+  Trying query: "marvel-2025-topps-finest-x-men-'97-previously-on-x-men-gold-refractor"
