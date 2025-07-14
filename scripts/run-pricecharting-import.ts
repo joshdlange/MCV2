@@ -122,11 +122,8 @@ async function runPriceChartingImport() {
     let totalInsertedCount = 0;
     let totalSkippedCount = 0;
     
-    // Skip these two sets that we've already processed
-    const setsToSkip = [
-      "2023 upper deck marvel platinum red rainbow autograph",
-      "1993 SkyBox Marvel Masterpieces"
-    ];
+    // Process all sets - no skipping
+    const setsToSkip = [];
     
     // Process each set individually
     for (let i = 0; i < allSets.length; i++) {
