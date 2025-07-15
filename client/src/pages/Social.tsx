@@ -393,6 +393,14 @@ export default function Social() {
                                 <MessageCircle className="w-4 h-4 mr-1" />
                                 Message
                               </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => window.open(`/friend-profile/${friendUser.id}`, '_blank')}
+                                className="bg-green-500 hover:bg-green-600 text-white font-bold px-4 py-2 rounded-lg"
+                              >
+                                <User className="w-4 h-4 mr-1" />
+                                View Profile
+                              </Button>
                             </div>
                           </div>
                         </div>

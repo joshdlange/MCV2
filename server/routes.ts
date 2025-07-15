@@ -1936,6 +1936,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Friend Collection Sharing API
+  app.get("/api/social/friends/:friendId/profile", authenticateUser, async (req: any, res) => {
+    try {
+      const friendId = parseInt(req.params.friendId);
+      const profile = await storage.getFriendProfile(req.user.id, friendId);
+      res.json(profile);
+    } catch (error) {
+      console.error('Get friend profile error:', error);
+      res.status(500).json({ message: error.message || "Failed to fetch friend profile" });
+    }
+  });
+
+  app.get("/api/social/friends/:friendId/collection", authenticateUser, async (req: any, res) => {
+    try {
+      const friendId = parseInt(req.params.friendId);
+      const collection = await storage.getFriendCollection(req.user.id, friendId);
+      res.json(collection);
+    } catch (error) {
+      console.error('Get friend collection error:', error);
+      res.status(500).json({ message: error.message || "Failed to fetch friend collection" });
+    }
+  });
+
+  app.get("/api/social/friends/:friendId/wishlist", authenticateUser, async (req: any, res) => {
+    try {
+      const friendId = parseInt(req.params.friendId);
+      const wishlist = await storage.getFriendWishlist(req.user.id, friendId);
+      res.json(wishlist);
+    } catch (error) {
+      console.error('Get friend wishlist error:', error);
+      res.status(500).json({ message: error.message || "Failed to fetch friend wishlist" });
+    }
+  });
+
   // Admin Badge Management
   app.post("/api/admin/badges", authenticateUser, async (req: any, res) => {
     try {

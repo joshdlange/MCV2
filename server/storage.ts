@@ -130,6 +130,12 @@ interface IStorage {
   respondToFriendRequest(friendId: number, status: "accepted" | "declined"): Promise<Friend | undefined>;
   getFriendshipStatus(userId1: number, userId2: number): Promise<Friend | undefined>;
   removeFriend(friendId: number): Promise<void>;
+  
+  // Friend Collections and Profiles
+  canViewCollection(viewerUserId: number, targetUserId: number): Promise<boolean>;
+  getFriendCollection(viewerUserId: number, friendUserId: number): Promise<CollectionItem[]>;
+  getFriendWishlist(viewerUserId: number, friendUserId: number): Promise<WishlistItem[]>;
+  getFriendProfile(viewerUserId: number, friendUserId: number): Promise<{ user: User; stats: ProfileStats; canViewCollection: boolean; canViewWishlist: boolean; }>;
 
   // Social Features - Messages
   getMessages(userId1: number, userId2: number): Promise<MessageWithUsers[]>;
@@ -1967,6 +1973,163 @@ export class DatabaseStorage implements IStorage {
       default:
         return false;
     }
+  }
+
+  async canViewCollection(viewerUserId: number, targetUserId: number): Promise<boolean> {
+    // User can always view their own collection
+    if (viewerUserId === targetUserId) return true;
+    
+    const targetUser = await this.getUser(targetUserId);
+    if (!targetUser) return false;
+    
+    // Check if collections are visible based on showCollection setting
+    if (!targetUser.showCollection) return false;
+    
+    // Apply same privacy rules as profile
+    return this.canViewProfile(viewerUserId, targetUserId);
+  }
+
+  async getFriendCollection(viewerUserId: number, friendUserId: number): Promise<CollectionItem[]> {
+    // Check if viewer can access friend's collection
+    const canView = await this.canViewCollection(viewerUserId, friendUserId);
+    if (!canView) {
+      throw new Error("You don't have permission to view this collection");
+    }
+    
+    // Get friend's collection
+    const collections = await db
+      .select({
+        id: userCollections.id,
+        userId: userCollections.userId,
+        cardId: userCollections.cardId,
+        condition: userCollections.condition,
+        acquiredDate: userCollections.acquiredDate,
+        pricePaid: userCollections.pricePaid,
+        card: {
+          id: cards.id,
+          setId: cards.setId,
+          cardNumber: cards.cardNumber,
+          name: cards.name,
+          variation: cards.variation,
+          rarity: cards.rarity,
+          isInsert: cards.isInsert,
+          description: cards.description,
+          frontImageUrl: cards.frontImageUrl,
+          backImageUrl: cards.backImageUrl,
+          estimatedValue: cards.estimatedValue,
+          cardSet: {
+            id: cardSets.id,
+            name: cardSets.name,
+            slug: cardSets.slug,
+            year: cardSets.year,
+            manufacturer: cardSets.manufacturer,
+            description: cardSets.description,
+            totalCards: cardSets.totalCards,
+            imageUrl: cardSets.imageUrl,
+          }
+        }
+      })
+      .from(userCollections)
+      .innerJoin(cards, eq(userCollections.cardId, cards.id))
+      .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+      .where(eq(userCollections.userId, friendUserId))
+      .orderBy(userCollections.acquiredDate);
+
+    return collections.map(collection => ({
+      ...collection,
+      cardName: collection.card.name,
+      cardNumber: collection.card.cardNumber,
+      setName: collection.card.cardSet.name,
+      rarity: collection.card.rarity,
+      frontImageUrl: collection.card.frontImageUrl,
+      estimatedValue: collection.card.estimatedValue,
+    }));
+  }
+
+  async getFriendWishlist(viewerUserId: number, friendUserId: number): Promise<WishlistItem[]> {
+    // Check if viewer can access friend's wishlist
+    const canView = await this.canViewCollection(viewerUserId, friendUserId);
+    if (!canView) {
+      throw new Error("You don't have permission to view this wishlist");
+    }
+    
+    const targetUser = await this.getUser(friendUserId);
+    if (!targetUser || !targetUser.showWishlist) {
+      throw new Error("Wishlist is not publicly visible");
+    }
+    
+    // Get friend's wishlist
+    const wishlists = await db
+      .select({
+        id: userWishlists.id,
+        userId: userWishlists.userId,
+        cardId: userWishlists.cardId,
+        priority: userWishlists.priority,
+        notes: userWishlists.notes,
+        addedDate: userWishlists.addedDate,
+        card: {
+          id: cards.id,
+          setId: cards.setId,
+          cardNumber: cards.cardNumber,
+          name: cards.name,
+          variation: cards.variation,
+          rarity: cards.rarity,
+          isInsert: cards.isInsert,
+          description: cards.description,
+          frontImageUrl: cards.frontImageUrl,
+          backImageUrl: cards.backImageUrl,
+          estimatedValue: cards.estimatedValue,
+          cardSet: {
+            id: cardSets.id,
+            name: cardSets.name,
+            slug: cardSets.slug,
+            year: cardSets.year,
+            manufacturer: cardSets.manufacturer,
+            description: cardSets.description,
+            totalCards: cardSets.totalCards,
+            imageUrl: cardSets.imageUrl,
+          }
+        }
+      })
+      .from(userWishlists)
+      .innerJoin(cards, eq(userWishlists.cardId, cards.id))
+      .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+      .where(eq(userWishlists.userId, friendUserId))
+      .orderBy(userWishlists.priority, userWishlists.addedDate);
+
+    return wishlists.map(wishlist => ({
+      ...wishlist,
+      cardName: wishlist.card.name,
+      cardNumber: wishlist.card.cardNumber,
+      setName: wishlist.card.cardSet.name,
+      rarity: wishlist.card.rarity,
+      frontImageUrl: wishlist.card.frontImageUrl,
+      estimatedValue: wishlist.card.estimatedValue,
+    }));
+  }
+
+  async getFriendProfile(viewerUserId: number, friendUserId: number): Promise<{ user: User; stats: ProfileStats; canViewCollection: boolean; canViewWishlist: boolean; }> {
+    // Check if viewer can access friend's profile
+    const canView = await this.canViewProfile(viewerUserId, friendUserId);
+    if (!canView) {
+      throw new Error("You don't have permission to view this profile");
+    }
+    
+    const user = await this.getUser(friendUserId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    
+    const stats = await this.getProfileStats(friendUserId);
+    const canViewCollection = await this.canViewCollection(viewerUserId, friendUserId);
+    const canViewWishlist = canViewCollection && user.showWishlist;
+    
+    return {
+      user,
+      stats,
+      canViewCollection,
+      canViewWishlist,
+    };
   }
 }
 
