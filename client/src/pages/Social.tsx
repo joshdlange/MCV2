@@ -390,7 +390,7 @@ export default function Social() {
           className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold px-6 py-3 rounded-lg shadow-lg border-2 border-yellow-400 transform hover:scale-105 transition-all duration-200"
         >
           <Award className="w-5 h-5 mr-2" />
-          CHECK NEW BADGES
+          CHECK NEW SUPER POWERS
         </Button>
       </div>
 
@@ -421,7 +421,7 @@ export default function Social() {
             className="relative bg-white border-2 border-marvel-red rounded-t-lg py-2 px-3 font-bold text-sm text-marvel-red data-[state=active]:bg-marvel-red data-[state=active]:text-white hover:scale-105 transition-all duration-200"
           >
             <Award className="w-4 h-4 mr-1" />
-            BADGES
+            SUPER POWERS
             {userBadges.length > 0 && (
               <Badge className="ml-1 bg-yellow-500 text-black text-xs px-1 py-0.5 rounded-full">
                 {userBadges.length}
@@ -980,29 +980,29 @@ export default function Social() {
             <CardHeader className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black">
               <CardTitle className="font-bebas text-2xl tracking-wide flex items-center">
                 <Award className="w-6 h-6 mr-2" />
-                HERO ACHIEVEMENTS ({userBadges.length})
+                HERO SUPER POWERS ({userBadges.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               {userBadges.length === 0 ? (
                 <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                   <Award className="w-20 h-20 mx-auto mb-4 text-gray-400" />
-                  <p className="text-2xl font-bold text-gray-600 mb-2">No Achievements Yet!</p>
-                  <p className="text-gray-500 mb-6">Start collecting cards and making friends to earn heroic badges!</p>
+                  <p className="text-2xl font-bold text-gray-600 mb-2">No Super Powers Yet!</p>
+                  <p className="text-gray-500 mb-6">Start collecting cards and making friends to earn heroic super powers!</p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
                     <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
                       <Award className="w-8 h-8 mx-auto mb-2 text-blue-500" />
-                      <p className="text-sm font-bold text-gray-700">Collection Badges</p>
+                      <p className="text-sm font-bold text-gray-700">Collection Powers</p>
                       <p className="text-xs text-gray-500">Collect cards to unlock</p>
                     </div>
                     <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
                       <Users className="w-8 h-8 mx-auto mb-2 text-green-500" />
-                      <p className="text-sm font-bold text-gray-700">Social Badges</p>
+                      <p className="text-sm font-bold text-gray-700">Social Powers</p>
                       <p className="text-xs text-gray-500">Make friends to unlock</p>
                     </div>
                     <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
                       <Clock className="w-8 h-8 mx-auto mb-2 text-purple-500" />
-                      <p className="text-sm font-bold text-gray-700">Activity Badges</p>
+                      <p className="text-sm font-bold text-gray-700">Activity Powers</p>
                       <p className="text-xs text-gray-500">Stay active to unlock</p>
                     </div>
                   </div>
@@ -1019,7 +1019,7 @@ export default function Social() {
                         </div>
                         <div className="flex items-center justify-center mb-2">
                           <h3 className="font-bebas text-lg text-gray-800 tracking-wide">
-                            {userBadge.badge.name?.toUpperCase() || 'UNKNOWN BADGE'}
+                            {userBadge.badge.name?.toUpperCase() || 'UNKNOWN POWER'}
                           </h3>
                           <div className="ml-2 text-sm">{getRarityEmoji(userBadge.badge.rarity || 'common')}</div>
                         </div>
@@ -1049,7 +1049,7 @@ export default function Social() {
               {/* Locked Badges Preview */}
               <div className="mt-8 pt-8 border-t border-gray-300">
                 <h3 className="font-bebas text-xl text-gray-700 mb-4 tracking-wide">
-                  🔒 LOCKED ACHIEVEMENTS
+                  🔒 LOCKED SUPER POWERS
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                   {[

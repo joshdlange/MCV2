@@ -129,6 +129,7 @@ Changelog:
   - Profile now serves as social dashboard with overview of friends and achievements
   - Clean card-based layout with proper spacing and mobile responsiveness
   - Ready for custom badge images when provided - system supports both icon fallbacks and actual images
+  - TERMINOLOGY UPDATE: Changed all "badges" and "achievements" to "super powers" throughout the app
 - July 15, 2025: PERFECTED MOBILE MESSAGING LAYOUT - AVATAR-FOCUSED DESIGN
   - MOBILE OPTIMIZATION: Redesigned left conversation list to be avatar-focused on mobile screens
   - Mobile layout now shows profile pictures with names below, eliminating cramped text

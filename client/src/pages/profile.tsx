@@ -127,8 +127,8 @@ function SocialBadgesSection() {
     return (
       <div className="text-center py-6">
         <Award className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-        <p className="text-gray-500 mb-2">No badges earned yet</p>
-        <p className="text-sm text-gray-400">Complete activities to earn your first badge</p>
+        <p className="text-gray-500 mb-2">No super powers earned yet</p>
+        <p className="text-sm text-gray-400">Complete activities to earn your first super power</p>
       </div>
     );
   }
@@ -144,7 +144,7 @@ function SocialBadgesSection() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <span className="text-sm font-medium text-gray-700">
-          {userBadges.length} Badge{userBadges.length !== 1 ? 's' : ''} Earned
+          {userBadges.length} Super Power{userBadges.length !== 1 ? 's' : ''} Earned
         </span>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -180,7 +180,7 @@ function SocialBadgesSection() {
       {userBadges.length > 8 && (
         <div className="text-center mt-4">
           <span className="text-sm text-gray-500">
-            +{userBadges.length - 8} more badges
+            +{userBadges.length - 8} more super powers
           </span>
         </div>
       )}
@@ -579,7 +579,7 @@ export default function Profile() {
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2">
                       <Award className="w-5 h-5" />
-                      Badges & Achievements
+                      Super Powers
                     </CardTitle>
                     <Button 
                       variant="outline" 

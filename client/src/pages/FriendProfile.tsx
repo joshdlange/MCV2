@@ -212,7 +212,7 @@ export default function FriendProfile() {
           <Card className="border-2 border-red-500 bg-gradient-to-br from-white to-red-50">
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-red-600">{stats.badgesCount}</div>
-              <div className="text-sm text-gray-600">Badges Earned</div>
+              <div className="text-sm text-gray-600">Super Powers</div>
             </CardContent>
           </Card>
         </div>
@@ -272,7 +272,7 @@ export default function FriendProfile() {
                         <span className="font-bold">{stats.friendsCount}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Badges:</span>
+                        <span>Super Powers:</span>
                         <span className="font-bold">{stats.badgesCount}</span>
                       </div>
                     </div>
