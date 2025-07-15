@@ -396,7 +396,7 @@ export default function Social() {
 
       {/* Comic-style tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 bg-transparent p-0 h-auto gap-1 mb-4">
+        <TabsList className="grid w-full grid-cols-3 bg-transparent p-0 h-auto gap-1 mb-4">
           <TabsTrigger 
             value="friends" 
             className="relative bg-white border-2 border-marvel-red rounded-t-lg py-2 px-3 font-bold text-sm text-marvel-red data-[state=active]:bg-marvel-red data-[state=active]:text-white hover:scale-105 transition-all duration-200"
@@ -408,13 +408,6 @@ export default function Social() {
                 {friends.length}
               </Badge>
             )}
-          </TabsTrigger>
-          <TabsTrigger 
-            value="search"
-            className="relative bg-white border-2 border-marvel-red rounded-t-lg py-2 px-3 font-bold text-sm text-marvel-red data-[state=active]:bg-marvel-red data-[state=active]:text-white hover:scale-105 transition-all duration-200"
-          >
-            <Search className="w-4 h-4 mr-1" />
-            FIND FRIENDS
           </TabsTrigger>
           <TabsTrigger 
             value="messages"
@@ -439,7 +432,7 @@ export default function Social() {
 
         <TabsContent value="friends" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Friends List - Comic Panel Style */}
+            {/* Friends List with Find Heroes - Comic Panel Style */}
             <Card className="border-2 border-marvel-red bg-gradient-to-br from-white to-blue-50 shadow-lg">
               <CardHeader className="bg-gradient-to-r from-marvel-red to-red-600 text-white p-3">
                 <CardTitle className="font-bebas text-lg tracking-wide flex items-center">
@@ -448,6 +441,71 @@ export default function Social() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4">
+                {/* Find New Heroes Section */}
+                <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border-2 border-green-200">
+                  <div className="flex items-center mb-3">
+                    <UserPlus className="w-5 h-5 mr-2 text-green-600" />
+                    <h3 className="font-bold text-green-800">Find New Heroes</h3>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Input
+                      placeholder="Search for heroes by name or email..."
+                      value={searchQuery}
+                      onChange={handleSearchChange}
+                      className="flex-1 border-green-300 focus:border-green-500"
+                    />
+                    <Button
+                      onClick={() => searchUsers(searchQuery)}
+                      disabled={isSearching || !searchQuery.trim()}
+                      className="bg-green-500 hover:bg-green-600 text-white"
+                    >
+                      <Search className="w-4 h-4 mr-1" />
+                      Search
+                    </Button>
+                  </div>
+                  
+                  {isSearching && (
+                    <div className="mt-4 text-center">
+                      <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
+                      <p className="text-sm text-green-600 mt-2">Searching heroes...</p>
+                    </div>
+                  )}
+                  
+                  {searchResults.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      {searchResults.map((searchUser: SearchUser) => (
+                        <div
+                          key={searchUser.id}
+                          className="flex items-center justify-between p-3 bg-white rounded-lg border border-green-200"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="w-10 h-10">
+                              <AvatarImage src={searchUser.photoURL} />
+                              <AvatarFallback className="bg-green-500 text-white font-bold">
+                                {searchUser.displayName?.charAt(0) || searchUser.username.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-bold text-gray-900">{searchUser.displayName}</p>
+                              <p className="text-sm text-gray-500">@{searchUser.username}</p>
+                              <p className="text-sm text-gray-400">{searchUser.email}</p>
+                            </div>
+                          </div>
+                          <Button
+                            onClick={() => sendFriendRequest.mutate({ recipientId: searchUser.id })}
+                            disabled={sendFriendRequest.isPending}
+                            className="bg-green-500 hover:bg-green-600 text-white"
+                          >
+                            <UserPlus className="w-4 h-4 mr-1" />
+                            Add Friend
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Friends List */}
                 {friendsLoading ? (
                   <div className="text-center py-8">
                     <div className="animate-spin w-8 h-8 border-4 border-marvel-red border-t-transparent rounded-full mx-auto mb-4"></div>
@@ -457,7 +515,7 @@ export default function Social() {
                   <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                     <Users className="w-16 h-16 mx-auto mb-4 text-gray-400" />
                     <p className="text-xl font-bold text-gray-600 mb-2">No Heroes Yet!</p>
-                    <p className="text-gray-500">Build your superhero team by adding friends</p>
+                    <p className="text-gray-500">Use the search above to find fellow Marvel fans</p>
                   </div>
                 ) : (
                   <div className="grid gap-4">
@@ -581,101 +639,28 @@ export default function Social() {
           </div>
         </TabsContent>
 
-        <TabsContent value="search" className="space-y-6">
-          <Card className="border-2 border-marvel-red bg-gradient-to-br from-white to-green-50 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 text-white">
-              <CardTitle className="font-bebas text-2xl tracking-wide flex items-center">
-                <Search className="w-6 h-6 mr-2" />
-                FIND NEW HEROES
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="mb-6">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                  <Input
-                    placeholder="Search by username, display name, or email..."
-                    value={searchQuery}
-                    onChange={handleSearchChange}
-                    className="pl-10 py-3 text-lg border-2 border-gray-300 focus:border-marvel-red rounded-lg bg-white text-black"
-                  />
-                </div>
-                <p className="text-sm text-gray-500 mt-2">
-                  Search for friends by their username, display name, or email address
-                </p>
+
+
+        <TabsContent value="messages" className="h-[80vh] bg-white">
+          <div className="h-full flex rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+            {/* Left Column: Conversation List - iPhone Style */}
+            <div className="w-1/3 border-r border-gray-200 bg-white">
+              {/* Header */}
+              <div className="p-4 bg-gray-50 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
               </div>
-
-              {isSearching ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin w-8 h-8 border-4 border-marvel-red border-t-transparent rounded-full mx-auto mb-4"></div>
-                  <p className="text-gray-600 font-medium">Searching heroes...</p>
-                </div>
-              ) : searchQuery.length > 0 && searchQuery.length < 2 ? (
-                <div className="text-center py-8 bg-yellow-50 rounded-lg border-2 border-dashed border-yellow-300">
-                  <Search className="w-16 h-16 mx-auto mb-4 text-yellow-400" />
-                  <p className="text-yellow-700 font-medium">Type at least 2 characters to search</p>
-                </div>
-              ) : searchResults.length === 0 && searchQuery.length >= 2 ? (
-                <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                  <User className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                  <p className="text-gray-600 font-medium">No heroes found</p>
-                  <p className="text-gray-500 text-sm">Try a different search term</p>
-                </div>
-              ) : (
-                <div className="grid gap-4">
-                  {searchResults.map((searchUser: SearchUser) => (
-                    <div key={searchUser.id} className="flex items-center justify-between p-4 bg-white rounded-lg border-2 border-gray-200 hover:border-marvel-red transition-colors">
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="w-12 h-12 border-2 border-marvel-red">
-                          <AvatarImage src={searchUser.photoURL} alt={searchUser.displayName} />
-                          <AvatarFallback className="bg-marvel-red text-white font-bold">
-                            {searchUser.displayName.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-bold text-gray-900">{searchUser.displayName}</p>
-                          <p className="text-sm text-gray-500">@{searchUser.username}</p>
-                          <p className="text-sm text-gray-400">{searchUser.email}</p>
-                        </div>
-                      </div>
-                      <Button
-                        onClick={() => sendFriendRequest.mutate({ recipientId: searchUser.id })}
-                        disabled={sendFriendRequest.isPending}
-                        className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold px-4 py-2 rounded-lg shadow-lg border-2 border-green-400 transform hover:scale-105 transition-all duration-200"
-                      >
-                        <UserPlus className="w-4 h-4 mr-2" />
-                        ADD FRIEND
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="messages" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-[600px]">
-            {/* Left Column: Conversation List */}
-            <Card className="border border-gray-200 bg-white shadow-sm">
-              <CardHeader className="bg-blue-500 text-white p-4">
-                <CardTitle className="font-semibold text-lg flex items-center">
-                  <MessageCircle className="w-5 h-5 mr-2" />
-                  Messages
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="h-[500px] overflow-y-auto">
-                  {friends.length === 0 ? (
-                    <div className="text-center py-12 px-4">
-                      <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                      <p className="text-gray-600">No conversations yet</p>
-                      <p className="text-sm text-gray-500">Add friends to start messaging</p>
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-gray-100">
+              
+              {/* Conversation List */}
+              <div className="h-full overflow-y-auto">
+                {friends.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center px-6">
+                    <MessageCircle className="w-16 h-16 text-gray-300 mb-4" />
+                    <p className="text-gray-500 text-sm">No conversations</p>
+                    <p className="text-gray-400 text-xs">Add friends to start messaging</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
                     {friends.map((friend: Friend) => {
-                      // Get the friend user (not the current user)
                       const userEmail = user?.email;
                       const isRequesterCurrentUser = friend.requester.username === userEmail;
                       const friendUser = isRequesterCurrentUser 
@@ -684,116 +669,151 @@ export default function Social() {
                         <div
                           key={friend.id}
                           onClick={() => setSelectedFriendId(friendUser.id)}
-                          className={`p-4 cursor-pointer transition-colors duration-200 hover:bg-gray-50 ${
+                          className={`p-4 cursor-pointer transition-colors duration-150 hover:bg-gray-50 ${
                             selectedFriendId === friendUser.id 
-                              ? 'bg-blue-50 border-r-4 border-blue-500' 
+                              ? 'bg-blue-50 border-r-2 border-blue-500' 
                               : 'bg-white'
                           }`}
                         >
                           <div className="flex items-center space-x-3">
-                            <Avatar className="w-12 h-12">
-                              <AvatarImage src={friendUser.photoURL} />
-                              <AvatarFallback className="bg-blue-500 text-white font-semibold">
-                                {friendUser.displayName?.charAt(0) || friendUser.username.charAt(0)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-gray-900 truncate">
-                                {friendUser.displayName || friendUser.username}
-                              </p>
-                              <p className="text-sm text-gray-500 truncate">
-                                {friendUser.username}
-                              </p>
+                            <div className="relative">
+                              <Avatar className="w-12 h-12">
+                                <AvatarImage src={friendUser.photoURL} />
+                                <AvatarFallback className="bg-gray-400 text-white font-medium">
+                                  {friendUser.displayName?.charAt(0) || friendUser.username.charAt(0)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
                             </div>
-                            <div className="flex flex-col items-end">
-                              <div className="w-2 h-2 bg-green-500 rounded-full mb-1"></div>
-                              <span className="text-xs text-gray-400">Online</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <p className="font-medium text-gray-900 truncate text-sm">
+                                  {friendUser.displayName || friendUser.username}
+                                </p>
+                                <span className="text-xs text-gray-400">now</span>
+                              </div>
+                              <p className="text-sm text-gray-500 truncate">
+                                Tap to start chatting
+                              </p>
                             </div>
                           </div>
                         </div>
                       );
                     })}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                  </div>
+                )}
+              </div>
+            </div>
 
-            {/* Right Column: Current Conversation */}
-            <Card className="border border-gray-200 bg-white shadow-sm">
-              <CardHeader className="bg-green-500 text-white p-4">
-                <CardTitle className="font-semibold text-lg flex items-center">
-                  <MessageCircle className="w-5 h-5 mr-2" />
-                  {selectedFriendId ? 
-                    `Chat with ${friends.find(f => {
-                      const userEmail = user?.email;
-                      const isRequesterCurrentUser = f.requester.username === userEmail;
-                      const friendUser = isRequesterCurrentUser ? f.recipient : f.requester;
-                      return friendUser.id === selectedFriendId;
-                    })?.recipient?.displayName || friends.find(f => {
-                      const userEmail = user?.email;
-                      const isRequesterCurrentUser = f.requester.username === userEmail;
-                      const friendUser = isRequesterCurrentUser ? f.recipient : f.requester;
-                      return friendUser.id === selectedFriendId;
-                    })?.requester?.displayName || 'Friend'}` : 
-                    'Select a Conversation'
-                  }
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                {!selectedFriendId ? (
-                  <div className="h-[500px] flex items-center justify-center bg-gray-50">
-                    <div className="text-center">
-                      <MessageCircle className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                      <p className="text-xl font-semibold text-gray-600 mb-2">Start a Conversation</p>
-                      <p className="text-gray-500">Select a friend from the left to begin chatting</p>
+            {/* Right Column: Current Conversation - iPhone Style */}
+            <div className="flex-1 flex flex-col">
+              {!selectedFriendId ? (
+                <div className="flex-1 flex items-center justify-center bg-gray-50">
+                  <div className="text-center">
+                    <MessageCircle className="w-20 h-20 text-gray-300 mx-auto mb-4" />
+                    <p className="text-xl font-medium text-gray-600 mb-2">Select a conversation</p>
+                    <p className="text-gray-500">Choose from your existing conversations</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Chat Header */}
+                  <div className="p-4 bg-gray-50 border-b border-gray-200">
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="w-10 h-10">
+                        <AvatarImage src={friends.find(f => {
+                          const userEmail = user?.email;
+                          const isRequesterCurrentUser = f.requester.username === userEmail;
+                          const friendUser = isRequesterCurrentUser ? f.recipient : f.requester;
+                          return friendUser.id === selectedFriendId;
+                        })?.recipient?.photoURL || friends.find(f => {
+                          const userEmail = user?.email;
+                          const isRequesterCurrentUser = f.requester.username === userEmail;
+                          const friendUser = isRequesterCurrentUser ? f.recipient : f.requester;
+                          return friendUser.id === selectedFriendId;
+                        })?.requester?.photoURL} />
+                        <AvatarFallback className="bg-gray-400 text-white font-medium">
+                          {friends.find(f => {
+                            const userEmail = user?.email;
+                            const isRequesterCurrentUser = f.requester.username === userEmail;
+                            const friendUser = isRequesterCurrentUser ? f.recipient : f.requester;
+                            return friendUser.id === selectedFriendId;
+                          })?.recipient?.displayName?.charAt(0) || friends.find(f => {
+                            const userEmail = user?.email;
+                            const isRequesterCurrentUser = f.requester.username === userEmail;
+                            const friendUser = isRequesterCurrentUser ? f.recipient : f.requester;
+                            return friendUser.id === selectedFriendId;
+                          })?.requester?.displayName?.charAt(0) || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-medium text-gray-900">
+                          {friends.find(f => {
+                            const userEmail = user?.email;
+                            const isRequesterCurrentUser = f.requester.username === userEmail;
+                            const friendUser = isRequesterCurrentUser ? f.recipient : f.requester;
+                            return friendUser.id === selectedFriendId;
+                          })?.recipient?.displayName || friends.find(f => {
+                            const userEmail = user?.email;
+                            const isRequesterCurrentUser = f.requester.username === userEmail;
+                            const friendUser = isRequesterCurrentUser ? f.recipient : f.requester;
+                            return friendUser.id === selectedFriendId;
+                          })?.requester?.displayName || 'Friend'}
+                        </h3>
+                        <p className="text-sm text-green-600">Active now</p>
+                      </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="h-[500px] flex flex-col">
-                    {/* Messages Display */}
-                    <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-                      {messages.length === 0 ? (
-                        <div className="text-center py-12">
-                          <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                          <p className="text-gray-600">No messages yet</p>
-                          <p className="text-sm text-gray-500">Start the conversation!</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {messages.map((message: Message) => (
+                  
+                  {/* Messages Area */}
+                  <div className="flex-1 overflow-y-auto p-4 bg-white">
+                    {messages.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-full text-center">
+                        <MessageCircle className="w-16 h-16 text-gray-300 mb-4" />
+                        <p className="text-gray-500">No messages yet</p>
+                        <p className="text-gray-400 text-sm">Say hello to start the conversation!</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {messages.map((message: Message) => (
+                          <div
+                            key={message.id}
+                            className={`flex ${message.senderId === user?.uid ? 'justify-end' : 'justify-start'}`}
+                          >
                             <div
-                              key={message.id}
-                              className={`flex ${message.senderId === user?.uid ? 'justify-end' : 'justify-start'}`}
+                              className={`max-w-xs px-4 py-2 rounded-2xl ${
+                                message.senderId === user?.uid
+                                  ? 'bg-blue-500 text-white'
+                                  : 'bg-gray-100 text-gray-900'
+                              }`}
                             >
-                              <div
-                                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl shadow-sm ${
-                                  message.senderId === user?.uid
-                                    ? 'bg-blue-500 text-white'
-                                    : 'bg-white border border-gray-200 text-gray-900'
-                                }`}
-                              >
-                                <p className="text-sm">{message.content}</p>
-                                <p className={`text-xs mt-1 ${
-                                  message.senderId === user?.uid ? 'text-blue-100' : 'text-gray-500'
-                                }`}>
-                                  {new Date(message.createdAt).toLocaleTimeString()}
-                                </p>
-                              </div>
+                              <p className="text-sm leading-relaxed">{message.content}</p>
+                              <p className={`text-xs mt-1 ${
+                                message.senderId === user?.uid ? 'text-blue-100' : 'text-gray-500'
+                              }`}>
+                                {new Date(message.createdAt).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </p>
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Message Input */}
-                    <div className="p-4 border-t bg-white">
-                      <div className="flex space-x-2">
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Message Input - iPhone Style */}
+                  <div className="p-4 bg-white border-t border-gray-200">
+                    <div className="flex items-end space-x-2">
+                      <div className="flex-1 relative">
                         <Textarea
-                          placeholder="Type your message..."
+                          placeholder="Message..."
                           value={newMessage}
                           onChange={(e) => setNewMessage(e.target.value)}
-                          className="flex-1 min-h-[40px] max-h-[120px] resize-none border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-full resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 placeholder-gray-500"
+                          rows={1}
+                          style={{ maxHeight: '100px' }}
                           onKeyPress={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault();
@@ -807,27 +827,29 @@ export default function Social() {
                             }
                           }}
                         />
-                        <Button
-                          onClick={() => {
-                            if (newMessage.trim() && selectedFriendId) {
-                              sendMessage.mutate({
-                                recipientId: selectedFriendId,
-                                content: newMessage.trim(),
-                              });
-                              setNewMessage("");
-                            }
-                          }}
-                          disabled={!newMessage.trim() || sendMessage.isPending}
-                          className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg"
-                        >
-                          Send
-                        </Button>
                       </div>
+                      <Button
+                        onClick={() => {
+                          if (newMessage.trim() && selectedFriendId) {
+                            sendMessage.mutate({
+                              recipientId: selectedFriendId,
+                              content: newMessage.trim(),
+                            });
+                            setNewMessage("");
+                          }
+                        }}
+                        disabled={!newMessage.trim() || sendMessage.isPending}
+                        className="w-10 h-10 rounded-full bg-blue-500 hover:bg-blue-600 text-white p-0 flex items-center justify-center"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                      </Button>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </>
+              )}
+            </div>
           </div>
         </TabsContent>
 
