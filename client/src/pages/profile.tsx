@@ -102,6 +102,27 @@ function SocialBadgesSection() {
     enabled: !!user
   });
 
+  // Badge Icon Helper
+  function GetBadgeIcon({ badgeName }: { badgeName: string }) {
+    const iconClass = "w-8 h-8 text-white";
+    
+    if (badgeName.toLowerCase().includes('collector')) {
+      return <Trophy className={iconClass} />;
+    } else if (badgeName.toLowerCase().includes('chat') || badgeName.toLowerCase().includes('social') || badgeName.toLowerCase().includes('friend')) {
+      return <MessageCircle className={iconClass} />;
+    } else if (badgeName.toLowerCase().includes('hunter') || badgeName.toLowerCase().includes('insert')) {
+      return <Star className={iconClass} />;
+    } else if (badgeName.toLowerCase().includes('vault') || badgeName.toLowerCase().includes('guardian')) {
+      return <Shield className={iconClass} />;
+    } else if (badgeName.toLowerCase().includes('hero') || badgeName.toLowerCase().includes('launch')) {
+      return <Crown className={iconClass} />;
+    } else if (badgeName.toLowerCase().includes('hundred') || badgeName.toLowerCase().includes('club')) {
+      return <TrendingUp className={iconClass} />;
+    } else {
+      return <Award className={iconClass} />;
+    }
+  }
+
   if (!userBadges || userBadges.length === 0) {
     return (
       <div className="text-center py-6">
@@ -128,8 +149,24 @@ function SocialBadgesSection() {
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {userBadges.slice(0, 8).map((userBadge: any) => (
-          <div key={userBadge.id} className="text-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-            <div className="text-3xl mb-2">{userBadge.badge.icon}</div>
+          <div 
+            key={userBadge.id} 
+            className="text-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+            onClick={() => navigate('/social?tab=badges')}
+          >
+            <div className="w-16 h-16 mx-auto mb-2 flex items-center justify-center">
+              {userBadge.badge.iconUrl ? (
+                <img 
+                  src={userBadge.badge.iconUrl} 
+                  alt={userBadge.badge.name}
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg">
+                  <GetBadgeIcon badgeName={userBadge.badge.name} />
+                </div>
+              )}
+            </div>
             <p className="text-xs font-semibold text-gray-900 mb-2">{userBadge.badge.name}</p>
             <Badge 
               variant="secondary" 
