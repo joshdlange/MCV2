@@ -128,8 +128,11 @@ export const badges = pgTable("badges", {
   name: text("name").notNull().unique(),
   description: text("description").notNull(),
   iconUrl: text("icon_url"),
-  category: text("category").notNull(), // collection, social, activity, achievement
+  category: text("category").notNull(), // Collection, Social, Event, Achievement
   requirement: text("requirement").notNull(), // JSON string describing unlock condition
+  rarity: text("rarity").default("bronze").notNull(), // bronze, silver, gold, platinum
+  points: integer("points").default(10).notNull(),
+  unlockHint: text("unlock_hint"), // User-friendly description of how to unlock
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

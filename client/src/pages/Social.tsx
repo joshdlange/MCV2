@@ -224,13 +224,60 @@ export default function Social() {
   const getBadgeColor = (category: string) => {
     switch (category) {
       case "Collection":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-500 text-white";
       case "Social":
-        return "bg-green-100 text-green-800";
-      case "Activity":
-        return "bg-purple-100 text-purple-800";
+        return "bg-green-500 text-white";
+      case "Achievement":
+        return "bg-purple-500 text-white";
+      case "Event":
+        return "bg-yellow-500 text-black";
       default:
         return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getRarityStyle = (rarity: string) => {
+    switch (rarity) {
+      case "bronze":
+        return "bg-gradient-to-br from-amber-600 to-amber-800 border-amber-500";
+      case "silver":
+        return "bg-gradient-to-br from-gray-400 to-gray-600 border-gray-400";
+      case "gold":
+        return "bg-gradient-to-br from-yellow-400 to-yellow-600 border-yellow-400";
+      case "platinum":
+        return "bg-gradient-to-br from-purple-400 to-purple-600 border-purple-400";
+      default:
+        return "bg-gradient-to-br from-gray-400 to-gray-600 border-gray-400";
+    }
+  };
+
+  const getRarityGlow = (rarity: string) => {
+    switch (rarity) {
+      case "bronze":
+        return "shadow-lg shadow-amber-500/50";
+      case "silver":
+        return "shadow-lg shadow-gray-400/50";
+      case "gold":
+        return "shadow-lg shadow-yellow-400/50";
+      case "platinum":
+        return "shadow-lg shadow-purple-400/50";
+      default:
+        return "shadow-lg shadow-gray-400/50";
+    }
+  };
+
+  const getRarityEmoji = (rarity: string) => {
+    switch (rarity) {
+      case "bronze":
+        return "🥉";
+      case "silver":
+        return "🥈";
+      case "gold":
+        return "🥇";
+      case "platinum":
+        return "💎";
+      default:
+        return "🏅";
     }
   };
 
@@ -591,30 +638,36 @@ export default function Social() {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {userBadges.map((userBadge: UserBadge) => (
-                    <Card key={userBadge.id} className="text-center border-2 border-gray-200 bg-white shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105">
+                    <Card key={userBadge.id} className="text-center border-2 border-gray-200 bg-white shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1">
                       <CardContent className="p-6">
                         <div className="flex justify-center mb-4">
-                          <div className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg border-4 ${
-                            userBadge.badge.category === 'Collection' ? 'bg-gradient-to-br from-blue-400 to-blue-600 border-blue-300' :
-                            userBadge.badge.category === 'Social' ? 'bg-gradient-to-br from-green-400 to-green-600 border-green-300' :
-                            userBadge.badge.category === 'Activity' ? 'bg-gradient-to-br from-purple-400 to-purple-600 border-purple-300' :
-                            'bg-gradient-to-br from-yellow-400 to-yellow-600 border-yellow-300'
-                          }`}>
-                            <Award className="w-10 h-10 text-white" />
+                          <div className={`w-24 h-24 rounded-full flex items-center justify-center border-4 transition-all duration-300 ${getRarityStyle(userBadge.badge.rarity)} ${getRarityGlow(userBadge.badge.rarity)}`}>
+                            <div className="text-2xl">{getRarityEmoji(userBadge.badge.rarity)}</div>
                           </div>
                         </div>
-                        <h3 className="font-bebas text-xl text-gray-800 mb-2 tracking-wide">
-                          {userBadge.badge.name.toUpperCase()}
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-4 px-2">{userBadge.badge.description}</p>
-                        <Badge className={`${getBadgeColor(userBadge.badge.category)} font-bold px-3 py-1 text-xs`}>
-                          {userBadge.badge.category.toUpperCase()}
-                        </Badge>
-                        <div className="mt-4 pt-4 border-t border-gray-200">
+                        <div className="flex items-center justify-center mb-2">
+                          <h3 className="font-bebas text-lg text-gray-800 tracking-wide">
+                            {userBadge.badge.name.toUpperCase()}
+                          </h3>
+                          <div className="ml-2 text-sm">{getRarityEmoji(userBadge.badge.rarity)}</div>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-4 px-2 line-clamp-2">{userBadge.badge.description}</p>
+                        <div className="flex justify-center space-x-2 mb-3">
+                          <Badge className={`${getBadgeColor(userBadge.badge.category)} font-bold px-3 py-1 text-xs`}>
+                            {userBadge.badge.category.toUpperCase()}
+                          </Badge>
+                          <Badge className="bg-gray-200 text-gray-800 font-bold px-3 py-1 text-xs">
+                            {userBadge.badge.rarity.toUpperCase()}
+                          </Badge>
+                        </div>
+                        <div className="text-center">
                           <p className="text-xs text-gray-500 font-medium">
                             🏆 EARNED {new Date(userBadge.earnedAt).toLocaleDateString()}
+                          </p>
+                          <p className="text-xs text-yellow-600 font-bold mt-1">
+                            +{userBadge.badge.points} Points
                           </p>
                         </div>
                       </CardContent>
@@ -628,14 +681,30 @@ export default function Social() {
                 <h3 className="font-bebas text-xl text-gray-700 mb-4 tracking-wide">
                   🔒 LOCKED ACHIEVEMENTS
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {["Master Collector", "Social Butterfly", "Loyal Hero", "Set Completionist"].map((badgeName, index) => (
-                    <div key={index} className="bg-gray-100 rounded-lg p-4 text-center border-2 border-gray-200 opacity-60">
-                      <div className="w-16 h-16 mx-auto mb-3 bg-gray-300 rounded-full flex items-center justify-center">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {[
+                    { name: "Vault Guardian", rarity: "platinum", hint: "Collect 1000 cards" },
+                    { name: "Master Collector", rarity: "platinum", hint: "Complete 5 full sets" },
+                    { name: "Social Butterfly", rarity: "gold", hint: "Send 50 messages" },
+                    { name: "Squad Assembled", rarity: "silver", hint: "Add 10 friends" },
+                    { name: "Insert Hunter", rarity: "gold", hint: "Collect 10 insert cards" },
+                    { name: "7-Day Streak", rarity: "silver", hint: "Log in daily for 7 days" },
+                    { name: "Launch Day Hero", rarity: "platinum", hint: "Join during launch month" },
+                    { name: "Event Winner", rarity: "platinum", hint: "Win a challenge" },
+                    { name: "Curator", rarity: "gold", hint: "Add notes to 50 cards" },
+                    { name: "Speed Collector", rarity: "gold", hint: "Add 50 cards in one day" }
+                  ].map((badge, index) => (
+                    <div key={index} className="bg-gray-100 rounded-lg p-4 text-center border-2 border-gray-200 opacity-60 hover:opacity-80 transition-opacity duration-200">
+                      <div className={`w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center bg-gray-300 border-2 border-gray-400`}>
                         <Lock className="w-8 h-8 text-gray-500" />
                       </div>
-                      <p className="font-bold text-gray-600 text-sm">{badgeName}</p>
-                      <p className="text-xs text-gray-500 mt-1">Requirements locked</p>
+                      <p className="font-bold text-gray-600 text-sm mb-1">{badge.name}</p>
+                      <div className="flex justify-center mb-2">
+                        <Badge className="bg-gray-300 text-gray-600 text-xs px-2 py-1">
+                          {badge.rarity.toUpperCase()}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-gray-500">{badge.hint}</p>
                     </div>
                   ))}
                 </div>

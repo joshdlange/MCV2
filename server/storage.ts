@@ -1781,55 +1781,137 @@ export class DatabaseStorage implements IStorage {
   async checkAndAwardBadges(userId: number): Promise<UserBadge[]> {
     const awarded: UserBadge[] = [];
     
-    // Get user's current badges
-    const currentBadges = await this.getUserBadges(userId);
-    const currentBadgeIds = currentBadges.map(b => b.badgeId);
-    
-    // Get user's collection stats
-    const stats = await this.getCollectionStats(userId);
-    
-    // Check for badge achievements
-    const allBadges = await this.getBadges();
-    
-    for (const badge of allBadges) {
-      // Skip if user already has this badge
-      if (currentBadgeIds.includes(badge.id)) continue;
+    try {
+      // Get user's current badges
+      const currentBadges = await this.getUserBadges(userId);
+      const currentBadgeIds = currentBadges.map(b => b.badgeId);
       
-      // Parse badge requirement
-      const requirement = JSON.parse(badge.requirement);
-      let shouldAward = false;
+      // Get user's collection stats
+      const stats = await this.getCollectionStats(userId);
+      const user = await this.getUser(userId);
       
-      switch (requirement.type) {
-        case 'first_card':
-          shouldAward = stats.totalCards >= 1;
-          break;
-        case 'collection_size':
-          shouldAward = stats.totalCards >= requirement.count;
-          break;
-        case 'friend_count':
-          const friendCount = (await this.getFriends(userId)).length;
-          shouldAward = friendCount >= requirement.count;
-          break;
-        case 'login_streak':
-          const user = await this.getUser(userId);
-          shouldAward = user ? user.loginStreak >= requirement.days : false;
-          break;
-        case 'completed_sets':
-          shouldAward = stats.completedSets >= requirement.count;
-          break;
-      }
+      // Check for badge achievements
+      const allBadges = await this.getBadges();
       
-      if (shouldAward) {
-        try {
-          const newBadge = await this.awardBadge(userId, badge.id);
-          awarded.push(newBadge);
-        } catch (error) {
-          console.error('Error awarding badge:', error);
+      for (const badge of allBadges) {
+        // Skip if user already has this badge
+        if (currentBadgeIds.includes(badge.id)) continue;
+        
+        // Parse badge requirement
+        const requirement = JSON.parse(badge.requirement);
+        let shouldAward = false;
+        
+        switch (requirement.type) {
+          case 'collection_count':
+            shouldAward = stats.totalCards >= requirement.value;
+            break;
+            
+          case 'insert_count':
+            const insertCount = await db.select({ count: sql`count(*)` })
+              .from(userCollections)
+              .leftJoin(cards, eq(userCollections.cardId, cards.id))
+              .where(and(
+                eq(userCollections.userId, userId),
+                eq(cards.isInsert, true)
+              ));
+            shouldAward = Number(insertCount[0].count) >= requirement.value;
+            break;
+            
+          case 'completed_sets':
+            // For now, we'll use a simple approximation
+            shouldAward = stats.completedSets >= requirement.value;
+            break;
+            
+          case 'friend_count':
+            const friendCount = await db.select({ count: sql`count(*)` })
+              .from(friends)
+              .where(and(
+                or(
+                  eq(friends.requesterId, userId),
+                  eq(friends.recipientId, userId)
+                ),
+                eq(friends.status, 'accepted')
+              ));
+            shouldAward = Number(friendCount[0].count) >= requirement.value;
+            break;
+            
+          case 'message_sent':
+          case 'messages_sent':
+            const messageCount = await db.select({ count: sql`count(*)` })
+              .from(messages)
+              .where(eq(messages.senderId, userId));
+            shouldAward = Number(messageCount[0].count) >= requirement.value;
+            break;
+            
+          case 'cards_with_notes':
+            const notesCount = await db.select({ count: sql`count(*)` })
+              .from(userCollections)
+              .where(and(
+                eq(userCollections.userId, userId),
+                isNotNull(userCollections.notes)
+              ));
+            shouldAward = Number(notesCount[0].count) >= requirement.value;
+            break;
+            
+          case 'login_streak':
+            shouldAward = user ? user.loginStreak >= requirement.value : false;
+            break;
+            
+          case 'launch_month':
+            if (user) {
+              const userCreated = new Date(user.createdAt);
+              const launchMonth = new Date('2025-06-01');
+              shouldAward = userCreated.getMonth() === launchMonth.getMonth() && 
+                           userCreated.getFullYear() === launchMonth.getFullYear();
+            }
+            break;
+            
+          case 'user_number':
+            shouldAward = user ? user.id <= requirement.value : false;
+            break;
+            
+          case 'cards_added_daily':
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            const dailyCount = await db.select({ count: sql`count(*)` })
+              .from(userCollections)
+              .where(and(
+                eq(userCollections.userId, userId),
+                gte(userCollections.acquiredDate, today),
+                lt(userCollections.acquiredDate, tomorrow)
+              ));
+            shouldAward = Number(dailyCount[0].count) >= requirement.value;
+            break;
+            
+          case 'night_activity':
+            const now = new Date();
+            const hour = now.getHours();
+            shouldAward = hour >= 0 && hour <= 6;
+            break;
+            
+          default:
+            console.log(`Unknown badge requirement type: ${requirement.type}`);
+            break;
+        }
+        
+        if (shouldAward) {
+          try {
+            const newBadge = await this.awardBadge(userId, badge.id);
+            awarded.push(newBadge);
+          } catch (error) {
+            console.error('Error awarding badge:', error);
+          }
         }
       }
+      
+      return awarded;
+    } catch (error) {
+      console.error('Error checking and awarding badges:', error);
+      return [];
     }
-    
-    return awarded;
   }
 
   async createBadge(insertBadge: InsertBadge): Promise<Badge> {
