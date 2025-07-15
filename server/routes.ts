@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCardSetSchema, insertCardSchema, insertUserCollectionSchema, insertUserWishlistSchema, insertUserSchema, insertMainSetSchema } from "@shared/schema";
+import { insertCardSetSchema, insertCardSchema, insertUserCollectionSchema, insertUserWishlistSchema, insertUserSchema, insertMainSetSchema, insertFriendSchema, insertMessageSchema, insertBadgeSchema, insertUserBadgeSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import csv from "csv-parser";
@@ -1731,6 +1731,244 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('PriceCharting config error:', error);
       res.status(500).json({ message: "Failed to check PriceCharting configuration" });
+    }
+  });
+
+  // ========== SOCIAL FEATURES API ROUTES ==========
+  
+  // Friends API
+  app.get("/api/social/friends", authenticateUser, async (req: any, res) => {
+    try {
+      const friends = await storage.getFriends(req.user.id);
+      res.json(friends);
+    } catch (error) {
+      console.error('Get friends error:', error);
+      res.status(500).json({ message: "Failed to fetch friends" });
+    }
+  });
+
+  app.get("/api/social/friend-requests", authenticateUser, async (req: any, res) => {
+    try {
+      const requests = await storage.getFriendRequests(req.user.id);
+      res.json(requests);
+    } catch (error) {
+      console.error('Get friend requests error:', error);
+      res.status(500).json({ message: "Failed to fetch friend requests" });
+    }
+  });
+
+  app.post("/api/social/friend-request", authenticateUser, async (req: any, res) => {
+    try {
+      const { recipientId } = req.body;
+      
+      if (!recipientId || recipientId === req.user.id) {
+        return res.status(400).json({ message: "Invalid recipient ID" });
+      }
+
+      // Check if friendship already exists
+      const existingFriendship = await storage.getFriendshipStatus(req.user.id, recipientId);
+      if (existingFriendship) {
+        return res.status(400).json({ message: "Friend request already exists" });
+      }
+
+      const friendship = await storage.sendFriendRequest(req.user.id, recipientId);
+      res.status(201).json(friendship);
+    } catch (error) {
+      console.error('Send friend request error:', error);
+      res.status(500).json({ message: "Failed to send friend request" });
+    }
+  });
+
+  app.post("/api/social/friend-request/:id/respond", authenticateUser, async (req: any, res) => {
+    try {
+      const friendId = parseInt(req.params.id);
+      const { status } = req.body;
+      
+      if (!["accepted", "declined"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+
+      const friendship = await storage.respondToFriendRequest(friendId, status);
+      if (!friendship) {
+        return res.status(404).json({ message: "Friend request not found" });
+      }
+
+      res.json(friendship);
+    } catch (error) {
+      console.error('Respond to friend request error:', error);
+      res.status(500).json({ message: "Failed to respond to friend request" });
+    }
+  });
+
+  app.delete("/api/social/friend/:id", authenticateUser, async (req: any, res) => {
+    try {
+      const friendId = parseInt(req.params.id);
+      await storage.removeFriend(friendId);
+      res.json({ message: "Friend removed successfully" });
+    } catch (error) {
+      console.error('Remove friend error:', error);
+      res.status(500).json({ message: "Failed to remove friend" });
+    }
+  });
+
+  // Messages API
+  app.get("/api/social/messages/:userId", authenticateUser, async (req: any, res) => {
+    try {
+      const otherUserId = parseInt(req.params.userId);
+      const messages = await storage.getMessages(req.user.id, otherUserId);
+      res.json(messages);
+    } catch (error) {
+      console.error('Get messages error:', error);
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  app.post("/api/social/messages", authenticateUser, async (req: any, res) => {
+    try {
+      const { recipientId, content } = req.body;
+      
+      if (!recipientId || !content || content.trim().length === 0) {
+        return res.status(400).json({ message: "Recipient ID and content are required" });
+      }
+
+      const message = await storage.sendMessage(req.user.id, recipientId, content.trim());
+      res.status(201).json(message);
+    } catch (error) {
+      console.error('Send message error:', error);
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  app.post("/api/social/messages/:id/read", authenticateUser, async (req: any, res) => {
+    try {
+      const messageId = parseInt(req.params.id);
+      await storage.markMessageAsRead(messageId);
+      res.json({ message: "Message marked as read" });
+    } catch (error) {
+      console.error('Mark message as read error:', error);
+      res.status(500).json({ message: "Failed to mark message as read" });
+    }
+  });
+
+  app.get("/api/social/message-threads", authenticateUser, async (req: any, res) => {
+    try {
+      const threads = await storage.getMessageThreads(req.user.id);
+      res.json(threads);
+    } catch (error) {
+      console.error('Get message threads error:', error);
+      res.status(500).json({ message: "Failed to fetch message threads" });
+    }
+  });
+
+  app.get("/api/social/unread-count", authenticateUser, async (req: any, res) => {
+    try {
+      const count = await storage.getUnreadMessageCount(req.user.id);
+      res.json({ count });
+    } catch (error) {
+      console.error('Get unread count error:', error);
+      res.status(500).json({ message: "Failed to fetch unread count" });
+    }
+  });
+
+  // Badges API
+  app.get("/api/social/badges", async (req, res) => {
+    try {
+      const badges = await storage.getBadges();
+      res.json(badges);
+    } catch (error) {
+      console.error('Get badges error:', error);
+      res.status(500).json({ message: "Failed to fetch badges" });
+    }
+  });
+
+  app.get("/api/social/user-badges", authenticateUser, async (req: any, res) => {
+    try {
+      const userBadges = await storage.getUserBadges(req.user.id);
+      res.json(userBadges);
+    } catch (error) {
+      console.error('Get user badges error:', error);
+      res.status(500).json({ message: "Failed to fetch user badges" });
+    }
+  });
+
+  app.post("/api/social/check-badges", authenticateUser, async (req: any, res) => {
+    try {
+      const newBadges = await storage.checkAndAwardBadges(req.user.id);
+      res.json({ newBadges });
+    } catch (error) {
+      console.error('Check badges error:', error);
+      res.status(500).json({ message: "Failed to check badges" });
+    }
+  });
+
+  // Profiles API
+  app.get("/api/social/profile/:userId", authenticateUser, async (req: any, res) => {
+    try {
+      const targetUserId = parseInt(req.params.userId);
+      
+      // Check if user can view this profile
+      const canView = await storage.canViewProfile(req.user.id, targetUserId);
+      if (!canView) {
+        return res.status(403).json({ message: "You don't have permission to view this profile" });
+      }
+
+      const stats = await storage.getProfileStats(targetUserId);
+      res.json(stats);
+    } catch (error) {
+      console.error('Get profile stats error:', error);
+      res.status(500).json({ message: "Failed to fetch profile stats" });
+    }
+  });
+
+  app.put("/api/social/profile/visibility", authenticateUser, async (req: any, res) => {
+    try {
+      const { visibility } = req.body;
+      
+      if (!["public", "friends", "private"].includes(visibility)) {
+        return res.status(400).json({ message: "Invalid visibility setting" });
+      }
+
+      await storage.updateProfileVisibility(req.user.id, visibility);
+      res.json({ message: "Profile visibility updated successfully" });
+    } catch (error) {
+      console.error('Update profile visibility error:', error);
+      res.status(500).json({ message: "Failed to update profile visibility" });
+    }
+  });
+
+  // Admin Badge Management
+  app.post("/api/admin/badges", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const validatedData = insertBadgeSchema.parse(req.body);
+      const badge = await storage.createBadge(validatedData);
+      res.status(201).json(badge);
+    } catch (error) {
+      console.error('Create badge error:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create badge" });
+    }
+  });
+
+  app.post("/api/admin/badges/:badgeId/award/:userId", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const badgeId = parseInt(req.params.badgeId);
+      const userId = parseInt(req.params.userId);
+      
+      const userBadge = await storage.awardBadge(userId, badgeId);
+      res.status(201).json(userBadge);
+    } catch (error) {
+      console.error('Award badge error:', error);
+      res.status(500).json({ message: "Failed to award badge" });
     }
   });
 

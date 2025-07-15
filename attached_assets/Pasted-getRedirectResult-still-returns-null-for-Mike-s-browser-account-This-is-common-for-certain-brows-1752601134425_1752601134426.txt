@@ -1,0 +1,89 @@
+getRedirectResult() still returns null for Mike’s browser/account.
+
+This is common for certain browsers (Safari, iOS, strict privacy modes) where session cookies are lost during the redirect flow.
+
+That explains why yours works (Chrome desktop most likely) but Mike’s does not.
+
+The fallback signInWithPopup() is implemented only in RedirectHandler.tsx, but it triggers only after the user hits the handler route.
+
+On the auth page (/auth), the “popup fallback” button exists — but it’s manual and does nothing to auto-correct if redirect flow fails.
+
+🪄 What Needs to Change
+✅ Rather than attempting signInWithRedirect() by default and hoping it works, we should:
+1️⃣ Detect browser support for redirect flow.
+2️⃣ Use signInWithPopup() by default, and leave signInWithRedirect() as an optional fallback.
+3️⃣ Keep RedirectHandler.tsx simple and stop trying to “rescue” after failure.
+
+This is a best practice per Firebase’s own documentation for environments where session loss is common.
+
+🚀 Clean Fix: Code Changes
+1️⃣ firebase-auth-page.tsx
+In the main auth page, change the Google sign-in button to use signInWithPopup() directly:
+
+tsx
+Copy
+Edit
+<Button
+  onClick={async () => {
+    try {
+      await signInWithGooglePopup();
+      setLocation("/dashboard");
+    } catch (err) {
+      console.error("Popup login failed", err);
+    }
+  }}
+>
+  Continue with Google
+</Button>
+Remove any code that calls signInWithRedirect() by default.
+
+2️⃣ RedirectHandler.tsx
+You can actually remove the fallback here entirely.
+It can just show a message that “Your session expired, please try again” if getRedirectResult() returns null.
+
+tsx
+Copy
+Edit
+useEffect(() => {
+  const processRedirect = async () => {
+    console.log("=== RedirectHandler: Processing OAuth redirect ===");
+
+    try {
+      const result = await getRedirectResult(auth);
+      if (result?.user) {
+        const idToken = await result.user.getIdToken();
+        await apiRequest("POST", "/api/firebase/sync-user", { idToken });
+        navigate("/dashboard");
+      } else {
+        console.warn("RedirectHandler: getRedirectResult() returned null.");
+        navigate("/auth?error=session");
+      }
+    } catch (err) {
+      console.error("RedirectHandler: Auth failed", err);
+      navigate("/auth?error=auth");
+    }
+  };
+
+  processRedirect();
+}, [navigate]);
+3️⃣ use-firebase-auth.tsx
+✅ Keep the signInWithPopup() method exactly as written — no changes needed.
+
+📝 Why This Works
+✅ Redirect flow simply does not work reliably in privacy-heavy browsers or mobile.
+✅ Popup flow is faster and more reliable for 99% of use cases.
+✅ Keeps logic clean: no weird fallback hacks or state confusion.
+✅ Still keeps the /__/auth/handler route for users who land there (but it simply instructs them to retry).
+
+🧪 What to Tell Replit
+We need to stop defaulting to signInWithRedirect() and instead use signInWithPopup() as the default login method on /auth.
+
+Please update firebase-auth-page.tsx to have the main “Continue with Google” button trigger signInWithGooglePopup(), then navigate to /dashboard on success.
+
+Update RedirectHandler.tsx to just show an error and navigate back to /auth if getRedirectResult() is null — no more automatic fallback.
+
+This is the recommended best practice for iOS/Safari and other privacy-mode browsers that don’t persist session state properly during redirect.
+
+Once this is implemented, Mike’s login should succeed via popup even on his device. Please deploy this change and test.
+
+✅ This is clean, reliable, and the recommended way to handle cross-browser auth. If you want, I can also bundle the ready-to-drop firebase-auth-page.tsx and RedirectHandler.tsx code files

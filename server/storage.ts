@@ -6,6 +6,10 @@ import {
   userCollections, 
   userWishlists,
   cardPriceCache,
+  friends,
+  messages,
+  badges,
+  userBadges,
   type User, 
   type InsertUser,
   type MainSet,
@@ -21,7 +25,19 @@ import {
   type CardWithSet,
   type CollectionItem,
   type WishlistItem,
-  type CollectionStats
+  type CollectionStats,
+  type Friend,
+  type InsertFriend,
+  type Message,
+  type InsertMessage,
+  type Badge,
+  type InsertBadge,
+  type UserBadge,
+  type InsertUserBadge,
+  type FriendWithUser,
+  type MessageWithUsers,
+  type UserWithBadges,
+  type ProfileStats
 } from "@shared/schema";
 import { db, withDatabaseRetry } from "./db";
 import { eq, ilike, and, count, sum, desc, sql, isNull, isNotNull, or, lt, gte, gt } from "drizzle-orm";
@@ -106,6 +122,33 @@ interface IStorage {
   
   // Admin Functions
   clearAllData(): Promise<void>;
+
+  // Social Features - Friends
+  getFriends(userId: number): Promise<FriendWithUser[]>;
+  getFriendRequests(userId: number): Promise<FriendWithUser[]>;
+  sendFriendRequest(requesterId: number, recipientId: number): Promise<Friend>;
+  respondToFriendRequest(friendId: number, status: "accepted" | "declined"): Promise<Friend | undefined>;
+  getFriendshipStatus(userId1: number, userId2: number): Promise<Friend | undefined>;
+  removeFriend(friendId: number): Promise<void>;
+
+  // Social Features - Messages
+  getMessages(userId1: number, userId2: number): Promise<MessageWithUsers[]>;
+  sendMessage(senderId: number, recipientId: number, content: string): Promise<Message>;
+  markMessageAsRead(messageId: number): Promise<void>;
+  getUnreadMessageCount(userId: number): Promise<number>;
+  getMessageThreads(userId: number): Promise<{ user: User; lastMessage: Message; unreadCount: number }[]>;
+
+  // Social Features - Badges
+  getBadges(): Promise<Badge[]>;
+  getUserBadges(userId: number): Promise<(UserBadge & { badge: Badge })[]>;
+  awardBadge(userId: number, badgeId: number): Promise<UserBadge>;
+  checkAndAwardBadges(userId: number): Promise<UserBadge[]>;
+  createBadge(insertBadge: InsertBadge): Promise<Badge>;
+
+  // Social Features - Profiles
+  getProfileStats(userId: number): Promise<ProfileStats>;
+  updateProfileVisibility(userId: number, visibility: "public" | "friends" | "private"): Promise<void>;
+  canViewProfile(viewerUserId: number, targetUserId: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1435,10 +1478,412 @@ export class DatabaseStorage implements IStorage {
       await db.delete(cards);
       await db.delete(cardSets);
       await db.delete(mainSets);
+      await db.delete(userBadges);
+      await db.delete(messages);
+      await db.delete(friends);
       await db.delete(users);
     } catch (error) {
       console.error('Error clearing all data:', error);
       throw new Error('Failed to clear all data');
+    }
+  }
+
+  // Social Features - Friends
+  async getFriends(userId: number): Promise<FriendWithUser[]> {
+    const friendships = await db
+      .select({
+        id: friends.id,
+        requesterId: friends.requesterId,
+        recipientId: friends.recipientId,
+        status: friends.status,
+        createdAt: friends.createdAt,
+        updatedAt: friends.updatedAt,
+        requester: {
+          id: users.id,
+          username: users.username,
+          displayName: users.displayName,
+          photoURL: users.photoURL,
+          bio: users.bio,
+          location: users.location,
+          profileVisibility: users.profileVisibility,
+        },
+        recipient: {
+          id: users.id,
+          username: users.username,
+          displayName: users.displayName,
+          photoURL: users.photoURL,
+          bio: users.bio,
+          location: users.location,
+          profileVisibility: users.profileVisibility,
+        }
+      })
+      .from(friends)
+      .leftJoin(users, eq(friends.requesterId, users.id))
+      .where(
+        and(
+          eq(friends.status, "accepted"),
+          or(
+            eq(friends.requesterId, userId),
+            eq(friends.recipientId, userId)
+          )
+        )
+      );
+
+    return friendships.map(f => ({
+      ...f,
+      requester: f.requester as User,
+      recipient: f.recipient as User
+    }));
+  }
+
+  async getFriendRequests(userId: number): Promise<FriendWithUser[]> {
+    const requests = await db
+      .select({
+        id: friends.id,
+        requesterId: friends.requesterId,
+        recipientId: friends.recipientId,
+        status: friends.status,
+        createdAt: friends.createdAt,
+        updatedAt: friends.updatedAt,
+        requester: {
+          id: users.id,
+          username: users.username,
+          displayName: users.displayName,
+          photoURL: users.photoURL,
+          bio: users.bio,
+          location: users.location,
+          profileVisibility: users.profileVisibility,
+        },
+        recipient: {
+          id: users.id,
+          username: users.username,
+          displayName: users.displayName,
+          photoURL: users.photoURL,
+          bio: users.bio,
+          location: users.location,
+          profileVisibility: users.profileVisibility,
+        }
+      })
+      .from(friends)
+      .leftJoin(users, eq(friends.requesterId, users.id))
+      .where(
+        and(
+          eq(friends.recipientId, userId),
+          eq(friends.status, "pending")
+        )
+      );
+
+    return requests.map(r => ({
+      ...r,
+      requester: r.requester as User,
+      recipient: r.recipient as User
+    }));
+  }
+
+  async sendFriendRequest(requesterId: number, recipientId: number): Promise<Friend> {
+    const [friendship] = await db
+      .insert(friends)
+      .values({
+        requesterId,
+        recipientId,
+        status: "pending"
+      })
+      .returning();
+    return friendship;
+  }
+
+  async respondToFriendRequest(friendId: number, status: "accepted" | "declined"): Promise<Friend | undefined> {
+    const [updated] = await db
+      .update(friends)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(friends.id, friendId))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getFriendshipStatus(userId1: number, userId2: number): Promise<Friend | undefined> {
+    const [friendship] = await db
+      .select()
+      .from(friends)
+      .where(
+        or(
+          and(eq(friends.requesterId, userId1), eq(friends.recipientId, userId2)),
+          and(eq(friends.requesterId, userId2), eq(friends.recipientId, userId1))
+        )
+      )
+      .limit(1);
+    return friendship || undefined;
+  }
+
+  async removeFriend(friendId: number): Promise<void> {
+    await db.delete(friends).where(eq(friends.id, friendId));
+  }
+
+  // Social Features - Messages
+  async getMessages(userId1: number, userId2: number): Promise<MessageWithUsers[]> {
+    const messageList = await db
+      .select({
+        id: messages.id,
+        senderId: messages.senderId,
+        recipientId: messages.recipientId,
+        content: messages.content,
+        isRead: messages.isRead,
+        createdAt: messages.createdAt,
+        sender: {
+          id: users.id,
+          username: users.username,
+          displayName: users.displayName,
+          photoURL: users.photoURL,
+        },
+        recipient: {
+          id: users.id,
+          username: users.username,
+          displayName: users.displayName,
+          photoURL: users.photoURL,
+        }
+      })
+      .from(messages)
+      .leftJoin(users, eq(messages.senderId, users.id))
+      .where(
+        or(
+          and(eq(messages.senderId, userId1), eq(messages.recipientId, userId2)),
+          and(eq(messages.senderId, userId2), eq(messages.recipientId, userId1))
+        )
+      )
+      .orderBy(messages.createdAt);
+
+    return messageList.map(m => ({
+      ...m,
+      sender: m.sender as User,
+      recipient: m.recipient as User
+    }));
+  }
+
+  async sendMessage(senderId: number, recipientId: number, content: string): Promise<Message> {
+    const [message] = await db
+      .insert(messages)
+      .values({
+        senderId,
+        recipientId,
+        content,
+        isRead: false
+      })
+      .returning();
+    return message;
+  }
+
+  async markMessageAsRead(messageId: number): Promise<void> {
+    await db
+      .update(messages)
+      .set({ isRead: true })
+      .where(eq(messages.id, messageId));
+  }
+
+  async getUnreadMessageCount(userId: number): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.recipientId, userId),
+          eq(messages.isRead, false)
+        )
+      );
+    return result.count;
+  }
+
+  async getMessageThreads(userId: number): Promise<{ user: User; lastMessage: Message; unreadCount: number }[]> {
+    // This is a complex query - we'll implement a simpler version for now
+    const recentMessages = await db
+      .select()
+      .from(messages)
+      .where(
+        or(
+          eq(messages.senderId, userId),
+          eq(messages.recipientId, userId)
+        )
+      )
+      .orderBy(desc(messages.createdAt))
+      .limit(100);
+
+    // Group by conversation partner and get most recent message
+    const threads: { [key: number]: { user: User; lastMessage: Message; unreadCount: number } } = {};
+    
+    for (const message of recentMessages) {
+      const partnerId = message.senderId === userId ? message.recipientId : message.senderId;
+      
+      if (!threads[partnerId]) {
+        const partner = await this.getUser(partnerId);
+        if (partner) {
+          threads[partnerId] = {
+            user: partner,
+            lastMessage: message,
+            unreadCount: 0
+          };
+        }
+      }
+      
+      // Count unread messages from this partner
+      if (message.recipientId === userId && !message.isRead) {
+        threads[partnerId].unreadCount++;
+      }
+    }
+
+    return Object.values(threads);
+  }
+
+  // Social Features - Badges
+  async getBadges(): Promise<Badge[]> {
+    return await db
+      .select()
+      .from(badges)
+      .where(eq(badges.isActive, true))
+      .orderBy(badges.category, badges.name);
+  }
+
+  async getUserBadges(userId: number): Promise<(UserBadge & { badge: Badge })[]> {
+    const userBadgeList = await db
+      .select({
+        id: userBadges.id,
+        userId: userBadges.userId,
+        badgeId: userBadges.badgeId,
+        earnedAt: userBadges.earnedAt,
+        badge: {
+          id: badges.id,
+          name: badges.name,
+          description: badges.description,
+          iconUrl: badges.iconUrl,
+          category: badges.category,
+          requirement: badges.requirement,
+          isActive: badges.isActive,
+          createdAt: badges.createdAt,
+        }
+      })
+      .from(userBadges)
+      .innerJoin(badges, eq(userBadges.badgeId, badges.id))
+      .where(eq(userBadges.userId, userId))
+      .orderBy(desc(userBadges.earnedAt));
+
+    return userBadgeList.map(ub => ({
+      ...ub,
+      badge: ub.badge as Badge
+    }));
+  }
+
+  async awardBadge(userId: number, badgeId: number): Promise<UserBadge> {
+    const [userBadge] = await db
+      .insert(userBadges)
+      .values({ userId, badgeId })
+      .returning();
+    return userBadge;
+  }
+
+  async checkAndAwardBadges(userId: number): Promise<UserBadge[]> {
+    const awarded: UserBadge[] = [];
+    
+    // Get user's current badges
+    const currentBadges = await this.getUserBadges(userId);
+    const currentBadgeIds = currentBadges.map(b => b.badgeId);
+    
+    // Get user's collection stats
+    const stats = await this.getCollectionStats(userId);
+    
+    // Check for badge achievements
+    const allBadges = await this.getBadges();
+    
+    for (const badge of allBadges) {
+      // Skip if user already has this badge
+      if (currentBadgeIds.includes(badge.id)) continue;
+      
+      // Parse badge requirement
+      const requirement = JSON.parse(badge.requirement);
+      let shouldAward = false;
+      
+      switch (requirement.type) {
+        case 'first_card':
+          shouldAward = stats.totalCards >= 1;
+          break;
+        case 'collection_size':
+          shouldAward = stats.totalCards >= requirement.count;
+          break;
+        case 'friend_count':
+          const friendCount = (await this.getFriends(userId)).length;
+          shouldAward = friendCount >= requirement.count;
+          break;
+        case 'login_streak':
+          const user = await this.getUser(userId);
+          shouldAward = user ? user.loginStreak >= requirement.days : false;
+          break;
+        case 'completed_sets':
+          shouldAward = stats.completedSets >= requirement.count;
+          break;
+      }
+      
+      if (shouldAward) {
+        try {
+          const newBadge = await this.awardBadge(userId, badge.id);
+          awarded.push(newBadge);
+        } catch (error) {
+          console.error('Error awarding badge:', error);
+        }
+      }
+    }
+    
+    return awarded;
+  }
+
+  async createBadge(insertBadge: InsertBadge): Promise<Badge> {
+    const [badge] = await db
+      .insert(badges)
+      .values(insertBadge)
+      .returning();
+    return badge;
+  }
+
+  // Social Features - Profiles
+  async getProfileStats(userId: number): Promise<ProfileStats> {
+    const collectionStats = await this.getCollectionStats(userId);
+    const friendsCount = (await this.getFriends(userId)).length;
+    const badgesCount = (await this.getUserBadges(userId)).length;
+    const user = await this.getUser(userId);
+    
+    return {
+      totalCards: collectionStats.totalCards,
+      totalValue: collectionStats.totalValue,
+      wishlistItems: collectionStats.wishlistItems,
+      friendsCount,
+      badgesCount,
+      completedSets: collectionStats.completedSets,
+      loginStreak: user?.loginStreak || 0,
+    };
+  }
+
+  async updateProfileVisibility(userId: number, visibility: "public" | "friends" | "private"): Promise<void> {
+    await db
+      .update(users)
+      .set({ profileVisibility: visibility })
+      .where(eq(users.id, userId));
+  }
+
+  async canViewProfile(viewerUserId: number, targetUserId: number): Promise<boolean> {
+    // Users can always view their own profile
+    if (viewerUserId === targetUserId) return true;
+    
+    const targetUser = await this.getUser(targetUserId);
+    if (!targetUser) return false;
+    
+    // Check visibility settings
+    switch (targetUser.profileVisibility) {
+      case "public":
+        return true;
+      case "private":
+        return false;
+      case "friends":
+        // Check if they're friends
+        const friendship = await this.getFriendshipStatus(viewerUserId, targetUserId);
+        return friendship?.status === "accepted";
+      default:
+        return false;
     }
   }
 }

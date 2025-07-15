@@ -37,6 +37,7 @@ const getNavigationItems = (userPlan: string): NavigationItem[] => [
     badge: userPlan === 'SIDE_KICK' ? "👑" : undefined
   },
   { href: "/trends", label: "Market Trends", icon: "TrendingUp" },
+  { href: "/social", label: "Social Hub", icon: "Users" },
 ];
 
 const adminItems: NavigationItem[] = [

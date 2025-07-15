@@ -25,7 +25,10 @@ export const users = pgTable("users", {
   emailUpdates: boolean("email_updates").default(true).notNull(),
   priceAlerts: boolean("price_alerts").default(true).notNull(),
   friendActivity: boolean("friend_activity").default(true).notNull(),
+  profileVisibility: text("profile_visibility").default("public").notNull(), // public, friends, private
   lastLogin: timestamp("last_login"),
+  loginStreak: integer("login_streak").default(0).notNull(),
+  totalLogins: integer("total_logins").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -99,6 +102,46 @@ export const cardPriceCache = pgTable("card_price_cache", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Friends system
+export const friends = pgTable("friends", {
+  id: serial("id").primaryKey(),
+  requesterId: integer("requester_id").references(() => users.id).notNull(),
+  recipientId: integer("recipient_id").references(() => users.id).notNull(),
+  status: text("status").default("pending").notNull(), // pending, accepted, declined
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Messages system
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  senderId: integer("sender_id").references(() => users.id).notNull(),
+  recipientId: integer("recipient_id").references(() => users.id).notNull(),
+  content: text("content").notNull(),
+  isRead: boolean("is_read").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Badges system
+export const badges = pgTable("badges", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  description: text("description").notNull(),
+  iconUrl: text("icon_url"),
+  category: text("category").notNull(), // collection, social, activity, achievement
+  requirement: text("requirement").notNull(), // JSON string describing unlock condition
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// User badges (earned badges)
+export const userBadges = pgTable("user_badges", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  badgeId: integer("badge_id").references(() => badges.id).notNull(),
+  earnedAt: timestamp("earned_at").defaultNow().notNull(),
+});
+
 // Relations
 export const cardSetsRelations = relations(cardSets, ({ many }) => ({
   cards: many(cards),
@@ -127,6 +170,52 @@ export const cardPriceCacheRelations = relations(cardPriceCache, ({ one }) => ({
 export const usersRelations = relations(users, ({ many }) => ({
   collections: many(userCollections),
   wishlists: many(userWishlists),
+  friendRequestsSent: many(friends, { relationName: "requester" }),
+  friendRequestsReceived: many(friends, { relationName: "recipient" }),
+  messagesSent: many(messages, { relationName: "sender" }),
+  messagesReceived: many(messages, { relationName: "recipient" }),
+  badges: many(userBadges),
+}));
+
+export const friendsRelations = relations(friends, ({ one }) => ({
+  requester: one(users, {
+    fields: [friends.requesterId],
+    references: [users.id],
+    relationName: "requester",
+  }),
+  recipient: one(users, {
+    fields: [friends.recipientId],
+    references: [users.id],
+    relationName: "recipient",
+  }),
+}));
+
+export const messagesRelations = relations(messages, ({ one }) => ({
+  sender: one(users, {
+    fields: [messages.senderId],
+    references: [users.id],
+    relationName: "sender",
+  }),
+  recipient: one(users, {
+    fields: [messages.recipientId],
+    references: [users.id],
+    relationName: "recipient",
+  }),
+}));
+
+export const badgesRelations = relations(badges, ({ many }) => ({
+  userBadges: many(userBadges),
+}));
+
+export const userBadgesRelations = relations(userBadges, ({ one }) => ({
+  user: one(users, {
+    fields: [userBadges.userId],
+    references: [users.id],
+  }),
+  badge: one(badges, {
+    fields: [userBadges.badgeId],
+    references: [badges.id],
+  }),
 }));
 
 export const userCollectionsRelations = relations(userCollections, ({ one }) => ({
@@ -191,6 +280,27 @@ export const insertCardPriceCacheSchema = createInsertSchema(cardPriceCache).omi
   lastFetched: true,
 });
 
+export const insertFriendSchema = createInsertSchema(friends).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertBadgeSchema = createInsertSchema(badges).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserBadgeSchema = createInsertSchema(userBadges).omit({
+  id: true,
+  earnedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -212,6 +322,18 @@ export type InsertUserWishlist = z.infer<typeof insertUserWishlistSchema>;
 
 export type CardPriceCache = typeof cardPriceCache.$inferSelect;
 export type InsertCardPriceCache = z.infer<typeof insertCardPriceCacheSchema>;
+
+export type Friend = typeof friends.$inferSelect;
+export type InsertFriend = z.infer<typeof insertFriendSchema>;
+
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+
+export type Badge = typeof badges.$inferSelect;
+export type InsertBadge = z.infer<typeof insertBadgeSchema>;
+
+export type UserBadge = typeof userBadges.$inferSelect;
+export type InsertUserBadge = z.infer<typeof insertUserBadgeSchema>;
 
 // Extended types for API responses
 export type CardWithSet = Card & {
@@ -237,4 +359,29 @@ export type CollectionStats = {
   insertCardsGrowth: string;
   totalValueGrowth: string;
   wishlistGrowth: string;
+};
+
+// Extended types for social features
+export type FriendWithUser = Friend & {
+  requester: User;
+  recipient: User;
+};
+
+export type MessageWithUsers = Message & {
+  sender: User;
+  recipient: User;
+};
+
+export type UserWithBadges = User & {
+  badges: (UserBadge & { badge: Badge })[];
+};
+
+export type ProfileStats = {
+  totalCards: number;
+  totalValue: number;
+  wishlistItems: number;
+  friendsCount: number;
+  badgesCount: number;
+  completedSets: number;
+  loginStreak: number;
 };

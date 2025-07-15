@@ -16,6 +16,7 @@ import MyCollection from "@/pages/my-collection";
 import Wishlist from "@/pages/wishlist";
 import Marketplace from "@/pages/marketplace";
 import Profile from "@/pages/profile";
+import Social from "@/pages/Social";
 import AdminCardManagement from "@/pages/admin/card-management";
 import AdminUsers from "@/pages/admin/users";
 import AdminMainSets from "@/pages/admin/main-sets";
@@ -99,6 +100,7 @@ function Router() {
       <Route path="/marketplace" component={Marketplace} />
       <Route path="/trends" component={MarketTrends} />
       <Route path="/profile" component={Profile} />
+      <Route path="/social" component={Social} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/automation" component={AdminAutomation} />
       <Route path="/admin/cards" component={AdminCardManagement} />
