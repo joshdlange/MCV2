@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Users, MessageCircle, Award, User, Lock, Clock, Check, X, Search, UserPlus } from "lucide-react";
+import { Users, MessageCircle, Award, User, Lock, Clock, Check, X, Search, UserPlus, Plus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Friend {
@@ -442,17 +442,17 @@ export default function Social() {
               </CardHeader>
               <CardContent className="p-4">
                 {/* Find New Heroes Section */}
-                <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border-2 border-green-200">
-                  <div className="flex items-center mb-3">
-                    <UserPlus className="w-5 h-5 mr-2 text-green-600" />
-                    <h3 className="font-bold text-green-800">Find New Heroes</h3>
+                <div className="mb-4 p-3 bg-white rounded-lg border border-gray-200">
+                  <div className="flex items-center mb-2">
+                    <UserPlus className="w-4 h-4 mr-2 text-green-600" />
+                    <h3 className="font-semibold text-gray-800">Find New Heroes</h3>
                   </div>
                   <div className="flex space-x-2">
                     <Input
                       placeholder="Search for heroes by name or email..."
                       value={searchQuery}
                       onChange={handleSearchChange}
-                      className="flex-1 border-green-300 focus:border-green-500"
+                      className="flex-1 border-gray-300 focus:border-green-500 bg-white text-gray-900 placeholder-gray-500"
                     />
                     <Button
                       onClick={() => searchUsers(searchQuery)}
@@ -465,18 +465,18 @@ export default function Social() {
                   </div>
                   
                   {isSearching && (
-                    <div className="mt-4 text-center">
-                      <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
-                      <p className="text-sm text-green-600 mt-2">Searching heroes...</p>
+                    <div className="mt-3 text-center">
+                      <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-green-500"></div>
+                      <p className="text-sm text-gray-600 mt-2">Searching heroes...</p>
                     </div>
                   )}
                   
                   {searchResults.length > 0 && (
-                    <div className="mt-4 space-y-2">
+                    <div className="mt-3 space-y-2">
                       {searchResults.map((searchUser: SearchUser) => (
                         <div
                           key={searchUser.id}
-                          className="flex items-center justify-between p-3 bg-white rounded-lg border border-green-200"
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
                         >
                           <div className="flex items-center space-x-3">
                             <Avatar className="w-10 h-10">
@@ -553,18 +553,18 @@ export default function Social() {
                                   const tabEvent = new CustomEvent('switchToMessages', { detail: { friendId: friendUser.id } });
                                   window.dispatchEvent(tabEvent);
                                 }}
-                                className="bg-blue-500 hover:bg-blue-600 text-white font-bold px-3 py-1.5 rounded text-xs"
+                                className="bg-blue-500 hover:bg-blue-600 text-white font-bold px-2 py-1.5 rounded text-xs sm:px-3"
                               >
-                                <MessageCircle className="w-3 h-3 mr-1" />
-                                Message
+                                <MessageCircle className="w-3 h-3 sm:mr-1" />
+                                <span className="hidden sm:inline">Message</span>
                               </Button>
                               <Button
                                 size="sm"
                                 onClick={() => window.open(`/friend-profile/${friendUser.id}`, '_blank')}
-                                className="bg-green-500 hover:bg-green-600 text-white font-bold px-3 py-1.5 rounded text-xs"
+                                className="bg-green-500 hover:bg-green-600 text-white font-bold px-2 py-1.5 rounded text-xs sm:px-3"
                               >
-                                <User className="w-3 h-3 mr-1" />
-                                View Profile
+                                <User className="w-3 h-3 sm:mr-1" />
+                                <span className="hidden sm:inline">View Profile</span>
                               </Button>
                             </div>
                           </div>
@@ -644,19 +644,33 @@ export default function Social() {
         <TabsContent value="messages" className="h-[80vh] bg-white">
           <div className="h-full flex rounded-lg overflow-hidden border border-gray-200 shadow-sm">
             {/* Left Column: Conversation List - iPhone Style */}
-            <div className="w-1/3 border-r border-gray-200 bg-white">
+            <div className="w-1/3 border-r border-gray-200 bg-white flex flex-col">
               {/* Header */}
-              <div className="p-4 bg-gray-50 border-b border-gray-200">
+              <div className="p-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
+                <Button 
+                  size="sm" 
+                  onClick={() => setActiveTab('friends')}
+                  className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1"
+                >
+                  <UserPlus className="w-3 h-3 mr-1" />
+                  New
+                </Button>
               </div>
               
               {/* Conversation List */}
-              <div className="h-full overflow-y-auto">
+              <div className="flex-1 overflow-y-auto">
                 {friends.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center px-6">
                     <MessageCircle className="w-16 h-16 text-gray-300 mb-4" />
                     <p className="text-gray-500 text-sm">No conversations</p>
                     <p className="text-gray-400 text-xs">Add friends to start messaging</p>
+                    <Button 
+                      onClick={() => setActiveTab('friends')}
+                      className="mt-4 bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2"
+                    >
+                      Add Friends
+                    </Button>
                   </div>
                 ) : (
                   <div className="divide-y divide-gray-100">
@@ -665,6 +679,13 @@ export default function Social() {
                       const isRequesterCurrentUser = friend.requester.username === userEmail;
                       const friendUser = isRequesterCurrentUser 
                         ? friend.recipient : friend.requester;
+                      
+                      // Get the last message with this friend
+                      const lastMessage = messages.find(m => 
+                        (m.senderId === user?.uid && m.recipientId === friendUser.id) ||
+                        (m.senderId === friendUser.id && m.recipientId === user?.uid)
+                      );
+                      
                       return (
                         <div
                           key={friend.id}
@@ -690,10 +711,18 @@ export default function Social() {
                                 <p className="font-medium text-gray-900 truncate text-sm">
                                   {friendUser.displayName || friendUser.username}
                                 </p>
-                                <span className="text-xs text-gray-400">now</span>
+                                <span className="text-xs text-gray-400">
+                                  {lastMessage ? new Date(lastMessage.createdAt).toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  }) : 'now'}
+                                </span>
                               </div>
                               <p className="text-sm text-gray-500 truncate">
-                                Tap to start chatting
+                                {lastMessage ? 
+                                  (lastMessage.senderId === user?.uid ? 'You: ' : '') + lastMessage.content
+                                  : 'Tap to start chatting'
+                                }
                               </p>
                             </div>
                           </div>
