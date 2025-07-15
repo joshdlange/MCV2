@@ -41,6 +41,7 @@ import {
 } from "@shared/schema";
 import { db, withDatabaseRetry } from "./db";
 import { eq, ilike, and, count, sum, desc, sql, isNull, isNotNull, or, lt, gte, gt, ne } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 
 // Utility function to generate slugs
 function generateSlug(name: string): string {
@@ -1499,6 +1500,9 @@ export class DatabaseStorage implements IStorage {
 
   // Social Features - Friends
   async getFriends(userId: number): Promise<FriendWithUser[]> {
+    const requesterAlias = alias(users, 'requester');
+    const recipientAlias = alias(users, 'recipient');
+    
     const friendships = await db
       .select({
         id: friends.id,
@@ -1508,26 +1512,27 @@ export class DatabaseStorage implements IStorage {
         createdAt: friends.createdAt,
         updatedAt: friends.updatedAt,
         requester: {
-          id: users.id,
-          username: users.username,
-          displayName: users.displayName,
-          photoURL: users.photoURL,
-          bio: users.bio,
-          location: users.location,
-          profileVisibility: users.profileVisibility,
+          id: requesterAlias.id,
+          username: requesterAlias.username,
+          displayName: requesterAlias.displayName,
+          photoURL: requesterAlias.photoURL,
+          bio: requesterAlias.bio,
+          location: requesterAlias.location,
+          profileVisibility: requesterAlias.profileVisibility,
         },
         recipient: {
-          id: users.id,
-          username: users.username,
-          displayName: users.displayName,
-          photoURL: users.photoURL,
-          bio: users.bio,
-          location: users.location,
-          profileVisibility: users.profileVisibility,
+          id: recipientAlias.id,
+          username: recipientAlias.username,
+          displayName: recipientAlias.displayName,
+          photoURL: recipientAlias.photoURL,
+          bio: recipientAlias.bio,
+          location: recipientAlias.location,
+          profileVisibility: recipientAlias.profileVisibility,
         }
       })
       .from(friends)
-      .leftJoin(users, eq(friends.requesterId, users.id))
+      .leftJoin(requesterAlias, eq(friends.requesterId, requesterAlias.id))
+      .leftJoin(recipientAlias, eq(friends.recipientId, recipientAlias.id))
       .where(
         and(
           eq(friends.status, "accepted"),
