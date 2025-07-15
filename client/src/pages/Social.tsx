@@ -90,8 +90,16 @@ export default function Social() {
       setSelectedFriendId(event.detail.friendId);
     };
     
+    const handleSwitchToMessagesTab = () => {
+      setActiveTab("messages");
+    };
+    
     window.addEventListener('switchToMessages', handleSwitchToMessages as EventListener);
-    return () => window.removeEventListener('switchToMessages', handleSwitchToMessages as EventListener);
+    window.addEventListener('switchToMessagesTab', handleSwitchToMessagesTab as EventListener);
+    return () => {
+      window.removeEventListener('switchToMessages', handleSwitchToMessages as EventListener);
+      window.removeEventListener('switchToMessagesTab', handleSwitchToMessagesTab as EventListener);
+    };
   }, []);
 
   // Helper function to get auth headers
@@ -454,7 +462,9 @@ export default function Social() {
                 ) : (
                   <div className="grid gap-4">
                     {friends.map((friend: Friend) => {
-                      const friendUser = friend.requester.id === friend.recipient.id 
+                      // Get the friend user (not the current user)
+                      const currentUserId = user?.id;
+                      const friendUser = friend.requester.id === currentUserId 
                         ? friend.recipient : friend.requester;
                       return (
                         <div key={friend.id} className="bg-white rounded-lg border border-blue-200 p-3 shadow-sm hover:shadow-md transition-all duration-200">
@@ -662,7 +672,9 @@ export default function Social() {
                 ) : (
                   <div className="space-y-2">
                     {friends.map((friend: Friend) => {
-                      const friendUser = friend.requester.id === friend.recipient.id 
+                      // Get the friend user (not the current user)
+                      const currentUserId = user?.id;
+                      const friendUser = friend.requester.id === currentUserId 
                         ? friend.recipient : friend.requester;
                       return (
                         <div
