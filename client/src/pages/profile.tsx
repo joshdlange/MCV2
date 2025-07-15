@@ -113,9 +113,9 @@ function SocialBadgesSection() {
   }
 
   const categoryColors = {
-    'collection': 'bg-blue-100 text-blue-800',
-    'social': 'bg-green-100 text-green-800',
-    'engagement': 'bg-purple-100 text-purple-800',
+    'collection': 'bg-red-100 text-red-800',
+    'social': 'bg-gray-100 text-gray-800',
+    'engagement': 'bg-red-50 text-red-700',
     'achievement': 'bg-yellow-100 text-yellow-800'
   };
 
@@ -128,9 +128,9 @@ function SocialBadgesSection() {
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {userBadges.slice(0, 8).map((userBadge: any) => (
-          <div key={userBadge.id} className="text-center p-3 bg-gray-50 rounded-lg">
-            <div className="text-2xl mb-1">{userBadge.badge.icon}</div>
-            <p className="text-xs font-medium text-gray-900 mb-1">{userBadge.badge.name}</p>
+          <div key={userBadge.id} className="text-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+            <div className="text-3xl mb-2">{userBadge.badge.icon}</div>
+            <p className="text-xs font-semibold text-gray-900 mb-2">{userBadge.badge.name}</p>
             <Badge 
               variant="secondary" 
               className={`text-xs ${categoryColors[userBadge.badge.category as keyof typeof categoryColors] || 'bg-gray-100 text-gray-800'}`}
@@ -525,7 +525,7 @@ export default function Profile() {
                       variant="outline" 
                       size="sm"
                       onClick={() => navigate('/social')}
-                      className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                      className="text-red-600 border-red-600 hover:bg-red-50"
                     >
                       View All
                     </Button>
@@ -548,7 +548,7 @@ export default function Profile() {
                       variant="outline" 
                       size="sm"
                       onClick={() => navigate('/social?tab=badges')}
-                      className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                      className="text-red-600 border-red-600 hover:bg-red-50"
                     >
                       View All
                     </Button>
@@ -571,7 +571,7 @@ export default function Profile() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Button 
                       onClick={() => navigate('/social?tab=messages')}
-                      className="bg-blue-500 hover:bg-blue-600 text-white"
+                      className="bg-red-500 hover:bg-red-600 text-white"
                     >
                       <MessageCircle className="w-4 h-4 mr-2" />
                       Send Message
@@ -579,7 +579,7 @@ export default function Profile() {
                     <Button 
                       onClick={() => navigate('/social?tab=friends')}
                       variant="outline"
-                      className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                      className="border-red-600 text-red-600 hover:bg-red-50"
                     >
                       <UserPlus className="w-4 h-4 mr-2" />
                       Find Friends
