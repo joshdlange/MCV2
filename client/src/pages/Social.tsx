@@ -654,24 +654,26 @@ export default function Social() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="messages" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Friends to message - Comic Panel Style */}
-            <Card className="border-2 border-blue-500 bg-gradient-to-br from-white to-blue-50 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                <CardTitle className="font-bebas text-xl tracking-wide flex items-center">
-                  <Users className="w-5 h-5 mr-2" />
-                  TEAM CHAT
+        <TabsContent value="messages" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-[600px]">
+            {/* Left Column: Conversation List */}
+            <Card className="border border-gray-200 bg-white shadow-sm">
+              <CardHeader className="bg-blue-500 text-white p-4">
+                <CardTitle className="font-semibold text-lg flex items-center">
+                  <MessageCircle className="w-5 h-5 mr-2" />
+                  Messages
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-4">
-                {friends.length === 0 ? (
-                  <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                    <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                    <p className="text-sm text-gray-600">No friends to message yet</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
+              <CardContent className="p-0">
+                <div className="h-[500px] overflow-y-auto">
+                  {friends.length === 0 ? (
+                    <div className="text-center py-12 px-4">
+                      <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                      <p className="text-gray-600">No conversations yet</p>
+                      <p className="text-sm text-gray-500">Add friends to start messaging</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-gray-100">
                     {friends.map((friend: Friend) => {
                       // Get the friend user (not the current user)
                       const userEmail = user?.email;
@@ -682,113 +684,146 @@ export default function Social() {
                         <div
                           key={friend.id}
                           onClick={() => setSelectedFriendId(friendUser.id)}
-                          className={`p-3 rounded-lg cursor-pointer transition-all duration-200 border-2 ${
+                          className={`p-4 cursor-pointer transition-colors duration-200 hover:bg-gray-50 ${
                             selectedFriendId === friendUser.id 
-                              ? 'bg-blue-500 border-blue-600 text-white shadow-lg' 
-                              : 'bg-white border-gray-200 hover:border-blue-300 hover:shadow-md'
+                              ? 'bg-blue-50 border-r-4 border-blue-500' 
+                              : 'bg-white'
                           }`}
                         >
                           <div className="flex items-center space-x-3">
-                            <Avatar className="w-8 h-8">
+                            <Avatar className="w-12 h-12">
                               <AvatarImage src={friendUser.photoURL} />
-                              <AvatarFallback className="bg-marvel-red text-white text-sm font-bold">
+                              <AvatarFallback className="bg-blue-500 text-white font-semibold">
                                 {friendUser.displayName?.charAt(0) || friendUser.username.charAt(0)}
                               </AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
-                              <p className="font-bold text-sm truncate">
+                              <p className="font-semibold text-gray-900 truncate">
                                 {friendUser.displayName || friendUser.username}
                               </p>
-                              <p className="text-xs opacity-75 truncate">
-                                Last message preview...
+                              <p className="text-sm text-gray-500 truncate">
+                                {friendUser.username}
                               </p>
                             </div>
                             <div className="flex flex-col items-end">
-                              <Clock className="w-3 h-3 mb-1 opacity-60" />
-                              <Badge className="text-xs bg-green-500 text-white px-1 py-0">
-                                2
-                              </Badge>
+                              <div className="w-2 h-2 bg-green-500 rounded-full mb-1"></div>
+                              <span className="text-xs text-gray-400">Online</span>
                             </div>
                           </div>
                         </div>
                       );
                     })}
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
-            {/* Messages - Comic Panel Style */}
-            <Card className="lg:col-span-2 border-2 border-green-500 bg-gradient-to-br from-white to-green-50 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-                <CardTitle className="font-bebas text-xl tracking-wide flex items-center">
+            {/* Right Column: Current Conversation */}
+            <Card className="border border-gray-200 bg-white shadow-sm">
+              <CardHeader className="bg-green-500 text-white p-4">
+                <CardTitle className="font-semibold text-lg flex items-center">
                   <MessageCircle className="w-5 h-5 mr-2" />
-                  {selectedFriendId ? `CHAT WITH ${
-                    friends.find((f: Friend) => {
-                      const friendUser = f.requester.id === f.recipient.id 
-                        ? f.recipient : f.requester;
+                  {selectedFriendId ? 
+                    `Chat with ${friends.find(f => {
+                      const userEmail = user?.email;
+                      const isRequesterCurrentUser = f.requester.username === userEmail;
+                      const friendUser = isRequesterCurrentUser ? f.recipient : f.requester;
                       return friendUser.id === selectedFriendId;
-                    })?.requester.displayName?.toUpperCase() || "HERO"
-                  }` : "SELECT A HERO TO CHAT"}
+                    })?.recipient?.displayName || friends.find(f => {
+                      const userEmail = user?.email;
+                      const isRequesterCurrentUser = f.requester.username === userEmail;
+                      const friendUser = isRequesterCurrentUser ? f.recipient : f.requester;
+                      return friendUser.id === selectedFriendId;
+                    })?.requester?.displayName || 'Friend'}` : 
+                    'Select a Conversation'
+                  }
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6">
-                {selectedFriendId ? (
-                  <div className="space-y-4">
-                    {/* Messages display - Comic speech bubbles */}
-                    <div className="max-h-96 overflow-y-auto space-y-4 p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
-                      {messages.length === 0 ? (
-                        <div className="text-center py-8">
-                          <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                          <p className="text-gray-600 font-medium">Start your heroic conversation!</p>
-                        </div>
-                      ) : (
-                        messages.map((message: Message) => (
-                          <div
-                            key={message.id}
-                            className={`flex ${message.senderId === selectedFriendId ? 'justify-start' : 'justify-end'}`}
-                          >
-                            <div
-                              className={`max-w-xs px-4 py-3 rounded-2xl shadow-md border-2 ${
-                                message.senderId === selectedFriendId
-                                  ? 'bg-white border-gray-300 text-gray-900'
-                                  : 'bg-marvel-red border-red-600 text-white'
-                              }`}
-                            >
-                              <p className="text-sm font-medium">{message.content}</p>
-                              <p className="text-xs opacity-75 mt-1">
-                                {new Date(message.createdAt).toLocaleTimeString()}
-                              </p>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-
-                    {/* Message input - Comic style */}
-                    <div className="flex space-x-3">
-                      <Textarea
-                        placeholder="Type your heroic message..."
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        className="flex-1 border-2 border-gray-300 rounded-lg font-medium"
-                        rows={2}
-                      />
-                      <Button
-                        onClick={handleSendMessage}
-                        disabled={!newMessage.trim() || sendMessage.isPending}
-                        className="bg-marvel-red hover:bg-red-600 text-white font-bold px-6 py-3 rounded-lg border-2 border-red-600 self-end"
-                      >
-                        <MessageCircle className="w-4 h-4 mr-1" />
-                        Send
-                      </Button>
+              <CardContent className="p-0">
+                {!selectedFriendId ? (
+                  <div className="h-[500px] flex items-center justify-center bg-gray-50">
+                    <div className="text-center">
+                      <MessageCircle className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                      <p className="text-xl font-semibold text-gray-600 mb-2">Start a Conversation</p>
+                      <p className="text-gray-500">Select a friend from the left to begin chatting</p>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                    <MessageCircle className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                    <p className="text-xl font-bold text-gray-600 mb-2">Ready to Chat!</p>
-                    <p className="text-gray-500">Select a hero from your team to start messaging</p>
+                  <div className="h-[500px] flex flex-col">
+                    {/* Messages Display */}
+                    <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+                      {messages.length === 0 ? (
+                        <div className="text-center py-12">
+                          <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                          <p className="text-gray-600">No messages yet</p>
+                          <p className="text-sm text-gray-500">Start the conversation!</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {messages.map((message: Message) => (
+                            <div
+                              key={message.id}
+                              className={`flex ${message.senderId === user?.uid ? 'justify-end' : 'justify-start'}`}
+                            >
+                              <div
+                                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl shadow-sm ${
+                                  message.senderId === user?.uid
+                                    ? 'bg-blue-500 text-white'
+                                    : 'bg-white border border-gray-200 text-gray-900'
+                                }`}
+                              >
+                                <p className="text-sm">{message.content}</p>
+                                <p className={`text-xs mt-1 ${
+                                  message.senderId === user?.uid ? 'text-blue-100' : 'text-gray-500'
+                                }`}>
+                                  {new Date(message.createdAt).toLocaleTimeString()}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Message Input */}
+                    <div className="p-4 border-t bg-white">
+                      <div className="flex space-x-2">
+                        <Textarea
+                          placeholder="Type your message..."
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          className="flex-1 min-h-[40px] max-h-[120px] resize-none border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white"
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              if (newMessage.trim() && selectedFriendId) {
+                                sendMessage.mutate({
+                                  recipientId: selectedFriendId,
+                                  content: newMessage.trim(),
+                                });
+                                setNewMessage("");
+                              }
+                            }
+                          }}
+                        />
+                        <Button
+                          onClick={() => {
+                            if (newMessage.trim() && selectedFriendId) {
+                              sendMessage.mutate({
+                                recipientId: selectedFriendId,
+                                content: newMessage.trim(),
+                              });
+                              setNewMessage("");
+                            }
+                          }}
+                          disabled={!newMessage.trim() || sendMessage.isPending}
+                          className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg"
+                        >
+                          Send
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </CardContent>
