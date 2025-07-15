@@ -79,8 +79,20 @@ export default function Social() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [activeTab, setActiveTab] = useState("friends");
   const queryClient = useQueryClient();
   const { user } = useAuth();
+
+  // Listen for custom tab switching events
+  useEffect(() => {
+    const handleSwitchToMessages = (event: CustomEvent) => {
+      setActiveTab("messages");
+      setSelectedFriendId(event.detail.friendId);
+    };
+    
+    window.addEventListener('switchToMessages', handleSwitchToMessages as EventListener);
+    return () => window.removeEventListener('switchToMessages', handleSwitchToMessages as EventListener);
+  }, []);
 
   // Helper function to get auth headers
   const getAuthHeaders = async () => {
@@ -375,60 +387,59 @@ export default function Social() {
       </div>
 
       {/* Comic-style tabs */}
-      <Tabs defaultValue="friends" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 bg-transparent p-0 h-auto gap-2 mb-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-4 bg-transparent p-0 h-auto gap-1 mb-4">
           <TabsTrigger 
             value="friends" 
-            className="relative bg-white border-2 border-marvel-red rounded-t-lg py-3 px-6 font-bold text-marvel-red data-[state=active]:bg-marvel-red data-[state=active]:text-white transform hover:scale-105 transition-all duration-200"
+            className="relative bg-white border-2 border-marvel-red rounded-t-lg py-2 px-3 font-bold text-sm text-marvel-red data-[state=active]:bg-marvel-red data-[state=active]:text-white hover:scale-105 transition-all duration-200"
           >
-            <Users className="w-5 h-5 mr-2" />
+            <Users className="w-4 h-4 mr-1" />
             FRIENDS
             {friends.length > 0 && (
-              <Badge className="ml-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+              <Badge className="ml-1 bg-blue-500 text-white text-xs px-1 py-0.5 rounded-full">
                 {friends.length}
               </Badge>
             )}
           </TabsTrigger>
           <TabsTrigger 
             value="search"
-            className="relative bg-white border-2 border-marvel-red rounded-t-lg py-3 px-6 font-bold text-marvel-red data-[state=active]:bg-marvel-red data-[state=active]:text-white transform hover:scale-105 transition-all duration-200"
+            className="relative bg-white border-2 border-marvel-red rounded-t-lg py-2 px-3 font-bold text-sm text-marvel-red data-[state=active]:bg-marvel-red data-[state=active]:text-white hover:scale-105 transition-all duration-200"
           >
-            <Search className="w-5 h-5 mr-2" />
+            <Search className="w-4 h-4 mr-1" />
             FIND FRIENDS
           </TabsTrigger>
           <TabsTrigger 
             value="messages"
-            className="relative bg-white border-2 border-marvel-red rounded-t-lg py-3 px-6 font-bold text-marvel-red data-[state=active]:bg-marvel-red data-[state=active]:text-white transform hover:scale-105 transition-all duration-200"
+            className="relative bg-white border-2 border-marvel-red rounded-t-lg py-2 px-3 font-bold text-sm text-marvel-red data-[state=active]:bg-marvel-red data-[state=active]:text-white hover:scale-105 transition-all duration-200"
           >
-            <MessageCircle className="w-5 h-5 mr-2" />
+            <MessageCircle className="w-4 h-4 mr-1" />
             MESSAGES
-            {/* TODO: Add unread message count here */}
           </TabsTrigger>
           <TabsTrigger 
             value="badges"
-            className="relative bg-white border-2 border-marvel-red rounded-t-lg py-3 px-6 font-bold text-marvel-red data-[state=active]:bg-marvel-red data-[state=active]:text-white transform hover:scale-105 transition-all duration-200"
+            className="relative bg-white border-2 border-marvel-red rounded-t-lg py-2 px-3 font-bold text-sm text-marvel-red data-[state=active]:bg-marvel-red data-[state=active]:text-white hover:scale-105 transition-all duration-200"
           >
-            <Award className="w-5 h-5 mr-2" />
+            <Award className="w-4 h-4 mr-1" />
             BADGES
             {userBadges.length > 0 && (
-              <Badge className="ml-2 bg-yellow-500 text-black text-xs px-2 py-1 rounded-full">
+              <Badge className="ml-1 bg-yellow-500 text-black text-xs px-1 py-0.5 rounded-full">
                 {userBadges.length}
               </Badge>
             )}
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="friends" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TabsContent value="friends" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Friends List - Comic Panel Style */}
             <Card className="border-2 border-marvel-red bg-gradient-to-br from-white to-blue-50 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-marvel-red to-red-600 text-white">
-                <CardTitle className="font-bebas text-2xl tracking-wide flex items-center">
-                  <Users className="w-6 h-6 mr-2" />
+              <CardHeader className="bg-gradient-to-r from-marvel-red to-red-600 text-white p-3">
+                <CardTitle className="font-bebas text-lg tracking-wide flex items-center">
+                  <Users className="w-5 h-5 mr-2" />
                   MY HEROES ({friends.length})
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 {friendsLoading ? (
                   <div className="text-center py-8">
                     <div className="animate-spin w-8 h-8 border-4 border-marvel-red border-t-transparent rounded-full mx-auto mb-4"></div>
@@ -446,39 +457,44 @@ export default function Social() {
                       const friendUser = friend.requester.id === friend.recipient.id 
                         ? friend.recipient : friend.requester;
                       return (
-                        <div key={friend.id} className="bg-white rounded-lg border-2 border-blue-200 p-4 shadow-sm hover:shadow-md transition-all duration-200 transform hover:scale-105">
+                        <div key={friend.id} className="bg-white rounded-lg border border-blue-200 p-3 shadow-sm hover:shadow-md transition-all duration-200">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                              <Avatar className="w-12 h-12 border-2 border-marvel-red">
+                            <div className="flex items-center space-x-3">
+                              <Avatar className="w-10 h-10 border-2 border-marvel-red">
                                 <AvatarImage src={friendUser.photoURL} />
-                                <AvatarFallback className="bg-marvel-red text-white font-bold">
+                                <AvatarFallback className="bg-marvel-red text-white font-bold text-sm">
                                   {friendUser.displayName?.charAt(0) || friendUser.username.charAt(0)}
                                 </AvatarFallback>
                               </Avatar>
                               <div>
-                                <p className="font-bold text-gray-800">{friendUser.displayName || friendUser.username}</p>
-                                <p className="text-sm text-gray-600">@{friendUser.username}</p>
+                                <p className="font-bold text-gray-800 text-sm">{friendUser.displayName || friendUser.username}</p>
+                                <p className="text-xs text-gray-600">@{friendUser.username}</p>
                                 <div className="flex items-center mt-1">
-                                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                                  <span className="text-xs text-green-600 font-medium">Online</span>
+                                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></div>
+                                  <span className="text-xs text-green-600">Online</span>
                                 </div>
                               </div>
                             </div>
-                            <div className="flex space-x-2">
+                            <div className="flex space-x-1">
                               <Button
                                 size="sm"
-                                onClick={() => setSelectedFriendId(friendUser.id)}
-                                className="bg-blue-500 hover:bg-blue-600 text-white font-bold px-4 py-2 rounded-lg"
+                                onClick={() => {
+                                  setSelectedFriendId(friendUser.id);
+                                  // Create a custom event to switch tabs
+                                  const tabEvent = new CustomEvent('switchToMessages', { detail: { friendId: friendUser.id } });
+                                  window.dispatchEvent(tabEvent);
+                                }}
+                                className="bg-blue-500 hover:bg-blue-600 text-white font-bold px-3 py-1.5 rounded text-xs"
                               >
-                                <MessageCircle className="w-4 h-4 mr-1" />
+                                <MessageCircle className="w-3 h-3 mr-1" />
                                 Message
                               </Button>
                               <Button
                                 size="sm"
                                 onClick={() => window.open(`/friend-profile/${friendUser.id}`, '_blank')}
-                                className="bg-green-500 hover:bg-green-600 text-white font-bold px-4 py-2 rounded-lg"
+                                className="bg-green-500 hover:bg-green-600 text-white font-bold px-3 py-1.5 rounded text-xs"
                               >
-                                <User className="w-4 h-4 mr-1" />
+                                <User className="w-3 h-3 mr-1" />
                                 View Profile
                               </Button>
                             </div>
@@ -493,13 +509,13 @@ export default function Social() {
 
             {/* Friend Requests - Comic Panel Style */}
             <Card className="border-2 border-yellow-500 bg-gradient-to-br from-white to-yellow-50 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black">
-                <CardTitle className="font-bebas text-2xl tracking-wide flex items-center">
-                  <User className="w-6 h-6 mr-2" />
+              <CardHeader className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black p-3">
+                <CardTitle className="font-bebas text-lg tracking-wide flex items-center">
+                  <User className="w-5 h-5 mr-2" />
                   RECRUITMENT ({friendRequests.length})
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 {friendRequests.length === 0 ? (
                   <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                     <User className="w-16 h-16 mx-auto mb-4 text-gray-400" />

@@ -313,20 +313,28 @@ export default function FriendProfile() {
                     {friendCollection.slice(0, 12).map((item: CollectionItem) => (
                       <div key={item.id} className="bg-white rounded-lg border-2 border-gray-200 p-4 hover:shadow-lg transition-shadow">
                         <div className="flex items-center space-x-3">
-                          <div className="w-12 h-16 bg-gray-200 rounded flex items-center justify-center">
+                          <div className="w-16 h-20 bg-gray-200 rounded flex items-center justify-center flex-shrink-0">
                             {item.frontImageUrl ? (
                               <img src={item.frontImageUrl} alt={item.cardName} className="w-full h-full object-cover rounded" />
                             ) : (
                               <span className="text-xs text-gray-500">No Image</span>
                             )}
                           </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-sm text-gray-900">{item.cardName}</h4>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-sm text-gray-900 truncate">{item.cardName}</h4>
                             <p className="text-xs text-gray-600">#{item.cardNumber}</p>
-                            <p className="text-xs text-gray-500">{item.setName}</p>
-                            <Badge variant="secondary" className="text-xs mt-1">
-                              {item.rarity}
-                            </Badge>
+                            <p className="text-xs text-gray-500 truncate">{item.setName}</p>
+                            <div className="flex items-center justify-between mt-2">
+                              <Badge variant="secondary" className="text-xs">
+                                {item.rarity}
+                              </Badge>
+                              <span className="text-xs text-gray-500">{item.condition}</span>
+                            </div>
+                            {item.estimatedValue && (
+                              <p className="text-xs text-green-600 font-semibold mt-1">
+                                ${item.estimatedValue.toFixed(2)}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
