@@ -463,8 +463,9 @@ export default function Social() {
                   <div className="grid gap-4">
                     {friends.map((friend: Friend) => {
                       // Get the friend user (not the current user)
-                      const currentUserId = user?.id;
-                      const friendUser = friend.requester.id === currentUserId 
+                      const userEmail = user?.email;
+                      const isRequesterCurrentUser = friend.requester.username === userEmail;
+                      const friendUser = isRequesterCurrentUser 
                         ? friend.recipient : friend.requester;
                       return (
                         <div key={friend.id} className="bg-white rounded-lg border border-blue-200 p-3 shadow-sm hover:shadow-md transition-all duration-200">
@@ -673,8 +674,9 @@ export default function Social() {
                   <div className="space-y-2">
                     {friends.map((friend: Friend) => {
                       // Get the friend user (not the current user)
-                      const currentUserId = user?.id;
-                      const friendUser = friend.requester.id === currentUserId 
+                      const userEmail = user?.email;
+                      const isRequesterCurrentUser = friend.requester.username === userEmail;
+                      const friendUser = isRequesterCurrentUser 
                         ? friend.recipient : friend.requester;
                       return (
                         <div

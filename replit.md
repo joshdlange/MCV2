@@ -116,6 +116,14 @@ The application implements comprehensive performance optimizations for handling 
 
 ```
 Changelog:
+- July 15, 2025: COMPLETELY FIXED FRIENDS LIST DISPLAY BUG - NOW SHOWS ACTUAL FRIENDS
+  - CRITICAL FIX: Friends list was showing multiple instances of current user instead of actual friends
+  - Root cause: user.id was null causing friend selection logic to fail and default to requester
+  - Solution: Changed from user.id comparison to email matching (friend.requester.username === user?.email)
+  - Now correctly displays: Mike Neri, Test User 4, Final Test User (actual friends)
+  - Fixed both Friends tab and Messages tab friend selection logic
+  - Added mail icon to mobile header that navigates to Social Hub Messages tab
+  - Auto-friending system working correctly - new users become friends with admin
 - July 15, 2025: FIXED FRIENDS LIST BUG AND IMPLEMENTED AUTO-FRIENDING SYSTEM
   - MAJOR FIX: Resolved critical friends list bug where users saw themselves instead of actual friends
   - Fixed getFriends() database query to properly join both requester and recipient user data
