@@ -1764,6 +1764,9 @@ export class DatabaseStorage implements IStorage {
           iconUrl: badges.iconUrl,
           category: badges.category,
           requirement: badges.requirement,
+          rarity: badges.rarity,
+          points: badges.points,
+          unlockHint: badges.unlockHint,
           isActive: badges.isActive,
           createdAt: badges.createdAt,
         }

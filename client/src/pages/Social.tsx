@@ -820,23 +820,23 @@ export default function Social() {
                     <Card key={userBadge.id} className="text-center border-2 border-gray-200 bg-white shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1">
                       <CardContent className="p-6">
                         <div className="flex justify-center mb-4">
-                          <div className={`w-24 h-24 rounded-full flex items-center justify-center border-4 transition-all duration-300 ${getRarityStyle(userBadge.badge.rarity)} ${getRarityGlow(userBadge.badge.rarity)}`}>
-                            <div className="text-2xl">{getRarityEmoji(userBadge.badge.rarity)}</div>
+                          <div className={`w-24 h-24 rounded-full flex items-center justify-center border-4 transition-all duration-300 ${getRarityStyle(userBadge.badge.rarity || 'common')} ${getRarityGlow(userBadge.badge.rarity || 'common')}`}>
+                            <div className="text-2xl">{getRarityEmoji(userBadge.badge.rarity || 'common')}</div>
                           </div>
                         </div>
                         <div className="flex items-center justify-center mb-2">
                           <h3 className="font-bebas text-lg text-gray-800 tracking-wide">
-                            {userBadge.badge.name.toUpperCase()}
+                            {userBadge.badge.name?.toUpperCase() || 'UNKNOWN BADGE'}
                           </h3>
-                          <div className="ml-2 text-sm">{getRarityEmoji(userBadge.badge.rarity)}</div>
+                          <div className="ml-2 text-sm">{getRarityEmoji(userBadge.badge.rarity || 'common')}</div>
                         </div>
-                        <p className="text-sm text-gray-600 mb-4 px-2 line-clamp-2">{userBadge.badge.description}</p>
+                        <p className="text-sm text-gray-600 mb-4 px-2 line-clamp-2">{userBadge.badge.description || 'No description available'}</p>
                         <div className="flex justify-center space-x-2 mb-3">
-                          <Badge className={`${getBadgeColor(userBadge.badge.category)} font-bold px-3 py-1 text-xs`}>
-                            {userBadge.badge.category.toUpperCase()}
+                          <Badge className={`${getBadgeColor(userBadge.badge.category || 'achievement')} font-bold px-3 py-1 text-xs`}>
+                            {userBadge.badge.category?.toUpperCase() || 'ACHIEVEMENT'}
                           </Badge>
                           <Badge className="bg-gray-200 text-gray-800 font-bold px-3 py-1 text-xs">
-                            {userBadge.badge.rarity.toUpperCase()}
+                            {userBadge.badge.rarity?.toUpperCase() || 'COMMON'}
                           </Badge>
                         </div>
                         <div className="text-center">
@@ -844,7 +844,7 @@ export default function Social() {
                             🏆 EARNED {new Date(userBadge.earnedAt).toLocaleDateString()}
                           </p>
                           <p className="text-xs text-yellow-600 font-bold mt-1">
-                            +{userBadge.badge.points} Points
+                            +{userBadge.badge.points || 0} Points
                           </p>
                         </div>
                       </CardContent>
