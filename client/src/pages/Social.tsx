@@ -647,14 +647,16 @@ export default function Social() {
             <div className="w-2/5 border-r border-gray-200 bg-white flex flex-col">
               {/* Header */}
               <div className="p-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
+                <h2 className="text-lg font-semibold text-gray-900 hidden md:block">Messages</h2>
+                <h2 className="text-sm font-semibold text-gray-900 block md:hidden">Chats</h2>
                 <Button 
                   size="sm" 
                   onClick={() => setActiveTab('friends')}
                   className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1"
                 >
-                  <UserPlus className="w-3 h-3 mr-1" />
-                  New
+                  <UserPlus className="w-3 h-3 mr-1 hidden md:block" />
+                  <UserPlus className="w-4 h-4 block md:hidden" />
+                  <span className="hidden md:block">New</span>
                 </Button>
               </div>
               
@@ -690,40 +692,61 @@ export default function Social() {
                         <div
                           key={friend.id}
                           onClick={() => setSelectedFriendId(friendUser.id)}
-                          className={`p-5 cursor-pointer transition-colors duration-150 hover:bg-gray-50 ${
+                          className={`cursor-pointer transition-colors duration-150 hover:bg-gray-50 ${
                             selectedFriendId === friendUser.id 
                               ? 'bg-blue-50 border-r-3 border-blue-500' 
                               : 'bg-white'
                           }`}
                         >
-                          <div className="flex items-center space-x-4">
-                            <div className="relative">
-                              <Avatar className="w-14 h-14">
-                                <AvatarImage src={friendUser.photoURL} />
-                                <AvatarFallback className="bg-gray-400 text-white font-medium text-lg">
-                                  {friendUser.displayName?.charAt(0) || friendUser.username.charAt(0)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between mb-1">
-                                <p className="font-semibold text-gray-900 truncate text-base">
-                                  {friendUser.displayName || friendUser.username}
-                                </p>
-                                <span className="text-xs text-gray-400 flex-shrink-0">
-                                  {lastMessage ? new Date(lastMessage.createdAt).toLocaleTimeString([], {
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  }) : 'now'}
-                                </span>
+                          {/* Mobile Layout - Avatar focused */}
+                          <div className="block md:hidden p-3">
+                            <div className="flex flex-col items-center space-y-2">
+                              <div className="relative">
+                                <Avatar className="w-12 h-12">
+                                  <AvatarImage src={friendUser.photoURL} />
+                                  <AvatarFallback className="bg-gray-400 text-white font-medium text-sm">
+                                    {friendUser.displayName?.charAt(0) || friendUser.username.charAt(0)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
                               </div>
-                              <p className="text-sm text-gray-500 truncate">
-                                {lastMessage ? 
-                                  (lastMessage.senderId === user?.uid ? 'You: ' : '') + lastMessage.content
-                                  : 'Tap to start chatting'
-                                }
+                              <p className="text-xs font-medium text-gray-900 truncate w-full text-center">
+                                {friendUser.displayName?.split(' ')[0] || friendUser.username}
                               </p>
+                            </div>
+                          </div>
+
+                          {/* Desktop Layout - Full info */}
+                          <div className="hidden md:block p-5">
+                            <div className="flex items-center space-x-4">
+                              <div className="relative">
+                                <Avatar className="w-14 h-14">
+                                  <AvatarImage src={friendUser.photoURL} />
+                                  <AvatarFallback className="bg-gray-400 text-white font-medium text-lg">
+                                    {friendUser.displayName?.charAt(0) || friendUser.username.charAt(0)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-1">
+                                  <p className="font-semibold text-gray-900 truncate text-base">
+                                    {friendUser.displayName || friendUser.username}
+                                  </p>
+                                  <span className="text-xs text-gray-400 flex-shrink-0">
+                                    {lastMessage ? new Date(lastMessage.createdAt).toLocaleTimeString([], {
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    }) : 'now'}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-500 truncate">
+                                  {lastMessage ? 
+                                    (lastMessage.senderId === user?.uid ? 'You: ' : '') + lastMessage.content
+                                    : 'Tap to start chatting'
+                                  }
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>
