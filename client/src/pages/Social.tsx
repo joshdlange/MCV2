@@ -570,7 +570,7 @@ export default function Social() {
                     placeholder="Search by username, display name, or email..."
                     value={searchQuery}
                     onChange={handleSearchChange}
-                    className="pl-10 py-3 text-lg border-2 border-gray-300 focus:border-marvel-red rounded-lg"
+                    className="pl-10 py-3 text-lg border-2 border-gray-300 focus:border-marvel-red rounded-lg bg-white text-black"
                   />
                 </div>
                 <p className="text-sm text-gray-500 mt-2">

@@ -2151,7 +2151,20 @@ export class DatabaseStorage implements IStorage {
       .limit(20);
 
     if (excludeUserId) {
-      searchQuery = searchQuery.where(ne(users.id, excludeUserId));
+      searchQuery = db
+        .select()
+        .from(users)
+        .where(
+          and(
+            or(
+              ilike(users.username, searchTerm),
+              ilike(users.displayName, searchTerm),
+              ilike(users.email, searchTerm)
+            ),
+            ne(users.id, excludeUserId)
+          )
+        )
+        .limit(20);
     }
 
     return await searchQuery;
