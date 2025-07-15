@@ -1970,6 +1970,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User Search API
+  app.get("/api/social/search-users", authenticateUser, async (req: any, res) => {
+    try {
+      const { q } = req.query;
+      
+      if (!q || typeof q !== 'string' || q.trim().length < 2) {
+        return res.status(400).json({ message: "Search query must be at least 2 characters long" });
+      }
+
+      const users = await storage.searchUsers(q.trim(), req.user.id);
+      res.json(users);
+    } catch (error) {
+      console.error('Search users error:', error);
+      res.status(500).json({ message: "Failed to search users" });
+    }
+  });
+
   // Admin Badge Management
   app.post("/api/admin/badges", authenticateUser, async (req: any, res) => {
     try {

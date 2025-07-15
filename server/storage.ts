@@ -40,7 +40,7 @@ import {
   type ProfileStats
 } from "@shared/schema";
 import { db, withDatabaseRetry } from "./db";
-import { eq, ilike, and, count, sum, desc, sql, isNull, isNotNull, or, lt, gte, gt } from "drizzle-orm";
+import { eq, ilike, and, count, sum, desc, sql, isNull, isNotNull, or, lt, gte, gt, ne } from "drizzle-orm";
 
 // Utility function to generate slugs
 function generateSlug(name: string): string {
@@ -136,6 +136,9 @@ interface IStorage {
   getFriendCollection(viewerUserId: number, friendUserId: number): Promise<CollectionItem[]>;
   getFriendWishlist(viewerUserId: number, friendUserId: number): Promise<WishlistItem[]>;
   getFriendProfile(viewerUserId: number, friendUserId: number): Promise<{ user: User; stats: ProfileStats; canViewCollection: boolean; canViewWishlist: boolean; }>;
+  
+  // User Search and Friend Invitations
+  searchUsers(query: string, excludeUserId?: number): Promise<User[]>;
 
   // Social Features - Messages
   getMessages(userId1: number, userId2: number): Promise<MessageWithUsers[]>;
@@ -2130,6 +2133,28 @@ export class DatabaseStorage implements IStorage {
       canViewCollection,
       canViewWishlist,
     };
+  }
+
+  async searchUsers(query: string, excludeUserId?: number): Promise<User[]> {
+    const searchTerm = `%${query.toLowerCase()}%`;
+    
+    let searchQuery = db
+      .select()
+      .from(users)
+      .where(
+        or(
+          ilike(users.username, searchTerm),
+          ilike(users.displayName, searchTerm),
+          ilike(users.email, searchTerm)
+        )
+      )
+      .limit(20);
+
+    if (excludeUserId) {
+      searchQuery = searchQuery.where(ne(users.id, excludeUserId));
+    }
+
+    return await searchQuery;
   }
 }
 

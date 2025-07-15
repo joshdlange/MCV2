@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Users, MessageCircle, Award, User, Lock, Clock, Check, X } from "lucide-react";
+import { Users, MessageCircle, Award, User, Lock, Clock, Check, X, Search, UserPlus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Friend {
@@ -65,9 +65,20 @@ interface ProfileStats {
   loginStreak: number;
 }
 
+interface SearchUser {
+  id: number;
+  username: string;
+  displayName: string;
+  photoURL?: string;
+  email: string;
+}
+
 export default function Social() {
   const [selectedFriendId, setSelectedFriendId] = useState<number | null>(null);
   const [newMessage, setNewMessage] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -215,6 +226,68 @@ export default function Social() {
     },
   });
 
+  // Send friend request
+  const sendFriendRequest = useMutation({
+    mutationFn: async ({ recipientId }: { recipientId: number }) => {
+      const headers = await getAuthHeaders();
+      const response = await fetch("/api/social/friend-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...headers,
+        },
+        body: JSON.stringify({ recipientId }),
+      });
+      if (!response.ok) throw new Error("Failed to send friend request");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["social/friends"] });
+      toast({
+        title: "Success",
+        description: "Friend request sent successfully",
+      });
+      setSearchResults([]);
+      setSearchQuery("");
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to send friend request",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Search for users
+  const searchUsers = async (query: string) => {
+    if (query.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/social/search-users?q=${encodeURIComponent(query)}`, { headers });
+      if (!response.ok) throw new Error("Failed to search users");
+      const users = await response.json();
+      setSearchResults(users);
+    } catch (error) {
+      console.error("Search error:", error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Handle search input
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    searchUsers(value);
+  };
+
   const handleSendMessage = () => {
     if (selectedFriendId && newMessage.trim()) {
       sendMessage.mutate({ recipientId: selectedFriendId, content: newMessage.trim() });
@@ -303,7 +376,7 @@ export default function Social() {
 
       {/* Comic-style tabs */}
       <Tabs defaultValue="friends" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-transparent p-0 h-auto gap-2 mb-6">
+        <TabsList className="grid w-full grid-cols-4 bg-transparent p-0 h-auto gap-2 mb-6">
           <TabsTrigger 
             value="friends" 
             className="relative bg-white border-2 border-marvel-red rounded-t-lg py-3 px-6 font-bold text-marvel-red data-[state=active]:bg-marvel-red data-[state=active]:text-white transform hover:scale-105 transition-all duration-200"
@@ -315,6 +388,13 @@ export default function Social() {
                 {friends.length}
               </Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger 
+            value="search"
+            className="relative bg-white border-2 border-marvel-red rounded-t-lg py-3 px-6 font-bold text-marvel-red data-[state=active]:bg-marvel-red data-[state=active]:text-white transform hover:scale-105 transition-all duration-200"
+          >
+            <Search className="w-5 h-5 mr-2" />
+            FIND FRIENDS
           </TabsTrigger>
           <TabsTrigger 
             value="messages"
@@ -472,6 +552,79 @@ export default function Social() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="search" className="space-y-6">
+          <Card className="border-2 border-marvel-red bg-gradient-to-br from-white to-green-50 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 text-white">
+              <CardTitle className="font-bebas text-2xl tracking-wide flex items-center">
+                <Search className="w-6 h-6 mr-2" />
+                FIND NEW HEROES
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="mb-6">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                  <Input
+                    placeholder="Search by username, display name, or email..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    className="pl-10 py-3 text-lg border-2 border-gray-300 focus:border-marvel-red rounded-lg"
+                  />
+                </div>
+                <p className="text-sm text-gray-500 mt-2">
+                  Search for friends by their username, display name, or email address
+                </p>
+              </div>
+
+              {isSearching ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin w-8 h-8 border-4 border-marvel-red border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p className="text-gray-600 font-medium">Searching heroes...</p>
+                </div>
+              ) : searchQuery.length > 0 && searchQuery.length < 2 ? (
+                <div className="text-center py-8 bg-yellow-50 rounded-lg border-2 border-dashed border-yellow-300">
+                  <Search className="w-16 h-16 mx-auto mb-4 text-yellow-400" />
+                  <p className="text-yellow-700 font-medium">Type at least 2 characters to search</p>
+                </div>
+              ) : searchResults.length === 0 && searchQuery.length >= 2 ? (
+                <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                  <User className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                  <p className="text-gray-600 font-medium">No heroes found</p>
+                  <p className="text-gray-500 text-sm">Try a different search term</p>
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {searchResults.map((searchUser: SearchUser) => (
+                    <div key={searchUser.id} className="flex items-center justify-between p-4 bg-white rounded-lg border-2 border-gray-200 hover:border-marvel-red transition-colors">
+                      <div className="flex items-center space-x-3">
+                        <Avatar className="w-12 h-12 border-2 border-marvel-red">
+                          <AvatarImage src={searchUser.photoURL} alt={searchUser.displayName} />
+                          <AvatarFallback className="bg-marvel-red text-white font-bold">
+                            {searchUser.displayName.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-bold text-gray-900">{searchUser.displayName}</p>
+                          <p className="text-sm text-gray-500">@{searchUser.username}</p>
+                          <p className="text-sm text-gray-400">{searchUser.email}</p>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => sendFriendRequest.mutate({ recipientId: searchUser.id })}
+                        disabled={sendFriendRequest.isPending}
+                        className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold px-4 py-2 rounded-lg shadow-lg border-2 border-green-400 transform hover:scale-105 transition-all duration-200"
+                      >
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        ADD FRIEND
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="messages" className="space-y-6">
