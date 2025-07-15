@@ -1,0 +1,9 @@
+=== RANDOMIZED COMPLETE PRICECHARTING IMPORT ===
+Starting randomized import...
+Time: 2025-07-15T17:00:30.352Z
+Database connection established
+Baseline card count: 61828
+Total sets to process: 1114 (randomized order)
+[1/1114] Processing: "marvel 2024 topps chrome character autograph" (ID: 1962)
+  Current cards in set: 8
+  Query: "marvel-2024-topps-chrome-character-autograph"
