@@ -25,18 +25,140 @@ import {
   Lock,
   Eye,
   EyeOff,
-  TrendingUp
+  TrendingUp,
+  Award,
+  MessageCircle,
+  UserPlus
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { User as UserType } from "@/types/schema";
+import { useLocation } from "wouter";
+
+// Social Components
+function SocialFriendsSection() {
+  const { user } = useAuth();
+  
+  const { data: friends } = useQuery({
+    queryKey: ['/api/social/friends'],
+    enabled: !!user
+  });
+
+  if (!friends || friends.length === 0) {
+    return (
+      <div className="text-center py-6">
+        <Users className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+        <p className="text-gray-500 mb-2">No friends yet</p>
+        <p className="text-sm text-gray-400">Connect with other collectors to start building your network</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-sm font-medium text-gray-700">
+          {friends.length} Friend{friends.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+      <div className="grid grid-cols-4 gap-4">
+        {friends.slice(0, 8).map((friend: any) => {
+          const userEmail = user?.email;
+          const isRequesterCurrentUser = friend.requester.username === userEmail;
+          const friendUser = isRequesterCurrentUser ? friend.recipient : friend.requester;
+          
+          return (
+            <div key={friend.id} className="text-center">
+              <Avatar className="w-12 h-12 mx-auto mb-2">
+                <AvatarImage src={friendUser.photoURL} />
+                <AvatarFallback className="bg-gray-400 text-white text-sm">
+                  {friendUser.displayName?.charAt(0) || friendUser.username.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <p className="text-xs text-gray-600 truncate">
+                {friendUser.displayName?.split(' ')[0] || friendUser.username.split('@')[0]}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+      {friends.length > 8 && (
+        <div className="text-center mt-4">
+          <span className="text-sm text-gray-500">
+            +{friends.length - 8} more friends
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SocialBadgesSection() {
+  const { user } = useAuth();
+  
+  const { data: userBadges } = useQuery({
+    queryKey: ['/api/social/user-badges'],
+    enabled: !!user
+  });
+
+  if (!userBadges || userBadges.length === 0) {
+    return (
+      <div className="text-center py-6">
+        <Award className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+        <p className="text-gray-500 mb-2">No badges earned yet</p>
+        <p className="text-sm text-gray-400">Complete activities to earn your first badge</p>
+      </div>
+    );
+  }
+
+  const categoryColors = {
+    'collection': 'bg-blue-100 text-blue-800',
+    'social': 'bg-green-100 text-green-800',
+    'engagement': 'bg-purple-100 text-purple-800',
+    'achievement': 'bg-yellow-100 text-yellow-800'
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-sm font-medium text-gray-700">
+          {userBadges.length} Badge{userBadges.length !== 1 ? 's' : ''} Earned
+        </span>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {userBadges.slice(0, 8).map((userBadge: any) => (
+          <div key={userBadge.id} className="text-center p-3 bg-gray-50 rounded-lg">
+            <div className="text-2xl mb-1">{userBadge.badge.icon}</div>
+            <p className="text-xs font-medium text-gray-900 mb-1">{userBadge.badge.name}</p>
+            <Badge 
+              variant="secondary" 
+              className={`text-xs ${categoryColors[userBadge.badge.category as keyof typeof categoryColors] || 'bg-gray-100 text-gray-800'}`}
+            >
+              {userBadge.badge.category}
+            </Badge>
+          </div>
+        ))}
+      </div>
+      {userBadges.length > 8 && (
+        <div className="text-center mt-4">
+          <span className="text-sm text-gray-500">
+            +{userBadges.length - 8} more badges
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Profile() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
+  const navigate = (path: string) => {
+    window.location.href = path;
+  };
   const [profileData, setProfileData] = useState({
     displayName: user?.displayName || '',
     bio: '',
@@ -390,23 +512,82 @@ export default function Profile() {
 
           {/* Social Tab */}
           <TabsContent value="social">
-            <Card>
-              <CardHeader>
-                <CardTitle>Social & Friends</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Users className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Friends & Social Features</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Connect with other collectors, share your collection, and discover new cards together.
-                  </p>
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                    Coming Soon
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="space-y-6">
+              {/* Friends Section */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="w-5 h-5" />
+                      Friends
+                    </CardTitle>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => navigate('/social')}
+                      className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                    >
+                      View All
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <SocialFriendsSection />
+                </CardContent>
+              </Card>
+
+              {/* Badges Section */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <Award className="w-5 h-5" />
+                      Badges & Achievements
+                    </CardTitle>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => navigate('/social?tab=badges')}
+                      className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                    >
+                      View All
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <SocialBadgesSection />
+                </CardContent>
+              </Card>
+
+              {/* Quick Actions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageCircle className="w-5 h-5" />
+                    Social Actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Button 
+                      onClick={() => navigate('/social?tab=messages')}
+                      className="bg-blue-500 hover:bg-blue-600 text-white"
+                    >
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      Send Message
+                    </Button>
+                    <Button 
+                      onClick={() => navigate('/social?tab=friends')}
+                      variant="outline"
+                      className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                    >
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Find Friends
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* Billing Tab */}
