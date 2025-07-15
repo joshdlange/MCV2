@@ -148,7 +148,7 @@ export default function Social() {
   });
 
   // Fetch messages for selected friend
-  const { data: messages = [] } = useQuery({
+  const { data: messages = [], refetch: refetchMessages } = useQuery({
     queryKey: ["social/messages", selectedFriendId],
     queryFn: async () => {
       if (!selectedFriendId) return [];
@@ -644,7 +644,7 @@ export default function Social() {
         <TabsContent value="messages" className="h-[80vh] bg-white">
           <div className="h-full flex rounded-lg overflow-hidden border border-gray-200 shadow-sm">
             {/* Left Column: Conversation List - iPhone Style */}
-            <div className="w-1/3 border-r border-gray-200 bg-white flex flex-col">
+            <div className="w-2/5 border-r border-gray-200 bg-white flex flex-col">
               {/* Header */}
               <div className="p-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
@@ -690,28 +690,28 @@ export default function Social() {
                         <div
                           key={friend.id}
                           onClick={() => setSelectedFriendId(friendUser.id)}
-                          className={`p-4 cursor-pointer transition-colors duration-150 hover:bg-gray-50 ${
+                          className={`p-5 cursor-pointer transition-colors duration-150 hover:bg-gray-50 ${
                             selectedFriendId === friendUser.id 
-                              ? 'bg-blue-50 border-r-2 border-blue-500' 
+                              ? 'bg-blue-50 border-r-3 border-blue-500' 
                               : 'bg-white'
                           }`}
                         >
-                          <div className="flex items-center space-x-3">
+                          <div className="flex items-center space-x-4">
                             <div className="relative">
-                              <Avatar className="w-12 h-12">
+                              <Avatar className="w-14 h-14">
                                 <AvatarImage src={friendUser.photoURL} />
-                                <AvatarFallback className="bg-gray-400 text-white font-medium">
+                                <AvatarFallback className="bg-gray-400 text-white font-medium text-lg">
                                   {friendUser.displayName?.charAt(0) || friendUser.username.charAt(0)}
                                 </AvatarFallback>
                               </Avatar>
-                              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+                              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between">
-                                <p className="font-medium text-gray-900 truncate text-sm">
+                              <div className="flex items-center justify-between mb-1">
+                                <p className="font-semibold text-gray-900 truncate text-base">
                                   {friendUser.displayName || friendUser.username}
                                 </p>
-                                <span className="text-xs text-gray-400">
+                                <span className="text-xs text-gray-400 flex-shrink-0">
                                   {lastMessage ? new Date(lastMessage.createdAt).toLocaleTimeString([], {
                                     hour: '2-digit',
                                     minute: '2-digit'
@@ -816,7 +816,21 @@ export default function Social() {
                                   : 'bg-gray-100 text-gray-900'
                               }`}
                             >
-                              <p className="text-sm leading-relaxed">{message.content}</p>
+                              {(message as any).imageUrl ? (
+                                <div className="space-y-2">
+                                  <img 
+                                    src={(message as any).imageUrl} 
+                                    alt="Shared image" 
+                                    className="rounded-lg max-w-full h-auto"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                    }}
+                                  />
+                                  <p className="text-sm leading-relaxed">{message.content}</p>
+                                </div>
+                              ) : (
+                                <p className="text-sm leading-relaxed">{message.content}</p>
+                              )}
                               <p className={`text-xs mt-1 ${
                                 message.senderId === user?.uid ? 'text-blue-100' : 'text-gray-500'
                               }`}>
@@ -832,17 +846,71 @@ export default function Social() {
                     )}
                   </div>
                   
-                  {/* Message Input - iPhone Style */}
+                  {/* Message Input - Enhanced iPhone Style */}
                   <div className="p-4 bg-white border-t border-gray-200">
-                    <div className="flex items-end space-x-2">
+                    <div className="flex items-end space-x-3">
+                      {/* Attachment Button */}
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = 'image/*';
+                          input.onchange = async (e) => {
+                            const file = (e.target as HTMLInputElement).files?.[0];
+                            if (file && selectedFriendId) {
+                              try {
+                                const formData = new FormData();
+                                formData.append('image', file);
+                                formData.append('recipientId', selectedFriendId.toString());
+
+                                const response = await fetch('/api/social/messages/image', {
+                                  method: 'POST',
+                                  headers: {
+                                    'Authorization': `Bearer ${user?.accessToken}`,
+                                  },
+                                  body: formData,
+                                });
+
+                                if (response.ok) {
+                                  const result = await response.json();
+                                  // Refresh messages
+                                  refetchMessages();
+                                  toast({
+                                    title: "Image sent!",
+                                    description: "Your image has been shared successfully.",
+                                  });
+                                } else {
+                                  throw new Error('Failed to send image');
+                                }
+                              } catch (error) {
+                                console.error('Image upload error:', error);
+                                toast({
+                                  title: "Upload failed",
+                                  description: "Could not send image. Please try again.",
+                                  variant: "destructive",
+                                });
+                              }
+                            }
+                          };
+                          input.click();
+                        }}
+                        className="w-12 h-12 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 p-0 flex items-center justify-center flex-shrink-0"
+                      >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </Button>
+                      
+                      {/* Message Input */}
                       <div className="flex-1 relative">
                         <Textarea
                           placeholder="Message..."
                           value={newMessage}
                           onChange={(e) => setNewMessage(e.target.value)}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-full resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 placeholder-gray-500"
+                          className="w-full px-5 py-3 border border-gray-300 rounded-full resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 placeholder-gray-500 text-base"
                           rows={1}
-                          style={{ maxHeight: '100px' }}
+                          style={{ maxHeight: '120px' }}
                           onKeyPress={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault();
@@ -857,6 +925,8 @@ export default function Social() {
                           }}
                         />
                       </div>
+                      
+                      {/* Send Button */}
                       <Button
                         onClick={() => {
                           if (newMessage.trim() && selectedFriendId) {
@@ -868,9 +938,9 @@ export default function Social() {
                           }
                         }}
                         disabled={!newMessage.trim() || sendMessage.isPending}
-                        className="w-10 h-10 rounded-full bg-blue-500 hover:bg-blue-600 text-white p-0 flex items-center justify-center"
+                        className="w-12 h-12 rounded-full bg-blue-500 hover:bg-blue-600 text-white p-0 flex items-center justify-center flex-shrink-0"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                         </svg>
                       </Button>

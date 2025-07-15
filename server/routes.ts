@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertCardSetSchema, insertCardSchema, insertUserCollectionSchema, insertUserWishlistSchema, insertUserSchema, insertMainSetSchema, insertFriendSchema, insertMessageSchema, insertBadgeSchema, insertUserBadgeSchema } from "@shared/schema";
@@ -1866,6 +1867,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Image upload for messages
+  app.post("/api/social/messages/image", authenticateUser, upload.single('image'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+
+      const recipientId = parseInt(req.body.recipientId);
+      if (!recipientId) {
+        return res.status(400).json({ message: "Recipient ID is required" });
+      }
+
+      // For now, save to uploads directory
+      const uploadsDir = path.join(process.cwd(), 'uploads');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+
+      const fileExtension = path.extname(req.file.originalname);
+      const filename = `${crypto.randomUUID()}${fileExtension}`;
+      const filepath = path.join(uploadsDir, filename);
+
+      fs.writeFileSync(filepath, req.file.buffer);
+
+      // Create message with image
+      const imageUrl = `/uploads/${filename}`;
+      const messageData = {
+        senderId: req.user.id,
+        recipientId,
+        content: `[Image: ${req.file.originalname}]`,
+        imageUrl
+      };
+
+      const message = await storage.sendMessage(req.user.id, recipientId, `[Image: ${req.file.originalname}]`);
+      res.status(201).json({ ...message, imageUrl });
+    } catch (error) {
+      console.error('Send image message error:', error);
+      res.status(500).json({ message: "Failed to send image message" });
+    }
+  });
+
   app.post("/api/social/messages/:id/read", authenticateUser, async (req: any, res) => {
     try {
       const messageId = parseInt(req.params.id);
@@ -2052,6 +2094,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);
+
+  // Serve uploaded images
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
   const httpServer = createServer(app);
   return httpServer;
