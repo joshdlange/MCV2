@@ -1,0 +1,60 @@
+Suggested Visual Enhancements for Friends/Messages/Badges Page
+✅ General Layout & Style
+Use a card grid layout instead of two equally plain boxes.
+
+Friend cards (with avatars, names, and “message” or “remove” buttons).
+
+Request cards (with avatars, names, and “accept/decline” buttons).
+
+Reduce the heavy black tab bar — replace with comic-style tabs (e.g. speech-bubble shaped or lighter border with bold comic font).
+
+Add more visual hierarchy (larger title, smaller “(0)” counters in a badge style).
+
+🔗 Friends Section
+Show a placeholder avatar/icon for each friend or request with “No friends yet” styled like a character panel.
+
+When friends exist:
+
+Display as cards with avatars, usernames, and badges.
+
+Use color-coded badges or symbols to denote online/offline status.
+
+✉️ Messages Tab
+Add an unread message badge count on the tab itself.
+
+Display conversation preview cards on the Messages page:
+
+Avatar + Name + Last Message Snippet + Timestamp
+
+Subtle hover highlight and “New” badge for unread.
+
+🏅 Badges Tab
+Display earned badges as colorful icons with tooltips or click-to-expand descriptions.
+
+Show “Locked” badges as greyed-out with a comic-style lock symbol.
+
+Use Marvel-inspired colors (red, gold, blue, black) and slight gradients for flare.
+
+🎨 Thematic Suggestions
+Replace plain fonts with a comic-inspired headline font for titles and tabs.
+
+Add light comic-book-style “panel” borders around each section.
+
+Use subtle background textures (e.g., faint dots or halftones) to avoid flat grey.
+
+📝 Prompt to Replit
+Improve the visual design and layout of the Friends/Messages/Badges section to make it fit the Marvel comic book theme. Specific changes:
+
+Make the tabs styled like comic-book speech bubbles with bold, fun font.
+
+Use a card grid for friends and requests, showing avatars, usernames, and buttons (e.g., message, remove, accept, decline).
+
+Add placeholder avatars and better styling for the “No friends yet” and “No pending requests” states.
+
+On the Badges tab, display earned badges with colorful icons and descriptions, and locked badges as greyed-out with a lock icon.
+
+Messages tab: show a preview card for each conversation (avatar, name, last message snippet, timestamp) and badge counts for unread messages.
+
+Use a more vibrant Marvel-inspired color palette, subtle textures, and comic-book-style borders/panels.
+
+Keep the functionality the same — these are purely visual and stylistic improvements.
