@@ -116,6 +116,16 @@ The application implements comprehensive performance optimizations for handling 
 
 ```
 Changelog:
+- July 15, 2025: FIXED FRIENDS LIST BUG AND IMPLEMENTED AUTO-FRIENDING SYSTEM
+  - MAJOR FIX: Resolved critical friends list bug where users saw themselves instead of actual friends
+  - Fixed getFriends() database query to properly join both requester and recipient user data
+  - Added table aliases to distinguish between the two users in friendship relationships
+  - Implemented auto-friending feature for new user signups
+  - New users automatically become friends with Joshua (admin user ID: 337) upon registration
+  - Auto-friending includes proper friendship creation and automatic acceptance
+  - Enhanced logging for debugging and monitoring auto-friend operations
+  - Verified Find Friends functionality is working correctly in Social Hub
+  - Social Hub now displays correct friend relationships with proper user information
 - July 15, 2025: MAJOR UI FIXES AND BADGE SYSTEM DEPLOYMENT COMPLETE
   - FIXED: Resolved all critical deployment issues identified in user testing
   - Fixed missing "Find Friends" tab visibility for all users in Social Hub

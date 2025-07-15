@@ -141,6 +141,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         user = await storage.createUser(userData);
         console.log('Created new user:', user.id, 'isAdmin:', user.isAdmin);
+        
+        // Auto-friend new users with Joshua (admin user ID: 337)
+        if (!isAdminEmail && user.id !== 337) {
+          try {
+            console.log('Attempting to auto-friend user', user.id, 'with Joshua (337)');
+            // Check if friendship already exists
+            const existingFriendship = await storage.getFriendshipStatus(337, user.id);
+            console.log('Existing friendship check result:', existingFriendship);
+            if (!existingFriendship) {
+              // Create friendship - Joshua as requester, new user as recipient, auto-accepted
+              console.log('Creating friend request from Joshua (337) to user', user.id);
+              await storage.sendFriendRequest(337, user.id);
+              const friendship = await storage.getFriendshipStatus(337, user.id);
+              console.log('Friendship created:', friendship);
+              if (friendship) {
+                console.log('Accepting friendship with ID:', friendship.id);
+                await storage.respondToFriendRequest(friendship.id, 'accepted');
+                console.log('Auto-friended new user', user.id, 'with Joshua (337)');
+              }
+            } else {
+              console.log('Friendship already exists, skipping auto-friend');
+            }
+          } catch (error) {
+            console.error('Error auto-friending new user:', error);
+            // Don't fail the user creation if auto-friending fails
+          }
+        }
       } else {
         console.log('Found existing user:', user.id, 'isAdmin:', user.isAdmin);
         
