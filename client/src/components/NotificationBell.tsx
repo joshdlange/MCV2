@@ -119,6 +119,7 @@ export function NotificationBell() {
                       size="sm"
                       onClick={handleMarkAllRead}
                       disabled={markAllReadMutation.isPending}
+                      className="text-gray-700 border-gray-300 hover:bg-gray-50 hover:text-gray-900"
                     >
                       Mark all read
                     </Button>
@@ -127,6 +128,7 @@ export function NotificationBell() {
                     variant="ghost"
                     size="icon"
                     onClick={() => setIsOpen(false)}
+                    className="text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                   >
                     <X className="h-4 w-4" />
                   </Button>
