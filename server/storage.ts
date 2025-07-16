@@ -1551,6 +1551,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getFriendRequests(userId: number): Promise<FriendWithUser[]> {
+    const requesterTable = alias(users, 'requester');
+    const recipientTable = alias(users, 'recipient');
+    
     const requests = await db
       .select({
         id: friends.id,
@@ -1560,26 +1563,27 @@ export class DatabaseStorage implements IStorage {
         createdAt: friends.createdAt,
         updatedAt: friends.updatedAt,
         requester: {
-          id: users.id,
-          username: users.username,
-          displayName: users.displayName,
-          photoURL: users.photoURL,
-          bio: users.bio,
-          location: users.location,
-          profileVisibility: users.profileVisibility,
+          id: requesterTable.id,
+          username: requesterTable.username,
+          displayName: requesterTable.displayName,
+          photoURL: requesterTable.photoURL,
+          bio: requesterTable.bio,
+          location: requesterTable.location,
+          profileVisibility: requesterTable.profileVisibility,
         },
         recipient: {
-          id: users.id,
-          username: users.username,
-          displayName: users.displayName,
-          photoURL: users.photoURL,
-          bio: users.bio,
-          location: users.location,
-          profileVisibility: users.profileVisibility,
+          id: recipientTable.id,
+          username: recipientTable.username,
+          displayName: recipientTable.displayName,
+          photoURL: recipientTable.photoURL,
+          bio: recipientTable.bio,
+          location: recipientTable.location,
+          profileVisibility: recipientTable.profileVisibility,
         }
       })
       .from(friends)
-      .leftJoin(users, eq(friends.requesterId, users.id))
+      .leftJoin(requesterTable, eq(friends.requesterId, requesterTable.id))
+      .leftJoin(recipientTable, eq(friends.recipientId, recipientTable.id))
       .where(
         and(
           eq(friends.recipientId, userId),
@@ -2048,13 +2052,16 @@ export class DatabaseStorage implements IStorage {
       .orderBy(userCollections.acquiredDate);
 
     return collections.map(collection => ({
-      ...collection,
-      cardName: collection.card.name,
-      cardNumber: collection.card.cardNumber,
-      setName: collection.card.cardSet.name,
-      rarity: collection.card.rarity,
-      frontImageUrl: collection.card.frontImageUrl,
-      estimatedValue: collection.card.estimatedValue,
+      id: collection.id,
+      userId: collection.userId,
+      cardId: collection.cardId,
+      condition: collection.condition,
+      acquiredDate: collection.acquiredDate,
+      pricePaid: collection.pricePaid,
+      card: {
+        ...collection.card,
+        imageUrl: collection.card.frontImageUrl
+      }
     }));
   }
 

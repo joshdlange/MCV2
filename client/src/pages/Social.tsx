@@ -431,7 +431,7 @@ export default function Social() {
       {/* Comic-style header with Marvel theme */}
       <div className="text-center mb-8">
         <div className="relative inline-block">
-          <h1 className="text-4xl font-bold text-marvel-red font-bebas tracking-wider">
+          <h1 className="text-4xl font-black text-black font-bebas tracking-wider">
             SOCIAL HUB
           </h1>
           <div className="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-marvel-red to-red-600 rounded-full"></div>
