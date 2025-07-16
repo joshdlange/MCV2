@@ -1950,6 +1950,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/badges", authenticateUser, async (req, res) => {
+    try {
+      const badges = await storage.getBadges();
+      res.json(badges);
+    } catch (error) {
+      console.error('Get badges error:', error);
+      res.status(500).json({ message: "Failed to fetch badges" });
+    }
+  });
+
   app.get("/api/social/user-badges", authenticateUser, async (req: any, res) => {
     try {
       const userBadges = await storage.getUserBadges(req.user.id);

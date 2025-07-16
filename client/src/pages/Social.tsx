@@ -149,6 +149,18 @@ export default function Social() {
     enabled: !!user,
   });
 
+  // Fetch all badges to show locked ones
+  const { data: allBadges = [] } = useQuery({
+    queryKey: ["badges"],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch("/api/badges", { headers });
+      if (!response.ok) throw new Error("Failed to fetch badges");
+      return response.json();
+    },
+    enabled: !!user,
+  });
+
   // Fetch messages for selected friend
   const { data: messages = [], refetch: refetchMessages } = useQuery({
     queryKey: ["social/messages", selectedFriendId],
@@ -1016,7 +1028,15 @@ export default function Social() {
                       <CardContent className="p-6">
                         <div className="flex justify-center mb-4">
                           <div className={`w-24 h-24 rounded-full flex items-center justify-center border-4 transition-all duration-300 ${getRarityStyle(userBadge.badge.rarity || 'common')} ${getRarityGlow(userBadge.badge.rarity || 'common')}`}>
-                            <div className="text-2xl">{getRarityEmoji(userBadge.badge.rarity || 'common')}</div>
+                            {userBadge.badge.iconUrl ? (
+                              <img 
+                                src={userBadge.badge.iconUrl} 
+                                alt={userBadge.badge.name}
+                                className="w-16 h-16 object-cover rounded-full"
+                              />
+                            ) : (
+                              <div className="text-2xl">{getRarityEmoji(userBadge.badge.rarity || 'common')}</div>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center justify-center mb-2">
@@ -1049,38 +1069,42 @@ export default function Social() {
               )}
               
               {/* Locked Badges Preview */}
-              <div className="mt-8 pt-8 border-t border-gray-300">
-                <h3 className="font-bebas text-xl text-gray-700 mb-4 tracking-wide">
-                  🔒 LOCKED SUPER POWERS
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                  {[
-                    { name: "Vault Guardian", rarity: "platinum", hint: "Collect 1000 cards" },
-                    { name: "Master Collector", rarity: "platinum", hint: "Complete 5 full sets" },
-                    { name: "Social Butterfly", rarity: "gold", hint: "Send 50 messages" },
-                    { name: "Squad Assembled", rarity: "silver", hint: "Add 10 friends" },
-                    { name: "Insert Hunter", rarity: "gold", hint: "Collect 10 insert cards" },
-                    { name: "7-Day Streak", rarity: "silver", hint: "Log in daily for 7 days" },
-                    { name: "Launch Day Hero", rarity: "platinum", hint: "Join during launch month" },
-                    { name: "Event Winner", rarity: "platinum", hint: "Win a challenge" },
-                    { name: "Curator", rarity: "gold", hint: "Add notes to 50 cards" },
-                    { name: "Speed Collector", rarity: "gold", hint: "Add 50 cards in one day" }
-                  ].map((badge, index) => (
-                    <div key={index} className="bg-gray-100 rounded-lg p-4 text-center border-2 border-gray-200 opacity-60 hover:opacity-80 transition-opacity duration-200">
-                      <div className={`w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center bg-gray-300 border-2 border-gray-400`}>
-                        <Lock className="w-8 h-8 text-gray-500" />
-                      </div>
-                      <p className="font-bold text-gray-600 text-sm mb-1">{badge.name}</p>
-                      <div className="flex justify-center mb-2">
-                        <Badge className="bg-gray-300 text-gray-600 text-xs px-2 py-1">
-                          {badge.rarity.toUpperCase()}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-gray-500">{badge.hint}</p>
+              {(() => {
+                const earnedBadgeIds = userBadges.map((ub: UserBadge) => ub.badge.id);
+                const lockedBadges = allBadges.filter((badge: any) => !earnedBadgeIds.includes(badge.id));
+                
+                return lockedBadges.length > 0 ? (
+                  <div className="mt-8 pt-8 border-t border-gray-300">
+                    <h3 className="font-bebas text-xl text-gray-700 mb-4 tracking-wide">
+                      🔒 LOCKED SUPER POWERS
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                      {lockedBadges.map((badge: any) => (
+                        <div key={badge.id} className="bg-gray-100 rounded-lg p-4 text-center border-2 border-gray-200 opacity-60 hover:opacity-80 transition-opacity duration-200">
+                          <div className={`w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center bg-gray-300 border-2 border-gray-400`}>
+                            {badge.iconUrl ? (
+                              <img 
+                                src={badge.iconUrl} 
+                                alt={badge.name}
+                                className="w-12 h-12 object-cover rounded-full opacity-50"
+                              />
+                            ) : (
+                              <Lock className="w-8 h-8 text-gray-500" />
+                            )}
+                          </div>
+                          <p className="font-bold text-gray-600 text-sm mb-1">{badge.name}</p>
+                          <div className="flex justify-center mb-2">
+                            <Badge className="bg-gray-300 text-gray-600 text-xs px-2 py-1">
+                              {badge.rarity.toUpperCase()}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-gray-500">{badge.unlockHint}</p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                ) : null;
+              })()}
             </CardContent>
           </Card>
         </TabsContent>
