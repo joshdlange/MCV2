@@ -2049,6 +2049,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/social/friends/:friendId/badges", authenticateUser, async (req: any, res) => {
+    try {
+      const friendId = parseInt(req.params.friendId);
+      
+      // Check if user can view this friend's badges
+      const canView = await storage.canViewProfile(req.user.id, friendId);
+      if (!canView) {
+        return res.status(403).json({ message: "You don't have permission to view this friend's badges" });
+      }
+      
+      const badges = await storage.getUserBadges(friendId);
+      res.json(badges);
+    } catch (error) {
+      console.error('Get friend badges error:', error);
+      res.status(500).json({ message: "Failed to fetch friend badges" });
+    }
+  });
+
   // User Search API
   app.get("/api/social/search-users", authenticateUser, async (req: any, res) => {
     try {

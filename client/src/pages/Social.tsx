@@ -151,6 +151,42 @@ export default function Social() {
     enabled: !!user,
   });
 
+  // Fetch friend profile data
+  const { data: friendProfile, isLoading: friendProfileLoading } = useQuery({
+    queryKey: ["social/friend-profile", selectedFriendProfile?.id],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/social/friends/${selectedFriendProfile.id}/profile`, { headers });
+      if (!response.ok) throw new Error("Failed to fetch friend profile");
+      return response.json();
+    },
+    enabled: !!user && !!selectedFriendProfile,
+  });
+
+  // Fetch friend collection
+  const { data: friendCollection = [], isLoading: friendCollectionLoading } = useQuery({
+    queryKey: ["social/friend-collection", selectedFriendProfile?.id],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/social/friends/${selectedFriendProfile.id}/collection`, { headers });
+      if (!response.ok) throw new Error("Failed to fetch friend collection");
+      return response.json();
+    },
+    enabled: !!user && !!selectedFriendProfile,
+  });
+
+  // Fetch friend badges
+  const { data: friendBadges = [], isLoading: friendBadgesLoading } = useQuery({
+    queryKey: ["social/friend-badges", selectedFriendProfile?.id],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/social/friends/${selectedFriendProfile.id}/badges`, { headers });
+      if (!response.ok) throw new Error("Failed to fetch friend badges");
+      return response.json();
+    },
+    enabled: !!user && !!selectedFriendProfile,
+  });
+
   // Fetch all badges to show locked ones
   const { data: allBadges = [] } = useQuery({
     queryKey: ["badges"],
@@ -393,17 +429,14 @@ export default function Social() {
   return (
     <div className="container mx-auto p-6 max-w-6xl">
       {/* Comic-style header with Marvel theme */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="relative">
+      <div className="text-center mb-8">
+        <div className="relative inline-block">
           <h1 className="text-4xl font-bold text-marvel-red font-bebas tracking-wider">
             SOCIAL HUB
           </h1>
           <div className="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-marvel-red to-red-600 rounded-full"></div>
         </div>
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Social Hub</h2>
-          <p className="text-gray-600">Connect with friends and show off your collection</p>
-        </div>
+        <p className="text-gray-600 mt-2">Connect with friends and show off your collection</p>
       </div>
 
       {/* Comic-style tabs */}
@@ -433,7 +466,8 @@ export default function Social() {
             className="relative bg-white border-2 border-marvel-red rounded-t-lg py-2 px-3 font-bold text-sm text-marvel-red data-[state=active]:bg-marvel-red data-[state=active]:text-white hover:scale-105 transition-all duration-200"
           >
             <Award className="w-4 h-4 mr-1" />
-            SUPER POWERS
+            <span className="hidden sm:inline">SUPER POWERS</span>
+            <span className="sm:hidden">POWERS</span>
             {userBadges.length > 0 && (
               <Badge className="ml-1 bg-yellow-500 text-black text-xs px-1 py-0.5 rounded-full">
                 {userBadges.length}
@@ -447,10 +481,8 @@ export default function Social() {
             >
               <User className="w-4 h-4 mr-1" />
               PROFILE
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                className="ml-2 h-4 w-4 p-0 text-current hover:bg-white/20" 
+              <span 
+                className="ml-2 h-4 w-4 p-0 text-current hover:bg-white/20 cursor-pointer rounded inline-flex items-center justify-center" 
                 onClick={(e) => {
                   e.stopPropagation();
                   setViewingProfile(false);
@@ -459,7 +491,7 @@ export default function Social() {
                 }}
               >
                 <X className="w-3 h-3" />
-              </Button>
+              </span>
             </TabsTrigger>
           )}
         </TabsList>
@@ -1163,19 +1195,27 @@ export default function Social() {
                       )}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                         <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
-                          <div className="text-2xl font-bold text-green-600">0</div>
+                          <div className="text-2xl font-bold text-green-600">
+                            {friendProfile?.stats?.totalCards || 0}
+                          </div>
                           <div className="text-sm text-green-800">Cards</div>
                         </div>
                         <div className="text-center p-3 bg-purple-50 rounded-lg border border-purple-200">
-                          <div className="text-2xl font-bold text-purple-600">$0</div>
+                          <div className="text-2xl font-bold text-purple-600">
+                            ${friendProfile?.stats?.totalValue?.toFixed(2) || '0.00'}
+                          </div>
                           <div className="text-sm text-purple-800">Value</div>
                         </div>
                         <div className="text-center p-3 bg-orange-50 rounded-lg border border-orange-200">
-                          <div className="text-2xl font-bold text-orange-600">0</div>
+                          <div className="text-2xl font-bold text-orange-600">
+                            {friendProfile?.stats?.wishlistItems || 0}
+                          </div>
                           <div className="text-sm text-orange-800">Wishlist</div>
                         </div>
                         <div className="text-center p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                          <div className="text-2xl font-bold text-yellow-600">0</div>
+                          <div className="text-2xl font-bold text-yellow-600">
+                            {friendProfile?.stats?.badgesCount || 0}
+                          </div>
                           <div className="text-sm text-yellow-800">Badges</div>
                         </div>
                       </div>
@@ -1192,11 +1232,41 @@ export default function Social() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
-                  <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                    <Award className="w-20 h-20 mx-auto mb-4 text-gray-400" />
-                    <p className="text-2xl font-bold text-gray-600 mb-2">Profile badges coming soon!</p>
-                    <p className="text-gray-500">Friend badge viewing will be implemented in a future update.</p>
-                  </div>
+                  {friendBadgesLoading ? (
+                    <div className="text-center py-16">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto"></div>
+                      <p className="text-gray-600 mt-4">Loading badges...</p>
+                    </div>
+                  ) : friendBadges.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {friendBadges.map((userBadge: UserBadge) => (
+                        <div key={userBadge.id} className="bg-white rounded-lg border-2 border-gray-200 p-4 text-center hover:shadow-md transition-shadow">
+                          <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center">
+                            {userBadge.badge.iconUrl ? (
+                              <img 
+                                src={userBadge.badge.iconUrl} 
+                                alt={userBadge.badge.name}
+                                className="w-12 h-12 object-contain"
+                              />
+                            ) : (
+                              <Award className="w-8 h-8 text-white" />
+                            )}
+                          </div>
+                          <h3 className="font-bold text-sm text-gray-800 mb-1">{userBadge.badge.name}</h3>
+                          <p className="text-xs text-gray-600 mb-2">{userBadge.badge.description}</p>
+                          <div className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${getBadgeColor(userBadge.badge.category)}`}>
+                            {userBadge.badge.category}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                      <Award className="w-20 h-20 mx-auto mb-4 text-gray-400" />
+                      <p className="text-2xl font-bold text-gray-600 mb-2">No badges yet!</p>
+                      <p className="text-gray-500">{selectedFriendProfile?.displayName || selectedFriendProfile?.username} hasn't earned any badges yet.</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -1208,13 +1278,55 @@ export default function Social() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
-                  <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                    <div className="w-20 h-20 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center">
-                      <User className="w-12 h-12 text-gray-400" />
+                  {friendCollectionLoading ? (
+                    <div className="text-center py-16">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
+                      <p className="text-gray-600 mt-4">Loading collection...</p>
                     </div>
-                    <p className="text-2xl font-bold text-gray-600 mb-2">Collection viewing coming soon!</p>
-                    <p className="text-gray-500">Friend collection viewing will be implemented in a future update.</p>
-                  </div>
+                  ) : friendCollection.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {friendCollection.slice(0, 12).map((item: any) => (
+                        <div key={item.id} className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-md transition-shadow">
+                          <div className="aspect-[3/4] bg-gray-100 rounded-lg mb-2 overflow-hidden">
+                            {item.card.imageUrl ? (
+                              <img 
+                                src={item.card.imageUrl} 
+                                alt={item.card.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                                <span className="text-gray-400 text-xs">No Image</span>
+                              </div>
+                            )}
+                          </div>
+                          <h3 className="font-semibold text-sm text-gray-800 mb-1 truncate">{item.card.name}</h3>
+                          <p className="text-xs text-gray-600 mb-1">{item.card.cardSet?.name}</p>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-gray-500">#{item.card.cardNumber}</span>
+                            <span className="text-xs font-semibold text-green-600">
+                              {item.condition || 'Unknown'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                      <div className="w-20 h-20 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center">
+                        <User className="w-12 h-12 text-gray-400" />
+                      </div>
+                      <p className="text-2xl font-bold text-gray-600 mb-2">No cards yet!</p>
+                      <p className="text-gray-500">{selectedFriendProfile?.displayName || selectedFriendProfile?.username} hasn't added any cards to their collection yet.</p>
+                    </div>
+                  )}
+                  {friendCollection.length > 12 && (
+                    <div className="text-center mt-4">
+                      <p className="text-sm text-gray-600">
+                        Showing 12 of {friendCollection.length} cards
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
