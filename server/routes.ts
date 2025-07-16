@@ -1900,7 +1900,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         imageUrl
       };
 
-      const message = await storage.sendMessage(req.user.id, recipientId, `[Image: ${req.file.originalname}]`);
+      const message = await storage.sendMessage(req.user.id, recipientId, `[Image: ${req.file.originalname}]`, imageUrl);
       res.status(201).json({ ...message, imageUrl });
     } catch (error) {
       console.error('Send image message error:', error);

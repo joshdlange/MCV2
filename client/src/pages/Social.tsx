@@ -81,6 +81,8 @@ export default function Social() {
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [activeTab, setActiveTab] = useState("friends");
+  const [selectedFriendProfile, setSelectedFriendProfile] = useState<any>(null);
+  const [viewingProfile, setViewingProfile] = useState(false);
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { currentUser } = useAppStore();
@@ -398,19 +400,15 @@ export default function Social() {
           </h1>
           <div className="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-marvel-red to-red-600 rounded-full"></div>
         </div>
-        <Button 
-          onClick={() => checkBadges.mutate()} 
-          disabled={checkBadges.isPending}
-          className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold px-6 py-3 rounded-lg shadow-lg border-2 border-yellow-400 transform hover:scale-105 transition-all duration-200"
-        >
-          <Award className="w-5 h-5 mr-2" />
-          CHECK NEW SUPER POWERS
-        </Button>
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Social Hub</h2>
+          <p className="text-gray-600">Connect with friends and show off your collection</p>
+        </div>
       </div>
 
       {/* Comic-style tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-transparent p-0 h-auto gap-1 mb-4">
+        <TabsList className={`grid w-full ${viewingProfile ? 'grid-cols-4' : 'grid-cols-3'} bg-transparent p-0 h-auto gap-1 mb-4`}>
           <TabsTrigger 
             value="friends" 
             className="relative bg-white border-2 border-marvel-red rounded-t-lg py-2 px-3 font-bold text-sm text-marvel-red data-[state=active]:bg-marvel-red data-[state=active]:text-white hover:scale-105 transition-all duration-200"
@@ -442,6 +440,28 @@ export default function Social() {
               </Badge>
             )}
           </TabsTrigger>
+          {viewingProfile && (
+            <TabsTrigger 
+              value="profile"
+              className="relative bg-white border-2 border-marvel-red rounded-t-lg py-2 px-3 font-bold text-sm text-marvel-red data-[state=active]:bg-marvel-red data-[state=active]:text-white hover:scale-105 transition-all duration-200"
+            >
+              <User className="w-4 h-4 mr-1" />
+              PROFILE
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="ml-2 h-4 w-4 p-0 text-current hover:bg-white/20" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setViewingProfile(false);
+                  setSelectedFriendProfile(null);
+                  setActiveTab('friends');
+                }}
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="friends" className="space-y-4">
@@ -574,7 +594,11 @@ export default function Social() {
                               </Button>
                               <Button
                                 size="sm"
-                                onClick={() => window.open(`/friend-profile/${friendUser.id}`, '_blank')}
+                                onClick={() => {
+                                  setSelectedFriendProfile(friendUser);
+                                  setViewingProfile(true);
+                                  setActiveTab('profile');
+                                }}
                                 className="bg-green-500 hover:bg-green-600 text-white font-bold px-2 py-1.5 rounded text-xs sm:px-3"
                               >
                                 <User className="w-3 h-3 sm:mr-1" />
@@ -904,7 +928,7 @@ export default function Social() {
                                 const response = await fetch('/api/social/messages/image', {
                                   method: 'POST',
                                   headers: {
-                                    'Authorization': `Bearer ${user?.accessToken}`,
+                                    ...await getAuthHeaders(),
                                   },
                                   body: formData,
                                 });
@@ -1022,17 +1046,17 @@ export default function Social() {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                   {userBadges.map((userBadge: UserBadge) => (
                     <Card key={userBadge.id} className="text-center border-2 border-gray-200 bg-white shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1">
-                      <CardContent className="p-6">
+                      <CardContent className="p-4 sm:p-6">
                         <div className="flex justify-center mb-4">
-                          <div className={`w-24 h-24 rounded-full flex items-center justify-center border-4 transition-all duration-300 ${getRarityStyle(userBadge.badge.rarity || 'common')} ${getRarityGlow(userBadge.badge.rarity || 'common')}`}>
+                          <div className={`w-16 h-16 sm:w-24 sm:h-24 rounded-full flex items-center justify-center border-4 transition-all duration-300 ${getRarityStyle(userBadge.badge.rarity || 'common')} ${getRarityGlow(userBadge.badge.rarity || 'common')}`}>
                             {userBadge.badge.iconUrl ? (
                               <img 
                                 src={userBadge.badge.iconUrl} 
                                 alt={userBadge.badge.name}
-                                className="w-16 h-16 object-cover rounded-full"
+                                className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-full"
                               />
                             ) : (
                               <div className="text-2xl">{getRarityEmoji(userBadge.badge.rarity || 'common')}</div>
@@ -1040,12 +1064,12 @@ export default function Social() {
                           </div>
                         </div>
                         <div className="flex items-center justify-center mb-2">
-                          <h3 className="font-bebas text-lg text-gray-800 tracking-wide">
+                          <h3 className="font-bebas text-sm sm:text-lg text-gray-800 tracking-wide">
                             {userBadge.badge.name?.toUpperCase() || 'UNKNOWN POWER'}
                           </h3>
                           <div className="ml-2 text-sm">{getRarityEmoji(userBadge.badge.rarity || 'common')}</div>
                         </div>
-                        <p className="text-sm text-gray-600 mb-4 px-2 line-clamp-2">{userBadge.badge.description || 'No description available'}</p>
+                        <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 px-1 sm:px-2 line-clamp-2">{userBadge.badge.description || 'No description available'}</p>
                         <div className="flex justify-center space-x-2 mb-3">
                           <Badge className={`${getBadgeColor(userBadge.badge.category || 'achievement')} font-bold px-3 py-1 text-xs`}>
                             {userBadge.badge.category?.toUpperCase() || 'ACHIEVEMENT'}
@@ -1078,21 +1102,21 @@ export default function Social() {
                     <h3 className="font-bebas text-xl text-gray-700 mb-4 tracking-wide">
                       🔒 LOCKED SUPER POWERS
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
                       {lockedBadges.map((badge: any) => (
-                        <div key={badge.id} className="bg-gray-100 rounded-lg p-4 text-center border-2 border-gray-200 opacity-60 hover:opacity-80 transition-opacity duration-200">
-                          <div className={`w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center bg-gray-300 border-2 border-gray-400`}>
+                        <div key={badge.id} className="bg-gray-100 rounded-lg p-3 sm:p-4 text-center border-2 border-gray-200 opacity-60 hover:opacity-80 transition-opacity duration-200">
+                          <div className={`w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-2 sm:mb-3 rounded-full flex items-center justify-center bg-gray-300 border-2 border-gray-400`}>
                             {badge.iconUrl ? (
                               <img 
                                 src={badge.iconUrl} 
                                 alt={badge.name}
-                                className="w-12 h-12 object-cover rounded-full opacity-50"
+                                className="w-8 h-8 sm:w-12 sm:h-12 object-cover rounded-full opacity-50"
                               />
                             ) : (
-                              <Lock className="w-8 h-8 text-gray-500" />
+                              <Lock className="w-6 h-6 sm:w-8 sm:h-8 text-gray-500" />
                             )}
                           </div>
-                          <p className="font-bold text-gray-600 text-sm mb-1">{badge.name}</p>
+                          <p className="font-bold text-gray-600 text-xs sm:text-sm mb-1">{badge.name}</p>
                           <div className="flex justify-center mb-2">
                             <Badge className="bg-gray-300 text-gray-600 text-xs px-2 py-1">
                               {badge.rarity.toUpperCase()}
@@ -1107,6 +1131,94 @@ export default function Social() {
               })()}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="profile" className="space-y-6">
+          {selectedFriendProfile && (
+            <div className="space-y-6">
+              <Card className="border-2 border-blue-500 bg-gradient-to-br from-white to-blue-50">
+                <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                  <CardTitle className="font-bebas text-2xl tracking-wide flex items-center">
+                    <User className="w-6 h-6 mr-2" />
+                    {selectedFriendProfile.displayName || selectedFriendProfile.username}'s Profile
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="flex flex-col sm:flex-row gap-6">
+                    <div className="flex-shrink-0">
+                      <Avatar className="w-24 h-24 border-4 border-blue-300">
+                        <AvatarImage src={selectedFriendProfile.photoURL} alt={selectedFriendProfile.displayName} />
+                        <AvatarFallback className="bg-blue-100 text-blue-800 text-xl font-bold">
+                          {selectedFriendProfile.displayName?.charAt(0) || selectedFriendProfile.username?.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-gray-800 mb-1">
+                        {selectedFriendProfile.displayName || selectedFriendProfile.username}
+                      </h3>
+                      <p className="text-gray-600 mb-4">@{selectedFriendProfile.username}</p>
+                      {selectedFriendProfile.bio && (
+                        <p className="text-gray-700 mb-4">{selectedFriendProfile.bio}</p>
+                      )}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
+                          <div className="text-2xl font-bold text-green-600">0</div>
+                          <div className="text-sm text-green-800">Cards</div>
+                        </div>
+                        <div className="text-center p-3 bg-purple-50 rounded-lg border border-purple-200">
+                          <div className="text-2xl font-bold text-purple-600">$0</div>
+                          <div className="text-sm text-purple-800">Value</div>
+                        </div>
+                        <div className="text-center p-3 bg-orange-50 rounded-lg border border-orange-200">
+                          <div className="text-2xl font-bold text-orange-600">0</div>
+                          <div className="text-sm text-orange-800">Wishlist</div>
+                        </div>
+                        <div className="text-center p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                          <div className="text-2xl font-bold text-yellow-600">0</div>
+                          <div className="text-sm text-yellow-800">Badges</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-2 border-yellow-500 bg-gradient-to-br from-white to-yellow-50">
+                <CardHeader className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black">
+                  <CardTitle className="font-bebas text-2xl tracking-wide flex items-center">
+                    <Award className="w-6 h-6 mr-2" />
+                    {selectedFriendProfile.displayName || selectedFriendProfile.username}'s Super Powers
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <Award className="w-20 h-20 mx-auto mb-4 text-gray-400" />
+                    <p className="text-2xl font-bold text-gray-600 mb-2">Profile badges coming soon!</p>
+                    <p className="text-gray-500">Friend badge viewing will be implemented in a future update.</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-2 border-green-500 bg-gradient-to-br from-white to-green-50">
+                <CardHeader className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+                  <CardTitle className="font-bebas text-2xl tracking-wide flex items-center">
+                    <User className="w-6 h-6 mr-2" />
+                    {selectedFriendProfile.displayName || selectedFriendProfile.username}'s Collection
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <div className="w-20 h-20 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center">
+                      <User className="w-12 h-12 text-gray-400" />
+                    </div>
+                    <p className="text-2xl font-bold text-gray-600 mb-2">Collection viewing coming soon!</p>
+                    <p className="text-gray-500">Friend collection viewing will be implemented in a future update.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

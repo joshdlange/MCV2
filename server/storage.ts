@@ -1673,14 +1673,15 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async sendMessage(senderId: number, recipientId: number, content: string): Promise<Message> {
+  async sendMessage(senderId: number, recipientId: number, content: string, imageUrl?: string): Promise<Message> {
     const [message] = await db
       .insert(messages)
       .values({
         senderId,
         recipientId,
         content,
-        isRead: false
+        isRead: false,
+        imageUrl
       })
       .returning();
     return message;
