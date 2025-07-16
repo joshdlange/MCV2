@@ -742,7 +742,7 @@ export default function Social() {
                                 </div>
                                 <p className="text-sm text-gray-500 truncate">
                                   {lastMessage ? 
-                                    (lastMessage.senderId === user?.uid ? 'You: ' : '') + lastMessage.content
+                                    (lastMessage.senderId === user?.id ? 'You: ' : '') + lastMessage.content
                                     : 'Tap to start chatting'
                                   }
                                 </p>
@@ -830,11 +830,11 @@ export default function Social() {
                         {messages.map((message: Message) => (
                           <div
                             key={message.id}
-                            className={`flex ${message.senderId === user?.uid ? 'justify-end' : 'justify-start'}`}
+                            className={`flex ${message.senderId === user?.id ? 'justify-end' : 'justify-start'}`}
                           >
                             <div
                               className={`max-w-xs px-4 py-2 rounded-2xl ${
-                                message.senderId === user?.uid
+                                message.senderId === user?.id
                                   ? 'bg-blue-500 text-white'
                                   : 'bg-gray-100 text-gray-900'
                               }`}
@@ -855,7 +855,7 @@ export default function Social() {
                                 <p className="text-sm leading-relaxed">{message.content}</p>
                               )}
                               <p className={`text-xs mt-1 ${
-                                message.senderId === user?.uid ? 'text-blue-100' : 'text-gray-500'
+                                message.senderId === user?.id ? 'text-blue-100' : 'text-gray-500'
                               }`}>
                                 {new Date(message.createdAt).toLocaleTimeString([], {
                                   hour: '2-digit',
