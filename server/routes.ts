@@ -20,6 +20,7 @@ import { cards, cardSets } from "@shared/schema";
 import { sql, eq, ilike } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
+import { badgeService } from "./badge-service";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -178,6 +179,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           user = await storage.getUserByFirebaseUid(firebaseUid);
           console.log('Updated user admin status:', user?.isAdmin);
         }
+      }
+      
+      // Check badges on login/sync
+      await badgeService.checkBadgesOnLogin(user.id);
+      
+      // Run retroactive badge checks for new users
+      if (!user.lastLogin) {
+        await badgeService.runRetroactiveBadgeChecks(user.id);
       }
       
       res.json({ user });
@@ -792,6 +801,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const collectionItem = await storage.addToCollection(validatedData);
+      
+      // Check badges when collection changes
+      await badgeService.checkBadgesOnCollectionChange(req.user.id);
+      
       res.status(201).json(collectionItem);
     } catch (error) {
       console.error('Add to collection error:', error);
@@ -823,6 +836,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       await storage.removeFromCollection(id);
+      
+      // Check badges when collection changes
+      await badgeService.checkBadgesOnCollectionChange(req.user.id);
+      
       res.json({ message: "Card removed from collection" });
     } catch (error) {
       console.error('Remove from collection error:', error);
@@ -1476,6 +1493,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Price refresh endpoint for users to trigger price updates
+  app.post("/api/cards/:id/refresh-price", authenticateUser, async (req: any, res) => {
+    try {
+      const cardId = parseInt(req.params.id);
+      
+      // Trigger price refresh (this would normally call eBay API)
+      // For now, we'll just award the badge for the action
+      await badgeService.checkBadgesOnPriceRefresh(req.user.id);
+      
+      res.json({ message: "Price refresh triggered", cardId });
+    } catch (error) {
+      console.error('Price refresh error:', error);
+      res.status(500).json({ message: "Failed to refresh price" });
+    }
+  });
+
   // Background image processing endpoints
   app.post("/api/admin/background-images/start", authenticateUser, async (req: any, res) => {
     try {
@@ -1810,6 +1843,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const friendship = await storage.sendFriendRequest(req.user.id, recipientId);
+      
+      // Check badges when friend relationships change
+      await badgeService.checkBadgesOnFriendChange(req.user.id);
+      
       res.status(201).json(friendship);
     } catch (error) {
       console.error('Send friend request error:', error);
@@ -1829,6 +1866,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const friendship = await storage.respondToFriendRequest(friendId, status);
       if (!friendship) {
         return res.status(404).json({ message: "Friend request not found" });
+      }
+
+      // Check badges when friend relationships change (only if accepted)
+      if (status === 'accepted') {
+        await badgeService.checkBadgesOnFriendChange(req.user.id);
       }
 
       res.json(friendship);
@@ -1870,6 +1912,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const message = await storage.sendMessage(req.user.id, recipientId, content.trim());
+      
+      // Check badge unlocks when user sends a message
+      await badgeService.checkBadgesOnMessage(req.user.id, content.trim());
+      
       res.status(201).json(message);
     } catch (error) {
       console.error('Send message error:', error);
