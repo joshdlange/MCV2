@@ -11,6 +11,8 @@ app.use(express.urlencoded({ extended: false }));
 
 // Serve uploaded images statically
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+// Serve badge images statically
+app.use('/badge_images', express.static(path.join(process.cwd(), 'badge_images')));
 
 app.use((req, res, next) => {
   const start = Date.now();
