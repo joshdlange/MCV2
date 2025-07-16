@@ -1598,6 +1598,54 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
+  async getPendingInvitations(userId: number): Promise<FriendWithUser[]> {
+    const requesterTable = alias(users, 'requester');
+    const recipientTable = alias(users, 'recipient');
+    
+    const invitations = await db
+      .select({
+        id: friends.id,
+        requesterId: friends.requesterId,
+        recipientId: friends.recipientId,
+        status: friends.status,
+        createdAt: friends.createdAt,
+        updatedAt: friends.updatedAt,
+        requester: {
+          id: requesterTable.id,
+          username: requesterTable.username,
+          displayName: requesterTable.displayName,
+          photoURL: requesterTable.photoURL,
+          bio: requesterTable.bio,
+          location: requesterTable.location,
+          profileVisibility: requesterTable.profileVisibility,
+        },
+        recipient: {
+          id: recipientTable.id,
+          username: recipientTable.username,
+          displayName: recipientTable.displayName,
+          photoURL: recipientTable.photoURL,
+          bio: recipientTable.bio,
+          location: recipientTable.location,
+          profileVisibility: recipientTable.profileVisibility,
+        }
+      })
+      .from(friends)
+      .leftJoin(requesterTable, eq(friends.requesterId, requesterTable.id))
+      .leftJoin(recipientTable, eq(friends.recipientId, recipientTable.id))
+      .where(
+        and(
+          eq(friends.requesterId, userId),
+          eq(friends.status, "pending")
+        )
+      );
+
+    return invitations.map(r => ({
+      ...r,
+      requester: r.requester as User,
+      recipient: r.recipient as User
+    }));
+  }
+
   async sendFriendRequest(requesterId: number, recipientId: number): Promise<Friend> {
     const [friendship] = await db
       .insert(friends)
@@ -2020,30 +2068,25 @@ export class DatabaseStorage implements IStorage {
         cardId: userCollections.cardId,
         condition: userCollections.condition,
         acquiredDate: userCollections.acquiredDate,
-        pricePaid: userCollections.pricePaid,
-        card: {
-          id: cards.id,
-          setId: cards.setId,
-          cardNumber: cards.cardNumber,
-          name: cards.name,
-          variation: cards.variation,
-          rarity: cards.rarity,
-          isInsert: cards.isInsert,
-          description: cards.description,
-          frontImageUrl: cards.frontImageUrl,
-          backImageUrl: cards.backImageUrl,
-          estimatedValue: cards.estimatedValue,
-          cardSet: {
-            id: cardSets.id,
-            name: cardSets.name,
-            slug: cardSets.slug,
-            year: cardSets.year,
-            manufacturer: cardSets.manufacturer,
-            description: cardSets.description,
-            totalCards: cardSets.totalCards,
-            imageUrl: cardSets.imageUrl,
-          }
-        }
+        salePrice: userCollections.salePrice,
+        cardId_: cards.id,
+        cardName: cards.name,
+        cardNumber: cards.cardNumber,
+        variation: cards.variation,
+        rarity: cards.rarity,
+        isInsert: cards.isInsert,
+        description: cards.description,
+        frontImageUrl: cards.frontImageUrl,
+        backImageUrl: cards.backImageUrl,
+        estimatedValue: cards.estimatedValue,
+        setId: cardSets.id,
+        setName: cardSets.name,
+        setSlug: cardSets.slug,
+        setYear: cardSets.year,
+        setManufacturer: cardSets.manufacturer,
+        setDescription: cardSets.description,
+        setTotalCards: cardSets.totalCards,
+        setImageUrl: cardSets.imageUrl,
       })
       .from(userCollections)
       .innerJoin(cards, eq(userCollections.cardId, cards.id))
@@ -2057,10 +2100,30 @@ export class DatabaseStorage implements IStorage {
       cardId: collection.cardId,
       condition: collection.condition,
       acquiredDate: collection.acquiredDate,
-      pricePaid: collection.pricePaid,
+      pricePaid: collection.salePrice,
       card: {
-        ...collection.card,
-        imageUrl: collection.card.frontImageUrl
+        id: collection.cardId_,
+        setId: collection.setId,
+        cardNumber: collection.cardNumber,
+        name: collection.cardName,
+        variation: collection.variation,
+        rarity: collection.rarity,
+        isInsert: collection.isInsert,
+        description: collection.description,
+        frontImageUrl: collection.frontImageUrl,
+        backImageUrl: collection.backImageUrl,
+        estimatedValue: collection.estimatedValue,
+        imageUrl: collection.frontImageUrl,
+        cardSet: {
+          id: collection.setId,
+          name: collection.setName,
+          slug: collection.setSlug,
+          year: collection.setYear,
+          manufacturer: collection.setManufacturer,
+          description: collection.setDescription,
+          totalCards: collection.setTotalCards,
+          imageUrl: collection.setImageUrl,
+        }
       }
     }));
   }

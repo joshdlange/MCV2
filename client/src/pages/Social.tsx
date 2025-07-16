@@ -139,6 +139,18 @@ export default function Social() {
     enabled: !!user,
   });
 
+  // Fetch pending invitations (outgoing requests)
+  const { data: pendingInvitations = [] } = useQuery({
+    queryKey: ["social/pending-invitations"],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch("/api/social/pending-invitations", { headers });
+      if (!response.ok) throw new Error("Failed to fetch pending invitations");
+      return response.json();
+    },
+    enabled: !!user,
+  });
+
   // Fetch user badges
   const { data: userBadges = [] } = useQuery({
     queryKey: ["social/user-badges"],
@@ -646,9 +658,58 @@ export default function Social() {
               </CardContent>
             </Card>
 
-            {/* Friend Requests - Comic Panel Style */}
+            {/* Pending Invitations - Comic Panel Style */}
             <Card className="border-2 border-yellow-500 bg-gradient-to-br from-white to-yellow-50 shadow-lg">
               <CardHeader className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black p-3">
+                <CardTitle className="font-bebas text-lg tracking-wide flex items-center">
+                  <Clock className="w-5 h-5 mr-2" />
+                  PENDING INVITATIONS ({pendingInvitations.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                {pendingInvitations.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <Clock className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                    <p className="text-xl font-bold text-gray-600 mb-2">No Pending Invitations</p>
+                    <p className="text-gray-500">Send invitations to grow your team!</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4">
+                    {pendingInvitations.map((invitation: Friend) => (
+                      <div key={invitation.id} className="bg-white rounded-lg border-2 border-yellow-200 p-4 shadow-sm hover:shadow-md transition-all duration-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <Avatar className="w-12 h-12 border-2 border-yellow-500">
+                              <AvatarImage src={invitation.recipient.photoURL} />
+                              <AvatarFallback className="bg-yellow-500 text-black font-bold">
+                                {invitation.recipient.displayName?.charAt(0) || invitation.recipient.username.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-bold text-gray-800">{invitation.recipient.displayName || invitation.recipient.username}</p>
+                              <p className="text-sm text-gray-600">@{invitation.recipient.username}</p>
+                              <p className="text-xs text-yellow-600 font-medium mt-1 flex items-center">
+                                <Clock className="w-3 h-3 mr-1" />
+                                Invitation pending
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                              Waiting for response
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Friend Requests - Comic Panel Style */}
+            <Card className="border-2 border-green-500 bg-gradient-to-br from-white to-green-50 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-green-500 to-green-600 text-black p-3">
                 <CardTitle className="font-bebas text-lg tracking-wide flex items-center">
                   <User className="w-5 h-5 mr-2" />
                   RECRUITMENT ({friendRequests.length})
@@ -664,19 +725,19 @@ export default function Social() {
                 ) : (
                   <div className="grid gap-4">
                     {friendRequests.map((request: Friend) => (
-                      <div key={request.id} className="bg-white rounded-lg border-2 border-yellow-200 p-4 shadow-sm hover:shadow-md transition-all duration-200">
+                      <div key={request.id} className="bg-white rounded-lg border-2 border-green-200 p-4 shadow-sm hover:shadow-md transition-all duration-200">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-4">
-                            <Avatar className="w-12 h-12 border-2 border-yellow-500">
+                            <Avatar className="w-12 h-12 border-2 border-green-500">
                               <AvatarImage src={request.requester.photoURL} />
-                              <AvatarFallback className="bg-yellow-500 text-black font-bold">
+                              <AvatarFallback className="bg-green-500 text-black font-bold">
                                 {request.requester.displayName?.charAt(0) || request.requester.username.charAt(0)}
                               </AvatarFallback>
                             </Avatar>
                             <div>
                               <p className="font-bold text-gray-800">{request.requester.displayName || request.requester.username}</p>
                               <p className="text-sm text-gray-600">@{request.requester.username}</p>
-                              <p className="text-xs text-yellow-600 font-medium mt-1">Wants to join your team</p>
+                              <p className="text-xs text-green-600 font-medium mt-1">Wants to join your team</p>
                             </div>
                           </div>
                           <div className="flex space-x-2">

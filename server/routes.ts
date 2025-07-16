@@ -1785,6 +1785,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/social/pending-invitations", authenticateUser, async (req: any, res) => {
+    try {
+      const invitations = await storage.getPendingInvitations(req.user.id);
+      res.json(invitations);
+    } catch (error) {
+      console.error('Get pending invitations error:', error);
+      res.status(500).json({ message: "Failed to fetch pending invitations" });
+    }
+  });
+
   app.post("/api/social/friend-request", authenticateUser, async (req: any, res) => {
     try {
       const { recipientId } = req.body;
