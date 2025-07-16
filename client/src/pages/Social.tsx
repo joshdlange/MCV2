@@ -1175,15 +1175,7 @@ export default function Social() {
                       <CardContent className="p-4 sm:p-6">
                         <div className="flex justify-center mb-4">
                           <div className={`w-16 h-16 sm:w-24 sm:h-24 rounded-full flex items-center justify-center border-4 transition-all duration-300 ${getRarityStyle(userBadge.badge.rarity || 'common')} ${getRarityGlow(userBadge.badge.rarity || 'common')}`}>
-                            {userBadge.badge.iconUrl ? (
-                              <img 
-                                src={userBadge.badge.iconUrl} 
-                                alt={userBadge.badge.name}
-                                className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-full"
-                              />
-                            ) : (
-                              <div className="text-2xl">{getRarityEmoji(userBadge.badge.rarity || 'common')}</div>
-                            )}
+                            <div className="text-2xl">{getRarityEmoji(userBadge.badge.rarity || 'common')}</div>
                           </div>
                         </div>
                         <div className="flex items-center justify-center mb-2">
