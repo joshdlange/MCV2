@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { Users, MessageCircle, Award, User, Lock, Clock, Check, X, Search, UserPlus, Plus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAppStore } from "@/lib/store";
 
 interface Friend {
   id: number;
@@ -82,6 +83,7 @@ export default function Social() {
   const [activeTab, setActiveTab] = useState("friends");
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { currentUser } = useAppStore();
 
   // Listen for custom tab switching events
   useEffect(() => {
@@ -684,8 +686,8 @@ export default function Social() {
                       
                       // Get the last message with this friend
                       const lastMessage = messages.find(m => 
-                        (m.senderId === user?.uid && m.recipientId === friendUser.id) ||
-                        (m.senderId === friendUser.id && m.recipientId === user?.uid)
+                        (m.senderId === currentUser?.id && m.recipientId === friendUser.id) ||
+                        (m.senderId === friendUser.id && m.recipientId === currentUser?.id)
                       );
                       
                       return (
@@ -742,7 +744,7 @@ export default function Social() {
                                 </div>
                                 <p className="text-sm text-gray-500 truncate">
                                   {lastMessage ? 
-                                    (lastMessage.senderId === user?.id ? 'You: ' : '') + lastMessage.content
+                                    (lastMessage.senderId === currentUser?.id ? 'You: ' : '') + lastMessage.content
                                     : 'Tap to start chatting'
                                   }
                                 </p>
@@ -830,11 +832,11 @@ export default function Social() {
                         {messages.map((message: Message) => (
                           <div
                             key={message.id}
-                            className={`flex ${message.senderId === user?.id ? 'justify-end' : 'justify-start'}`}
+                            className={`flex ${message.senderId === currentUser?.id ? 'justify-end' : 'justify-start'}`}
                           >
                             <div
                               className={`max-w-xs px-4 py-2 rounded-2xl ${
-                                message.senderId === user?.id
+                                message.senderId === currentUser?.id
                                   ? 'bg-blue-500 text-white'
                                   : 'bg-gray-100 text-gray-900'
                               }`}
@@ -855,7 +857,7 @@ export default function Social() {
                                 <p className="text-sm leading-relaxed">{message.content}</p>
                               )}
                               <p className={`text-xs mt-1 ${
-                                message.senderId === user?.id ? 'text-blue-100' : 'text-gray-500'
+                                message.senderId === currentUser?.id ? 'text-blue-100' : 'text-gray-500'
                               }`}>
                                 {new Date(message.createdAt).toLocaleTimeString([], {
                                   hour: '2-digit',
