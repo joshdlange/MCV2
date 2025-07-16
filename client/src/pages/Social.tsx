@@ -523,7 +523,7 @@ export default function Social() {
               className="relative bg-white border-2 border-marvel-red rounded-t-lg py-2 px-3 font-bold text-sm text-marvel-red data-[state=active]:bg-marvel-red data-[state=active]:text-white hover:scale-105 transition-all duration-200"
             >
               <User className="w-4 h-4 mr-1" />
-              PROFILE
+              {selectedFriendProfile?.displayName || selectedFriendProfile?.username || 'PROFILE'}
               <span 
                 className="ml-2 h-4 w-4 p-0 text-current hover:bg-white/20 cursor-pointer rounded inline-flex items-center justify-center" 
                 onClick={(e) => {
@@ -544,9 +544,9 @@ export default function Social() {
             {/* Friends List with Find Heroes - Comic Panel Style */}
             <Card className="border-2 border-marvel-red bg-gradient-to-br from-white to-blue-50 shadow-lg">
               <CardHeader className="bg-gradient-to-r from-marvel-red to-red-600 text-white p-3">
-                <CardTitle className="font-bebas text-lg tracking-wide flex items-center">
-                  <Users className="w-5 h-5 mr-2" />
-                  MY HEROES ({friends.length})
+                <CardTitle className="font-bebas text-lg tracking-wide flex items-center text-white">
+                  <Users className="w-5 h-5 mr-2 text-white" />
+                  <span className="text-white">MY HEROES ({friends.length})</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4">
