@@ -2117,13 +2117,16 @@ export class DatabaseStorage implements IStorage {
       .orderBy(userWishlists.priority, userWishlists.addedDate);
 
     return wishlists.map(wishlist => ({
-      ...wishlist,
-      cardName: wishlist.card.name,
-      cardNumber: wishlist.card.cardNumber,
-      setName: wishlist.card.cardSet.name,
-      rarity: wishlist.card.rarity,
-      frontImageUrl: wishlist.card.frontImageUrl,
-      estimatedValue: wishlist.card.estimatedValue,
+      id: wishlist.id,
+      userId: wishlist.userId,
+      cardId: wishlist.cardId,
+      priority: wishlist.priority,
+      notes: wishlist.notes,
+      addedDate: wishlist.addedDate,
+      card: {
+        ...wishlist.card,
+        imageUrl: wishlist.card.frontImageUrl
+      }
     }));
   }
 
