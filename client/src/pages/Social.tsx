@@ -132,7 +132,28 @@ export default function Social() {
       const headers = await getAuthHeaders();
       const response = await fetch("/api/social/friends", { headers });
       if (!response.ok) throw new Error("Failed to fetch friends");
-      return response.json();
+      const friendsData = await response.json();
+      
+      // Deduplicate friends by email/username to avoid showing duplicates
+      const uniqueFriends = new Map();
+      
+      friendsData.forEach((friend: Friend) => {
+        const friendUser = friend.requester.username === user?.email 
+          ? friend.recipient 
+          : friend.requester;
+        
+        // Use email as unique key since that's what causes duplicates
+        if (!uniqueFriends.has(friendUser.username)) {
+          uniqueFriends.set(friendUser.username, {
+            ...friend,
+            // Normalize to always show the friend (not current user)
+            requester: friend.requester.username === user?.email ? friend.requester : friend.recipient,
+            recipient: friend.requester.username === user?.email ? friend.recipient : friend.requester
+          });
+        }
+      });
+      
+      return Array.from(uniqueFriends.values());
     },
     enabled: !!user,
   });
@@ -1391,7 +1412,7 @@ export default function Social() {
                           </div>
                           
                           <Select value={selectedCollectionSet} onValueChange={setSelectedCollectionSet}>
-                            <SelectTrigger className="w-48">
+                            <SelectTrigger className="w-48 bg-white text-gray-900">
                               <SelectValue placeholder="Filter by set" />
                             </SelectTrigger>
                             <SelectContent>
