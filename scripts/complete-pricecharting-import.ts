@@ -1,355 +1,214 @@
-#!/usr/bin/env tsx
-
-import { db } from '../server/db';
+import { drizzle } from 'drizzle-orm/neon-http';
+import { neon } from '@neondatabase/serverless';
 import { cardSets, cards } from '../shared/schema';
-import { eq } from 'drizzle-orm';
-import { writeFileSync } from 'fs';
+import { eq, and } from 'drizzle-orm';
+
+const sql = neon(process.env.DATABASE_URL!);
+const db = drizzle(sql);
 
 interface PriceChartingProduct {
+  id: string;
   'product-name': string;
   'console-name': string;
-  'loose-price': number;
-  'cib-price': number;
-  'new-price': number;
-  id: string;
+  'loose-price'?: number;
+  'cib-price'?: number;
+  'new-price'?: number;
+  image?: string;
 }
 
 interface PriceChartingResponse {
-  status: string;
   products: PriceChartingProduct[];
 }
 
-interface ImportResult {
-  setsProcessed: number;
-  setsInserted: number;
-  setsSkipped: number;
-  cardsProcessed: number;
-  cardsInserted: number;
-  cardsSkipped: number;
-  errors: string[];
-  skippedItems: Array<{
-    type: 'set' | 'card';
-    name: string;
-    reason: string;
-  }>;
+const API_KEY = process.env.PRICECHARTING_API_KEY;
+const DELAY_BETWEEN_REQUESTS = 2000; // 2 seconds to be safe
+const BATCH_SIZE = 25; // Process in batches for progress updates
+
+function formatSetName(name: string): string {
+  return name.toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
 }
 
-// Calculate string similarity
-function calculateSimilarity(str1: string, str2: string): number {
-  const longer = str1.length > str2.length ? str1 : str2;
-  const shorter = str1.length > str2.length ? str2 : str1;
-  
-  if (longer.length === 0) return 1.0;
-  
-  const editDistance = getEditDistance(longer, shorter);
-  return (longer.length - editDistance) / longer.length;
-}
-
-function getEditDistance(str1: string, str2: string): number {
-  const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
-  
-  for (let i = 0; i <= str1.length; i++) matrix[0][i] = i;
-  for (let j = 0; j <= str2.length; j++) matrix[j][0] = j;
-  
-  for (let j = 1; j <= str2.length; j++) {
-    for (let i = 1; i <= str1.length; i++) {
-      if (str1[i - 1] === str2[j - 1]) {
-        matrix[j][i] = matrix[j - 1][i - 1];
-      } else {
-        matrix[j][i] = Math.min(
-          matrix[j - 1][i - 1] + 1,
-          matrix[j][i - 1] + 1,
-          matrix[j - 1][i] + 1
-        );
-      }
-    }
+function parseCardName(productName: string): { name: string; cardNumber: string } {
+  const hashMatch = productName.match(/^(.+?)\s+#(\w+)$/);
+  if (hashMatch) {
+    return {
+      name: hashMatch[1].trim(),
+      cardNumber: hashMatch[2]
+    };
   }
   
-  return matrix[str2.length][str1.length];
-}
-
-// Extract card number from product name
-function extractCardNumber(productName: string): string | null {
-  const match = productName.match(/#(\d+)/);
-  return match ? match[1] : null;
-}
-
-// Clean set name for matching
-function cleanSetName(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^\w\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-// Check if product is a trading card
-function isTradingCard(product: PriceChartingProduct): boolean {
-  const consoleName = product['console-name']?.toLowerCase() || '';
-  const productName = product['product-name']?.toLowerCase() || '';
-  
-  const tradingCardIndicators = [
-    'trading card',
-    'card',
-    'marvel',
-    'x-men',
-    'spider-man',
-    'fantastic four',
-    'avengers',
-    'wolverine',
-    'deadpool',
-    'hulk',
-    'iron man',
-    'captain america',
-    'thor'
-  ];
-  
-  const excludePatterns = [
-    'playstation',
-    'xbox',
-    'nintendo',
-    'pc',
-    'game',
-    'video',
-    'dvd',
-    'blu-ray',
-    'figure',
-    'toy',
-    'funko'
-  ];
-  
-  const hasCardIndicator = tradingCardIndicators.some(indicator => 
-    consoleName.includes(indicator) || productName.includes(indicator)
-  );
-  
-  const hasExcludePattern = excludePatterns.some(pattern =>
-    consoleName.includes(pattern) || productName.includes(pattern)
-  );
-  
-  return hasCardIndicator && !hasExcludePattern;
-}
-
-// Log progress to file
-function logProgress(message: string) {
-  const timestamp = new Date().toISOString();
-  const logEntry = `${timestamp}: ${message}\n`;
-  console.log(message);
-  writeFileSync('complete-import.log', logEntry, { flag: 'a' });
-}
-
-export async function importPriceChartingCards(): Promise<ImportResult> {
-  const apiToken = process.env.PRICECHARTING_API_TOKEN;
-  
-  if (!apiToken) {
-    throw new Error('PRICECHARTING_API_TOKEN environment variable is required');
+  const numberMatch = productName.match(/^(.+?)\s+(\d+)$/);
+  if (numberMatch) {
+    return {
+      name: numberMatch[1].trim(),
+      cardNumber: numberMatch[2]
+    };
   }
   
-  logProgress('🚀 Starting COMPLETE import for ALL 1,114 sets...');
+  // Generate a unique card number based on the product name
+  const cardNumber = productName.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 10) || 'PROMO';
   
-  const allSets = await db.select().from(cardSets);
-  logProgress(`📊 Found ${allSets.length} sets to process`);
-  
-  const result: ImportResult = {
-    setsProcessed: 0,
-    setsInserted: 0,
-    setsSkipped: 0,
-    cardsProcessed: 0,
-    cardsInserted: 0,
-    cardsSkipped: 0,
-    errors: [],
-    skippedItems: []
+  return {
+    name: productName.trim(),
+    cardNumber: cardNumber
   };
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchPriceChartingProducts(query: string): Promise<PriceChartingProduct[]> {
+  const url = `https://www.pricecharting.com/api/products?platform=trading-card&q=${encodeURIComponent(query)}&t=${API_KEY}`;
   
-  // Process ALL sets
-  for (const [index, set] of allSets.entries()) {
-    const setNumber = index + 1;
-    result.setsProcessed++;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
     
-    logProgress(`🔍 [${setNumber}/${allSets.length}] Processing: "${set.name}"`);
+    const data: PriceChartingResponse = await response.json();
+    return data.products || [];
+  } catch (error) {
+    console.error(`Error fetching from PriceCharting: ${error}`);
+    return [];
+  }
+}
+
+async function processSet(set: any, setIndex: number, totalSets: number): Promise<number> {
+  console.log(`[${setIndex + 1}/${totalSets}] Processing: "${set.name}" (ID: ${set.id})`);
+  
+  // Get existing cards in this set
+  const existingCards = await db
+    .select({ name: cards.name, cardNumber: cards.cardNumber })
+    .from(cards)
+    .where(eq(cards.setId, set.id));
+  
+  const existingCardMap = new Map();
+  existingCards.forEach(card => {
+    const key = `${card.name}|${card.cardNumber || ''}`;
+    existingCardMap.set(key, true);
+  });
+  
+  console.log(`  Current cards in set: ${existingCards.length}`);
+  
+  // Format set name for PriceCharting query
+  const query = formatSetName(set.name);
+  console.log(`  Query: "${query}"`);
+  
+  // Fetch products from PriceCharting
+  const products = await fetchPriceChartingProducts(query);
+  console.log(`  Found ${products.length} products from PriceCharting`);
+  
+  if (products.length === 0) {
+    console.log(`  ⚠️  No products found for "${set.name}"`);
+    return 0;
+  }
+  
+  // Process each product
+  let addedCount = 0;
+  
+  for (const product of products) {
+    const { name, cardNumber } = parseCardName(product['product-name']);
+    const key = `${name}|${cardNumber || ''}`;
     
+    // Skip if card already exists
+    if (existingCardMap.has(key)) {
+      continue;
+    }
+    
+    // Add new card
     try {
-      // Get existing cards for this set
-      const existingCards = await db.select().from(cards).where(eq(cards.setId, set.id));
-      const existingCardNames = new Set(existingCards.map(card => card.name.toLowerCase()));
-      
-      logProgress(`📋 Found ${existingCards.length} existing cards in set`);
-      
-      // Search PriceCharting
-      const searchQuery = set.name;
-      const url = `https://www.pricecharting.com/api/products?t=${apiToken}&q=${encodeURIComponent(searchQuery)}`;
-      
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        const error = `HTTP ${response.status}: ${response.statusText}`;
-        result.errors.push(error);
-        result.skippedItems.push({
-          type: 'set',
-          name: set.name,
-          reason: error
-        });
-        continue;
-      }
-      
-      const data: PriceChartingResponse = await response.json();
-      
-      if (data.status !== 'success') {
-        const error = `API Error: ${data.status}`;
-        result.errors.push(error);
-        result.skippedItems.push({
-          type: 'set',
-          name: set.name,
-          reason: error
-        });
-        continue;
-      }
-      
-      // Filter for trading cards that match this set
-      const tradingCards = data.products.filter(product => {
-        const consoleName = product['console-name']?.toLowerCase() || '';
-        const setNameLower = set.name.toLowerCase();
-        
-        if (!isTradingCard(product)) {
-          return false;
-        }
-        
-        const cleanedConsole = cleanSetName(consoleName);
-        const cleanedSet = cleanSetName(setNameLower);
-        
-        // Strategy 1: Direct similarity match (85% threshold)
-        const directSimilarity = calculateSimilarity(cleanedConsole, cleanedSet);
-        if (directSimilarity >= 0.85) {
-          return true;
-        }
-        
-        // Strategy 2: Word-based matching (60% of words must match)
-        const setWords = cleanedSet.split(' ').filter(word => word.length > 2);
-        const consoleWords = cleanedConsole.split(' ');
-        const matchingWords = setWords.filter(word => consoleWords.includes(word));
-        const wordMatchRatio = matchingWords.length / setWords.length;
-        
-        if (wordMatchRatio >= 0.6) {
-          return true;
-        }
-        
-        // Strategy 3: Pattern-based matching
-        const yearMatch = /\d{4}/.exec(cleanedSet);
-        const manufacturerMatch = /(upper deck|topps|panini|fleer)/.exec(cleanedSet);
-        const productMatch = /(marvel|platinum|chrome|ultra|prizm)/.exec(cleanedSet);
-        
-        if (yearMatch && manufacturerMatch && productMatch) {
-          const hasYear = cleanedConsole.includes(yearMatch[0]);
-          const hasManufacturer = cleanedConsole.includes(manufacturerMatch[0]);
-          const hasProduct = cleanedConsole.includes(productMatch[0]);
-          
-          if (hasYear && hasManufacturer && hasProduct) {
-            return true;
-          }
-        }
-        
-        return false;
+      await db.insert(cards).values({
+        name: name,
+        cardNumber: cardNumber,
+        setId: set.id,
+        frontImageUrl: product.image || null,
+        rarity: 'Common', // Default rarity
+        estimatedValue: product['loose-price'] ? product['loose-price'].toString() : null
       });
       
-      logProgress(`📦 Found ${tradingCards.length} matching cards in PriceCharting`);
-      result.cardsProcessed += tradingCards.length;
-      
-      let newCardsForSet = 0;
-      
-      // Add new cards
-      for (const card of tradingCards) {
-        const productName = card['product-name'];
-        
-        if (existingCardNames.has(productName.toLowerCase())) {
-          result.cardsSkipped++;
-          continue;
-        }
-        
-        const cardNumber = extractCardNumber(productName);
-        
-        await db.insert(cards).values({
-          setId: set.id,
-          name: productName,
-          cardNumber: cardNumber || '',
-          frontImageUrl: '',
-          backImageUrl: '',
-          variation: '',
-          rarity: 'Unknown',
-          description: '',
-          estimatedValue: card['loose-price'] || 0
-        });
-        
-        newCardsForSet++;
-        result.cardsInserted++;
-      }
-      
-      if (newCardsForSet > 0) {
-        result.setsInserted++;
-      } else {
-        result.setsSkipped++;
-      }
-      
-      logProgress(`✅ Added ${newCardsForSet} new cards to set "${set.name}"`);
-      
-      // Progress update every 10 sets
-      if (setNumber % 10 === 0) {
-        logProgress(`📊 Progress: ${setNumber}/${allSets.length} sets processed (${result.cardsInserted} cards added)`);
-      }
-      
-      // Rate limiting - wait 30 seconds between requests
-      if (index < allSets.length - 1) {
-        const remaining = allSets.length - index - 1;
-        logProgress(`⏱️  Waiting 30 seconds... (${remaining} sets remaining)`);
-        await new Promise(resolve => setTimeout(resolve, 30000));
-      }
-      
+      addedCount++;
     } catch (error) {
-      const errorMessage = `Error processing set "${set.name}": ${error instanceof Error ? error.message : String(error)}`;
-      result.errors.push(errorMessage);
-      result.skippedItems.push({
-        type: 'set',
-        name: set.name,
-        reason: errorMessage
-      });
-      logProgress(`❌ ${errorMessage}`);
+      console.error(`  Error adding card "${name}": ${error}`);
     }
   }
   
-  logProgress('🎉 IMPORT COMPLETE!');
-  logProgress(`📊 Final Results:`);
-  logProgress(`   - Total sets processed: ${result.setsProcessed}`);
-  logProgress(`   - Sets with new cards: ${result.setsInserted}`);
-  logProgress(`   - Sets skipped: ${result.setsSkipped}`);
-  logProgress(`   - Total cards processed: ${result.cardsProcessed}`);
-  logProgress(`   - Total new cards added: ${result.cardsInserted}`);
-  logProgress(`   - Cards skipped (already exist): ${result.cardsSkipped}`);
-  logProgress(`   - Errors: ${result.errors.length}`);
-  
-  return result;
+  console.log(`  ✅ Added ${addedCount} new cards to set`);
+  return addedCount;
 }
 
-// Only run if called directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  importPriceChartingCards()
-    .then(result => {
-      console.log('\n🎯 Final Import Results:');
-      console.log(`   Sets processed: ${result.setsProcessed}`);
-      console.log(`   Sets with new cards: ${result.setsInserted}`);
-      console.log(`   Sets skipped: ${result.setsSkipped}`);
-      console.log(`   Cards processed: ${result.cardsProcessed}`);
-      console.log(`   Cards inserted: ${result.cardsInserted}`);
-      console.log(`   Cards skipped: ${result.cardsSkipped}`);
-      console.log(`   Errors: ${result.errors.length}`);
-      
-      if (result.errors.length > 0) {
-        console.log('\n❌ Errors:');
-        result.errors.forEach(error => console.log(`   - ${error}`));
+async function runCompleteImport(): Promise<void> {
+  console.log('='.repeat(50));
+  console.log('COMPLETE PRICECHARTING IMPORT - PROCESSING ALL SETS');
+  console.log('='.repeat(50));
+  
+  if (!API_KEY) {
+    console.error('❌ PRICECHARTING_API_KEY environment variable not set');
+    process.exit(1);
+  }
+  
+  console.log('✅ API Key present');
+  console.log(`⏱️  Delay between requests: ${DELAY_BETWEEN_REQUESTS}ms`);
+  
+  // Get baseline card count
+  const baselineResult = await db.select().from(cards);
+  const baselineCount = baselineResult.length;
+  console.log(`📊 Baseline card count: ${baselineCount}`);
+  
+  // Get all card sets
+  const allSets = await db.select().from(cardSets).orderBy(cardSets.id);
+  const totalSets = allSets.length;
+  console.log(`📁 Total sets to process: ${totalSets}`);
+  
+  let totalAdded = 0;
+  let processedSets = 0;
+  
+  // Process sets in batches
+  for (let i = 0; i < allSets.length; i += BATCH_SIZE) {
+    const batch = allSets.slice(i, i + BATCH_SIZE);
+    
+    for (const set of batch) {
+      try {
+        const addedCount = await processSet(set, i + batch.indexOf(set), totalSets);
+        totalAdded += addedCount;
+        processedSets++;
+        
+        // Add delay between requests
+        await sleep(DELAY_BETWEEN_REQUESTS);
+      } catch (error) {
+        console.error(`❌ Error processing set "${set.name}": ${error}`);
       }
-      
-      console.log('\n✅ Import completed successfully!');
-      process.exit(0);
-    })
-    .catch(error => {
-      console.error('❌ Fatal error:', error);
-      process.exit(1);
-    });
+    }
+    
+    // Progress update every batch
+    console.log(`\n📊 PROGRESS UPDATE: ${processedSets}/${totalSets} sets processed (${Math.round(processedSets / totalSets * 100)}%)`);
+    console.log(`🆕 Total new cards added so far: ${totalAdded}`);
+    console.log('-'.repeat(50));
+  }
+  
+  // Final summary
+  const finalResult = await db.select().from(cards);
+  const finalCount = finalResult.length;
+  
+  console.log('\n' + '='.repeat(50));
+  console.log('🎉 IMPORT COMPLETE!');
+  console.log('='.repeat(50));
+  console.log(`📊 Final Statistics:`);
+  console.log(`   - Sets processed: ${processedSets}/${totalSets}`);
+  console.log(`   - Cards before: ${baselineCount}`);
+  console.log(`   - Cards after: ${finalCount}`);
+  console.log(`   - New cards added: ${totalAdded}`);
+  console.log(`   - Database growth: ${((finalCount - baselineCount) / baselineCount * 100).toFixed(1)}%`);
+  console.log('='.repeat(50));
 }
+
+// Run the import
+runCompleteImport().catch(error => {
+  console.error('❌ Import failed:', error);
+  process.exit(1);
+});
