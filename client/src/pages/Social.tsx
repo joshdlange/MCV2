@@ -481,7 +481,6 @@ export default function Social() {
         </div>
         <p className="text-gray-600 mt-2">Connect with friends and show off your collection</p>
       </div>
-
       {/* Comic-style tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className={`grid w-full ${viewingProfile ? 'grid-cols-4' : 'grid-cols-3'} bg-transparent p-0 h-auto gap-1 mb-4`}>
@@ -546,7 +545,7 @@ export default function Social() {
               <CardHeader className="bg-gradient-to-r from-marvel-red to-red-600 text-white p-3" style={{ backgroundColor: '#EF4444' }}>
                 <CardTitle className="font-bebas text-lg tracking-wide flex items-center" style={{ color: 'white' }}>
                   <Users className="w-5 h-5 mr-2" style={{ color: 'white' }} />
-                  <span style={{ color: 'white' }}>MY HEROES ({friends.length})</span>
+                  <span style={{ color: 'white' }} className="text-[#151515]">MY HEROES ({friends.length})</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4">
@@ -1052,7 +1051,7 @@ export default function Social() {
                                 const response = await fetch('/api/social/messages/image', {
                                   method: 'POST',
                                   headers: {
-                                    ...await getAuthHeaders(),
+                                    ...(await getAuthHeaders()),
                                   },
                                   body: formData,
                                 });
@@ -1587,7 +1586,6 @@ export default function Social() {
           )}
         </TabsContent>
       </Tabs>
-      
       {/* Card Detail Modal */}
       <CardDetailModal
         card={selectedCard}
