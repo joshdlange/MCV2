@@ -6,9 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Users, Award, Star, Eye, EyeOff, MapPin, Globe, Calendar, TrendingUp } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, Users, Award, Star, Eye, EyeOff, MapPin, Globe, Calendar, TrendingUp, Search, Grid, List, BookOpen } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
+import { CardDetailModal } from "@/components/cards/card-detail-modal";
+import type { CardWithSet } from "@/types/database";
 
 interface FriendProfileData {
   user: {
@@ -55,6 +59,11 @@ export default function FriendProfile() {
   const { friendId } = useParams<{ friendId: string }>();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("profile");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSet, setSelectedSet] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
+  const [showCardDetail, setShowCardDetail] = useState(false);
   const { user } = useAuth();
 
   // Helper function to get auth headers
@@ -135,6 +144,51 @@ export default function FriendProfile() {
 
   const friend = friendProfile.user;
   const stats = friendProfile.stats;
+
+  // Filter and search functionality
+  const uniqueSets = Array.from(new Set(friendCollection.map((item: CollectionItem) => item.setName)))
+    .sort()
+    .map(setName => ({ value: setName, label: setName }));
+
+  const filteredCollection = friendCollection.filter((item: CollectionItem) => {
+    const matchesSearch = searchQuery === "" || 
+      item.cardName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.cardNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.setName.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesSet = selectedSet === "all" || item.setName === selectedSet;
+    
+    return matchesSearch && matchesSet;
+  });
+
+  const handleCardClick = (item: CollectionItem) => {
+    // Convert CollectionItem to CardWithSet format for the modal
+    const cardWithSet: CardWithSet = {
+      id: item.cardId,
+      setId: 0, // We don't have setId in CollectionItem
+      cardNumber: item.cardNumber,
+      name: item.cardName,
+      variation: null,
+      rarity: item.rarity,
+      isInsert: false,
+      description: null,
+      frontImageUrl: item.frontImageUrl,
+      backImageUrl: null,
+      estimatedValue: item.estimatedValue,
+      cardSet: {
+        id: 0,
+        name: item.setName,
+        slug: '',
+        year: null,
+        description: null,
+        totalCards: null,
+        imageUrl: null,
+      }
+    };
+    
+    setSelectedCard(cardWithSet);
+    setShowCardDetail(true);
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
@@ -287,7 +341,7 @@ export default function FriendProfile() {
               <CardHeader className="bg-gradient-to-r from-green-500 to-green-600 text-white">
                 <CardTitle className="flex items-center">
                   <Star className="w-5 h-5 mr-2" />
-                  {friend.displayName || friend.username}'s Collection ({friendCollection.length})
+                  {friend.displayName || friend.username}'s Collection ({filteredCollection.length} of {friendCollection.length})
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
@@ -309,37 +363,138 @@ export default function FriendProfile() {
                     <p className="text-gray-500">This collection is empty.</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {friendCollection.slice(0, 12).map((item: CollectionItem) => (
-                      <div key={item.id} className="bg-white rounded-lg border-2 border-gray-200 p-4 hover:shadow-lg transition-shadow">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-16 h-20 bg-gray-200 rounded flex items-center justify-center flex-shrink-0">
-                            {item.frontImageUrl ? (
-                              <img src={item.frontImageUrl} alt={item.cardName} className="w-full h-full object-cover rounded" />
-                            ) : (
-                              <span className="text-xs text-gray-500">No Image</span>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-sm text-gray-900 truncate">{item.cardName}</h4>
-                            <p className="text-xs text-gray-600">#{item.cardNumber}</p>
-                            <p className="text-xs text-gray-500 truncate">{item.setName}</p>
-                            <div className="flex items-center justify-between mt-2">
-                              <Badge variant="secondary" className="text-xs">
-                                {item.rarity}
-                              </Badge>
-                              <span className="text-xs text-gray-500">{item.condition}</span>
-                            </div>
-                            {item.estimatedValue && (
-                              <p className="text-xs text-green-600 font-semibold mt-1">
-                                ${item.estimatedValue.toFixed(2)}
-                              </p>
-                            )}
-                          </div>
+                  <>
+                    {/* Search and Filter Controls */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                          <Input
+                            placeholder="Search cards..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 w-64 bg-white text-gray-900 placeholder:text-gray-500"
+                          />
                         </div>
+                        
+                        <Select value={selectedSet} onValueChange={setSelectedSet}>
+                          <SelectTrigger className="w-48">
+                            <SelectValue placeholder="Filter by set" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Sets</SelectItem>
+                            {uniqueSets.map(set => (
+                              <SelectItem key={set.value} value={set.value}>
+                                {set.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
-                    ))}
-                  </div>
+                      
+                      <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+                        <Button
+                          variant={viewMode === "grid" ? "default" : "ghost"}
+                          size="sm"
+                          onClick={() => setViewMode("grid")}
+                          className={`rounded-none px-3 ${viewMode === "grid" ? "text-white" : "text-green-600 hover:text-green-600"}`}
+                        >
+                          <Grid className="w-4 h-4 mr-1" />
+                          Grid
+                        </Button>
+                        <Button
+                          variant={viewMode === "list" ? "default" : "ghost"}
+                          size="sm"
+                          onClick={() => setViewMode("list")}
+                          className={`rounded-none px-3 ${viewMode === "list" ? "text-white" : "text-green-600 hover:text-green-600"}`}
+                        >
+                          <List className="w-4 h-4 mr-1" />
+                          List
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Collection Display */}
+                    {filteredCollection.length === 0 ? (
+                      <div className="text-center py-12">
+                        <Search className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                        <p className="text-xl font-bold text-gray-600 mb-2">No Cards Found</p>
+                        <p className="text-gray-500">Try adjusting your search or filter criteria.</p>
+                      </div>
+                    ) : viewMode === "grid" ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filteredCollection.map((item: CollectionItem) => (
+                          <div 
+                            key={item.id} 
+                            className="bg-white rounded-lg border-2 border-gray-200 p-4 hover:shadow-lg transition-shadow cursor-pointer hover:border-green-300" 
+                            onClick={() => handleCardClick(item)}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className="w-16 h-20 bg-gray-200 rounded flex items-center justify-center flex-shrink-0">
+                                {item.frontImageUrl ? (
+                                  <img src={item.frontImageUrl} alt={item.cardName} className="w-full h-full object-cover rounded" />
+                                ) : (
+                                  <span className="text-xs text-gray-500">No Image</span>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-sm text-gray-900 truncate">{item.cardName}</h4>
+                                <p className="text-xs text-gray-600">#{item.cardNumber}</p>
+                                <p className="text-xs text-gray-500 truncate">{item.setName}</p>
+                                <div className="flex items-center justify-between mt-2">
+                                  <Badge variant="secondary" className="text-xs">
+                                    {item.rarity}
+                                  </Badge>
+                                  <span className="text-xs text-gray-500">{item.condition}</span>
+                                </div>
+                                {item.estimatedValue && (
+                                  <p className="text-xs text-green-600 font-semibold mt-1">
+                                    ${item.estimatedValue.toFixed(2)}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {filteredCollection.map((item: CollectionItem) => (
+                          <div 
+                            key={item.id} 
+                            className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer hover:border-green-300"
+                            onClick={() => handleCardClick(item)}
+                          >
+                            <div className="flex items-center space-x-4">
+                              <div className="w-12 h-16 bg-gray-200 rounded flex items-center justify-center flex-shrink-0">
+                                {item.frontImageUrl ? (
+                                  <img src={item.frontImageUrl} alt={item.cardName} className="w-full h-full object-cover rounded" />
+                                ) : (
+                                  <span className="text-xs text-gray-500">No Image</span>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <h4 className="font-semibold text-gray-900 truncate">{item.cardName}</h4>
+                                  {item.estimatedValue && (
+                                    <p className="text-green-600 font-semibold">${item.estimatedValue.toFixed(2)}</p>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-600">#{item.cardNumber}</p>
+                                <p className="text-sm text-gray-500 truncate">{item.setName}</p>
+                                <div className="flex items-center space-x-3 mt-2">
+                                  <Badge variant="secondary" className="text-xs">
+                                    {item.rarity}
+                                  </Badge>
+                                  <span className="text-xs text-gray-500">{item.condition}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -374,7 +529,11 @@ export default function FriendProfile() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {friendWishlist.slice(0, 12).map((item: CollectionItem) => (
-                      <div key={item.id} className="bg-white rounded-lg border-2 border-gray-200 p-4 hover:shadow-lg transition-shadow">
+                      <div 
+                        key={item.id} 
+                        className="bg-white rounded-lg border-2 border-gray-200 p-4 hover:shadow-lg transition-shadow cursor-pointer hover:border-purple-300"
+                        onClick={() => handleCardClick(item)}
+                      >
                         <div className="flex items-center space-x-3">
                           <div className="w-12 h-16 bg-gray-200 rounded flex items-center justify-center">
                             {item.frontImageUrl ? (
@@ -401,6 +560,18 @@ export default function FriendProfile() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Card Detail Modal */}
+      <CardDetailModal
+        card={selectedCard}
+        isOpen={showCardDetail}
+        onClose={() => {
+          setShowCardDetail(false);
+          setSelectedCard(null);
+        }}
+        isInCollection={false}
+        isInWishlist={false}
+      />
     </div>
   );
 }
