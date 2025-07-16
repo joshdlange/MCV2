@@ -2060,69 +2060,44 @@ export class DatabaseStorage implements IStorage {
       throw new Error("You don't have permission to view this collection");
     }
     
-    // Get friend's collection
+    // Get friend's collection with flattened structure
     const collections = await db
-      .select({
-        id: userCollections.id,
-        userId: userCollections.userId,
-        cardId: userCollections.cardId,
-        condition: userCollections.condition,
-        acquiredDate: userCollections.acquiredDate,
-        salePrice: userCollections.salePrice,
-        cardId_: cards.id,
-        cardName: cards.name,
-        cardNumber: cards.cardNumber,
-        variation: cards.variation,
-        rarity: cards.rarity,
-        isInsert: cards.isInsert,
-        description: cards.description,
-        frontImageUrl: cards.frontImageUrl,
-        backImageUrl: cards.backImageUrl,
-        estimatedValue: cards.estimatedValue,
-        setId: cardSets.id,
-        setName: cardSets.name,
-        setSlug: cardSets.slug,
-        setYear: cardSets.year,
-        setManufacturer: cardSets.manufacturer,
-        setDescription: cardSets.description,
-        setTotalCards: cardSets.totalCards,
-        setImageUrl: cardSets.imageUrl,
-      })
+      .select()
       .from(userCollections)
       .innerJoin(cards, eq(userCollections.cardId, cards.id))
       .innerJoin(cardSets, eq(cards.setId, cardSets.id))
       .where(eq(userCollections.userId, friendUserId))
       .orderBy(userCollections.acquiredDate);
 
-    return collections.map(collection => ({
-      id: collection.id,
-      userId: collection.userId,
-      cardId: collection.cardId,
-      condition: collection.condition,
-      acquiredDate: collection.acquiredDate,
-      pricePaid: collection.salePrice,
+    return collections.map(row => ({
+      id: row.user_collections.id,
+      userId: row.user_collections.userId,
+      cardId: row.user_collections.cardId,
+      condition: row.user_collections.condition,
+      acquiredDate: row.user_collections.acquiredDate,
+      pricePaid: row.user_collections.salePrice,
       card: {
-        id: collection.cardId_,
-        setId: collection.setId,
-        cardNumber: collection.cardNumber,
-        name: collection.cardName,
-        variation: collection.variation,
-        rarity: collection.rarity,
-        isInsert: collection.isInsert,
-        description: collection.description,
-        frontImageUrl: collection.frontImageUrl,
-        backImageUrl: collection.backImageUrl,
-        estimatedValue: collection.estimatedValue,
-        imageUrl: collection.frontImageUrl,
+        id: row.cards.id,
+        setId: row.cards.setId,
+        cardNumber: row.cards.cardNumber,
+        name: row.cards.name,
+        variation: row.cards.variation,
+        rarity: row.cards.rarity,
+        isInsert: row.cards.isInsert,
+        description: row.cards.description,
+        frontImageUrl: row.cards.frontImageUrl,
+        backImageUrl: row.cards.backImageUrl,
+        estimatedValue: row.cards.estimatedValue,
+        imageUrl: row.cards.frontImageUrl,
         cardSet: {
-          id: collection.setId,
-          name: collection.setName,
-          slug: collection.setSlug,
-          year: collection.setYear,
-          manufacturer: collection.setManufacturer,
-          description: collection.setDescription,
-          totalCards: collection.setTotalCards,
-          imageUrl: collection.setImageUrl,
+          id: row.card_sets.id,
+          name: row.card_sets.name,
+          slug: row.card_sets.slug,
+          year: row.card_sets.year,
+          manufacturer: null,
+          description: row.card_sets.description,
+          totalCards: row.card_sets.totalCards,
+          imageUrl: row.card_sets.imageUrl,
         }
       }
     }));
@@ -2140,55 +2115,45 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Wishlist is not publicly visible");
     }
     
-    // Get friend's wishlist
+    // Get friend's wishlist with flattened structure
     const wishlists = await db
-      .select({
-        id: userWishlists.id,
-        userId: userWishlists.userId,
-        cardId: userWishlists.cardId,
-        priority: userWishlists.priority,
-        notes: userWishlists.notes,
-        addedDate: userWishlists.addedDate,
-        card: {
-          id: cards.id,
-          setId: cards.setId,
-          cardNumber: cards.cardNumber,
-          name: cards.name,
-          variation: cards.variation,
-          rarity: cards.rarity,
-          isInsert: cards.isInsert,
-          description: cards.description,
-          frontImageUrl: cards.frontImageUrl,
-          backImageUrl: cards.backImageUrl,
-          estimatedValue: cards.estimatedValue,
-          cardSet: {
-            id: cardSets.id,
-            name: cardSets.name,
-            slug: cardSets.slug,
-            year: cardSets.year,
-            manufacturer: cardSets.manufacturer,
-            description: cardSets.description,
-            totalCards: cardSets.totalCards,
-            imageUrl: cardSets.imageUrl,
-          }
-        }
-      })
+      .select()
       .from(userWishlists)
       .innerJoin(cards, eq(userWishlists.cardId, cards.id))
       .innerJoin(cardSets, eq(cards.setId, cardSets.id))
       .where(eq(userWishlists.userId, friendUserId))
       .orderBy(userWishlists.priority, userWishlists.addedDate);
 
-    return wishlists.map(wishlist => ({
-      id: wishlist.id,
-      userId: wishlist.userId,
-      cardId: wishlist.cardId,
-      priority: wishlist.priority,
-      notes: wishlist.notes,
-      addedDate: wishlist.addedDate,
+    return wishlists.map(row => ({
+      id: row.user_wishlists.id,
+      userId: row.user_wishlists.userId,
+      cardId: row.user_wishlists.cardId,
+      priority: row.user_wishlists.priority,
+      notes: row.user_wishlists.notes,
+      addedDate: row.user_wishlists.addedDate,
       card: {
-        ...wishlist.card,
-        imageUrl: wishlist.card.frontImageUrl
+        id: row.cards.id,
+        setId: row.cards.setId,
+        cardNumber: row.cards.cardNumber,
+        name: row.cards.name,
+        variation: row.cards.variation,
+        rarity: row.cards.rarity,
+        isInsert: row.cards.isInsert,
+        description: row.cards.description,
+        frontImageUrl: row.cards.frontImageUrl,
+        backImageUrl: row.cards.backImageUrl,
+        estimatedValue: row.cards.estimatedValue,
+        imageUrl: row.cards.frontImageUrl,
+        cardSet: {
+          id: row.card_sets.id,
+          name: row.card_sets.name,
+          slug: row.card_sets.slug,
+          year: row.card_sets.year,
+          manufacturer: null,
+          description: row.card_sets.description,
+          totalCards: row.card_sets.totalCards,
+          imageUrl: row.card_sets.imageUrl,
+        }
       }
     }));
   }
