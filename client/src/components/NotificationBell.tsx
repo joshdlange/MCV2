@@ -119,7 +119,7 @@ export function NotificationBell() {
                       size="sm"
                       onClick={handleMarkAllRead}
                       disabled={markAllReadMutation.isPending}
-                      className="text-gray-700 border-gray-300 hover:bg-gray-50 hover:text-gray-900"
+                      className="text-white bg-gray-800 border-gray-600 hover:bg-gray-700"
                     >
                       Mark all read
                     </Button>
