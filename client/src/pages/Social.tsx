@@ -543,10 +543,10 @@ export default function Social() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Friends List with Find Heroes - Comic Panel Style */}
             <Card className="border-2 border-marvel-red bg-gradient-to-br from-white to-blue-50 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-marvel-red to-red-600 text-white p-3">
-                <CardTitle className="font-bebas text-lg tracking-wide flex items-center text-white">
-                  <Users className="w-5 h-5 mr-2 text-white" />
-                  <span className="text-white">MY HEROES ({friends.length})</span>
+              <CardHeader className="bg-gradient-to-r from-marvel-red to-red-600 text-white p-3" style={{ backgroundColor: '#EF4444' }}>
+                <CardTitle className="font-bebas text-lg tracking-wide flex items-center" style={{ color: 'white' }}>
+                  <Users className="w-5 h-5 mr-2" style={{ color: 'white' }} />
+                  <span style={{ color: 'white' }}>MY HEROES ({friends.length})</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4">
