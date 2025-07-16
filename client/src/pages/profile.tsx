@@ -155,9 +155,17 @@ function SocialBadgesSection() {
             onClick={() => navigate('/social?tab=badges')}
           >
             <div className="w-16 h-16 mx-auto mb-2 flex items-center justify-center">
-              <div className="w-full h-full bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg">
-                <GetBadgeIcon badgeName={userBadge.badge.name} />
-              </div>
+              {userBadge.badge.iconUrl ? (
+                <img 
+                  src={userBadge.badge.iconUrl} 
+                  alt={userBadge.badge.name}
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg">
+                  <GetBadgeIcon badgeName={userBadge.badge.name} />
+                </div>
+              )}
             </div>
             <p className="text-xs font-semibold text-gray-900 mb-2">{userBadge.badge.name}</p>
             <Badge 
