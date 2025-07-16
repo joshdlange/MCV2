@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { badges, userBadges, users, messages, friends, cardSets, userCollections, cards } from "../shared/schema";
 import { eq, and, count, gte, lte, sql } from "drizzle-orm";
+import { notificationService } from "./notification-service";
 
 export class BadgeService {
   // List of curse words for Potty Mouth badge
@@ -40,9 +41,8 @@ export class BadgeService {
     if (badge[0]) {
       console.log(`🏆 BADGE EARNED: User ${userId} earned "${badge[0].name}" (${badge[0].rarity})`);
       
-      // TODO: Add notification system here
-      // This is where you would trigger a notification to the user
-      // For now, we'll just log it
+      // Create notification for badge earned
+      await notificationService.createBadgeNotification(userId, badge[0].name, badge[0].rarity);
     }
   }
 

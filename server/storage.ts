@@ -10,6 +10,7 @@ import {
   messages,
   badges,
   userBadges,
+  notifications,
   type User, 
   type InsertUser,
   type MainSet,
@@ -159,6 +160,12 @@ interface IStorage {
   getProfileStats(userId: number): Promise<ProfileStats>;
   updateProfileVisibility(userId: number, visibility: "public" | "friends" | "private"): Promise<void>;
   canViewProfile(viewerUserId: number, targetUserId: number): Promise<boolean>;
+
+  // Notifications
+  getUserNotifications(userId: number, limit?: number): Promise<any[]>;
+  getUnreadNotificationCount(userId: number): Promise<number>;
+  markNotificationAsRead(notificationId: number): Promise<void>;
+  markAllNotificationsAsRead(userId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2215,6 +2222,42 @@ export class DatabaseStorage implements IStorage {
     }
 
     return await searchQuery;
+  }
+
+  // Notification methods
+  async getUserNotifications(userId: number, limit: number = 20): Promise<any[]> {
+    return await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt))
+      .limit(limit);
+  }
+
+  async getUnreadNotificationCount(userId: number): Promise<number> {
+    const result = await db
+      .select({ count: count() })
+      .from(notifications)
+      .where(and(
+        eq(notifications.userId, userId),
+        eq(notifications.isRead, false)
+      ));
+    
+    return result[0].count;
+  }
+
+  async markNotificationAsRead(notificationId: number): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.id, notificationId));
+  }
+
+  async markAllNotificationsAsRead(userId: number): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.userId, userId));
   }
 }
 

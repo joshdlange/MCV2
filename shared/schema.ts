@@ -123,6 +123,18 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Notifications system
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  type: text("type").notNull(), // 'badge_earned', 'friend_request', 'message', etc.
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  data: text("data"), // JSON string for additional data
+  isRead: boolean("is_read").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Badges system
 export const badges = pgTable("badges", {
   id: serial("id").primaryKey(),

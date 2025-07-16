@@ -1,7 +1,8 @@
 import { useAppStore } from "@/lib/store";
-import { Menu, Search, MessageCircle } from "lucide-react";
+import { Menu, Search } from "lucide-react";
 import heroLogoWhite from "@assets/noun-super-hero-380874-FFFFFF.png";
 import { useLocation } from "wouter";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export function MobileHeader() {
   const { toggleMobileMenu } = useAppStore();
@@ -30,19 +31,7 @@ export function MobileHeader() {
         </div>
       </div>
       <div className="flex items-center space-x-3">
-        <button 
-          className="text-gray-600 hover:text-gray-900"
-          onClick={() => {
-            setLocation('/social');
-            // After navigating, switch to messages tab
-            setTimeout(() => {
-              const event = new CustomEvent('switchToMessagesTab');
-              window.dispatchEvent(event);
-            }, 100);
-          }}
-        >
-          <MessageCircle className="w-5 h-5" />
-        </button>
+        <NotificationBell />
         <button 
           className="text-gray-600 hover:text-gray-900"
           onClick={() => setLocation('/card-search')}
