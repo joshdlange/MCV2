@@ -273,6 +273,7 @@ export default function Social() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["social/friend-requests"] });
       queryClient.invalidateQueries({ queryKey: ["social/friends"] });
+      queryClient.invalidateQueries({ queryKey: ["social/pending-invitations"] });
       toast({
         title: "Success",
         description: "Friend request responded to successfully",
@@ -358,6 +359,7 @@ export default function Social() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["social/friends"] });
+      queryClient.invalidateQueries({ queryKey: ["social/pending-invitations"] });
       toast({
         title: "Success",
         description: "Friend request sent successfully",

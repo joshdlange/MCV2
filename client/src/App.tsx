@@ -9,6 +9,8 @@ import { useAppStore } from "@/lib/store";
 import { Search } from "lucide-react";
 import { useLocation } from "wouter";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { NotificationBell } from "@/components/NotificationBell";
+import heroLogoWhite from "@assets/noun-super-hero-380874-FFFFFF.png";
 import { Login } from "@/components/auth/Login";
 import Dashboard from "@/pages/dashboard";
 import BrowseCards from "@/pages/browse-cards";
@@ -32,9 +34,31 @@ import SubscriptionCancelled from "@/pages/subscription-cancelled";
 import NotFound from "@/pages/not-found";
 
 function DesktopHeader() {
+  const [, setLocation] = useLocation();
+  
   return (
-    <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-2">
-      {/* Removed duplicate Quick Search - already in sidebar */}
+    <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-2 flex items-center justify-between">
+      <div className="flex items-center space-x-4">
+        <div className="w-8 h-8 bg-marvel-red rounded-lg flex items-center justify-center">
+          <img 
+            src={heroLogoWhite} 
+            alt="Marvel Card Vault" 
+            className="w-5 h-5 object-contain"
+          />
+        </div>
+        <h1 className="text-gray-900 font-bebas text-xl tracking-wide font-bold">
+          MARVEL CARD VAULT
+        </h1>
+      </div>
+      <div className="flex items-center space-x-4">
+        <NotificationBell />
+        <button 
+          className="text-gray-600 hover:text-gray-900 p-2"
+          onClick={() => setLocation('/card-search')}
+        >
+          <Search className="w-5 h-5" />
+        </button>
+      </div>
     </div>
   );
 }

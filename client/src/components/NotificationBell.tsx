@@ -24,23 +24,30 @@ export function NotificationBell() {
   const queryClient = useQueryClient();
 
   // Get unread notification count
-  const { data: unreadCount = 0 } = useQuery({
+  const { data: unreadCountData } = useQuery({
     queryKey: ['/api/notifications/unread-count'],
     refetchInterval: 30000, // Check every 30 seconds
   });
+  const unreadCount = (unreadCountData as { count: number })?.count || 0;
 
   // Get notifications
-  const { data: notifications = [] } = useQuery({
+  const { data: notificationsData } = useQuery({
     queryKey: ['/api/notifications'],
     enabled: isOpen,
   });
+  const notifications = (notificationsData as Notification[]) || [];
 
   // Mark notification as read
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: number) => {
-      return apiRequest(`/api/notifications/${notificationId}/read`, {
+      const response = await fetch(`/api/notifications/${notificationId}/read`, {
         method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('firebaseToken')}`,
+        },
       });
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
@@ -51,9 +58,14 @@ export function NotificationBell() {
   // Mark all as read
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('/api/notifications/mark-all-read', {
+      const response = await fetch('/api/notifications/mark-all-read', {
         method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('firebaseToken')}`,
+        },
       });
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
@@ -80,14 +92,14 @@ export function NotificationBell() {
       <Button
         variant="ghost"
         size="icon"
-        className="relative"
+        className="relative text-gray-700 hover:text-gray-900 hover:bg-gray-100 border border-gray-300 rounded-lg"
         onClick={() => setIsOpen(!isOpen)}
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
           <Badge
             variant="destructive"
-            className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+            className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500 text-white"
           >
             {unreadCount > 99 ? '99+' : unreadCount}
           </Badge>
