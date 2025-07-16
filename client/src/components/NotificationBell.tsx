@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Bell, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,7 @@ interface Notification {
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   // Get unread notification count
   const { data: unreadCountData } = useQuery({
@@ -80,6 +82,13 @@ export function NotificationBell() {
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.isRead) {
       markAsReadMutation.mutate(notification.id);
+    }
+    
+    // Handle navigation based on notification type
+    if (notification.type === 'badge_earned' || notification.type === 'achievement_unlocked') {
+      // Navigate to Social Hub Super Powers section
+      setLocation('/social?tab=badges');
+      setIsOpen(false);
     }
   };
 
