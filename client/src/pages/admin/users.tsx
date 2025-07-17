@@ -169,12 +169,12 @@ export default function AdminUsers() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {user.isAdmin ? (
-                        <Badge className="bg-red-100 text-red-800">
+                        <Badge className="bg-red-600 text-white border-red-600">
                           <Shield className="w-3 h-3 mr-1" />
                           Admin
                         </Badge>
                       ) : (
-                        <Badge variant="outline">User</Badge>
+                        <Badge className="bg-gray-100 text-gray-800 border-gray-300">User</Badge>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
