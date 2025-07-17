@@ -67,14 +67,28 @@ export function NotificationBell() {
           'Authorization': `Bearer ${localStorage.getItem('firebaseToken')}`,
         },
       });
+      if (!response.ok) {
+        throw new Error('Failed to mark all notifications as read');
+      }
       return response.json();
     },
     onSuccess: () => {
+      // Force refetch of both queries to ensure UI updates
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
+      queryClient.refetchQueries({ queryKey: ['/api/notifications/unread-count'] });
+      
       toast({
         title: "All notifications marked as read",
         description: "Your notifications have been cleared.",
+      });
+    },
+    onError: (error) => {
+      console.error('Mark all as read error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to mark all notifications as read. Please try again.",
+        variant: "destructive",
       });
     },
   });
@@ -94,6 +108,7 @@ export function NotificationBell() {
 
   const handleMarkAllRead = () => {
     markAllReadMutation.mutate();
+    setIsOpen(false); // Close the dropdown after marking all as read
   };
 
   return (
