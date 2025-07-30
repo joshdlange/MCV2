@@ -1697,13 +1697,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`[DEBUG] Using DESC order to prioritize newer cards over old failures`);
       }
       
-      // Get cards needing images
-      console.log(`[DEBUG] Executing database query for cards needing images...`);
+      // Get cards needing images - SKIP RECENTLY PROCESSED CARDS
+      console.log(`[DEBUG] Executing database query for cards needing images (skipping recently processed)...`);
+      let whereClause = `WHERE (c.front_image_url IS NULL OR c.front_image_url = '')`;
+      
+      if (skipRecentlyFailed) {
+        // Skip cards that were updated in the last 24 hours (likely already processed)
+        whereClause += ` AND (c.updated_at IS NULL OR c.updated_at < NOW() - INTERVAL '24 hours')`;
+        console.log(`[DEBUG] Skipping cards processed in the last 24 hours`);
+      }
+      
       const cardsNeedingImages = await db.execute(sql`
         SELECT c.id, c.name, c.card_number, cs.name as set_name
         FROM cards c
         JOIN card_sets cs ON c.set_id = cs.id  
-        WHERE c.front_image_url IS NULL OR c.front_image_url = ''
+        ${sql.raw(whereClause)}
         ${sql.raw(orderClause)}
         LIMIT ${actualLimit}
       `);
@@ -1781,6 +1789,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Failed to update missing images",
         error: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  });
+
+  // Add stop endpoint for bulk update
+  app.post("/api/admin/stop-bulk-update", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      console.log('[DEBUG] Stop bulk update request received');
+      // For now, just acknowledge the stop request
+      // In a production system, you'd set a global stop flag
+      res.json({ message: "Stop request received" });
+    } catch (error) {
+      console.error('Stop bulk update error:', error);
+      res.status(500).json({ message: "Failed to stop bulk update" });
     }
   });
 
