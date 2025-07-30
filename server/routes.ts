@@ -1398,6 +1398,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Main search endpoint (for frontend compatibility)
+  app.get("/api/search", async (req, res) => {
+    try {
+      const query = req.query.q as string;
+      
+      if (!query || query.length < 2) {
+        return res.json({ sets: [], cards: [] });
+      }
+
+      // Search card sets
+      const sets = await storage.searchCardSets(query);
+      
+      // Search individual cards with limit
+      const cards = await storage.getCards({ search: query });
+      const limitedCards = cards.slice(0, 20);
+
+      res.json({ sets, cards: limitedCards });
+    } catch (error) {
+      console.error('Search error:', error);
+      res.status(500).json({ message: "Failed to search" });
+    }
+  });
+
   // Optimized search endpoint
   app.get("/api/v2/search", async (req, res) => {
     const performanceStart = Date.now();

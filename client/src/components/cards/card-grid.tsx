@@ -41,9 +41,12 @@ export function CardGrid({
     if (filters.isInsert !== undefined) queryParams.set('isInsert', filters.isInsert.toString());
   }
 
-  const { data: cards, isLoading } = useQuery<CardWithSet[]>({
+  const { data: cardsResponse, isLoading } = useQuery<{ items?: CardWithSet[]; cards?: CardWithSet[] }>({
     queryKey: [filters.setId ? apiEndpoint : `${apiEndpoint}?${queryParams.toString()}`],
   });
+
+  // Handle both paginated response format (items) and direct array format (cards)
+  const cards = cardsResponse?.items || cardsResponse?.cards || cardsResponse || [];
 
   // Fetch user's collection and wishlist to show status indicators
   const { data: collection } = useQuery<CollectionItem[]>({
