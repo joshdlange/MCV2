@@ -1702,11 +1702,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let whereClause = `WHERE (c.front_image_url IS NULL OR c.front_image_url = '')`;
       
       if (skipRecentlyFailed) {
-        // TEMPORARY FIX: Skip logic disabled because updated_at timestamps were corrupted
-        // All cards have recent timestamps from database cleanup, so skip logic would exclude everything
-        // TODO: Implement proper image processing attempt tracking
-        console.log(`[DEBUG] Skip recently failed logic temporarily disabled due to timestamp corruption`);
-        console.log(`[DEBUG] Processing all cards regardless of updated_at timestamp`);
+        // Skip cards that have been processed recently using a different approach
+        // Use the last_image_search_attempt field instead of updated_at to avoid auto-update issues
+        whereClause += ` AND (c.last_image_search_attempt IS NULL OR c.last_image_search_attempt < NOW() - INTERVAL '30 days')`;
+        console.log(`[DEBUG] Skipping cards with image search attempts in the last 30 days`);
       }
       
       const cardsNeedingImages = await db.execute(sql`
@@ -1750,6 +1749,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             card.name,
             card.card_number
           );
+          
+          // Always update the last_image_search_attempt timestamp, regardless of success/failure
+          await db.execute(sql`
+            UPDATE cards 
+            SET last_image_search_attempt = NOW() 
+            WHERE id = ${Number(card.id)}
+          `);
           
           if (result.success) {
             successCount++;
