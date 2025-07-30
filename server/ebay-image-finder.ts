@@ -92,7 +92,7 @@ interface CardImageUpdate {
 }
 
 /**
- * Search eBay for card images using the exact format: ${setName} ${cardName} ${cardNumber} comc
+ * Search COMC eBay store specifically for card images using seller filter
  */
 async function searchEBayForCardImage(
   setName: string,
@@ -101,27 +101,94 @@ async function searchEBayForCardImage(
   description?: string
 ): Promise<string | null> {
   try {
-    // Use exact search format as specified
-    const searchTerms = `${setName} ${cardName} ${cardNumber} comc`.replace(/\s+/g, ' ').trim();
-    console.log(`eBay search with exact format: "${searchTerms}"`);
-
-    const ebayResult = await performEBaySearch(searchTerms);
-    if (ebayResult) {
-      console.log(`✅ Found image using eBay search`);
-      return ebayResult;
+    // Get access token first
+    const accessToken = await getEBayAccessToken();
+    if (!accessToken) {
+      console.log('Failed to get eBay access token, skipping eBay search');
+      return null;
     }
 
-    console.log(`❌ No image found on eBay`);
+    // First try: Full query with set name + card name + card number (COMC-scoped)
+    const fullQuery = `${setName} ${cardName} ${cardNumber}`.replace(/\s+/g, ' ').trim();
+    console.log(`🔍 COMC Search (full): "${fullQuery}"`);
+    
+    const fullResult = await performCOMCSearch(fullQuery, accessToken);
+    if (fullResult) {
+      console.log(`✅ Found COMC image (full query)`);
+      return fullResult;
+    }
+
+    // Second try: Loosened query without card number (COMC-scoped)
+    const loosenedQuery = `${setName} ${cardName}`.replace(/\s+/g, ' ').trim();
+    console.log(`🔄 COMC Search (loosened): "${loosenedQuery}"`);
+    
+    const loosenedResult = await performCOMCSearch(loosenedQuery, accessToken);
+    if (loosenedResult) {
+      console.log(`✅ Found COMC image (loosened query)`);
+      return loosenedResult;
+    }
+
+    console.log(`❌ No image found in COMC store`);
     return null;
 
   } catch (error) {
-    console.error('eBay search error:', error);
+    console.error('COMC eBay search error:', error);
     throw error;
   }
 }
 
-// Remove all extra search methods - only use eBay with the exact format specified
+/**
+ * Search COMC eBay store specifically using seller filter
+ */
+async function performCOMCSearch(searchQuery: string, accessToken: string): Promise<string | null> {
+  try {
+    const browseApiUrl = 'https://api.ebay.com/buy/browse/v1/item_summary/search';
+    const params = new URLSearchParams({
+      'q': searchQuery,
+      'filter': 'sellers:comc',  // This restricts to COMC store only
+      'limit': '10',
+      'fieldgroups': 'EXTENDED'
+    });
 
+    const response = await fetch(`${browseApiUrl}?${params}`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      console.error(`❌ eBay Browse API error: ${response.status} ${response.statusText}`);
+      return null;
+    }
+
+    const data: any = await response.json();
+
+    if (!data.itemSummaries || data.itemSummaries.length === 0) {
+      console.log('📭 No items found in COMC store');
+      return null;
+    }
+
+    // Extract the first available image from COMC results
+    for (const item of data.itemSummaries) {
+      if (item.image && item.image.imageUrl) {
+        console.log(`✅ Found COMC image: ${item.image.imageUrl}`);
+        return item.image.imageUrl;
+      }
+    }
+
+    console.log('📭 No images found in COMC results');
+    return null;
+
+  } catch (error) {
+    console.error('❌ COMC search error:', error);
+    return null;
+  }
+}
+
+// Legacy function kept for compatibility but updated to use COMC search
 async function performEBaySearch(searchTerms: string): Promise<string | null> {
   try {
     // Use modern eBay Browse API with OAuth2
