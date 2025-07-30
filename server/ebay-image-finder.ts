@@ -108,27 +108,18 @@ async function searchEBayForCardImage(
       return null;
     }
 
-    // First try: Full query with set name + card name + card number (COMC-scoped)
-    const fullQuery = `${setName} ${cardName} ${cardNumber}`.replace(/\s+/g, ' ').trim();
-    console.log(`🔍 COMC Search (full): "${fullQuery}"`);
+    // EXACT MATCH ONLY: Full query with set name + card name + card number (COMC-scoped)
+    // NO LOOSENED SEARCH to ensure we get the exact card variant
+    const exactQuery = `${setName} ${cardName} ${cardNumber}`.replace(/\s+/g, ' ').trim();
+    console.log(`🔍 COMC Search (EXACT ONLY): "${exactQuery}"`);
     
-    const fullResult = await performCOMCSearch(fullQuery, accessToken);
-    if (fullResult) {
-      console.log(`✅ Found COMC image (full query)`);
-      return fullResult;
+    const exactResult = await performCOMCSearch(exactQuery, accessToken);
+    if (exactResult) {
+      console.log(`✅ Found EXACT COMC image match`);
+      return exactResult;
     }
 
-    // Second try: Loosened query without card number (COMC-scoped)
-    const loosenedQuery = `${setName} ${cardName}`.replace(/\s+/g, ' ').trim();
-    console.log(`🔄 COMC Search (loosened): "${loosenedQuery}"`);
-    
-    const loosenedResult = await performCOMCSearch(loosenedQuery, accessToken);
-    if (loosenedResult) {
-      console.log(`✅ Found COMC image (loosened query)`);
-      return loosenedResult;
-    }
-
-    console.log(`❌ No image found in COMC store`);
+    console.log(`❌ No EXACT match found in COMC store - will not use inexact matches`);
     return null;
 
   } catch (error) {

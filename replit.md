@@ -116,6 +116,15 @@ The application implements comprehensive performance optimizations for handling 
 
 ```
 Changelog:
+- July 30, 2025: CRITICAL ACCURACY FIX - REMOVED LOOSENED SEARCH TO PREVENT WRONG CARD VARIANTS
+  - MAJOR ACCURACY IMPROVEMENT: Completely removed loosened search fallback that could return wrong card variants
+  - Fixed both card detail modal "Update Image" button and batch script to use EXACT MATCHES ONLY
+  - Previous issue: "Bullseye BF-21" could return "Bullseye BF-1" with loosened search (set name + card name only)
+  - NEW BEHAVIOR: Only returns images when exact query matches (set name + card name + card number)
+  - Both systems now guarantee variant accuracy - no more wrong card images
+  - Search query format: "2024 skybox metal universe avengers blast furnace Bullseye BF-21" (EXACT ONLY)
+  - Removed searchCOMCLoosened function completely from batch script
+  - Updated all logging to emphasize "EXACT MATCH ONLY" behavior
 - July 30, 2025: COMC-SPECIFIC IMAGE POPULATION SYSTEM DEPLOYED
   - MAJOR NEW FEATURE: Created dedicated COMC-only image population script
   - Uses eBay Browse API with 'filter=sellers:comc' for COMC store exclusivity

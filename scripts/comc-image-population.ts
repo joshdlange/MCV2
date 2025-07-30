@@ -131,62 +131,7 @@ async function searchCOMCForCard(
   }
 }
 
-/**
- * Search with loosened formatting (retry without card number)
- */
-async function searchCOMCLoosened(
-  setName: string,
-  cardName: string,
-  accessToken: string
-): Promise<string | null> {
-  try {
-    // Try without card number
-    const searchQuery = `${setName} ${cardName}`.replace(/\s+/g, ' ').trim();
-    
-    const browseApiUrl = 'https://api.ebay.com/buy/browse/v1/item_summary/search';
-    const params = new URLSearchParams({
-      'q': searchQuery,
-      'filter': 'sellers:comc',
-      'limit': '5',
-      'fieldgroups': 'EXTENDED'
-    });
 
-    console.log(`🔍 COMC Retry (loosened): "${searchQuery}"`);
-
-    const response = await fetch(`${browseApiUrl}?${params}`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US',
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data: any = await response.json();
-
-    if (!data.itemSummaries || data.itemSummaries.length === 0) {
-      return null;
-    }
-
-    // Extract the first available image
-    for (const item of data.itemSummaries) {
-      if (item.image && item.image.imageUrl) {
-        console.log(`✅ Found COMC image (loosened): ${item.image.imageUrl}`);
-        return item.image.imageUrl;
-      }
-    }
-
-    return null;
-
-  } catch (error) {
-    console.error('❌ COMC loosened search error:', error);
-    return null;
-  }
-}
 
 /**
  * Upload image to Cloudinary and get optimized URL
@@ -243,25 +188,20 @@ async function processCard(
   console.log(`\n🎯 Processing Card ${card.id}: ${card.name} (${card.cardNumber})`);
   
   try {
-    // Step 1: Search COMC with full details
-    let imageUrl = await searchCOMCForCard(card.setName, card.name, card.cardNumber, accessToken);
+    // EXACT MATCH ONLY: Search COMC with full details (set + name + number)
+    // NO LOOSENED SEARCH to ensure we get the exact card variant
+    const imageUrl = await searchCOMCForCard(card.setName, card.name, card.cardNumber, accessToken);
     
-    // Step 2: If no result, try loosened search
+    // If no EXACT match found, reject to avoid wrong variants
     if (!imageUrl) {
-      console.log('🔄 Trying loosened search...');
-      imageUrl = await searchCOMCLoosened(card.setName, card.name, accessToken);
-    }
-    
-    // Step 3: If still no result, log miss
-    if (!imageUrl) {
-      console.log(`📭 Miss logged for card ${card.id}`);
+      console.log(`📭 No EXACT match found for card ${card.id} - will not use inexact matches`);
       return {
         cardId: card.id,
         setName: card.setName,
         cardName: card.name,
         cardNumber: card.cardNumber,
         success: false,
-        error: 'No image found in COMC store'
+        error: 'No EXACT match found in COMC store'
       };
     }
     
