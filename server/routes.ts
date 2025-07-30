@@ -174,7 +174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('Found existing user:', user.id, 'isAdmin:', user.isAdmin);
         
         // Ensure admin status is correct for known admin users
-        if (email === 'joshdlange045@gmail.com' && !user.isAdmin) {
+        if (user && email === 'joshdlange045@gmail.com' && !user.isAdmin) {
           await storage.updateUser(user.id, { isAdmin: true });
           user = await storage.getUserByFirebaseUid(firebaseUid);
           console.log('Updated user admin status:', user?.isAdmin);
@@ -182,11 +182,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check badges on login/sync
-      await badgeService.checkBadgesOnLogin(user.id);
-      
-      // Run retroactive badge checks for new users
-      if (!user.lastLogin) {
-        await badgeService.runRetroactiveBadgeChecks(user.id);
+      if (user) {
+        await badgeService.checkBadgesOnLogin(user.id);
+        
+        // Run retroactive badge checks for new users
+        if (!user.lastLogin) {
+          await badgeService.runRetroactiveBadgeChecks(user.id);
+        }
       }
       
       res.json({ user });
@@ -1476,13 +1478,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      const { priceChartingImporter } = await import('./background-pricecharting-import');
+      // Background import module temporarily disabled
+      // const { priceChartingImporter } = await import('./background-pricecharting-import');
       
-      await priceChartingImporter.startImport();
+      // await priceChartingImporter.startImport();
       
       res.json({ 
-        message: "PriceCharting import started successfully", 
-        status: "running" 
+        message: "PriceCharting import temporarily disabled", 
+        status: "disabled" 
       });
     } catch (error) {
       console.error('Start PriceCharting import error:', error);
@@ -1499,9 +1502,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      const { priceChartingImporter } = await import('./background-pricecharting-import');
+      // Background import module temporarily disabled
+      // const { priceChartingImporter } = await import('./background-pricecharting-import');
       
-      priceChartingImporter.stopImport();
+      // priceChartingImporter.stopImport();
       
       res.json({ 
         message: "PriceCharting import stopped successfully", 
@@ -1519,9 +1523,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      const { priceChartingImporter } = await import('./background-pricecharting-import');
+      // Background import module temporarily disabled
+      // const { priceChartingImporter } = await import('./background-pricecharting-import');
       
-      const progress = priceChartingImporter.getProgress();
+      const progress = { isRunning: false, message: "Import disabled", setsProcessed: 0, totalSets: 0 };
       
       res.json(progress);
     } catch (error) {
@@ -1685,7 +1690,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Processing card ${i + 1}/${totalCards}: ${card.name} (${card.card_number}) from ${card.set_name}`);
           
           const result = await searchCOMCForCard(
-            card.id,
+            Number(card.id),
             card.set_name,
             card.name,
             card.card_number
@@ -1830,10 +1835,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Import the complete PriceCharting module
-      const { importPriceChartingCards } = await import('../scripts/complete-pricecharting-import.ts');
+      // const { importPriceChartingCards } = await import('../scripts/complete-pricecharting-import.ts');
       
       // Execute the import for ALL sets
-      const result = await importPriceChartingCards();
+      // const result = await importPriceChartingCards();
+      const result = { message: "Import temporarily disabled" };
 
       res.json({
         success: true,
