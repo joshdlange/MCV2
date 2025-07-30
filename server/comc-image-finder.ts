@@ -94,13 +94,24 @@ async function searchCOMCForCardImage(setName: string, cardName: string, cardNum
       return null;
     }
 
-    // Get the first item's image URL
-    const firstItem = data.itemSummaries[0];
-    if (firstItem.image?.imageUrl) {
-      console.log(`✅ Found COMC image: ${firstItem.image.imageUrl}`);
-      return firstItem.image.imageUrl;
+    // Look for exact matches first (using same logic as working standalone script)
+    for (const item of data.itemSummaries) {
+      const title = item.title.toLowerCase();
+      const queryLower = query.toLowerCase();
+      
+      // Check if this is a good match (contains key components)
+      if (title.includes(cardName.toLowerCase()) && 
+          (cardNumber ? title.includes(cardNumber) : true)) {
+        
+        const imageUrl = item.image?.imageUrl || item.thumbnailImages?.[0]?.imageUrl;
+        if (imageUrl) {
+          console.log(`✅ Found COMC exact match: ${imageUrl}`);
+          return imageUrl;
+        }
+      }
     }
 
+    console.log('📭 No exact match found in COMC store');
     return null;
 
   } catch (error) {
