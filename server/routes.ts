@@ -1631,12 +1631,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const { limit, rateLimitMs } = req.body;
-      console.log(`[DEBUG] Request parameters - limit: ${limit}, rateLimitMs: ${rateLimitMs}`);
+      const { limit, rateLimitMs, skipRecentlyFailed = true, randomOrder = false } = req.body;
+      console.log(`[DEBUG] Request parameters - limit: ${limit}, rateLimitMs: ${rateLimitMs}, skipRecentlyFailed: ${skipRecentlyFailed}, randomOrder: ${randomOrder}`);
       const actualLimit = limit ? Math.min(parseInt(limit), 1000) : 50; // Max 1000 cards per request
       const actualRateLimit = rateLimitMs ? Math.max(parseInt(rateLimitMs), 500) : 1000; // Min 500ms
       
       console.log(`[DEBUG] Starting COMC bulk image update with limit: ${actualLimit}, rate limit: ${actualRateLimit}ms`);
+      
+      // Smart ordering logic to avoid reprocessing failed cards
+      let orderClause = 'ORDER BY c.id DESC'; // Default: newest cards first (avoids old failures)
+      if (randomOrder) {
+        orderClause = 'ORDER BY RANDOM()'; // Random order to avoid failed card clusters
+        console.log(`[DEBUG] Using random order to avoid failed card clusters`);
+      } else {
+        console.log(`[DEBUG] Using DESC order to prioritize newer cards over old failures`);
+      }
       
       // Get cards needing images
       console.log(`[DEBUG] Executing database query for cards needing images...`);
@@ -1645,7 +1654,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         FROM cards c
         JOIN card_sets cs ON c.set_id = cs.id  
         WHERE c.front_image_url IS NULL OR c.front_image_url = ''
-        ORDER BY c.id
+        ${sql.raw(orderClause)}
         LIMIT ${actualLimit}
       `);
       

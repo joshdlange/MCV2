@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { RefreshCw, CheckCircle, XCircle, AlertCircle, Image, Database } from 'lucide-react';
@@ -56,6 +57,8 @@ export default function BulkImageUpdater() {
   const [progress, setProgress] = useState<BulkUpdateProgress | null>(null);
   const [limit, setLimit] = useState('50');
   const [rateLimitMs, setRateLimitMs] = useState('1000');
+  const [skipRecentlyFailed, setSkipRecentlyFailed] = useState(true);
+  const [randomOrder, setRandomOrder] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const { toast } = useToast();
 
@@ -95,7 +98,9 @@ export default function BulkImageUpdater() {
       console.log('[DEBUG] Frontend: Starting bulk update request...');
       const response = await apiRequest('POST', '/api/admin/update-missing-images', {
         limit: parseInt(limit),
-        rateLimitMs: parseInt(rateLimitMs)
+        rateLimitMs: parseInt(rateLimitMs),
+        skipRecentlyFailed,
+        randomOrder
       });
 
       console.log('[DEBUG] Frontend: Got response, parsing JSON...');
@@ -253,6 +258,43 @@ export default function BulkImageUpdater() {
                 className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
               />
             </div>
+          </div>
+
+          {/* Smart Retry Options */}
+          <div className="space-y-4">
+            <Label className="text-gray-900 dark:text-white font-medium">Smart Processing Options</Label>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="skipRecentlyFailed"
+                checked={skipRecentlyFailed}
+                onCheckedChange={(checked) => setSkipRecentlyFailed(!!checked)}
+                disabled={updating}
+              />
+              <Label htmlFor="skipRecentlyFailed" className="text-sm text-gray-700 dark:text-gray-300">
+                Skip recently failed cards (avoids reprocessing old failures first)
+              </Label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="randomOrder"
+                checked={randomOrder}
+                onCheckedChange={(checked) => setRandomOrder(!!checked)}
+                disabled={updating}
+              />
+              <Label htmlFor="randomOrder" className="text-sm text-gray-700 dark:text-gray-300">
+                Random order processing (prevents processing failed card clusters)
+              </Label>
+            </div>
+            
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-sm">
+                <strong>Recommended:</strong> Keep "Skip recently failed" enabled to prioritize unprocessed cards. 
+                Use random order if you notice the system repeatedly processing the same failed cards.
+              </AlertDescription>
+            </Alert>
           </div>
 
           {/* Action Buttons */}

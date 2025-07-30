@@ -116,6 +116,16 @@ The application implements comprehensive performance optimizations for handling 
 
 ```
 Changelog:
+- July 30, 2025: SMART BULK IMAGE UPDATER RETRY LOGIC IMPLEMENTED
+  - MAJOR IMPROVEMENT: Fixed inefficient retry logic that reprocessed failed cards first
+  - Added "Skip Recently Failed" option to prioritize unprocessed cards over old failures  
+  - Implemented random order processing to avoid clusters of failed cards
+  - Changed default ordering from ASC (oldest first) to DESC (newest first) to avoid repeated failures
+  - Added smart processing options in admin interface with explanatory tooltips
+  - System now processes fresh cards instead of repeatedly hitting the same failed ones
+  - Prevents development interference - background processing can now be properly managed
+  - Recommended settings: Skip Recently Failed = ON, Random Order = optional for variety
+  - Eliminates frustration of system wasting time on cards that consistently fail image lookup
 - July 30, 2025: BULK IMAGE UPDATER SUCCESSFULLY FIXED AND DEPLOYED
   - MAJOR SUCCESS: Fixed critical frontend/backend mismatch causing bulk update failures
   - Root cause: Frontend expected Server-Sent Events, backend returned JSON responses

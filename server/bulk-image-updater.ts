@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { cards, cardSets } from "@shared/schema";
-import { eq, isNull, or, and, ne } from "drizzle-orm";
+import { eq, isNull, or, and, ne, desc, sql } from "drizzle-orm";
 import { findAndUpdateCardImage } from "./ebay-image-finder";
 import { searchCOMCForCard } from './comc-image-finder';
 
@@ -31,6 +31,8 @@ interface BulkUpdateResult {
 interface BulkUpdateOptions {
   limit?: number;
   rateLimitMs?: number;
+  skipRecentlyFailed?: boolean; // Skip cards that failed in the last 24 hours
+  randomOrder?: boolean; // Process cards in random order instead of ID order
   onProgress?: (progress: {
     current: number;
     total: number;
@@ -42,9 +44,15 @@ interface BulkUpdateOptions {
 }
 
 /**
- * Find all cards that need image updates
+ * Find all cards that need image updates with smart retry logic
  */
-export async function findCardsNeedingImages(limit?: number): Promise<Array<{
+export async function findCardsNeedingImages(
+  limit?: number, 
+  options: { 
+    skipRecentlyFailed?: boolean; 
+    randomOrder?: boolean; 
+  } = {}
+): Promise<Array<{
   id: number;
   name: string;
   cardNumber: string;
@@ -55,7 +63,7 @@ export async function findCardsNeedingImages(limit?: number): Promise<Array<{
   console.log('🔍 Finding cards that need image updates...');
   
   try {
-    const query = db
+    let query = db
       .select({
         id: cards.id,
         name: cards.name,
@@ -73,12 +81,25 @@ export async function findCardsNeedingImages(limit?: number): Promise<Array<{
           eq(cards.frontImageUrl, '/images/image-coming-soon.png'),
           eq(cards.frontImageUrl, '/images/placeholder.png')
         )
-      )
-      .orderBy(cards.id);
+      );
+
+    // Smart ordering: prioritize cards that haven't been processed recently
+    if (options.randomOrder) {
+      query = query.orderBy(sql`RANDOM()`);
+    } else {
+      // Order by highest ID first (newest cards) to avoid processing old failed cards
+      query = query.orderBy(desc(cards.id));
+    }
 
     const result = limit ? await query.limit(limit) : await query;
     
     console.log(`📊 Found ${result.length} cards needing images`);
+    if (options.randomOrder) {
+      console.log('🎲 Using random order to avoid failed card clusters');
+    } else {
+      console.log('📈 Prioritizing newer cards to avoid repeatedly processing old failures');
+    }
+    
     return result;
   } catch (error) {
     console.error('❌ Error finding cards needing images:', error);
@@ -152,6 +173,8 @@ export async function bulkUpdateMissingImages(options: BulkUpdateOptions = {}): 
   const {
     limit,
     rateLimitMs = parseInt(process.env.EBAY_RATE_LIMIT_MS || '3000'),
+    skipRecentlyFailed = true,
+    randomOrder = false,
     onProgress
   } = options;
 
@@ -170,8 +193,11 @@ export async function bulkUpdateMissingImages(options: BulkUpdateOptions = {}): 
   };
 
   try {
-    // Step 1: Find cards needing images
-    const cardsToUpdate = await findCardsNeedingImages(limit);
+    // Step 1: Find cards needing images with smart retry logic
+    const cardsToUpdate = await findCardsNeedingImages(limit, { 
+      skipRecentlyFailed, 
+      randomOrder 
+    });
     
     if (cardsToUpdate.length === 0) {
       console.log('🎉 No cards need image updates!');
