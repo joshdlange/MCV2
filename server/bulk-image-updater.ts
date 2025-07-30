@@ -2,6 +2,7 @@ import { db } from "./db";
 import { cards, cardSets } from "@shared/schema";
 import { eq, isNull, or, and, ne } from "drizzle-orm";
 import { findAndUpdateCardImage } from "./ebay-image-finder";
+import { searchCOMCForCard } from './comc-image-finder';
 
 interface BulkUpdateResult {
   totalProcessed: number;
@@ -97,25 +98,25 @@ async function processCard(card: {
   description: string | null;
 }): Promise<{ success: boolean; newImageUrl?: string; error?: string }> {
   try {
-    console.log(`🎯 Processing card ${card.id}: ${card.name}`);
+    console.log(`🏪 COMC Processing card ${card.id}: ${card.name} (${card.cardNumber})`);
     
-    const result = await findAndUpdateCardImage(
+    // Use COMC-specific search instead of general eBay search
+    const result = await searchCOMCForCard(
       card.id,
       card.setName,
       card.name,
-      card.cardNumber,
-      card.description || undefined
+      card.cardNumber
     );
     
     if (result.success && result.newImageUrl) {
-      console.log(`✅ Updated card ${card.id} with new image`);
+      console.log(`✅ COMC Updated card ${card.id} with new image`);
       return { success: true, newImageUrl: result.newImageUrl };
     } else {
-      console.log(`❌ Failed to update card ${card.id}: ${result.error || 'Unknown error'}`);
-      return { success: false, error: result.error || 'Unknown error' };
+      console.log(`📭 COMC No exact match for card ${card.id}: ${result.error || 'Unknown error'}`);
+      return { success: false, error: result.error || 'No exact match found in COMC store' };
     }
   } catch (error) {
-    console.error(`🚨 Error processing card ${card.id}:`, error);
+    console.error(`🚨 COMC Error processing card ${card.id}:`, error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 
