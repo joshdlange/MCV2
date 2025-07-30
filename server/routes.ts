@@ -1719,6 +1719,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const totalCards = cardsNeedingImages.rows.length;
       console.log(`[DEBUG] Database query completed. Found ${totalCards} cards needing images`);
+      console.log(`[DEBUG] Raw SQL query executed:`, whereClause + ' ' + orderClause);
+      console.log(`[DEBUG] First few results:`, cardsNeedingImages.rows.slice(0, 3));
       
       if (totalCards === 0) {
         console.log(`[DEBUG] No cards found, returning early`);
