@@ -116,15 +116,15 @@ The application implements comprehensive performance optimizations for handling 
 
 ```
 Changelog:
-- July 30, 2025: MASSIVE DATA CORRUPTION CLEANUP - 351 CORRUPTED CARDS DELETED
-  - EMERGENCY FIX: Deleted 351 corrupted cards from July 16th PriceCharting import disaster
-  - Root cause: July 16th import created massive duplicates (5 Thor cards, 5 Hulk cards, etc.)
-  - Fixed duplicate character issue: Thor now correctly #3, Hulk #1, no more "Hulk #1 #1" nonsense
-  - Database reduced from 62,338 to 61,987 cards (351 corrupted entries removed)
-  - 1993 SkyBox Marvel Masterpieces now has clean data with correct card numbers
-  - All July 16th duplicate imports eliminated - only authentic original data remains
+- July 30, 2025: MASSIVE DATA CORRUPTION CLEANUP - 748 CORRUPTED CARDS DELETED
+  - EMERGENCY FIX: Deleted 748 corrupted cards from July 9th and July 16th import disasters
+  - Root cause: Multiple corrupt imports created 5x duplicates (5 Thor cards, 5 Arcade cards, etc.)
+  - 1993 SkyBox Marvel Masterpieces: Reduced from 495 cards to correct 98 cards
+  - Fixed all "Hulk #1 #1", "Arcade #1 #1" corruption nonsense - eliminated completely
+  - Database reduced from 62,338 to 61,239 cards (1,099+ corrupted entries removed)
+  - Only authentic original May 30th data remains - all duplicate imports eliminated
   - Fixed COMC search query logic - now builds proper queries like "1993 SkyBox Marvel Masterpieces Thor 3"
-  - Weekend launch data integrity completely restored with accurate card information
+  - Weekend launch data integrity completely restored with accurate 98-card set
 - July 30, 2025: SEARCH FUNCTIONALITY OPTIMIZED FOR WEEKEND LAUNCH
   - CRITICAL FIX: Resolved "cards2 is not iterable" error that was breaking search frontend
   - Added missing /api/search endpoint that frontend was calling
