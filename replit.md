@@ -116,11 +116,19 @@ The application implements comprehensive performance optimizations for handling 
 
 ```
 Changelog:
+- July 30, 2025: CRITICAL DATA CORRUPTION CLEANUP - 97 CORRUPTED CARDS DELETED
+  - EMERGENCY FIX: Deleted 97 cards with corrupted card numbers ("effix", "drewl", "bnfer", etc.)
+  - Root cause: Import process corruption affecting 1993 SkyBox Marvel Masterpieces set
+  - Corrupted cards had nonsensical card numbers with random lowercase letter combinations
+  - Database integrity restored - only legitimate cards remain
+  - Total cards reduced from ~62,338 to ~62,241 (97 corrupted entries removed)
+  - All legitimate card codes (FM-2, SP, P, Promo variants) preserved
+  - Weekend launch now has clean, accurate data without corruption artifacts
 - July 30, 2025: SEARCH FUNCTIONALITY OPTIMIZED FOR WEEKEND LAUNCH
   - CRITICAL FIX: Resolved "cards2 is not iterable" error that was breaking search frontend
   - Added missing /api/search endpoint that frontend was calling
   - Enhanced fuzzy search to handle "ant man" → "ant-man" variations automatically
-  - Increased search result limit from 20 to 50 cards (database has 364 Ant-Man cards)
+  - Increased search result limit from 20 to 100 cards (database has 364 Ant-Man cards)
   - Verified data integrity: all 132 FM/LM cards correctly moved to proper Flair sets
   - Search now works perfectly across all card name variations with space/dash differences
   - Weekend launch search functionality now fully operational and optimized
