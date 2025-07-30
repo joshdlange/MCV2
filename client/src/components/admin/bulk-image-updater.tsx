@@ -92,59 +92,37 @@ export default function BulkImageUpdater() {
     setLogs([]);
 
     try {
-      const response = await fetch('/api/admin/update-missing-images', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await (window as any).firebase.auth().currentUser?.getIdToken()}`
-        },
-        body: JSON.stringify({
-          limit: parseInt(limit),
-          rateLimitMs: parseInt(rateLimitMs)
-        })
+      console.log('[DEBUG] Frontend: Starting bulk update request...');
+      const response = await apiRequest('POST', '/api/admin/update-missing-images', {
+        limit: parseInt(limit),
+        rateLimitMs: parseInt(rateLimitMs)
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      console.log('[DEBUG] Frontend: Got response, parsing JSON...');
+      const result = await response.json();
+      console.log('[DEBUG] Frontend: Parsed result:', result);
+
+      // Handle the completed result directly
+      setProgress({
+        type: 'complete',
+        current: result.totalProcessed || 0,
+        total: result.totalProcessed || 0,
+        totalProcessed: result.totalProcessed || 0,
+        successCount: result.successCount || 0,
+        failureCount: result.failureCount || 0,
+        successes: result.successes || [],
+        failures: result.failures || []
+      });
+
+      // Add final log entries
+      if (result.successCount > 0) {
+        setLogs(prev => [...prev, `✅ Successfully updated ${result.successCount} card images`]);
       }
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (!reader) {
-        throw new Error('No response body');
+      if (result.failureCount > 0) {
+        setLogs(prev => [...prev, `❌ Failed to update ${result.failureCount} cards`]);
       }
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const text = decoder.decode(value);
-        const lines = text.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              setProgress(data);
-              
-              if (data.type === 'progress') {
-                const statusEmoji = {
-                  processing: '⏳',
-                  success: '✅',
-                  failure: '❌',
-                  skipped: '⏭️'
-                }[data.status as keyof typeof statusEmoji] || '⏳';
-                
-                const logEntry = `${statusEmoji} [${Math.round((data.current / data.total) * 100)}%] ${data.current}/${data.total} - Card ${data.cardId}: ${data.cardName}`;
-                setLogs(prev => [...prev.slice(-20), logEntry]); // Keep last 20 logs
-              }
-            } catch (e) {
-              console.error('Error parsing SSE data:', e);
-            }
-          }
-        }
-      }
+      
+      console.log('[DEBUG] Frontend: Update completed successfully');
 
       toast({
         title: "Bulk Update Complete",
