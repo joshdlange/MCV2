@@ -1574,7 +1574,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      const { findCOMCImageAndUpload } = await import('./comc-image-finder');
+      const { searchCOMCForCard } = await import('./comc-image-finder');
       
       // Check COMC configuration
       const ebayAppId = process.env.EBAY_APP_ID;
@@ -1625,19 +1625,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           console.log(`Processing card ${i + 1}/${totalCards}: ${card.name} (${card.card_number}) from ${card.set_name}`);
           
-          const imageUrl = await findCOMCImageAndUpload(
+          const result = await searchCOMCForCard(
             card.id,
+            card.set_name,
             card.name,
-            card.card_number,
-            card.set_name
+            card.card_number
           );
           
-          if (imageUrl) {
+          if (result.success) {
             successCount++;
             console.log(`✅ Success: Found image for ${card.name}`);
           } else {
             failureCount++;
-            console.log(`❌ Failed: No image found for ${card.name}`);
+            console.log(`❌ Failed: ${result.error} for ${card.name}`);
           }
           
         } catch (error) {
