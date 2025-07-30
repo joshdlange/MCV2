@@ -1569,18 +1569,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Bulk image update endpoints
   app.post("/api/admin/update-missing-images", authenticateUser, async (req: any, res) => {
+    console.log(`[DEBUG] Bulk update endpoint hit with body:`, req.body);
+    console.log(`[DEBUG] Authenticated user:`, req.user);
+    
     try {
       if (!req.user.isAdmin) {
+        console.log(`[DEBUG] Admin check failed for user:`, req.user);
         return res.status(403).json({ message: "Admin access required" });
       }
 
+      console.log(`[DEBUG] Admin check passed, importing COMC finder...`);
       const { searchCOMCForCard } = await import('./comc-image-finder');
       
       // Check COMC configuration
       const ebayAppId = process.env.EBAY_APP_ID;
       const cloudinaryUrl = process.env.CLOUDINARY_URL;
+      console.log(`[DEBUG] Environment check - EBAY_APP_ID: ${!!ebayAppId}, CLOUDINARY_URL: ${!!cloudinaryUrl}`);
       
       if (!ebayAppId || !cloudinaryUrl) {
+        console.log(`[DEBUG] Missing config detected`);
         return res.status(400).json({ 
           message: "Configuration error", 
           missingConfig: ['EBAY_APP_ID', 'CLOUDINARY_URL'].filter(key => !process.env[key])
@@ -1588,12 +1595,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { limit, rateLimitMs } = req.body;
+      console.log(`[DEBUG] Request parameters - limit: ${limit}, rateLimitMs: ${rateLimitMs}`);
       const actualLimit = limit ? Math.min(parseInt(limit), 1000) : 50; // Max 1000 cards per request
       const actualRateLimit = rateLimitMs ? Math.max(parseInt(rateLimitMs), 500) : 1000; // Min 500ms
       
-      console.log(`Starting COMC bulk image update with limit: ${actualLimit}, rate limit: ${actualRateLimit}ms`);
+      console.log(`[DEBUG] Starting COMC bulk image update with limit: ${actualLimit}, rate limit: ${actualRateLimit}ms`);
       
       // Get cards needing images
+      console.log(`[DEBUG] Executing database query for cards needing images...`);
       const cardsNeedingImages = await db.execute(sql`
         SELECT c.id, c.name, c.card_number, cs.name as set_name
         FROM cards c
@@ -1604,9 +1613,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       `);
       
       const totalCards = cardsNeedingImages.rows.length;
-      console.log(`Found ${totalCards} cards needing images`);
+      console.log(`[DEBUG] Database query completed. Found ${totalCards} cards needing images`);
       
       if (totalCards === 0) {
+        console.log(`[DEBUG] No cards found, returning early`);
         return res.json({
           totalProcessed: 0,
           successCount: 0,
@@ -1615,8 +1625,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      
       let successCount = 0;
       let failureCount = 0;
+      
+      console.log(`[DEBUG] Starting to process ${totalCards} cards sequentially...`);
       
       // Process cards sequentially with rate limiting
       for (let i = 0; i < totalCards; i++) {
@@ -1662,10 +1675,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(result);
       
     } catch (error) {
-      console.error('Bulk update error details:', {
+      console.error('[DEBUG] FATAL ERROR in bulk update endpoint:', {
         error: error,
         message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : 'No stack trace'
+        stack: error instanceof Error ? error.stack : 'No stack trace',
+        name: error instanceof Error ? error.name : 'Unknown error type'
       });
       res.status(500).json({ 
         message: "Failed to update missing images",

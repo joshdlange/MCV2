@@ -1,0 +1,135 @@
+Bulk Image Updater Fails via Web, Works in Standalone
+You're hitting a case where:
+
+✅ Standalone bulk image script works (~40% hit rate)
+
+❌ Web-triggered /api/admin/update-missing-images fails immediately
+
+✅ Configs and credentials are present and valid
+
+❓ Logs show no helpful error — the process exits before any card logic is hit
+
+🧰 1. Instrument the bulkUpdateMissingImages() Entry Point
+In server/bulk-image-updater.ts, add logging at the top of bulkUpdateMissingImages() to confirm it’s actually being entered from the POST request.
+
+ts
+Copy
+Edit
+export async function bulkUpdateMissingImages({ limit, rateLimitMs }: { limit: number; rateLimitMs: number }) {
+  console.log(`[DEBUG] Entered bulkUpdateMissingImages with limit=${limit}, rateLimitMs=${rateLimitMs}`);
+  ...
+}
+➡️ If this log does not appear, the error is before the function is reached (likely auth or routing).
+
+🔐 2. Verify requireAdmin Middleware Behavior
+Since the route is protected with requireAdmin, verify:
+
+req.user or req.uid is populated as expected
+
+The isAdmin flag is reliably returned from your getUserFromFirebase() check
+
+Add debug logs just before calling the actual handler:
+
+ts
+Copy
+Edit
+app.post('/api/admin/update-missing-images', requireAdmin, async (req, res) => {
+  console.log(`[DEBUG] Authenticated user:`, req.user || req.uid);
+  ...
+});
+➡️ If undefined, this may indicate Firebase JWT decoding is silently failing.
+
+⚠️ 3. Check for Silent Async Failures
+If bulkUpdateMissingImages() internally starts background tasks using await Promise.all() or other batch processing, make sure you aren't swallowing an error mid-loop without logging.
+
+In your processCard() or inside the orchestration loop, add:
+
+ts
+Copy
+Edit
+try {
+  // card logic
+} catch (err) {
+  console.error(`[ERROR] Failed to process card ${card.id}:`, err);
+}
+And more importantly:
+
+ts
+Copy
+Edit
+bulkUpdateMissingImages() {
+  try {
+    // ...
+  } catch (err) {
+    console.error(`[FATAL] bulkUpdateMissingImages root failure:`, err);
+    throw err;
+  }
+}
+➡️ If you're using Array.map(async...) without await Promise.all, fix that — the function may finish before the work is done.
+
+🧵 4. Are You Failing a DB Connection or Transaction Early?
+Check the first DB query in bulkUpdateMissingImages(). If it's something like:
+
+ts
+Copy
+Edit
+const cards = await db.select().from(cardsTable).where(...);
+and that query fails silently or returns zero, you'll short-circuit.
+
+Add logging after fetching cards:
+
+ts
+Copy
+Edit
+console.log(`[DEBUG] Found ${cards.length} cards to process`);
+If it’s 0, check whether the filter used in the web context differs from the standalone script (e.g., different isMissing, image IS NULL, or LIMIT logic).
+
+🔄 5. Check for Payload/Destructuring Failures
+In your POST endpoint:
+
+ts
+Copy
+Edit
+const { limit = 50, rateLimitMs = 1000 } = req.body;
+➡️ Add:
+
+ts
+Copy
+Edit
+console.log(`[DEBUG] Bulk update request body:`, req.body);
+Sometimes req.body isn’t parsed properly due to missing express.json() middleware or incorrect headers on the frontend call.
+
+✅ 6. Checklist of Common Express Failures:
+Is express.json() used? If not, req.body may be undefined.
+
+Are all async handlers wrapped in try/catch with explicit logging?
+
+Does your admin Firebase check correctly verify the current user?
+
+Are you using res.json() and not leaving Promises unhandled?
+
+🧪 7. Bonus Debug Tip
+Wrap bulkUpdateMissingImages() in a timed block and track the full lifecycle:
+
+ts
+Copy
+Edit
+const start = Date.now();
+console.log(`[DEBUG] Starting bulk image update...`);
+await bulkUpdateMissingImages({ limit, rateLimitMs });
+console.log(`[DEBUG] Completed in ${Date.now() - start}ms`);
+If you never hit either line, the function isn't being reached at all.
+
+📌 Conclusion:
+Based on symptoms, this is very likely a failure before reaching the core logic — either in:
+
+Middleware (requireAdmin)
+
+Request body parsing (req.body)
+
+A DB read throwing silently
+
+Or async code failing without logs
+
+Once the logs confirm entry into bulkUpdateMissingImages(), we can tighten error recovery or retry logic inside the loop.
+
