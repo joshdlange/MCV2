@@ -1662,8 +1662,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(result);
       
     } catch (error) {
-      console.error('Bulk update error:', error);
-      res.status(500).json({ message: "Failed to update missing images" });
+      console.error('Bulk update error details:', {
+        error: error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace'
+      });
+      res.status(500).json({ 
+        message: "Failed to update missing images",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
