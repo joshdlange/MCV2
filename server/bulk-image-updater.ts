@@ -75,11 +75,20 @@ export async function findCardsNeedingImages(
       .from(cards)
       .innerJoin(cardSets, eq(cards.setId, cardSets.id))
       .where(
-        or(
-          isNull(cards.frontImageUrl),
-          eq(cards.frontImageUrl, ''),
-          eq(cards.frontImageUrl, '/images/image-coming-soon.png'),
-          eq(cards.frontImageUrl, '/images/placeholder.png')
+        and(
+          or(
+            isNull(cards.frontImageUrl),
+            eq(cards.frontImageUrl, ''),
+            eq(cards.frontImageUrl, '/images/image-coming-soon.png'),
+            eq(cards.frontImageUrl, '/images/placeholder.png')
+          ),
+          // Apply skipRecentlyFailed logic if enabled
+          options.skipRecentlyFailed ? 
+            or(
+              isNull(cards.updatedAt),
+              sql`updated_at < NOW() - INTERVAL '24 hours'`
+            ) : 
+            sql`TRUE`
         )
       );
 
