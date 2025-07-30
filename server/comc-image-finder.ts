@@ -62,9 +62,10 @@ async function getEBayAccessToken(): Promise<string | null> {
  */
 async function searchCOMCForCardImage(setName: string, cardName: string, cardNumber: string, accessToken: string): Promise<string | null> {
   try {
-    // Build search query for exact match in COMC store
-    const query = `${setName} ${cardName} ${cardNumber}`.trim();
-    console.log(`🔍 COMC Search: "${query}"`);
+    // FIXED: Build clean search query exactly as specified - no transformations
+    // Format: "{setName} {cardName} {cardNumber}" - use card_number exactly as stored in DB
+    const query = `${setName} ${cardName} ${cardNumber}`.replace(/\s+/g, ' ').trim();
+    console.log(`[COMC DEBUG] Query: "${query}"`);
 
     const searchUrl = 'https://api.ebay.com/buy/browse/v1/item_summary/search';
     const params = new URLSearchParams({
@@ -97,15 +98,18 @@ async function searchCOMCForCardImage(setName: string, cardName: string, cardNum
     // Look for exact matches first (using same logic as working standalone script)
     for (const item of data.itemSummaries) {
       const title = item.title.toLowerCase();
-      const queryLower = query.toLowerCase();
+      const cardNameLower = cardName.toLowerCase();
       
-      // Check if this is a good match (contains key components)
-      if (title.includes(cardName.toLowerCase()) && 
-          (cardNumber ? title.includes(cardNumber) : true)) {
-        
+      // FIXED: Better matching logic for COMC results
+      // Check if this is a good match (contains card name and ideally card number)
+      const hasCardName = title.includes(cardNameLower);
+      const hasCardNumber = cardNumber ? title.includes(cardNumber.toLowerCase()) : true;
+      
+      if (hasCardName && hasCardNumber) {
         const imageUrl = item.image?.imageUrl || item.thumbnailImages?.[0]?.imageUrl;
         if (imageUrl) {
           console.log(`✅ Found COMC exact match: ${imageUrl}`);
+          console.log(`[COMC DEBUG] Matched title: "${item.title}"`);
           return imageUrl;
         }
       }

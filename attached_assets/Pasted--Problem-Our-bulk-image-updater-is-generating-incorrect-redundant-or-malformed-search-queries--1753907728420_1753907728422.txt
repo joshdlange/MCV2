@@ -1,0 +1,67 @@
+❌ Problem:
+Our bulk image updater is generating incorrect, redundant, or malformed search queries — resulting in a <2% success rate, despite valid working examples via manual search.
+
+🔍 Examples of what’s broken:
+"marvel 1995 flair Cyclops #FM-73 FM-7" ← invalid and duplicated number suffixes
+
+"1993 skybox marvel masterpieces thor 81" ← this query works manually but fails in bulk updater, meaning the logic is incorrectly formatting or executing the request
+
+✅ Required Fix:
+🔧 1. Search query must be constructed exactly as follows:
+arduino
+Copy
+Edit
+"{setName} {cardName} {cardNumber}"
+Where:
+
+setName = the full display name (e.g., "1993 SkyBox Marvel Masterpieces")
+
+cardName = the character name (e.g., "Thor")
+
+cardNumber = the exact value stored in the DB — including prefixes like FM-73, SP-1, #42, etc.
+
+❗ Do not strip or normalize the card number. Use it exactly as-is.
+❗ Do not append a second version (like FM-7) or try to duplicate it in the query.
+❌ "FM-73 FM-7" → invalid
+✅ "1995 Flair Marvel Cyclops FM-73" → correct
+
+🔧 2. Update the COMC Search Builder Logic
+In server/comc-image-finder.ts (likely inside searchCOMCForCard()), do the following:
+
+Construct the query exactly using:
+
+ts
+Copy
+Edit
+const query = `${setName} ${cardName} ${cardNumber}`;
+Do not use any additional helpers that modify or duplicate cardNumber.
+
+Ensure query is lowercased or formatted to match manual test strings if needed — but do not mutate cardNumber.
+
+🧪 3. Debug & Verify
+Add debug logs before calling the eBay API:
+
+ts
+Copy
+Edit
+console.log(`[COMC DEBUG] Query: "${query}"`);
+Run test lookups for known matches (e.g., Thor 81 from 1993 SkyBox) and confirm that queries exactly match working manual searches.
+
+🧱 File Targets to Update:
+server/comc-image-finder.ts — primary focus: fix query builder
+
+server/ebay-image-finder.ts — verify no conflicting fallback logic interfering
+
+server/bulk-image-updater.ts — confirm that card.cardNumber is being passed in unchanged from the database
+
+server/routes.ts — no change required unless logging is missing on the endpoint
+
+🎯 Summary:
+Fix query generator to only build {setName} {cardName} {cardNumber} with no transformations
+
+Never strip or rewrite cardNumber
+
+Never duplicate suffixes (e.g., "FM-73 FM-7" is invalid)
+
+No fallback logic or normalization — accuracy matters more than hit rate
+
