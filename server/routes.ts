@@ -1681,7 +1681,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const { limit, rateLimitMs, skipRecentlyFailed = true, randomOrder = false } = req.body;
+      const { limit, rateLimitMs, skipRecentlyFailed = false, randomOrder = false } = req.body;
       console.log(`[DEBUG] Request parameters - limit: ${limit}, rateLimitMs: ${rateLimitMs}, skipRecentlyFailed: ${skipRecentlyFailed}, randomOrder: ${randomOrder}`);
       const actualLimit = limit ? Math.min(parseInt(limit), 1000) : 50; // Max 1000 cards per request
       const actualRateLimit = rateLimitMs ? Math.max(parseInt(rateLimitMs), 500) : 1000; // Min 500ms
@@ -1702,9 +1702,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let whereClause = `WHERE (c.front_image_url IS NULL OR c.front_image_url = '')`;
       
       if (skipRecentlyFailed) {
-        // Skip cards that were updated in the last 24 hours (likely already processed)
-        whereClause += ` AND (c.updated_at IS NULL OR c.updated_at < NOW() - INTERVAL '24 hours')`;
-        console.log(`[DEBUG] Skipping cards processed in the last 24 hours`);
+        // Skip cards that were updated in the last 30 days (likely already processed)
+        whereClause += ` AND (c.updated_at IS NULL OR c.updated_at < NOW() - INTERVAL '30 days')`;
+        console.log(`[DEBUG] Skipping cards processed in the last 30 days`);
       }
       
       const cardsNeedingImages = await db.execute(sql`
