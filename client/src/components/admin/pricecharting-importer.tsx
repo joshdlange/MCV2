@@ -45,7 +45,13 @@ interface ImportProgress {
 }
 
 export function PriceChartingImporter() {
+  const [config, setConfig] = useState<PriceChartingConfig | null>(null);
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [limit, setLimit] = useState(100);
+  const [rateLimitMs, setRateLimitMs] = useState(30000);
   const { toast } = useToast();
 
   useEffect(() => {
