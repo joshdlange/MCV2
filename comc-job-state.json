@@ -1,0 +1,9 @@
+{
+  "isRunning": false,
+  "lastProcessedId": 0,
+  "totalProcessed": 0,
+  "successCount": 0,
+  "failureCount": 0,
+  "batchSize": 100,
+  "startTime": "2025-07-30T16:54:31.000Z"
+}
