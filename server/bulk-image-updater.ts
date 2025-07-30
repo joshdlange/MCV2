@@ -87,7 +87,7 @@ export async function findCardsNeedingImages(limit?: number): Promise<Array<{
 }
 
 /**
- * Process a single card for image update
+ * Process a single card for image update with COMC → eBay fallback strategy
  */
 async function processCard(card: {
   id: number;
@@ -96,27 +96,48 @@ async function processCard(card: {
   setName: string;
   frontImageUrl: string | null;
   description: string | null;
-}): Promise<{ success: boolean; newImageUrl?: string; error?: string }> {
+}): Promise<{ success: boolean; newImageUrl?: string; error?: string; source?: string }> {
   try {
-    console.log(`🏪 COMC Processing card ${card.id}: ${card.name} (${card.cardNumber})`);
+    console.log(`Processing card ${card.id}: ${card.name} (${card.cardNumber}) from ${card.setName}`);
     
-    // Use COMC-specific search instead of general eBay search
-    const result = await searchCOMCForCard(
+    // STRATEGY 1: Try COMC first (exact matches only)
+    console.log(`🏪 COMC Search: "${card.setName} ${card.name} ${card.cardNumber}"`);
+    const comcResult = await searchCOMCForCard(
       card.id,
       card.setName,
       card.name,
       card.cardNumber
     );
     
-    if (result.success && result.newImageUrl) {
-      console.log(`✅ COMC Updated card ${card.id} with new image`);
-      return { success: true, newImageUrl: result.newImageUrl };
-    } else {
-      console.log(`📭 COMC No exact match for card ${card.id}: ${result.error || 'Unknown error'}`);
-      return { success: false, error: result.error || 'No exact match found in COMC store' };
+    if (comcResult.success && comcResult.newImageUrl) {
+      console.log(`✅ SUCCESS via COMC for card ${card.id}`);
+      return { 
+        success: true, 
+        newImageUrl: comcResult.newImageUrl,
+        source: 'COMC'
+      };
     }
+    
+    // STRATEGY 2: Fallback to original eBay search
+    console.log(`🔍 COMC failed, trying general eBay search for card ${card.id}`);
+    const ebayResult = await findAndUpdateCardImage(card.id);
+    
+    if (ebayResult.success && ebayResult.newImageUrl) {
+      console.log(`✅ SUCCESS via eBay fallback for card ${card.id}`);
+      return { 
+        success: true, 
+        newImageUrl: ebayResult.newImageUrl,
+        source: 'eBay'
+      };
+    }
+    
+    // Both strategies failed
+    const errorMsg = `No images found via COMC or eBay for ${card.name}`;
+    console.log(`❌ Failed: ${errorMsg}`);
+    return { success: false, error: errorMsg };
+    
   } catch (error) {
-    console.error(`🚨 COMC Error processing card ${card.id}:`, error);
+    console.error(`🚨 Error processing card ${card.id}:`, error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 
@@ -181,12 +202,15 @@ export async function bulkUpdateMissingImages(options: BulkUpdateOptions = {}): 
         
         if (updateResult.success) {
           result.successCount++;
+          const source = (updateResult as any).source || 'Unknown';
           result.successes.push({
             cardId: card.id,
             cardName: card.name,
             setName: card.setName,
             newImageUrl: updateResult.newImageUrl!
           });
+          
+          console.log(`✅ SUCCESS via ${source} for card ${card.id}: ${card.name}`);
           
           if (onProgress) {
             onProgress({
@@ -195,7 +219,7 @@ export async function bulkUpdateMissingImages(options: BulkUpdateOptions = {}): 
               cardId: card.id,
               cardName: card.name,
               status: 'success',
-              message: `Updated with new image`
+              message: `Updated via ${source}`
             });
           }
         } else {
