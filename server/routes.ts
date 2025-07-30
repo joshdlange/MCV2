@@ -1410,9 +1410,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Search card sets
       const sets = await storage.searchCardSets(query);
       
-      // Search individual cards with limit
-      const cards = await storage.getCards({ search: query });
-      const limitedCards = cards.slice(0, 20);
+      // Enhanced search with fuzzy matching for space/dash variations
+      const baseCards = await storage.getCards({ search: query });
+      
+      // Additional search with space-dash variations
+      let additionalCards: any[] = [];
+      const normalizedQuery = query.toLowerCase().trim();
+      
+      // If query has spaces, also search with dashes
+      if (normalizedQuery.includes(' ')) {
+        const dashQuery = normalizedQuery.replace(/\s+/g, '-');
+        additionalCards = await storage.getCards({ search: dashQuery });
+      }
+      // If query has dashes, also search with spaces
+      else if (normalizedQuery.includes('-')) {
+        const spaceQuery = normalizedQuery.replace(/-/g, ' ');
+        additionalCards = await storage.getCards({ search: spaceQuery });
+      }
+      
+      // Combine and deduplicate results
+      const allCards = [...baseCards, ...additionalCards];
+      const uniqueCards = allCards.filter((card, index, self) => 
+        index === self.findIndex(c => c.id === card.id)
+      );
+      
+      const limitedCards = uniqueCards.slice(0, 100); // Show up to 100 results for better UX
 
       res.json({ sets, cards: limitedCards });
     } catch (error) {

@@ -116,6 +116,14 @@ The application implements comprehensive performance optimizations for handling 
 
 ```
 Changelog:
+- July 30, 2025: SEARCH FUNCTIONALITY OPTIMIZED FOR WEEKEND LAUNCH
+  - CRITICAL FIX: Resolved "cards2 is not iterable" error that was breaking search frontend
+  - Added missing /api/search endpoint that frontend was calling
+  - Enhanced fuzzy search to handle "ant man" → "ant-man" variations automatically
+  - Increased search result limit from 20 to 50 cards (database has 364 Ant-Man cards)
+  - Verified data integrity: all 132 FM/LM cards correctly moved to proper Flair sets
+  - Search now works perfectly across all card name variations with space/dash differences
+  - Weekend launch search functionality now fully operational and optimized
 - July 30, 2025: SMART BULK IMAGE UPDATER RETRY LOGIC IMPLEMENTED
   - MAJOR IMPROVEMENT: Fixed inefficient retry logic that reprocessed failed cards first
   - Added "Skip Recently Failed" option to prioritize unprocessed cards over old failures  
