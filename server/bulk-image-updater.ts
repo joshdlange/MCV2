@@ -84,15 +84,12 @@ export async function findCardsNeedingImages(
           ),
           // Apply skipRecentlyFailed logic if enabled
           options.skipRecentlyFailed ? 
-            or(
-              isNull(cards.updatedAt),
-              sql`updated_at < NOW() - INTERVAL '24 hours'`
-            ) : 
+            sql`(updated_at IS NULL OR updated_at < NOW() - INTERVAL '24 hours')` : 
             sql`TRUE`
         )
       );
 
-    // Smart ordering: prioritize cards that haven't been processed recently
+    // Apply ordering - this needs to be done before executing the query
     if (options.randomOrder) {
       query = query.orderBy(sql`RANDOM()`);
     } else {
@@ -150,7 +147,13 @@ async function processCard(card: {
     
     // STRATEGY 2: Fallback to original eBay search
     console.log(`🔍 COMC failed, trying general eBay search for card ${card.id}`);
-    const ebayResult = await findAndUpdateCardImage(card.id);
+    const ebayResult = await findAndUpdateCardImage(
+      card.id,
+      card.setName,
+      card.name,
+      card.cardNumber,
+      card.description || undefined
+    );
     
     if (ebayResult.success && ebayResult.newImageUrl) {
       console.log(`✅ SUCCESS via eBay fallback for card ${card.id}`);
