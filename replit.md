@@ -116,6 +116,17 @@ The application implements comprehensive performance optimizations for handling 
 
 ```
 Changelog:
+- July 30, 2025: COMC-SPECIFIC IMAGE POPULATION SYSTEM DEPLOYED
+  - MAJOR NEW FEATURE: Created dedicated COMC-only image population script
+  - Uses eBay Browse API with 'filter=sellers:comc' for COMC store exclusivity
+  - Implements intelligent search: full query → loosened query → logging misses
+  - Perfect integration: eBay search → Cloudinary upload → database update
+  - Test results: 100% success rate on first 5 cards (Storm, Bucky, Nikki, Spectrum, Hawkeye)
+  - Script location: scripts/comc-image-population.ts with batch processing capabilities
+  - Command: npx tsx scripts/comc-image-population.ts [limit] [batch_size]
+  - Comprehensive reporting: successes, misses (not in COMC), technical failures
+  - Rate limiting: 1000ms between requests for API compliance
+  - All images uploaded to Cloudinary with optimization and stored in database
 - July 17, 2025: PRODUCTION CLEANUP AND PERFORMANCE OPTIMIZATION COMPLETE
   - MAJOR CLEANUP: Successfully removed all 18 test users from production database
   - Fixed badge role visibility issue with proper contrast (red Admin badges, gray User badges)
