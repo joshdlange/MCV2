@@ -1702,9 +1702,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let whereClause = `WHERE (c.front_image_url IS NULL OR c.front_image_url = '')`;
       
       if (skipRecentlyFailed) {
-        // Skip cards that were updated in the last 30 days (likely already processed)
-        whereClause += ` AND (c.updated_at IS NULL OR c.updated_at < NOW() - INTERVAL '30 days')`;
-        console.log(`[DEBUG] Skipping cards processed in the last 30 days`);
+        // TEMPORARY FIX: Skip logic disabled because updated_at timestamps were corrupted
+        // All cards have recent timestamps from database cleanup, so skip logic would exclude everything
+        // TODO: Implement proper image processing attempt tracking
+        console.log(`[DEBUG] Skip recently failed logic temporarily disabled due to timestamp corruption`);
+        console.log(`[DEBUG] Processing all cards regardless of updated_at timestamp`);
       }
       
       const cardsNeedingImages = await db.execute(sql`
