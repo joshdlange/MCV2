@@ -316,8 +316,8 @@ export default function BulkImageUpdater() {
           {logs.length > 0 && (
             <div className="space-y-2">
               <Label className="text-sm font-medium">Live Progress</Label>
-              <div className="bg-muted rounded-md p-3 max-h-40 overflow-y-auto">
-                <pre className="text-xs whitespace-pre-wrap">
+              <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-3 max-h-40 overflow-y-auto border">
+                <pre className="text-xs whitespace-pre-wrap text-gray-900 dark:text-gray-100">
                   {logs.slice(-10).join('\n')}
                 </pre>
               </div>
