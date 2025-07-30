@@ -1574,66 +1574,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      const { bulkUpdateMissingImages, checkBulkUpdateConfiguration } = await import('./bulk-image-updater');
+      const { findCOMCImageAndUpload } = await import('./comc-image-finder');
       
-      // Check configuration
-      const config = checkBulkUpdateConfiguration();
-      if (!config.ready) {
+      // Check COMC configuration
+      const ebayAppId = process.env.EBAY_APP_ID;
+      const cloudinaryUrl = process.env.CLOUDINARY_URL;
+      
+      if (!ebayAppId || !cloudinaryUrl) {
         return res.status(400).json({ 
           message: "Configuration error", 
-          missingConfig: config.missingConfig 
+          missingConfig: ['EBAY_APP_ID', 'CLOUDINARY_URL'].filter(key => !process.env[key])
         });
       }
 
       const { limit, rateLimitMs } = req.body;
       const actualLimit = limit ? Math.min(parseInt(limit), 1000) : 50; // Max 1000 cards per request
-      const actualRateLimit = rateLimitMs ? Math.max(parseInt(rateLimitMs), 500) : config.rateLimitMs; // Min 500ms
+      const actualRateLimit = rateLimitMs ? Math.max(parseInt(rateLimitMs), 500) : 1000; // Min 500ms
       
-      console.log(`Starting bulk image update with limit: ${actualLimit}, rate limit: ${actualRateLimit}ms`);
+      console.log(`Starting COMC bulk image update with limit: ${actualLimit}, rate limit: ${actualRateLimit}ms`);
       
-      // Stream progress updates
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
+      // Get cards needing images
+      const cardsNeedingImages = await db.execute(sql`
+        SELECT c.id, c.name, c.card_number, cs.name as set_name
+        FROM cards c
+        JOIN card_sets cs ON c.set_id = cs.id  
+        WHERE c.front_image_url IS NULL OR c.front_image_url = ''
+        ORDER BY c.id
+        LIMIT ${actualLimit}
+      `);
       
-      let progressData = {
-        totalProcessed: 0,
-        successCount: 0,
-        failureCount: 0,
-        current: 0,
-        total: 0
+      const totalCards = cardsNeedingImages.rows.length;
+      console.log(`Found ${totalCards} cards needing images`);
+      
+      if (totalCards === 0) {
+        return res.json({
+          totalProcessed: 0,
+          successCount: 0,
+          failureCount: 0,
+          message: "No cards found needing images"
+        });
+      }
+      
+      let successCount = 0;
+      let failureCount = 0;
+      
+      // Process cards sequentially with rate limiting
+      for (let i = 0; i < totalCards; i++) {
+        const card = cardsNeedingImages.rows[i];
+        
+        try {
+          console.log(`Processing card ${i + 1}/${totalCards}: ${card.name} (${card.card_number}) from ${card.set_name}`);
+          
+          const imageUrl = await findCOMCImageAndUpload(
+            card.id,
+            card.name,
+            card.card_number,
+            card.set_name
+          );
+          
+          if (imageUrl) {
+            successCount++;
+            console.log(`✅ Success: Found image for ${card.name}`);
+          } else {
+            failureCount++;
+            console.log(`❌ Failed: No image found for ${card.name}`);
+          }
+          
+        } catch (error) {
+          failureCount++;
+          console.error(`❌ Error processing ${card.name}:`, error);
+        }
+        
+        // Rate limiting delay
+        if (i < totalCards - 1) {
+          await new Promise(resolve => setTimeout(resolve, actualRateLimit));
+        }
+      }
+      
+      const result = {
+        totalProcessed: totalCards,
+        successCount,
+        failureCount,
+        message: `Processed ${totalCards} cards. ${successCount} images found, ${failureCount} failures.`
       };
       
-      const result = await bulkUpdateMissingImages({
-        limit: actualLimit,
-        rateLimitMs: actualRateLimit,
-        onProgress: (progress) => {
-          progressData = {
-            totalProcessed: progress.current,
-            successCount: progressData.successCount + (progress.status === 'success' ? 1 : 0),
-            failureCount: progressData.failureCount + (progress.status === 'failure' ? 1 : 0),
-            current: progress.current,
-            total: progress.total
-          };
-          
-          res.write(`data: ${JSON.stringify({
-            type: 'progress',
-            ...progressData,
-            cardId: progress.cardId,
-            cardName: progress.cardName,
-            status: progress.status,
-            message: progress.message
-          })}\n\n`);
-        }
-      });
-      
-      // Send final result
-      res.write(`data: ${JSON.stringify({
-        type: 'complete',
-        ...result
-      })}\n\n`);
-      
-      res.end();
+      console.log('COMC bulk update complete:', result);
+      res.json(result);
       
     } catch (error) {
       console.error('Bulk update error:', error);
