@@ -63,6 +63,7 @@ export async function findCardsNeedingImages(
   console.log('🔍 Finding cards that need image updates...');
   
   try {
+    // Build the base query
     let query = db
       .select({
         id: cards.id,
@@ -82,22 +83,23 @@ export async function findCardsNeedingImages(
             eq(cards.frontImageUrl, '/images/image-coming-soon.png'),
             eq(cards.frontImageUrl, '/images/placeholder.png')
           ),
-          // Apply skipRecentlyFailed logic if enabled
+          // Apply skipRecentlyFailed logic if enabled (30 days) - only skip if updated_at exists and is recent
           options.skipRecentlyFailed ? 
-            sql`(updated_at IS NULL OR updated_at < NOW() - INTERVAL '24 hours')` : 
-            sql`TRUE`
+            sql`(updated_at IS NULL OR updated_at < NOW() - INTERVAL '30 days')` : 
+            sql`1=1`
         )
       );
 
-    // Apply ordering - this needs to be done before executing the query
+    // Add ordering
     if (options.randomOrder) {
-      query = query.orderBy(sql`RANDOM()`);
+      query = query.orderBy(sql`RANDOM()`) as any;
     } else {
       // Order by highest ID first (newest cards) to avoid processing old failed cards
-      query = query.orderBy(desc(cards.id));
+      query = query.orderBy(desc(cards.id)) as any;
     }
-
-    const result = limit ? await query.limit(limit) : await query;
+    
+    // Add limit if specified
+    const result = limit ? await (query as any).limit(limit) : await query;
     
     console.log(`📊 Found ${result.length} cards needing images`);
     if (options.randomOrder) {
@@ -185,7 +187,7 @@ export async function bulkUpdateMissingImages(options: BulkUpdateOptions = {}): 
   const {
     limit,
     rateLimitMs = parseInt(process.env.EBAY_RATE_LIMIT_MS || '3000'),
-    skipRecentlyFailed = true,
+    skipRecentlyFailed = false,
     randomOrder = false,
     onProgress
   } = options;
