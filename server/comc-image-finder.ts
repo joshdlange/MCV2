@@ -62,10 +62,11 @@ async function getEBayAccessToken(): Promise<string | null> {
  */
 async function searchCOMCForCardImage(setName: string, cardName: string, cardNumber: string, accessToken: string): Promise<string | null> {
   try {
-    // FIXED: Build clean search query exactly as specified - no transformations
-    // Format: "{setName} {cardName} {cardNumber}" - use card_number exactly as stored in DB
+    // Build search query exactly like the working manual search
+    // Manual working search: "marvel 2024 upper deck studios ud canvas Black White Antonia Salib as Taweret C28"
     const query = `${setName} ${cardName} ${cardNumber}`.replace(/\s+/g, ' ').trim();
     console.log(`[COMC DEBUG] Query: "${query}"`);
+    console.log(`[COMC DEBUG] Individual parts: setName="${setName}", cardName="${cardName}", cardNumber="${cardNumber}"`);
 
     const searchUrl = 'https://api.ebay.com/buy/browse/v1/item_summary/search';
     const params = new URLSearchParams({
@@ -90,20 +91,35 @@ async function searchCOMCForCardImage(setName: string, cardName: string, cardNum
 
     const data: any = await response.json();
     
+    console.log(`[COMC DEBUG] eBay API response status: ${response.status}`);
+    console.log(`[COMC DEBUG] Total items found: ${data.itemSummaries?.length || 0}`);
+    
     if (!data.itemSummaries || data.itemSummaries.length === 0) {
       console.log('📭 No items found in COMC store');
+      console.log('[COMC DEBUG] Full API response:', JSON.stringify(data, null, 2));
       return null;
     }
 
+    // Debug all results first
+    console.log('[COMC DEBUG] All search results:');
+    data.itemSummaries.forEach((item: any, index: number) => {
+      console.log(`[COMC DEBUG] Result ${index + 1}: "${item.title}"`);
+    });
+    
     // Look for exact matches first (using same logic as working standalone script)
     for (const item of data.itemSummaries) {
       const title = item.title.toLowerCase();
       const cardNameLower = cardName.toLowerCase();
       
+      console.log(`[COMC DEBUG] Checking: "${item.title}"`);
+      console.log(`[COMC DEBUG] Looking for cardName: "${cardName}" and cardNumber: "${cardNumber}"`);
+      
       // FIXED: Better matching logic for COMC results
       // Check if this is a good match (contains card name and ideally card number)
       const hasCardName = title.includes(cardNameLower);
       const hasCardNumber = cardNumber ? title.includes(cardNumber.toLowerCase()) : true;
+      
+      console.log(`[COMC DEBUG] hasCardName: ${hasCardName}, hasCardNumber: ${hasCardNumber}`);
       
       if (hasCardName && hasCardNumber) {
         const imageUrl = item.image?.imageUrl || item.thumbnailImages?.[0]?.imageUrl;
