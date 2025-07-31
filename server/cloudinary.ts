@@ -80,21 +80,30 @@ export function getCardMobile(imageUrl: string): string {
   return getOptimizedImageUrl(imageUrl, IMAGE_SIZES.CARD_MOBILE);
 }
 
-// Upload image to Cloudinary (for admin uploads)
-export async function uploadImage(filePath: string, folder: string = 'marvel-cards'): Promise<string> {
+// Upload image from file path or buffer to Cloudinary (CLOUDINARY-ONLY)
+export async function uploadImage(filePathOrBuffer: string | Buffer, folder: string = 'marvel-cards'): Promise<string> {
   try {
-    const result = await cloudinary.uploader.upload(filePath, {
+    const uploadOptions: any = {
       folder: folder,
       resource_type: 'image',
-      transformation: {
-        quality: 'auto',
-        fetch_format: 'auto',
-      },
-    });
-    
+      transformation: [
+        { width: 800, height: 1120, crop: 'fit', quality: 'auto' },
+        { format: 'auto' }
+      ]
+    };
+
+    let result;
+    if (Buffer.isBuffer(filePathOrBuffer)) {
+      // Upload from buffer (NO LOCAL FILE SYSTEM USAGE)
+      result = await cloudinary.uploader.upload(`data:image/jpeg;base64,${filePathOrBuffer.toString('base64')}`, uploadOptions);
+    } else {
+      // Upload from file path (legacy support)
+      result = await cloudinary.uploader.upload(filePathOrBuffer, uploadOptions);
+    }
+
     return result.secure_url;
   } catch (error) {
-    console.error('Error uploading to Cloudinary:', error);
+    console.error('Cloudinary upload error:', error);
     throw error;
   }
 }

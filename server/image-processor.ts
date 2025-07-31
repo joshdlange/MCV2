@@ -53,14 +53,10 @@ function getHigherResolutionUrl(url: string): string {
   return url;
 }
 
-// Function to download and upload image to Cloudinary
+// Function to download and upload image to Cloudinary (CLOUDINARY-ONLY - NO LOCAL FILES)
 async function downloadAndUploadToCloudinary(url: string, folder: string = 'marvel-cards'): Promise<string | null> {
   try {
-    // Create temporary uploads directory if it doesn't exist
-    const uploadsDir = path.join(process.cwd(), "uploads");
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
+    // NO LOCAL DIRECTORY CREATION - streaming directly to Cloudinary
 
     // Try to get higher resolution version
     let processUrl = getHigherResolutionUrl(url);
@@ -82,25 +78,13 @@ async function downloadAndUploadToCloudinary(url: string, folder: string = 'marv
     if (contentType?.includes("gif")) extension = ".gif";
     if (contentType?.includes("webp")) extension = ".webp";
 
-    // Generate unique filename
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 15);
-    const filename = `image_${timestamp}_${randomString}${extension}`;
-    const filepath = path.join(uploadsDir, filename);
-
-    // Save the image temporarily
+    // Stream directly to Cloudinary instead of saving locally
     const buffer = await response.arrayBuffer();
-    fs.writeFileSync(filepath, Buffer.from(buffer));
-
-    // Upload to Cloudinary
-    const cloudinaryUrl = await uploadImage(filepath, folder);
     
-    // Clean up temporary file
-    try {
-      fs.unlinkSync(filepath);
-    } catch (cleanupError) {
-      console.warn(`Failed to clean up temporary file ${filepath}:`, cleanupError);
-    }
+    // Upload buffer directly to Cloudinary (no local file system usage)
+    const cloudinaryUrl = await uploadImage(Buffer.from(buffer), folder);
+    
+    // No temporary file cleanup needed - we never saved to disk
 
     return cloudinaryUrl;
   } catch (error) {

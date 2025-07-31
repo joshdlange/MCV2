@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { cards, cardSets } from "@shared/schema";
+import { cards, cardSets } from "../shared/schema";
 import { eq, isNull, or, and, ne, desc, sql, not, ilike } from "drizzle-orm";
 import { findAndUpdateCardImage } from "./ebay-image-finder";
 import { searchCOMCForCard } from './comc-image-finder';

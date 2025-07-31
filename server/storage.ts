@@ -39,7 +39,7 @@ import {
   type MessageWithUsers,
   type UserWithBadges,
   type ProfileStats
-} from "@shared/schema";
+} from "../shared/schema";
 import { db, withDatabaseRetry } from "./db";
 import { eq, ilike, and, count, sum, desc, sql, isNull, isNotNull, or, lt, gte, gt, ne } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";

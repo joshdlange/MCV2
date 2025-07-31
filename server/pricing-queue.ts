@@ -1,5 +1,5 @@
 import { db } from './db';
-import { cards, userCollections, cardSets } from '@shared/schema';
+import { cards, userCollections, cardSets } from '../shared/schema';
 import { eq } from 'drizzle-orm';
 import { ebayPricingService } from './ebay-pricing';
 
