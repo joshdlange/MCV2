@@ -133,6 +133,11 @@ Changelog:
   - Verified data integrity: all 132 FM/LM cards correctly moved to proper Flair sets
   - Search now works perfectly across all card name variations with space/dash differences
   - Weekend launch search functionality now fully operational and optimized
+- July 30, 2025: CRITICAL ERROR - HIT EBAY API RATE LIMITS FROM REPEATED FAILED PROCESSING
+  - ROOT CAUSE: Bulk updater repeatedly processed same failed cards, exhausting daily API quota
+  - Evidence: All COMC searches returning "No items found" despite manual searches working
+  - Need to wait for API limits to reset (likely 24 hours) before continuing
+  - Lesson learned: Must implement proper failed card tracking to avoid wasting API calls
 - July 30, 2025: SMART BULK IMAGE UPDATER RETRY LOGIC IMPLEMENTED
   - MAJOR IMPROVEMENT: Fixed inefficient retry logic that reprocessed failed cards first
   - Added "Skip Recently Failed" option to prioritize unprocessed cards over old failures  
