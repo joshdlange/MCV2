@@ -64,15 +64,14 @@ async function searchCOMCForCardImage(setName: string, cardName: string, cardNum
   try {
     // Build search query exactly like the working manual search
     // Manual working search: "marvel 2024 upper deck studios ud canvas Black White Antonia Salib as Taweret C28"
-    const query = `${setName} ${cardName} ${cardNumber}`.replace(/\s+/g, ' ').trim();
+    const query = `${setName} ${cardName} ${cardNumber} COMC`.replace(/\s+/g, ' ').trim();
     console.log(`[COMC DEBUG] Query: "${query}"`);
     console.log(`[COMC DEBUG] Individual parts: setName="${setName}", cardName="${cardName}", cardNumber="${cardNumber}"`);
 
     const searchUrl = 'https://api.ebay.com/buy/browse/v1/item_summary/search';
     const params = new URLSearchParams({
-      q: query,
-      limit: '10',
-      filter: 'sellers:comc' // Only search COMC's eBay store
+      q: query, // Include COMC in search query directly
+      limit: '20' // Increase limit to find better matches
     });
 
     const response = await fetch(`${searchUrl}?${params}`, {
@@ -113,15 +112,29 @@ async function searchCOMCForCardImage(setName: string, cardName: string, cardNum
       
       console.log(`[COMC DEBUG] Checking: "${item.title}"`);
       console.log(`[COMC DEBUG] Looking for cardName: "${cardName}" and cardNumber: "${cardNumber}"`);
+      console.log(`[COMC DEBUG] Seller: ${item.seller?.username || 'unknown'}`);
       
-      // FIXED: Better matching logic for COMC results
-      // Check if this is a good match (contains card name and ideally card number)
-      const hasCardName = title.includes(cardNameLower);
-      const hasCardNumber = cardNumber ? title.includes(cardNumber.toLowerCase()) : true;
+      // FIXED: Improved matching logic - more flexible name matching
+      const hasCardName = cardNameLower.split(' ').some(word => 
+        word.length > 2 && title.includes(word) // Match individual words from card name
+      );
       
-      console.log(`[COMC DEBUG] hasCardName: ${hasCardName}, hasCardNumber: ${hasCardNumber}`);
+      // Look for card number in various formats: #99, 99, "99 "
+      const hasCardNumber = cardNumber ? (
+        title.includes(`#${cardNumber}`) || 
+        title.includes(` ${cardNumber} `) ||
+        title.includes(` ${cardNumber}`) ||
+        title.endsWith(cardNumber)
+      ) : true;
       
-      if (hasCardName && hasCardNumber) {
+      // Also check if title contains "COMC" to ensure it's from the right seller
+      const isFromCOMC = title.toLowerCase().includes('comc') || 
+                        item.seller?.username?.toLowerCase().includes('comc') ||
+                        item.itemWebUrl?.includes('comc');
+      
+      console.log(`[COMC DEBUG] hasCardName: ${hasCardName}, hasCardNumber: ${hasCardNumber}, isFromCOMC: ${isFromCOMC}`);
+      
+      if (hasCardName && hasCardNumber && isFromCOMC) {
         const imageUrl = item.image?.imageUrl || item.thumbnailImages?.[0]?.imageUrl;
         if (imageUrl) {
           console.log(`✅ Found COMC exact match: ${imageUrl}`);
