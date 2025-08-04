@@ -2468,6 +2468,147 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Firebase User Recovery Endpoint
+  app.get("/api/admin/firebase-users", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      console.log('Fetching Firebase users for comparison...');
+      
+      // Get all Firebase users
+      const firebaseUsers = [];
+      let nextPageToken;
+      
+      do {
+        const listUsersResult = await admin.auth().listUsers(1000, nextPageToken);
+        firebaseUsers.push(...listUsersResult.users);
+        nextPageToken = listUsersResult.pageToken;
+      } while (nextPageToken);
+
+      // Get all database users
+      const dbUsers = await storage.getAllUsers();
+      
+      // Compare Firebase vs Database
+      const firebaseUIDs = firebaseUsers.map(u => u.uid);
+      const dbUIDs = dbUsers.map(u => u.firebaseUid);
+      
+      const missingInDB = firebaseUsers.filter(u => !dbUIDs.includes(u.uid));
+      const missingInFirebase = dbUsers.filter(u => !firebaseUIDs.includes(u.firebaseUid));
+      
+      const comparison = {
+        firebaseCount: firebaseUsers.length,
+        databaseCount: dbUsers.length,
+        missingInDatabase: missingInDB.length,
+        missingInFirebase: missingInFirebase.length,
+        missingUsers: missingInDB.map(u => ({
+          uid: u.uid,
+          email: u.email || 'No email',
+          displayName: u.displayName || 'No display name',
+          createdTime: u.metadata.creationTime,
+          lastSignInTime: u.metadata.lastSignInTime || 'Never'
+        })),
+        dbUsers: dbUsers.map(u => ({
+          id: u.id,
+          firebaseUid: u.firebaseUid,
+          email: u.email,
+          displayName: u.displayName,
+          createdAt: u.createdAt
+        }))
+      };
+      
+      res.json(comparison);
+    } catch (error) {
+      console.error('Firebase users fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch Firebase users" });
+    }
+  });
+
+  // Restore Missing Firebase Users Endpoint
+  app.post("/api/admin/restore-firebase-users", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      console.log('Starting Firebase user restoration...');
+      
+      // Get all Firebase users
+      const firebaseUsers = [];
+      let nextPageToken;
+      
+      do {
+        const listUsersResult = await admin.auth().listUsers(1000, nextPageToken);
+        firebaseUsers.push(...listUsersResult.users);
+        nextPageToken = listUsersResult.pageToken;
+      } while (nextPageToken);
+
+      // Get current database users
+      const dbUsers = await storage.getAllUsers();
+      const dbUIDs = dbUsers.map(u => u.firebaseUid);
+      
+      // Find users missing from database
+      const missingUsers = firebaseUsers.filter(u => !dbUIDs.includes(u.uid));
+      
+      console.log(`Found ${missingUsers.length} Firebase users missing from database`);
+      
+      const restoredUsers = [];
+      const errors = [];
+      
+      for (const firebaseUser of missingUsers) {
+        try {
+          const isAdminEmail = firebaseUser.email === 'joshdlange045@gmail.com';
+          const userData = {
+            firebaseUid: firebaseUser.uid,
+            username: firebaseUser.email ? firebaseUser.email.split('@')[0] : `user_${firebaseUser.uid.slice(0, 8)}`,
+            email: firebaseUser.email || `${firebaseUser.uid}@unknown.com`,
+            displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Restored User',
+            isAdmin: isAdminEmail,
+            plan: 'SIDE_KICK',
+            subscriptionStatus: 'active'
+          };
+          
+          const user = await storage.createUser(userData);
+          restoredUsers.push({
+            id: user.id,
+            email: user.email,
+            displayName: user.displayName,
+            firebaseUid: user.firebaseUid
+          });
+          
+          console.log(`Restored user: ${user.email} (ID: ${user.id})`);
+        } catch (error) {
+          console.error(`Failed to restore user ${firebaseUser.uid}:`, error);
+          errors.push({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email || 'No email',
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+      
+      const result = {
+        firebaseTotal: firebaseUsers.length,
+        databaseBefore: dbUsers.length,
+        missingFound: missingUsers.length,
+        restored: restoredUsers.length,
+        errors: errors.length,
+        restoredUsers,
+        errors: errors.slice(0, 5) // Only show first 5 errors
+      };
+      
+      console.log('Firebase user restoration complete:', result);
+      res.json(result);
+    } catch (error) {
+      console.error('Firebase user restoration error:', error);
+      res.status(500).json({ 
+        message: "Failed to restore Firebase users",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);
 
