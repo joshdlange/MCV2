@@ -58,20 +58,20 @@ async function getEBayAccessToken(): Promise<string | null> {
 }
 
 /**
- * Search COMC eBay store for a specific card using Browse API
+ * Search eBay for a specific card using Browse API (improved matching)
  */
 async function searchCOMCForCardImage(setName: string, cardName: string, cardNumber: string, accessToken: string): Promise<string | null> {
   try {
-    // Build search query exactly like the working manual search
-    // Manual working search: "marvel 2024 upper deck studios ud canvas Black White Antonia Salib as Taweret C28"
-    const query = `${setName} ${cardName} ${cardNumber} COMC`.replace(/\s+/g, ' ').trim();
-    console.log(`[COMC DEBUG] Query: "${query}"`);
-    console.log(`[COMC DEBUG] Individual parts: setName="${setName}", cardName="${cardName}", cardNumber="${cardNumber}"`);
+    // FIXED: Remove COMC requirement - search all eBay for better matches
+    const query = `${setName} ${cardName} ${cardNumber}`.replace(/\s+/g, ' ').trim();
+    console.log(`[IMAGE DEBUG] Query: "${query}"`);
+    console.log(`[IMAGE DEBUG] Individual parts: setName="${setName}", cardName="${cardName}", cardNumber="${cardNumber}"`);
 
     const searchUrl = 'https://api.ebay.com/buy/browse/v1/item_summary/search';
     const params = new URLSearchParams({
-      q: query, // Include COMC in search query directly
-      limit: '20' // Increase limit to find better matches
+      q: query,
+      limit: '30', // Increase limit for better matches
+      sort: 'price' // Sort by price to get consistent results
     });
 
     const response = await fetch(`${searchUrl}?${params}`, {
@@ -90,65 +90,60 @@ async function searchCOMCForCardImage(setName: string, cardName: string, cardNum
 
     const data: any = await response.json();
     
-    console.log(`[COMC DEBUG] eBay API response status: ${response.status}`);
-    console.log(`[COMC DEBUG] Total items found: ${data.itemSummaries?.length || 0}`);
+    console.log(`[IMAGE DEBUG] eBay API response status: ${response.status}`);
+    console.log(`[IMAGE DEBUG] Total items found: ${data.itemSummaries?.length || 0}`);
     
     if (!data.itemSummaries || data.itemSummaries.length === 0) {
-      console.log('📭 No items found in COMC store');
-      console.log('[COMC DEBUG] Full API response:', JSON.stringify(data, null, 2));
+      console.log('📭 No items found on eBay');
       return null;
     }
 
-    // Debug all results first
-    console.log('[COMC DEBUG] All search results:');
-    data.itemSummaries.forEach((item: any, index: number) => {
-      console.log(`[COMC DEBUG] Result ${index + 1}: "${item.title}"`);
-    });
-    
-    // Look for exact matches first (using same logic as working standalone script)
+    // Look for exact matches with improved logic
     for (const item of data.itemSummaries) {
       const title = item.title.toLowerCase();
       const cardNameLower = cardName.toLowerCase();
       
-      console.log(`[COMC DEBUG] Checking: "${item.title}"`);
-      console.log(`[COMC DEBUG] Looking for cardName: "${cardName}" and cardNumber: "${cardNumber}"`);
-      console.log(`[COMC DEBUG] Seller: ${item.seller?.username || 'unknown'}`);
-      
-      // FIXED: Improved matching logic - more flexible name matching
-      const hasCardName = cardNameLower.split(' ').some(word => 
-        word.length > 2 && title.includes(word) // Match individual words from card name
+      // FIXED: Better card name matching - handle multi-word names
+      const hasCardName = cardNameLower.split(' ').every(word => 
+        word.length <= 2 || title.includes(word) // All significant words must be present
       );
       
-      // Look for card number in various formats: #99, 99, "99 "
+      // FIXED: Improved card number matching
       const hasCardNumber = cardNumber ? (
-        title.includes(`#${cardNumber}`) || 
+        title.includes(`#${cardNumber} `) || 
+        title.includes(`#${cardNumber}`) ||
         title.includes(` ${cardNumber} `) ||
-        title.includes(` ${cardNumber}`) ||
-        title.endsWith(cardNumber)
+        title.includes(`-${cardNumber} `) ||
+        new RegExp(`\\b${cardNumber}\\b`).test(title) // Word boundary match
       ) : true;
       
-      // Also check if title contains "COMC" to ensure it's from the right seller
-      const isFromCOMC = title.toLowerCase().includes('comc') || 
-                        item.seller?.username?.toLowerCase().includes('comc') ||
-                        item.itemWebUrl?.includes('comc');
+      // FIXED: Check if it's likely a trading card (not other Marvel merchandise)
+      const isLikelyCard = (
+        title.includes('upper deck') ||
+        title.includes('card') ||
+        title.includes('trading') ||
+        title.includes('#') ||
+        /\b\d{4}\s*(upper|deck|marvel|topps)\b/.test(title)
+      );
       
-      console.log(`[COMC DEBUG] hasCardName: ${hasCardName}, hasCardNumber: ${hasCardNumber}, isFromCOMC: ${isFromCOMC}`);
+      console.log(`[IMAGE DEBUG] Checking: "${item.title}"`); 
+      console.log(`[IMAGE DEBUG] hasCardName: ${hasCardName}, hasCardNumber: ${hasCardNumber}, isLikelyCard: ${isLikelyCard}`);
       
-      if (hasCardName && hasCardNumber && isFromCOMC) {
+      if (hasCardName && hasCardNumber && isLikelyCard) {
         const imageUrl = item.image?.imageUrl || item.thumbnailImages?.[0]?.imageUrl;
         if (imageUrl) {
-          console.log(`✅ Found COMC exact match: ${imageUrl}`);
-          console.log(`[COMC DEBUG] Matched title: "${item.title}"`);
+          console.log(`✅ Found matching card: ${imageUrl}`);
+          console.log(`[IMAGE DEBUG] Matched title: "${item.title}"`);
           return imageUrl;
         }
       }
     }
 
-    console.log('📭 No exact match found in COMC store');
+    console.log('📭 No exact match found');
     return null;
 
   } catch (error) {
-    console.error('❌ Error searching COMC store:', error);
+    console.error('❌ Error searching eBay:', error);
     return null;
   }
 }
@@ -199,7 +194,7 @@ async function updateCardImage(cardId: number, imageUrl: string): Promise<boolea
 }
 
 /**
- * Main function to search COMC for a card and update if found
+ * Main function to search eBay for a card and update if found
  */
 export async function searchCOMCForCard(
   cardId: number,
@@ -214,10 +209,10 @@ export async function searchCOMCForCard(
       return { success: false, error: 'Failed to get eBay access token' };
     }
 
-    // Search COMC store
+    // Search eBay for card images
     const imageUrl = await searchCOMCForCardImage(setName, cardName, cardNumber, accessToken);
     if (!imageUrl) {
-      return { success: false, error: 'No exact match found in COMC store' };
+      return { success: false, error: 'No exact match found on eBay' };
     }
 
     // Upload to Cloudinary
