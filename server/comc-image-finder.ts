@@ -103,33 +103,30 @@ async function searchCOMCForCardImage(setName: string, cardName: string, cardNum
       const title = item.title.toLowerCase();
       const cardNameLower = cardName.toLowerCase();
       
-      // FIXED: Better card name matching - handle multi-word names
-      const hasCardName = cardNameLower.split(' ').every(word => 
-        word.length <= 2 || title.includes(word) // All significant words must be present
+      // SIMPLIFIED: Use flexible matching that actually works
+      const hasCardName = cardNameLower.split(' ').some(word => 
+        word.length > 2 && title.includes(word) // At least one significant word must match
       );
       
-      // FIXED: Improved card number matching
+      // SIMPLIFIED: Basic card number matching
       const hasCardNumber = cardNumber ? (
-        title.includes(`#${cardNumber} `) || 
-        title.includes(`#${cardNumber}`) ||
+        title.includes(`#${cardNumber}`) || 
         title.includes(` ${cardNumber} `) ||
-        title.includes(`-${cardNumber} `) ||
-        new RegExp(`\\b${cardNumber}\\b`).test(title) // Word boundary match
+        new RegExp(`\\b${cardNumber}\\b`).test(title)
       ) : true;
       
-      // FIXED: Check if it's likely a trading card (not other Marvel merchandise)
+      // SIMPLIFIED: Basic trading card verification
       const isLikelyCard = (
         title.includes('upper deck') ||
-        title.includes('card') ||
-        title.includes('trading') ||
-        title.includes('#') ||
-        /\b\d{4}\s*(upper|deck|marvel|topps)\b/.test(title)
+        title.includes('marvel') ||
+        title.includes('#')
       );
       
       console.log(`[IMAGE DEBUG] Checking: "${item.title}"`); 
       console.log(`[IMAGE DEBUG] hasCardName: ${hasCardName}, hasCardNumber: ${hasCardNumber}, isLikelyCard: ${isLikelyCard}`);
       
-      if (hasCardName && hasCardNumber && isLikelyCard) {
+      // FIXED: Accept more matches - be less restrictive
+      if ((hasCardName && hasCardNumber) || (hasCardName && isLikelyCard && cardNumber && title.includes(cardNumber))) {
         const imageUrl = item.image?.imageUrl || item.thumbnailImages?.[0]?.imageUrl;
         if (imageUrl) {
           console.log(`✅ Found matching card: ${imageUrl}`);
