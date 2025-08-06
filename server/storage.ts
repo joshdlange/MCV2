@@ -11,6 +11,8 @@ import {
   badges,
   userBadges,
   notifications,
+  marketTrends,
+  marketTrendItems,
   type User, 
   type InsertUser,
   type MainSet,
@@ -38,7 +40,11 @@ import {
   type FriendWithUser,
   type MessageWithUsers,
   type UserWithBadges,
-  type ProfileStats
+  type ProfileStats,
+  type MarketTrend,
+  type InsertMarketTrend,
+  type MarketTrendItem,
+  type InsertMarketTrendItem
 } from "../shared/schema";
 import { db, withDatabaseRetry } from "./db";
 import { eq, ilike, and, count, sum, desc, sql, isNull, isNotNull, or, lt, gte, gt, ne } from "drizzle-orm";
@@ -166,6 +172,14 @@ interface IStorage {
   getUnreadNotificationCount(userId: number): Promise<number>;
   markNotificationAsRead(notificationId: number): Promise<void>;
   markAllNotificationsAsRead(userId: number): Promise<void>;
+
+  // Market Trends
+  createMarketTrend(insertMarketTrend: InsertMarketTrend): Promise<MarketTrend>;
+  getMarketTrend(date: string): Promise<MarketTrend | undefined>;
+  getLatestMarketTrend(): Promise<MarketTrend | undefined>;
+  getMarketTrendHistory(days: number): Promise<MarketTrend[]>;
+  createMarketTrendItem(insertMarketTrendItem: InsertMarketTrendItem): Promise<MarketTrendItem>;
+  getMarketTrendItems(trendId: number): Promise<MarketTrendItem[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2258,6 +2272,45 @@ export class DatabaseStorage implements IStorage {
       .update(notifications)
       .set({ isRead: true })
       .where(eq(notifications.userId, userId));
+  }
+
+  // Market Trends Implementation
+  async createMarketTrend(insertMarketTrend: InsertMarketTrend): Promise<MarketTrend> {
+    const [marketTrend] = await withDatabaseRetry(
+      () => db.insert(marketTrends).values(insertMarketTrend).returning()
+    );
+    return marketTrend;
+  }
+
+  async getMarketTrend(date: string): Promise<MarketTrend | undefined> {
+    const [marketTrend] = await db.select().from(marketTrends).where(eq(marketTrends.date, date));
+    return marketTrend;
+  }
+
+  async getLatestMarketTrend(): Promise<MarketTrend | undefined> {
+    const [marketTrend] = await db.select().from(marketTrends)
+      .orderBy(desc(marketTrends.createdAt))
+      .limit(1);
+    return marketTrend;
+  }
+
+  async getMarketTrendHistory(days: number): Promise<MarketTrend[]> {
+    return await db.select().from(marketTrends)
+      .orderBy(desc(marketTrends.date))
+      .limit(days);
+  }
+
+  async createMarketTrendItem(insertMarketTrendItem: InsertMarketTrendItem): Promise<MarketTrendItem> {
+    const [marketTrendItem] = await withDatabaseRetry(
+      () => db.insert(marketTrendItems).values(insertMarketTrendItem).returning()
+    );
+    return marketTrendItem;
+  }
+
+  async getMarketTrendItems(trendId: number): Promise<MarketTrendItem[]> {
+    return await db.select().from(marketTrendItems)
+      .where(eq(marketTrendItems.trendId, trendId))
+      .orderBy(desc(marketTrendItems.price));
   }
 }
 

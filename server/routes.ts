@@ -21,6 +21,7 @@ import { sql, eq, ilike } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
 import { badgeService } from "./badge-service";
+import { marketTrendsService } from "./market-trends-service";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -2606,6 +2607,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Failed to restore Firebase users",
         error: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  });
+
+  // Market Trends API
+  app.get("/api/market-trends", async (req, res) => {
+    try {
+      const trendsData = await marketTrendsService.getMarketTrendsResponse();
+      res.json(trendsData);
+    } catch (error) {
+      console.error('Get market trends error:', error);
+      res.status(500).json({ message: "Failed to fetch market trends" });
+    }
+  });
+
+  // Admin route to manually trigger market trends update
+  app.post("/api/admin/market-trends/update", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      await marketTrendsService.runDailyUpdate();
+      res.json({ message: "Market trends updated successfully" });
+    } catch (error) {
+      console.error('Update market trends error:', error);
+      res.status(500).json({ message: "Failed to update market trends" });
     }
   });
 

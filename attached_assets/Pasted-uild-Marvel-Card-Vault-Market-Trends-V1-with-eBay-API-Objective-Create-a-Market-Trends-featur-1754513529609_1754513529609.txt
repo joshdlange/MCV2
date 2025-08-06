@@ -1,0 +1,124 @@
+uild Marvel Card Vault “Market Trends” (V1) with eBay API
+🎯 Objective
+Create a Market Trends feature inside Marvel Card Vault that shows daily market insights for Marvel trading cards.
+Data source is exclusively the eBay Browse API, filtered for Marvel trading cards.
+No other APIs or data sources are to be used.
+The feature must be visually stunning, on-brand, and mobile-first with a comic book theme.
+
+🔍 Data Requirements (V1)
+Pull from eBay Browse API with the following constraints:
+
+Query must return only Marvel trading cards:
+
+Use keywords: "Marvel trading cards"
+
+Category: Collectible Card Games or equivalent Trading Cards category
+
+Fetch sold items only for the last 24 hours
+
+Return for each sold item:
+
+title
+
+price.value and price.currency
+
+image.imageUrl (first image)
+
+itemWebUrl
+
+Compute:
+
+Average sold price (last 24h)
+
+Total number of sold items (last 24h)
+
+Highest sale price and Lowest sale price (last 24h)
+
+Identify:
+
+Top 5 gainers and Top 5 losers by % change compared to the previous day’s average (requires storing previous day’s summary in our DB for comparison)
+
+⚙️ Technical Requirements
+Backend (/api/market-trends)
+New Express.js endpoint at /api/market-trends
+
+Calls eBay Browse API with the above filters
+
+Processes and returns JSON in this exact format:
+
+json
+Copy
+Edit
+{
+  "marketMovement": {
+    "averagePrice": 54.23,
+    "percentChange": 3.4,
+    "totalSold": 284,
+    "highestSale": 320.00,
+    "lowestSale": 4.50
+  },
+  "trendData": [
+    { "date": "2025-08-01", "averagePrice": 52.45 },
+    { "date": "2025-08-02", "averagePrice": 54.23 }
+  ],
+  "topGainers": [
+    { "name": "Wolverine 1992 MM #45", "priceChange": 25, "currentPrice": 80.00, "imageUrl": "https://...", "itemUrl": "https://..." }
+  ],
+  "topLosers": [
+    { "name": "Magneto 1990 Impel #12", "priceChange": -18, "currentPrice": 15.00, "imageUrl": "https://...", "itemUrl": "https://..." }
+  ]
+}
+Store yesterday’s summary in the DB for calculating day-over-day change
+
+Only store one record per day to avoid bloating the DB
+
+Frontend (MarketTrends.tsx)
+Mobile-first responsive layout
+
+Sections:
+
+Market Summary Panel
+
+Big % arrow (green up, red down) styled like comic book action lines
+
+Stats: Avg Price, % Change, Total Sold, Highest Sale, Lowest Sale
+
+Trend Chart
+
+7-day line chart of average prices
+
+Use Chart.js with custom comic-style skin (halftone texture, bold black outlines)
+
+Top Gainers / Top Losers
+
+Side-by-side lists in comic-style boxes
+
+Show image, name, % change, current price, and clickable link to eBay
+
+🎨 Styling & Branding
+Match Marvel Card Vault theme: bold reds (#E62429), yellows, black outlines, comic halftone backgrounds
+
+Use Marvel-style typography for headers
+
+Comic speech bubbles for % change indicators
+
+Keep layout clean and non-cluttered — no extra widgets or panels
+
+📅 Data Refresh
+Backend cron job runs once daily at midnight UTC to:
+
+Fetch new 24h data from eBay
+
+Update DB record for “yesterday”
+
+Frontend always pulls latest computed values from /api/market-trends
+
+🚫 Explicit DO NOTs
+❌ Do not use PriceCharting or any other API
+
+❌ Do not store or fetch card images locally — only use the eBay-provided image URLs
+
+❌ No fuzzy keyword experiments — stick to "Marvel trading cards" search term and correct category filter
+
+❌ No adding unrelated data points — only the ones listed above
+

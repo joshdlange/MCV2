@@ -318,6 +318,41 @@ export const insertUserBadgeSchema = createInsertSchema(userBadges).omit({
   earnedAt: true,
 });
 
+// Market Trends Tables
+export const marketTrends = pgTable("market_trends", {
+  id: serial("id").primaryKey(),
+  date: text("date").notNull().unique(), // YYYY-MM-DD format
+  averagePrice: decimal("average_price", { precision: 10, scale: 2 }).notNull(),
+  totalSold: integer("total_sold").notNull(),
+  highestSale: decimal("highest_sale", { precision: 10, scale: 2 }).notNull(),
+  lowestSale: decimal("lowest_sale", { precision: 10, scale: 2 }).notNull(),
+  percentChange: decimal("percent_change", { precision: 5, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const marketTrendItems = pgTable("market_trend_items", {
+  id: serial("id").primaryKey(),
+  trendId: integer("trend_id").references(() => marketTrends.id).notNull(),
+  title: text("title").notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").notNull(),
+  imageUrl: text("image_url"),
+  itemWebUrl: text("item_web_url"),
+  category: text("category"),
+  dayOverDayChange: decimal("day_over_day_change", { precision: 5, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertMarketTrendSchema = createInsertSchema(marketTrends).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMarketTrendItemSchema = createInsertSchema(marketTrendItems).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -351,6 +386,12 @@ export type InsertBadge = z.infer<typeof insertBadgeSchema>;
 
 export type UserBadge = typeof userBadges.$inferSelect;
 export type InsertUserBadge = z.infer<typeof insertUserBadgeSchema>;
+
+export type MarketTrend = typeof marketTrends.$inferSelect;
+export type InsertMarketTrend = z.infer<typeof insertMarketTrendSchema>;
+
+export type MarketTrendItem = typeof marketTrendItems.$inferSelect;
+export type InsertMarketTrendItem = z.infer<typeof insertMarketTrendItemSchema>;
 
 // Extended types for API responses
 export type CardWithSet = Card & {
