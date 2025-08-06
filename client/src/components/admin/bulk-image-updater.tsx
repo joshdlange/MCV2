@@ -129,9 +129,12 @@ export default function BulkImageUpdater() {
       
       console.log('[DEBUG] Frontend: Update completed successfully');
 
+      // Refresh the missing images count immediately
+      await fetchMissingInfo();
+
       toast({
-        title: "Bulk Update Complete",
-        description: "Image update process finished successfully",
+        title: "Bulk Update Complete", 
+        description: `Updated ${result.successCount} images successfully. Missing images count refreshed.`,
       });
     } catch (error) {
       console.error('Bulk update error:', error);
@@ -142,7 +145,10 @@ export default function BulkImageUpdater() {
       });
     } finally {
       setUpdating(false);
-      await fetchMissingInfo(); // Refresh the count
+      // Double-refresh to ensure count is current
+      setTimeout(() => {
+        fetchMissingInfo();
+      }, 1000);
     }
   };
 

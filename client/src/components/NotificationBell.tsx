@@ -42,34 +42,27 @@ export function NotificationBell() {
   // Mark notification as read
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: number) => {
-      const response = await fetch(`/api/notifications/${notificationId}/read`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('firebaseToken')}`,
-        },
-      });
+      const response = await apiRequest('PUT', `/api/notifications/${notificationId}/read`);
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
     },
+    onError: (error) => {
+      console.error('Mark as read error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to mark notification as read",
+        variant: "destructive",
+      });
+    },
   });
 
   // Mark all as read
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/notifications/mark-all-read', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('firebaseToken')}`,
-        },
-      });
-      if (!response.ok) {
-        throw new Error('Failed to mark all notifications as read');
-      }
+      const response = await apiRequest('PUT', '/api/notifications/mark-all-read');
       return response.json();
     },
     onSuccess: () => {
