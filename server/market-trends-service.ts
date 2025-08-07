@@ -1,5 +1,6 @@
 import { storage } from './storage';
 import { ebayBrowseApi } from './ebay-browse-api';
+import { ebayMarketplaceInsights } from './ebay-marketplace-insights';
 
 export class MarketTrendsService {
   

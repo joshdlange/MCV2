@@ -74,13 +74,14 @@ export class eBayBrowseApi {
       const accessToken = await ebayOAuthService.getAccessToken();
       
       // Search for Marvel cards in category 183050 (Non-Sport Trading Card Singles)
-      // with condition filters for graded (LIKE_NEW=2750) and ungraded (USED_VERY_GOOD=4000) cards
+      // NOTE: Browse API only shows ACTIVE listings, not sold items
+      // For historical sales data, we need Marketplace Insights API
       const searchParams = new URLSearchParams({
         category_ids: '183050',
         q: 'Marvel trading card',
-        filter: 'conditionIds:{2750|4000},soldItemsOnly,price:[1..],priceCurrency:USD',
+        filter: 'conditionIds:{2750|4000},price:[1..],priceCurrency:USD',
         limit: '200', // Max allowed per request
-        sort: 'endDate', // Most recent sales first
+        sort: 'price', // Sort by price for current market analysis
       });
 
       const response = await fetch(`${this.baseUrl}/item_summary/search?${searchParams}`, {

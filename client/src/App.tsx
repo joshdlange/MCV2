@@ -29,6 +29,7 @@ import AdminPage from "@/pages/admin";
 import AdminAutomation from "@/pages/admin/automation";
 import CardSearch from "@/pages/card-search";
 import MarketTrends from "@/pages/market-trends";
+import ApiDemo from "@/pages/api-demo";
 import SubscriptionSuccess from "@/pages/subscription-success";
 import SubscriptionCancelled from "@/pages/subscription-cancelled";
 import NotFound from "@/pages/not-found";
@@ -124,6 +125,7 @@ function Router() {
       <Route path="/wishlist" component={Wishlist} />
       <Route path="/marketplace" component={Marketplace} />
       <Route path="/trends" component={MarketTrends} />
+      <Route path="/api-demo" component={ApiDemo} />
       <Route path="/profile" component={Profile} />
       <Route path="/social" component={Social} />
       <Route path="/friend-profile/:friendId" component={FriendProfile} />

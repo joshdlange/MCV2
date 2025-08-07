@@ -22,6 +22,8 @@ import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-find
 import { registerPerformanceRoutes } from "./performance-routes";
 import { badgeService } from "./badge-service";
 import { marketTrendsService } from "./market-trends-service";
+import { ebayBrowseApi } from "./ebay-browse-api";
+import { ebayMarketplaceInsights } from "./ebay-marketplace-insights";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -2596,7 +2598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         restored: restoredUsers.length,
         errors: errors.length,
         restoredUsers,
-        errors: errors.slice(0, 5) // Only show first 5 errors
+        errorDetails: errors.slice(0, 5) // Only show first 5 errors
       };
       
       console.log('Firebase user restoration complete:', result);
@@ -2633,6 +2635,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Update market trends error:', error);
       res.status(500).json({ message: "Failed to update market trends" });
+    }
+  });
+
+  // Check eBay API access status
+  app.get("/api/ebay-api-status", async (req, res) => {
+    try {
+      const [browseAccess, insightsAccess] = await Promise.all([
+        // Check Browse API (should always work with valid credentials)
+        ebayBrowseApi.getMarvelCardTrends().then(() => ({ hasAccess: true, message: 'Browse API accessible' }))
+          .catch((error) => ({ hasAccess: false, message: `Browse API error: ${error.message}` })),
+        
+        // Check Marketplace Insights API (requires business approval)
+        ebayMarketplaceInsights.checkApiAccess()
+      ]);
+
+      res.json({
+        browseApi: browseAccess,
+        marketplaceInsights: insightsAccess,
+        recommendations: [
+          !browseAccess.hasAccess && "Add eBay Browse API credentials",
+          !insightsAccess.hasAccess && "Apply for Marketplace Insights API access at https://developer.ebay.com/api-docs/buy/static/api-insights.html"
+        ].filter(Boolean)
+      });
+    } catch (error) {
+      console.error('API status check error:', error);
+      res.status(500).json({ message: "Failed to check API status" });
+    }
+  });
+
+  // Get historical Marvel card sales data (requires Marketplace Insights API)
+  app.get("/api/market-trends/historical", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required for historical data' });
+      }
+
+      const historicalData = await ebayMarketplaceInsights.getMarvelCardSalesHistory();
+      
+      res.json({
+        dataSource: 'eBay Marketplace Insights API',
+        timeWindow: 'Last 90 days',
+        totalSales: historicalData.totalSales,
+        averagePrice: historicalData.averagePrice,
+        priceRange: historicalData.priceRange,
+        dailySales: historicalData.salesByDate,
+        topSellers: historicalData.topSellers.slice(0, 5), // Limit to top 5
+        note: historicalData.totalSales === 0 ? 
+          'No historical data available. This requires Marketplace Insights API access from eBay.' : 
+          'Historical sales data from eBay Marketplace Insights API'
+      });
+    } catch (error) {
+      console.error('Historical data error:', error);
+      res.status(500).json({ 
+        message: "Failed to fetch historical data",
+        note: "This feature requires eBay Marketplace Insights API access"
+      });
     }
   });
 
