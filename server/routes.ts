@@ -2694,6 +2694,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stripe Subscription Routes
+  app.post("/api/create-checkout-session", authenticateUser, async (req: any, res) => {
+    try {
+      const user = req.user;
+      
+      // Don't allow already subscribed users to create new sessions
+      if (user.plan === 'SUPER_HERO' && user.subscriptionStatus === 'active') {
+        return res.status(400).json({ message: "User already has an active subscription" });
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: 'Marvel Card Vault - Super Hero Plan',
+                description: 'Unlimited card tracking, marketplace access, and advanced analytics',
+              },
+              unit_amount: 400, // $4.00 in cents
+              recurring: {
+                interval: 'month',
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        mode: 'subscription',
+        success_url: `${req.headers.origin}/subscription-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${req.headers.origin}/subscription-cancelled`,
+        metadata: {
+          userId: user.id.toString(),
+          userEmail: user.email,
+        },
+      });
+
+      res.json({ sessionId: session.id, url: session.url });
+    } catch (error: any) {
+      console.error('Error creating checkout session:', error);
+      res.status(500).json({ message: 'Failed to create checkout session' });
+    }
+  });
+
+  // Stripe webhook endpoint to handle successful payments
+  app.post('/api/stripe-webhook', async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    let event;
+
+    try {
+      // In production, you should set STRIPE_WEBHOOK_SECRET
+      event = stripe.webhooks.constructEvent(req.body, sig as string, process.env.STRIPE_WEBHOOK_SECRET || '');
+    } catch (err: any) {
+      console.error('Webhook signature verification failed:', err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed':
+          const session = event.data.object as Stripe.Checkout.Session;
+          const userId = parseInt(session.metadata?.userId || '0');
+          
+          if (userId && session.subscription) {
+            // Update user to Super Hero plan
+            await storage.updateUser(userId, {
+              plan: 'SUPER_HERO',
+              subscriptionStatus: 'active',
+              stripeCustomerId: session.customer as string,
+              stripeSubscriptionId: session.subscription as string
+            });
+            console.log(`User ${userId} upgraded to Super Hero plan`);
+          }
+          break;
+
+        case 'customer.subscription.deleted':
+          const subscription = event.data.object as Stripe.Subscription;
+          // Find user by subscription ID and downgrade to free plan
+          const users = await storage.getAllUsers();
+          const subscribedUser = users.find(u => u.stripeSubscriptionId === subscription.id);
+          
+          if (subscribedUser) {
+            await storage.updateUser(subscribedUser.id, {
+              plan: 'SIDE_KICK',
+              subscriptionStatus: 'cancelled',
+              stripeSubscriptionId: null
+            });
+            console.log(`User ${subscribedUser.id} downgraded to Side Kick plan`);
+          }
+          break;
+
+        default:
+          console.log(`Unhandled event type ${event.type}`);
+      }
+
+      res.json({ received: true });
+    } catch (error) {
+      console.error('Error processing webhook:', error);
+      res.status(500).json({ message: 'Webhook processing failed' });
+    }
+  });
+
+  // Get current subscription status
+  app.get("/api/subscription-status", authenticateUser, async (req: any, res) => {
+    try {
+      const user = req.user;
+      res.json({
+        plan: user.plan,
+        subscriptionStatus: user.subscriptionStatus,
+        stripeCustomerId: user.stripeCustomerId,
+        stripeSubscriptionId: user.stripeSubscriptionId
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch subscription status" });
+    }
+  });
+
+  // Create customer portal session for billing management
+  app.post("/api/create-portal-session", authenticateUser, async (req: any, res) => {
+    try {
+      const user = req.user;
+      
+      if (!user.stripeCustomerId) {
+        return res.status(400).json({ message: "No Stripe customer ID found" });
+      }
+
+      const session = await stripe.billingPortal.sessions.create({
+        customer: user.stripeCustomerId,
+        return_url: `${req.headers.origin}/profile`,
+      });
+
+      res.json({ url: session.url });
+    } catch (error: any) {
+      console.error('Error creating portal session:', error);
+      res.status(500).json({ message: 'Failed to create portal session' });
+    }
+  });
+
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);
 
