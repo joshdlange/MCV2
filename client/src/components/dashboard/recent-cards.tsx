@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
+import SimpleImage from "@/components/ui/simple-image";
 import { convertGoogleDriveUrl } from "@/lib/utils";
 import type { CollectionItem } from "@shared/schema";
 
@@ -101,7 +102,7 @@ export function RecentCards() {
           <Button 
             variant="ghost" 
             className="text-marvel-red hover:text-red-700"
-            onClick={() => setLocation('/collection')}
+            onClick={() => setLocation('/my-collection')}
           >
             View All
           </Button>
@@ -120,20 +121,11 @@ export function RecentCards() {
             >
               {/* Trading card with proper 2.5:3.5 aspect ratio */}
               <div className="aspect-[2.5/3.5] relative">
-                {item.frontImageUrl ? (
-                  <img 
-                    src={convertGoogleDriveUrl(item.frontImageUrl)} 
-                    alt={item.cardName}
-                    className="w-full h-full object-contain"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzlkYTNhZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIEVycm9yPC90ZXh0Pjwvc3ZnPg==';
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-muted flex items-center justify-center">
-                    <span className="text-muted-foreground text-xs">No Image</span>
-                  </div>
-                )}
+                <SimpleImage
+                  src={item.frontImageUrl ? convertGoogleDriveUrl(item.frontImageUrl) : ""}
+                  alt={item.cardName}
+                  className="w-full h-full"
+                />
                 
                 {/* Status badges */}
                 <div className="absolute top-1 right-1 flex flex-col gap-1">
