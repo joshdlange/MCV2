@@ -2714,9 +2714,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 name: 'Marvel Card Vault - Super Hero Plan',
                 description: 'Unlimited card tracking, marketplace access, and advanced analytics',
               },
-              unit_amount: 400, // $4.00 in cents
+              unit_amount: 1200, // $12.00 in cents (3 months at $4/month)
               recurring: {
                 interval: 'month',
+                interval_count: 3, // Bill every 3 months
               },
             },
             quantity: 1,
