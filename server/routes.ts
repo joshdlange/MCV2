@@ -2832,6 +2832,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Manually upgrade user (for compensation/webhook issues)
+  app.post("/api/admin/upgrade-user", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { userId, plan = 'SUPER_HERO', months = 2, reason } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+
+      // Calculate expiration date
+      const expirationDate = new Date();
+      expirationDate.setMonth(expirationDate.getMonth() + months);
+      
+      // Update user plan
+      const updatedUser = await storage.updateUser(userId, {
+        plan,
+        subscriptionStatus: 'active',
+        // Note: Not setting stripeCustomerId since this is manual compensation
+      });
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      console.log(`Admin ${req.user.id} manually upgraded user ${userId} to ${plan} for ${months} months. Reason: ${reason || 'No reason provided'}`);
+      
+      res.json({
+        success: true,
+        message: `User ${userId} upgraded to ${plan} plan for ${months} months`,
+        user: {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          plan: updatedUser.plan,
+          subscriptionStatus: updatedUser.subscriptionStatus
+        },
+        expirationDate: expirationDate.toISOString()
+      });
+    } catch (error) {
+      console.error('Manual upgrade error:', error);
+      res.status(500).json({ message: "Failed to upgrade user" });
+    }
+  });
+
+  // Admin: Get affected users during outage period
+  app.get("/api/admin/outage-affected-users", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      // Get users who signed up recently but are still on free plan
+      const users = await storage.getAllUsers();
+      
+      // Filter for potentially affected users (adjust dates as needed)
+      const outageStartDate = new Date('2025-01-17'); // Adjust this date
+      const outageEndDate = new Date('2025-01-19');   // Adjust this date
+      
+      const affectedUsers = users.filter(user => {
+        const createdDate = new Date(user.createdAt);
+        return (
+          createdDate >= outageStartDate &&
+          createdDate <= outageEndDate &&
+          user.plan === 'SIDE_KICK' && // Still on free plan
+          !user.stripeCustomerId // No successful payment
+        );
+      });
+
+      res.json({
+        outageStartDate: outageStartDate.toISOString(),
+        outageEndDate: outageEndDate.toISOString(),
+        affectedUsers: affectedUsers.map(user => ({
+          id: user.id,
+          email: user.email,
+          displayName: user.displayName,
+          createdAt: user.createdAt,
+          plan: user.plan,
+          subscriptionStatus: user.subscriptionStatus,
+          hasStripeCustomer: !!user.stripeCustomerId
+        })),
+        count: affectedUsers.length
+      });
+    } catch (error) {
+      console.error('Get affected users error:', error);
+      res.status(500).json({ message: "Failed to get affected users" });
+    }
+  });
+
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);
 
