@@ -9,14 +9,14 @@
 
 ### Billing Details
 - **Plan**: Super Hero Plan
-- **Price**: $12.00 every 3 months ($4/month equivalent)
-- **Billing Cycle**: Every 3 months automatically
+- **Price**: $4.00 per month
+- **Billing Cycle**: Monthly recurring subscription
 - **Currency**: USD
 - **Payment Methods**: Credit/Debit cards via Stripe
 
 ### Recurring Payment Setup ✅
-- **Interval**: 3-month recurring subscription
-- **Auto-renewal**: Yes, automatically charges every 3 months
+- **Interval**: Monthly recurring subscription
+- **Auto-renewal**: Yes, automatically charges every month
 - **Proration**: Handled by Stripe automatically
 - **Failed payments**: Stripe retries automatically with smart retry logic
 
