@@ -70,6 +70,11 @@ const authenticateUser = async (req: any, res: any, next: any) => {
       console.log("User not found in database");
       return res.status(404).json({ message: 'User not found in database' });
     }
+
+    // Track user login (async, don't wait for it)
+    storage.recordUserLogin(decodedToken.uid).catch(error => {
+      console.error('Failed to track login for user:', decodedToken.uid, error);
+    });
     
     req.user = user;
     next();
@@ -90,6 +95,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       version: "1.0.0"
     });
   });
+
+
   
   // Create admin user endpoint (only for initial setup)
   app.post("/api/admin/create-user", async (req, res) => {

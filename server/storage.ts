@@ -70,6 +70,7 @@ interface IStorage {
   getAllUsers(): Promise<User[]>;
   updateUser(id: number, insertUser: Partial<InsertUser>): Promise<User | undefined>;
   deleteUser(id: number): Promise<void>;
+  recordUserLogin(firebaseUid: string): Promise<void>;
   
   // Main Sets
   getMainSets(): Promise<MainSet[]>;
@@ -296,6 +297,49 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error deleting user:', error);
       throw new Error('Failed to delete user');
+    }
+  }
+
+  async recordUserLogin(firebaseUid: string): Promise<void> {
+    try {
+      const now = new Date();
+      const user = await this.getUserByFirebaseUid(firebaseUid);
+      
+      if (!user) {
+        console.error('User not found for login tracking:', firebaseUid);
+        return;
+      }
+
+      // Calculate login streak
+      let newLoginStreak = 1;
+      if (user.lastLogin) {
+        const lastLoginDate = new Date(user.lastLogin);
+        const daysDiff = Math.floor((now.getTime() - lastLoginDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (daysDiff === 1) {
+          // Consecutive day login
+          newLoginStreak = (user.loginStreak || 0) + 1;
+        } else if (daysDiff === 0) {
+          // Same day login - don't update streak or total
+          newLoginStreak = user.loginStreak || 1;
+          return; // Exit early to avoid updating for same-day logins
+        }
+        // If daysDiff > 1, streak resets to 1 (already set above)
+      }
+
+      await db
+        .update(users)
+        .set({
+          lastLogin: now,
+          loginStreak: newLoginStreak,
+          totalLogins: (user.totalLogins || 0) + 1
+        })
+        .where(eq(users.firebaseUid, firebaseUid));
+
+      console.log(`Login tracked for user ${firebaseUid}: streak ${newLoginStreak}, total ${(user.totalLogins || 0) + 1}`);
+    } catch (error) {
+      console.error('Error recording user login:', error);
+      // Don't throw - login tracking shouldn't break authentication
     }
   }
 
