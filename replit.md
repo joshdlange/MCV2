@@ -42,9 +42,16 @@ The application features a modern, clean interface with careful attention to vis
 ### Production APIs
 - **eBay Finding API**: For card image search and pricing.
 - **eBay OAuth**: For API authentication.
-- **Stripe API**: For subscription payment processing.
+- **Stripe API**: For subscription payment processing. ✅ RESTORED (Jan 19, 2025)
 - **Firebase Auth**: For user authentication and management.
 - **Cloudinary**: For image processing and CDN hosting.
+
+### Payment System Status (Updated Jan 19, 2025)
+- **RESOLVED**: Critical payment outage caused by accidental removal of Stripe endpoints
+- **RESTORED**: All Stripe payment endpoints (`/api/create-checkout-session`, `/api/stripe-webhook`, `/api/subscription-status`, `/api/create-portal-session`)
+- **CONFIGURED**: Complete Stripe key setup (Secret, Publishable, Webhook Secret)
+- **AUTOMATED**: User upgrades now automatic via webhook processing
+- **CUSTOMER IMPACT**: 10+ users affected during outage, compensation tools ready
 
 ### Development Tools
 - **Drizzle Kit**: For database migrations and schema management.
