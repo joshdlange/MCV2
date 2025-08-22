@@ -122,7 +122,7 @@ export default function MarketTrends() {
     }),
     datasets: [
       {
-        label: 'Average Price',
+        label: 'Marvel Card Average Price (USD)',
         data: trendData.map(d => d.averagePrice),
         borderColor: '#dc2626', // Marvel red
         backgroundColor: 'rgba(220, 38, 38, 0.1)',
@@ -147,7 +147,7 @@ export default function MarketTrends() {
       },
       title: {
         display: true,
-        text: '7-Day Price Trend',
+        text: '30-Day Marvel Card Price Trend',
         font: {
           size: 18,
           weight: 'bold' as const,

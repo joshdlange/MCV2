@@ -1,6 +1,8 @@
 import { storage } from './storage';
 import { ebayBrowseApi } from './ebay-browse-api';
 import { ebayMarketplaceInsights } from './ebay-marketplace-insights';
+import { db } from './db';
+import { sql } from 'drizzle-orm';
 
 export class MarketTrendsService {
   
@@ -105,8 +107,8 @@ export class MarketTrendsService {
         };
       }
 
-      // Get 7-day history for trend chart
-      const trendHistory = await storage.getMarketTrendHistory(7);
+      // Get 30-day history for trend chart
+      const trendHistory = await storage.getMarketTrendHistory(30);
       const trendData = trendHistory.map(trend => ({
         date: trend.date,
         averagePrice: parseFloat(trend.averagePrice)
@@ -121,10 +123,9 @@ export class MarketTrendsService {
         lowestSale: parseFloat(latestTrend.lowestSale)
       };
 
-      // For V1, we'll return empty gainers/losers
-      // Future versions can implement more sophisticated card-level tracking
-      const topGainers: any[] = [];
-      const topLosers: any[] = [];
+      // Get top gainers and losers from card price history
+      const topGainers = await this.getTopGainers();
+      const topLosers = await this.getTopLosers();
 
       return {
         marketMovement,
@@ -145,6 +146,71 @@ export class MarketTrendsService {
   async runDailyUpdate(): Promise<void> {
     const today = new Date().toISOString().split('T')[0];
     await this.updateMarketTrendsForDate(today);
+  }
+
+  /**
+   * Get top gaining cards over the last 30 days
+   */
+  private async getTopGainers(): Promise<Array<{
+    name: string;
+    priceChange: number;
+    currentPrice: number;
+    imageUrl?: string;
+    itemUrl: string;
+  }>> {
+    try {
+      const result = await db.execute(sql`
+        SELECT card_name, current_price, previous_price, price_change, percent_change, image_url, item_url
+        FROM card_price_history 
+        WHERE percent_change > 0
+        ORDER BY percent_change DESC 
+        LIMIT 5
+      `);
+      
+      return result.rows.map((row: any) => ({
+        name: row.card_name,
+        priceChange: parseFloat(row.percent_change),
+        currentPrice: parseFloat(row.current_price),
+        imageUrl: row.image_url,
+        itemUrl: row.item_url
+      }));
+    } catch (error) {
+      console.error('Error fetching top gainers:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get top losing cards over the last 30 days
+   */
+  private async getTopLosers(): Promise<Array<{
+    name: string;
+    priceChange: number;
+    currentPrice: number;
+    imageUrl?: string;
+    itemUrl: string;
+  }>> {
+    try {
+      // Use direct SQL query through Drizzle
+      const result = await db.execute(sql`
+        SELECT card_name, current_price, previous_price, price_change, percent_change, image_url, item_url
+        FROM card_price_history 
+        WHERE percent_change < 0
+        ORDER BY percent_change ASC 
+        LIMIT 5
+      `);
+      
+      return result.rows.map((row: any) => ({
+        name: row.card_name,
+        priceChange: parseFloat(row.percent_change),
+        currentPrice: parseFloat(row.current_price),
+        imageUrl: row.image_url,
+        itemUrl: row.item_url
+      }));
+    } catch (error) {
+      console.error('Error fetching top losers:', error);
+      return [];
+    }
   }
 }
 
