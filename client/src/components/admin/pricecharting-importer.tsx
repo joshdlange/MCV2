@@ -332,7 +332,7 @@ export function PriceChartingImporter() {
               </div>
             </div>
 
-            {importResult.errors.length > 0 && (
+            {importResult.errors && importResult.errors.length > 0 && (
               <>
                 <Separator />
                 <div className="space-y-2">
@@ -349,7 +349,7 @@ export function PriceChartingImporter() {
               </>
             )}
 
-            {importResult.skippedItems.length > 0 && (
+            {importResult.skippedItems && importResult.skippedItems.length > 0 && (
               <>
                 <Separator />
                 <div className="space-y-2">
