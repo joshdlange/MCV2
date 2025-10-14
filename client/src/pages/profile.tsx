@@ -96,6 +96,7 @@ function SocialFriendsSection() {
 
 function SocialBadgesSection() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   
   const { data: userBadges } = useQuery({
     queryKey: ['/api/social/user-badges'],
@@ -152,17 +153,17 @@ function SocialBadgesSection() {
           <div 
             key={userBadge.id} 
             className="text-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => navigate('/social?tab=badges')}
+            onClick={() => setLocation('/social?tab=badges')}
           >
             <div className="w-16 h-16 mx-auto mb-2 flex items-center justify-center">
               {userBadge.badge.iconUrl ? (
                 <img 
                   src={userBadge.badge.iconUrl} 
                   alt={userBadge.badge.name}
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain rounded-full border-4 border-gray-300"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg">
+                <div className="w-full h-full bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg border-4 border-red-400">
                   <GetBadgeIcon badgeName={userBadge.badge.name} />
                 </div>
               )}
@@ -192,10 +193,8 @@ export default function Profile() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const [isEditing, setIsEditing] = useState(false);
-  const navigate = (path: string) => {
-    window.location.href = path;
-  };
   const [profileData, setProfileData] = useState({
     displayName: user?.displayName || '',
     bio: '',
@@ -561,7 +560,7 @@ export default function Profile() {
                     <Button 
                       variant="outline" 
                       size="sm"
-                      onClick={() => navigate('/social')}
+                      onClick={() => setLocation('/social')}
                       className="text-red-600 border-red-600 hover:bg-red-50"
                     >
                       View All
@@ -584,7 +583,7 @@ export default function Profile() {
                     <Button 
                       variant="outline" 
                       size="sm"
-                      onClick={() => navigate('/social?tab=badges')}
+                      onClick={() => setLocation('/social?tab=badges')}
                       className="text-red-600 border-red-600 hover:bg-red-50"
                     >
                       View All
@@ -607,14 +606,14 @@ export default function Profile() {
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Button 
-                      onClick={() => navigate('/social?tab=messages')}
+                      onClick={() => setLocation('/social?tab=messages')}
                       className="bg-red-500 hover:bg-red-600 text-white"
                     >
                       <MessageCircle className="w-4 h-4 mr-2" />
                       Send Message
                     </Button>
                     <Button 
-                      onClick={() => navigate('/social?tab=friends')}
+                      onClick={() => setLocation('/social?tab=friends')}
                       variant="outline"
                       className="border-red-600 text-red-600 hover:bg-red-50"
                     >
