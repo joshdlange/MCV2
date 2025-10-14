@@ -146,21 +146,16 @@ export default function MarketTrends() {
         display: false,
       },
       title: {
-        display: true,
-        text: '7-Day Price Trend',
-        font: {
-          size: 18,
-          weight: 'bold' as const,
-        },
-        color: '#1f2937',
+        display: false,
       },
       tooltip: {
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        backgroundColor: 'rgba(220, 38, 38, 0.95)',
         titleColor: '#ffffff',
         bodyColor: '#ffffff',
         borderColor: '#dc2626',
-        borderWidth: 1,
+        borderWidth: 2,
         displayColors: false,
+        padding: 12,
         callbacks: {
           label: (context: any) => `$${context.parsed.y.toFixed(2)}`,
         },
@@ -173,14 +168,21 @@ export default function MarketTrends() {
         },
         ticks: {
           color: '#6b7280',
+          font: {
+            size: 12,
+          },
         },
       },
       y: {
         grid: {
-          color: 'rgba(0, 0, 0, 0.1)',
+          color: 'rgba(220, 38, 38, 0.1)',
+          lineWidth: 1,
         },
         ticks: {
           color: '#6b7280',
+          font: {
+            size: 12,
+          },
           callback: (value: any) => `$${value}`,
         },
       },
@@ -202,15 +204,15 @@ export default function MarketTrends() {
       {/* Market Summary Panel */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {/* Average Price */}
-        <Card className="border-2 border-red-200 dark:border-red-800 bg-gradient-to-br from-red-50 to-white dark:from-red-950 dark:to-gray-900">
+        <Card className="border-red-200 dark:border-red-800 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-red-700 dark:text-red-300">
+            <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Average Price
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-red-600 dark:text-red-400" />
+            <DollarSign className="h-5 w-5 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-800 dark:text-red-200">
+            <div className="text-3xl font-bold text-red-600 dark:text-red-400">
               ${marketMovement.averagePrice.toFixed(2)}
             </div>
             <div className="flex items-center mt-2">
@@ -220,69 +222,69 @@ export default function MarketTrends() {
                 <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
               )}
               <span className={`text-sm font-medium ${
-                marketMovement.percentChange >= 0 ? 'text-green-600' : 'text-red-600'
+                marketMovement.percentChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
               }`}>
                 {marketMovement.percentChange >= 0 ? '+' : ''}{marketMovement.percentChange.toFixed(1)}%
               </span>
-              <span className="text-xs text-gray-500 ml-2">vs yesterday</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">vs yesterday</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Total Sold */}
-        <Card className="border-2 border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950 dark:to-gray-900">
+        <Card className="border-red-200 dark:border-red-800 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-300">
+            <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Cards Sold (24h)
             </CardTitle>
-            <ShoppingCart className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <ShoppingCart className="h-5 w-5 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-800 dark:text-blue-200">
+            <div className="text-3xl font-bold text-red-600 dark:text-red-400">
               {marketMovement.totalSold.toLocaleString()}
             </div>
-            <p className="text-xs text-gray-500 mt-2">Marvel trading cards</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Marvel trading cards</p>
           </CardContent>
         </Card>
 
         {/* Highest Sale */}
-        <Card className="border-2 border-green-200 dark:border-green-800 bg-gradient-to-br from-green-50 to-white dark:from-green-950 dark:to-gray-900">
+        <Card className="border-red-200 dark:border-red-800 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-700 dark:text-green-300">
+            <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Highest Sale
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <TrendingUp className="h-5 w-5 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-800 dark:text-green-200">
+            <div className="text-3xl font-bold text-red-600 dark:text-red-400">
               ${marketMovement.highestSale.toFixed(2)}
             </div>
-            <p className="text-xs text-gray-500 mt-2">Last 24 hours</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Last 24 hours</p>
           </CardContent>
         </Card>
 
         {/* Lowest Sale */}
-        <Card className="border-2 border-orange-200 dark:border-orange-800 bg-gradient-to-br from-orange-50 to-white dark:from-orange-950 dark:to-gray-900">
+        <Card className="border-red-200 dark:border-red-800 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-orange-700 dark:text-orange-300">
+            <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Lowest Sale
             </CardTitle>
-            <TrendingDown className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+            <TrendingDown className="h-5 w-5 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-800 dark:text-orange-200">
+            <div className="text-3xl font-bold text-red-600 dark:text-red-400">
               ${marketMovement.lowestSale.toFixed(2)}
             </div>
-            <p className="text-xs text-gray-500 mt-2">Last 24 hours</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Last 24 hours</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Trend Chart */}
-      <Card className="mb-8 border-2 border-gray-200 dark:border-gray-700">
+      <Card className="mb-8 border-red-200 dark:border-red-800 shadow-md">
         <CardHeader>
-          <CardTitle className="text-xl font-bold text-center text-gray-800 dark:text-gray-200">
-            Price Trend Analysis
+          <CardTitle className="text-xl font-bold text-center text-red-600 dark:text-red-400">
+            30-Day Marvel Card Price Trend
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -302,9 +304,9 @@ export default function MarketTrends() {
 
       {/* Top Gainers and Losers (Future Implementation) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card className="border-2 border-green-200 dark:border-green-800">
+        <Card className="border-red-200 dark:border-red-800 shadow-md">
           <CardHeader>
-            <CardTitle className="text-lg font-bold text-green-700 dark:text-green-300 flex items-center">
+            <CardTitle className="text-lg font-bold text-red-600 dark:text-red-400 flex items-center">
               <TrendingUp className="mr-2" />
               Top Gainers
             </CardTitle>
@@ -318,9 +320,9 @@ export default function MarketTrends() {
           </CardContent>
         </Card>
 
-        <Card className="border-2 border-red-200 dark:border-red-800">
+        <Card className="border-red-200 dark:border-red-800 shadow-md">
           <CardHeader>
-            <CardTitle className="text-lg font-bold text-red-700 dark:text-red-300 flex items-center">
+            <CardTitle className="text-lg font-bold text-red-600 dark:text-red-400 flex items-center">
               <TrendingDown className="mr-2" />
               Top Losers
             </CardTitle>
