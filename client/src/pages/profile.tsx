@@ -35,10 +35,12 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { User as UserType } from "@/types/schema";
 import { useLocation } from "wouter";
+import { useAppStore } from "@/lib/store";
 
 // Social Components
 function SocialFriendsSection() {
   const { user } = useAuth();
+  const { currentUser } = useAppStore();
   
   const { data: friends } = useQuery({
     queryKey: ['/api/social/friends'],
@@ -64,8 +66,8 @@ function SocialFriendsSection() {
       </div>
       <div className="grid grid-cols-4 gap-4">
         {friends.slice(0, 8).map((friend: any) => {
-          const userEmail = user?.email;
-          const isRequesterCurrentUser = friend.requester.username === userEmail;
+          const userId = currentUser?.id;
+          const isRequesterCurrentUser = friend.requester.id === userId;
           const friendUser = isRequesterCurrentUser ? friend.recipient : friend.requester;
           
           return (
@@ -191,6 +193,7 @@ function SocialBadgesSection() {
 
 export default function Profile() {
   const { user } = useAuth();
+  const { currentUser } = useAppStore();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -303,7 +306,7 @@ export default function Profile() {
               <Avatar className="w-24 h-24">
                 <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'User'} />
                 <AvatarFallback className="text-2xl">
-                  {(user.displayName || user.email || 'U').charAt(0).toUpperCase()}
+                  {(user.displayName || currentUser?.username || 'U').charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               
@@ -311,13 +314,13 @@ export default function Profile() {
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-2">
                   <div className="flex flex-col md:flex-row md:items-center gap-3">
                     <h1 className="text-3xl font-bold">{user.displayName || 'User'}</h1>
-                    {user.isAdmin && (
+                    {currentUser?.isAdmin && (
                       <Badge className="bg-red-600">
                         <Shield className="w-3 h-3 mr-1" />
                         Admin
                       </Badge>
                     )}
-                    {getPlanBadge(userProfile?.plan || 'SIDE_KICK')}
+                    {getPlanBadge(currentUser?.plan || 'SIDE_KICK')}
                   </div>
                   <Button 
                     onClick={() => setIsEditing(!isEditing)} 
@@ -330,7 +333,7 @@ export default function Profile() {
                   </Button>
                 </div>
                 
-                <p className="text-muted-foreground mb-2">{user.email}</p>
+                <p className="text-muted-foreground mb-2">@{currentUser?.username || 'user'}</p>
                 <p className="text-sm text-muted-foreground mb-4">
                   <Calendar className="w-4 h-4 inline mr-1" />
                   {getAccountAge()}

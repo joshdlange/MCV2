@@ -12,6 +12,8 @@ interface AppState {
     isAdmin: boolean;
     plan: string;
     subscriptionStatus: string;
+    onboardingComplete: boolean;
+    username?: string;
   } | null;
   toggleAdminMode: () => void;
   toggleMobileMenu: () => void;

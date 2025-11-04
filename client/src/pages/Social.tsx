@@ -134,21 +134,22 @@ export default function Social() {
       if (!response.ok) throw new Error("Failed to fetch friends");
       const friendsData = await response.json();
       
-      // Deduplicate friends by email/username to avoid showing duplicates
+      // Deduplicate friends by ID to avoid showing duplicates
       const uniqueFriends = new Map();
+      const currentUserId = currentUser?.id;
       
       friendsData.forEach((friend: Friend) => {
-        const friendUser = friend.requester.username === user?.email 
+        const friendUser = friend.requester.id === currentUserId 
           ? friend.recipient 
           : friend.requester;
         
-        // Use email as unique key since that's what causes duplicates
-        if (!uniqueFriends.has(friendUser.username)) {
-          uniqueFriends.set(friendUser.username, {
+        // Use friend ID as unique key
+        if (!uniqueFriends.has(friendUser.id)) {
+          uniqueFriends.set(friendUser.id, {
             ...friend,
             // Normalize to always show the friend (not current user)
-            requester: friend.requester.username === user?.email ? friend.requester : friend.recipient,
-            recipient: friend.requester.username === user?.email ? friend.recipient : friend.requester
+            requester: friend.requester.id === currentUserId ? friend.requester : friend.recipient,
+            recipient: friend.requester.id === currentUserId ? friend.recipient : friend.requester
           });
         }
       });
@@ -598,7 +599,6 @@ export default function Social() {
                             <div>
                               <p className="font-bold text-gray-900">{searchUser.displayName}</p>
                               <p className="text-sm text-gray-500">@{searchUser.username}</p>
-                              <p className="text-sm text-gray-400">{searchUser.email}</p>
                             </div>
                           </div>
                           <Button

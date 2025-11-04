@@ -7,11 +7,13 @@ import { useAppStore } from '@/lib/store';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  refreshUser: async () => {},
 });
 
 export const useAuth = () => {
@@ -57,13 +59,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           avatar: data.user.photoURL || '',
           isAdmin: data.user.isAdmin,
           plan: data.user.plan,
-          subscriptionStatus: data.user.subscriptionStatus
+          subscriptionStatus: data.user.subscriptionStatus,
+          onboardingComplete: data.user.onboardingComplete || false,
+          username: data.user.username
         });
       } else {
         console.error('Failed to sync user with backend');
       }
     } catch (error) {
       console.error('Error syncing user:', error);
+    }
+  };
+
+  // Function to refresh user data from backend
+  const refreshUser = async () => {
+    if (user) {
+      await syncUserWithBackend(user);
     }
   };
 
@@ -97,6 +108,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value = {
     user,
     loading,
+    refreshUser,
   };
 
   return (

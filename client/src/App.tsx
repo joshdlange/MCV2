@@ -12,6 +12,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { NotificationBell } from "@/components/NotificationBell";
 import heroLogoWhite from "@assets/noun-super-hero-380874-FFFFFF.png";
 import { Login } from "@/components/auth/Login";
+import { Onboarding } from "@/components/auth/Onboarding";
 import Dashboard from "@/pages/dashboard";
 import BrowseCards from "@/pages/browse-cards";
 import MyCollection from "@/pages/my-collection";
@@ -158,9 +159,12 @@ function AuthenticatedApp() {
   }
 
   return (
-    <AppLayout>
-      <Router />
-    </AppLayout>
+    <>
+      <Onboarding />
+      <AppLayout>
+        <Router />
+      </AppLayout>
+    </>
   );
 }
 

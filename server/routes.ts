@@ -214,9 +214,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Onboarding routes
-  app.post("/api/onboarding/check-username", authenticateUser, async (req: any, res) => {
+  app.get("/api/onboarding/check-username", authenticateUser, async (req: any, res) => {
     try {
-      const { username } = req.body;
+      const username = req.query.username as string;
       
       // Validate username format (3-20 chars, lowercase, underscores only)
       const usernameRegex = /^[a-z0-9_]{3,20}$/;
@@ -227,8 +227,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Check if username is already taken
+      // Check if username is already taken by another user
       const existingUser = await storage.getUserByUsername(username);
+      // Allow current user to keep their own username
       const isAvailable = !existingUser || existingUser.id === req.user.id;
       
       res.json({ 
