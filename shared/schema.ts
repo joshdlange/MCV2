@@ -6,7 +6,7 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   firebaseUid: text("firebase_uid").notNull().unique(),
-  username: text("username").notNull(),
+  username: text("username").notNull().unique(),
   email: text("email").notNull().unique(),
   displayName: text("display_name"),
   photoURL: text("photo_url"),
@@ -26,6 +26,10 @@ export const users = pgTable("users", {
   priceAlerts: boolean("price_alerts").default(true).notNull(),
   friendActivity: boolean("friend_activity").default(true).notNull(),
   profileVisibility: text("profile_visibility").default("public").notNull(), // public, friends, private
+  onboardingComplete: boolean("onboarding_complete").default(false).notNull(),
+  heardAbout: text("heard_about"),
+  favoriteSets: text("favorite_sets").array(),
+  marketingOptIn: boolean("marketing_opt_in").default(false).notNull(),
   lastLogin: timestamp("last_login"),
   loginStreak: integer("login_streak").default(0).notNull(),
   totalLogins: integer("total_logins").default(0).notNull(),
@@ -353,6 +357,25 @@ export const insertMarketTrendItemSchema = createInsertSchema(marketTrendItems).
   createdAt: true,
 });
 
+// Upcoming Sets Table
+export const upcomingSets = pgTable("upcoming_sets", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  publisher: text("publisher").notNull(),
+  releaseDate: timestamp("release_date").notNull(),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertUpcomingSetSchema = createInsertSchema(upcomingSets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -392,6 +415,9 @@ export type InsertMarketTrend = z.infer<typeof insertMarketTrendSchema>;
 
 export type MarketTrendItem = typeof marketTrendItems.$inferSelect;
 export type InsertMarketTrendItem = z.infer<typeof insertMarketTrendItemSchema>;
+
+export type UpcomingSet = typeof upcomingSets.$inferSelect;
+export type InsertUpcomingSet = z.infer<typeof insertUpcomingSetSchema>;
 
 // Extended types for API responses
 export type CardWithSet = Card & {

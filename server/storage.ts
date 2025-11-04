@@ -44,7 +44,10 @@ import {
   type MarketTrend,
   type InsertMarketTrend,
   type MarketTrendItem,
-  type InsertMarketTrendItem
+  type InsertMarketTrendItem,
+  type UpcomingSet,
+  type InsertUpcomingSet,
+  upcomingSets
 } from "../shared/schema";
 import { db, withDatabaseRetry } from "./db";
 import { eq, ilike, and, count, sum, desc, sql, isNull, isNotNull, or, lt, gte, gt, ne } from "drizzle-orm";
@@ -181,6 +184,12 @@ interface IStorage {
   getMarketTrendHistory(days: number): Promise<MarketTrend[]>;
   createMarketTrendItem(insertMarketTrendItem: InsertMarketTrendItem): Promise<MarketTrendItem>;
   getMarketTrendItems(trendId: number): Promise<MarketTrendItem[]>;
+
+  // Upcoming Sets
+  getUpcomingSets(): Promise<any[]>;
+  createUpcomingSet(setData: any): Promise<any>;
+  updateUpcomingSet(id: number, updates: any): Promise<any>;
+  deleteUpcomingSet(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2355,6 +2364,33 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(marketTrendItems)
       .where(eq(marketTrendItems.trendId, trendId))
       .orderBy(desc(marketTrendItems.price));
+  }
+
+  // Upcoming Sets methods
+  async getUpcomingSets(): Promise<UpcomingSet[]> {
+    return await db.select().from(upcomingSets)
+      .where(eq(upcomingSets.isActive, true))
+      .orderBy(upcomingSets.releaseDate);
+  }
+
+  async createUpcomingSet(setData: InsertUpcomingSet): Promise<UpcomingSet> {
+    const [newSet] = await withDatabaseRetry(
+      () => db.insert(upcomingSets).values(setData).returning()
+    );
+    return newSet;
+  }
+
+  async updateUpcomingSet(id: number, updates: Partial<InsertUpcomingSet>): Promise<UpcomingSet | undefined> {
+    const [updatedSet] = await db.update(upcomingSets)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(upcomingSets.id, id))
+      .returning();
+    return updatedSet;
+  }
+
+  async deleteUpcomingSet(id: number): Promise<void> {
+    await db.delete(upcomingSets)
+      .where(eq(upcomingSets.id, id));
   }
 }
 

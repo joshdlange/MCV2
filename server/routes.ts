@@ -213,6 +213,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ user: req.user });
   });
 
+  // Onboarding routes
+  app.post("/api/onboarding/check-username", authenticateUser, async (req: any, res) => {
+    try {
+      const { username } = req.body;
+      
+      // Validate username format (3-20 chars, lowercase, underscores only)
+      const usernameRegex = /^[a-z0-9_]{3,20}$/;
+      if (!usernameRegex.test(username)) {
+        return res.status(400).json({ 
+          available: false,
+          message: 'Username must be 3-20 characters, lowercase letters, numbers, and underscores only' 
+        });
+      }
+      
+      // Check if username is already taken
+      const existingUser = await storage.getUserByUsername(username);
+      const isAvailable = !existingUser || existingUser.id === req.user.id;
+      
+      res.json({ 
+        available: isAvailable,
+        message: isAvailable ? 'Username is available' : 'Username is already taken'
+      });
+    } catch (error) {
+      console.error('Check username error:', error);
+      res.status(500).json({ message: 'Failed to check username availability' });
+    }
+  });
+
+  app.post("/api/onboarding/complete", authenticateUser, async (req: any, res) => {
+    try {
+      const { username, heardAbout, favoriteSets, marketingOptIn } = req.body;
+      
+      // Validate username format
+      const usernameRegex = /^[a-z0-9_]{3,20}$/;
+      if (!usernameRegex.test(username)) {
+        return res.status(400).json({ 
+          message: 'Invalid username format' 
+        });
+      }
+      
+      // Check if username is taken by another user
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser && existingUser.id !== req.user.id) {
+        return res.status(400).json({ 
+          message: 'Username is already taken' 
+        });
+      }
+      
+      // Update user with onboarding data
+      const updatedUser = await storage.updateUser(req.user.id, {
+        username,
+        heardAbout,
+        favoriteSets: favoriteSets || [],
+        marketingOptIn: marketingOptIn || false,
+        onboardingComplete: true
+      });
+      
+      res.json({ user: updatedUser });
+    } catch (error) {
+      console.error('Complete onboarding error:', error);
+      res.status(500).json({ message: 'Failed to complete onboarding' });
+    }
+  });
+
   // Get all users (admin only)
   app.get("/api/users", authenticateUser, async (req: any, res) => {
     try {
@@ -2698,6 +2762,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Failed to fetch historical data",
         note: "This feature requires eBay Marketplace Insights API access"
       });
+    }
+  });
+
+  // Upcoming Sets CRUD API
+  app.get("/api/upcoming-sets", async (req, res) => {
+    try {
+      const sets = await storage.getUpcomingSets();
+      res.json(sets);
+    } catch (error) {
+      console.error('Get upcoming sets error:', error);
+      res.status(500).json({ message: "Failed to fetch upcoming sets" });
+    }
+  });
+
+  app.post("/api/admin/upcoming-sets", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      const setData = req.body;
+      const newSet = await storage.createUpcomingSet(setData);
+      res.json(newSet);
+    } catch (error) {
+      console.error('Create upcoming set error:', error);
+      res.status(500).json({ message: "Failed to create upcoming set" });
+    }
+  });
+
+  app.put("/api/admin/upcoming-sets/:id", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      const setId = parseInt(req.params.id);
+      const updates = req.body;
+      const updatedSet = await storage.updateUpcomingSet(setId, updates);
+      
+      if (!updatedSet) {
+        return res.status(404).json({ message: "Upcoming set not found" });
+      }
+      
+      res.json(updatedSet);
+    } catch (error) {
+      console.error('Update upcoming set error:', error);
+      res.status(500).json({ message: "Failed to update upcoming set" });
+    }
+  });
+
+  app.delete("/api/admin/upcoming-sets/:id", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      const setId = parseInt(req.params.id);
+      await storage.deleteUpcomingSet(setId);
+      res.json({ message: "Upcoming set deleted successfully" });
+    } catch (error) {
+      console.error('Delete upcoming set error:', error);
+      res.status(500).json({ message: "Failed to delete upcoming set" });
     }
   });
 
