@@ -28,8 +28,10 @@ import AdminUnassignedSets from "@/pages/admin/unassigned-sets";
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminPage from "@/pages/admin";
 import AdminAutomation from "@/pages/admin/automation";
+import AdminUpcomingSets from "@/pages/admin/upcoming-sets";
 import CardSearch from "@/pages/card-search";
 import MarketTrends from "@/pages/market-trends";
+import UpcomingSets from "@/pages/upcoming-sets";
 import ApiDemo from "@/pages/api-demo";
 import SubscriptionSuccess from "@/pages/subscription-success";
 import SubscriptionCancelled from "@/pages/subscription-cancelled";
@@ -126,6 +128,7 @@ function Router() {
       <Route path="/wishlist" component={Wishlist} />
       <Route path="/marketplace" component={Marketplace} />
       <Route path="/trends" component={MarketTrends} />
+      <Route path="/upcoming-sets" component={UpcomingSets} />
       <Route path="/api-demo" component={ApiDemo} />
       <Route path="/profile" component={Profile} />
       <Route path="/social" component={Social} />
@@ -136,6 +139,7 @@ function Router() {
       <Route path="/admin/users" component={AdminUsers} />
       <Route path="/admin/main-sets" component={AdminMainSets} />
       <Route path="/admin/unassigned-sets" component={AdminUnassignedSets} />
+      <Route path="/admin/upcoming-sets" component={AdminUpcomingSets} />
       <Route path="/subscription-success" component={SubscriptionSuccess} />
       <Route path="/subscription-cancelled" component={SubscriptionCancelled} />
       <Route component={NotFound} />

@@ -22,7 +22,8 @@ import {
   TrendingUp,
   Users,
   Store,
-  User
+  User,
+  Calendar
 } from "lucide-react";
 
 const getNavigationItems = (userPlan: string): NavigationItem[] => [
@@ -37,6 +38,7 @@ const getNavigationItems = (userPlan: string): NavigationItem[] => [
     badge: userPlan === 'SIDE_KICK' ? "👑" : undefined
   },
   { href: "/trends", label: "Market Trends", icon: "TrendingUp" },
+  { href: "/upcoming-sets", label: "Upcoming Sets", icon: "Calendar" },
   { href: "/social", label: "Social Hub", icon: "Users" },
 ];
 
@@ -55,6 +57,7 @@ const iconMap = {
   TrendingUp,
   Users,
   Store,
+  Calendar,
 };
 
 export function Sidebar() {

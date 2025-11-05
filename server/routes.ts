@@ -2777,6 +2777,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public: Get active upcoming sets
+  app.get("/api/upcoming-sets", async (req, res) => {
+    try {
+      const allSets = await storage.getAllUpcomingSets();
+      const activeSets = allSets.filter(set => set.isActive);
+      res.json(activeSets);
+    } catch (error) {
+      console.error('Get upcoming sets error:', error);
+      res.status(500).json({ message: "Failed to fetch upcoming sets" });
+    }
+  });
+
+  // Admin: Get all upcoming sets
+  app.get("/api/admin/upcoming-sets", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      const sets = await storage.getAllUpcomingSets();
+      res.json(sets);
+    } catch (error) {
+      console.error('Get admin upcoming sets error:', error);
+      res.status(500).json({ message: "Failed to fetch upcoming sets" });
+    }
+  });
+
   app.post("/api/admin/upcoming-sets", authenticateUser, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) {
@@ -2792,7 +2819,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/upcoming-sets/:id", authenticateUser, async (req: any, res) => {
+  app.patch("/api/admin/upcoming-sets/:id", authenticateUser, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) {
         return res.status(403).json({ message: 'Admin access required' });

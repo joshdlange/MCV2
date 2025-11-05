@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, FolderOpen, Edit, PlusCircle, Settings } from "lucide-react";
+import { Users, FolderOpen, Edit, PlusCircle, Settings, Calendar } from "lucide-react";
 
 export default function AdminDashboard() {
   const adminTools = [
@@ -40,6 +40,13 @@ export default function AdminDashboard() {
       href: "/admin/automation",
       icon: Settings,
       color: "bg-gray-500"
+    },
+    {
+      title: "Upcoming Sets Tracker",
+      description: "Manage upcoming Marvel card set releases",
+      href: "/admin/upcoming-sets",
+      icon: Calendar,
+      color: "bg-red-500"
     }
   ];
 
