@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, User, MapPin, Heart } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppStore } from "@/lib/store";
@@ -133,6 +133,9 @@ export function Onboarding() {
       });
 
       await refreshUser();
+      
+      // Auto-close modal after successful completion
+      // The modal will close automatically when currentUser.onboardingComplete becomes true
     } catch (error: any) {
       console.error("Onboarding error:", error);
       toast({
@@ -288,11 +291,35 @@ export function Onboarding() {
                 </div>
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                <p className="text-sm font-medium">Your Profile:</p>
-                <p className="text-sm text-gray-600">Username: @{username}</p>
-                <p className="text-sm text-gray-600">Heard about us: {heardAbout === "Other" ? heardAboutOther : heardAbout}</p>
-                {favoriteSets && <p className="text-sm text-gray-600">Favorite sets: {favoriteSets}</p>}
+              <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950/20 dark:to-orange-950/20 border-2 border-red-200 dark:border-red-800 p-5 rounded-lg space-y-3">
+                <h3 className="text-base font-bold text-red-700 dark:text-red-400 mb-3 flex items-center gap-2">
+                  <User className="w-5 h-5" />
+                  Your Profile
+                </h3>
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Username:</span>
+                    <span className="text-sm font-bold text-red-600 dark:text-red-400">@{username}</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <MapPin className="w-4 h-4 text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">Heard about us:</span> {heardAbout === "Other" ? heardAboutOther : heardAbout}
+                      </span>
+                    </div>
+                  </div>
+                  {favoriteSets && (
+                    <div className="flex items-start gap-2">
+                      <Heart className="w-4 h-4 text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          <span className="font-medium">Favorite sets:</span> {favoriteSets}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}

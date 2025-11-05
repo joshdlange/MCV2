@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithRedirect, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "firebase/auth";
+import { getAuth, signInWithRedirect, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, type Auth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -11,12 +11,10 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase with error handling
-let app;
-let auth;
+const app = initializeApp(firebaseConfig);
+const auth: Auth = getAuth(app);
 
 try {
-  app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
   console.log('Firebase initialized successfully');
 } catch (error) {
   console.error('Firebase initialization error:', error);
@@ -56,7 +54,9 @@ const syncUserWithBackend = async (user: any) => {
         avatar: data.user.photoURL || '',
         isAdmin: data.user.isAdmin,
         plan: data.user.plan,
-        subscriptionStatus: data.user.subscriptionStatus
+        subscriptionStatus: data.user.subscriptionStatus,
+        onboardingComplete: data.user.onboardingComplete,
+        username: data.user.username
       });
 
       // Check if user selected Super Hero plan during login
