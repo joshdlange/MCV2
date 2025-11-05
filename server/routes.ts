@@ -266,7 +266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedUser = await storage.updateUser(req.user.id, {
         username,
         heardAbout,
-        favoriteSets: favoriteSets || [],
+        favoriteSets: favoriteSets ? [favoriteSets] : [],
         marketingOptIn: marketingOptIn || false,
         onboardingComplete: true
       });
