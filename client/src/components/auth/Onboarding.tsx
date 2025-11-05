@@ -11,6 +11,7 @@ import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppStore } from "@/lib/store";
+import { auth } from "@/lib/firebase";
 
 export function Onboarding() {
   const { refreshUser } = useAuth();
@@ -55,7 +56,19 @@ export function Onboarding() {
 
       setCheckingUsername(true);
       try {
-        const response = await fetch(`/api/onboarding/check-username?username=${username}`);
+        const user = auth.currentUser;
+        if (!user) {
+          setUsernameError("Please sign in to continue");
+          setUsernameValid(false);
+          return;
+        }
+
+        const token = await user.getIdToken();
+        const response = await fetch(`/api/onboarding/check-username?username=${username}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         const data = await response.json();
         
         if (data.available) {
@@ -67,6 +80,8 @@ export function Onboarding() {
         }
       } catch (error) {
         console.error("Username check error:", error);
+        setUsernameError("Failed to check username availability");
+        setUsernameValid(false);
       } finally {
         setCheckingUsername(false);
       }
