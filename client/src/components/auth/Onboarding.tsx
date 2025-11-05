@@ -301,6 +301,10 @@ export function Onboarding() {
               onClick={handleNext}
               data-testid="button-next"
               className="bg-red-600 hover:bg-red-700"
+              disabled={
+                (step === 1 && (!username || usernameValid !== true || checkingUsername)) ||
+                (step === 2 && !heardAbout)
+              }
             >
               Next
             </Button>
