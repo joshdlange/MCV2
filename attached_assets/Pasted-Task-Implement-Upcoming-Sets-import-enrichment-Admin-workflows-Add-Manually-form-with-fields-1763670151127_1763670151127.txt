@@ -1,0 +1,119 @@
+Task: Implement “Upcoming Sets” import + enrichment.
+
+Admin workflows
+
+Add Manually form with fields: set_name*, manufacturer*, release_date_estimated, date_confidence (estimated/confirmed), status (upcoming/delayed/released), product_line, format, configuration, key_highlights (markdown), msrp, checklist_url, source_url*, thumbnail_url (optional upload).
+
+Add via URL: admin pastes a source_url. Server fetches page once, extracts OpenGraph/TwitterCard metadata:
+
+og:title → prefill set_name (admin can edit)
+
+og:image → prefill image candidate (download → cache to our storage → store thumbnail_url)
+
+og:description → prefill key_highlights (admin trims)
+
+Try to parse a date string if present (fallback to manual)
+
+Show a preview for admin to confirm/edit → Save.
+
+Listing table: sort by release_date_estimated ASC; filters by status/manufacturer. Actions: Edit/Delete/Mark Released.
+
+Auto-flip: nightly job sets status='released' when release_date_estimated < today (only if date_confidence=confirmed), otherwise leave as upcoming.
+
+Public UI
+
+“Coming Soon” carousel on Discover/Browse: show next 3–6 sets, each card shows thumbnail, set_name, manufacturer, and “Releases in X days”.
+
+“View details” modal/page: all fields and “Notify me” button (increments interest_count, gated by auth).
+
+Model (Drizzle/Postgres)
+
+Table upcoming_sets:
+
+id (uuid pk), set_name (text, not null), manufacturer (text), product_line (text),
+
+release_date_estimated (date), date_confidence (text enum: 'estimated'|'confirmed'),
+
+status (text enum: 'upcoming'|'delayed'|'released' default 'upcoming'),
+
+format (text), configuration (text), msrp (numeric, nullable),
+
+key_highlights (text), checklist_url (text), source_url (text not null),
+
+thumbnail_url (text), interest_count (int default 0),
+
+last_verified_at (timestamptz default now()),
+
+created_at, updated_at (timestamps default now()).
+
+Routes
+
+Admin:
+
+POST /api/admin/upcoming-sets (manual create)
+
+POST /api/admin/upcoming-sets/import { source_url } → fetch OG meta, cache image, return prefilled draft; admin confirms with POST /api/admin/upcoming-sets
+
+PATCH /api/admin/upcoming-sets/:id (edit)
+
+DELETE /api/admin/upcoming-sets/:id
+
+POST /api/admin/upcoming-sets/:id/mark-released
+
+Auth: admin only.
+
+Public:
+
+GET /api/upcoming-sets?limit=… (public, safe fields only)
+
+POST /api/upcoming-sets/:id/interest (auth; increments interest_count once per user)
+
+Image handling
+
+On import, if og:image exists, download → store to our image pipeline (same as existing) → set thumbnail_url.
+
+Always store source_url and display a small “Source” link on the admin detail.
+
+If no image provided or fetch fails, admin can upload a thumbnail manually.
+
+UI
+
+Admin: shadcn Table + Modal for import via URL (shows parsed fields), edit form with validation.
+
+Public: “Coming Soon” carousel (skeleton states), Details modal with fields and “Notify me”.
+
+Validation
+
+Required: set_name, source_url.
+
+release_date_estimated optional but recommended.
+
+On import, sanitize HTML, strip tracking query params from image URLs before caching.
+
+Allow manual override for everything.
+
+Compliance
+
+Respect robots/TOS: limit to OG/Twitter meta; do not deep scrape content.
+
+Cache images locally; store source_url attribution.
+
+QA
+
+Import a DA Card World or Cardboard Connection URL → OG title/description/image parsed into draft.
+
+Manual add works.
+
+Carousel shows only upcoming/delayed sets sorted by date.
+
+“Releases in X days” correct.
+
+Interest button increments once per user.
+
+Nightly job flips status when appropriate.
+
+Admin can edit after import.
+
+Deliverables
+
+DB migration, server routes, admin UI (import + CRUD), public carousel & detail modal, image caching helper, nightly job, tests for import parsing, README notes.
