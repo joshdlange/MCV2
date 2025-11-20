@@ -357,14 +357,24 @@ export const insertMarketTrendItemSchema = createInsertSchema(marketTrendItems).
   createdAt: true,
 });
 
-// Upcoming Sets Table
+// Upcoming Sets Table - Enhanced with full spec
 export const upcomingSets = pgTable("upcoming_sets", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  publisher: text("publisher").notNull(),
-  releaseDate: timestamp("release_date").notNull(),
-  description: text("description"),
-  imageUrl: text("image_url"),
+  setName: text("set_name").notNull(),
+  manufacturer: text("manufacturer"),
+  productLine: text("product_line"),
+  releaseDateEstimated: timestamp("release_date_estimated"),
+  dateConfidence: text("date_confidence", { enum: ['estimated', 'confirmed'] }),
+  status: text("status", { enum: ['upcoming', 'delayed', 'released'] }).default('upcoming').notNull(),
+  format: text("format"),
+  configuration: text("configuration"),
+  msrp: decimal("msrp", { precision: 10, scale: 2 }),
+  keyHighlights: text("key_highlights"),
+  checklistUrl: text("checklist_url"),
+  sourceUrl: text("source_url").notNull(),
+  thumbnailUrl: text("thumbnail_url"),
+  interestCount: integer("interest_count").default(0).notNull(),
+  lastVerifiedAt: timestamp("last_verified_at").defaultNow(),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -374,6 +384,7 @@ export const insertUpcomingSetSchema = createInsertSchema(upcomingSets).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  interestCount: true,
 });
 
 // Types
