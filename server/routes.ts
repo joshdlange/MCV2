@@ -2766,10 +2766,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Upcoming Sets CRUD API
+  // Public: Get active upcoming sets
   app.get("/api/upcoming-sets", async (req, res) => {
     try {
-      const sets = await storage.getUpcomingSets();
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      let sets = await storage.getUpcomingSets();
+      
+      // Filter to only upcoming and delayed (not released)
+      sets = sets.filter(set => set.status === 'upcoming' || set.status === 'delayed');
+      
+      // Sort by release date
+      sets.sort((a, b) => {
+        if (!a.releaseDateEstimated) return 1;
+        if (!b.releaseDateEstimated) return -1;
+        return new Date(a.releaseDateEstimated).getTime() - new Date(b.releaseDateEstimated).getTime();
+      });
+      
+      // Apply limit if specified
+      if (limit) {
+        sets = sets.slice(0, limit);
+      }
+      
       res.json(sets);
     } catch (error) {
       console.error('Get upcoming sets error:', error);
@@ -2777,15 +2794,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public: Get active upcoming sets
-  app.get("/api/upcoming-sets", async (req, res) => {
+  // Public: Express interest in an upcoming set
+  app.post("/api/upcoming-sets/:id/interest", authenticateUser, async (req: any, res) => {
     try {
-      const allSets = await storage.getAllUpcomingSets();
-      const activeSets = allSets.filter(set => set.isActive);
-      res.json(activeSets);
+      const setId = parseInt(req.params.id);
+      const userId = req.user.id;
+
+      const updatedSet = await storage.incrementSetInterest(setId, userId);
+
+      if (!updatedSet) {
+        return res.status(404).json({ message: "Upcoming set not found" });
+      }
+
+      res.json({ 
+        message: "Interest recorded successfully",
+        interestCount: updatedSet.interestCount 
+      });
     } catch (error) {
-      console.error('Get upcoming sets error:', error);
-      res.status(500).json({ message: "Failed to fetch upcoming sets" });
+      console.error('Record interest error:', error);
+      res.status(500).json({ message: "Failed to record interest" });
     }
   });
 
@@ -2837,6 +2864,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Update upcoming set error:', error);
       res.status(500).json({ message: "Failed to update upcoming set" });
+    }
+  });
+
+  // Admin: Import upcoming set from URL (OpenGraph scraping)
+  app.post("/api/admin/upcoming-sets/import", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      const { sourceUrl } = req.body;
+      
+      if (!sourceUrl) {
+        return res.status(400).json({ message: 'sourceUrl is required' });
+      }
+
+      // Import the scraper utilities
+      const { scrapeSetDataFromUrl } = await import('./utils/openGraphScraper');
+      const { cacheImageToCloudinary } = await import('./utils/imageCacher');
+
+      // Scrape the URL for metadata
+      const scrapedData = await scrapeSetDataFromUrl(sourceUrl);
+
+      // If there's an image, cache it to Cloudinary
+      if (scrapedData.thumbnailUrl) {
+        try {
+          scrapedData.thumbnailUrl = await cacheImageToCloudinary(scrapedData.thumbnailUrl);
+        } catch (imageError) {
+          console.error('Failed to cache image, using original URL:', imageError);
+          // Continue with original URL if caching fails
+        }
+      }
+
+      // Return the scraped data as a preview for admin to confirm/edit
+      res.json({
+        preview: scrapedData,
+        message: 'Successfully scraped metadata. Please review and confirm before saving.'
+      });
+    } catch (error) {
+      console.error('Import URL error:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to import from URL'
+      });
+    }
+  });
+
+  // Admin: Mark upcoming set as released
+  app.post("/api/admin/upcoming-sets/:id/mark-released", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      const setId = parseInt(req.params.id);
+      const updatedSet = await storage.markSetAsReleased(setId);
+
+      if (!updatedSet) {
+        return res.status(404).json({ message: "Upcoming set not found" });
+      }
+
+      res.json(updatedSet);
+    } catch (error) {
+      console.error('Mark set as released error:', error);
+      res.status(500).json({ message: "Failed to mark set as released" });
     }
   });
 

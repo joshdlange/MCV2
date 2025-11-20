@@ -186,10 +186,14 @@ interface IStorage {
   getMarketTrendItems(trendId: number): Promise<MarketTrendItem[]>;
 
   // Upcoming Sets
-  getUpcomingSets(): Promise<any[]>;
-  createUpcomingSet(setData: any): Promise<any>;
-  updateUpcomingSet(id: number, updates: any): Promise<any>;
+  getUpcomingSets(): Promise<UpcomingSet[]>;
+  getAllUpcomingSets(): Promise<UpcomingSet[]>;
+  getUpcomingSetById(id: number): Promise<UpcomingSet | undefined>;
+  createUpcomingSet(setData: InsertUpcomingSet): Promise<UpcomingSet>;
+  updateUpcomingSet(id: number, updates: Partial<InsertUpcomingSet>): Promise<UpcomingSet | undefined>;
   deleteUpcomingSet(id: number): Promise<void>;
+  incrementSetInterest(id: number, userId: number): Promise<UpcomingSet | undefined>;
+  markSetAsReleased(id: number): Promise<UpcomingSet | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2370,12 +2374,26 @@ export class DatabaseStorage implements IStorage {
   async getUpcomingSets(): Promise<UpcomingSet[]> {
     return await db.select().from(upcomingSets)
       .where(eq(upcomingSets.isActive, true))
-      .orderBy(upcomingSets.releaseDate);
+      .orderBy(upcomingSets.releaseDateEstimated);
+  }
+
+  async getAllUpcomingSets(): Promise<UpcomingSet[]> {
+    return await db.select().from(upcomingSets)
+      .orderBy(upcomingSets.releaseDateEstimated);
+  }
+
+  async getUpcomingSetById(id: number): Promise<UpcomingSet | undefined> {
+    const [set] = await db.select().from(upcomingSets)
+      .where(eq(upcomingSets.id, id));
+    return set;
   }
 
   async createUpcomingSet(setData: InsertUpcomingSet): Promise<UpcomingSet> {
     const [newSet] = await withDatabaseRetry(
-      () => db.insert(upcomingSets).values(setData).returning()
+      () => db.insert(upcomingSets).values({
+        ...setData,
+        lastVerifiedAt: new Date(),
+      }).returning()
     );
     return newSet;
   }
@@ -2391,6 +2409,28 @@ export class DatabaseStorage implements IStorage {
   async deleteUpcomingSet(id: number): Promise<void> {
     await db.delete(upcomingSets)
       .where(eq(upcomingSets.id, id));
+  }
+
+  async incrementSetInterest(id: number, userId: number): Promise<UpcomingSet | undefined> {
+    const [updatedSet] = await db.update(upcomingSets)
+      .set({ 
+        interestCount: sql`${upcomingSets.interestCount} + 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(upcomingSets.id, id))
+      .returning();
+    return updatedSet;
+  }
+
+  async markSetAsReleased(id: number): Promise<UpcomingSet | undefined> {
+    const [updatedSet] = await db.update(upcomingSets)
+      .set({ 
+        status: 'released',
+        updatedAt: new Date()
+      })
+      .where(eq(upcomingSets.id, id))
+      .returning();
+    return updatedSet;
   }
 }
 
