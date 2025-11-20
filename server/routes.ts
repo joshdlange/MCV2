@@ -24,6 +24,8 @@ import { badgeService } from "./badge-service";
 import { marketTrendsService } from "./market-trends-service";
 import { ebayBrowseApi } from "./ebay-browse-api";
 import { ebayMarketplaceInsights } from "./ebay-marketplace-insights";
+import { sendEmail } from "./email";
+import { syncFirebaseUsersToBrevo } from "./contactsSync";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -2046,6 +2048,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('PriceCharting config error:', error);
       res.status(500).json({ message: "Failed to check PriceCharting configuration" });
+    }
+  });
+
+  // ========== BREVO EMAIL & CONTACT SYNC ROUTES ==========
+
+  // Test email sending route (development only)
+  app.post("/api/test-email", async (req, res) => {
+    try {
+      const { to, subject, html } = req.body;
+
+      if (!to || !subject || !html) {
+        return res.status(400).json({ 
+          message: "Missing required fields: to, subject, html" 
+        });
+      }
+
+      await sendEmail(to, subject, html);
+      res.json({ 
+        success: true, 
+        message: `Email sent successfully to ${to}` 
+      });
+    } catch (error) {
+      console.error('Test email error:', error);
+      res.status(500).json({ 
+        message: "Failed to send test email",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Admin-only: Sync Firebase users to Brevo contacts
+  app.post("/api/admin/sync-contacts", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      await syncFirebaseUsersToBrevo();
+      res.json({ 
+        success: true, 
+        message: "Firebase users synced to Brevo successfully" 
+      });
+    } catch (error) {
+      console.error('Contact sync error:', error);
+      res.status(500).json({ 
+        message: "Failed to sync contacts to Brevo",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
