@@ -21,8 +21,9 @@ Preferred communication style: Simple, everyday language.
 The application incorporates comprehensive performance optimizations for handling large datasets, including database indexing, paginated API endpoints, virtual scrolling for large card grids, intelligent caching with TTL management, and background jobs for heavy operations.
 
 ### Key Components
-- **Database Schema**: Structured for efficient management of users, card sets, individual cards, user collections, wishlists, and cached pricing data.
+- **Database Schema**: Structured for efficient management of users, card sets, individual cards, user collections, wishlists, cached pricing data, and upcoming set releases.
 - **Authentication & Authorization**: Leverages Firebase Authentication for user management, implements admin role-based access control, JWT token validation, and enforces subscription tier access.
+- **Upcoming Sets Tracker**: ✨ NEW (Nov 20, 2025) - Comprehensive system for managing and displaying upcoming Marvel card set releases with URL import, OpenGraph metadata scraping, image caching, countdown timers, and user interest tracking.
 
 ### Data Flow
 - **Card Management**: Involves admin CSV uploads, background processing, eBay API integration for image finding, Cloudinary optimization, and periodic price data refreshes.
