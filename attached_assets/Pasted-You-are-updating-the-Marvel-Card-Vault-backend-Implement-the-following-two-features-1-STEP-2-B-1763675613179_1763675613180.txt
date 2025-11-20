@@ -1,0 +1,115 @@
+You are updating the Marvel Card Vault backend.
+Implement the following two features:
+
+1. STEP 2 — Brevo SMTP Email Sending (Nodemailer Integration)
+
+Create a complete email-sending module that lets the app send transactional emails (welcome, notifications, etc.) using Brevo SMTP.
+
+Requirements:
+
+Create a new backend file named:
+server/email.ts
+
+Configure Nodemailer using Brevo SMTP:
+
+host: "smtp-relay.brevo.com"
+
+port: 587
+
+secure: false
+
+auth.user = process.env.BREVO_SMTP_USER
+
+auth.pass = process.env.BREVO_SMTP_KEY
+Do NOT hardcode any secrets. Use Replit Secrets only.
+
+Export a function:
+
+sendEmail(to: string, subject: string, html: string): Promise<void>
+
+
+This function should:
+
+Send email via Brevo SMTP
+
+Use from: "Marvel Card Vault <no-reply@marvelcardvault.com>"
+
+Catch and log errors
+
+Create a test route for development:
+
+POST /api/test-email
+
+body: { to, subject, html }
+
+Calls sendEmail()
+
+Do not modify unrelated code.
+Use the project’s existing TypeScript, Express, and folder structure.
+
+2. STEP 4 — Firebase → Brevo Contact Sync
+
+Implement a backend script + endpoint that syncs user emails from Firebase Auth into Brevo contacts.
+
+Requirements:
+
+Create a new file:
+server/contactsSync.ts
+
+Implement a function:
+
+syncFirebaseUsersToBrevo(): Promise<void>
+
+
+Steps inside the function:
+
+Use Firebase Admin to list all users (paginate using auth.listUsers).
+
+For each user:
+
+Prepare { email, attributes: { firebaseId: user.uid } }
+
+Connect to Brevo using the official package (@getbrevo/brevo)
+
+Use process.env.BREVO_SMTP_KEY as the API key
+
+Do NOT hardcode anything
+
+Create contacts in Brevo
+
+Skip duplicates gracefully
+
+Log completion
+
+Add a secured admin-only endpoint:
+
+POST /api/admin/sync-contacts
+
+Calls syncFirebaseUsersToBrevo()
+
+Do not expose API keys in logs.
+Do not modify other unrelated routes.
+
+Overall Notes
+
+Keep all secrets in Replit Secrets, not in code.
+
+Keep file organization consistent with the current codebase.
+
+Follow best practices for error handling.
+
+Use TypeScript types for all new functions.
+
+Deliverables from the Agent
+
+server/email.ts fully implemented
+
+server/contactsSync.ts fully implemented
+
+Test route /api/test-email
+
+Admin route /api/admin/sync-contacts
+
+Import & export new modules appropriately
+
+No breaking changes to existing app functionality
