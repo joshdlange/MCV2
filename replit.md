@@ -24,6 +24,7 @@ The application incorporates comprehensive performance optimizations for handlin
 - **Database Schema**: Structured for efficient management of users, card sets, individual cards, user collections, wishlists, cached pricing data, and upcoming set releases.
 - **Authentication & Authorization**: Leverages Firebase Authentication for user management, implements admin role-based access control, JWT token validation, and enforces subscription tier access.
 - **Upcoming Sets Tracker**: ✨ NEW (Nov 20, 2025) - Comprehensive system for managing and displaying upcoming Marvel card set releases with URL import, OpenGraph metadata scraping, image caching, countdown timers, and user interest tracking.
+- **Email Integration**: ✨ NEW (Nov 20, 2025) - Brevo SMTP integration for transactional emails with Nodemailer configuration (`server/email.ts`), Firebase to Brevo contact sync (`server/contactsSync.ts`), and admin-only sync endpoint for CRM management.
 
 ### Data Flow
 - **Card Management**: Involves admin CSV uploads, background processing, eBay API integration for image finding, Cloudinary optimization, and periodic price data refreshes.
@@ -46,6 +47,7 @@ The application features a modern, clean interface with careful attention to vis
 - **Stripe API**: For subscription payment processing. ✅ RESTORED (Jan 19, 2025)
 - **Firebase Auth**: For user authentication and management.
 - **Cloudinary**: For image processing and CDN hosting.
+- **Brevo SMTP**: For transactional email delivery and contact management. ✅ INTEGRATED (Nov 20, 2025)
 
 ### Payment System Status (Updated Jan 19, 2025)
 - **RESOLVED**: Critical payment outage caused by accidental removal of Stripe endpoints
@@ -64,6 +66,7 @@ The application features a modern, clean interface with careful attention to vis
 - **Database**: `@neondatabase/serverless`, `drizzle-orm`
 - **UI Components**: `@radix-ui/*` component library
 - **Forms**: `react-hook-form`, `@hookform/resolvers`
-- **Authentication**: `firebase`
+- **Authentication**: `firebase`, `firebase-admin`
 - **Payments**: `@stripe/stripe-js`, `@stripe/react-stripe-js`
 - **Image Processing**: `cloudinary`, `multer`
+- **Email & CRM**: `nodemailer`, `@getbrevo/brevo`
