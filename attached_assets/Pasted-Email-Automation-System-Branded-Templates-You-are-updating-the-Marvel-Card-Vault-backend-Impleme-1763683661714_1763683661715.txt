@@ -1,0 +1,262 @@
+Email Automation System + Branded Templates
+
+You are updating the Marvel Card Vault backend.
+Implement a complete email automation system (transactional + behavioral), including a centralized email service, template engine, event triggers, cron jobs, and a /test-email route.
+Also create a future-ready stub for adding user profile social links (Instagram, Whatnot, eBay).
+
+Use TypeScript, Express, Drizzle ORM, Cloudinary-hosted images, and Brevo SMTP.
+
+1. Create the Email Service
+
+Create file:
+
+server/services/emailService.ts
+
+Requirements:
+
+Use Nodemailer
+
+SMTP configuration:
+
+host: "smtp-relay.brevo.com"
+
+port: 587
+
+secure: false
+
+auth.user → process.env.BREVO_SMTP_USER
+
+auth.pass → process.env.BREVO_SMTP_KEY
+
+Export:
+
+export async function sendEmail(to: string, subject: string, html: string)
+
+
+Centralized error logging
+
+No credentials hardcoded
+
+Default from address:
+
+"Marvel Card Vault <no-reply@marvelcardvault.com>"
+
+2. Create Email Template Engine
+
+Create file:
+
+server/services/emailTemplates.ts
+
+Implement a single shared layout wrapper:
+
+function baseTemplate({ title, bodyHtml }: { title: string, bodyHtml: string }): string
+
+
+Styling:
+
+Dark theme
+
+Marvel red accents
+
+Centered header with Marvel Card Vault logo
+
+Use Cloudinary-hosted logo:
+/mnt/data/A_logo_for_"Marvel_Card_Vault"_is_set_against_a_so.png
+
+Inline CSS, mobile friendly
+
+3. Build All Email Templates (HTML)
+3A. Transactional Templates
+
+Each should export a function returning HTML via baseTemplate():
+
+1. Welcome / Onboarding Complete
+welcomeTemplate(user)
+
+2. Password Reset Request
+
+Includes button linking to reset URL.
+
+passwordResetTemplate(user, resetLink)
+
+3. Password Reset Confirmation
+passwordResetConfirmationTemplate(user)
+
+4. Badge Unlocked
+
+Includes badge name, description, and a small icon (use placeholder).
+
+badgeUnlockedTemplate(user, badgeInfo)
+
+5. New Trade Proposal
+
+Includes trade details and CTA button.
+
+tradeProposedTemplate(sender, receiver, trade)
+
+6. Trade Accepted
+tradeAcceptedTemplate(user, trade)
+
+7. Trade Declined
+tradeDeclinedTemplate(user, trade)
+
+8. Card Image Approved
+cardImageApprovedTemplate(user, card)
+
+9. Card Image Rejected
+cardImageRejectedTemplate(user, card)
+
+10. Upcoming Set Reminder (Admin Triggered)
+newSetNotificationTemplate(user, setInfo)
+
+3B. Behavioral / Nudge Templates
+11. Add First Card
+addFirstCardTemplate(user)
+
+12. Complete Your Collection Setup
+finishSetupTemplate(user)
+
+13. 7-Day Inactivity Reminder
+inactiveUserTemplate(user)
+
+14. Collection Milestone
+collectionMilestoneTemplate(user, milestone)
+
+15. Weekly “New Sets Added” Digest
+weeklyDigestTemplate(user, sets)
+
+
+Each template should:
+
+Include logo in header
+
+Use large bold headers
+
+Include card art or set art if applicable
+
+Use CTA buttons
+
+4. Create Event Trigger Module
+
+Create file:
+
+server/services/emailTriggers.ts
+
+Implement:
+
+export async function onUserSignup(user) {}
+export async function onPasswordReset(user, link) {}
+export async function onBadgeUnlocked(user, badgeInfo) {}
+export async function onTradeProposed(sender, receiver, trade) {}
+export async function onTradeAccepted(user, trade) {}
+export async function onTradeDeclined(user, trade) {}
+export async function onCardImageApproved(user, card) {}
+export async function onCardImageRejected(user, card) {}
+export async function onWeeklyDigest(user, sets) {}
+
+
+Each must call the corresponding template + sendEmail().
+
+5. Add Cron Jobs
+
+Create file:
+
+server/jobs/emailCron.ts
+
+Use node-cron.
+
+Implement:
+
+Daily (9 AM)
+
+Users inactive for 7 days → send inactiveUserTemplate
+
+New users who haven’t added a card in 72 hours → addFirstCardTemplate
+
+Weekly (Friday morning)
+
+Send weeklyDigestTemplate to users with marketing opt-in
+
+Cron must query users & card data using existing Drizzle ORM.
+
+6. Integrate Triggers
+
+Add trigger calls inside existing business logic:
+
+Examples:
+
+After signup → onUserSignup(user)
+
+After creating reset token → onPasswordReset
+
+After unlocking a badge → onBadgeUnlocked
+
+After creating a trade → onTradeProposed
+
+After accepting a trade → onTradeAccepted
+
+After image approval → onCardImageApproved
+
+Do NOT change unrelated functionality.
+
+7. Add a Test Route
+
+Create:
+
+POST /api/test-email
+
+Body:
+
+{
+  "to": "someone@example.com",
+  "template": "welcome"
+}
+
+
+Send a sample email for testing.
+
+8. Add User Social Profile Links (Stub for later)
+
+Create a DB migration with new optional fields on the users table:
+
+instagram_url (text)
+
+whatnot_url (text)
+
+ebay_url (text)
+
+Add to user profile edit flow:
+/api/user/profile/update
+
+Add placeholder fields to the frontend:
+
+Instagram (optional)
+Whatnot (optional)
+eBay (optional)
+
+
+No UI polish needed — just backend + basic API route.
+
+9. Deliverables
+
+Replit should create:
+
+emailService.ts
+
+emailTemplates.ts
+
+emailTriggers.ts
+
+emailCron.ts
+
+API integration points
+
+/api/test-email
+
+DB migration for social links
+
+Template HTML with Marvel branding
+
+Use TypeScript, Express, Drizzle ORM, and inline CSS in templates.
+Do not hardcode credentials.
+Follow existing file structure.
