@@ -17,8 +17,17 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
   const [firstCardImage, setFirstCardImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const defaultFallbackUrl = "https://drive.google.com/uc?export=view&id=1ZcGcRer-EEmpbUgDivHKVqU4Ck_G5TiF";
+  
+  const isPlaceholderImage = (url: string | null) => {
+    if (!url) return true;
+    if (url.includes('1ZcGcRer-EEmpbUgDivHKVqU4Ck_G5TiF')) return true;
+    if (url.includes('superhero-fallback')) return true;
+    return false;
+  };
+
   useEffect(() => {
-    if (!set.imageUrl && set.id) {
+    if (isPlaceholderImage(set.imageUrl) && set.id) {
       setLoading(true);
       fetchFirstCardImage();
     }
@@ -84,13 +93,7 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
     >
       {/* Set Image */}
       <div className="aspect-[2.5/3.5] bg-gray-100 overflow-hidden relative">
-        {set.imageUrl ? (
-          <img
-            src={convertGoogleDriveUrl(set.imageUrl)}
-            alt={set.name}
-            className="w-full h-full object-cover"
-          />
-        ) : loading ? (
+        {loading ? (
           <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
             <div className="animate-spin w-6 h-6 border-2 border-white border-t-transparent rounded-full"></div>
           </div>
@@ -98,6 +101,12 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
           <img
             src={convertGoogleDriveUrl(firstCardImage)}
             alt={`${set.name} - First Card`}
+            className="w-full h-full object-cover"
+          />
+        ) : set.imageUrl && !isPlaceholderImage(set.imageUrl) ? (
+          <img
+            src={convertGoogleDriveUrl(set.imageUrl)}
+            alt={set.name}
             className="w-full h-full object-cover"
           />
         ) : (
