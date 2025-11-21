@@ -560,7 +560,7 @@ export default function Social() {
                   </div>
                   <div className="flex space-x-2">
                     <Input
-                      placeholder="Search for heroes by name or email..."
+                      placeholder="Search for heroes by username..."
                       value={searchQuery}
                       onChange={handleSearchChange}
                       className="flex-1 border-gray-300 focus:border-green-500 bg-white text-gray-900 placeholder-gray-500"
@@ -840,8 +840,8 @@ export default function Social() {
                 ) : (
                   <div className="divide-y divide-gray-100">
                     {friends.map((friend: Friend) => {
-                      const userEmail = user?.email;
-                      const isRequesterCurrentUser = friend.requester.username === userEmail;
+                      const currentUserId = currentUser?.id;
+                      const isRequesterCurrentUser = friend.requester.id === currentUserId;
                       const friendUser = isRequesterCurrentUser 
                         ? friend.recipient : friend.requester;
                       
@@ -933,52 +933,38 @@ export default function Social() {
               ) : (
                 <>
                   {/* Chat Header */}
-                  <div className="p-4 bg-gray-50 border-b border-gray-200">
-                    <div className="flex items-center space-x-3">
-                      <Avatar className="w-10 h-10">
-                        <AvatarImage src={friends.find(f => {
-                          const userEmail = user?.email;
-                          const isRequesterCurrentUser = f.requester.username === userEmail;
-                          const friendUser = isRequesterCurrentUser ? f.recipient : f.requester;
-                          return friendUser.id === selectedFriendId;
-                        })?.recipient?.photoURL || friends.find(f => {
-                          const userEmail = user?.email;
-                          const isRequesterCurrentUser = f.requester.username === userEmail;
-                          const friendUser = isRequesterCurrentUser ? f.recipient : f.requester;
-                          return friendUser.id === selectedFriendId;
-                        })?.requester?.photoURL} />
-                        <AvatarFallback className="bg-gray-400 text-white font-medium">
-                          {friends.find(f => {
-                            const userEmail = user?.email;
-                            const isRequesterCurrentUser = f.requester.username === userEmail;
-                            const friendUser = isRequesterCurrentUser ? f.recipient : f.requester;
-                            return friendUser.id === selectedFriendId;
-                          })?.recipient?.displayName?.charAt(0) || friends.find(f => {
-                            const userEmail = user?.email;
-                            const isRequesterCurrentUser = f.requester.username === userEmail;
-                            const friendUser = isRequesterCurrentUser ? f.recipient : f.requester;
-                            return friendUser.id === selectedFriendId;
-                          })?.requester?.displayName?.charAt(0) || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h3 className="font-medium text-gray-900">
-                          {friends.find(f => {
-                            const userEmail = user?.email;
-                            const isRequesterCurrentUser = f.requester.username === userEmail;
-                            const friendUser = isRequesterCurrentUser ? f.recipient : f.requester;
-                            return friendUser.id === selectedFriendId;
-                          })?.recipient?.displayName || friends.find(f => {
-                            const userEmail = user?.email;
-                            const isRequesterCurrentUser = f.requester.username === userEmail;
-                            const friendUser = isRequesterCurrentUser ? f.recipient : f.requester;
-                            return friendUser.id === selectedFriendId;
-                          })?.requester?.displayName || 'Friend'}
-                        </h3>
-                        <p className="text-sm text-green-600">Active now</p>
+                  {(() => {
+                    const selectedFriend = friends.find(f => {
+                      const currentUserId = currentUser?.id;
+                      const isRequesterCurrentUser = f.requester.id === currentUserId;
+                      const friendUser = isRequesterCurrentUser ? f.recipient : f.requester;
+                      return friendUser.id === selectedFriendId;
+                    });
+                    const currentUserId = currentUser?.id;
+                    const isRequesterCurrentUser = selectedFriend?.requester.id === currentUserId;
+                    const selectedFriendUser = selectedFriend 
+                      ? (isRequesterCurrentUser ? selectedFriend.recipient : selectedFriend.requester)
+                      : null;
+                    
+                    return (
+                      <div className="p-4 bg-gray-50 border-b border-gray-200">
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="w-10 h-10">
+                            <AvatarImage src={selectedFriendUser?.photoURL} />
+                            <AvatarFallback className="bg-gray-400 text-white font-medium">
+                              {selectedFriendUser?.displayName?.charAt(0) || selectedFriendUser?.username?.charAt(0) || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <h3 className="font-medium text-gray-900">
+                              {selectedFriendUser?.displayName || selectedFriendUser?.username || 'Friend'}
+                            </h3>
+                            <p className="text-sm text-green-600">Active now</p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    );
+                  })()}
                   
                   {/* Messages Area */}
                   <div className="flex-1 overflow-y-auto p-4 bg-white">
