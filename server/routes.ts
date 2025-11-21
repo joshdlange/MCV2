@@ -27,8 +27,8 @@ import { ebayMarketplaceInsights } from "./ebay-marketplace-insights";
 import { sendEmail } from "./email";
 import { syncFirebaseUsersToBrevo } from "./contactsSync";
 import { emailService } from "./services/emailService";
-import { emailTriggers } from "./services/emailTriggers";
-import { initializeEmailJobs } from "./jobs/emailCron";
+import * as emailTriggers from "./services/emailTriggers";
+import { startEmailCronJobs } from "./jobs/emailCron";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -3250,7 +3250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
   // Initialize email automation cron jobs
-  initializeEmailJobs();
+  startEmailCronJobs();
   console.log('Email automation jobs initialized');
 
   const httpServer = createServer(app);

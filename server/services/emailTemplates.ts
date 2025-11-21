@@ -410,7 +410,7 @@ export function inactiveUserTemplate(user: { displayName: string }): string {
         <li>New collectors in the community</li>
       </ul>
     </div>
-    ${ctaButton('Check Out What\\'s New', 'https://marvelcardvault.com')}
+    ${ctaButton("Check Out What's New", 'https://marvelcardvault.com')}
   `;
   return baseTemplate({ title: 'We Miss You!', bodyHtml });
 }

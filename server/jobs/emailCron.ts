@@ -5,7 +5,7 @@
 
 import cron from 'cron';
 import { db } from '../db';
-import { users, collection, cardSets } from '../../shared/schema';
+import { users, userCollections, cardSets } from '../../shared/schema';
 import { sql, lt, eq, and } from 'drizzle-orm';
 import * as emailTriggers from '../services/emailTriggers';
 
@@ -74,8 +74,8 @@ export const dailyEmailJob = new CronJob(
       for (const user of newUsersQuery) {
         const userCards = await db
           .select({ count: sql<number>`count(*)` })
-          .from(collection)
-          .where(eq(collection.userId, user.id));
+          .from(userCollections)
+          .where(eq(userCollections.userId, user.id));
         
         if (Number(userCards[0]?.count) === 0) {
           usersWithoutCards.push(user);
