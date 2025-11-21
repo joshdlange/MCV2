@@ -13,6 +13,9 @@ export const users = pgTable("users", {
   bio: text("bio"),
   location: text("location"),
   website: text("website"),
+  instagramUrl: text("instagram_url"),
+  whatnotUrl: text("whatnot_url"),
+  ebayUrl: text("ebay_url"),
   address: text("address"),
   isAdmin: boolean("is_admin").default(false).notNull(),
   plan: text("plan").default("SIDE_KICK").notNull(), // SIDE_KICK or SUPER_HERO
