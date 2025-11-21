@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileHeader } from "@/components/layout/mobile-header";
 import { useAppStore } from "@/lib/store";
-import { Search } from "lucide-react";
+import { Search, MessageCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -56,6 +56,13 @@ function DesktopHeader() {
       </div>
       <div className="flex items-center space-x-4">
         <NotificationBell />
+        <button 
+          className="text-gray-600 hover:text-gray-900 p-2"
+          onClick={() => setLocation('/social?tab=messages')}
+          title="Messages"
+        >
+          <MessageCircle className="w-5 h-5" />
+        </button>
         <button 
           className="text-gray-600 hover:text-gray-900 p-2"
           onClick={() => setLocation('/card-search')}

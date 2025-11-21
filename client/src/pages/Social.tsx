@@ -97,6 +97,15 @@ export default function Social() {
   const { user } = useAuth();
   const { currentUser } = useAppStore();
 
+  // Read URL parameters to set initial tab
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam === 'messages') {
+      setActiveTab('messages');
+    }
+  }, []);
+
   // Listen for custom tab switching events
   useEffect(() => {
     const handleSwitchToMessages = (event: CustomEvent) => {

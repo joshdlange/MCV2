@@ -1,5 +1,5 @@
 import { useAppStore } from "@/lib/store";
-import { Menu, Search } from "lucide-react";
+import { Menu, Search, MessageCircle } from "lucide-react";
 import heroLogoWhite from "@assets/noun-super-hero-380874-FFFFFF.png";
 import { useLocation } from "wouter";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -32,6 +32,13 @@ export function MobileHeader() {
       </div>
       <div className="flex items-center space-x-3">
         <NotificationBell />
+        <button 
+          className="text-gray-600 hover:text-gray-900"
+          onClick={() => setLocation('/social?tab=messages')}
+          title="Messages"
+        >
+          <MessageCircle className="w-5 h-5" />
+        </button>
         <button 
           className="text-gray-600 hover:text-gray-900"
           onClick={() => setLocation('/card-search')}
