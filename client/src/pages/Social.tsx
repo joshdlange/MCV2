@@ -631,8 +631,8 @@ export default function Social() {
                   <div className="grid gap-4">
                     {friends.map((friend: Friend) => {
                       // Get the friend user (not the current user)
-                      const userEmail = user?.email;
-                      const isRequesterCurrentUser = friend.requester.username === userEmail;
+                      const currentUserId = currentUser?.id;
+                      const isRequesterCurrentUser = friend.requester.id === currentUserId;
                       const friendUser = isRequesterCurrentUser 
                         ? friend.recipient : friend.requester;
                       return (
