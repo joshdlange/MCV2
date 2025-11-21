@@ -26,6 +26,9 @@ import { ebayBrowseApi } from "./ebay-browse-api";
 import { ebayMarketplaceInsights } from "./ebay-marketplace-insights";
 import { sendEmail } from "./email";
 import { syncFirebaseUsersToBrevo } from "./contactsSync";
+import { emailService } from "./services/emailService";
+import { emailTriggers } from "./services/emailTriggers";
+import { initializeEmailJobs } from "./jobs/emailCron";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -155,6 +158,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         user = await storage.createUser(userData);
         console.log('Created new user:', user.id, 'isAdmin:', user.isAdmin);
+        
+        // Send welcome email to new user (non-blocking)
+        emailTriggers.sendWelcomeEmail(user).catch(error => {
+          console.error('Failed to send welcome email:', error);
+        });
         
         // Auto-friend new users with Joshua (admin user ID: 337)
         if (!isAdminEmail && user.id !== 337) {
@@ -2516,6 +2524,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = parseInt(req.params.userId);
       
       const userBadge = await storage.awardBadge(userId, badgeId);
+      
+      // Send badge achievement email (non-blocking)
+      const user = await storage.getUserById(userId);
+      const badge = await storage.getBadgeById(badgeId);
+      if (user && badge) {
+        emailTriggers.sendBadgeAchievementEmail(user, badge).catch(error => {
+          console.error('Failed to send badge achievement email:', error);
+        });
+      }
+      
       res.status(201).json(userBadge);
     } catch (error) {
       console.error('Award badge error:', error);
@@ -3230,6 +3248,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Serve uploaded images
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
+  // Initialize email automation cron jobs
+  initializeEmailJobs();
+  console.log('Email automation jobs initialized');
 
   const httpServer = createServer(app);
   return httpServer;
