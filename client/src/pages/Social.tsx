@@ -159,6 +159,18 @@ export default function Social() {
     enabled: !!user,
   });
 
+  // Fetch message threads (only friends with message history)
+  const { data: messageThreads = [] } = useQuery({
+    queryKey: ["social/message-threads"],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch("/api/social/message-threads", { headers });
+      if (!response.ok) throw new Error("Failed to fetch message threads");
+      return response.json();
+    },
+    enabled: !!user,
+  });
+
   // Fetch friend requests
   const { data: friendRequests = [] } = useQuery({
     queryKey: ["social/friend-requests"],
@@ -306,6 +318,7 @@ export default function Social() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["social/messages", selectedFriendId] });
+      queryClient.invalidateQueries({ queryKey: ["social/message-threads"] });
       setNewMessage("");
       toast({
         title: "Success",
@@ -825,35 +838,28 @@ export default function Social() {
               
               {/* Conversation List */}
               <div className="flex-1 overflow-y-auto">
-                {friends.length === 0 ? (
+                {messageThreads.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center px-6">
                     <MessageCircle className="w-16 h-16 text-gray-300 mb-4" />
                     <p className="text-gray-500 text-sm">No conversations</p>
-                    <p className="text-gray-400 text-xs">Add friends to start messaging</p>
+                    <p className="text-gray-400 text-xs">Send a message to start chatting</p>
                     <Button 
                       onClick={() => setActiveTab('friends')}
                       className="mt-4 bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2"
                     >
-                      Add Friends
+                      View Friends
                     </Button>
                   </div>
                 ) : (
                   <div className="divide-y divide-gray-100">
-                    {friends.map((friend: Friend) => {
-                      const currentUserId = currentUser?.id;
-                      const isRequesterCurrentUser = friend.requester.id === currentUserId;
-                      const friendUser = isRequesterCurrentUser 
-                        ? friend.recipient : friend.requester;
-                      
-                      // Get the last message with this friend
-                      const lastMessage = messages.find(m => 
-                        (m.senderId === currentUser?.id && m.recipientId === friendUser.id) ||
-                        (m.senderId === friendUser.id && m.recipientId === currentUser?.id)
-                      );
+                    {messageThreads.map((thread: any) => {
+                      const friendUser = thread.user;
+                      const lastMessage = thread.lastMessage;
+                      const unreadCount = thread.unreadCount || 0;
                       
                       return (
                         <div
-                          key={friend.id}
+                          key={friendUser.id}
                           onClick={() => setSelectedFriendId(friendUser.id)}
                           className={`cursor-pointer transition-colors duration-150 hover:bg-gray-50 ${
                             selectedFriendId === friendUser.id 
@@ -872,6 +878,11 @@ export default function Social() {
                                   </AvatarFallback>
                                 </Avatar>
                                 <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+                                {unreadCount > 0 && (
+                                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                                    {unreadCount}
+                                  </div>
+                                )}
                               </div>
                               <p className="text-xs font-medium text-gray-900 truncate w-full text-center">
                                 {friendUser.displayName?.split(' ')[0] || friendUser.username}
@@ -890,6 +901,11 @@ export default function Social() {
                                   </AvatarFallback>
                                 </Avatar>
                                 <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
+                                {unreadCount > 0 && (
+                                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                                    {unreadCount}
+                                  </div>
+                                )}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between mb-1">
@@ -897,17 +913,14 @@ export default function Social() {
                                     {friendUser.displayName || friendUser.username}
                                   </p>
                                   <span className="text-xs text-gray-400 flex-shrink-0">
-                                    {lastMessage ? new Date(lastMessage.createdAt).toLocaleTimeString([], {
+                                    {new Date(lastMessage.createdAt).toLocaleTimeString([], {
                                       hour: '2-digit',
                                       minute: '2-digit'
-                                    }) : 'now'}
+                                    })}
                                   </span>
                                 </div>
-                                <p className="text-sm text-gray-500 truncate">
-                                  {lastMessage ? 
-                                    (lastMessage.senderId === currentUser?.id ? 'You: ' : '') + lastMessage.content
-                                    : 'Tap to start chatting'
-                                  }
+                                <p className={`text-sm truncate ${unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+                                  {lastMessage.senderId === currentUser?.id ? 'You: ' : ''}{lastMessage.content}
                                 </p>
                               </div>
                             </div>
@@ -934,17 +947,8 @@ export default function Social() {
                 <>
                   {/* Chat Header */}
                   {(() => {
-                    const selectedFriend = friends.find(f => {
-                      const currentUserId = currentUser?.id;
-                      const isRequesterCurrentUser = f.requester.id === currentUserId;
-                      const friendUser = isRequesterCurrentUser ? f.recipient : f.requester;
-                      return friendUser.id === selectedFriendId;
-                    });
-                    const currentUserId = currentUser?.id;
-                    const isRequesterCurrentUser = selectedFriend?.requester.id === currentUserId;
-                    const selectedFriendUser = selectedFriend 
-                      ? (isRequesterCurrentUser ? selectedFriend.recipient : selectedFriend.requester)
-                      : null;
+                    const selectedThread = messageThreads.find((t: any) => t.user.id === selectedFriendId);
+                    const selectedFriendUser = selectedThread?.user;
                     
                     return (
                       <div className="p-4 bg-gray-50 border-b border-gray-200">
