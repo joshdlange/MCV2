@@ -28,6 +28,7 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
 
   useEffect(() => {
     if (isPlaceholderImage(set.imageUrl) && set.id) {
+      console.log(`Fetching card image for set ${set.id}: ${set.name}`);
       setLoading(true);
       fetchFirstCardImage();
     }
@@ -39,7 +40,9 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const cards = await response.json();
+      const data = await response.json();
+      const cards = data.items || [];
+      console.log(`Set ${set.id} has ${cards.length} cards`);
       
       if (cards.length > 0) {
         const sortedCards = cards.sort((a: any, b: any) => {
@@ -56,7 +59,10 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
         );
         
         if (cardWithImage) {
+          console.log(`Found card image for set ${set.id}: ${cardWithImage.frontImageUrl}`);
           setFirstCardImage(cardWithImage.frontImageUrl);
+        } else {
+          console.log(`No valid card images found for set ${set.id}`);
         }
       }
     } catch (error) {
