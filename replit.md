@@ -24,7 +24,7 @@ The application incorporates comprehensive performance optimizations for handlin
 - **Database Schema**: Structured for efficient management of users, card sets, individual cards, user collections, wishlists, cached pricing data, and upcoming set releases.
 - **Authentication & Authorization**: Leverages Firebase Authentication for user management, implements admin role-based access control, JWT token validation, and enforces subscription tier access.
 - **Upcoming Sets Tracker**: ✨ NEW (Nov 20, 2025) - Comprehensive system for managing and displaying upcoming Marvel card set releases with URL import, OpenGraph metadata scraping, image caching, countdown timers, and user interest tracking.
-- **Email Integration**: ✨ NEW (Nov 20, 2025) - Brevo SMTP integration for transactional emails with Nodemailer configuration (`server/email.ts`), Firebase to Brevo contact sync (`server/contactsSync.ts`), and admin-only sync endpoint for CRM management.
+- **Email Integration**: ✨ NEW (Nov 20, 2025) - Brevo SMTP integration for transactional emails with Nodemailer configuration (`server/email.ts`), Firebase to Brevo contact sync (`server/contactsSync.ts`), admin-only sync endpoint for CRM management, and comprehensive email automation system with 15 branded templates, event triggers, and scheduled cron jobs. ✅ UPDATED (Nov 21, 2025) - Inactivity reminders and weekly digest emails are limited to 1 email per month maximum to prevent email fatigue.
 
 ### Data Flow
 - **Card Management**: Involves admin CSV uploads, background processing, eBay API integration for image finding, Cloudinary optimization, and periodic price data refreshes.
