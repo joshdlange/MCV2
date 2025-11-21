@@ -25,28 +25,41 @@ export const dailyEmailJob = new CronJob(
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       
+      // Only send if they haven't received this email in the last 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
       const inactiveUsers = await db
         .select({
+          id: users.id,
           email: users.email,
           displayName: users.displayName,
           lastLogin: users.lastLogin,
+          lastInactivityEmailSent: users.lastInactivityEmailSent,
         })
         .from(users)
         .where(
           and(
             lt(users.lastLogin, sevenDaysAgo),
-            eq(users.emailUpdates, true) // Only send to users who opted in
+            eq(users.emailUpdates, true), // Only send to users who opted in
+            sql`(${users.lastInactivityEmailSent} IS NULL OR ${users.lastInactivityEmailSent} < ${thirtyDaysAgo})`
           )
         )
         .limit(50); // Batch limit to avoid overwhelming the email service
       
-      console.log(`📧 Sending inactivity reminders to ${inactiveUsers.length} users`);
+      console.log(`📧 Sending inactivity reminders to ${inactiveUsers.length} users (max 1 per month)`);
       
       for (const user of inactiveUsers) {
         await emailTriggers.onInactivityReminder({
           email: user.email,
           displayName: user.displayName || 'Collector',
         });
+        
+        // Update timestamp to prevent sending again within 30 days
+        await db
+          .update(users)
+          .set({ lastInactivityEmailSent: new Date() })
+          .where(eq(users.id, user.id));
       }
       
       // Find new users who haven't added any cards in 72 hours
@@ -111,14 +124,25 @@ export const weeklyDigestJob = new CronJob(
     console.log('🕒 Running weekly digest job...');
     
     try {
+      // Only send if they haven't received this email in the last 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
       // Get users who opted into marketing emails
       const subscribedUsers = await db
         .select({
+          id: users.id,
           email: users.email,
           displayName: users.displayName,
+          lastWeeklyDigestSent: users.lastWeeklyDigestSent,
         })
         .from(users)
-        .where(eq(users.marketingOptIn, true))
+        .where(
+          and(
+            eq(users.marketingOptIn, true),
+            sql`(${users.lastWeeklyDigestSent} IS NULL OR ${users.lastWeeklyDigestSent} < ${thirtyDaysAgo})`
+          )
+        )
         .limit(200); // Batch limit
       
       // Get card sets added in the last 7 days
@@ -141,7 +165,7 @@ export const weeklyDigestJob = new CronJob(
         cardCount: Number(set.cardCount || 0)
       }));
       
-      console.log(`📧 Sending weekly digest to ${subscribedUsers.length} users with ${setsData.length} new sets`);
+      console.log(`📧 Sending weekly digest to ${subscribedUsers.length} users with ${setsData.length} new sets (max 1 per month)`);
       
       for (const user of subscribedUsers) {
         await emailTriggers.onWeeklyDigest(
@@ -151,6 +175,12 @@ export const weeklyDigestJob = new CronJob(
           },
           setsData
         );
+        
+        // Update timestamp to prevent sending again within 30 days
+        await db
+          .update(users)
+          .set({ lastWeeklyDigestSent: new Date() })
+          .where(eq(users.id, user.id));
       }
       
       console.log('✅ Weekly digest job completed');
