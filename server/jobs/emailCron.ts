@@ -12,11 +12,11 @@ import * as emailTriggers from '../services/emailTriggers';
 const { CronJob } = cron;
 
 /**
- * Daily job: Send emails to inactive users and onboarding nudges
- * Runs every day at 9:00 AM
+ * Monthly job: Send emails to inactive users and onboarding nudges
+ * Runs on the 1st of every month at 9:00 AM
  */
 export const dailyEmailJob = new CronJob(
-  '0 9 * * *', // 9:00 AM every day
+  '0 9 1 * *', // 9:00 AM on the 1st of every month
   async () => {
     console.log('🕒 Running daily email job...');
     
@@ -115,11 +115,11 @@ export const dailyEmailJob = new CronJob(
 );
 
 /**
- * Weekly job: Send digest emails
- * Runs every Friday at 9:00 AM
+ * Monthly digest job: Send digest emails
+ * Runs on the 1st of every month at 9:00 AM
  */
 export const weeklyDigestJob = new CronJob(
-  '0 9 * * 5', // 9:00 AM every Friday
+  '0 9 1 * *', // 9:00 AM on the 1st of every month
   async () => {
     console.log('🕒 Running weekly digest job...');
     
@@ -201,8 +201,8 @@ export function startEmailCronJobs() {
   dailyEmailJob.start();
   weeklyDigestJob.start();
   console.log('✅ Email cron jobs started:');
-  console.log('  - Daily emails: 9:00 AM every day');
-  console.log('  - Weekly digest: 9:00 AM every Friday');
+  console.log('  - Monthly emails: 9:00 AM on the 1st of each month');
+  console.log('  - Monthly digest: 9:00 AM on the 1st of each month');
 }
 
 /**
