@@ -346,9 +346,9 @@ export function CardDetailModal({
                 <img
                   src={showBack ? convertGoogleDriveUrl(card.backImageUrl || '') : convertGoogleDriveUrl(card.frontImageUrl || '')}
                   alt={showBack ? `${card.name} back` : card.name}
-                  className="w-full h-full object-contain bg-white dark:bg-gray-800"
+                  className="w-full h-full object-contain"
                   onError={(e) => {
-                    e.currentTarget.src = '/attached_assets/Marvel Card Vault Logo_1755625167642.png';
+                    e.currentTarget.src = '/attached_assets/no card image 4_1764019444486.png';
                   }}
                 />
                 

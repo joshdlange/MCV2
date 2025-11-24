@@ -109,9 +109,7 @@ export default function AdminImageApprovals() {
   });
 
   const handleApprove = (submission: PendingSubmission) => {
-    if (confirm(`Approve this image submission from ${submission.user.username}?`)) {
-      approveMutation.mutate(submission.id);
-    }
+    approveMutation.mutate(submission.id);
   };
 
   const handleReject = () => {
