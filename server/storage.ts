@@ -6,6 +6,7 @@ import {
   userCollections, 
   userWishlists,
   cardPriceCache,
+  pendingCardImages,
   friends,
   messages,
   badges,
@@ -25,6 +26,8 @@ import {
   type InsertUserCollection,
   type UserWishlist,
   type InsertUserWishlist,
+  type PendingCardImage,
+  type InsertPendingCardImage,
   type CardWithSet,
   type CollectionItem,
   type WishlistItem,
@@ -131,6 +134,14 @@ interface IStorage {
   
   // Image Management
   getCardsWithoutImages(limit: number): Promise<CardWithSet[]>;
+  
+  // User-Submitted Card Images
+  createPendingCardImage(data: InsertPendingCardImage): Promise<PendingCardImage>;
+  getPendingCardImages(): Promise<(PendingCardImage & { user: User; card: CardWithSet })[]>;
+  getPendingCardImage(id: number): Promise<PendingCardImage | undefined>;
+  updatePendingCardImage(id: number, updates: Partial<PendingCardImage>): Promise<void>;
+  getUserApprovedImageCount(userId: number): Promise<number>;
+  getUserCollectionItem(userId: number, cardId: number): Promise<UserCollection | undefined>;
   
   // Admin Functions
   clearAllData(): Promise<void>;
@@ -1519,6 +1530,146 @@ export class DatabaseStorage implements IStorage {
       console.error('Error getting cards without images:', error);
       return [];
     }
+  }
+
+  // User-Submitted Card Images
+  async createPendingCardImage(data: InsertPendingCardImage): Promise<PendingCardImage> {
+    const [pendingImage] = await db.insert(pendingCardImages).values(data).returning();
+    return pendingImage;
+  }
+
+  async getPendingCardImages(): Promise<(PendingCardImage & { user: User; card: CardWithSet })[]> {
+    const results = await db
+      .select({
+        id: pendingCardImages.id,
+        userId: pendingCardImages.userId,
+        cardId: pendingCardImages.cardId,
+        frontImageUrl: pendingCardImages.frontImageUrl,
+        backImageUrl: pendingCardImages.backImageUrl,
+        status: pendingCardImages.status,
+        rejectionReason: pendingCardImages.rejectionReason,
+        reviewedBy: pendingCardImages.reviewedBy,
+        reviewedAt: pendingCardImages.reviewedAt,
+        createdAt: pendingCardImages.createdAt,
+        user: {
+          id: users.id,
+          firebaseUid: users.firebaseUid,
+          username: users.username,
+          email: users.email,
+          displayName: users.displayName,
+          photoURL: users.photoURL,
+          bio: users.bio,
+          location: users.location,
+          website: users.website,
+          instagramUrl: users.instagramUrl,
+          whatnotUrl: users.whatnotUrl,
+          ebayUrl: users.ebayUrl,
+          address: users.address,
+          isAdmin: users.isAdmin,
+          plan: users.plan,
+          subscriptionStatus: users.subscriptionStatus,
+          stripeCustomerId: users.stripeCustomerId,
+          stripeSubscriptionId: users.stripeSubscriptionId,
+          showEmail: users.showEmail,
+          showCollection: users.showCollection,
+          showWishlist: users.showWishlist,
+          emailUpdates: users.emailUpdates,
+          priceAlerts: users.priceAlerts,
+          friendActivity: users.friendActivity,
+          profileVisibility: users.profileVisibility,
+          onboardingComplete: users.onboardingComplete,
+          heardAbout: users.heardAbout,
+          favoriteSets: users.favoriteSets,
+          marketingOptIn: users.marketingOptIn,
+          lastLogin: users.lastLogin,
+          loginStreak: users.loginStreak,
+          totalLogins: users.totalLogins,
+          lastInactivityEmailSent: users.lastInactivityEmailSent,
+          lastWeeklyDigestSent: users.lastWeeklyDigestSent,
+          createdAt: users.createdAt,
+        },
+        card: {
+          id: cards.id,
+          setId: cards.setId,
+          cardNumber: cards.cardNumber,
+          name: cards.name,
+          variation: cards.variation,
+          isInsert: cards.isInsert,
+          frontImageUrl: cards.frontImageUrl,
+          backImageUrl: cards.backImageUrl,
+          description: cards.description,
+          rarity: cards.rarity,
+          estimatedValue: cards.estimatedValue,
+          createdAt: cards.createdAt,
+        },
+        cardSet: {
+          id: cardSets.id,
+          name: cardSets.name,
+          slug: cardSets.slug,
+          year: cardSets.year,
+          description: cardSets.description,
+          imageUrl: cardSets.imageUrl,
+          totalCards: cardSets.totalCards,
+          mainSetId: cardSets.mainSetId,
+          createdAt: cardSets.createdAt,
+        }
+      })
+      .from(pendingCardImages)
+      .innerJoin(users, eq(pendingCardImages.userId, users.id))
+      .innerJoin(cards, eq(pendingCardImages.cardId, cards.id))
+      .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+      .orderBy(desc(pendingCardImages.createdAt));
+
+    return results.map(row => ({
+      ...row,
+      card: {
+        ...row.card,
+        set: row.cardSet
+      }
+    }));
+  }
+
+  async getPendingCardImage(id: number): Promise<PendingCardImage | undefined> {
+    const [result] = await db
+      .select()
+      .from(pendingCardImages)
+      .where(eq(pendingCardImages.id, id))
+      .limit(1);
+    return result;
+  }
+
+  async updatePendingCardImage(id: number, updates: Partial<PendingCardImage>): Promise<void> {
+    await db
+      .update(pendingCardImages)
+      .set(updates)
+      .where(eq(pendingCardImages.id, id));
+  }
+
+  async getUserApprovedImageCount(userId: number): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(pendingCardImages)
+      .where(
+        and(
+          eq(pendingCardImages.userId, userId),
+          eq(pendingCardImages.status, 'approved')
+        )
+      );
+    return result[0]?.count || 0;
+  }
+
+  async getUserCollectionItem(userId: number, cardId: number): Promise<UserCollection | undefined> {
+    const [result] = await db
+      .select()
+      .from(userCollections)
+      .where(
+        and(
+          eq(userCollections.userId, userId),
+          eq(userCollections.cardId, cardId)
+        )
+      )
+      .limit(1);
+    return result;
   }
 
   async searchCardSets(query: string): Promise<CardSet[]> {

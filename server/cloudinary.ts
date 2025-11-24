@@ -108,4 +108,37 @@ export async function uploadImage(filePathOrBuffer: string | Buffer, folder: str
   }
 }
 
+// Upload user-submitted card image with validation and resizing
+export async function uploadUserCardImage(
+  fileBuffer: Buffer,
+  userId: number,
+  cardId: number,
+  side: 'front' | 'back'
+): Promise<string> {
+  try {
+    const folder = `user_uploads/${userId}/${cardId}`;
+    const uploadOptions: any = {
+      folder: folder,
+      resource_type: 'image',
+      public_id: side,
+      overwrite: true,
+      moderation: 'aws_rek', // Cloudinary NSFW detection
+      transformation: [
+        { width: 1200, height: 1200, crop: 'limit', quality: 'auto' },
+        { format: 'auto' }
+      ]
+    };
+
+    const result = await cloudinary.uploader.upload(
+      `data:image/jpeg;base64,${fileBuffer.toString('base64')}`,
+      uploadOptions
+    );
+
+    return result.secure_url;
+  } catch (error) {
+    console.error('User card image upload error:', error);
+    throw error;
+  }
+}
+
 export { cloudinary };

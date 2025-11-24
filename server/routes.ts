@@ -16,7 +16,7 @@ import { ebayPricingService } from "./ebay-pricing";
 import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
 import { db } from "./db";
-import { cards, cardSets, emailLogs } from "../shared/schema";
+import { cards, cardSets, emailLogs, pendingCardImages, insertPendingCardImageSchema } from "../shared/schema";
 import { sql, eq, ilike } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
@@ -29,6 +29,7 @@ import { syncFirebaseUsersToBrevo } from "./contactsSync";
 import { emailService } from "./services/emailService";
 import * as emailTriggers from "./services/emailTriggers";
 import { startEmailCronJobs } from "./jobs/emailCron";
+import { uploadUserCardImage } from "./cloudinary";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -3400,6 +3401,210 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get affected users error:', error);
       res.status(500).json({ message: "Failed to get affected users" });
+    }
+  });
+
+  // ===== USER IMAGE UPLOAD ROUTES =====
+  
+  // User uploads card image (front and/or back)
+  app.post("/api/cards/:cardId/upload", authenticateUser, upload.fields([
+    { name: 'frontImage', maxCount: 1 },
+    { name: 'backImage', maxCount: 1 }
+  ]), async (req: any, res) => {
+    try {
+      const cardId = parseInt(req.params.cardId);
+      const files = req.files as { frontImage?: Express.Multer.File[], backImage?: Express.Multer.File[] };
+      
+      if (!files.frontImage && !files.backImage) {
+        return res.status(400).json({ message: "At least one image (front or back) is required" });
+      }
+      
+      // Validate file sizes (5MB max)
+      const MAX_SIZE = 5 * 1024 * 1024;
+      if (files.frontImage && files.frontImage[0].size > MAX_SIZE) {
+        return res.status(400).json({ message: "Front image exceeds 5MB limit" });
+      }
+      if (files.backImage && files.backImage[0].size > MAX_SIZE) {
+        return res.status(400).json({ message: "Back image exceeds 5MB limit" });
+      }
+      
+      // Validate file types
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (files.frontImage && !allowedTypes.includes(files.frontImage[0].mimetype)) {
+        return res.status(400).json({ message: "Front image must be JPEG, PNG, or WebP" });
+      }
+      if (files.backImage && !allowedTypes.includes(files.backImage[0].mimetype)) {
+        return res.status(400).json({ message: "Back image must be JPEG, PNG, or WebP" });
+      }
+      
+      // Check if card exists
+      const card = await storage.getCard(cardId);
+      if (!card) {
+        return res.status(404).json({ message: "Card not found" });
+      }
+      
+      // Upload images to Cloudinary
+      let frontImageUrl: string | null = null;
+      let backImageUrl: string | null = null;
+      
+      if (files.frontImage) {
+        frontImageUrl = await uploadUserCardImage(
+          files.frontImage[0].buffer,
+          req.user.id,
+          cardId,
+          'front'
+        );
+      }
+      
+      if (files.backImage) {
+        backImageUrl = await uploadUserCardImage(
+          files.backImage[0].buffer,
+          req.user.id,
+          cardId,
+          'back'
+        );
+      }
+      
+      // Create pending image record
+      const pendingImage = await storage.createPendingCardImage({
+        userId: req.user.id,
+        cardId,
+        frontImageUrl,
+        backImageUrl,
+      });
+      
+      // Auto-add card to user's collection if they don't own it
+      const existingCollection = await storage.getUserCollectionItem(req.user.id, cardId);
+      if (!existingCollection) {
+        await storage.addToCollection({
+          userId: req.user.id,
+          cardId,
+          condition: "Near Mint",
+          acquiredVia: "image-upload",
+        });
+      }
+      
+      res.json({
+        message: "Thanks! Your image is pending approval.",
+        pendingImage
+      });
+    } catch (error) {
+      console.error('Upload card image error:', error);
+      res.status(500).json({ message: "Failed to upload image" });
+    }
+  });
+  
+  // Admin: Get all pending card images
+  app.get("/api/admin/pending-images", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const pendingImages = await storage.getPendingCardImages();
+      res.json(pendingImages);
+    } catch (error) {
+      console.error('Get pending images error:', error);
+      res.status(500).json({ message: "Failed to fetch pending images" });
+    }
+  });
+  
+  // Admin: Approve pending card image
+  app.post("/api/admin/pending-images/:id/approve", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const imageId = parseInt(req.params.id);
+      const pendingImage = await storage.getPendingCardImage(imageId);
+      
+      if (!pendingImage) {
+        return res.status(404).json({ message: "Pending image not found" });
+      }
+      
+      if (pendingImage.status !== 'pending') {
+        return res.status(400).json({ message: "Image has already been reviewed" });
+      }
+      
+      // Get the card
+      const card = await storage.getCard(pendingImage.cardId);
+      if (!card) {
+        return res.status(404).json({ message: "Card not found" });
+      }
+      
+      // Update card image
+      const cardUpdates: any = {};
+      
+      // If card has no image, use the user-submitted one as the main image
+      if (!card.frontImageUrl && pendingImage.frontImageUrl) {
+        cardUpdates.frontImageUrl = pendingImage.frontImageUrl;
+      } else if (pendingImage.frontImageUrl) {
+        // Add to alternateImages array
+        const alternateImages = card.alternateImages || [];
+        if (!alternateImages.includes(pendingImage.frontImageUrl)) {
+          cardUpdates.alternateImages = [...alternateImages, pendingImage.frontImageUrl];
+        }
+      }
+      
+      if (!card.backImageUrl && pendingImage.backImageUrl) {
+        cardUpdates.backImageUrl = pendingImage.backImageUrl;
+      }
+      
+      if (Object.keys(cardUpdates).length > 0) {
+        await storage.updateCard(pendingImage.cardId, cardUpdates);
+      }
+      
+      // Mark image as approved
+      await storage.updatePendingCardImage(imageId, {
+        status: 'approved',
+        reviewedBy: req.user.id,
+        reviewedAt: new Date(),
+      });
+      
+      // Check if user has earned Contributor badge (3+ approved images)
+      const userApprovedCount = await storage.getUserApprovedImageCount(pendingImage.userId);
+      if (userApprovedCount >= 3) {
+        await badgeService.awardBadge(pendingImage.userId, 'contributor');
+      }
+      
+      res.json({ message: "Image approved successfully" });
+    } catch (error) {
+      console.error('Approve image error:', error);
+      res.status(500).json({ message: "Failed to approve image" });
+    }
+  });
+  
+  // Admin: Reject pending card image
+  app.post("/api/admin/pending-images/:id/reject", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const imageId = parseInt(req.params.id);
+      const { rejectionReason } = req.body;
+      
+      const pendingImage = await storage.getPendingCardImage(imageId);
+      if (!pendingImage) {
+        return res.status(404).json({ message: "Pending image not found" });
+      }
+      
+      if (pendingImage.status !== 'pending') {
+        return res.status(400).json({ message: "Image has already been reviewed" });
+      }
+      
+      await storage.updatePendingCardImage(imageId, {
+        status: 'rejected',
+        rejectionReason: rejectionReason || 'No reason provided',
+        reviewedBy: req.user.id,
+        reviewedAt: new Date(),
+      });
+      
+      res.json({ message: "Image rejected successfully" });
+    } catch (error) {
+      console.error('Reject image error:', error);
+      res.status(500).json({ message: "Failed to reject image" });
     }
   });
 
