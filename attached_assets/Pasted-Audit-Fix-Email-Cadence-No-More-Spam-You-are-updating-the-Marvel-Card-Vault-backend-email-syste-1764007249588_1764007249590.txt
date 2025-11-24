@@ -1,0 +1,153 @@
+Audit & Fix Email Cadence (No More Spam)
+
+You are updating the Marvel Card Vault backend email system.
+
+Goals:
+
+Make sure no user can receive more than 1 automated “nudge” email in 30 days.
+
+Confirm cron jobs are truly monthly, not daily.
+
+Ensure no other part of the codebase is sending those same nudges or digests outside of cron.
+
+Add logging so we can see exactly what’s being sent, when, and why.
+
+Optionally allow us to disable cron jobs via an environment variable.
+
+Step 1 – Find all email send entry points
+
+Search the codebase for:
+
+sendEmail(
+
+emailTriggers.
+
+onInactivityReminder
+
+onAddFirstCardNudge
+
+onWeeklyDigest
+
+List every file + function where these are called and confirm:
+
+They are only called from:
+
+emailCron.ts (for nudges / digests), and
+
+legitimate one-off events (password reset, trade updates, etc.)
+
+There is no per-request or per-login trigger that could be firing repeatedly.
+
+If any “nudge” / “digest” emails are being sent outside of emailCron.ts, remove or refactor those calls.
+
+Step 2 – Add a global email send log
+
+Create a new table with Drizzle:
+
+Table name: email_logs
+
+Columns:
+
+id (uuid, pk)
+
+userId (uuid, nullable)
+
+email (text)
+
+template (text)
+
+sentAt (timestamp, default now)
+
+meta (jsonb, optional – e.g., { "job": "dailyEmailJob" })
+
+Then update sendEmail() in emailService.ts to:
+
+Insert a row in email_logs every time an email is sent (including template name if available).
+
+Log template and any cron job name passed in.
+
+If email is sent outside cron (e.g., immediate transactional emails), still log it, but with a different meta.job or field.
+
+Step 3 – Tighten cron jobs and rename them
+
+In server/jobs/emailCron.ts:
+
+Rename:
+
+dailyEmailJob → monthlyNudgesJob
+weeklyDigestJob → monthlyDigestJob
+
+
+Keep both cron expressions as monthly:
+
+'0 9 1 * *' // 9:00 AM on the 1st of every month
+
+
+Inside each job, ensure we never send more than 1 email per user per 30 days by:
+
+Using the existing lastInactivityEmailSent and lastWeeklyDigestSent checks
+
+Confirming these columns actually exist on the users table and are persisted
+
+After sending, successfully updating these columns
+
+If the columns do not exist in the DB schema or migration, create them properly and ensure they are wired to the Drizzle schema.
+
+Step 4 – Add environment-based kill switch for cron
+
+In emailCron.ts and wherever startEmailCronJobs() is called:
+
+Introduce an env var: EMAIL_CRON_ENABLED (default false if not set)
+
+Only start cron jobs if process.env.EMAIL_CRON_ENABLED === 'true'
+
+Example:
+
+export function startEmailCronJobs() {
+  if (process.env.EMAIL_CRON_ENABLED !== 'true') {
+    console.log('📅 Email cron jobs are disabled by EMAIL_CRON_ENABLED env var');
+    return;
+  }
+  console.log('📅 Starting email cron jobs...');
+  monthlyNudgesJob.start();
+  monthlyDigestJob.start();
+}
+
+
+This allows us to deploy with cron disabled while we verify behavior.
+
+Step 5 – Add an admin debug endpoint
+
+Create an admin-only route:
+
+GET /api/admin/email-cron-status
+
+Return:
+
+Current cron expressions for both jobs
+
+Whether each job is running (job.running)
+
+The count of emails sent in the last 7 days (query email_logs)
+
+A breakdown of how many per template
+
+This is for future debugging.
+
+Step 6 – Confirm & clean up
+
+After implementing:
+
+Show the updated emailCron.ts
+
+Show the updated emailService.ts
+
+Show the updated emailTriggers.ts (if changed)
+
+Show the new email_logs schema and migration
+
+Confirm EMAIL_CRON_ENABLED can be set in Replit Secrets to enable/disable cron
+
+IMPORTANT:
+Do not change the email templates themselves in this prompt.
+We will handle copy/design separately.
