@@ -2107,6 +2107,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin-only: Preview email templates
+  app.get("/api/admin/email-preview", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { template } = req.query;
+      const templates = await import('./services/emailTemplates');
+      
+      // Mock data for each template type
+      const mockUser = { displayName: 'John Collector', username: 'johncollector' };
+      const mockBadge = { name: 'First Card', description: 'Added your first card to the collection' };
+      const mockTrade = { 
+        id: 123, 
+        offeredCards: ['Iron Man #1', 'Spider-Man #2', 'Hulk #3'],
+        requestedCards: ['Captain America #1'],
+        partnerUsername: 'traderbob'
+      };
+      const mockCard = { name: 'Iron Man #1', imageUrl: 'https://via.placeholder.com/200' };
+      const mockSet = { name: 'Marvel Masterpieces 2024', releaseDate: 'December 2024', imageUrl: 'https://via.placeholder.com/600x300' };
+      const mockMilestone = { count: 100, type: 'Cards' };
+      const mockSets = [
+        { name: 'Marvel Masterpieces 2024', cardCount: 150 },
+        { name: 'Topps Chrome 2024', cardCount: 200 }
+      ];
+
+      let html: string;
+      
+      switch (template) {
+        case 'welcome':
+          html = templates.welcomeTemplate(mockUser);
+          break;
+        case 'password-reset':
+          html = templates.passwordResetTemplate({ email: 'user@example.com' }, 'https://marvelcardvault.com/reset');
+          break;
+        case 'password-reset-confirmation':
+          html = templates.passwordResetConfirmationTemplate(mockUser);
+          break;
+        case 'badge-unlocked':
+          html = templates.badgeUnlockedTemplate(mockUser, mockBadge);
+          break;
+        case 'trade-proposed':
+          html = templates.tradeProposedTemplate(
+            { displayName: 'Bob Trader', username: 'traderbob' },
+            mockUser,
+            mockTrade
+          );
+          break;
+        case 'trade-accepted':
+          html = templates.tradeAcceptedTemplate(mockUser, mockTrade);
+          break;
+        case 'trade-declined':
+          html = templates.tradeDeclinedTemplate(mockUser, mockTrade);
+          break;
+        case 'card-image-approved':
+          html = templates.cardImageApprovedTemplate(mockUser, mockCard);
+          break;
+        case 'card-image-rejected':
+          html = templates.cardImageRejectedTemplate(mockUser, { ...mockCard, reason: 'Image quality too low' });
+          break;
+        case 'new-set-notification':
+          html = templates.newSetNotificationTemplate(mockUser, mockSet);
+          break;
+        case 'add-first-card':
+          html = templates.addFirstCardTemplate(mockUser);
+          break;
+        case 'finish-setup':
+          html = templates.finishSetupTemplate(mockUser);
+          break;
+        case 'inactive-user':
+          html = templates.inactiveUserTemplate(mockUser);
+          break;
+        case 'collection-milestone':
+          html = templates.collectionMilestoneTemplate(mockUser, mockMilestone);
+          break;
+        case 'weekly-digest':
+          html = templates.weeklyDigestTemplate(mockUser, mockSets);
+          break;
+        default:
+          return res.status(400).json({ 
+            message: "Invalid template name. Available templates: welcome, password-reset, password-reset-confirmation, badge-unlocked, trade-proposed, trade-accepted, trade-declined, card-image-approved, card-image-rejected, new-set-notification, add-first-card, finish-setup, inactive-user, collection-milestone, weekly-digest"
+          });
+      }
+
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      console.error('Email preview error:', error);
+      res.status(500).json({ 
+        message: "Failed to generate email preview",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // ========== SOCIAL FEATURES API ROUTES ==========
   
   // Friends API
