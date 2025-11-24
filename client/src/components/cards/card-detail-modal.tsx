@@ -15,6 +15,7 @@ import { convertGoogleDriveUrl } from "@/lib/utils";
 import type { CardWithSet } from "@shared/schema";
 import { useCardPricing, useRefreshCardPricing } from "@/hooks/useCardPricing";
 import { auth } from "@/lib/firebase";
+import noCardImagePlaceholder from "@assets/no card image 4_1764019444486.png";
 
 interface CardDetailModalProps {
   card: CardWithSet | null;
@@ -348,7 +349,7 @@ export function CardDetailModal({
                   alt={showBack ? `${card.name} back` : card.name}
                   className="w-full h-full object-contain"
                   onError={(e) => {
-                    e.currentTarget.src = '/attached_assets/no card image 4_1764019444486.png';
+                    e.currentTarget.src = noCardImagePlaceholder;
                   }}
                 />
                 
