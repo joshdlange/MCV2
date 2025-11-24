@@ -617,7 +617,10 @@ export function CardDetailModal({
               {isInCollection ? (
                 <Button 
                   variant="outline" 
-                  onClick={onRemoveFromCollection}
+                  onClick={() => {
+                    console.log('Remove from collection clicked, callback exists:', !!onRemoveFromCollection);
+                    onRemoveFromCollection?.();
+                  }}
                   data-testid="button-remove-from-collection"
                   className="flex items-center gap-2 border-green-200 text-green-700"
                 >
@@ -628,7 +631,10 @@ export function CardDetailModal({
                 </Button>
               ) : (
                 <Button 
-                  onClick={onAddToCollection}
+                  onClick={() => {
+                    console.log('Add to collection clicked, callback exists:', !!onAddToCollection);
+                    onAddToCollection?.();
+                  }}
                   data-testid="button-add-to-collection"
                   className="bg-green-600 hover:bg-green-700 flex items-center gap-2"
                 >
