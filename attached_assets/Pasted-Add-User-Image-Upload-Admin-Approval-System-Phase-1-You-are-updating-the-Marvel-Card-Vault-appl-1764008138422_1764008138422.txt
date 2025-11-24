@@ -1,0 +1,147 @@
+Add User Image Upload + Admin Approval System (Phase 1)
+
+You are updating the Marvel Card Vault application with a full user-generated card image upload system.
+
+PART 1 — User-Side Image Upload
+
+Add a user-facing feature that allows a user to upload card images ONLY when:
+
+The card has no official image, OR
+
+The user chooses “Add Your Own Image” from their collection.
+
+Requirements:
+
+UI must support:
+
+Upload front image
+
+Upload back image (optional)
+
+Mobile-first camera support
+
+Clean, simple interface
+
+Show immediate preview of uploaded images
+
+Uploads must be stored in Cloudinary in a folder structure:
+
+/user_uploads/{userId}/{cardId}/front.jpg
+/user_uploads/{userId}/{cardId}/back.jpg
+
+
+After upload:
+
+Store pending review record in DB table pending_card_images
+
+Add fields:
+
+id (uuid)
+
+userId
+
+cardId
+
+frontUrl
+
+backUrl
+
+createdAt
+
+status ("pending", "approved", "rejected")
+
+reviewedAt (nullable)
+
+reviewedBy (adminId)
+
+Once uploaded, user sees:
+“Thanks! Your image is pending approval.”
+
+PART 2 — Auto-Add Card to Collection
+
+If user uploads an image for a card they do not yet own, automatically add the card to their collection with:
+
+acquiredVia: "image-upload"
+
+dateAdded: now()
+
+PART 3 — Admin Approval Tools
+
+Create a new admin area:
+
+Admin → Card Image Approvals
+
+Display:
+
+User who submitted it
+
+Card they claim it belongs to
+
+Front/back preview
+
+Timestamp
+
+Approve / Reject buttons
+
+Optional rejection text field
+
+On Approve:
+
+Replace the card's main image if it has none
+
+OR add as an alternate (decide depending on if a template image exists)
+
+Update card's imageUrl or alternateImages[]
+
+On Reject:
+
+Mark as rejected
+
+Store rejection reason
+
+PART 4 — Contributor Badges (Optional)
+
+If a user gets 3 approved images, award the badge:
+
+Contributor – Helping complete the Vault!
+
+
+Add a trigger to email them (use existing email service).
+
+PART 5 — Security / Validation
+
+Only image files allowed
+
+Max size: 5MB
+
+Auto-resize to 1200px max dimension
+
+Reject if NSFW (Cloudinary auto-moderation tag)
+
+Reject if card image obviously mismatches (leave manual approval)
+
+PART 6 — Deliverables
+
+Create:
+
+New DB table: pending_card_images
+
+New user upload UI component
+
+New admin approval UI
+
+New backend routes:
+
+POST /api/cards/:cardId/upload
+GET /api/admin/pending-images
+POST /api/admin/pending-images/:id/approve
+POST /api/admin/pending-images/:id/reject
+
+
+Cloudinary upload integration
+
+Auto-add to collection logic
+
+Badge awarding logic
+
+Ensure TypeScript, React/Vite (frontend), Node/Express (backend), Drizzle ORM (DB).

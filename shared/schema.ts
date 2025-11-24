@@ -81,6 +81,7 @@ export const cards = pgTable("cards", {
   isInsert: boolean("is_insert").default(false).notNull(),
   frontImageUrl: text("front_image_url"),
   backImageUrl: text("back_image_url"),
+  alternateImages: text("alternate_images").array(),
   description: text("description"),
   rarity: text("rarity").notNull(),
   estimatedValue: decimal("estimated_value", { precision: 10, scale: 2 }),
@@ -94,6 +95,7 @@ export const userCollections = pgTable("user_collections", {
   cardId: integer("card_id").references(() => cards.id).notNull(),
   condition: text("condition").default("Near Mint").notNull(),
   acquiredDate: timestamp("acquired_date").defaultNow().notNull(),
+  acquiredVia: text("acquired_via").default("manual").notNull(),
   personalValue: decimal("personal_value", { precision: 10, scale: 2 }),
   salePrice: decimal("sale_price", { precision: 10, scale: 2 }),
   isForSale: boolean("is_for_sale").default(false).notNull(),
@@ -119,6 +121,20 @@ export const cardPriceCache = pgTable("card_price_cache", {
   recentSales: text("recent_sales").array(),
   salesCount: integer("sales_count").default(0),
   lastFetched: timestamp("last_fetched").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// User-submitted card images pending admin approval
+export const pendingCardImages = pgTable("pending_card_images", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  cardId: integer("card_id").references(() => cards.id).notNull(),
+  frontImageUrl: text("front_image_url"),
+  backImageUrl: text("back_image_url"),
+  status: text("status").default("pending").notNull(), // pending, approved, rejected
+  rejectionReason: text("rejection_reason"),
+  reviewedBy: integer("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -321,6 +337,15 @@ export const insertCardPriceCacheSchema = createInsertSchema(cardPriceCache).omi
   lastFetched: true,
 });
 
+export const insertPendingCardImageSchema = createInsertSchema(pendingCardImages).omit({
+  id: true,
+  createdAt: true,
+  status: true,
+  reviewedAt: true,
+  reviewedBy: true,
+  rejectionReason: true,
+});
+
 export const insertFriendSchema = createInsertSchema(friends).omit({
   id: true,
   createdAt: true,
@@ -431,6 +456,9 @@ export type InsertUserWishlist = z.infer<typeof insertUserWishlistSchema>;
 
 export type CardPriceCache = typeof cardPriceCache.$inferSelect;
 export type InsertCardPriceCache = z.infer<typeof insertCardPriceCacheSchema>;
+
+export type PendingCardImage = typeof pendingCardImages.$inferSelect;
+export type InsertPendingCardImage = z.infer<typeof insertPendingCardImageSchema>;
 
 export type Friend = typeof friends.$inferSelect;
 export type InsertFriend = z.infer<typeof insertFriendSchema>;
