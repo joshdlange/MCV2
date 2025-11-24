@@ -90,16 +90,16 @@ function ctaButton(text: string, url: string): string {
 export function welcomeTemplate(user: { displayName: string; username: string }): string {
   const bodyHtml = `
     <h1 style="margin: 0 0 20px; font-size: 32px; font-weight: 700; color: ${TEXT_PRIMARY}; line-height: 1.2;">
-      Welcome to Marvel Card Vault, ${user.displayName}! 🎉
+      Welcome to Marvel Card Vault, ${user.displayName}!
     </h1>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      Your collection journey starts now! We're excited to have you join the community of Marvel card collectors.
+      You're all set. Track your cards, monitor values, and showcase your collection—all in one place.
     </p>
     <div style="background-color: ${DARK_BG}; padding: 20px; border-radius: 8px; border-left: 4px solid ${BRAND_RED}; margin: 20px 0;">
       <p style="margin: 0 0 10px; font-size: 14px; color: ${TEXT_PRIMARY};"><strong>Your Username:</strong> @${user.username}</p>
-      <p style="margin: 0; font-size: 14px; color: ${TEXT_SECONDARY};">Start building your legendary collection today!</p>
+      <p style="margin: 0; font-size: 14px; color: ${TEXT_SECONDARY};">Ready to organize your Marvel collection</p>
     </div>
-    ${ctaButton('Start Collecting', 'https://marvelcardvault.com/browse')}
+    ${ctaButton('Track Your Collection', 'https://marvelcardvault.com/browse')}
   `;
   return baseTemplate({ title: 'Welcome to Marvel Card Vault', bodyHtml });
 }
@@ -158,7 +158,7 @@ export function badgeUnlockedTemplate(
     <div style="text-align: center; padding: 20px 0;">
       <div style="font-size: 64px; margin-bottom: 20px;">🏆</div>
       <h1 style="margin: 0 0 10px; font-size: 32px; font-weight: 700; color: ${BRAND_RED};">
-        Badge Unlocked!
+        Achievement Unlocked
       </h1>
     </div>
     <div style="background-color: ${DARK_BG}; padding: 30px; border-radius: 8px; text-align: center; margin: 20px 0;">
@@ -166,11 +166,11 @@ export function badgeUnlockedTemplate(
       <p style="margin: 0; font-size: 16px; color: ${TEXT_SECONDARY};">${badgeInfo.description}</p>
     </div>
     <p style="margin: 20px 0; font-size: 16px; text-align: center; color: ${TEXT_SECONDARY};">
-      Great work, ${user.displayName}! Keep collecting to unlock more achievements.
+      Nice work, ${user.displayName}.
     </p>
-    ${ctaButton('View All Badges', 'https://marvelcardvault.com/profile/badges')}
+    ${ctaButton('View Your Achievements', 'https://marvelcardvault.com/profile/badges')}
   `;
-  return baseTemplate({ title: 'New Badge Unlocked!', bodyHtml });
+  return baseTemplate({ title: 'Achievement Unlocked', bodyHtml });
 }
 
 /**
@@ -183,23 +183,23 @@ export function tradeProposedTemplate(
 ): string {
   const bodyHtml = `
     <h1 style="margin: 0 0 20px; font-size: 28px; font-weight: 700; color: ${TEXT_PRIMARY};">
-      New Trade Proposal 🤝
+      Trade Proposal from @${sender.username}
     </h1>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
       Hi ${receiver.displayName},
     </p>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      <strong style="color: ${TEXT_PRIMARY};">@${sender.username}</strong> has sent you a trade proposal!
+      <strong style="color: ${TEXT_PRIMARY};">@${sender.username}</strong> wants to trade with you.
     </p>
     <div style="background-color: ${DARK_BG}; padding: 20px; border-radius: 8px; margin: 20px 0;">
-      <p style="margin: 0 0 10px; font-size: 14px; color: ${TEXT_PRIMARY};"><strong>They're offering:</strong></p>
+      <p style="margin: 0 0 10px; font-size: 14px; color: ${TEXT_PRIMARY};"><strong>Offering:</strong></p>
       <p style="margin: 0 0 15px; font-size: 14px; color: ${TEXT_SECONDARY};">${trade.offeredCards.slice(0, 3).join(', ')}${trade.offeredCards.length > 3 ? ` +${trade.offeredCards.length - 3} more` : ''}</p>
-      <p style="margin: 0 0 10px; font-size: 14px; color: ${TEXT_PRIMARY};"><strong>For your:</strong></p>
+      <p style="margin: 0 0 10px; font-size: 14px; color: ${TEXT_PRIMARY};"><strong>Requesting:</strong></p>
       <p style="margin: 0; font-size: 14px; color: ${TEXT_SECONDARY};">${trade.requestedCards.slice(0, 3).join(', ')}${trade.requestedCards.length > 3 ? ` +${trade.requestedCards.length - 3} more` : ''}</p>
     </div>
     ${ctaButton('Review Trade', `https://marvelcardvault.com/trades/${trade.id}`)}
   `;
-  return baseTemplate({ title: 'New Trade Proposal', bodyHtml });
+  return baseTemplate({ title: 'Trade Proposal', bodyHtml });
 }
 
 /**
@@ -211,15 +211,15 @@ export function tradeAcceptedTemplate(
 ): string {
   const bodyHtml = `
     <h1 style="margin: 0 0 20px; font-size: 28px; font-weight: 700; color: ${BRAND_RED};">
-      Trade Accepted! ✅
+      Trade Accepted
     </h1>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      Great news, ${user.displayName}!
+      ${user.displayName},
     </p>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      <strong style="color: ${TEXT_PRIMARY};">@${trade.partnerUsername}</strong> has accepted your trade proposal.
+      <strong style="color: ${TEXT_PRIMARY};">@${trade.partnerUsername}</strong> accepted your trade.
     </p>
-    ${ctaButton('View Trade Details', `https://marvelcardvault.com/trades/${trade.id}`)}
+    ${ctaButton('View Trade', `https://marvelcardvault.com/trades/${trade.id}`)}
   `;
   return baseTemplate({ title: 'Trade Accepted', bodyHtml });
 }
@@ -236,15 +236,12 @@ export function tradeDeclinedTemplate(
       Trade Update
     </h1>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      Hi ${user.displayName},
+      ${user.displayName},
     </p>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      <strong style="color: ${TEXT_PRIMARY};">@${trade.partnerUsername}</strong> has declined your trade proposal.
+      <strong style="color: ${TEXT_PRIMARY};">@${trade.partnerUsername}</strong> declined your trade.
     </p>
-    <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      Don't worry! There are plenty of other collectors looking to trade.
-    </p>
-    ${ctaButton('Browse Collections', 'https://marvelcardvault.com/community')}
+    ${ctaButton('Find Other Collectors', 'https://marvelcardvault.com/community')}
   `;
   return baseTemplate({ title: 'Trade Declined', bodyHtml });
 }
@@ -258,13 +255,13 @@ export function cardImageApprovedTemplate(
 ): string {
   const bodyHtml = `
     <h1 style="margin: 0 0 20px; font-size: 28px; font-weight: 700; color: ${BRAND_RED};">
-      Card Image Approved! ✅
+      Image Approved
     </h1>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      Great work, ${user.displayName}!
+      ${user.displayName},
     </p>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      Your submitted image for <strong style="color: ${TEXT_PRIMARY};">${card.name}</strong> has been approved and is now live.
+      Your image for <strong style="color: ${TEXT_PRIMARY};">${card.name}</strong> is now live.
     </p>
     ${card.imageUrl ? `
       <div style="text-align: center; margin: 20px 0;">
@@ -272,10 +269,10 @@ export function cardImageApprovedTemplate(
       </div>
     ` : ''}
     <p style="margin: 20px 0 0; font-size: 14px; text-align: center; color: ${TEXT_SECONDARY};">
-      Thank you for contributing to the community!
+      Thanks for contributing.
     </p>
   `;
-  return baseTemplate({ title: 'Card Image Approved', bodyHtml });
+  return baseTemplate({ title: 'Image Approved', bodyHtml });
 }
 
 /**
@@ -316,13 +313,13 @@ export function newSetNotificationTemplate(
 ): string {
   const bodyHtml = `
     <h1 style="margin: 0 0 20px; font-size: 32px; font-weight: 700; color: ${BRAND_RED};">
-      New Set Alert! 🚨
+      New Set Incoming
     </h1>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      Hey ${user.displayName},
+      ${user.displayName},
     </p>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      A new Marvel card set is coming soon!
+      A new Marvel set is releasing soon.
     </p>
     ${setInfo.imageUrl ? `
       <div style="text-align: center; margin: 20px 0;">
@@ -331,11 +328,11 @@ export function newSetNotificationTemplate(
     ` : ''}
     <div style="background-color: ${DARK_BG}; padding: 20px; border-radius: 8px; margin: 20px 0;">
       <h2 style="margin: 0 0 10px; font-size: 24px; color: ${TEXT_PRIMARY};">${setInfo.name}</h2>
-      <p style="margin: 0; font-size: 16px; color: ${TEXT_SECONDARY};"><strong>Release Date:</strong> ${setInfo.releaseDate}</p>
+      <p style="margin: 0; font-size: 16px; color: ${TEXT_SECONDARY};"><strong>Releases:</strong> ${setInfo.releaseDate}</p>
     </div>
-    ${ctaButton('View Upcoming Sets', 'https://marvelcardvault.com/upcoming-sets')}
+    ${ctaButton('See Upcoming Sets', 'https://marvelcardvault.com/upcoming-sets')}
   `;
-  return baseTemplate({ title: 'New Set Coming Soon!', bodyHtml });
+  return baseTemplate({ title: 'New Set Incoming', bodyHtml });
 }
 
 // =============================================================================
@@ -348,20 +345,17 @@ export function newSetNotificationTemplate(
 export function addFirstCardTemplate(user: { displayName: string }): string {
   const bodyHtml = `
     <h1 style="margin: 0 0 20px; font-size: 28px; font-weight: 700; color: ${TEXT_PRIMARY};">
-      Ready to Start Your Collection? 📚
+      Track Your First Card
     </h1>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      Hi ${user.displayName},
+      ${user.displayName},
     </p>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      We noticed you haven't added any cards to your collection yet. Let's get started!
+      You haven't added any cards yet. Search our database of <strong style="color: ${TEXT_PRIMARY};">60,000+ Marvel cards</strong> to start organizing your collection.
     </p>
-    <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      Browse our database of <strong style="color: ${TEXT_PRIMARY};">60,000+ Marvel cards</strong> and start building your legendary collection.
-    </p>
-    ${ctaButton('Browse Cards', 'https://marvelcardvault.com/browse')}
+    ${ctaButton('Add Your Cards', 'https://marvelcardvault.com/browse')}
   `;
-  return baseTemplate({ title: 'Start Your Collection', bodyHtml });
+  return baseTemplate({ title: 'Track Your First Card', bodyHtml });
 }
 
 /**
@@ -370,23 +364,23 @@ export function addFirstCardTemplate(user: { displayName: string }): string {
 export function finishSetupTemplate(user: { displayName: string }): string {
   const bodyHtml = `
     <h1 style="margin: 0 0 20px; font-size: 28px; font-weight: 700; color: ${TEXT_PRIMARY};">
-      Complete Your Profile 👤
+      Finish Your Profile
     </h1>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      Hi ${user.displayName},
+      ${user.displayName},
     </p>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      You're almost there! Complete your profile to unlock the full Marvel Card Vault experience:
+      Complete your profile to get the most out of Marvel Card Vault:
     </p>
     <ul style="margin: 0 0 20px; padding-left: 20px; color: ${TEXT_SECONDARY};">
-      <li style="margin-bottom: 10px;">Add your favorite card sets</li>
-      <li style="margin-bottom: 10px;">Connect with other collectors</li>
+      <li style="margin-bottom: 10px;">Track your favorite sets</li>
+      <li style="margin-bottom: 10px;">Connect with collectors</li>
       <li style="margin-bottom: 10px;">Set up trade preferences</li>
-      <li>Customize your collection display</li>
+      <li>Showcase your collection</li>
     </ul>
-    ${ctaButton('Complete Profile', 'https://marvelcardvault.com/profile/edit')}
+    ${ctaButton('Update Profile', 'https://marvelcardvault.com/profile/edit')}
   `;
-  return baseTemplate({ title: 'Complete Your Profile', bodyHtml });
+  return baseTemplate({ title: 'Finish Your Profile', bodyHtml });
 }
 
 /**
@@ -395,24 +389,24 @@ export function finishSetupTemplate(user: { displayName: string }): string {
 export function inactiveUserTemplate(user: { displayName: string }): string {
   const bodyHtml = `
     <h1 style="margin: 0 0 20px; font-size: 28px; font-weight: 700; color: ${TEXT_PRIMARY};">
-      We Miss You! 💔
+      What's New
     </h1>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      Hi ${user.displayName},
+      ${user.displayName},
     </p>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      It's been a while since we've seen you! Here's what you've been missing:
+      Here's what's been added since your last visit:
     </p>
     <div style="background-color: ${DARK_BG}; padding: 20px; border-radius: 8px; margin: 20px 0;">
       <ul style="margin: 0; padding-left: 20px; color: ${TEXT_SECONDARY};">
-        <li style="margin-bottom: 10px;">New card sets added to the database</li>
+        <li style="margin-bottom: 10px;">New card sets in the database</li>
         <li style="margin-bottom: 10px;">Updated market prices</li>
-        <li>New collectors in the community</li>
+        <li>New collectors joined</li>
       </ul>
     </div>
-    ${ctaButton("Check Out What's New", 'https://marvelcardvault.com')}
+    ${ctaButton("See What's New", 'https://marvelcardvault.com')}
   `;
-  return baseTemplate({ title: 'We Miss You!', bodyHtml });
+  return baseTemplate({ title: "What's New", bodyHtml });
 }
 
 /**
@@ -426,26 +420,26 @@ export function collectionMilestoneTemplate(
     <div style="text-align: center; padding: 20px 0;">
       <div style="font-size: 64px; margin-bottom: 20px;">🎊</div>
       <h1 style="margin: 0 0 10px; font-size: 32px; font-weight: 700; color: ${BRAND_RED};">
-        Milestone Achieved!
+        Collection Milestone
       </h1>
     </div>
     <p style="margin: 0 0 20px; font-size: 18px; text-align: center; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      Congratulations, ${user.displayName}!
+      ${user.displayName},
     </p>
     <div style="background-color: ${DARK_BG}; padding: 30px; border-radius: 8px; text-align: center; margin: 20px 0;">
       <h2 style="margin: 0 0 10px; font-size: 48px; color: ${BRAND_RED};">${milestone.count}</h2>
-      <p style="margin: 0; font-size: 20px; color: ${TEXT_PRIMARY};">${milestone.type} in Your Collection!</p>
+      <p style="margin: 0; font-size: 20px; color: ${TEXT_PRIMARY};">${milestone.type} Tracked</p>
     </div>
     <p style="margin: 20px 0 0; font-size: 16px; text-align: center; color: ${TEXT_SECONDARY};">
-      Keep up the amazing work! Your collection is growing legendary.
+      Your collection keeps growing.
     </p>
-    ${ctaButton('View Collection', 'https://marvelcardvault.com/collection')}
+    ${ctaButton('View Your Collection', 'https://marvelcardvault.com/collection')}
   `;
-  return baseTemplate({ title: 'Collection Milestone!', bodyHtml });
+  return baseTemplate({ title: 'Collection Milestone', bodyHtml });
 }
 
 /**
- * 15. Weekly "New Sets Added" Digest
+ * 15. Monthly "New Sets Added" Digest
  */
 export function weeklyDigestTemplate(
   user: { displayName: string },
@@ -454,25 +448,25 @@ export function weeklyDigestTemplate(
   const setsHtml = sets.map(set => `
     <div style="background-color: ${CARD_BG}; padding: 15px; border-radius: 6px; margin-bottom: 10px; border-left: 3px solid ${BRAND_RED};">
       <p style="margin: 0 0 5px; font-size: 16px; color: ${TEXT_PRIMARY}; font-weight: 600;">${set.name}</p>
-      <p style="margin: 0; font-size: 14px; color: ${TEXT_SECONDARY};">${set.cardCount} cards added</p>
+      <p style="margin: 0; font-size: 14px; color: ${TEXT_SECONDARY};">${set.cardCount} cards</p>
     </div>
   `).join('');
 
   const bodyHtml = `
     <h1 style="margin: 0 0 20px; font-size: 28px; font-weight: 700; color: ${TEXT_PRIMARY};">
-      Your Weekly Digest 📬
+      Monthly Update
     </h1>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      Hi ${user.displayName},
+      ${user.displayName},
     </p>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      Here's what's new this week at Marvel Card Vault:
+      Here's what's new this month:
     </p>
     <div style="background-color: ${DARK_BG}; padding: 20px; border-radius: 8px; margin: 20px 0;">
-      <h3 style="margin: 0 0 15px; font-size: 18px; color: ${TEXT_PRIMARY};">New Sets Added (${sets.length})</h3>
-      ${setsHtml || '<p style="margin: 0; color: ${TEXT_SECONDARY};">No new sets this week</p>'}
+      <h3 style="margin: 0 0 15px; font-size: 18px; color: ${TEXT_PRIMARY};">New Sets (${sets.length})</h3>
+      ${setsHtml || '<p style="margin: 0; color: ${TEXT_SECONDARY};">No new sets this month</p>'}
     </div>
-    ${ctaButton('Explore New Sets', 'https://marvelcardvault.com/browse')}
+    ${ctaButton('See New Sets', 'https://marvelcardvault.com/browse')}
   `;
-  return baseTemplate({ title: 'Your Weekly Marvel Card Vault Digest', bodyHtml });
+  return baseTemplate({ title: 'Monthly Update', bodyHtml });
 }
