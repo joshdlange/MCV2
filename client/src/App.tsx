@@ -29,6 +29,7 @@ import AdminDashboard from "@/pages/admin/dashboard";
 import AdminPage from "@/pages/admin";
 import AdminAutomation from "@/pages/admin/automation";
 import AdminUpcomingSets from "@/pages/admin/upcoming-sets";
+import AdminImageApprovals from "@/pages/admin/image-approvals";
 import CardSearch from "@/pages/card-search";
 import MarketTrends from "@/pages/market-trends";
 import UpcomingSets from "@/pages/upcoming-sets";
@@ -147,6 +148,7 @@ function Router() {
       <Route path="/admin/main-sets" component={AdminMainSets} />
       <Route path="/admin/unassigned-sets" component={AdminUnassignedSets} />
       <Route path="/admin/upcoming-sets" component={AdminUpcomingSets} />
+      <Route path="/admin/image-approvals" component={AdminImageApprovals} />
       <Route path="/subscription-success" component={SubscriptionSuccess} />
       <Route path="/subscription-cancelled" component={SubscriptionCancelled} />
       <Route component={NotFound} />
