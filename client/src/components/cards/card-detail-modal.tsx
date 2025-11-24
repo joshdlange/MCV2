@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
 import type { CardWithSet } from "@shared/schema";
 import { useCardPricing, useRefreshCardPricing } from "@/hooks/useCardPricing";
+import { auth } from "@/lib/firebase";
 
 interface CardDetailModalProps {
   card: CardWithSet | null;
@@ -133,7 +134,11 @@ export function CardDetailModal({
   // User image upload mutation
   const uploadImageMutation = useMutation({
     mutationFn: async ({ cardId, formData }: { cardId: number; formData: FormData }) => {
-      const token = localStorage.getItem('firebase_token');
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('You must be logged in to upload images');
+      }
+      const token = await user.getIdToken();
       const response = await fetch(`/api/cards/${cardId}/upload`, {
         method: 'POST',
         headers: {
@@ -687,9 +692,9 @@ export function CardDetailModal({
                             className="hidden"
                             data-testid="input-front-image"
                           />
-                          <label htmlFor="frontImage" className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-md cursor-pointer font-semibold transition-colors">
+                          <label htmlFor="frontImage" className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-md cursor-pointer font-medium transition-colors">
                             <Upload className="w-4 h-4" />
-                            FRONT UPLOAD
+                            Front Upload
                           </label>
                         </div>
                         {frontPreview && (
@@ -724,9 +729,9 @@ export function CardDetailModal({
                             className="hidden"
                             data-testid="input-back-image"
                           />
-                          <label htmlFor="backImage" className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-md cursor-pointer font-semibold transition-colors">
+                          <label htmlFor="backImage" className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-md cursor-pointer font-medium transition-colors">
                             <Upload className="w-4 h-4" />
-                            BACK UPLOAD
+                            Back Upload
                           </label>
                         </div>
                         {backPreview && (
