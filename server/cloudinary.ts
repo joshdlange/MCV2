@@ -122,7 +122,6 @@ export async function uploadUserCardImage(
       resource_type: 'image',
       public_id: side,
       overwrite: true,
-      moderation: 'aws_rek', // Cloudinary NSFW detection
       transformation: [
         { width: 1200, height: 1200, crop: 'limit', quality: 'auto' },
         { format: 'auto' }
