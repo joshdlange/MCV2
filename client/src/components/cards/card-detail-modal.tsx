@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Check, Heart, Star, RotateCcw, Edit, Trash2, Save, X, RefreshCw, ExternalLink, Image } from "lucide-react";
+import { Check, Heart, Star, RotateCcw, Edit, Trash2, Save, X, RefreshCw, ExternalLink, Image, Upload, Camera } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -47,6 +47,11 @@ export function CardDetailModal({
   const [notes, setNotes] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editedCard, setEditedCard] = useState<Partial<CardWithSet>>({});
+  const [frontImageFile, setFrontImageFile] = useState<File | null>(null);
+  const [backImageFile, setBackImageFile] = useState<File | null>(null);
+  const [frontPreview, setFrontPreview] = useState<string | null>(null);
+  const [backPreview, setBackPreview] = useState<string | null>(null);
+  const [showUploadSection, setShowUploadSection] = useState(false);
   
   const { isAdminMode } = useAppStore();
   const queryClient = useQueryClient();
@@ -125,6 +130,40 @@ export function CardDetailModal({
     }
   });
 
+  // User image upload mutation
+  const uploadImageMutation = useMutation({
+    mutationFn: async ({ cardId, formData }: { cardId: number; formData: FormData }) => {
+      const response = await fetch(`/api/cards/${cardId}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Upload failed');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Image uploaded successfully!",
+        description: "Your submission is pending admin approval. Thank you for contributing!",
+      });
+      setFrontImageFile(null);
+      setBackImageFile(null);
+      setFrontPreview(null);
+      setBackPreview(null);
+      setShowUploadSection(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/cards'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
   const handleSaveEdit = () => {
     updateCardMutation.mutate(editedCard);
   };
@@ -133,6 +172,77 @@ export function CardDetailModal({
     if (confirm('Are you sure you want to delete this card? This action cannot be undone.')) {
       deleteCardMutation.mutate();
     }
+  };
+
+  const handleFileSelect = (file: File | null, type: 'front' | 'back') => {
+    if (!file) {
+      if (type === 'front') {
+        setFrontImageFile(null);
+        setFrontPreview(null);
+      } else {
+        setBackImageFile(null);
+        setBackPreview(null);
+      }
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Images must be under 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Set file and create preview
+    if (type === 'front') {
+      setFrontImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFrontPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setBackImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setBackPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUploadSubmit = () => {
+    if (!frontImageFile && !backImageFile) {
+      toast({
+        title: "No images selected",
+        description: "Please select at least one image to upload",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const formData = new FormData();
+    if (frontImageFile) {
+      formData.append('frontImage', frontImageFile);
+    }
+    if (backImageFile) {
+      formData.append('backImage', backImageFile);
+    }
+
+    uploadImageMutation.mutate({ cardId: card.id, formData });
   };
 
   if (!card) return null;
@@ -534,6 +644,136 @@ export function CardDetailModal({
                 </Button>
               )}
             </div>
+
+            {/* User Image Upload Section */}
+            {!isAdminMode && !isEditing && (
+              <div className="border-t pt-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-card-foreground flex items-center gap-2">
+                      <Camera className="w-4 h-4" />
+                      Contribute Card Images
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Help grow the database by uploading high-quality card images
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowUploadSection(!showUploadSection)}
+                    data-testid="button-toggle-upload"
+                  >
+                    {showUploadSection ? 'Cancel' : 'Upload Images'}
+                  </Button>
+                </div>
+
+                {showUploadSection && (
+                  <div className="space-y-4 border rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Front Image Upload */}
+                      <div className="space-y-2">
+                        <Label htmlFor="frontImage" className="text-sm font-medium">
+                          Front Image
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            id="frontImage"
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            onChange={(e) => handleFileSelect(e.target.files?.[0] || null, 'front')}
+                            className="cursor-pointer"
+                            data-testid="input-front-image"
+                          />
+                        </div>
+                        {frontPreview && (
+                          <div className="relative aspect-[2.5/3.5] w-full rounded border overflow-hidden">
+                            <img
+                              src={frontPreview}
+                              alt="Front preview"
+                              className="w-full h-full object-contain"
+                            />
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="absolute top-2 right-2"
+                              onClick={() => handleFileSelect(null, 'front')}
+                              data-testid="button-remove-front"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Back Image Upload */}
+                      <div className="space-y-2">
+                        <Label htmlFor="backImage" className="text-sm font-medium">
+                          Back Image (Optional)
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            id="backImage"
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            onChange={(e) => handleFileSelect(e.target.files?.[0] || null, 'back')}
+                            className="cursor-pointer"
+                            data-testid="input-back-image"
+                          />
+                        </div>
+                        {backPreview && (
+                          <div className="relative aspect-[2.5/3.5] w-full rounded border overflow-hidden">
+                            <img
+                              src={backPreview}
+                              alt="Back preview"
+                              className="w-full h-full object-contain"
+                            />
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="absolute top-2 right-2"
+                              onClick={() => handleFileSelect(null, 'back')}
+                              data-testid="button-remove-back"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="text-xs text-muted-foreground space-y-1">
+                        <p>• Images will be reviewed by admins before being added</p>
+                        <p>• Max file size: 5MB per image</p>
+                        <p>• Accepted formats: JPEG, PNG, WebP</p>
+                        <p>• Earn the Contributor badge after 3 approved submissions!</p>
+                      </div>
+                      <Button
+                        onClick={handleUploadSubmit}
+                        disabled={uploadImageMutation.isPending || (!frontImageFile && !backImageFile)}
+                        className="w-full bg-marvel-red hover:bg-red-700"
+                        data-testid="button-submit-upload"
+                      >
+                        {uploadImageMutation.isPending ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-4 h-4 mr-2" />
+                            Submit for Review
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Marketplace Settings (only if in collection) */}
             {isInCollection && (
