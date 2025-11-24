@@ -57,7 +57,7 @@ export default function AdminImageApprovals() {
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/admin/pending-images');
       const data = await response.json();
-      return data as PendingSubmission[];
+      return (data.items || data) as PendingSubmission[];
     }
   });
 
