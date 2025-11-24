@@ -133,8 +133,12 @@ export function CardDetailModal({
   // User image upload mutation
   const uploadImageMutation = useMutation({
     mutationFn: async ({ cardId, formData }: { cardId: number; formData: FormData }) => {
+      const token = localStorage.getItem('firebase_token');
       const response = await fetch(`/api/cards/${cardId}/upload`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
         body: formData,
       });
       if (!response.ok) {
@@ -659,10 +663,10 @@ export function CardDetailModal({
                     </p>
                   </div>
                   <Button
-                    variant="outline"
                     size="sm"
                     onClick={() => setShowUploadSection(!showUploadSection)}
                     data-testid="button-toggle-upload"
+                    className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white border-none hover:from-blue-600 hover:via-purple-600 hover:to-pink-600"
                   >
                     {showUploadSection ? 'Cancel' : 'Upload Images'}
                   </Button>
@@ -673,19 +677,20 @@ export function CardDetailModal({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Front Image Upload */}
                       <div className="space-y-2">
-                        <Label htmlFor="frontImage" className="text-sm font-medium">
-                          Front Image
-                        </Label>
                         <div className="relative">
-                          <Input
+                          <input
                             id="frontImage"
                             type="file"
                             accept="image/*"
                             capture="environment"
                             onChange={(e) => handleFileSelect(e.target.files?.[0] || null, 'front')}
-                            className="cursor-pointer"
+                            className="hidden"
                             data-testid="input-front-image"
                           />
+                          <label htmlFor="frontImage" className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-md cursor-pointer font-semibold transition-colors">
+                            <Upload className="w-4 h-4" />
+                            FRONT UPLOAD
+                          </label>
                         </div>
                         {frontPreview && (
                           <div className="relative aspect-[2.5/3.5] w-full rounded border overflow-hidden">
@@ -709,19 +714,20 @@ export function CardDetailModal({
 
                       {/* Back Image Upload */}
                       <div className="space-y-2">
-                        <Label htmlFor="backImage" className="text-sm font-medium">
-                          Back Image (Optional)
-                        </Label>
                         <div className="relative">
-                          <Input
+                          <input
                             id="backImage"
                             type="file"
                             accept="image/*"
                             capture="environment"
                             onChange={(e) => handleFileSelect(e.target.files?.[0] || null, 'back')}
-                            className="cursor-pointer"
+                            className="hidden"
                             data-testid="input-back-image"
                           />
+                          <label htmlFor="backImage" className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-md cursor-pointer font-semibold transition-colors">
+                            <Upload className="w-4 h-4" />
+                            BACK UPLOAD
+                          </label>
                         </div>
                         {backPreview && (
                           <div className="relative aspect-[2.5/3.5] w-full rounded border overflow-hidden">
