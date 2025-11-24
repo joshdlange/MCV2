@@ -56,7 +56,7 @@ export async function onUserSignup(user: User): Promise<void> {
       displayName: user.displayName,
       username: user.username || 'collector'
     });
-    await sendEmail(user.email, 'Welcome to Marvel Card Vault', html);
+    await sendEmail(user.email, 'Welcome to Marvel Card Vault', html, 'welcome');
   } catch (error) {
     console.error('Failed to send welcome email:', error);
   }
@@ -68,7 +68,7 @@ export async function onUserSignup(user: User): Promise<void> {
 export async function onPasswordReset(user: User, resetLink: string): Promise<void> {
   try {
     const html = templates.passwordResetTemplate({ email: user.email }, resetLink);
-    await sendEmail(user.email, 'Reset Your Password', html);
+    await sendEmail(user.email, 'Reset Your Password', html, 'password-reset');
   } catch (error) {
     console.error('Failed to send password reset email:', error);
   }
@@ -80,7 +80,7 @@ export async function onPasswordReset(user: User, resetLink: string): Promise<vo
 export async function onPasswordResetConfirm(user: User): Promise<void> {
   try {
     const html = templates.passwordResetConfirmationTemplate({ displayName: user.displayName });
-    await sendEmail(user.email, 'Password Changed Successfully', html);
+    await sendEmail(user.email, 'Password Changed Successfully', html, 'password-reset-confirmation');
   } catch (error) {
     console.error('Failed to send password reset confirmation email:', error);
   }
@@ -95,7 +95,7 @@ export async function onBadgeUnlocked(user: User, badgeInfo: BadgeInfo): Promise
       { displayName: user.displayName },
       badgeInfo
     );
-    await sendEmail(user.email, `Achievement Unlocked: ${badgeInfo.name}`, html);
+    await sendEmail(user.email, `Achievement Unlocked: ${badgeInfo.name}`, html, 'badge-unlocked');
   } catch (error) {
     console.error('Failed to send badge unlocked email:', error);
   }
@@ -119,7 +119,7 @@ export async function onTradeProposed(
         requestedCards: trade.requestedCards || []
       }
     );
-    await sendEmail(receiver.email, 'New Trade Proposal from ' + sender.displayName, html);
+    await sendEmail(receiver.email, 'New Trade Proposal from ' + sender.displayName, html, 'trade-proposed');
   } catch (error) {
     console.error('Failed to send trade proposed email:', error);
   }
@@ -134,7 +134,7 @@ export async function onTradeAccepted(user: User, trade: Trade): Promise<void> {
       { displayName: user.displayName },
       { id: trade.id, partnerUsername: trade.partnerUsername || 'collector' }
     );
-    await sendEmail(user.email, 'Trade Accepted', html);
+    await sendEmail(user.email, 'Trade Accepted', html, 'trade-accepted');
   } catch (error) {
     console.error('Failed to send trade accepted email:', error);
   }
@@ -149,7 +149,7 @@ export async function onTradeDeclined(user: User, trade: Trade): Promise<void> {
       { displayName: user.displayName },
       { id: trade.id, partnerUsername: trade.partnerUsername || 'collector' }
     );
-    await sendEmail(user.email, 'Trade Update', html);
+    await sendEmail(user.email, 'Trade Update', html, 'trade-declined');
   } catch (error) {
     console.error('Failed to send trade declined email:', error);
   }
@@ -164,7 +164,7 @@ export async function onCardImageApproved(user: User, card: Card): Promise<void>
       { displayName: user.displayName },
       card
     );
-    await sendEmail(user.email, 'Image Approved', html);
+    await sendEmail(user.email, 'Image Approved', html, 'card-image-approved');
   } catch (error) {
     console.error('Failed to send card image approved email:', error);
   }
@@ -179,7 +179,7 @@ export async function onCardImageRejected(user: User, card: Card): Promise<void>
       { displayName: user.displayName },
       card
     );
-    await sendEmail(user.email, 'Card Image Update', html);
+    await sendEmail(user.email, 'Card Image Update', html, 'card-image-rejected');
   } catch (error) {
     console.error('Failed to send card image rejected email:', error);
   }
@@ -194,7 +194,7 @@ export async function onNewSetAnnouncement(user: User, setInfo: SetInfo): Promis
       { displayName: user.displayName },
       setInfo
     );
-    await sendEmail(user.email, `New Set: ${setInfo.name}`, html);
+    await sendEmail(user.email, `New Set: ${setInfo.name}`, html, 'new-set-notification');
   } catch (error) {
     console.error('Failed to send new set announcement email:', error);
   }
@@ -206,7 +206,7 @@ export async function onNewSetAnnouncement(user: User, setInfo: SetInfo): Promis
 export async function onAddFirstCardNudge(user: User): Promise<void> {
   try {
     const html = templates.addFirstCardTemplate({ displayName: user.displayName });
-    await sendEmail(user.email, 'Track Your First Card', html);
+    await sendEmail(user.email, 'Track Your First Card', html, 'add-first-card');
   } catch (error) {
     console.error('Failed to send add first card nudge email:', error);
   }
@@ -218,7 +218,7 @@ export async function onAddFirstCardNudge(user: User): Promise<void> {
 export async function onFinishSetupNudge(user: User): Promise<void> {
   try {
     const html = templates.finishSetupTemplate({ displayName: user.displayName });
-    await sendEmail(user.email, 'Finish Your Profile', html);
+    await sendEmail(user.email, 'Finish Your Profile', html, 'finish-setup');
   } catch (error) {
     console.error('Failed to send finish setup nudge email:', error);
   }
@@ -230,7 +230,7 @@ export async function onFinishSetupNudge(user: User): Promise<void> {
 export async function onInactivityReminder(user: User): Promise<void> {
   try {
     const html = templates.inactiveUserTemplate({ displayName: user.displayName });
-    await sendEmail(user.email, "What's New at Marvel Card Vault", html);
+    await sendEmail(user.email, "What's New at Marvel Card Vault", html, 'inactive-user');
   } catch (error) {
     console.error('Failed to send inactivity reminder email:', error);
   }
@@ -245,7 +245,7 @@ export async function onCollectionMilestone(user: User, milestone: Milestone): P
       { displayName: user.displayName },
       milestone
     );
-    await sendEmail(user.email, 'Collection Milestone', html);
+    await sendEmail(user.email, 'Collection Milestone', html, 'collection-milestone');
   } catch (error) {
     console.error('Failed to send collection milestone email:', error);
   }
@@ -260,7 +260,7 @@ export async function onWeeklyDigest(user: User, sets: NewSet[]): Promise<void> 
       { displayName: user.displayName },
       sets
     );
-    await sendEmail(user.email, 'Monthly Update - Marvel Card Vault', html);
+    await sendEmail(user.email, 'Monthly Update - Marvel Card Vault', html, 'weekly-digest');
   } catch (error) {
     console.error('Failed to send weekly digest email:', error);
   }

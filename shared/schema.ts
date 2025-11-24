@@ -41,6 +41,16 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const emailLogs = pgTable("email_logs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  email: text("email").notNull(),
+  template: text("template").notNull(),
+  subject: text("subject").notNull(),
+  jobName: text("job_name"),
+  sentAt: timestamp("sent_at").defaultNow().notNull(),
+});
+
 export const mainSets = pgTable("main_sets", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -272,6 +282,11 @@ export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
 });
 
+export const insertEmailLogSchema = createInsertSchema(emailLogs).omit({
+  id: true,
+  sentAt: true,
+});
+
 export const insertMainSetSchema = createInsertSchema(mainSets).omit({
   id: true,
   slug: true,
@@ -395,6 +410,9 @@ export const insertUpcomingSetSchema = createInsertSchema(upcomingSets).omit({
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+
+export type EmailLog = typeof emailLogs.$inferSelect;
+export type InsertEmailLog = z.infer<typeof insertEmailLogSchema>;
 
 export type MainSet = typeof mainSets.$inferSelect;
 export type InsertMainSet = z.infer<typeof insertMainSetSchema>;

@@ -12,13 +12,13 @@ import * as emailTriggers from '../services/emailTriggers';
 const { CronJob } = cron;
 
 /**
- * Monthly job: Send emails to inactive users and onboarding nudges
+ * Monthly nudges job: Send emails to inactive users and onboarding nudges
  * Runs on the 1st of every month at 9:00 AM
  */
-export const dailyEmailJob = new CronJob(
+export const monthlyNudgesJob = new CronJob(
   '0 9 1 * *', // 9:00 AM on the 1st of every month
   async () => {
-    console.log('🕒 Running daily email job...');
+    console.log('🕒 Running monthly nudges job...');
     
     try {
       // Find users inactive for 7 days
@@ -104,9 +104,9 @@ export const dailyEmailJob = new CronJob(
         });
       }
       
-      console.log('✅ Daily email job completed');
+      console.log('✅ Monthly nudges job completed');
     } catch (error) {
-      console.error('❌ Error in daily email job:', error);
+      console.error('❌ Error in monthly nudges job:', error);
     }
   },
   null, // onComplete callback
@@ -118,10 +118,10 @@ export const dailyEmailJob = new CronJob(
  * Monthly digest job: Send digest emails
  * Runs on the 1st of every month at 9:00 AM
  */
-export const weeklyDigestJob = new CronJob(
+export const monthlyDigestJob = new CronJob(
   '0 9 1 * *', // 9:00 AM on the 1st of every month
   async () => {
-    console.log('🕒 Running weekly digest job...');
+    console.log('🕒 Running monthly digest job...');
     
     try {
       // Only send if they haven't received this email in the last 30 days
@@ -165,7 +165,7 @@ export const weeklyDigestJob = new CronJob(
         cardCount: Number(set.cardCount || 0)
       }));
       
-      console.log(`📧 Sending weekly digest to ${subscribedUsers.length} users with ${setsData.length} new sets (max 1 per month)`);
+      console.log(`📧 Sending monthly digest to ${subscribedUsers.length} users with ${setsData.length} new sets (max 1 per month)`);
       
       for (const user of subscribedUsers) {
         await emailTriggers.onWeeklyDigest(
@@ -183,9 +183,9 @@ export const weeklyDigestJob = new CronJob(
           .where(eq(users.id, user.id));
       }
       
-      console.log('✅ Weekly digest job completed');
+      console.log('✅ Monthly digest job completed');
     } catch (error) {
-      console.error('❌ Error in weekly digest job:', error);
+      console.error('❌ Error in monthly digest job:', error);
     }
   },
   null,
@@ -195,13 +195,19 @@ export const weeklyDigestJob = new CronJob(
 
 /**
  * Initialize and start all cron jobs
+ * Can be disabled via EMAIL_CRON_ENABLED environment variable
  */
 export function startEmailCronJobs() {
+  if (process.env.EMAIL_CRON_ENABLED !== 'true') {
+    console.log('📅 Email cron jobs are DISABLED (set EMAIL_CRON_ENABLED=true to enable)');
+    return;
+  }
+  
   console.log('📅 Starting email cron jobs...');
-  dailyEmailJob.start();
-  weeklyDigestJob.start();
+  monthlyNudgesJob.start();
+  monthlyDigestJob.start();
   console.log('✅ Email cron jobs started:');
-  console.log('  - Monthly emails: 9:00 AM on the 1st of each month');
+  console.log('  - Monthly nudges: 9:00 AM on the 1st of each month');
   console.log('  - Monthly digest: 9:00 AM on the 1st of each month');
 }
 
@@ -210,6 +216,29 @@ export function startEmailCronJobs() {
  */
 export function stopEmailCronJobs() {
   console.log('⏹️  Stopping email cron jobs...');
-  dailyEmailJob.stop();
-  weeklyDigestJob.stop();
+  monthlyNudgesJob.stop();
+  monthlyDigestJob.stop();
+}
+
+/**
+ * Get status of all cron jobs
+ */
+export function getEmailCronStatus() {
+  return {
+    enabled: process.env.EMAIL_CRON_ENABLED === 'true',
+    jobs: [
+      {
+        name: 'monthlyNudgesJob',
+        schedule: '0 9 1 * *',
+        running: monthlyNudgesJob.running || false,
+        description: 'Sends inactivity reminders and onboarding nudges monthly'
+      },
+      {
+        name: 'monthlyDigestJob',
+        schedule: '0 9 1 * *',
+        running: monthlyDigestJob.running || false,
+        description: 'Sends monthly digest of new sets and activity'
+      }
+    ]
+  };
 }

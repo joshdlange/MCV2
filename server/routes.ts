@@ -16,7 +16,7 @@ import { ebayPricingService } from "./ebay-pricing";
 import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
 import { db } from "./db";
-import { cards, cardSets } from "../shared/schema";
+import { cards, cardSets, emailLogs } from "../shared/schema";
 import { sql, eq, ilike } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
@@ -160,7 +160,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('Created new user:', user.id, 'isAdmin:', user.isAdmin);
         
         // Send welcome email to new user (non-blocking)
-        emailTriggers.sendWelcomeEmail(user).catch(error => {
+        emailTriggers.onUserSignup({
+          email: user.email,
+          displayName: user.displayName || user.username,
+          username: user.username
+        }).catch(error => {
           console.error('Failed to send welcome email:', error);
         });
         
@@ -2203,6 +2207,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin-only: Email cron status and statistics
+  app.get("/api/admin/email-cron-status", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { getEmailCronStatus } = await import('./jobs/emailCron');
+      const cronStatus = getEmailCronStatus();
+
+      // Get email stats from last 7 days
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const recentEmails = await db
+        .select({
+          template: emailLogs.template,
+          count: sql<number>`count(*)`,
+        })
+        .from(emailLogs)
+        .where(sql`${emailLogs.sentAt} >= ${sevenDaysAgo}`)
+        .groupBy(emailLogs.template);
+
+      const totalEmailsLast7Days = recentEmails.reduce(
+        (sum, row) => sum + Number(row.count),
+        0
+      );
+
+      const emailsByTemplate = recentEmails.map(row => ({
+        template: row.template,
+        count: Number(row.count)
+      }));
+
+      res.json({
+        cron: cronStatus,
+        stats: {
+          totalEmailsLast7Days,
+          emailsByTemplate,
+          period: '7 days'
+        }
+      });
+    } catch (error) {
+      console.error('Email cron status error:', error);
+      res.status(500).json({ 
+        message: "Failed to get email cron status",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // ========== SOCIAL FEATURES API ROUTES ==========
   
   // Friends API
@@ -2625,7 +2679,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUserById(userId);
       const badge = await storage.getBadgeById(badgeId);
       if (user && badge) {
-        emailTriggers.sendBadgeAchievementEmail(user, badge).catch(error => {
+        emailTriggers.onBadgeUnlocked(
+          {
+            email: user.email,
+            displayName: user.displayName || user.username,
+          },
+          {
+            name: badge.name,
+            description: badge.description,
+            icon: badge.icon || undefined
+          }
+        ).catch(error => {
           console.error('Failed to send badge achievement email:', error);
         });
       }
