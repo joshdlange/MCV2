@@ -1,0 +1,289 @@
+1. Why you're getting DAILY emails
+Your emailCron.ts is not in the ZIP — meaning Replit likely created it outside the services folder.
+Daily “inactive user” emails are always caused by something like:
+cron.schedule("0 9 * * *", ...)  // runs every day at 9am
+
+We need to change it to:
+cron.schedule("0 9 1 * *", ...)  // runs the FIRST of each month
+
+Or disable it entirely until you're ready.
+👉 We just need you to upload emailCron.ts, or have Replit print it out with:
+Show me the full contents of server/jobs/emailCron.ts
+
+
+✅ 2. Why the logo is broken
+Your templates reference the logo using a local filesystem path, something like:
+/mnt/data/A_logo_for...
+
+This works in Replit but NOT in emails.
+To fix this:
+Upload your logo to Cloudinary
+(or give me the URL if you already did)
+Then replace the template header image with:
+<img src="https://res.cloudinary.com/.../marvel-card-vault-logo.png"
+     alt="Marvel Card Vault" 
+     width="160" 
+     style="margin-bottom:20px;" />
+
+This will render properly everywhere.
+
+✅ 3. The messaging is off (“Start your collection”)
+I saw it in the “add first card” template — it currently frames MCV like a starter app instead of a tracker.
+We will rewrite every template to:
+Tone should be:
+Clean
+
+
+Collector-to-collector
+
+
+Slightly witty, but not cringey
+
+
+Confident, not salesy
+
+
+Positioned around tracking, valuing, showcasing, and trading
+
+
+Once you send me emailTemplates.ts fully (the version printed was truncated due to some HTML characters), I will rewrite every template to match your exact brand voice.
+
+✅ 4. How to get full template files for me to rewrite
+Because HTML inside TS sometimes gets truncated in the terminal, zip them is great — but your ZIP also got truncated because of HTML entities (Replit bug).
+So do this:
+Ask Replit:
+Show me the FULL contents of server/services/emailTemplates.ts 
+as a single code block with NO collapsing and NO markdown formatting.
+
+If it still truncates, ask Replit:
+Split emailTemplates.ts into 3 messages of <20,000 characters each and print them sequentially.
+
+Copy each chunk here.
+
+✅ 5. You asked: “Where would I grab these files?”
+You already did — they are in:
+/server/services/emailTemplates.ts
+/server/services/emailTriggers.ts
+/server/jobs/emailCron.ts
+
+Those three control:
+what emails exist
+
+
+when they send
+
+
+how they look
+
+
+what they say
+
+
+EmailService is fine.
+Templates + Cron are what we need to fix.
+
+✅ 6. What I’ll do once you paste the full template file
+I will:
+✔ Fix the broken logo
+ ✔ Rewrite ALL messaging to be on-brand
+ ✔ Fix grammar, spacing, and layout
+ ✔ Re-theme emails to be Marvel-like (clean + bold + red highlights)
+ ✔ Fix the CTA wording (“Track Your Collection” instead of “Browse Cards”)
+ ✔ Fix button colors + accessibility
+ ✔ Remove any wording that implies they need to “start a collection”
+ ✔ Make badge emails punchier
+ ✔ Make trade emails clearer
+ ✔ Fix upcoming sets template (it’s messy right now)
+ ✔ Add unsubscribe compliance wording
+ ✔ Clean up HTML to render perfectly in Gmail, Apple Mail, Outlook
+ ✔ Fix the footer branding
+ ✔ Make the emails look premium, not boilerplate
+After that we will:
+✔ Fix cron frequencies
+ ✔ Add guardrails so the same user never gets the same nudge twice
+ ✔ Add user preference support (like disable nudges)
+
+🚀 NEXT STEP
+Please paste:
+emailTemplates.ts (full, untruncated)
+emailCron.ts (full)
+Once I have those, I will rewrite everything perfectly.
+Just send:
+👉 “Here is emailTemplates.ts part 1/3…”
+You said:
+Give me a replit prompt to address this so I don't have to?
+ChatGPT said:
+Here is the exact Replit prompt you can copy/paste.
+ This prompt forces Replit to:
+Find every email file
+
+
+Print them in full
+
+
+Fix the “daily emails” issue
+
+
+Replace broken logo paths
+
+
+Rewrite ALL email templates to match your brand voice (“Track your collection,” not “Start your collection”)
+
+
+Fix all cron schedules (monthly, not daily)
+
+
+Clean up HTML/CSS
+
+
+Re-test everything
+
+
+Just paste this entire block into Replit:
+
+🚀 REPLIT AGENT PROMPT — Fix Email System, Branding, Logo, Cron, and Templates
+I need to audit and repair the entire Marvel Card Vault email system.
+ Follow these steps in order and provide all code changes clearly.
+
+STEP 1 — SHOW ALL EMAIL FILES (NO SUMMARIES)
+Print the full contents of each file below, with no truncation and no summarizing:
+server/services/emailTemplates.ts
+server/services/emailTriggers.ts
+server/jobs/emailCron.ts
+
+If any file is too long, split it into multiple messages automatically.
+
+STEP 2 — FIX THE BROKEN LOGO
+Anywhere an <img> tag references a local path like /mnt/data/..., replace it with:
+https://res.cloudinary.com/demo/image/upload/v1734450000/marvel-card-vault-logo.png
+
+(Use a placeholder — I will swap the real logo later.)
+Ensure the <img> tag always includes:
+style="display:block;margin:0 auto 20px;width:160px;"
+
+
+STEP 3 — FIX ALL MESSAGING (BRAND VOICE REQUIREMENTS)
+Rewrite ALL email templates so the language matches Marvel Card Vault’s positioning:
+Brand Voice Rules
+Do NOT say “Start your collection”
+
+
+Instead say “Track your collection,” “Organize your cards,” “Showcase your vault,” etc.
+
+
+Keep the tone collector-focused, friendly, confident.
+
+
+No cringe, no overly enthusiastic startup tone.
+
+
+Keep CTAs like:
+
+
+Track Your Collection
+
+
+Open Your Vault
+
+
+View Your Cards
+
+
+See New Sets
+
+
+Manage Your Trades
+
+
+Update all templates to reflect this tone.
+
+STEP 4 — FIX MONTHLY CRON ISSUES
+Review emailCron.ts.
+If any jobs use daily syntax:
+0 9 * * *
+
+Replace with monthly (1st of the month at 9am):
+0 9 1 * *
+
+And ensure the following behavior:
+Cron Requirements
+Monthly summary ONLY
+
+
+NO daily “inactive user” emails
+
+
+NO more than 1 nudge per user per month
+
+
+Add guard logic so a user doesn’t get duplicates:
+
+
+Check last_nudge_sent_at column (create it if needed)
+
+
+
+STEP 5 — FIX TEMPLATE HTML
+For every template:
+Ensure consistent header layout
+
+
+Ensure consistent footer layout
+
+
+Fix spacing, padding, margins
+
+
+Use inline CSS so emails display correctly in Gmail, Outlook, iOS Mail
+
+
+Buttons must use:
+
+
+background:#E53935;
+color:#fff;
+font-weight:bold;
+padding:12px 22px;
+border-radius:6px;
+text-decoration:none;
+display:inline-block;
+
+Make typography clean, readable, and properly spaced
+
+
+
+STEP 6 — ADD PREVIEW MODE
+Create an endpoint:
+GET /api/admin/email-preview?template=name
+
+This should return the rendered HTML for that template
+ (using mock user + mock data), so I can preview emails in browser.
+
+STEP 7 — CONFIRM FUNCTIONALITY
+After making all changes:
+Show me the updated files
+
+
+Show me the diff of what changed
+
+
+Confirm:
+
+
+Logo renders
+
+
+Cron is monthly
+
+
+No daily emails
+
+
+Templates use new brand language
+
+
+No broken images
+
+
+Preview route works
+
