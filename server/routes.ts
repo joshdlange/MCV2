@@ -3536,18 +3536,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update card image
       const cardUpdates: any = {};
       
-      // If card has no image, use the user-submitted one as the main image
-      if (!card.frontImageUrl && pendingImage.frontImageUrl) {
+      // Always replace frontImageUrl with approved user-submitted image (overrides placeholder)
+      if (pendingImage.frontImageUrl) {
         cardUpdates.frontImageUrl = pendingImage.frontImageUrl;
-      } else if (pendingImage.frontImageUrl) {
-        // Add to alternateImages array
-        const alternateImages = card.alternateImages || [];
-        if (!alternateImages.includes(pendingImage.frontImageUrl)) {
-          cardUpdates.alternateImages = [...alternateImages, pendingImage.frontImageUrl];
-        }
       }
       
-      if (!card.backImageUrl && pendingImage.backImageUrl) {
+      // Always replace backImageUrl with approved user-submitted image
+      if (pendingImage.backImageUrl) {
         cardUpdates.backImageUrl = pendingImage.backImageUrl;
       }
       

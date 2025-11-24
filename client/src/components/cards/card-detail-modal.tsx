@@ -618,6 +618,7 @@ export function CardDetailModal({
                 <Button 
                   variant="outline" 
                   onClick={onRemoveFromCollection}
+                  data-testid="button-remove-from-collection"
                   className="flex items-center gap-2 border-green-200 text-green-700"
                 >
                   <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
@@ -628,6 +629,7 @@ export function CardDetailModal({
               ) : (
                 <Button 
                   onClick={onAddToCollection}
+                  data-testid="button-add-to-collection"
                   className="bg-green-600 hover:bg-green-700 flex items-center gap-2"
                 >
                   <Check className="w-4 h-4" />
