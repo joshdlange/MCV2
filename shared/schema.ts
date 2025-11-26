@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, decimal, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -103,7 +103,11 @@ export const userCollections = pgTable("user_collections", {
   quantity: integer("quantity").default(1).notNull(),
   isFavorite: boolean("is_favorite").default(false).notNull(),
   notes: text("notes"),
-});
+}, (table) => ({
+  userIdIdx: index("user_collections_user_id_idx").on(table.userId),
+  cardIdIdx: index("user_collections_card_id_idx").on(table.cardId),
+  userCardIdx: uniqueIndex("user_collections_user_card_idx").on(table.userId, table.cardId),
+}));
 
 export const userWishlists = pgTable("user_wishlists", {
   id: serial("id").primaryKey(),
@@ -112,7 +116,11 @@ export const userWishlists = pgTable("user_wishlists", {
   priority: integer("priority").default(1).notNull(),
   maxPrice: decimal("max_price", { precision: 10, scale: 2 }),
   addedDate: timestamp("added_date").defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index("user_wishlists_user_id_idx").on(table.userId),
+  cardIdIdx: index("user_wishlists_card_id_idx").on(table.cardId),
+  userCardIdx: uniqueIndex("user_wishlists_user_card_idx").on(table.userId, table.cardId),
+}));
 
 export const cardPriceCache = pgTable("card_price_cache", {
   id: serial("id").primaryKey(),

@@ -1,0 +1,150 @@
+FIX SLOW CARD ADDING + BROKEN “VIEW MISSING” ADDING
+
+You are working in the Marvel Card Vault main app repo.
+
+We have two critical issues to fix:
+
+ISSUE #1 — Adding cards to a user’s collection is extremely slow on mobile.
+Please do the following:
+
+Optimize the backend endpoint
+
+Find the API route that handles:
+POST /api/collection/add or similar
+
+Add missing database indexes on:
+
+userCollections.userId
+
+userCollections.cardId
+
+Unique combined index on (userId, cardId)
+
+Ensure the Drizzle query is efficient and not scanning entire tables.
+
+Ensure we aren’t doing unnecessary joins when inserting a card.
+
+Add optimistic UI updates on the frontend
+
+When a user taps “Add”, immediately update UI state:
+
+Mark card as “Owned”
+
+Remove from “View Missing”
+
+Show a quick checkmark animation
+
+No waiting for server response.
+
+Convert add-card operation into a debounced or queued request
+
+Mobile should not freeze when tapping repeatedly.
+
+Implement a request queue so adds fire sequentially in background.
+
+Add proper loading/disabled states
+
+Disable “Add” button briefly after tapping
+
+Replace text with a spinner for 300ms
+
+Prevent double-tapping
+
+Reduce re-renders
+
+Audit the component (likely CardTile or CardList)
+
+Memoize card rows (React.memo)
+
+Use stable keys
+
+Avoid re-rendering entire lists when 1 card changes
+
+ISSUE #2 — “My Collection > View Missing” cannot add cards at all.
+
+This feature is broken. Fix completely.
+
+Fixes needed:
+
+Verify the “add card” handler in Missing view is calling the correct endpoint.
+In many apps, this view accidentally uses:
+
+a stale cardId
+
+or an empty cardId
+
+or the wrong click handler
+
+Fix filtering logic
+Missing view should show:
+allCards - userCollections
+After successfully adding a card, the card should be removed from missing list without refetching everything.
+
+Add console logging + fix any silent errors
+
+Log cardId being added
+
+Log server response
+
+Log errors visibly
+
+Fix UI state bug
+Often “Missing” views maintain separate react state from “Owned” views.
+Ensure both reference the same source of truth.
+
+Add toast notifications
+
+“Added to your collection!”
+
+“Card already owned” (if duplicate)
+
+“Error adding card — try again”
+
+TESTING REQUIREMENTS
+
+After implementing fixes, test on:
+
+Mobile:
+
+iOS Safari
+
+Android Chrome
+
+Flows to test:
+
+Add 10 cards rapidly from search
+
+Add 10 cards from a subset
+
+Add cards from “My Collection > View Missing”
+
+Switch between tabs while adding
+
+Refresh the page and verify state persists
+
+Ensure UI feels immediate and smooth
+
+ACCEPTANCE CRITERIA
+
+Adding cards takes <150ms perceived time due to optimistic UI
+
+Backend insert takes <30ms due to indexing
+
+“View Missing” correctly removes a card immediately
+
+No double-adding
+
+No broken cardId values
+
+No lag or freeze on mobile
+
+No full re-renders of giant card lists
+
+Scrolling stays smooth
+
+Toast notifications appear
+
+This is a high-priority performance and functionality upgrade.
+Please apply all of the above fixes and summarize what you changed.
+
+✔️ END OF PROMPT
