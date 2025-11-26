@@ -64,12 +64,45 @@ export function CardGrid({
         condition: 'Near Mint'
       });
     },
+    onMutate: async (cardId) => {
+      // Cancel outgoing refetches for instant UI
+      await queryClient.cancelQueries({ queryKey: ['/api/collection'] });
+      
+      const previousCollection = queryClient.getQueryData(['/api/collection']);
+      
+      // Optimistically add card
+      queryClient.setQueryData(['/api/collection'], (old: any = []) => [
+        ...old,
+        {
+          id: Date.now(),
+          userId: 0,
+          cardId,
+          condition: 'Near Mint',
+          acquiredDate: new Date(),
+          acquiredVia: 'manual',
+          personalValue: null,
+          salePrice: null,
+          isForSale: false,
+          serialNumber: null,
+          quantity: 1,
+          isFavorite: false,
+          notes: null,
+        }
+      ]);
+      
+      return { previousCollection };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
-      toast({ title: "Card added to collection" });
+      queryClient.invalidateQueries({ queryKey: ['/api/missing-cards'] });
+      toast({ title: "Added to collection!" });
     },
-    onError: () => {
-      toast({ title: "Failed to add to collection", variant: "destructive" });
+    onError: (err, cardId, context: any) => {
+      // Rollback on error
+      if (context?.previousCollection) {
+        queryClient.setQueryData(['/api/collection'], context.previousCollection);
+      }
+      toast({ title: "Failed to add card", variant: "destructive" });
     }
   });
 
@@ -95,12 +128,29 @@ export function CardGrid({
       if (!collectionItem) throw new Error('Card not in collection');
       return apiRequest('DELETE', `/api/collection/${collectionItem.id}`);
     },
+    onMutate: async (cardId) => {
+      // Cancel outgoing refetches for instant UI
+      await queryClient.cancelQueries({ queryKey: ['/api/collection'] });
+      
+      const previousCollection = queryClient.getQueryData(['/api/collection']);
+      
+      // Optimistically remove card
+      queryClient.setQueryData(['/api/collection'], (old: any = []) => 
+        old.filter((item: any) => item.cardId !== cardId && item.card?.id !== cardId)
+      );
+      
+      return { previousCollection };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
-      toast({ title: "Card removed from collection" });
+      toast({ title: "Removed from collection!" });
     },
-    onError: () => {
-      toast({ title: "Failed to remove from collection", variant: "destructive" });
+    onError: (err, cardId, context: any) => {
+      // Rollback on error
+      if (context?.previousCollection) {
+        queryClient.setQueryData(['/api/collection'], context.previousCollection);
+      }
+      toast({ title: "Failed to remove card", variant: "destructive" });
     }
   });
 
