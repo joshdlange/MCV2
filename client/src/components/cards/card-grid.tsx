@@ -348,11 +348,12 @@ export function CardGrid({
                     {showAddToCollection && (
                       <Button
                         size="sm"
+                        disabled={addToCollectionMutation.isPending || removeFromCollectionMutation.isPending}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleAddToCollection(card.id);
                         }}
-                        className="flex-1 bg-marvel-red hover:bg-red-700 text-xs h-6 px-1"
+                        className="flex-1 bg-marvel-red hover:bg-red-700 text-xs h-6 px-1 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Plus className="w-3 h-3" />
                       </Button>
@@ -362,11 +363,12 @@ export function CardGrid({
                       <Button
                         variant="outline"
                         size="sm"
+                        disabled={addToWishlistMutation.isPending || removeFromWishlistMutation.isPending}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleAddToWishlist(card.id);
                         }}
-                        className="flex-1 border-gray-300 hover:bg-gray-100 text-xs h-6 px-1 text-pink-500 hover:text-pink-600"
+                        className="flex-1 border-gray-300 hover:bg-gray-100 text-xs h-6 px-1 text-pink-500 hover:text-pink-600 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Heart className="w-3 h-3 fill-current" />
                       </Button>
