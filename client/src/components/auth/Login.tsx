@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { signInWithGoogle } from "@/lib/firebase";
+import { signInWithGoogleUnified } from "../../auth/googleSignIn";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { ArrowRight, Sparkles, Info } from "lucide-react";
@@ -33,8 +33,14 @@ export function Login() {
     }
   }, [allCards]);
 
-  const handleGoogleSignIn = () => {
-    signInWithGoogle();
+  const handleGoogleSignIn = async () => {
+    try {
+      const cred = await signInWithGoogleUnified();
+      console.log("Logged in as:", cred.user.uid);
+      window.location.href = "/";
+    } catch (err) {
+      console.error("Google login failed:", err);
+    }
   };
 
   const handlePlanSelection = (plan: 'SIDE_KICK' | 'SUPER_HERO') => {
