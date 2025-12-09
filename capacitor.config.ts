@@ -5,6 +5,8 @@ const config: CapacitorConfig = {
   appName: 'Marvel Card Vault',
   webDir: 'dist/public',
   server: {
+    url: 'https://app.marvelcardvault.com',
+    cleartext: false,
     androidScheme: 'https'
   },
   plugins: {
