@@ -30,9 +30,8 @@ let socialLoginInitialized = false;
 async function initSocialLoginIfNeeded() {
   if (socialLoginInitialized) return;
 
-  // OAuth 2.0 Web Client ID for Capacitor Social Login
-  const WEB_CLIENT_ID = "770260743951-6l5g55umth6on34f972h0hqki8471lk8.apps.googleusercontent.com";
-  console.log('Initializing Capacitor Social Login with Web Client ID:', WEB_CLIENT_ID);
+  // Your actual Firebase Web Client ID
+  const WEB_CLIENT_ID = "946426423073-rjhk84sgojd77gvkq2uf5ehrcd1l3ja9.apps.googleusercontent.com";
 
   await SocialLogin.initialize({
     google: {
