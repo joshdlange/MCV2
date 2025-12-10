@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "946426423073",
+    "project_id": "marvel-card-vault",
+    "storage_bucket": "marvel-card-vault.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:946426423073:android:6d6d356edd194bb31d0060",
+        "android_client_info": {
+          "package_name": "com.marvelcardvault.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "946426423073-rjhk84sgojd77gvkq2uf5ehrcd1l3ja9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB64Y4zMJnbYYNl120_7RQXqdx43ZVpurk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "946426423073-rjhk84sgojd77gvkq2uf5ehrcd1l3ja9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

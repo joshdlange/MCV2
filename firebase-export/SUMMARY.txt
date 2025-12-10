@@ -1,0 +1,88 @@
+Firebase Files Export Summary
+Generated: 2025-12-10T00:19:52.710Z
+Total Files: 28
+
+Files List:
+1. .local/state/replit/agent/filesystem/filesystem_state.json
+   Keywords: firebase, firebaseUid, Firebase, getAuth, GoogleAuthProvider, initializeApp, admin.auth(), VITE_FIREBASE
+
+2. android/app/google-services.json
+   Keywords: firebase
+
+3. android/app/src/main/assets/public/assets/index-DxERMQMj.js
+   Keywords: firebase, firebaseUid, Firebase, getAuth, initializeApp
+
+4. client/package.json
+   Keywords: firebase
+
+5. client/src/auth/googleSignIn.ts
+   Keywords: firebase, Firebase, getAuth, GoogleAuthProvider
+
+6. client/src/components/auth/Onboarding.tsx
+   Keywords: firebase
+
+7. client/src/components/auth/temp-bypass.tsx
+   Keywords: Firebase
+
+8. client/src/components/cards/card-detail-modal.tsx
+   Keywords: firebase
+
+9. client/src/components/layout/sidebar.tsx
+   Keywords: firebase
+
+10. client/src/contexts/AuthContext.tsx
+   Keywords: firebase, firebaseUid, Firebase
+
+11. client/src/lib/apiClient.ts
+   Keywords: firebase, Firebase
+
+12. client/src/lib/firebase.ts
+   Keywords: firebase, firebaseUid, Firebase, getAuth, GoogleAuthProvider, initializeApp, VITE_FIREBASE
+
+13. client/src/lib/handleRedirect.ts
+   Keywords: firebase, firebaseUid, getAuth, GoogleAuthProvider
+
+14. client/src/lib/queryClient.ts
+   Keywords: firebase, getAuth
+
+15. client/src/pages/FriendProfile.tsx
+   Keywords: getAuth
+
+16. client/src/pages/Social.tsx
+   Keywords: getAuth
+
+17. client/src/types/schema.ts
+   Keywords: firebase, firebaseUid
+
+18. customer-compensation-plan.md
+   Keywords: Firebase
+
+19. google-services.json
+   Keywords: firebase
+
+20. package-lock.json
+   Keywords: firebase
+
+21. package.json
+   Keywords: firebase
+
+22. recover_firebase_users.js
+   Keywords: firebase, Firebase, initializeApp, admin.auth(), VITE_FIREBASE
+
+23. replit.md
+   Keywords: firebase, Firebase
+
+24. scripts/export-firebase-files.ts
+   Keywords: firebase, firebaseUid, Firebase, getAuth, GoogleAuthProvider, initializeApp, admin.auth(), VITE_FIREBASE
+
+25. server/contactsSync.ts
+   Keywords: firebase, Firebase, admin.auth()
+
+26. server/routes.ts
+   Keywords: firebase, firebaseUid, Firebase, initializeApp, admin.auth(), VITE_FIREBASE
+
+27. server/storage.ts
+   Keywords: firebase, firebaseUid, Firebase
+
+28. shared/schema.ts
+   Keywords: firebase, firebaseUid

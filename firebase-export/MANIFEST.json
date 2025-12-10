@@ -1,0 +1,224 @@
+{
+  "exportDate": "2025-12-10T00:19:52.680Z",
+  "totalFiles": 28,
+  "files": [
+    {
+      "path": ".local/state/replit/agent/filesystem/filesystem_state.json",
+      "keywords": [
+        "firebase",
+        "firebaseUid",
+        "Firebase",
+        "getAuth",
+        "GoogleAuthProvider",
+        "initializeApp",
+        "admin.auth()",
+        "VITE_FIREBASE"
+      ]
+    },
+    {
+      "path": "android/app/google-services.json",
+      "keywords": [
+        "firebase"
+      ]
+    },
+    {
+      "path": "android/app/src/main/assets/public/assets/index-DxERMQMj.js",
+      "keywords": [
+        "firebase",
+        "firebaseUid",
+        "Firebase",
+        "getAuth",
+        "initializeApp"
+      ]
+    },
+    {
+      "path": "client/package.json",
+      "keywords": [
+        "firebase"
+      ]
+    },
+    {
+      "path": "client/src/auth/googleSignIn.ts",
+      "keywords": [
+        "firebase",
+        "Firebase",
+        "getAuth",
+        "GoogleAuthProvider"
+      ]
+    },
+    {
+      "path": "client/src/components/auth/Onboarding.tsx",
+      "keywords": [
+        "firebase"
+      ]
+    },
+    {
+      "path": "client/src/components/auth/temp-bypass.tsx",
+      "keywords": [
+        "Firebase"
+      ]
+    },
+    {
+      "path": "client/src/components/cards/card-detail-modal.tsx",
+      "keywords": [
+        "firebase"
+      ]
+    },
+    {
+      "path": "client/src/components/layout/sidebar.tsx",
+      "keywords": [
+        "firebase"
+      ]
+    },
+    {
+      "path": "client/src/contexts/AuthContext.tsx",
+      "keywords": [
+        "firebase",
+        "firebaseUid",
+        "Firebase"
+      ]
+    },
+    {
+      "path": "client/src/lib/apiClient.ts",
+      "keywords": [
+        "firebase",
+        "Firebase"
+      ]
+    },
+    {
+      "path": "client/src/lib/firebase.ts",
+      "keywords": [
+        "firebase",
+        "firebaseUid",
+        "Firebase",
+        "getAuth",
+        "GoogleAuthProvider",
+        "initializeApp",
+        "VITE_FIREBASE"
+      ]
+    },
+    {
+      "path": "client/src/lib/handleRedirect.ts",
+      "keywords": [
+        "firebase",
+        "firebaseUid",
+        "getAuth",
+        "GoogleAuthProvider"
+      ]
+    },
+    {
+      "path": "client/src/lib/queryClient.ts",
+      "keywords": [
+        "firebase",
+        "getAuth"
+      ]
+    },
+    {
+      "path": "client/src/pages/FriendProfile.tsx",
+      "keywords": [
+        "getAuth"
+      ]
+    },
+    {
+      "path": "client/src/pages/Social.tsx",
+      "keywords": [
+        "getAuth"
+      ]
+    },
+    {
+      "path": "client/src/types/schema.ts",
+      "keywords": [
+        "firebase",
+        "firebaseUid"
+      ]
+    },
+    {
+      "path": "customer-compensation-plan.md",
+      "keywords": [
+        "Firebase"
+      ]
+    },
+    {
+      "path": "google-services.json",
+      "keywords": [
+        "firebase"
+      ]
+    },
+    {
+      "path": "package-lock.json",
+      "keywords": [
+        "firebase"
+      ]
+    },
+    {
+      "path": "package.json",
+      "keywords": [
+        "firebase"
+      ]
+    },
+    {
+      "path": "recover_firebase_users.js",
+      "keywords": [
+        "firebase",
+        "Firebase",
+        "initializeApp",
+        "admin.auth()",
+        "VITE_FIREBASE"
+      ]
+    },
+    {
+      "path": "replit.md",
+      "keywords": [
+        "firebase",
+        "Firebase"
+      ]
+    },
+    {
+      "path": "scripts/export-firebase-files.ts",
+      "keywords": [
+        "firebase",
+        "firebaseUid",
+        "Firebase",
+        "getAuth",
+        "GoogleAuthProvider",
+        "initializeApp",
+        "admin.auth()",
+        "VITE_FIREBASE"
+      ]
+    },
+    {
+      "path": "server/contactsSync.ts",
+      "keywords": [
+        "firebase",
+        "Firebase",
+        "admin.auth()"
+      ]
+    },
+    {
+      "path": "server/routes.ts",
+      "keywords": [
+        "firebase",
+        "firebaseUid",
+        "Firebase",
+        "initializeApp",
+        "admin.auth()",
+        "VITE_FIREBASE"
+      ]
+    },
+    {
+      "path": "server/storage.ts",
+      "keywords": [
+        "firebase",
+        "firebaseUid",
+        "Firebase"
+      ]
+    },
+    {
+      "path": "shared/schema.ts",
+      "keywords": [
+        "firebase",
+        "firebaseUid"
+      ]
+    }
+  ]
+}

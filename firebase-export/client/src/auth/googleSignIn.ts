@@ -55,46 +55,16 @@ export async function signInWithGoogleUnified(): Promise<UserCredential> {
     options: {},
   });
 
-  console.log('SocialLogin response:', res);
-
-  // Try multiple possible locations for the idToken
-  let idToken = 
+  const idToken =
     res?.idToken ||
     res?.authentication?.idToken ||
-    res?.credential?.idToken ||
-    res?.result?.idToken ||
-    res?.result?.credential?.idToken;
-
-  // If still no idToken, try parsing the credential field
-  if (!idToken && res?.result?.credential) {
-    try {
-      const credential = typeof res.result.credential === 'string' 
-        ? JSON.parse(res.result.credential)
-        : res.result.credential;
-      idToken = credential?.token || credential?.idToken;
-    } catch (e) {
-      console.error('Failed to parse credential:', e);
-    }
-  }
-
-  // Android Credential Manager specific format
-  if (!idToken && res?.result?.data) {
-    try {
-      const data = typeof res.result.data === 'string'
-        ? JSON.parse(res.result.data)
-        : res.result.data;
-      idToken = data?.token || data?.idToken;
-    } catch (e) {
-      console.error('Failed to parse data:', e);
-    }
-  }
+    res?.credential?.idToken;
 
   if (!idToken) {
-    console.error("SocialLogin response:", JSON.stringify(res, null, 2));
+    console.error("SocialLogin response:", res);
     throw new Error("No idToken returned from SocialLogin Google login");
   }
 
-  console.log('Successfully extracted idToken');
   const credential = GoogleAuthProvider.credential(idToken);
   return await signInWithCredential(auth, credential);
 }
