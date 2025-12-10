@@ -1,6 +1,23 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithRedirect, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, type Auth } from "firebase/auth";
 
+// Detect if running in native Capacitor app (Android/iOS)
+function isNativeApp(): boolean {
+  const w = window as any;
+  if (w.Capacitor) {
+    try {
+      if (typeof w.Capacitor.getPlatform === 'function') {
+        const platform = w.Capacitor.getPlatform();
+        return platform === 'android' || platform === 'ios';
+      }
+      if (typeof w.Capacitor.isNativePlatform === 'function') {
+        return !!w.Capacitor.isNativePlatform();
+      }
+    } catch {}
+  }
+  return false;
+}
+
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com`,
@@ -85,10 +102,23 @@ export const signInWithGoogle = async () => {
       apiKey: !!import.meta.env.VITE_FIREBASE_API_KEY,
       projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
       appId: !!import.meta.env.VITE_FIREBASE_APP_ID,
-      hostname: window.location.hostname
+      hostname: window.location.hostname,
+      isNative: isNativeApp()
     });
     
-    // Try popup first, fallback to redirect if popup fails
+    // Use native authentication on Capacitor (Android/iOS)
+    if (isNativeApp()) {
+      console.log('Using native Capacitor Social Login...');
+      const { signInWithGoogleUnified } = await import('@/auth/googleSignIn');
+      const result = await signInWithGoogleUnified();
+      if (result.user) {
+        console.log('User signed in via native:', result.user.displayName);
+        await syncUserWithBackend(result.user);
+      }
+      return;
+    }
+    
+    // Use web-based authentication for browsers
     try {
       const result = await signInWithPopup(auth, provider);
       if (result.user) {
