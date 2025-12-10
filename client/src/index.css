@@ -66,13 +66,20 @@
 
   body {
     @apply font-inter antialiased bg-background text-foreground;
-    padding-top: env(safe-area-inset-top);
   }
   
   /* Respect safe area insets for mobile notches */
   #root {
     display: flex;
+    flex-direction: column;
     min-height: 100vh;
+  }
+  
+  /* Mobile-specific adjustments */
+  @media (max-width: 1024px) {
+    body {
+      font-size: 16px; /* Prevents auto-zoom on input focus on mobile */
+    }
   }
   
   /* Custom hover effects and gradients */

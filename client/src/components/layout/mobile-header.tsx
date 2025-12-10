@@ -9,11 +9,12 @@ export function MobileHeader() {
   const [, setLocation] = useLocation();
 
   return (
-    <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+    <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 flex items-center justify-between" style={{ paddingTop: 'calc(16px + env(safe-area-inset-top))', paddingBottom: '12px' }}>
       <div className="flex items-center space-x-3">
         <button 
           onClick={toggleMobileMenu}
-          className="text-gray-600 hover:text-gray-900"
+          className="text-gray-600 hover:text-gray-900 flex-shrink-0"
+          style={{ minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
           <Menu className="w-6 h-6" />
         </button>
