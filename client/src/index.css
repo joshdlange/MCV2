@@ -66,6 +66,13 @@
 
   body {
     @apply font-inter antialiased bg-background text-foreground;
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  /* Respect safe area insets for mobile notches */
+  #root {
+    display: flex;
+    min-height: 100vh;
   }
   
   /* Custom hover effects and gradients */

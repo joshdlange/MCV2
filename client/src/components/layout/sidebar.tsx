@@ -42,9 +42,6 @@ const getNavigationItems = (userPlan: string): NavigationItem[] => [
   { href: "/social", label: "Social Hub", icon: "Users" },
 ];
 
-const adminItems: NavigationItem[] = [
-  { href: "/admin", label: "Admin Tools", icon: "Settings" },
-];
 
 const iconMap = {
   LayoutDashboard,
@@ -197,28 +194,6 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* Admin Only Section */}
-        {isAdminMode && currentUser?.isAdmin && (
-          <div className="pt-4 border-t border-gray-200 mt-4">
-            <p className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-              Admin Tools
-            </p>
-            {adminItems.map((item) => (
-              <Link key={item.href} href={item.href}>
-                <div 
-                  className={`flex items-center px-4 py-4 md:py-3 rounded-lg transition-colors group cursor-pointer text-base md:text-sm ${
-                    location === item.href 
-                      ? 'bg-marvel-red text-white' 
-                      : 'text-foreground hover:bg-marvel-red hover:text-white'
-                  }`}
-                >
-                  <IconComponent iconName={item.icon} />
-                  <span className="font-medium">{item.label}</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
       </nav>
 
       {/* Upgrade Modal */}
