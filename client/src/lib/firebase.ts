@@ -1,5 +1,17 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithRedirect, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, type Auth } from "firebase/auth";
+import { 
+  getAuth, 
+  signInWithRedirect, 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  onAuthStateChanged, 
+  signOut,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  updateProfile,
+  type Auth 
+} from "firebase/auth";
 
 // Detect if running in native Capacitor app (Android/iOS)
 function isNativeApp(): boolean {
@@ -153,6 +165,59 @@ export const signInWithGoogle = async () => {
 
 export const signOutUser = () => {
   return signOut(auth);
+};
+
+// Email/Password Authentication Functions
+export const signUpWithEmail = async (email: string, password: string, displayName: string) => {
+  try {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    
+    // Update the user's display name
+    if (result.user) {
+      await updateProfile(result.user, { displayName });
+      await syncUserWithBackend({
+        uid: result.user.uid,
+        email: result.user.email,
+        displayName: displayName,
+        photoURL: result.user.photoURL
+      });
+    }
+    
+    return result;
+  } catch (error: any) {
+    console.error('Email sign-up error:', error);
+    throw error;
+  }
+};
+
+export const signInWithEmail = async (email: string, password: string) => {
+  try {
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    
+    if (result.user) {
+      await syncUserWithBackend({
+        uid: result.user.uid,
+        email: result.user.email,
+        displayName: result.user.displayName,
+        photoURL: result.user.photoURL
+      });
+    }
+    
+    return result;
+  } catch (error: any) {
+    console.error('Email sign-in error:', error);
+    throw error;
+  }
+};
+
+export const resetPassword = async (email: string) => {
+  try {
+    await sendPasswordResetEmail(auth, email);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Password reset error:', error);
+    throw error;
+  }
 };
 
 export { onAuthStateChanged };
