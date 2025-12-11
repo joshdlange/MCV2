@@ -9,7 +9,7 @@ export function MobileHeader() {
   const [, setLocation] = useLocation();
 
   return (
-    <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 flex items-center justify-between" style={{ paddingTop: 'calc(16px + env(safe-area-inset-top))', paddingBottom: '12px' }}>
+    <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 flex items-center justify-between" style={{ paddingTop: 'calc(8px + env(safe-area-inset-top))', paddingBottom: '8px' }}>
       <div className="flex items-center space-x-3">
         <button 
           onClick={toggleMobileMenu}
