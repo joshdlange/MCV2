@@ -8,7 +8,7 @@ import { signUpWithEmail, signInWithEmail, resetPassword } from "@/lib/firebase"
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { ArrowRight, Sparkles, Eye, EyeOff, Mail, Lock, User, AlertCircle, CheckCircle } from "lucide-react";
-import heroLogoWhite from "@assets/noun-super-hero-380874-FFFFFF.png";
+import marvelCardVaultLogo from "@assets/Marvel_Card_Vault_Logo_1765487074024.png";
 import { useAppStore } from "@/lib/store";
 
 export function Login() {
@@ -176,17 +176,12 @@ export function Login() {
           {/* Logo & Branding */}
           <div className="relative z-10 text-center mb-8 lg:mb-10">
             <div className="flex items-center justify-center mb-4">
-              <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-red-500 to-red-700 rounded-2xl flex items-center justify-center shadow-2xl shadow-red-500/30">
-                <img 
-                  src={heroLogoWhite} 
-                  alt="Marvel Card Vault" 
-                  className="w-10 h-10 lg:w-12 lg:h-12 object-contain"
-                />
-              </div>
+              <img 
+                src={marvelCardVaultLogo} 
+                alt="Marvel Card Vault" 
+                className="w-48 h-48 lg:w-56 lg:h-56 object-contain"
+              />
             </div>
-            <h1 className="text-4xl lg:text-5xl font-bebas tracking-wider mb-2 text-white">
-              MARVEL <span className="text-red-500">CARD</span> VAULT
-            </h1>
             <p className="text-lg lg:text-xl text-gray-300 max-w-md mx-auto font-light">
               Your ultimate destination for collecting, trading, and tracking Marvel cards
             </p>
@@ -250,7 +245,7 @@ export function Login() {
           <div className="relative z-10 grid grid-cols-3 gap-4 mt-8 lg:mt-10 max-w-md">
             <div className="text-center">
               <div className="text-2xl lg:text-3xl font-bold text-red-500">60K+</div>
-              <div className="text-xs text-gray-400">Cards</div>
+              <div className="text-xs text-gray-400">Cards from every set</div>
             </div>
             <div className="text-center">
               <div className="text-2xl lg:text-3xl font-bold text-red-500">FREE</div>
@@ -258,7 +253,7 @@ export function Login() {
             </div>
             <div className="text-center">
               <div className="text-2xl lg:text-3xl font-bold text-red-500">Live</div>
-              <div className="text-xs text-gray-400">Pricing</div>
+              <div className="text-xs text-gray-400">Values</div>
             </div>
           </div>
         </div>
@@ -336,13 +331,6 @@ export function Login() {
               /* Sign In / Sign Up Tabs */
               <Card className="bg-gray-900/80 border-gray-800 shadow-2xl backdrop-blur">
                 <CardHeader className="text-center pb-4">
-                  <div className="w-14 h-14 bg-gradient-to-br from-red-500 to-red-700 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-red-500/30">
-                    <img 
-                      src={heroLogoWhite} 
-                      alt="Marvel Card Vault" 
-                      className="w-8 h-8 object-contain"
-                    />
-                  </div>
                   <CardTitle className="text-2xl font-bold text-white">Welcome to the Vault</CardTitle>
                   <CardDescription className="text-gray-400">
                     Start building your Marvel collection today
