@@ -276,24 +276,24 @@ export function CardDetailModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[95vh] p-0 overflow-hidden flex flex-col">
         {/* Sticky Header - Mobile Optimized */}
-        <div className="sticky top-0 z-10 bg-card border-b flex items-center justify-between px-3 py-3 sm:px-4">
+        <div className="sticky top-0 z-10 bg-gray-900 border-b border-gray-700 flex items-center justify-between px-3 py-3 sm:px-4">
           {/* Large Close Button on Left */}
           <Button
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="h-10 w-10 p-0 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+            className="h-10 w-10 p-0 rounded-full hover:bg-gray-700 text-white"
             data-testid="button-close-modal"
           >
-            <X className="h-6 w-6" />
+            <X className="h-6 w-6 text-white" />
           </Button>
           
           {/* Card Title - Centered */}
           <div className="flex-1 text-center px-2 min-w-0">
-            <h2 className="text-base sm:text-lg font-bebas tracking-wide truncate">
+            <h2 className="text-base sm:text-lg font-bebas tracking-wide truncate text-white">
               {isEditing ? 'Edit Card' : card.name}
             </h2>
-            <p className="text-xs text-muted-foreground">#{card.cardNumber}</p>
+            <p className="text-xs text-gray-400">#{card.cardNumber}</p>
           </div>
           
           {/* Admin Tools Toggle or Empty Space */}
@@ -302,10 +302,10 @@ export function CardDetailModal({
               variant="ghost"
               size="sm"
               onClick={() => setShowAdminTools(!showAdminTools)}
-              className="h-10 w-10 p-0 rounded-full"
+              className="h-10 w-10 p-0 rounded-full hover:bg-gray-700 text-white"
               data-testid="button-admin-menu"
             >
-              <MoreVertical className="h-5 w-5" />
+              <MoreVertical className="h-5 w-5 text-white" />
             </Button>
           ) : (
             <div className="w-10" /> 
@@ -514,15 +514,15 @@ export function CardDetailModal({
 
             {/* Card Info */}
             {!isEditing && (
-              <div className="text-center space-y-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
-                <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">{card.set?.name || 'Unknown Set'}</p>
+              <div className="text-center space-y-2 bg-gray-900 border border-gray-700 rounded-lg p-3">
+                <p className="text-sm text-white font-medium">{card.set?.name || 'Unknown Set'}</p>
                 <div className="flex items-center justify-center gap-2 flex-wrap">
-                  <Badge variant="outline" className="text-xs border-gray-400 text-gray-700 dark:text-gray-300">#{card.cardNumber}</Badge>
-                  {card.variation && <Badge variant="outline" className="text-xs border-gray-400 text-gray-700 dark:text-gray-300">{card.variation}</Badge>}
+                  <Badge variant="outline" className="text-xs border-gray-500 text-gray-300 bg-gray-800">#{card.cardNumber}</Badge>
+                  {card.variation && <Badge variant="outline" className="text-xs border-gray-500 text-gray-300 bg-gray-800">{card.variation}</Badge>}
                   {card.isInsert && <Badge className="bg-yellow-500 text-black text-xs">Insert Card</Badge>}
                 </div>
                 {card.description && (
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 px-2">{card.description}</p>
+                  <p className="text-xs text-gray-400 mt-2 px-2">{card.description}</p>
                 )}
               </div>
             )}
@@ -659,21 +659,21 @@ export function CardDetailModal({
               </Collapsible>
             )}
 
-            {/* Image Upload Section */}
-            {!isAdminMode && !isEditing && (
+            {/* Image Upload Section - Available for all users */}
+            {!isEditing && (
               <Collapsible open={showUploadSection} onOpenChange={setShowUploadSection}>
                 <CollapsibleTrigger asChild>
-                  <button className="w-full flex items-center justify-between p-3 rounded-lg bg-gray-100 dark:bg-gray-800 text-left">
+                  <button className="w-full flex items-center justify-between p-3 rounded-lg bg-gray-900 border border-gray-700 text-left">
                     <div className="flex items-center gap-2">
-                      <Camera className="w-4 h-4 text-purple-500" />
-                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Contribute Card Images</span>
+                      <Camera className="w-4 h-4 text-purple-400" />
+                      <span className="text-sm font-medium text-white">Upload Card Image</span>
                     </div>
-                    {showUploadSection ? <ChevronUp className="w-4 h-4 text-gray-600 dark:text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400" />}
+                    {showUploadSection ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
                   </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <div className="p-3 bg-gray-100 dark:bg-gray-800 border-t space-y-3">
-                    <p className="text-xs text-gray-600 dark:text-gray-400">Help grow the database with high-quality card images</p>
+                  <div className="p-3 bg-gray-900 border border-t-0 border-gray-700 rounded-b-lg space-y-3">
+                    <p className="text-xs text-gray-400">Help grow the database with high-quality card images</p>
                     
                     <div className="grid grid-cols-2 gap-3">
                       <div>
@@ -753,24 +753,24 @@ export function CardDetailModal({
             {isInCollection && !isEditing && (
               <Collapsible open={showMarketplace} onOpenChange={setShowMarketplace}>
                 <CollapsibleTrigger asChild>
-                  <button className="w-full flex items-center justify-between p-3 rounded-lg bg-gray-100 dark:bg-gray-800 text-left">
+                  <button className="w-full flex items-center justify-between p-3 rounded-lg bg-gray-900 border border-gray-700 text-left">
                     <div className="flex items-center gap-2">
-                      <Settings className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Marketplace Settings</span>
+                      <Settings className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm font-medium text-white">Marketplace Settings</span>
                     </div>
-                    {showMarketplace ? <ChevronUp className="w-4 h-4 text-gray-600 dark:text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400" />}
+                    {showMarketplace ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
                   </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <div className="p-3 bg-gray-100 dark:bg-gray-800 border-t space-y-3">
+                  <div className="p-3 bg-gray-900 border border-t-0 border-gray-700 rounded-b-lg space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Label htmlFor="condition" className="text-xs">Condition</Label>
+                        <Label htmlFor="condition" className="text-xs text-white">Condition</Label>
                         <select 
                           id="condition"
                           value={condition}
                           onChange={(e) => setCondition(e.target.value)}
-                          className="w-full mt-1 px-2 py-2 text-sm border border-border rounded-md bg-background"
+                          className="w-full mt-1 px-2 py-2 text-sm border border-gray-600 rounded-md bg-white text-black"
                         >
                           <option value="Mint">Mint</option>
                           <option value="Near Mint">Near Mint</option>
@@ -782,7 +782,7 @@ export function CardDetailModal({
                         </select>
                       </div>
                       <div>
-                        <Label htmlFor="salePrice" className="text-xs">Sale Price</Label>
+                        <Label htmlFor="salePrice" className="text-xs text-white">Sale Price</Label>
                         <Input
                           id="salePrice"
                           type="number"
@@ -790,7 +790,7 @@ export function CardDetailModal({
                           placeholder="0.00"
                           value={salePrice}
                           onChange={(e) => setSalePrice(e.target.value)}
-                          className="mt-1 text-sm h-9"
+                          className="mt-1 text-sm h-9 bg-white text-black border-gray-600"
                         />
                       </div>
                     </div>
@@ -801,17 +801,17 @@ export function CardDetailModal({
                         checked={isForSale}
                         onCheckedChange={setIsForSale}
                       />
-                      <Label htmlFor="forSale" className="text-sm">List for sale</Label>
+                      <Label htmlFor="forSale" className="text-sm text-white">List for sale</Label>
                     </div>
 
                     <div>
-                      <Label htmlFor="notes" className="text-xs">Notes</Label>
+                      <Label htmlFor="notes" className="text-xs text-white">Notes</Label>
                       <Textarea
                         id="notes"
                         placeholder="Personal notes about this card..."
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
-                        className="mt-1 text-sm"
+                        className="mt-1 text-sm bg-white text-black border-gray-600"
                         rows={2}
                       />
                     </div>
