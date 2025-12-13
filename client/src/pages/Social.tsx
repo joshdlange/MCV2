@@ -592,7 +592,7 @@ export default function Social() {
                   
                   {isSearching && (
                     <div className="mt-3 text-center">
-                      <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-green-500"></div>
+                      <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-gray-500"></div>
                       <p className="text-sm text-gray-600 mt-2">Searching heroes...</p>
                     </div>
                   )}
@@ -703,79 +703,32 @@ export default function Social() {
               </div>
             </div>
 
-            {/* Pending Invitations - Minimal Style */}
-            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="p-4 border-b border-gray-100 dark:border-gray-800">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-gray-500" />
-                    Pending Invitations
-                  </h3>
-                  {pendingInvitations.length > 0 && (
-                    <span className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs px-2 py-1 rounded-full">
-                      {pendingInvitations.length}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="p-4">
-                {pendingInvitations.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Clock className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-                    <p className="text-sm text-gray-500 dark:text-gray-400">No pending invitations</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {pendingInvitations.map((invitation: Friend) => (
-                      <div key={invitation.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="w-10 h-10 ring-2 ring-gray-200 dark:ring-gray-700">
-                            <AvatarImage src={invitation.recipient.photoURL} />
-                            <AvatarFallback className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-medium">
-                              {invitation.recipient.displayName?.charAt(0) || invitation.recipient.username.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-white text-sm">{invitation.recipient.displayName || invitation.recipient.username}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">@{invitation.recipient.username}</p>
-                          </div>
-                        </div>
-                        <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          Pending
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Friend Requests - Minimal Style */}
+            {/* Combined Requests & Invitations */}
             <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="p-4 border-b border-gray-100 dark:border-gray-800">
                 <div className="flex items-center justify-between">
                   <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <UserPlus className="w-4 h-4 text-gray-500" />
-                    Friend Requests
+                    Requests & Invitations
                   </h3>
-                  {friendRequests.length > 0 && (
-                    <span className="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs px-2 py-1 rounded-full">
-                      {friendRequests.length} new
+                  {(friendRequests.length > 0 || pendingInvitations.length > 0) && (
+                    <span className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs px-2 py-1 rounded-full">
+                      {friendRequests.length + pendingInvitations.length}
                     </span>
                   )}
                 </div>
               </div>
               <div className="p-4">
-                {friendRequests.length === 0 ? (
+                {friendRequests.length === 0 && pendingInvitations.length === 0 ? (
                   <div className="text-center py-8">
-                    <User className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-                    <p className="text-sm text-gray-500 dark:text-gray-400">No pending requests</p>
+                    <UserPlus className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No pending requests or invitations</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
+                    {/* Incoming Friend Requests */}
                     {friendRequests.map((request: Friend) => (
-                      <div key={request.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <div key={`req-${request.id}`} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                         <div className="flex items-center gap-3">
                           <Avatar className="w-10 h-10 ring-2 ring-gray-200 dark:ring-gray-700">
                             <AvatarImage src={request.requester.photoURL} />
@@ -785,7 +738,7 @@ export default function Social() {
                           </Avatar>
                           <div>
                             <p className="font-medium text-gray-900 dark:text-white text-sm">{request.requester.displayName || request.requester.username}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">@{request.requester.username}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Wants to connect</p>
                           </div>
                         </div>
                         <div className="flex gap-2">
@@ -810,6 +763,28 @@ export default function Social() {
                         </div>
                       </div>
                     ))}
+                    
+                    {/* Outgoing Pending Invitations */}
+                    {pendingInvitations.map((invitation: Friend) => (
+                      <div key={`inv-${invitation.id}`} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-10 h-10 ring-2 ring-gray-200 dark:ring-gray-700">
+                            <AvatarImage src={invitation.recipient.photoURL} />
+                            <AvatarFallback className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-medium">
+                              {invitation.recipient.displayName?.charAt(0) || invitation.recipient.username.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-white text-sm">{invitation.recipient.displayName || invitation.recipient.username}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Invitation sent</p>
+                          </div>
+                        </div>
+                        <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
+                          <Clock className="w-3 h-3" />
+                          Pending
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -819,10 +794,10 @@ export default function Social() {
 
 
 
-        <TabsContent value="messages" className="h-[80vh] bg-white">
-          <div className="h-full flex rounded-lg overflow-hidden border border-gray-200 shadow-sm">
-            {/* Left Column: Conversation List - iPhone Style */}
-            <div className="w-2/5 border-r border-gray-200 bg-white flex flex-col">
+        <TabsContent value="messages" className="h-[80vh] bg-white dark:bg-gray-900">
+          <div className="h-full flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
+            {/* Left Column: Conversation List */}
+            <div className="w-2/5 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col">
               {/* Header */}
               <div className="p-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-900 hidden md:block">Messages</h2>
@@ -1369,7 +1344,7 @@ export default function Social() {
                 <div className="p-4">
                   {friendCollectionLoading ? (
                     <div className="text-center py-16">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-500 mx-auto"></div>
                       <p className="text-gray-600 mt-4">Loading collection...</p>
                     </div>
                   ) : friendCollection.length > 0 ? (
@@ -1482,7 +1457,7 @@ export default function Social() {
                             {filteredCollection.map((item: any) => (
                               <div 
                                 key={item.id} 
-                                className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-md transition-shadow cursor-pointer hover:border-green-300"
+                                className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 hover:shadow-md transition-shadow cursor-pointer hover:border-gray-400 dark:hover:border-gray-500"
                                 onClick={() => handleCardClick(item)}
                               >
                                 <div className="aspect-[3/4] bg-gray-100 rounded-lg mb-2 overflow-hidden">
@@ -1514,7 +1489,7 @@ export default function Social() {
                             {filteredCollection.map((item: any) => (
                               <div 
                                 key={item.id} 
-                                className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer hover:border-green-300"
+                                className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow cursor-pointer hover:border-gray-400 dark:hover:border-gray-500"
                                 onClick={() => handleCardClick(item)}
                               >
                                 <div className="flex items-center space-x-4">
