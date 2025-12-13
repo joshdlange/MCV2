@@ -514,15 +514,15 @@ export function CardDetailModal({
 
             {/* Card Info */}
             {!isEditing && (
-              <div className="text-center space-y-2">
-                <p className="text-sm text-muted-foreground">{card.set?.name || 'Unknown Set'}</p>
+              <div className="text-center space-y-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
+                <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">{card.set?.name || 'Unknown Set'}</p>
                 <div className="flex items-center justify-center gap-2 flex-wrap">
-                  <Badge variant="outline" className="text-xs">#{card.cardNumber}</Badge>
-                  {card.variation && <Badge variant="outline" className="text-xs">{card.variation}</Badge>}
-                  {card.isInsert && <Badge className="bg-yellow-500 text-xs">Insert Card</Badge>}
+                  <Badge variant="outline" className="text-xs border-gray-400 text-gray-700 dark:text-gray-300">#{card.cardNumber}</Badge>
+                  {card.variation && <Badge variant="outline" className="text-xs border-gray-400 text-gray-700 dark:text-gray-300">{card.variation}</Badge>}
+                  {card.isInsert && <Badge className="bg-yellow-500 text-black text-xs">Insert Card</Badge>}
                 </div>
                 {card.description && (
-                  <p className="text-xs text-muted-foreground mt-2 px-4">{card.description}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 px-2">{card.description}</p>
                 )}
               </div>
             )}
@@ -666,14 +666,14 @@ export function CardDetailModal({
                   <button className="w-full flex items-center justify-between p-3 rounded-lg bg-gray-100 dark:bg-gray-800 text-left">
                     <div className="flex items-center gap-2">
                       <Camera className="w-4 h-4 text-purple-500" />
-                      <span className="text-sm font-medium">Contribute Card Images</span>
+                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Contribute Card Images</span>
                     </div>
-                    {showUploadSection ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    {showUploadSection ? <ChevronUp className="w-4 h-4 text-gray-600 dark:text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400" />}
                   </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="p-3 bg-gray-100 dark:bg-gray-800 border-t space-y-3">
-                    <p className="text-xs text-muted-foreground">Help grow the database with high-quality card images</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">Help grow the database with high-quality card images</p>
                     
                     <div className="grid grid-cols-2 gap-3">
                       <div>
@@ -755,10 +755,10 @@ export function CardDetailModal({
                 <CollapsibleTrigger asChild>
                   <button className="w-full flex items-center justify-between p-3 rounded-lg bg-gray-100 dark:bg-gray-800 text-left">
                     <div className="flex items-center gap-2">
-                      <Settings className="w-4 h-4" />
-                      <span className="text-sm font-medium">Marketplace Settings</span>
+                      <Settings className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Marketplace Settings</span>
                     </div>
-                    {showMarketplace ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    {showMarketplace ? <ChevronUp className="w-4 h-4 text-gray-600 dark:text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400" />}
                   </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
