@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Check, Heart, Star, RotateCcw, Edit, Trash2, Save, X, RefreshCw, ExternalLink, Image, Upload, Camera } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Check, Heart, Star, RotateCcw, Edit, Trash2, Save, X, RefreshCw, ExternalLink, Image, Upload, Camera, ChevronDown, ChevronUp, Settings, MoreVertical } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -54,6 +56,9 @@ export function CardDetailModal({
   const [frontPreview, setFrontPreview] = useState<string | null>(null);
   const [backPreview, setBackPreview] = useState<string | null>(null);
   const [showUploadSection, setShowUploadSection] = useState(false);
+  const [showPricing, setShowPricing] = useState(true);
+  const [showMarketplace, setShowMarketplace] = useState(false);
+  const [showAdminTools, setShowAdminTools] = useState(false);
   
   const { isAdminMode } = useAppStore();
   const queryClient = useQueryClient();
@@ -108,11 +113,9 @@ export function CardDetailModal({
         variant: data.success ? "default" : "destructive",
       });
       if (data.success && card?.id) {
-        // Refresh card data to show new image
         queryClient.invalidateQueries({ queryKey: ['/api/cards'] });
         queryClient.invalidateQueries({ queryKey: ['/api/cards/search'] });
         
-        // Fetch the updated card data
         try {
           const updatedCard = await apiRequest('GET', `/api/cards/${card.id}`).then(res => res.json());
           if (onCardUpdate) {
@@ -196,7 +199,6 @@ export function CardDetailModal({
       return;
     }
 
-    // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "File too large",
@@ -206,7 +208,6 @@ export function CardDetailModal({
       return;
     }
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast({
         title: "Invalid file type",
@@ -216,7 +217,6 @@ export function CardDetailModal({
       return;
     }
 
-    // Set file and create preview
     if (type === 'front') {
       setFrontImageFile(file);
       const reader = new FileReader();
@@ -235,6 +235,7 @@ export function CardDetailModal({
   };
 
   const handleUploadSubmit = () => {
+    if (!card) return;
     if (!frontImageFile && !backImageFile) {
       toast({
         title: "No images selected",
@@ -271,20 +272,97 @@ export function CardDetailModal({
     });
   };
 
-  const cardAspectRatio = "aspect-[2.5/3.5]"; // Trading card proportions
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl font-bebas tracking-wide">
-              {isEditing ? 'Edit Card' : `${card.name} #${card.cardNumber}`}
-            </DialogTitle>
-            {isAdminMode && (
-              <div className="flex gap-2">
-                {isEditing ? (
-                  <>
+      <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[95vh] p-0 overflow-hidden flex flex-col">
+        {/* Sticky Header - Mobile Optimized */}
+        <div className="sticky top-0 z-10 bg-card border-b flex items-center justify-between px-3 py-3 sm:px-4">
+          {/* Large Close Button on Left */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="h-10 w-10 p-0 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+            data-testid="button-close-modal"
+          >
+            <X className="h-6 w-6" />
+          </Button>
+          
+          {/* Card Title - Centered */}
+          <div className="flex-1 text-center px-2 min-w-0">
+            <h2 className="text-base sm:text-lg font-bebas tracking-wide truncate">
+              {isEditing ? 'Edit Card' : card.name}
+            </h2>
+            <p className="text-xs text-muted-foreground">#{card.cardNumber}</p>
+          </div>
+          
+          {/* Admin Tools Toggle or Empty Space */}
+          {isAdminMode && !isEditing ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAdminTools(!showAdminTools)}
+              className="h-10 w-10 p-0 rounded-full"
+              data-testid="button-admin-menu"
+            >
+              <MoreVertical className="h-5 w-5" />
+            </Button>
+          ) : (
+            <div className="w-10" /> 
+          )}
+        </div>
+
+        {/* Scrollable Content */}
+        <ScrollArea className="flex-1 overflow-y-auto">
+          <div className="p-4 space-y-4">
+            
+            {/* Admin Tools Dropdown - Only visible when toggled */}
+            {isAdminMode && showAdminTools && !isEditing && (
+              <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 space-y-2 animate-in slide-in-from-top-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Admin Tools</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    onClick={() => updateImageMutation.mutate(card.id)}
+                    disabled={updateImageMutation.isPending}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 min-w-[100px] bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                    data-testid="button-update-image"
+                  >
+                    <Image className="w-4 h-4 mr-1" />
+                    {updateImageMutation.isPending ? 'Updating...' : 'Find Image'}
+                  </Button>
+                  <Button
+                    onClick={startEditing}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 min-w-[80px]"
+                    data-testid="button-edit-card"
+                  >
+                    <Edit className="w-4 h-4 mr-1" />
+                    Edit
+                  </Button>
+                  <Button
+                    onClick={handleDelete}
+                    disabled={deleteCardMutation.isPending}
+                    variant="destructive"
+                    size="sm"
+                    className="flex-1 min-w-[80px]"
+                    data-testid="button-delete-card"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Admin Edit Mode */}
+            {isEditing && (
+              <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="font-medium">Editing Card</p>
+                  <div className="flex gap-2">
                     <Button
                       onClick={handleSaveEdit}
                       disabled={updateCardMutation.isPending}
@@ -299,567 +377,457 @@ export function CardDetailModal({
                       variant="outline"
                       size="sm"
                     >
-                      <X className="w-4 h-4 mr-1" />
                       Cancel
                     </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      onClick={() => updateImageMutation.mutate(card.id)}
-                      disabled={updateImageMutation.isPending}
-                      variant="outline"
-                      size="sm"
-                      className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                    >
-                      <Image className="w-4 h-4 mr-1" />
-                      {updateImageMutation.isPending ? 'Updating...' : 'Update Image'}
-                    </Button>
-                    <Button
-                      onClick={startEditing}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
-                      onClick={handleDelete}
-                      disabled={deleteCardMutation.isPending}
-                      variant="destructive"
-                      size="sm"
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" />
-                      Delete
-                    </Button>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </DialogHeader>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Card Image */}
-          <div className="space-y-4">
-            <div className="relative">
-              <div className={`${cardAspectRatio} w-full max-w-sm mx-auto relative overflow-hidden rounded-lg shadow-lg`}>
-                <img
-                  src={showBack ? convertGoogleDriveUrl(card.backImageUrl || '') : convertGoogleDriveUrl(card.frontImageUrl || '')}
-                  alt={showBack ? `${card.name} back` : card.name}
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    e.currentTarget.src = noCardImagePlaceholder;
-                  }}
-                />
+                  </div>
+                </div>
                 
-                {/* Badges */}
-                <div className="absolute top-2 right-2 flex flex-col gap-2">
-                  {isInCollection && (
-                    <div className="bg-green-500 rounded-full p-1 shadow-lg">
-                      <Check className="w-4 h-4 text-white" />
-                    </div>
-                  )}
-                  {isInWishlist && (
-                    <div className="bg-pink-500 rounded-full p-1 shadow-lg">
-                      <Heart className="w-4 h-4 text-white fill-white" />
-                    </div>
-                  )}
-                  {card.isInsert && (
-                    <div className="bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg">
-                      <span className="text-sm">💎</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Flip Button */}
-              {card.backImageUrl && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowBack(!showBack)}
-                  className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-orange-500 text-white border-orange-500 hover:bg-orange-500 hover:text-white"
-                >
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  FLIP
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Card Details */}
-          <div className="space-y-6">
-            {isEditing ? (
-              /* Admin Edit Form */
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="cardName">Card Name</Label>
-                  <Input
-                    id="cardName"
-                    value={editedCard.name || ''}
-                    onChange={(e) => setEditedCard({ ...editedCard, name: e.target.value })}
-                    className="bg-white text-black"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="cardNumber">Card Number</Label>
-                  <Input
-                    id="cardNumber"
-                    value={editedCard.cardNumber || ''}
-                    onChange={(e) => setEditedCard({ ...editedCard, cardNumber: e.target.value })}
-                    className="bg-white text-black"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="rarity">Rarity</Label>
-                  <Input
-                    id="rarity"
-                    value={editedCard.rarity || ''}
-                    onChange={(e) => setEditedCard({ ...editedCard, rarity: e.target.value })}
-                    className="bg-white text-black"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="estimatedValue">Estimated Value</Label>
-                  <Input
-                    id="estimatedValue"
-                    type="number"
-                    step="0.01"
-                    value={editedCard.estimatedValue || ''}
-                    onChange={(e) => setEditedCard({ ...editedCard, estimatedValue: e.target.value })}
-                    className="bg-white text-black"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="frontImage">Front Image URL</Label>
-                  <Input
-                    id="frontImage"
-                    value={editedCard.frontImageUrl || ''}
-                    onChange={(e) => setEditedCard({ ...editedCard, frontImageUrl: e.target.value })}
-                    className="bg-white text-black"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="backImage">Back Image URL</Label>
-                  <Input
-                    id="backImage"
-                    value={editedCard.backImageUrl || ''}
-                    onChange={(e) => setEditedCard({ ...editedCard, backImageUrl: e.target.value })}
-                    className="bg-white text-black"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={editedCard.description || ''}
-                    onChange={(e) => setEditedCard({ ...editedCard, description: e.target.value })}
-                    className="bg-white text-black"
-                    rows={3}
-                  />
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="isInsert"
-                    checked={editedCard.isInsert || false}
-                    onCheckedChange={(checked) => setEditedCard({ ...editedCard, isInsert: checked })}
-                  />
-                  <Label htmlFor="isInsert">Insert Card</Label>
-                </div>
-              </div>
-            ) : (
-              /* Regular Card Display */
-              <>
-                <div>
-                  <h3 className="text-lg font-semibold text-card-foreground">{card.name}</h3>
-                  <p className="text-muted-foreground">{card.set?.name || 'Unknown Set'}</p>
-                  <div className="flex items-center gap-4 mt-2">
-                    <Badge variant="outline">#{card.cardNumber}</Badge>
-                    {card.variation && <Badge variant="outline">{card.variation}</Badge>}
-                    {card.isInsert && <Badge className="bg-yellow-500">Insert Card</Badge>}
-                  </div>
-                </div>
-
-                {card.description && (
+                <div className="space-y-3">
                   <div>
-                    <Label className="text-sm font-medium">Description</Label>
-                    <p className="text-sm text-muted-foreground mt-1">{card.description}</p>
-                  </div>
-                )}
-
-                {/* eBay Market Pricing */}
-                <div className="rounded-lg p-4 bg-gray-900 border-2 border-gray-700 shadow-lg">
-                  <div className="flex items-center justify-between mb-3">
-                    <Label className="text-sm font-semibold text-white flex items-center gap-2">
-                      <div className="flex items-center gap-1">
-                        <span className="text-red-500 font-bold text-lg">e</span>
-                        <span className="text-blue-500 font-bold text-lg">b</span>
-                        <span className="text-yellow-400 font-bold text-lg">a</span>
-                        <span className="text-green-400 font-bold text-lg">y</span>
-                      </div>
-                      Market Price
-                    </Label>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={async () => {
-                        if (!card) return;
-                        
-                        // Show immediate loading state
-                        const loadingToast = toast({ 
-                          title: "Fetching eBay pricing...", 
-                          description: "This may take a moment"
-                        });
-                        
-                        try {
-                          console.log(`Refreshing pricing for card ${card.id}: ${card.name}`);
-                          const result = await refreshPricing(card.id);
-                          console.log('Refresh result:', result);
-                          
-                          // Invalidate both the specific card pricing and general queries
-                          await queryClient.invalidateQueries({ queryKey: ["/api/card-pricing", card.id] });
-                          await queryClient.refetchQueries({ queryKey: ["/api/card-pricing", card.id] });
-                          
-                          if (result && result.avgPrice === -1) {
-                            toast({ 
-                              title: "eBay API rate limit reached", 
-                              description: "Try again later when limits reset.",
-                              variant: "destructive" 
-                            });
-                          } else if (result && result.avgPrice === 0 && result.salesCount === 0) {
-                            toast({ 
-                              title: "No eBay sales found", 
-                              description: "This card may not have recent sales data."
-                            });
-                          } else {
-                            toast({ 
-                              title: "Pricing updated from eBay",
-                              description: result ? `$${result.avgPrice.toFixed(2)} (${result.salesCount} sales)` : "No data found"
-                            });
-                          }
-                        } catch (error: any) {
-                          console.error('Refresh error:', error);
-                          toast({ 
-                            title: "Failed to update pricing", 
-                            description: error.message || "Unknown error",
-                            variant: "destructive" 
-                          });
-                        }
-                      }}
-                      disabled={isPricingLoading}
-                      className="text-xs bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white border-none hover:from-blue-600 hover:via-purple-600 hover:to-pink-600"
-                    >
-                      <RefreshCw className={`w-3 h-3 mr-1 ${isPricingLoading ? 'animate-spin' : ''}`} />
-                      Refresh
-                    </Button>
-                  </div>
-                  
-                  {isPricingLoading ? (
-                    <div className="flex items-center space-x-2">
-                      <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />
-                      <span className="text-sm text-gray-300">Fetching latest prices...</span>
-                    </div>
-                  ) : pricing ? (
-                    pricing.avgPrice === -1 ? (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-red-400">
-                          <span className="text-sm font-medium">⚠️ Pricing unavailable (rate limit reached)</span>
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          eBay API limits exceeded. Try again later.
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          Last attempted: {new Date(pricing.lastFetched).toLocaleDateString()}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-2xl font-bold text-green-400">
-                            ${pricing.avgPrice.toFixed(2)}
-                          </span>
-                          <span className="text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded-full border border-gray-700">
-                            Based on {pricing.salesCount} recent sales
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          Last updated: {new Date(pricing.lastFetched).toLocaleDateString()}
-                        </div>
-                        <div className="text-xs text-blue-400 font-medium">
-                          Real-time data from eBay completed listings
-                        </div>
-                      </div>
-                    )
-                  ) : (
-                    <div className="space-y-2">
-                      <p className="text-sm text-gray-300">
-                        No pricing data available yet
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        Click refresh to fetch from eBay
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-
-            {/* Collection Actions */}
-            <div className="flex gap-2">
-              {isInCollection ? (
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    console.log('Remove from collection clicked, callback exists:', !!onRemoveFromCollection);
-                    onRemoveFromCollection?.();
-                  }}
-                  data-testid="button-remove-from-collection"
-                  className="flex items-center gap-2 border-green-200 text-green-700"
-                >
-                  <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                    <Check className="w-2.5 h-2.5 text-white" />
-                  </div>
-                  In Collection
-                </Button>
-              ) : (
-                <Button 
-                  onClick={() => {
-                    console.log('Add to collection clicked, callback exists:', !!onAddToCollection);
-                    onAddToCollection?.();
-                  }}
-                  data-testid="button-add-to-collection"
-                  className="bg-green-600 hover:bg-green-700 flex items-center gap-2"
-                >
-                  <Check className="w-4 h-4" />
-                  Add to Collection
-                </Button>
-              )}
-
-              {isInWishlist ? (
-                <Button 
-                  variant="outline" 
-                  onClick={onRemoveFromWishlist}
-                  className="flex items-center gap-2"
-                >
-                  <Heart className="w-4 h-4 fill-pink-500 text-pink-500" />
-                  In Wishlist
-                </Button>
-              ) : (
-                <Button 
-                  onClick={onAddToWishlist}
-                  className="bg-pink-500 hover:bg-pink-600 flex items-center gap-2"
-                >
-                  <Heart className="w-4 h-4" />
-                  Add to Wishlist
-                </Button>
-              )}
-            </div>
-
-            {/* User Image Upload Section */}
-            {!isAdminMode && !isEditing && (
-              <div className="border-t pt-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium text-card-foreground flex items-center gap-2">
-                      <Camera className="w-4 h-4" />
-                      Contribute Card Images
-                    </h4>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Help grow the database by uploading high-quality card images
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={() => setShowUploadSection(!showUploadSection)}
-                    data-testid="button-toggle-upload"
-                    className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white border-none hover:from-blue-600 hover:via-purple-600 hover:to-pink-600"
-                  >
-                    {showUploadSection ? 'Cancel' : 'Upload Images'}
-                  </Button>
-                </div>
-
-                {showUploadSection && (
-                  <div className="space-y-4 border rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Front Image Upload */}
-                      <div className="space-y-2">
-                        <div className="relative">
-                          <input
-                            id="frontImage"
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            onChange={(e) => handleFileSelect(e.target.files?.[0] || null, 'front')}
-                            className="hidden"
-                            data-testid="input-front-image"
-                          />
-                          <label htmlFor="frontImage" className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-md cursor-pointer font-medium transition-colors">
-                            <Upload className="w-4 h-4" />
-                            Front Upload
-                          </label>
-                        </div>
-                        {frontPreview && (
-                          <div className="relative aspect-[2.5/3.5] w-full rounded border overflow-hidden">
-                            <img
-                              src={frontPreview}
-                              alt="Front preview"
-                              className="w-full h-full object-contain"
-                            />
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              className="absolute top-2 right-2"
-                              onClick={() => handleFileSelect(null, 'front')}
-                              data-testid="button-remove-front"
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Back Image Upload */}
-                      <div className="space-y-2">
-                        <div className="relative">
-                          <input
-                            id="backImage"
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            onChange={(e) => handleFileSelect(e.target.files?.[0] || null, 'back')}
-                            className="hidden"
-                            data-testid="input-back-image"
-                          />
-                          <label htmlFor="backImage" className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-md cursor-pointer font-medium transition-colors">
-                            <Upload className="w-4 h-4" />
-                            Back Upload
-                          </label>
-                        </div>
-                        {backPreview && (
-                          <div className="relative aspect-[2.5/3.5] w-full rounded border overflow-hidden">
-                            <img
-                              src={backPreview}
-                              alt="Back preview"
-                              className="w-full h-full object-contain"
-                            />
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              className="absolute top-2 right-2"
-                              onClick={() => handleFileSelect(null, 'back')}
-                              data-testid="button-remove-back"
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="text-xs text-muted-foreground space-y-1">
-                        <p>• Images will be reviewed by admins before being added</p>
-                        <p>• Max file size: 5MB per image</p>
-                        <p>• Accepted formats: JPEG, PNG, WebP</p>
-                        <p>• Earn the Contributor badge after 3 approved submissions!</p>
-                      </div>
-                      <Button
-                        onClick={handleUploadSubmit}
-                        disabled={uploadImageMutation.isPending || (!frontImageFile && !backImageFile)}
-                        className="w-full bg-marvel-red hover:bg-red-700"
-                        data-testid="button-submit-upload"
-                      >
-                        {uploadImageMutation.isPending ? (
-                          <>
-                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                            Uploading...
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="w-4 h-4 mr-2" />
-                            Submit for Review
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Marketplace Settings (only if in collection) */}
-            {isInCollection && (
-              <div className="border-t pt-4 space-y-4">
-                <h4 className="font-medium text-card-foreground">Marketplace Settings</h4>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="condition">Condition</Label>
-                    <select 
-                      id="condition"
-                      value={condition}
-                      onChange={(e) => setCondition(e.target.value)}
-                      className="w-full mt-1 px-3 py-2 border border-border rounded-md bg-background"
-                    >
-                      <option value="Mint">Mint</option>
-                      <option value="Near Mint">Near Mint</option>
-                      <option value="Excellent">Excellent</option>
-                      <option value="Very Good">Very Good</option>
-                      <option value="Good">Good</option>
-                      <option value="Fair">Fair</option>
-                      <option value="Poor">Poor</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="salePrice">Sale Price</Label>
+                    <Label htmlFor="cardName" className="text-xs">Card Name</Label>
                     <Input
-                      id="salePrice"
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={salePrice}
-                      onChange={(e) => setSalePrice(e.target.value)}
-                      className="mt-1"
+                      id="cardName"
+                      value={editedCard.name || ''}
+                      onChange={(e) => setEditedCard({ ...editedCard, name: e.target.value })}
+                      className="bg-white text-black mt-1"
                     />
                   </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="cardNumber" className="text-xs">Card Number</Label>
+                      <Input
+                        id="cardNumber"
+                        value={editedCard.cardNumber || ''}
+                        onChange={(e) => setEditedCard({ ...editedCard, cardNumber: e.target.value })}
+                        className="bg-white text-black mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="rarity" className="text-xs">Rarity</Label>
+                      <Input
+                        id="rarity"
+                        value={editedCard.rarity || ''}
+                        onChange={(e) => setEditedCard({ ...editedCard, rarity: e.target.value })}
+                        className="bg-white text-black mt-1"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="estimatedValue" className="text-xs">Estimated Value</Label>
+                    <Input
+                      id="estimatedValue"
+                      type="number"
+                      step="0.01"
+                      value={editedCard.estimatedValue || ''}
+                      onChange={(e) => setEditedCard({ ...editedCard, estimatedValue: e.target.value })}
+                      className="bg-white text-black mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="frontImage" className="text-xs">Front Image URL</Label>
+                    <Input
+                      id="frontImage"
+                      value={editedCard.frontImageUrl || ''}
+                      onChange={(e) => setEditedCard({ ...editedCard, frontImageUrl: e.target.value })}
+                      className="bg-white text-black mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="backImage" className="text-xs">Back Image URL</Label>
+                    <Input
+                      id="backImage"
+                      value={editedCard.backImageUrl || ''}
+                      onChange={(e) => setEditedCard({ ...editedCard, backImageUrl: e.target.value })}
+                      className="bg-white text-black mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="description" className="text-xs">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={editedCard.description || ''}
+                      onChange={(e) => setEditedCard({ ...editedCard, description: e.target.value })}
+                      className="bg-white text-black mt-1"
+                      rows={2}
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="isInsert"
+                      checked={editedCard.isInsert || false}
+                      onCheckedChange={(checked) => setEditedCard({ ...editedCard, isInsert: checked })}
+                    />
+                    <Label htmlFor="isInsert" className="text-sm">Insert Card</Label>
+                  </div>
                 </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="forSale"
-                    checked={isForSale}
-                    onCheckedChange={setIsForSale}
-                  />
-                  <Label htmlFor="forSale">List for sale</Label>
-                </div>
-
-                <div>
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea
-                    id="notes"
-                    placeholder="Personal notes about this card..."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-
-                <Button className="w-full bg-marvel-red hover:bg-red-700">
-                  Save Settings
-                </Button>
               </div>
             )}
+
+            {/* Card Image - Optimized for Mobile */}
+            {!isEditing && (
+              <div className="relative">
+                <div className="aspect-[2.5/3.5] w-full max-w-[280px] mx-auto relative overflow-hidden rounded-xl shadow-xl">
+                  <img
+                    src={showBack ? convertGoogleDriveUrl(card.backImageUrl || '') : convertGoogleDriveUrl(card.frontImageUrl || '')}
+                    alt={showBack ? `${card.name} back` : card.name}
+                    className="w-full h-full object-contain bg-gray-900"
+                    onError={(e) => {
+                      e.currentTarget.src = noCardImagePlaceholder;
+                    }}
+                  />
+                  
+                  {/* Status Badges */}
+                  <div className="absolute top-2 right-2 flex flex-col gap-1.5">
+                    {isInCollection && (
+                      <div className="bg-green-500 rounded-full p-1.5 shadow-lg">
+                        <Check className="w-3 h-3 text-white" />
+                      </div>
+                    )}
+                    {isInWishlist && (
+                      <div className="bg-pink-500 rounded-full p-1.5 shadow-lg">
+                        <Heart className="w-3 h-3 text-white fill-white" />
+                      </div>
+                    )}
+                    {card.isInsert && (
+                      <div className="bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg text-xs">
+                        💎
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Flip Button */}
+                  {card.backImageUrl && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowBack(!showBack)}
+                      className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-orange-500 text-white border-orange-500 hover:bg-orange-600 hover:text-white text-xs px-3 py-1 h-8"
+                      data-testid="button-flip-card"
+                    >
+                      <RotateCcw className="w-3 h-3 mr-1" />
+                      FLIP
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Card Info */}
+            {!isEditing && (
+              <div className="text-center space-y-2">
+                <p className="text-sm text-muted-foreground">{card.set?.name || 'Unknown Set'}</p>
+                <div className="flex items-center justify-center gap-2 flex-wrap">
+                  <Badge variant="outline" className="text-xs">#{card.cardNumber}</Badge>
+                  {card.variation && <Badge variant="outline" className="text-xs">{card.variation}</Badge>}
+                  {card.isInsert && <Badge className="bg-yellow-500 text-xs">Insert Card</Badge>}
+                </div>
+                {card.description && (
+                  <p className="text-xs text-muted-foreground mt-2 px-4">{card.description}</p>
+                )}
+              </div>
+            )}
+
+            {/* Collection/Wishlist Actions - Always Visible */}
+            {!isEditing && (
+              <div className="grid grid-cols-2 gap-2">
+                {isInCollection ? (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => onRemoveFromCollection?.()}
+                    data-testid="button-remove-from-collection"
+                    className="h-12 text-sm border-green-200 text-green-700 hover:bg-green-50"
+                  >
+                    <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-2">
+                      <Check className="w-3 h-3 text-white" />
+                    </div>
+                    In Collection
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={() => onAddToCollection?.()}
+                    data-testid="button-add-to-collection"
+                    className="h-12 text-sm bg-green-600 hover:bg-green-700"
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    Add to Collection
+                  </Button>
+                )}
+
+                {isInWishlist ? (
+                  <Button 
+                    variant="outline" 
+                    onClick={onRemoveFromWishlist}
+                    data-testid="button-remove-from-wishlist"
+                    className="h-12 text-sm border-pink-200 text-pink-700 hover:bg-pink-50"
+                  >
+                    <Heart className="w-4 h-4 fill-pink-500 text-pink-500 mr-2" />
+                    In Wishlist
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={onAddToWishlist}
+                    data-testid="button-add-to-wishlist"
+                    className="h-12 text-sm bg-pink-500 hover:bg-pink-600"
+                  >
+                    <Heart className="w-4 h-4 mr-2" />
+                    Add to Wishlist
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* eBay Pricing - Collapsible */}
+            {!isEditing && (
+              <Collapsible open={showPricing} onOpenChange={setShowPricing}>
+                <CollapsibleTrigger asChild>
+                  <button className="w-full flex items-center justify-between p-3 rounded-lg bg-gray-900 border border-gray-700 text-left">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-0.5">
+                        <span className="text-red-500 font-bold text-sm">e</span>
+                        <span className="text-blue-500 font-bold text-sm">b</span>
+                        <span className="text-yellow-400 font-bold text-sm">a</span>
+                        <span className="text-green-400 font-bold text-sm">y</span>
+                      </div>
+                      <span className="text-white text-sm font-medium">Market Price</span>
+                      {pricing && pricing.avgPrice > 0 && (
+                        <span className="text-green-400 font-bold">${pricing.avgPrice.toFixed(2)}</span>
+                      )}
+                    </div>
+                    {showPricing ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="p-3 bg-gray-900 border border-t-0 border-gray-700 rounded-b-lg space-y-3">
+                    <div className="flex justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          if (!card) return;
+                          toast({ title: "Fetching eBay pricing...", description: "This may take a moment" });
+                          try {
+                            const result = await refreshPricing(card.id);
+                            await queryClient.invalidateQueries({ queryKey: ["/api/card-pricing", card.id] });
+                            await queryClient.refetchQueries({ queryKey: ["/api/card-pricing", card.id] });
+                            
+                            if (result && result.avgPrice === -1) {
+                              toast({ title: "eBay API rate limit reached", description: "Try again later.", variant: "destructive" });
+                            } else if (result && result.avgPrice === 0 && result.salesCount === 0) {
+                              toast({ title: "No eBay sales found", description: "This card may not have recent sales data." });
+                            } else {
+                              toast({ title: "Pricing updated", description: result ? `$${result.avgPrice.toFixed(2)} (${result.salesCount} sales)` : "No data" });
+                            }
+                          } catch (error: any) {
+                            toast({ title: "Failed to update", description: error.message || "Unknown error", variant: "destructive" });
+                          }
+                        }}
+                        disabled={isPricingLoading}
+                        className="text-xs bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white border-none"
+                        data-testid="button-refresh-pricing"
+                      >
+                        <RefreshCw className={`w-3 h-3 mr-1 ${isPricingLoading ? 'animate-spin' : ''}`} />
+                        Refresh
+                      </Button>
+                    </div>
+                    
+                    {isPricingLoading ? (
+                      <div className="flex items-center gap-2 text-gray-300 text-sm">
+                        <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />
+                        Fetching latest prices...
+                      </div>
+                    ) : pricing ? (
+                      pricing.avgPrice === -1 ? (
+                        <div className="text-sm text-red-400">⚠️ Pricing unavailable (rate limit)</div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-2xl font-bold text-green-400">${pricing.avgPrice.toFixed(2)}</span>
+                            <span className="text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded-full">
+                              {pricing.salesCount} sales
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-400">
+                            Updated: {new Date(pricing.lastFetched).toLocaleDateString()}
+                          </p>
+                        </div>
+                      )
+                    ) : (
+                      <p className="text-sm text-gray-400">No pricing data yet. Click refresh to fetch.</p>
+                    )}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
+            {/* Image Upload Section */}
+            {!isAdminMode && !isEditing && (
+              <Collapsible open={showUploadSection} onOpenChange={setShowUploadSection}>
+                <CollapsibleTrigger asChild>
+                  <button className="w-full flex items-center justify-between p-3 rounded-lg bg-gray-100 dark:bg-gray-800 text-left">
+                    <div className="flex items-center gap-2">
+                      <Camera className="w-4 h-4 text-purple-500" />
+                      <span className="text-sm font-medium">Contribute Card Images</span>
+                    </div>
+                    {showUploadSection ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="p-3 bg-gray-100 dark:bg-gray-800 border-t space-y-3">
+                    <p className="text-xs text-muted-foreground">Help grow the database with high-quality card images</p>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <input
+                          id="frontImage"
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={(e) => handleFileSelect(e.target.files?.[0] || null, 'front')}
+                          className="hidden"
+                        />
+                        <label htmlFor="frontImage" className="flex items-center justify-center gap-1 w-full px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md cursor-pointer text-sm">
+                          <Upload className="w-3 h-3" />
+                          Front
+                        </label>
+                        {frontPreview && (
+                          <div className="relative aspect-[2.5/3.5] mt-2 rounded border overflow-hidden">
+                            <img src={frontPreview} alt="Front" className="w-full h-full object-contain" />
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0"
+                              onClick={() => handleFileSelect(null, 'front')}
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <input
+                          id="backImage"
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={(e) => handleFileSelect(e.target.files?.[0] || null, 'back')}
+                          className="hidden"
+                        />
+                        <label htmlFor="backImage" className="flex items-center justify-center gap-1 w-full px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md cursor-pointer text-sm">
+                          <Upload className="w-3 h-3" />
+                          Back
+                        </label>
+                        {backPreview && (
+                          <div className="relative aspect-[2.5/3.5] mt-2 rounded border overflow-hidden">
+                            <img src={backPreview} alt="Back" className="w-full h-full object-contain" />
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0"
+                              onClick={() => handleFileSelect(null, 'back')}
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <Button
+                      onClick={handleUploadSubmit}
+                      disabled={uploadImageMutation.isPending || (!frontImageFile && !backImageFile)}
+                      className="w-full bg-marvel-red hover:bg-red-700 text-sm h-10"
+                    >
+                      {uploadImageMutation.isPending ? (
+                        <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Uploading...</>
+                      ) : (
+                        <><Upload className="w-3 h-3 mr-1" /> Submit for Review</>
+                      )}
+                    </Button>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
+            {/* Marketplace Settings - Collapsible (only if in collection) */}
+            {isInCollection && !isEditing && (
+              <Collapsible open={showMarketplace} onOpenChange={setShowMarketplace}>
+                <CollapsibleTrigger asChild>
+                  <button className="w-full flex items-center justify-between p-3 rounded-lg bg-gray-100 dark:bg-gray-800 text-left">
+                    <div className="flex items-center gap-2">
+                      <Settings className="w-4 h-4" />
+                      <span className="text-sm font-medium">Marketplace Settings</span>
+                    </div>
+                    {showMarketplace ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="p-3 bg-gray-100 dark:bg-gray-800 border-t space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label htmlFor="condition" className="text-xs">Condition</Label>
+                        <select 
+                          id="condition"
+                          value={condition}
+                          onChange={(e) => setCondition(e.target.value)}
+                          className="w-full mt-1 px-2 py-2 text-sm border border-border rounded-md bg-background"
+                        >
+                          <option value="Mint">Mint</option>
+                          <option value="Near Mint">Near Mint</option>
+                          <option value="Excellent">Excellent</option>
+                          <option value="Very Good">Very Good</option>
+                          <option value="Good">Good</option>
+                          <option value="Fair">Fair</option>
+                          <option value="Poor">Poor</option>
+                        </select>
+                      </div>
+                      <div>
+                        <Label htmlFor="salePrice" className="text-xs">Sale Price</Label>
+                        <Input
+                          id="salePrice"
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={salePrice}
+                          onChange={(e) => setSalePrice(e.target.value)}
+                          className="mt-1 text-sm h-9"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="forSale"
+                        checked={isForSale}
+                        onCheckedChange={setIsForSale}
+                      />
+                      <Label htmlFor="forSale" className="text-sm">List for sale</Label>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="notes" className="text-xs">Notes</Label>
+                      <Textarea
+                        id="notes"
+                        placeholder="Personal notes about this card..."
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        className="mt-1 text-sm"
+                        rows={2}
+                      />
+                    </div>
+
+                    <Button className="w-full bg-marvel-red hover:bg-red-700 text-sm h-10">
+                      Save Settings
+                    </Button>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+            
+            {/* Bottom padding for scroll */}
+            <div className="h-4" />
           </div>
-        </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
