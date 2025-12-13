@@ -1,0 +1,162 @@
+You are updating the Marvel Card Vault app UI.
+Do NOT refactor the entire project. Only update the Dashboard stats/header section that shows:
+
+Total Cards
+
+Insert Cards
+
+Total Value
+
+Wishlist Items
+
+Overall Goals
+
+Make the stats area more compact and use less vertical space.
+
+Make the section feel sleek, modern, and Marvel-inspired.
+
+Redesign the icons so they look premium (no more “clip-art” feel).
+
+Improve the new user onboarding by nudging users to add their first cards.
+
+1. Layout Changes
+
+Replace the current four large white cards with:
+
+Row 1 – Compact Stats Bar
+
+A single horizontal card that contains 4 stat “pills” or compact tiles, one for each metric.
+
+Each stat pill should include:
+
+A circular icon badge on the left
+
+A small label (e.g., “TOTAL CARDS”)
+
+A bold number underneath
+
+Layout guidelines:
+
+On desktop: all 4 pills in one row.
+
+On mobile: wrap into 2×2 grid or horizontal scroll, whichever is cleaner.
+
+Reduce overall height compared to the current design.
+
+Row 2 – Onboarding / Next Steps Card
+
+Directly under the stats bar, add a single onboarding card that changes based on collection size:
+
+If totalCards === 0:
+
+Title: “Let’s build your first Marvel vault.”
+
+Subtext: “Add a few cards to unlock stats, total value, and set progress.”
+
+Primary button: “Add Your First Cards” → hook into existing add-cards flow.
+
+Secondary link: “Explore sets first”
+
+If totalCards > 0:
+
+Title: “Nice start! Keep building your collection.”
+
+Subtext example:
+“You’ve added {totalCards} cards so far. Add 10 more to see richer value insights.”
+
+Primary button: “Add More Cards”
+
+Secondary link: “View All Sets”
+
+On desktop, this card can have text on the left and a subtle graphic/gradient on the right; on mobile, stack vertically.
+
+2. Icon Redesign (Important)
+
+The current icons feel flat and “clip-arty.”
+Redesign them to look clean, custom, and Marvel-adjacent, without overdoing it.
+
+You may use an icon set like lucide-react (if already used elsewhere) or create simple custom SVGs.
+
+New icon guidelines:
+
+Each stat gets a circular badge behind the icon:
+
+Slight gradient or soft glow
+
+Drop shadow or inner shadow to give depth
+
+Background circle colors (suggestion):
+
+Total Cards: red / dark red gradient
+
+Insert Cards: gold / yellow gradient
+
+Total Value: green gradient
+
+Wishlist: pink / magenta gradient
+
+Icons themselves should be:
+
+Simple, bold shapes (e.g. stack, star, dollar, heart)
+
+Single-color or two-tone that contrasts with the circle
+
+Scaled to feel balanced (not tiny, not cartoonishly large)
+
+The stat pill design:
+
+Slightly rounded rectangle or pill with subtle border or shadow
+
+Neutral background (off-white or dark gray depending on the current theme)
+
+Typography consistent with the app (same font families & sizes).
+
+The goal is to make the icons pop while still looking clean and modern — think “Marvel UI card dashboard,” not generic clip art.
+
+3. Styling & Branding
+
+Keep consistent with Marvel Card Vault branding:
+
+Main accents: red, black, white, with small pops of gold/green/pink.
+
+Make sure the new section works with the existing dark/light background of the dashboard.
+
+Use consistent spacing/margins with the rest of the app.
+
+4. Implementation Details
+
+Locate the component that renders these stats on the dashboard (e.g. DashboardStats, OverviewCards, etc.).
+
+Refactor into:
+
+StatsBar (compact icons + numbers)
+
+OnboardingCard (conditional content based on totalCards)
+
+Reuse existing data (totalCards, insertCards, totalValue, wishlistItems) — do NOT change backend or API shapes.
+
+If you introduce a new icon library (like lucide-react), add the dependency, but only if it’s not already present and keep usage minimal.
+
+5. QA Checklist
+
+Before finishing:
+
+Check desktop, tablet, and mobile views.
+
+Confirm the new section occupies less vertical space than the old 4-card row.
+
+Verify large numbers (e.g., 1,600 cards, $50,000 value) still look good and don’t overflow.
+
+Verify buttons and links still trigger the correct existing flows.
+
+Ensure there are no console errors or TypeScript issues.
+
+Do not modify unrelated components or routes.
+
+At the end, summarize:
+
+Components modified/created
+
+Any new dependencies added
+
+How to adjust labels/text if needed in the future
