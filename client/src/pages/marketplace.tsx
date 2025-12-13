@@ -104,7 +104,7 @@ export default function Marketplace() {
               <Crown className="w-5 h-5 mr-2" />
               Upgrade to SUPER HERO
             </Button>
-            <p className="text-sm text-gray-500 mt-4">Only $4/month • Cancel anytime</p>
+            <p className="text-sm text-gray-500 mt-4">Only $5/month • Cancel anytime</p>
           </div>
         </div>
       </div>

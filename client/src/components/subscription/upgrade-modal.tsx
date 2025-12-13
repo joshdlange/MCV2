@@ -60,7 +60,7 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
     },
     {
       name: "Super Hero",
-      price: "$4",
+      price: "$5",
       period: "/month",
       current: currentPlan === "SUPER_HERO",
       popular: true,

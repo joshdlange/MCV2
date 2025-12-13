@@ -641,7 +641,7 @@ export default function Profile() {
                     <div>
                       <h3 className="font-semibold">Current Plan</h3>
                       <p className="text-sm text-muted-foreground">
-                        {userProfile?.plan === 'SUPER_HERO' ? 'SUPER HERO - $4/month' : 'SIDE KICK - Free'}
+                        {userProfile?.plan === 'SUPER_HERO' ? 'SUPER HERO - $5/month' : 'SIDE KICK - Free'}
                       </p>
                     </div>
                     {getPlanBadge(userProfile?.plan || 'SIDE_KICK')}
