@@ -1,0 +1,256 @@
+ou are updating the Marvel Card Vault web app.
+Do NOT refactor the entire app. Only work on the “My Collection” → Set/Sub-set detail view where the user currently sees cards in a scroll/grid layout.
+
+We want to introduce a new default “Binder View” plus an optional “Expanded Grid View”.
+
+1. New Binder View (Default)
+
+Replace the existing card grid in the set/subset detail screen with a Binder View that visually mimics a 9-pocket trading card binder page.
+
+Core behavior:
+
+Each “page” shows 9 card slots (3×3 grid), ordered by card number.
+
+If the set has 100 cards and the user owns 1, 4, 6, 9, then:
+
+Slots for 1, 4, 6, 9 show the user’s actual card image.
+
+Slots for all other card numbers show a placeholder (see below).
+
+There should be page navigation controls at the bottom or top:
+
+Previous / Next
+
+“Page X of Y”
+
+Optional simple page index dots/numbers.
+
+Visual style:
+
+Use Option A from the discussion:
+A classic Ultra Pro 9-pocket binder page, but clean and not tacky.
+
+Background behind the 3×3 grid:
+
+Subtle dark binder texture or flat dark panel
+
+Rounded outer corners
+
+Thin border or edge shadow to imply a “page”
+
+Each pocket:
+
+Slightly rounded rectangle
+
+Subtle inner shadow / highlight to suggest plastic
+
+Card image sits inside with a small margin, as if inside a sleeve
+
+Placeholder for missing cards (E combination):
+
+For slots where the user doesn’t own the card:
+
+Show a greyscale placeholder with:
+
+Card number (e.g. #24)
+
+Card title if available (small text)
+
+Subtle dashed border or lighter opacity to indicate “missing”
+
+No “Find this card” button yet.
+
+Important: Clicking a missing slot should behave exactly like clicking an owned card:
+→ Navigate to the existing Card Details page using whatever route/ID the app already uses.
+
+Later we will add marketplace / eBay logic on the details page, but not now.
+
+2. Expanded Grid View (User Selectable)
+
+Add a view toggle above the binder:
+
+Default: Binder View (9 per page)
+
+Option: Expanded Grid View
+
+Behavior:
+
+In Expanded Grid View, cards are shown in a responsive grid with more than 9 per page, automatically based on screen width.
+
+This is a clean, modern card grid (no binder plastic texture), similar to what exists today but more polished.
+
+Still show placeholders for missing cards, consistent with Binder View styling (same placeholders but without the binder page background).
+
+Implementation idea:
+
+Create a ViewModeToggle (e.g., tabs or segmented control):
+
+“Binder” | “Grid”
+
+Use the app’s existing styling / buttons.
+
+3. Page Flip Animation (Binder View)
+
+When the user changes pages in Binder View:
+
+Use a 3D page curl / flip animation (Option D from discussion) or the closest feasible approximation using CSS/Framer Motion/React Spring—whatever is already used in the project, or simple CSS transforms if no animation library exists.
+
+The effect should:
+
+Animate old page out and new page in
+
+Feel like turning a real binder page, but keep it performant
+
+On mobile, make sure animation duration is short enough to feel snappy.
+
+4. Add/Complete Animations
+
+We want the binder to “celebrate” when cards are added.
+
+When a card is added to the set:
+
+In Binder View, if the card’s slot was previously empty on the current page:
+
+The placeholder should animate into the real card:
+
+e.g., quick glow + scale-up, or card slides into the pocket.
+
+If the card is on a different page than the one currently visible:
+
+Optionally show a subtle toast: “Card #24 added to page 3”.
+
+When a page is fully completed (all 9 owned):
+
+Brief celebration:
+
+Soft glow over the entire page or individual pockets
+
+Optional subtle confetti animation over the binder section (not full-screen).
+
+When the entire set is completed:
+
+Trigger a set completion celebration:
+
+A badge or banner at the top of the set screen: “Set Completed!”
+
+Optional confetti or animation overlay
+
+Keep it short and non-intrusive.
+
+No sound effects yet; visuals only.
+
+5. Data & Routing
+
+Use the existing data model for cards:
+
+Total cards in the set
+
+Which card numbers the user owns
+
+Paths/IDs to each card’s detail view.
+
+Do not change the backend API. Only change how the data is rendered.
+
+Binder View must respect:
+
+Card ordering (by card number)
+
+Variants if the app has them (use existing logic; don’t invent new logic).
+
+Click behavior for any slot (owned or missing):
+
+Navigate to the existing Card Details screen for that card ID/number.
+
+6. Component Structure (Suggested)
+
+Create or update components along these lines:
+
+SetDetailPage (existing)
+
+Add state: viewMode = "binder" | "grid"
+
+Render ViewModeToggle
+
+Conditionally render BinderView or ExpandedGridView
+
+BinderView
+
+Accepts: cardsInSet, ownedCardsByNumber, etc.
+
+Handles pagination (currentPage, totalPages)
+
+Handles page flip animation and slot rendering.
+
+ExpandedGridView
+
+Similar to current grid but refined, using shared slot/card components.
+
+BinderSlot
+
+Renders either:
+
+Owned card image
+
+Missing placeholder with card number/title
+
+Clickable → opens card details.
+
+Keep props clear and reusable.
+
+7. Styling & Responsiveness
+
+Maintain Marvel Card Vault branding:
+
+Dark/neutral background
+
+Pops of red, white, and accent colors.
+
+Binder View:
+
+Should look great on desktop and tablet.
+
+On small mobile screens, ensure:
+
+3×3 grid is still legible
+
+Tap targets meet accessibility sizes
+
+Page navigation is accessible (bottom sticky controls are okay).
+
+Expanded Grid View:
+
+Use a standard responsive layout (e.g., minmax + auto-fit in CSS grid).
+
+Ensure images are not distorted.
+
+8. QA Checklist
+
+Before finishing, verify:
+
+Binder View is the default view when opening a set.
+
+Toggle to Expanded Grid View and back works without layout glitches.
+
+Page navigation works correctly and updates the correct 9 card slots.
+
+Clicking an owned card and a missing card both open the correct Card Details view.
+
+Animations perform smoothly on:
+
+Desktop
+
+A typical mobile breakpoint.
+
+Large sets (100+ cards) behave correctly (page count, last partial page, etc.).
+
+No console errors or TypeScript issues.
+
+No existing routes or major components are broken by this change.
+
+At the end, summarize:
+
+Files created/modified
+
+Any new dependencies (for animation, if used)
+
+How to quickly adjust view labels (“Binder”, “Grid”) or animation durations.

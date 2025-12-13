@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { CardValue } from "@/components/cards/card-value";
-import { Star, Heart, Check, ShoppingCart, Trash2, Search, Grid3X3, List, Filter, X, Plus } from "lucide-react";
+import { BinderView } from "@/components/collection/binder-view";
+import { Star, Heart, Check, ShoppingCart, Trash2, Search, Grid3X3, List, Filter, X, Plus, BookOpen, ArrowLeft } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
@@ -25,6 +26,7 @@ export default function MyCollection() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [collectionView, setCollectionView] = useState<"cards" | "sets">("sets");
   const [cardsViewMode, setCardsViewMode] = useState<"owned" | "missing">("owned");
+  const [binderViewMode, setBinderViewMode] = useState<"binder" | "grid">("binder");
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -43,6 +45,13 @@ export default function MyCollection() {
   const { data: missingCards, isLoading: missingCardsLoading } = useQuery<CardWithSet[]>({
     queryKey: [`/api/missing-cards/${selectedSet}`],
     enabled: collectionView === "cards" && cardsViewMode === "missing" && selectedSet !== "all",
+  });
+
+  // Query for all cards in the selected set (for binder view)
+  // Keep query warm when viewing a specific set to avoid data loss on view toggle
+  const { data: allSetCards, isLoading: allSetCardsLoading } = useQuery<CardWithSet[]>({
+    queryKey: [`/api/cards/set/${selectedSet}`],
+    enabled: collectionView === "cards" && selectedSet !== "all",
   });
 
   // Get unique sets from collection with completion data
@@ -455,9 +464,79 @@ export default function MyCollection() {
         </div>
       </div>
 
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         {collectionView === "cards" ? (
-          cardsViewMode === "missing" && missingCardsLoading ? (
+          <>
+            {selectedSet !== "all" && (
+              <div className="flex items-center justify-between mb-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setCollectionView("sets");
+                    setSelectedSet("all");
+                  }}
+                  className="text-gray-600 hover:text-gray-900"
+                  data-testid="button-back-to-sets"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-1" />
+                  Back to Sets
+                </Button>
+                
+                {cardsViewMode === "owned" && (
+                  <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+                    <Button
+                      variant={binderViewMode === "binder" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setBinderViewMode("binder")}
+                      className={`rounded-none px-2 ${binderViewMode === "binder" ? "text-white" : "text-gray-900"}`}
+                      data-testid="button-binder-mode"
+                    >
+                      <BookOpen className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={binderViewMode === "grid" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setBinderViewMode("grid")}
+                      className={`rounded-none px-2 ${binderViewMode === "grid" ? "text-white" : "text-gray-900"}`}
+                      data-testid="button-expanded-grid-mode"
+                    >
+                      <Grid3X3 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {selectedSet !== "all" && cardsViewMode === "owned" && binderViewMode === "binder" ? (
+              allSetCardsLoading || !cardSets ? (
+                <div className="relative rounded-2xl p-4 sm:p-6" style={{ background: 'linear-gradient(135deg, #1e1e2f 0%, #141422 50%, #0d0d1a 100%)' }}>
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    {[...Array(9)].map((_, i) => (
+                      <div key={i} className="aspect-[2.5/3.5] rounded-lg bg-gray-700/50 animate-pulse" />
+                    ))}
+                  </div>
+                  <div className="mt-4 text-center text-white/60 text-sm">Loading binder...</div>
+                </div>
+              ) : (
+                <BinderView
+                  ownedCards={collection?.filter(item => item.card.set.id.toString() === selectedSet) || []}
+                  allCardsInSet={allSetCards || []}
+                  totalCardsInSet={cardSets?.find(s => s.id.toString() === selectedSet)?.totalCards || 0}
+                  setName={cardSets?.find(s => s.id.toString() === selectedSet)?.name || ""}
+                  onCardClick={(item) => {
+                    if ('card' in item) {
+                      handleCardClick(item as CollectionItem);
+                    } else {
+                      setSelectedCard(item as CardWithSet);
+                      setIsModalOpen(true);
+                    }
+                  }}
+                  onViewModeChange={setBinderViewMode}
+                  viewMode={binderViewMode}
+                />
+              )
+            ) : cardsViewMode === "missing" && missingCardsLoading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {[...Array(8)].map((_, i) => (
                 <Card key={i} className="animate-pulse">
@@ -724,7 +803,8 @@ export default function MyCollection() {
                 </Card>
               ))}
             </div>
-          )
+          )}
+          </>
         ) : (
           // Sets View
           viewMode === "grid" ? (
