@@ -1,0 +1,108 @@
+You are redesigning the Social Hub section of the Marvel Card Vault app.
+Do NOT rewrite the entire page. Only restyle and restructure the UI to create a cleaner, modern, social-friendly layout.
+
+Goals:
+
+Replace the harsh, boxy, multicolor design with a sleek, minimal, cohesive UI.
+
+Make the Social Hub feel like a modern chat/community interface (Discord/Instagram influence).
+
+Improve readability, reduce visual clutter, and create a unified aesthetic.
+
+1. Tabs Redesign
+
+Replace the existing large red-bordered tabs with a segmented control:
+
+Container: rounded pill, subtle grey background
+
+Selected tab: white background, bold text, slight shadow
+
+Non-selected tabs: medium grey text
+
+Add subtle icons (Friends, Messages, Powers)
+
+2. Friend List Cards
+
+Redesign each friend row into a compact social tile:
+
+Avatar: circular, initials fallback
+
+Username + @handle stacked
+
+Status dot (green/grey) next to username or under handle
+
+Action buttons (Message, View Profile) should be small icon-buttons or pill-style micro-buttons
+
+Card background: white with soft shadow and rounded corners
+
+Remove all thick borders
+
+Spacing should be tighter but balanced.
+
+3. Messages Panel (Basic Improvement)
+
+If messages exist:
+
+Show list of conversations on the left in a slim column
+
+When a conversation is selected, show chat panel on the right
+
+Keep this lightweight — do not build a full chat app yet
+
+Use simple card styling consistent with the friend tiles
+
+4. Pending Invitations Card
+
+Redesign the large yellow panel:
+
+Replace with small white or light grey card
+
+Soft rounded corners and shadow
+
+Use an icon (inbox or clock)
+
+Text: smaller, friendlier microcopy
+
+Add CTA: “Invite Friends” button (default style)
+
+5. Color & Style Harmonization
+
+Apply consistent design tokens:
+
+Red: primary accent (used minimally)
+
+Black/dark grey: text
+
+Light grey backgrounds for sections
+
+White cards with elevation for content
+
+Remove:
+
+Hard borders
+
+Bright yellow backgrounds
+
+Overly large buttons
+
+Mismatched shapes
+
+6. Responsiveness
+
+Ensure:
+
+Friend tiles stack vertically
+
+Message list collapses into icon-only list or modal on mobile
+
+Tabs remain scrollable on small screens
+
+7. Deliverables
+
+At completion, summarize:
+
+Files/components modified
+
+New components created (if any)
+
+How to adjust colors/icons in the future

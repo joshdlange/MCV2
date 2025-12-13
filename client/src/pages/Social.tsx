@@ -496,60 +496,56 @@ export default function Social() {
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">
-      {/* Comic-style header with Marvel theme */}
-      <div className="text-center mb-8">
-        <div className="relative inline-block">
-          <h1 className="text-4xl font-black text-black font-bebas tracking-wider">
-            SOCIAL HUB
-          </h1>
-          <div className="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-marvel-red to-red-600 rounded-full"></div>
-        </div>
-        <p className="text-gray-600 mt-2">Connect with friends and show off your collection</p>
+      {/* Clean minimal header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Social Hub</h1>
+        <p className="text-gray-500 text-sm mt-1">Connect with friends and share your collection</p>
       </div>
-      {/* Comic-style tabs */}
+
+      {/* Modern segmented pill tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={`grid w-full ${viewingProfile ? 'grid-cols-4' : 'grid-cols-3'} bg-transparent p-0 h-auto gap-1 mb-4`}>
+        <TabsList className={`inline-flex ${viewingProfile ? 'w-full' : 'w-auto'} bg-gray-100 dark:bg-gray-800 rounded-full p-1 mb-6 gap-1`}>
           <TabsTrigger 
             value="friends" 
-            className="relative bg-white border-2 border-marvel-red rounded-t-lg py-2 px-3 font-bold text-sm text-marvel-red data-[state=active]:bg-marvel-red data-[state=active]:text-white hover:scale-105 transition-all duration-200"
+            className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-600 dark:text-gray-400 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all"
           >
-            <Users className="w-4 h-4 mr-1" />
-            FRIENDS
+            <Users className="w-4 h-4" />
+            <span>Friends</span>
             {friends.length > 0 && (
-              <Badge className="ml-1 bg-blue-500 text-white text-xs px-1 py-0.5 rounded-full">
+              <span className="ml-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs px-1.5 py-0.5 rounded-full">
                 {friends.length}
-              </Badge>
+              </span>
             )}
           </TabsTrigger>
           <TabsTrigger 
             value="messages"
-            className="relative bg-white border-2 border-marvel-red rounded-t-lg py-2 px-3 font-bold text-sm text-marvel-red data-[state=active]:bg-marvel-red data-[state=active]:text-white hover:scale-105 transition-all duration-200"
+            className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-600 dark:text-gray-400 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all"
           >
-            <MessageCircle className="w-4 h-4 mr-1" />
-            MESSAGES
+            <MessageCircle className="w-4 h-4" />
+            <span>Messages</span>
           </TabsTrigger>
           <TabsTrigger 
             value="badges"
-            className="relative bg-white border-2 border-marvel-red rounded-t-lg py-2 px-3 font-bold text-sm text-marvel-red data-[state=active]:bg-marvel-red data-[state=active]:text-white hover:scale-105 transition-all duration-200"
+            className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-600 dark:text-gray-400 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all"
           >
-            <Award className="w-4 h-4 mr-1" />
-            <span className="hidden sm:inline">SUPER POWERS</span>
-            <span className="sm:hidden">POWERS</span>
+            <Award className="w-4 h-4" />
+            <span className="hidden sm:inline">Powers</span>
+            <span className="sm:hidden">⚡</span>
             {userBadges.length > 0 && (
-              <Badge className="ml-1 bg-yellow-500 text-black text-xs px-1 py-0.5 rounded-full">
+              <span className="ml-1 bg-amber-100 text-amber-700 text-xs px-1.5 py-0.5 rounded-full">
                 {userBadges.length}
-              </Badge>
+              </span>
             )}
           </TabsTrigger>
           {viewingProfile && (
             <TabsTrigger 
               value="profile"
-              className="relative bg-white border-2 border-marvel-red rounded-t-lg py-2 px-3 font-bold text-sm text-marvel-red data-[state=active]:bg-marvel-red data-[state=active]:text-white hover:scale-105 transition-all duration-200"
+              className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-600 dark:text-gray-400 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all"
             >
-              <User className="w-4 h-4 mr-1" />
-              {selectedFriendProfile?.displayName || selectedFriendProfile?.username || 'PROFILE'}
+              <User className="w-4 h-4" />
+              <span className="truncate max-w-[80px]">{selectedFriendProfile?.displayName || selectedFriendProfile?.username || 'Profile'}</span>
               <span 
-                className="ml-2 h-4 w-4 p-0 text-current hover:bg-white/20 cursor-pointer rounded inline-flex items-center justify-center" 
+                className="ml-1 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer rounded-full p-0.5" 
                 onClick={(e) => {
                   e.stopPropagation();
                   setViewingProfile(false);
@@ -564,38 +560,35 @@ export default function Social() {
         </TabsList>
 
         <TabsContent value="friends" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Friends List with Find Heroes - Comic Panel Style */}
-            <Card className="border-2 border-marvel-red bg-gradient-to-br from-white to-blue-50 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-marvel-red to-red-600 text-white p-3" style={{ backgroundColor: '#EF4444' }}>
-                <CardTitle className="font-bebas text-lg tracking-wide flex items-center" style={{ color: 'white' }}>
-                  <Users className="w-5 h-5 mr-2" style={{ color: 'white' }} />
-                  <span style={{ color: 'white' }} className="text-[#151515]">MY HEROES ({friends.length})</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                {/* Find New Heroes Section */}
-                <div className="mb-4 p-3 bg-white rounded-lg border border-gray-200">
-                  <div className="flex items-center mb-2">
-                    <UserPlus className="w-4 h-4 mr-2 text-green-600" />
-                    <h3 className="font-semibold text-gray-800">Find New Heroes</h3>
-                  </div>
-                  <div className="flex space-x-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Friends List - Clean Modern Design */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">My Friends</h2>
+                <span className="text-sm text-gray-500">{friends.length} connections</span>
+              </div>
+              
+              {/* Search Section - Minimal */}
+              <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 relative">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <Input
-                      placeholder="Search for heroes by username..."
+                      placeholder="Find new friends..."
                       value={searchQuery}
                       onChange={handleSearchChange}
-                      className="flex-1 border-gray-300 focus:border-green-500 bg-white text-gray-900 placeholder-gray-500"
+                      className="pl-9 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:bg-white dark:focus:bg-gray-900"
                     />
-                    <Button
-                      onClick={() => searchUsers(searchQuery)}
-                      disabled={isSearching || !searchQuery.trim()}
-                      className="bg-green-500 hover:bg-green-600 text-white"
-                    >
-                      <Search className="w-4 h-4 mr-1" />
-                      Search
-                    </Button>
                   </div>
+                  <Button
+                    onClick={() => searchUsers(searchQuery)}
+                    disabled={isSearching || !searchQuery.trim()}
+                    size="sm"
+                    className="bg-gray-900 hover:bg-gray-800 text-white dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                  </Button>
+                </div>
                   
                   {isSearching && (
                     <div className="mt-3 text-center">
@@ -637,70 +630,68 @@ export default function Social() {
                   )}
                 </div>
 
-                {/* Friends List */}
+              {/* Friends List - Social Tiles */}
+              <div className="space-y-2">
                 {friendsLoading ? (
                   <div className="text-center py-8">
-                    <div className="animate-spin w-8 h-8 border-4 border-marvel-red border-t-transparent rounded-full mx-auto mb-4"></div>
-                    <p className="text-gray-600 font-medium">Loading your team...</p>
+                    <div className="animate-spin w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full mx-auto mb-3"></div>
+                    <p className="text-gray-500 text-sm">Loading friends...</p>
                   </div>
                 ) : friends.length === 0 ? (
-                  <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                    <Users className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                    <p className="text-xl font-bold text-gray-600 mb-2">No Heroes Yet!</p>
-                    <p className="text-gray-500">Use the search above to find fellow Marvel fans</p>
+                  <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                    <Users className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+                    <p className="font-medium text-gray-600 dark:text-gray-400">No friends yet</p>
+                    <p className="text-sm text-gray-400">Search above to find collectors</p>
                   </div>
                 ) : (
-                  <div className="grid gap-4">
+                  <div className="space-y-2">
                     {friends.map((friend: Friend) => {
-                      // Get the friend user (not the current user)
                       const currentUserId = currentUser?.id;
                       const isRequesterCurrentUser = friend.requester.id === currentUserId;
                       const friendUser = isRequesterCurrentUser 
                         ? friend.recipient : friend.requester;
                       return (
-                        <div key={friend.id} className="bg-white rounded-lg border border-blue-200 p-3 shadow-sm hover:shadow-md transition-all duration-200">
+                        <div key={friend.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm hover:shadow-md transition-all">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                              <Avatar className="w-10 h-10 border-2 border-marvel-red">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="w-10 h-10 ring-2 ring-gray-200 dark:ring-gray-700">
                                 <AvatarImage src={friendUser.photoURL} />
-                                <AvatarFallback className="bg-marvel-red text-white font-bold text-sm">
+                                <AvatarFallback className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium text-sm">
                                   {friendUser.displayName?.charAt(0) || friendUser.username.charAt(0)}
                                 </AvatarFallback>
                               </Avatar>
-                              <div>
-                                <p className="font-bold text-gray-800 text-sm">{friendUser.displayName || friendUser.username}</p>
-                                <p className="text-xs text-gray-600">@{friendUser.username}</p>
-                                <div className="flex items-center mt-1">
-                                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></div>
-                                  <span className="text-xs text-green-600">Online</span>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{friendUser.displayName || friendUser.username}</p>
+                                  <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
                                 </div>
+                                <p className="text-xs text-gray-500 truncate">@{friendUser.username}</p>
                               </div>
                             </div>
-                            <div className="flex space-x-1">
+                            <div className="flex gap-1.5">
                               <Button
                                 size="sm"
+                                variant="ghost"
                                 onClick={() => {
                                   setSelectedFriendId(friendUser.id);
-                                  // Create a custom event to switch tabs
                                   const tabEvent = new CustomEvent('switchToMessages', { detail: { friendId: friendUser.id } });
                                   window.dispatchEvent(tabEvent);
                                 }}
-                                className="bg-blue-500 hover:bg-blue-600 text-white font-bold px-2 py-1.5 rounded text-xs sm:px-3"
+                                className="h-8 w-8 p-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
                               >
-                                <MessageCircle className="w-3 h-3 sm:mr-1" />
-                                <span className="hidden sm:inline">Message</span>
+                                <MessageCircle className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                               </Button>
                               <Button
                                 size="sm"
+                                variant="ghost"
                                 onClick={() => {
                                   setSelectedFriendProfile(friendUser);
                                   setViewingProfile(true);
                                   setActiveTab('profile');
                                 }}
-                                className="bg-green-500 hover:bg-green-600 text-white font-bold px-2 py-1.5 rounded text-xs sm:px-3"
+                                className="h-8 w-8 p-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
                               >
-                                <User className="w-3 h-3 sm:mr-1" />
-                                <span className="hidden sm:inline">View Profile</span>
+                                <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                               </Button>
                             </div>
                           </div>
@@ -709,118 +700,120 @@ export default function Social() {
                     })}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            {/* Pending Invitations - Comic Panel Style */}
-            <Card className="border-2 border-yellow-500 bg-gradient-to-br from-white to-yellow-50 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black p-3">
-                <CardTitle className="font-bebas text-lg tracking-wide flex items-center">
-                  <Clock className="w-5 h-5 mr-2" />
-                  PENDING INVITATIONS ({pendingInvitations.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
+            {/* Pending Invitations - Minimal Style */}
+            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-gray-500" />
+                    Pending Invitations
+                  </h3>
+                  {pendingInvitations.length > 0 && (
+                    <span className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs px-2 py-1 rounded-full">
+                      {pendingInvitations.length}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="p-4">
                 {pendingInvitations.length === 0 ? (
-                  <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                    <Clock className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                    <p className="text-xl font-bold text-gray-600 mb-2">No Pending Invitations</p>
-                    <p className="text-gray-500">Send invitations to grow your team!</p>
+                  <div className="text-center py-8">
+                    <Clock className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No pending invitations</p>
                   </div>
                 ) : (
-                  <div className="grid gap-4">
+                  <div className="space-y-3">
                     {pendingInvitations.map((invitation: Friend) => (
-                      <div key={invitation.id} className="bg-white rounded-lg border-2 border-yellow-200 p-4 shadow-sm hover:shadow-md transition-all duration-200">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4">
-                            <Avatar className="w-12 h-12 border-2 border-yellow-500">
-                              <AvatarImage src={invitation.recipient.photoURL} />
-                              <AvatarFallback className="bg-yellow-500 text-black font-bold">
-                                {invitation.recipient.displayName?.charAt(0) || invitation.recipient.username.charAt(0)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-bold text-gray-800">{invitation.recipient.displayName || invitation.recipient.username}</p>
-                              <p className="text-sm text-gray-600">@{invitation.recipient.username}</p>
-                              <p className="text-xs text-yellow-600 font-medium mt-1 flex items-center">
-                                <Clock className="w-3 h-3 mr-1" />
-                                Invitation pending
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex space-x-2">
-                            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
-                              Waiting for response
-                            </Badge>
+                      <div key={invitation.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-10 h-10 ring-2 ring-gray-200 dark:ring-gray-700">
+                            <AvatarImage src={invitation.recipient.photoURL} />
+                            <AvatarFallback className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-medium">
+                              {invitation.recipient.displayName?.charAt(0) || invitation.recipient.username.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-white text-sm">{invitation.recipient.displayName || invitation.recipient.username}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">@{invitation.recipient.username}</p>
                           </div>
                         </div>
+                        <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          Pending
+                        </span>
                       </div>
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            {/* Friend Requests - Comic Panel Style */}
-            <Card className="border-2 border-green-500 bg-gradient-to-br from-white to-green-50 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-green-500 to-green-600 text-black p-3">
-                <CardTitle className="font-bebas text-lg tracking-wide flex items-center">
-                  <User className="w-5 h-5 mr-2" />
-                  RECRUITMENT ({friendRequests.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
+            {/* Friend Requests - Minimal Style */}
+            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <UserPlus className="w-4 h-4 text-gray-500" />
+                    Friend Requests
+                  </h3>
+                  {friendRequests.length > 0 && (
+                    <span className="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs px-2 py-1 rounded-full">
+                      {friendRequests.length} new
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="p-4">
                 {friendRequests.length === 0 ? (
-                  <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                    <User className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                    <p className="text-xl font-bold text-gray-600 mb-2">No Pending Requests</p>
-                    <p className="text-gray-500">All heroes have been recruited!</p>
+                  <div className="text-center py-8">
+                    <User className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No pending requests</p>
                   </div>
                 ) : (
-                  <div className="grid gap-4">
+                  <div className="space-y-3">
                     {friendRequests.map((request: Friend) => (
-                      <div key={request.id} className="bg-white rounded-lg border-2 border-green-200 p-4 shadow-sm hover:shadow-md transition-all duration-200">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4">
-                            <Avatar className="w-12 h-12 border-2 border-green-500">
-                              <AvatarImage src={request.requester.photoURL} />
-                              <AvatarFallback className="bg-green-500 text-black font-bold">
-                                {request.requester.displayName?.charAt(0) || request.requester.username.charAt(0)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-bold text-gray-800">{request.requester.displayName || request.requester.username}</p>
-                              <p className="text-sm text-gray-600">@{request.requester.username}</p>
-                              <p className="text-xs text-green-600 font-medium mt-1">Wants to join your team</p>
-                            </div>
+                      <div key={request.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-10 h-10 ring-2 ring-gray-200 dark:ring-gray-700">
+                            <AvatarImage src={request.requester.photoURL} />
+                            <AvatarFallback className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-medium">
+                              {request.requester.displayName?.charAt(0) || request.requester.username.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-white text-sm">{request.requester.displayName || request.requester.username}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">@{request.requester.username}</p>
                           </div>
-                          <div className="flex space-x-2">
-                            <Button
-                              size="sm"
-                              onClick={() => respondToFriendRequest.mutate({ friendId: request.id, status: "accepted" })}
-                              disabled={respondToFriendRequest.isPending}
-                              className="bg-green-500 hover:bg-green-600 text-white font-bold px-4 py-2 rounded-lg"
-                            >
-                              <Check className="w-4 h-4 mr-1" />
-                              Accept
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => respondToFriendRequest.mutate({ friendId: request.id, status: "declined" })}
-                              disabled={respondToFriendRequest.isPending}
-                              className="bg-red-500 hover:bg-red-600 text-white font-bold px-4 py-2 rounded-lg"
-                            >
-                              <X className="w-4 h-4 mr-1" />
-                              Decline
-                            </Button>
-                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => respondToFriendRequest.mutate({ friendId: request.id, status: "accepted" })}
+                            disabled={respondToFriendRequest.isPending}
+                            className="h-8 px-3 bg-gray-900 hover:bg-gray-800 text-white dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 text-xs rounded-full"
+                          >
+                            <Check className="w-3 h-3 mr-1" />
+                            Accept
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => respondToFriendRequest.mutate({ friendId: request.id, status: "declined" })}
+                            disabled={respondToFriendRequest.isPending}
+                            className="h-8 w-8 p-0 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+                          >
+                            <X className="w-4 h-4 text-gray-500" />
+                          </Button>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </TabsContent>
 
@@ -1138,80 +1131,74 @@ export default function Social() {
         </TabsContent>
 
         <TabsContent value="badges" className="space-y-6">
-          <Card className="border-2 border-yellow-500 bg-gradient-to-br from-white to-yellow-50 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black">
-              <CardTitle className="font-bebas text-2xl tracking-wide flex items-center">
-                <Award className="w-6 h-6 mr-2" />
-                HERO SUPER POWERS ({userBadges.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Award className="w-5 h-5 text-amber-500" />
+                  Super Powers
+                </h2>
+                {userBadges.length > 0 && (
+                  <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-xs px-2 py-1 rounded-full">
+                    {userBadges.length} earned
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="p-6">
               {userBadges.length === 0 ? (
-                <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                  <Award className="w-20 h-20 mx-auto mb-4 text-gray-400" />
-                  <p className="text-2xl font-bold text-gray-600 mb-2">No Super Powers Yet!</p>
-                  <p className="text-gray-500 mb-6">Start collecting cards and making friends to earn heroic super powers!</p>
+                <div className="text-center py-12">
+                  <Award className="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
+                  <p className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">No Powers Yet</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Start collecting cards and making friends to earn powers!</p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
-                    <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
+                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                       <Award className="w-8 h-8 mx-auto mb-2 text-blue-500" />
-                      <p className="text-sm font-bold text-gray-700">Collection Powers</p>
-                      <p className="text-xs text-gray-500">Collect cards to unlock</p>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Collection</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Collect cards</p>
                     </div>
-                    <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
+                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                       <Users className="w-8 h-8 mx-auto mb-2 text-green-500" />
-                      <p className="text-sm font-bold text-gray-700">Social Powers</p>
-                      <p className="text-xs text-gray-500">Make friends to unlock</p>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Social</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Make friends</p>
                     </div>
-                    <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
+                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                       <Clock className="w-8 h-8 mx-auto mb-2 text-purple-500" />
-                      <p className="text-sm font-bold text-gray-700">Activity Powers</p>
-                      <p className="text-xs text-gray-500">Stay active to unlock</p>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Activity</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Stay active</p>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                   {userBadges.map((userBadge: UserBadge) => (
-                    <Card key={userBadge.id} className="text-center border-2 border-gray-200 bg-white shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1">
-                      <CardContent className="p-4 sm:p-6">
-                        <div className="flex justify-center mb-4">
-                          <div className={`w-16 h-16 sm:w-24 sm:h-24 rounded-full flex items-center justify-center border-4 transition-all duration-300 ${getRarityStyle(userBadge.badge.rarity || 'common')} ${getRarityGlow(userBadge.badge.rarity || 'common')}`}>
-                            {userBadge.badge.iconUrl ? (
-                              <img 
-                                src={userBadge.badge.iconUrl} 
-                                alt={userBadge.badge.name}
-                                className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-full"
-                              />
-                            ) : (
-                              <div className="text-2xl">{getRarityEmoji(userBadge.badge.rarity || 'common')}</div>
-                            )}
-                          </div>
+                    <div key={userBadge.id} className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center hover:shadow-md transition-all">
+                      <div className="flex justify-center mb-3">
+                        <div className={`w-14 h-14 rounded-full flex items-center justify-center border-2 ${getRarityStyle(userBadge.badge.rarity || 'common')}`}>
+                          {userBadge.badge.iconUrl ? (
+                            <img 
+                              src={userBadge.badge.iconUrl} 
+                              alt={userBadge.badge.name}
+                              className="w-10 h-10 object-cover rounded-full"
+                            />
+                          ) : (
+                            <span className="text-xl">{getRarityEmoji(userBadge.badge.rarity || 'common')}</span>
+                          )}
                         </div>
-                        <div className="flex items-center justify-center mb-2">
-                          <h3 className="font-bebas text-sm sm:text-lg text-gray-800 tracking-wide">
-                            {userBadge.badge.name?.toUpperCase() || 'UNKNOWN POWER'}
-                          </h3>
-                          <div className="ml-2 text-sm">{getRarityEmoji(userBadge.badge.rarity || 'common')}</div>
-                        </div>
-                        <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 px-1 sm:px-2 line-clamp-2">{userBadge.badge.description || 'No description available'}</p>
-                        <div className="flex justify-center space-x-2 mb-3">
-                          <Badge className={`${getBadgeColor(userBadge.badge.category || 'achievement')} font-bold px-3 py-1 text-xs`}>
-                            {userBadge.badge.category?.toUpperCase() || 'ACHIEVEMENT'}
-                          </Badge>
-                          <Badge className="bg-gray-200 text-gray-800 font-bold px-3 py-1 text-xs">
-                            {userBadge.badge.rarity?.toUpperCase() || 'COMMON'}
-                          </Badge>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-xs text-gray-500 font-medium">
-                            🏆 EARNED {new Date(userBadge.earnedAt).toLocaleDateString()}
-                          </p>
-                          <p className="text-xs text-yellow-600 font-bold mt-1">
-                            +{userBadge.badge.points || 0} Points
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                      <h3 className="font-medium text-sm text-gray-900 dark:text-white mb-1">
+                        {userBadge.badge.name || 'Unknown Power'}
+                      </h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-2">{userBadge.badge.description || 'No description'}</p>
+                      <div className="flex justify-center gap-1 mb-2">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${getBadgeColor(userBadge.badge.category || 'achievement')}`}>
+                          {userBadge.badge.category || 'Achievement'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
+                        Earned {new Date(userBadge.earnedAt).toLocaleDateString()}
+                      </p>
+                    </div>
                   ))}
                 </div>
               )}
@@ -1222,156 +1209,145 @@ export default function Social() {
                 const lockedBadges = allBadges.filter((badge: any) => !earnedBadgeIds.includes(badge.id));
                 
                 return lockedBadges.length > 0 ? (
-                  <div className="mt-8 pt-8 border-t border-gray-300">
-                    <h3 className="font-bebas text-xl text-gray-700 mb-4 tracking-wide">
-                      🔒 LOCKED SUPER POWERS
+                  <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-4 flex items-center gap-2">
+                      <Lock className="w-4 h-4" />
+                      Locked Powers
                     </h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
                       {lockedBadges.map((badge: any) => (
-                        <div key={badge.id} className="bg-gray-100 rounded-lg p-3 sm:p-4 text-center border-2 border-gray-200 opacity-60 hover:opacity-80 transition-opacity duration-200">
-                          <div className={`w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-2 sm:mb-3 rounded-full flex items-center justify-center bg-gray-300 border-2 border-gray-400`}>
+                        <div key={badge.id} className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 text-center opacity-50 hover:opacity-70 transition-opacity">
+                          <div className="w-10 h-10 mx-auto mb-2 rounded-full flex items-center justify-center bg-gray-200 dark:bg-gray-700">
                             {badge.iconUrl ? (
                               <img 
                                 src={badge.iconUrl} 
                                 alt={badge.name}
-                                className="w-8 h-8 sm:w-12 sm:h-12 object-cover rounded-full opacity-50"
+                                className="w-6 h-6 object-cover rounded-full opacity-50"
                               />
                             ) : (
-                              <Lock className="w-6 h-6 sm:w-8 sm:h-8 text-gray-500" />
+                              <Lock className="w-4 h-4 text-gray-400" />
                             )}
                           </div>
-                          <p className="font-bold text-gray-600 text-xs sm:text-sm mb-1">{badge.name}</p>
-                          <div className="flex justify-center mb-2">
-                            <Badge className="bg-gray-300 text-gray-600 text-xs px-2 py-1">
-                              {badge.rarity.toUpperCase()}
-                            </Badge>
-                          </div>
-                          <p className="text-xs text-gray-500">{badge.unlockHint}</p>
+                          <p className="font-medium text-gray-500 dark:text-gray-400 text-xs mb-1">{badge.name}</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500">{badge.unlockHint}</p>
                         </div>
                       ))}
                     </div>
                   </div>
                 ) : null;
               })()}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="profile" className="space-y-6">
           {selectedFriendProfile && (
             <div className="space-y-6">
-              <Card className="border-2 border-blue-500 bg-gradient-to-br from-white to-blue-50">
-                <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                  <CardTitle className="font-bebas text-2xl tracking-wide flex items-center">
-                    <User className="w-6 h-6 mr-2" />
-                    {selectedFriendProfile.displayName || selectedFriendProfile.username}'s Profile
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="flex flex-col sm:flex-row gap-6">
-                    <div className="flex-shrink-0">
-                      <Avatar className="w-24 h-24 border-4 border-blue-300">
-                        <AvatarImage src={selectedFriendProfile.photoURL} alt={selectedFriendProfile.displayName} />
-                        <AvatarFallback className="bg-blue-100 text-blue-800 text-xl font-bold">
-                          {selectedFriendProfile.displayName?.charAt(0) || selectedFriendProfile.username?.charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-800 mb-1">
-                        {selectedFriendProfile.displayName || selectedFriendProfile.username}
-                      </h3>
-                      <p className="text-gray-600 mb-4">@{selectedFriendProfile.username}</p>
-                      {selectedFriendProfile.bio && (
-                        <p className="text-gray-700 mb-4">{selectedFriendProfile.bio}</p>
-                      )}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
-                          <div className="text-2xl font-bold text-green-600">
-                            {friendProfile?.stats?.totalCards || 0}
-                          </div>
-                          <div className="text-sm text-green-800">Cards</div>
+              {/* Profile Header - Minimal Style */}
+              <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <div className="flex flex-col sm:flex-row gap-6">
+                  <div className="flex-shrink-0">
+                    <Avatar className="w-20 h-20 ring-4 ring-gray-200 dark:ring-gray-700">
+                      <AvatarImage src={selectedFriendProfile.photoURL} alt={selectedFriendProfile.displayName} />
+                      <AvatarFallback className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xl font-medium">
+                        {selectedFriendProfile.displayName?.charAt(0) || selectedFriendProfile.username?.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+                      {selectedFriendProfile.displayName || selectedFriendProfile.username}
+                    </h3>
+                    <p className="text-gray-500 dark:text-gray-400 mb-4">@{selectedFriendProfile.username}</p>
+                    {selectedFriendProfile.bio && (
+                      <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">{selectedFriendProfile.bio}</p>
+                    )}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="text-xl font-bold text-gray-900 dark:text-white">
+                          {friendProfile?.stats?.totalCards || 0}
                         </div>
-                        <div className="text-center p-3 bg-purple-50 rounded-lg border border-purple-200">
-                          <div className="text-2xl font-bold text-purple-600">
-                            ${friendProfile?.stats?.totalValue?.toFixed(2) || '0.00'}
-                          </div>
-                          <div className="text-sm text-purple-800">Value</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Cards</div>
+                      </div>
+                      <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="text-xl font-bold text-gray-900 dark:text-white">
+                          ${friendProfile?.stats?.totalValue?.toFixed(0) || '0'}
                         </div>
-                        <div className="text-center p-3 bg-orange-50 rounded-lg border border-orange-200">
-                          <div className="text-2xl font-bold text-orange-600">
-                            {friendProfile?.stats?.wishlistItems || 0}
-                          </div>
-                          <div className="text-sm text-orange-800">Wishlist</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Value</div>
+                      </div>
+                      <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="text-xl font-bold text-gray-900 dark:text-white">
+                          {friendProfile?.stats?.wishlistItems || 0}
                         </div>
-                        <div className="text-center p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                          <div className="text-2xl font-bold text-yellow-600">
-                            {friendProfile?.stats?.badgesCount || 0}
-                          </div>
-                          <div className="text-sm text-yellow-800">Badges</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Wishlist</div>
+                      </div>
+                      <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="text-xl font-bold text-gray-900 dark:text-white">
+                          {friendProfile?.stats?.badgesCount || 0}
                         </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Powers</div>
                       </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-              <Card className="border-2 border-yellow-500 bg-gradient-to-br from-white to-yellow-50">
-                <CardHeader className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black">
-                  <CardTitle className="font-bebas text-2xl tracking-wide flex items-center">
-                    <Award className="w-6 h-6 mr-2" />
-                    {selectedFriendProfile.displayName || selectedFriendProfile.username}'s Super Powers
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
+              {/* Friend's Super Powers - Minimal Style */}
+              <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+                <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Award className="w-4 h-4 text-amber-500" />
+                    {selectedFriendProfile.displayName || selectedFriendProfile.username}'s Powers
+                  </h3>
+                </div>
+                <div className="p-4">
                   {friendBadgesLoading ? (
-                    <div className="text-center py-16">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto"></div>
-                      <p className="text-gray-600 mt-4">Loading badges...</p>
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500 mx-auto"></div>
+                      <p className="text-gray-500 dark:text-gray-400 mt-3 text-sm">Loading...</p>
                     </div>
                   ) : friendBadges.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                       {friendBadges.map((userBadge: UserBadge) => (
-                        <div key={userBadge.id} className="bg-white rounded-lg border-2 border-gray-200 p-4 text-center hover:shadow-md transition-shadow">
-                          <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center">
+                        <div key={userBadge.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-center hover:shadow-sm transition-shadow">
+                          <div className={`w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center border-2 ${getRarityStyle(userBadge.badge.rarity || 'common')}`}>
                             {userBadge.badge.iconUrl ? (
                               <img 
                                 src={userBadge.badge.iconUrl} 
                                 alt={userBadge.badge.name}
-                                className="w-12 h-12 object-contain"
+                                className="w-8 h-8 object-contain"
                               />
                             ) : (
-                              <Award className="w-8 h-8 text-white" />
+                              <span className="text-lg">{getRarityEmoji(userBadge.badge.rarity || 'common')}</span>
                             )}
                           </div>
-                          <h3 className="font-bold text-sm text-gray-800 mb-1">{userBadge.badge.name}</h3>
-                          <p className="text-xs text-gray-600 mb-2">{userBadge.badge.description}</p>
-                          <div className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${getBadgeColor(userBadge.badge.category)}`}>
+                          <h3 className="font-medium text-xs text-gray-900 dark:text-white mb-1">{userBadge.badge.name}</h3>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${getBadgeColor(userBadge.badge.category)}`}>
                             {userBadge.badge.category}
-                          </div>
+                          </span>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                      <Award className="w-20 h-20 mx-auto mb-4 text-gray-400" />
-                      <p className="text-2xl font-bold text-gray-600 mb-2">No badges yet!</p>
-                      <p className="text-gray-500">{selectedFriendProfile?.displayName || selectedFriendProfile?.username} hasn't earned any badges yet.</p>
+                    <div className="text-center py-8">
+                      <Award className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+                      <p className="text-sm text-gray-500 dark:text-gray-400">No powers earned yet</p>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-
-
-              <Card className="border-2 border-green-500 bg-gradient-to-br from-white to-green-50">
-                <CardHeader className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-                  <CardTitle className="font-bebas text-2xl tracking-wide flex items-center">
-                    <User className="w-6 h-6 mr-2" />
-                    {selectedFriendProfile.displayName || selectedFriendProfile.username}'s Collection
+              {/* Friend's Collection - Minimal Style */}
+              <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+                <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <User className="w-4 h-4 text-gray-500" />
+                      {selectedFriendProfile.displayName || selectedFriendProfile.username}'s Collection
+                    </h3>
                     {friendCollection.length > 0 && (
-                      <span className="ml-2 text-sm opacity-90">
-                        ({(() => {
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        {(() => {
                           const filteredCount = friendCollection.filter((item: any) => {
                             const matchesSearch = collectionSearchQuery === "" || 
                               item.card.name.toLowerCase().includes(collectionSearchQuery.toLowerCase()) ||
@@ -1383,14 +1359,14 @@ export default function Social() {
                             return matchesSearch && matchesSet;
                           }).length;
                           return filteredCount !== friendCollection.length 
-                            ? `${filteredCount} of ${friendCollection.length}`
-                            : friendCollection.length;
-                        })()})
+                            ? `${filteredCount} of ${friendCollection.length} cards`
+                            : `${friendCollection.length} cards`;
+                        })()}
                       </span>
                     )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
+                  </div>
+                </div>
+                <div className="p-4">
                   {friendCollectionLoading ? (
                     <div className="text-center py-16">
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
@@ -1432,12 +1408,12 @@ export default function Social() {
                           </Select>
                         </div>
                         
-                        <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+                        <div className="flex border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                           <Button
                             variant={collectionViewMode === "grid" ? "default" : "ghost"}
                             size="sm"
                             onClick={() => setCollectionViewMode("grid")}
-                            className={`rounded-none px-3 ${collectionViewMode === "grid" ? "text-white" : "text-green-600 hover:text-green-600"}`}
+                            className={`rounded-none px-3 ${collectionViewMode === "grid" ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900" : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"}`}
                           >
                             <Grid className="w-4 h-4 mr-1" />
                             Grid
@@ -1446,7 +1422,7 @@ export default function Social() {
                             variant={collectionViewMode === "list" ? "default" : "ghost"}
                             size="sm"
                             onClick={() => setCollectionViewMode("list")}
-                            className={`rounded-none px-3 ${collectionViewMode === "list" ? "text-white" : "text-green-600 hover:text-green-600"}`}
+                            className={`rounded-none px-3 ${collectionViewMode === "list" ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900" : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"}`}
                           >
                             <List className="w-4 h-4 mr-1" />
                             List
@@ -1573,16 +1549,13 @@ export default function Social() {
                       })()}
                     </>
                   ) : (
-                    <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                      <div className="w-20 h-20 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center">
-                        <User className="w-12 h-12 text-gray-400" />
-                      </div>
-                      <p className="text-2xl font-bold text-gray-600 mb-2">No cards yet!</p>
-                      <p className="text-gray-500">{selectedFriendProfile?.displayName || selectedFriendProfile?.username} hasn't added any cards to their collection yet.</p>
+                    <div className="text-center py-8">
+                      <User className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+                      <p className="text-sm text-gray-500 dark:text-gray-400">No cards in collection yet</p>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
           )}
         </TabsContent>
