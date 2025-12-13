@@ -522,7 +522,7 @@ export default function MyCollection() {
                 <BinderView
                   ownedCards={collection?.filter(item => item.card.set.id.toString() === selectedSet) || []}
                   allCardsInSet={allSetCards || []}
-                  totalCardsInSet={cardSets?.find(s => s.id.toString() === selectedSet)?.totalCards || 0}
+                  totalCardsInSet={allSetCards?.length || 0}
                   setName={cardSets?.find(s => s.id.toString() === selectedSet)?.name || ""}
                   onCardClick={(item) => {
                     if ('card' in item) {

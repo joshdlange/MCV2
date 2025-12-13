@@ -931,8 +931,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const collectionItem = await storage.addToCollection(validatedData);
       
-      // Check badges when collection changes
-      await badgeService.checkBadgesOnCollectionChange(req.user.id);
+      // Check badges when collection changes (fire-and-forget for instant response)
+      badgeService.checkBadgesOnCollectionChange(req.user.id).catch(err => 
+        console.error('Background badge check failed:', err)
+      );
       
       res.status(201).json(collectionItem);
     } catch (error) {
@@ -966,8 +968,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       await storage.removeFromCollection(id);
       
-      // Check badges when collection changes
-      await badgeService.checkBadgesOnCollectionChange(req.user.id);
+      // Check badges when collection changes (fire-and-forget for instant response)
+      badgeService.checkBadgesOnCollectionChange(req.user.id).catch(err => 
+        console.error('Background badge check failed:', err)
+      );
       
       res.json({ message: "Card removed from collection" });
     } catch (error) {
