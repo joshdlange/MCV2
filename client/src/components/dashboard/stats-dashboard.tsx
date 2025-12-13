@@ -52,7 +52,7 @@ export function StatsDashboard() {
 
   const statItems = [
     {
-      label: "TOTAL CARDS",
+      label: "CARDS",
       value: totalCards.toLocaleString(),
       icon: Layers,
       gradient: "from-red-500 to-red-700",
@@ -62,7 +62,7 @@ export function StatsDashboard() {
       onClick: () => setLocation("/collection")
     },
     {
-      label: "INSERT CARDS",
+      label: "INSERTS",
       value: insertCards.toLocaleString(),
       icon: Star,
       gradient: "from-amber-400 to-yellow-600",
@@ -72,8 +72,10 @@ export function StatsDashboard() {
       onClick: () => setLocation("/collection")
     },
     {
-      label: "TOTAL VALUE",
-      value: `$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      label: "VALUE",
+      value: totalValue >= 10000 
+        ? `$${(totalValue / 1000).toFixed(1)}K` 
+        : `$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
       icon: DollarSign,
       gradient: "from-emerald-500 to-green-600",
       bgColor: "bg-emerald-50",
