@@ -3,7 +3,7 @@
  * All templates use a consistent dark theme with Marvel red accents
  */
 
-const LOGO_URL = 'https://res.cloudinary.com/dpkxkp1mb/image/upload/v1755625046/marvel-card-vault-logo.png';
+const LOGO_URL = 'https://res.cloudinary.com/dgu7hjfvn/image/upload/v1765655392/marvel-card-vault/email-logo.png';
 const BRAND_RED = '#EF4444';
 const DARK_BG = '#0F172A';
 const CARD_BG = '#1E293B';
