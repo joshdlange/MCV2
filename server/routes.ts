@@ -944,7 +944,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           const isInsert = (row.isinsert || row.insert)?.toLowerCase() === 'true';
-          const rarity = (row.rarity)?.trim() || null;
+          const rarity = (row.rarity)?.trim() || 'Common';
           const frontImageUrl = (row.frontimageurl || row.frontimage || row.imageurl || row.image)?.trim() || null;
           const backImageUrl = (row.backimageurl || row.backimage)?.trim() || null;
           const description = (row.description || row.desc)?.trim() || null;
@@ -963,8 +963,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.createCard(cardData);
           successCount++;
         } catch (rowError: any) {
+          console.error(`Row ${i + 2} error:`, rowError);
           errors.push(`Row ${i + 2}: ${rowError.message || 'Unknown error'}`);
         }
+      }
+
+      // Log errors before response
+      if (errors.length > 0) {
+        console.log(`CSV upload had ${errors.length} errors. First 5:`, errors.slice(0, 5));
       }
 
       // Clear cache after bulk insert
