@@ -507,10 +507,10 @@ export default function Social() {
         <TabsList className={`inline-flex ${viewingProfile ? 'w-full' : 'w-auto'} bg-gray-100 dark:bg-gray-800 rounded-full p-1 mb-6 gap-1`}>
           <TabsTrigger 
             value="friends" 
-            className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-600 dark:text-gray-400 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-sm font-medium text-gray-600 dark:text-gray-400 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all"
           >
             <Users className="w-4 h-4" />
-            <span>Friends</span>
+            <span className="hidden sm:inline">Friends</span>
             {friends.length > 0 && (
               <span className="ml-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs px-1.5 py-0.5 rounded-full">
                 {friends.length}
@@ -519,18 +519,17 @@ export default function Social() {
           </TabsTrigger>
           <TabsTrigger 
             value="messages"
-            className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-600 dark:text-gray-400 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-sm font-medium text-gray-600 dark:text-gray-400 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all"
           >
             <MessageCircle className="w-4 h-4" />
-            <span>Messages</span>
+            <span className="hidden sm:inline">Messages</span>
           </TabsTrigger>
           <TabsTrigger 
             value="badges"
-            className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-600 dark:text-gray-400 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-sm font-medium text-gray-600 dark:text-gray-400 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all"
           >
             <Award className="w-4 h-4" />
             <span className="hidden sm:inline">Powers</span>
-            <span className="sm:hidden">⚡</span>
             {userBadges.length > 0 && (
               <span className="ml-1 bg-amber-100 text-amber-700 text-xs px-1.5 py-0.5 rounded-full">
                 {userBadges.length}

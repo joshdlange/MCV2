@@ -59,7 +59,7 @@ export function StatsDashboard() {
       bgColor: "bg-red-50",
       iconColor: "text-white",
       tooltip: "Total cards in your collection. Add more from the Browse Cards page.",
-      onClick: () => setLocation("/collection")
+      onClick: () => setLocation("/my-collection")
     },
     {
       label: "INSERTS",
@@ -69,7 +69,7 @@ export function StatsDashboard() {
       bgColor: "bg-amber-50",
       iconColor: "text-white",
       tooltip: "Rare insert cards like autographs, memorabilia, foils, and special editions.",
-      onClick: () => setLocation("/collection")
+      onClick: () => setLocation("/my-collection")
     },
     {
       label: "VALUE",
