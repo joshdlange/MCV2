@@ -869,48 +869,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Set ID is required' });
       }
 
-      const csvContent = req.file.buffer.toString('utf-8');
-      const lines = csvContent.split('\n').filter((line: string) => line.trim());
+      // Use csv-parser with streams for proper CSV handling
+      const rows: any[] = [];
+      const errors: string[] = [];
       
-      if (lines.length < 2) {
+      await new Promise<void>((resolve, reject) => {
+        const stream = Readable.from(req.file.buffer);
+        stream
+          .pipe(csv({
+            mapHeaders: ({ header }: { header: string }) => header.trim().toLowerCase(),
+            skipEmptyLines: true
+          }))
+          .on('data', (row: any) => {
+            rows.push(row);
+          })
+          .on('error', (error: Error) => {
+            reject(error);
+          })
+          .on('end', () => {
+            resolve();
+          });
+      });
+
+      if (rows.length === 0) {
         return res.status(400).json({ message: 'CSV file is empty or has no data rows' });
       }
 
-      const headers = lines[0].split(',').map((h: string) => h.trim().toLowerCase());
-      const nameIdx = headers.indexOf('name');
-      const cardNumberIdx = headers.indexOf('cardnumber');
-      const isInsertIdx = headers.indexOf('isinsert');
-      const rarityIdx = headers.indexOf('rarity');
-      const frontImageIdx = headers.indexOf('frontimageurl');
-      const backImageIdx = headers.indexOf('backimageurl');
-      const descriptionIdx = headers.indexOf('description');
-      const priceIdx = headers.indexOf('price');
+      // Check required columns
+      const firstRow = rows[0];
+      const hasName = 'name' in firstRow;
+      const hasCardNumber = 'cardnumber' in firstRow;
 
-      if (nameIdx === -1 || cardNumberIdx === -1) {
+      if (!hasName || !hasCardNumber) {
         return res.status(400).json({ message: 'CSV must have name and cardNumber columns' });
       }
 
       let successCount = 0;
-      const errors: string[] = [];
 
-      for (let i = 1; i < lines.length; i++) {
+      for (let i = 0; i < rows.length; i++) {
         try {
-          const values = lines[i].split(',').map((v: string) => v.trim());
+          const row = rows[i];
           
-          const name = values[nameIdx];
-          const cardNumber = values[cardNumberIdx];
+          const name = row.name?.trim();
+          const cardNumber = row.cardnumber?.trim();
           
           if (!name || !cardNumber) {
-            errors.push(`Row ${i + 1}: Missing name or cardNumber`);
+            errors.push(`Row ${i + 2}: Missing name or cardNumber`);
             continue;
           }
 
-          const isInsert = isInsertIdx !== -1 ? values[isInsertIdx]?.toLowerCase() === 'true' : false;
-          const rarity = rarityIdx !== -1 ? values[rarityIdx] || null : null;
-          const frontImageUrl = frontImageIdx !== -1 ? values[frontImageIdx] || null : null;
-          const backImageUrl = backImageIdx !== -1 ? values[backImageIdx] || null : null;
-          const description = descriptionIdx !== -1 ? values[descriptionIdx] || null : null;
-          const price = priceIdx !== -1 && values[priceIdx] ? parseFloat(values[priceIdx]) : null;
+          const isInsert = row.isinsert?.toLowerCase() === 'true';
+          const rarity = row.rarity?.trim() || null;
+          const frontImageUrl = row.frontimageurl?.trim() || null;
+          const backImageUrl = row.backimageurl?.trim() || null;
+          const description = row.description?.trim() || null;
 
           const cardData = {
             name,
@@ -923,20 +935,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             description,
           };
 
-          const card = await storage.createCard(cardData);
-
-          // If price is provided, cache it
-          if (price !== null && !isNaN(price)) {
-            try {
-              await storage.cacheCardPrice(card.id, price, 'csv_upload');
-            } catch (e) {
-              console.log(`Could not cache price for card ${card.id}`);
-            }
-          }
-
+          await storage.createCard(cardData);
           successCount++;
         } catch (rowError: any) {
-          errors.push(`Row ${i + 1}: ${rowError.message || 'Unknown error'}`);
+          errors.push(`Row ${i + 2}: ${rowError.message || 'Unknown error'}`);
         }
       }
 
