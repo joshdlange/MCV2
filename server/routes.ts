@@ -873,11 +873,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rows: any[] = [];
       const errors: string[] = [];
       
+      // Strip BOM if present
+      let csvBuffer = req.file.buffer;
+      if (csvBuffer[0] === 0xEF && csvBuffer[1] === 0xBB && csvBuffer[2] === 0xBF) {
+        csvBuffer = csvBuffer.slice(3);
+      }
+      
       await new Promise<void>((resolve, reject) => {
-        const stream = Readable.from(req.file.buffer);
+        const stream = Readable.from(csvBuffer);
         stream
           .pipe(csv({
-            mapHeaders: ({ header }: { header: string }) => header.trim().toLowerCase(),
+            mapHeaders: ({ header }: { header: string }) => {
+              // Normalize header: trim, lowercase, remove spaces/underscores
+              const normalized = header.trim().toLowerCase().replace(/[\s_-]/g, '');
+              console.log(`CSV Header mapping: "${header}" -> "${normalized}"`);
+              return normalized;
+            },
             skipEmptyLines: true
           }))
           .on('data', (row: any) => {
@@ -891,17 +902,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
       });
 
+      console.log(`CSV parsed ${rows.length} rows`);
+      if (rows.length > 0) {
+        console.log('First row keys:', Object.keys(rows[0]));
+        console.log('First row data:', rows[0]);
+      }
+
       if (rows.length === 0) {
         return res.status(400).json({ message: 'CSV file is empty or has no data rows' });
       }
 
-      // Check required columns
+      // Check required columns - try multiple variations
       const firstRow = rows[0];
-      const hasName = 'name' in firstRow;
-      const hasCardNumber = 'cardnumber' in firstRow;
+      const keys = Object.keys(firstRow);
+      
+      // Find name column (could be 'name', 'cardname', etc)
+      const nameKey = keys.find(k => k === 'name' || k === 'cardname');
+      // Find card number column (could be 'cardnumber', 'number', 'card_number', etc)
+      const cardNumberKey = keys.find(k => k === 'cardnumber' || k === 'number' || k === 'card#' || k === 'no');
 
-      if (!hasName || !hasCardNumber) {
-        return res.status(400).json({ message: 'CSV must have name and cardNumber columns' });
+      console.log(`Found name column: "${nameKey}", card number column: "${cardNumberKey}"`);
+
+      if (!nameKey || !cardNumberKey) {
+        return res.status(400).json({ 
+          message: `CSV must have name and cardNumber columns. Found columns: ${keys.join(', ')}` 
+        });
       }
 
       let successCount = 0;
@@ -910,19 +935,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const row = rows[i];
           
-          const name = row.name?.trim();
-          const cardNumber = row.cardnumber?.trim();
+          const name = row[nameKey]?.trim();
+          const cardNumber = row[cardNumberKey]?.trim();
           
           if (!name || !cardNumber) {
             errors.push(`Row ${i + 2}: Missing name or cardNumber`);
             continue;
           }
 
-          const isInsert = row.isinsert?.toLowerCase() === 'true';
-          const rarity = row.rarity?.trim() || null;
-          const frontImageUrl = row.frontimageurl?.trim() || null;
-          const backImageUrl = row.backimageurl?.trim() || null;
-          const description = row.description?.trim() || null;
+          const isInsert = (row.isinsert || row.insert)?.toLowerCase() === 'true';
+          const rarity = (row.rarity)?.trim() || null;
+          const frontImageUrl = (row.frontimageurl || row.frontimage || row.imageurl || row.image)?.trim() || null;
+          const backImageUrl = (row.backimageurl || row.backimage)?.trim() || null;
+          const description = (row.description || row.desc)?.trim() || null;
 
           const cardData = {
             name,
