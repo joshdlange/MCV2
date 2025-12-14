@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlusCircle, Upload, FolderPlus, FileText, X } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import type { CardSet } from "@shared/schema";
 
 export default function AdminCardManagement() {
@@ -410,6 +411,7 @@ function CSVUploadForm({ cardSets }: { cardSets: CardSet[] }) {
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -426,14 +428,23 @@ function CSVUploadForm({ cardSets }: { cardSets: CardSet[] }) {
       return;
     }
 
+    if (!user) {
+      toast({ title: "You must be logged in", variant: "destructive" });
+      return;
+    }
+
     setIsUploading(true);
     try {
+      const token = await user.getIdToken();
       const formData = new FormData();
       formData.append('file', csvFile);
       formData.append('setId', selectedSet);
 
       const response = await fetch('/api/cards/upload-csv', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
         body: formData,
       });
 
