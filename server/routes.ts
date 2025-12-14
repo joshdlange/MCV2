@@ -853,6 +853,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // CSV Upload for cards (admin only)
+  app.post("/api/cards/upload-csv", authenticateUser, upload.single('file'), async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: 'No CSV file provided' });
+      }
+
+      const setId = parseInt(req.body.setId);
+      if (!setId) {
+        return res.status(400).json({ message: 'Set ID is required' });
+      }
+
+      const csvContent = req.file.buffer.toString('utf-8');
+      const lines = csvContent.split('\n').filter((line: string) => line.trim());
+      
+      if (lines.length < 2) {
+        return res.status(400).json({ message: 'CSV file is empty or has no data rows' });
+      }
+
+      const headers = lines[0].split(',').map((h: string) => h.trim().toLowerCase());
+      const nameIdx = headers.indexOf('name');
+      const cardNumberIdx = headers.indexOf('cardnumber');
+      const isInsertIdx = headers.indexOf('isinsert');
+      const rarityIdx = headers.indexOf('rarity');
+      const frontImageIdx = headers.indexOf('frontimageurl');
+      const backImageIdx = headers.indexOf('backimageurl');
+      const descriptionIdx = headers.indexOf('description');
+      const priceIdx = headers.indexOf('price');
+
+      if (nameIdx === -1 || cardNumberIdx === -1) {
+        return res.status(400).json({ message: 'CSV must have name and cardNumber columns' });
+      }
+
+      let successCount = 0;
+      const errors: string[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        try {
+          const values = lines[i].split(',').map((v: string) => v.trim());
+          
+          const name = values[nameIdx];
+          const cardNumber = values[cardNumberIdx];
+          
+          if (!name || !cardNumber) {
+            errors.push(`Row ${i + 1}: Missing name or cardNumber`);
+            continue;
+          }
+
+          const isInsert = isInsertIdx !== -1 ? values[isInsertIdx]?.toLowerCase() === 'true' : false;
+          const rarity = rarityIdx !== -1 ? values[rarityIdx] || null : null;
+          const frontImageUrl = frontImageIdx !== -1 ? values[frontImageIdx] || null : null;
+          const backImageUrl = backImageIdx !== -1 ? values[backImageIdx] || null : null;
+          const description = descriptionIdx !== -1 ? values[descriptionIdx] || null : null;
+          const price = priceIdx !== -1 && values[priceIdx] ? parseFloat(values[priceIdx]) : null;
+
+          const cardData = {
+            name,
+            cardNumber,
+            setId,
+            isInsert,
+            rarity,
+            frontImageUrl,
+            backImageUrl,
+            description,
+          };
+
+          const card = await storage.createCard(cardData);
+
+          // If price is provided, cache it
+          if (price !== null && !isNaN(price)) {
+            try {
+              await storage.cacheCardPrice(card.id, price, 'csv_upload');
+            } catch (e) {
+              console.log(`Could not cache price for card ${card.id}`);
+            }
+          }
+
+          successCount++;
+        } catch (rowError: any) {
+          errors.push(`Row ${i + 1}: ${rowError.message || 'Unknown error'}`);
+        }
+      }
+
+      // Clear cache after bulk insert
+      try {
+        const { ultraOptimizedStorage } = await import('./ultra-optimized-storage');
+        ultraOptimizedStorage.clearCache();
+      } catch (e) {
+        console.log('Cache clear skipped:', e);
+      }
+
+      res.json({
+        message: `Successfully uploaded ${successCount} cards`,
+        successCount,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error('CSV upload error:', error);
+      res.status(500).json({ message: "Failed to process CSV upload" });
+    }
+  });
+
   // Update card (admin only)
   app.put("/api/cards/:id", authenticateUser, async (req: any, res) => {
     try {
