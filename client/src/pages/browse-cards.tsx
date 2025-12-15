@@ -48,7 +48,7 @@ export default function BrowseCards() {
   // All hooks
   const { toast } = useToast();
   const { isAdminMode } = useAppStore();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const [location] = useLocation();
   const params = useParams<{ mainSetSlug?: string; setSlug?: string }>();
@@ -110,7 +110,7 @@ export default function BrowseCards() {
         ...old,
         {
           id: Date.now(), // Temporary ID
-          userId: user?.id || 0,
+          userId: 0, // Placeholder for optimistic update
           cardId,
           condition: "Near Mint",
           acquiredDate: new Date(),
@@ -483,7 +483,16 @@ export default function BrowseCards() {
   };
 
   const handleProcessImages = async () => {
-    if (!editingSet || !user) return;
+    if (!editingSet) return;
+    
+    if (!user || authLoading) {
+      toast({
+        title: "Error",
+        description: "Please wait for authentication to complete or log in again",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setProcessingImages(true);
     try {
@@ -517,7 +526,16 @@ export default function BrowseCards() {
   };
 
   const handleProcessPricing = async () => {
-    if (!editingSet || !user) return;
+    if (!editingSet) return;
+    
+    if (!user || authLoading) {
+      toast({
+        title: "Error",
+        description: "Please wait for authentication to complete or log in again",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setProcessingPricing(true);
     try {
