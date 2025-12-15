@@ -743,8 +743,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update card set (admin only)
-  app.put("/api/card-sets/:id", authenticateUser, async (req: any, res) => {
+  // Update card set (admin only) - supports both PUT and PATCH
+  const updateCardSetHandler = async (req: any, res: any) => {
     try {
       if (!req.user.isAdmin) {
         return res.status(403).json({ message: 'Admin access required' });
@@ -763,7 +763,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Update card set error:', error);
       res.status(500).json({ message: "Failed to update card set" });
     }
-  });
+  };
+  
+  app.put("/api/card-sets/:id", authenticateUser, updateCardSetHandler);
+  app.patch("/api/card-sets/:id", authenticateUser, updateCardSetHandler);
 
   // Get all cards with filters - ULTRA-OPTIMIZED
   app.get("/api/cards", async (req, res) => {
