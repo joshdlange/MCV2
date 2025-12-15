@@ -483,9 +483,15 @@ export default function BrowseCards() {
   };
 
   const handleProcessImages = async () => {
-    if (!editingSet) return;
+    console.log("handleProcessImages called", { editingSet, user, authLoading });
+    
+    if (!editingSet) {
+      console.log("No editingSet, returning early");
+      return;
+    }
     
     if (!user || authLoading) {
+      console.log("No user or still loading", { user, authLoading });
       toast({
         title: "Error",
         description: "Please wait for authentication to complete or log in again",
@@ -495,8 +501,10 @@ export default function BrowseCards() {
     }
     
     setProcessingImages(true);
+    console.log("About to fetch token and make request");
     try {
       const token = await user.getIdToken();
+      console.log("Got token, making request to:", `/api/admin/sets/${editingSet.id}/process-images`);
       const response = await fetch(`/api/admin/sets/${editingSet.id}/process-images`, {
         method: 'POST',
         headers: {
@@ -515,6 +523,7 @@ export default function BrowseCards() {
         throw new Error(result.message || 'Failed to start image processing');
       }
     } catch (error: any) {
+      console.error("handleProcessImages error:", error);
       toast({
         title: "Error",
         description: error.message,
