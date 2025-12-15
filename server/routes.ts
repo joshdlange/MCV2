@@ -973,6 +973,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`CSV upload had ${errors.length} errors. First 5:`, errors.slice(0, 5));
       }
 
+      // Update the card count for the set
+      try {
+        const cardCount = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(cards)
+          .where(eq(cards.setId, setId));
+        
+        await db
+          .update(cardSets)
+          .set({ totalCards: cardCount[0]?.count || 0 })
+          .where(eq(cardSets.id, setId));
+        
+        console.log(`Updated set ${setId} card count to ${cardCount[0]?.count}`);
+      } catch (e) {
+        console.log('Card count update skipped:', e);
+      }
+
       // Clear cache after bulk insert
       try {
         const { ultraOptimizedStorage } = await import('./ultra-optimized-storage');
