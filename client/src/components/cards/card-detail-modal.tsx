@@ -473,52 +473,53 @@ export function CardDetailModal({
               );
               
               return (
-                <div className="relative flex justify-center py-4">
-                  {/* Aura Wrapper - adds glow effect behind card */}
-                  <div className={`card-aura-wrapper aura-${auraTier}`}>
-                    <div className="aspect-[2.5/3.5] w-full max-w-[280px] relative overflow-hidden rounded-xl shadow-xl">
-                      <img
-                        src={showBack ? convertGoogleDriveUrl(card.backImageUrl || '') : convertGoogleDriveUrl(card.frontImageUrl || '')}
-                        alt={showBack ? `${card.name} back` : card.name}
-                        className="w-full h-full object-contain bg-gray-900"
-                        onError={(e) => {
-                          e.currentTarget.src = noCardImagePlaceholder;
-                        }}
-                      />
-                      
-                      {/* Status Badges */}
-                      <div className="absolute top-2 right-2 flex flex-col gap-1.5">
-                        {isInCollection && (
-                          <div className="bg-green-500 rounded-full p-1.5 shadow-lg">
-                            <Check className="w-3 h-3 text-white" />
-                          </div>
-                        )}
-                        {isInWishlist && (
-                          <div className="bg-pink-500 rounded-full p-1.5 shadow-lg">
-                            <Heart className="w-3 h-3 text-white fill-white" />
-                          </div>
-                        )}
-                        {card.isInsert && (
-                          <div className="bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg text-xs">
-                            💎
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Flip Button */}
-                      {card.backImageUrl && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowBack(!showBack)}
-                          className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-orange-500 text-white border-orange-500 hover:bg-orange-600 hover:text-white text-xs px-3 py-1 h-8"
-                          data-testid="button-flip-card"
-                        >
-                          <RotateCcw className="w-3 h-3 mr-1" />
-                          FLIP
-                        </Button>
+                <div className="relative flex justify-center py-6">
+                  {/* Aura Glow Element - positioned behind the card */}
+                  <div className={`card-aura-glow aura-glow-${auraTier}`} />
+                  
+                  {/* Card Container */}
+                  <div className="aspect-[2.5/3.5] w-full max-w-[280px] relative overflow-hidden rounded-xl shadow-xl z-10">
+                    <img
+                      src={showBack ? convertGoogleDriveUrl(card.backImageUrl || '') : convertGoogleDriveUrl(card.frontImageUrl || '')}
+                      alt={showBack ? `${card.name} back` : card.name}
+                      className="w-full h-full object-contain bg-gray-900"
+                      onError={(e) => {
+                        e.currentTarget.src = noCardImagePlaceholder;
+                      }}
+                    />
+                    
+                    {/* Status Badges */}
+                    <div className="absolute top-2 right-2 flex flex-col gap-1.5">
+                      {isInCollection && (
+                        <div className="bg-green-500 rounded-full p-1.5 shadow-lg">
+                          <Check className="w-3 h-3 text-white" />
+                        </div>
+                      )}
+                      {isInWishlist && (
+                        <div className="bg-pink-500 rounded-full p-1.5 shadow-lg">
+                          <Heart className="w-3 h-3 text-white fill-white" />
+                        </div>
+                      )}
+                      {card.isInsert && (
+                        <div className="bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg text-xs">
+                          💎
+                        </div>
                       )}
                     </div>
+                    
+                    {/* Flip Button */}
+                    {card.backImageUrl && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowBack(!showBack)}
+                        className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-orange-500 text-white border-orange-500 hover:bg-orange-600 hover:text-white text-xs px-3 py-1 h-8"
+                        data-testid="button-flip-card"
+                      >
+                        <RotateCcw className="w-3 h-3 mr-1" />
+                        FLIP
+                      </Button>
+                    )}
                   </div>
                 </div>
               );
