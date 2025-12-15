@@ -17,7 +17,7 @@ import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
 import { db } from "./db";
 import { cards, cardSets, emailLogs, pendingCardImages, insertPendingCardImageSchema } from "../shared/schema";
-import { sql, eq, ilike } from "drizzle-orm";
+import { sql, eq, ilike, and, or, isNull } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
 import { badgeService } from "./badge-service";
