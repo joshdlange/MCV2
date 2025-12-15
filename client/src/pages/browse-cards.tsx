@@ -252,10 +252,13 @@ export default function BrowseCards() {
 
   const updateSetMutation = useMutation({
     mutationFn: async ({ setId, updates }: { setId: number, updates: any }) => {
+      if (!user) throw new Error('Not authenticated');
+      const token = await user.getIdToken();
       const response = await fetch(`/api/card-sets/${setId}`, {
         method: 'PATCH',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(updates)
       });
