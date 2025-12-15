@@ -29,7 +29,7 @@ import { syncFirebaseUsersToBrevo } from "./contactsSync";
 import { emailService } from "./services/emailService";
 import * as emailTriggers from "./services/emailTriggers";
 import { startEmailCronJobs } from "./jobs/emailCron";
-import { uploadUserCardImage } from "./cloudinary";
+import { uploadUserCardImage, uploadMainSetThumbnail } from "./cloudinary";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -610,6 +610,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Unassign sets error:', error);
       res.status(500).json({ message: "Failed to unassign sets" });
+    }
+  });
+
+  // Upload main set thumbnail image
+  app.post("/api/main-sets/:id/upload-thumbnail", authenticateUser, upload.single('image'), async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const mainSetId = parseInt(req.params.id);
+      
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+      
+      // Upload to Cloudinary
+      const cloudinaryUrl = await uploadMainSetThumbnail(req.file.buffer, mainSetId);
+      
+      // Update main set with new thumbnail URL
+      const updatedMainSet = await storage.updateMainSet(mainSetId, { 
+        thumbnailImageUrl: cloudinaryUrl 
+      });
+      
+      if (!updatedMainSet) {
+        return res.status(404).json({ message: "Main set not found" });
+      }
+      
+      console.log(`Uploaded thumbnail for main set ${mainSetId}: ${cloudinaryUrl}`);
+      res.json({ 
+        message: "Thumbnail uploaded successfully", 
+        thumbnailImageUrl: cloudinaryUrl,
+        mainSet: updatedMainSet
+      });
+    } catch (error) {
+      console.error('Upload main set thumbnail error:', error);
+      res.status(500).json({ message: "Failed to upload thumbnail" });
     }
   });
 

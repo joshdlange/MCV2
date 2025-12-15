@@ -140,4 +140,32 @@ export async function uploadUserCardImage(
   }
 }
 
+// Upload main set thumbnail image
+export async function uploadMainSetThumbnail(
+  fileBuffer: Buffer,
+  mainSetId: number
+): Promise<string> {
+  try {
+    const uploadOptions: any = {
+      folder: 'main-set-thumbnails',
+      public_id: `main_set_${mainSetId}_${Date.now()}`,
+      resource_type: 'image',
+      transformation: [
+        { width: 400, height: 400, crop: 'fit', quality: 'auto' },
+        { format: 'auto' }
+      ]
+    };
+
+    const result = await cloudinary.uploader.upload(
+      `data:image/jpeg;base64,${fileBuffer.toString('base64')}`,
+      uploadOptions
+    );
+
+    return result.secure_url;
+  } catch (error) {
+    console.error('Main set thumbnail upload error:', error);
+    throw error;
+  }
+}
+
 export { cloudinary };

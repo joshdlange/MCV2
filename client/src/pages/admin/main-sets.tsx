@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { insertMainSetSchema, type MainSet, type InsertMainSet, type CardSet } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Search, Save } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Save, Upload, Loader2 } from "lucide-react";
 import { z } from "zod";
 
 const formSchema = insertMainSetSchema.extend({
@@ -156,6 +156,8 @@ function EditMainSetDialog({ mainSet }: { mainSet: MainSet }) {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [assignedSets, setAssignedSets] = useState<number[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -293,6 +295,76 @@ function EditMainSetDialog({ mainSet }: { mainSet: MainSet }) {
     );
   };
 
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        variant: "destructive",
+        title: "Invalid file",
+        description: "Please select an image file",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        variant: "destructive",
+        title: "File too large",
+        description: "Please select an image under 5MB",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const token = await (window as any).firebaseAuth?.currentUser?.getIdToken();
+      const response = await fetch(`/api/main-sets/${mainSet.id}/upload-thumbnail`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Upload failed');
+      }
+
+      const result = await response.json();
+      
+      // Update the form field with the new Cloudinary URL
+      form.setValue('thumbnailImageUrl', result.thumbnailImageUrl);
+      
+      // Invalidate queries to refresh the UI
+      queryClient.invalidateQueries({ queryKey: ["/api/main-sets"] });
+      
+      toast({
+        title: "Success",
+        description: "Thumbnail uploaded successfully",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Upload failed",
+        description: error.message || "Failed to upload thumbnail",
+      });
+    } finally {
+      setIsUploading(false);
+      // Reset the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -344,13 +416,65 @@ function EditMainSetDialog({ mainSet }: { mainSet: MainSet }) {
                 name="thumbnailImageUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Thumbnail Image URL</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="https://example.com/image.jpg"
-                        {...field}
-                      />
-                    </FormControl>
+                    <FormLabel>Thumbnail Image</FormLabel>
+                    <div className="space-y-3">
+                      {/* Upload Button - Primary option */}
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          onChange={handleImageUpload}
+                          accept="image/*"
+                          className="hidden"
+                          data-testid="input-thumbnail-file"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploading}
+                          className="flex-1"
+                          data-testid="button-upload-thumbnail"
+                        >
+                          {isUploading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Uploading...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="h-4 w-4 mr-2" />
+                              Upload Image
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      
+                      {/* URL Input - Alternative option */}
+                      <div className="text-xs text-gray-500 text-center">or paste an image URL</div>
+                      <FormControl>
+                        <Input 
+                          placeholder="https://example.com/image.jpg"
+                          {...field}
+                          data-testid="input-thumbnail-url"
+                        />
+                      </FormControl>
+                      
+                      {/* Preview */}
+                      {field.value && (
+                        <div className="mt-2">
+                          <p className="text-xs text-gray-500 mb-1">Preview:</p>
+                          <img 
+                            src={field.value} 
+                            alt="Thumbnail preview"
+                            className="w-24 h-24 object-cover rounded border"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
