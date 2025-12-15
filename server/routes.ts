@@ -2072,6 +2072,172 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Process images for a specific set
+  app.post("/api/admin/sets/:setId/process-images", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const setId = parseInt(req.params.setId);
+      if (isNaN(setId)) {
+        return res.status(400).json({ message: "Invalid set ID" });
+      }
+
+      // Get set details
+      const cardSet = await storage.getCardSet(setId);
+      if (!cardSet) {
+        return res.status(404).json({ message: "Card set not found" });
+      }
+
+      // Get cards in this set that are missing images
+      const cardsInSet = await db
+        .select({
+          id: cards.id,
+          name: cards.name,
+          cardNumber: cards.cardNumber,
+          frontImageUrl: cards.frontImageUrl,
+          description: cards.description
+        })
+        .from(cards)
+        .where(
+          and(
+            eq(cards.setId, setId),
+            or(
+              isNull(cards.frontImageUrl),
+              eq(cards.frontImageUrl, ''),
+              eq(cards.frontImageUrl, '/images/image-coming-soon.png'),
+              eq(cards.frontImageUrl, '/images/placeholder.png')
+            )
+          )
+        );
+
+      if (cardsInSet.length === 0) {
+        return res.json({ 
+          message: "All cards in this set already have images",
+          setName: cardSet.name,
+          totalCards: 0,
+          processed: 0
+        });
+      }
+
+      console.log(`Starting image processing for set ${cardSet.name} (${cardsInSet.length} cards need images)`);
+
+      // Import the image finder
+      const { findAndUpdateCardImage } = await import('./ebay-image-finder');
+      
+      // Process cards (start async, return immediately)
+      const processCards = async () => {
+        let successCount = 0;
+        let failCount = 0;
+        
+        for (const card of cardsInSet) {
+          try {
+            const result = await findAndUpdateCardImage(
+              card.id,
+              cardSet.name,
+              card.name,
+              card.cardNumber,
+              card.description || undefined
+            );
+            
+            if (result.success) {
+              successCount++;
+              console.log(`✅ Image found for ${card.name} (#${card.cardNumber})`);
+            } else {
+              failCount++;
+              console.log(`❌ No image for ${card.name}: ${result.error}`);
+            }
+            
+            // Rate limiting - wait 2 seconds between requests
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          } catch (error) {
+            failCount++;
+            console.error(`Error processing ${card.name}:`, error);
+          }
+        }
+        
+        console.log(`Image processing complete for set ${cardSet.name}: ${successCount} success, ${failCount} failed`);
+      };
+
+      // Start processing in background
+      processCards().catch(console.error);
+
+      res.json({ 
+        message: `Image processing started for ${cardSet.name}`,
+        setName: cardSet.name,
+        setId: setId,
+        totalCards: cardsInSet.length,
+        status: "processing"
+      });
+    } catch (error) {
+      console.error('Set image processing error:', error);
+      res.status(500).json({ message: "Failed to start image processing for set" });
+    }
+  });
+
+  // Process pricing for a specific set  
+  app.post("/api/admin/sets/:setId/process-pricing", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const setId = parseInt(req.params.setId);
+      if (isNaN(setId)) {
+        return res.status(400).json({ message: "Invalid set ID" });
+      }
+
+      // Get set details
+      const cardSet = await storage.getCardSet(setId);
+      if (!cardSet) {
+        return res.status(404).json({ message: "Card set not found" });
+      }
+
+      // Get all cards in this set
+      const cardsInSet = await db
+        .select({ id: cards.id, name: cards.name })
+        .from(cards)
+        .where(eq(cards.setId, setId));
+
+      if (cardsInSet.length === 0) {
+        return res.json({ 
+          message: "No cards found in this set",
+          setName: cardSet.name,
+          totalCards: 0
+        });
+      }
+
+      console.log(`Starting pricing update for set ${cardSet.name} (${cardsInSet.length} cards)`);
+
+      // Import the pricing service
+      const { ebayPricingService } = await import('./ebay-pricing');
+      
+      // Get card IDs
+      const cardIds = cardsInSet.map(c => c.id);
+      
+      // Start processing in background
+      ebayPricingService.updatePricingForCards(cardIds)
+        .then(() => {
+          console.log(`Pricing update complete for set ${cardSet.name}`);
+        })
+        .catch((error) => {
+          console.error(`Pricing update failed for set ${cardSet.name}:`, error);
+        });
+
+      res.json({ 
+        message: `Pricing update started for ${cardSet.name}`,
+        setName: cardSet.name,
+        setId: setId,
+        totalCards: cardsInSet.length,
+        status: "processing"
+      });
+    } catch (error) {
+      console.error('Set pricing processing error:', error);
+      res.status(500).json({ message: "Failed to start pricing update for set" });
+    }
+  });
+
   app.get("/api/admin/missing-images-count", authenticateUser, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) {

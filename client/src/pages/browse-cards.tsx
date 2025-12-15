@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Star, ArrowLeft, Plus, Edit, Filter, Grid3X3, List, X, Save, Home } from "lucide-react";
+import { Search, Star, ArrowLeft, Plus, Edit, Filter, Grid3X3, List, X, Save, Home, Image, DollarSign, Loader2 } from "lucide-react";
 import { CardGrid } from "@/components/cards/card-grid";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { SetThumbnail } from "@/components/cards/set-thumbnail";
@@ -42,6 +42,8 @@ export default function BrowseCards() {
     imageUrl: ''
   });
   const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
+  const [processingImages, setProcessingImages] = useState(false);
+  const [processingPricing, setProcessingPricing] = useState(false);
 
   // All hooks
   const { toast } = useToast();
@@ -477,6 +479,74 @@ export default function BrowseCards() {
     setEditFormData({ name: '', year: 0, description: '', imageUrl: '' });
   };
 
+  const handleProcessImages = async () => {
+    if (!editingSet || !user) return;
+    
+    setProcessingImages(true);
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/admin/sets/${editingSet.id}/process-images`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const result = await response.json();
+      if (response.ok) {
+        toast({
+          title: "Image Processing Started",
+          description: `Processing ${result.totalCards} cards in "${result.setName}". This runs in the background.`
+        });
+      } else {
+        throw new Error(result.message || 'Failed to start image processing');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingImages(false);
+    }
+  };
+
+  const handleProcessPricing = async () => {
+    if (!editingSet || !user) return;
+    
+    setProcessingPricing(true);
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/admin/sets/${editingSet.id}/process-pricing`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const result = await response.json();
+      if (response.ok) {
+        toast({
+          title: "Pricing Update Started",
+          description: `Fetching prices for ${result.totalCards} cards in "${result.setName}". This runs in the background.`
+        });
+      } else {
+        throw new Error(result.message || 'Failed to start pricing update');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingPricing(false);
+    }
+  };
+
   // Show individual cards if a set is selected
   if (selectedSet) {
     return (
@@ -881,6 +951,44 @@ export default function BrowseCards() {
                   <X className="w-4 h-4 mr-2" />
                   Cancel
                 </Button>
+              </div>
+              
+              {/* Bulk Processing Section */}
+              <div className="border-t pt-4 mt-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Bulk Processing</h4>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleProcessImages}
+                    disabled={processingImages || processingPricing}
+                    className="flex-1"
+                  >
+                    {processingImages ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Image className="w-4 h-4 mr-2" />
+                    )}
+                    {processingImages ? 'Starting...' : 'Find Images'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleProcessPricing}
+                    disabled={processingImages || processingPricing}
+                    className="flex-1"
+                  >
+                    {processingPricing ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <DollarSign className="w-4 h-4 mr-2" />
+                    )}
+                    {processingPricing ? 'Starting...' : 'Update Prices'}
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  These run in the background - you can close this dialog
+                </p>
               </div>
             </div>
           </DialogContent>
