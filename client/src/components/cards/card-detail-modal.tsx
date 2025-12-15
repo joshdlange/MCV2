@@ -14,6 +14,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
+import { getCardAuraTier, type AuraTier } from "@/lib/cardAura";
 import type { CardWithSet } from "@shared/schema";
 import { useCardPricing, useRefreshCardPricing } from "@/hooks/useCardPricing";
 import { auth } from "@/lib/firebase";
@@ -463,54 +464,65 @@ export function CardDetailModal({
               </div>
             )}
 
-            {/* Card Image - Optimized for Mobile */}
-            {!isEditing && (
-              <div className="relative">
-                <div className="aspect-[2.5/3.5] w-full max-w-[280px] mx-auto relative overflow-hidden rounded-xl shadow-xl">
-                  <img
-                    src={showBack ? convertGoogleDriveUrl(card.backImageUrl || '') : convertGoogleDriveUrl(card.frontImageUrl || '')}
-                    alt={showBack ? `${card.name} back` : card.name}
-                    className="w-full h-full object-contain bg-gray-900"
-                    onError={(e) => {
-                      e.currentTarget.src = noCardImagePlaceholder;
-                    }}
-                  />
-                  
-                  {/* Status Badges */}
-                  <div className="absolute top-2 right-2 flex flex-col gap-1.5">
-                    {isInCollection && (
-                      <div className="bg-green-500 rounded-full p-1.5 shadow-lg">
-                        <Check className="w-3 h-3 text-white" />
+            {/* Card Image - Optimized for Mobile with Value-Based Aura */}
+            {!isEditing && (() => {
+              // Calculate aura tier based on card value (or manual override if present)
+              const auraTier = getCardAuraTier(
+                card.estimatedValue ? parseFloat(String(card.estimatedValue)) : null,
+                (card as any).auraTierOverride as AuraTier | undefined
+              );
+              
+              return (
+                <div className="relative flex justify-center py-4">
+                  {/* Aura Wrapper - adds glow effect behind card */}
+                  <div className={`card-aura-wrapper aura-${auraTier}`}>
+                    <div className="aspect-[2.5/3.5] w-full max-w-[280px] relative overflow-hidden rounded-xl shadow-xl">
+                      <img
+                        src={showBack ? convertGoogleDriveUrl(card.backImageUrl || '') : convertGoogleDriveUrl(card.frontImageUrl || '')}
+                        alt={showBack ? `${card.name} back` : card.name}
+                        className="w-full h-full object-contain bg-gray-900"
+                        onError={(e) => {
+                          e.currentTarget.src = noCardImagePlaceholder;
+                        }}
+                      />
+                      
+                      {/* Status Badges */}
+                      <div className="absolute top-2 right-2 flex flex-col gap-1.5">
+                        {isInCollection && (
+                          <div className="bg-green-500 rounded-full p-1.5 shadow-lg">
+                            <Check className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+                        {isInWishlist && (
+                          <div className="bg-pink-500 rounded-full p-1.5 shadow-lg">
+                            <Heart className="w-3 h-3 text-white fill-white" />
+                          </div>
+                        )}
+                        {card.isInsert && (
+                          <div className="bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg text-xs">
+                            💎
+                          </div>
+                        )}
                       </div>
-                    )}
-                    {isInWishlist && (
-                      <div className="bg-pink-500 rounded-full p-1.5 shadow-lg">
-                        <Heart className="w-3 h-3 text-white fill-white" />
-                      </div>
-                    )}
-                    {card.isInsert && (
-                      <div className="bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg text-xs">
-                        💎
-                      </div>
-                    )}
+                      
+                      {/* Flip Button */}
+                      {card.backImageUrl && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowBack(!showBack)}
+                          className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-orange-500 text-white border-orange-500 hover:bg-orange-600 hover:text-white text-xs px-3 py-1 h-8"
+                          data-testid="button-flip-card"
+                        >
+                          <RotateCcw className="w-3 h-3 mr-1" />
+                          FLIP
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  
-                  {/* Flip Button */}
-                  {card.backImageUrl && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowBack(!showBack)}
-                      className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-orange-500 text-white border-orange-500 hover:bg-orange-600 hover:text-white text-xs px-3 py-1 h-8"
-                      data-testid="button-flip-card"
-                    >
-                      <RotateCcw className="w-3 h-3 mr-1" />
-                      FLIP
-                    </Button>
-                  )}
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Card Info */}
             {!isEditing && (

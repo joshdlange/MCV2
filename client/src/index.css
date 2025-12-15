@@ -202,6 +202,120 @@
   }
 }
 
+/* ============================================
+   Card Aura System - Card Details Screen Only
+   ============================================
+   Tiers: common, uncommon, rare, grail
+   Price thresholds defined in: client/src/lib/cardAura.ts
+   ============================================ */
+
+@keyframes auraPulse {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes auraGrailPulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.03);
+  }
+}
+
+/* Base aura container */
+.card-aura-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.card-aura-wrapper::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: -12px;
+  right: -12px;
+  bottom: -12px;
+  border-radius: 20px;
+  z-index: -1;
+  filter: blur(20px);
+  pointer-events: none;
+}
+
+/* Common - Very subtle, almost imperceptible */
+.aura-common::before {
+  background: radial-gradient(ellipse at center, 
+    rgba(156, 163, 175, 0.15) 0%, 
+    rgba(107, 114, 128, 0.08) 50%, 
+    transparent 70%);
+  animation: auraPulse 8s ease-in-out infinite;
+}
+
+/* Uncommon - Cool blue/teal tones */
+.aura-uncommon::before {
+  background: radial-gradient(ellipse at center, 
+    rgba(59, 130, 246, 0.25) 0%, 
+    rgba(14, 165, 233, 0.15) 40%, 
+    rgba(6, 182, 212, 0.08) 60%, 
+    transparent 75%);
+  animation: auraPulse 7s ease-in-out infinite;
+}
+
+/* Rare - Purple/magenta gradient */
+.aura-rare::before {
+  background: radial-gradient(ellipse at center, 
+    rgba(168, 85, 247, 0.35) 0%, 
+    rgba(192, 38, 211, 0.2) 35%, 
+    rgba(236, 72, 153, 0.12) 55%, 
+    transparent 75%);
+  animation: auraPulse 6s ease-in-out infinite;
+  filter: blur(24px);
+  top: -16px;
+  left: -16px;
+  right: -16px;
+  bottom: -16px;
+}
+
+/* Grail - Warm gold/orange/red, strongest effect */
+.aura-grail::before {
+  background: radial-gradient(ellipse at center, 
+    rgba(251, 191, 36, 0.45) 0%, 
+    rgba(249, 115, 22, 0.3) 30%, 
+    rgba(239, 68, 68, 0.2) 50%, 
+    rgba(220, 38, 38, 0.1) 65%, 
+    transparent 80%);
+  animation: auraGrailPulse 5s ease-in-out infinite;
+  filter: blur(28px);
+  top: -20px;
+  left: -20px;
+  right: -20px;
+  bottom: -20px;
+}
+
+/* Additional glow layer for grail cards */
+.aura-grail::after {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  right: -8px;
+  bottom: -8px;
+  border-radius: 16px;
+  z-index: -1;
+  background: radial-gradient(ellipse at center, 
+    rgba(251, 191, 36, 0.12) 0%, 
+    transparent 60%);
+  pointer-events: none;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
