@@ -793,166 +793,149 @@ export default function Social() {
 
 
 
-        <TabsContent value="messages" className="h-[80vh] bg-white dark:bg-gray-900">
-          <div className="h-full flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
-            {/* Left Column: Conversation List */}
-            <div className="w-2/5 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col">
-              {/* Header */}
-              <div className="p-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900 hidden md:block">Messages</h2>
-                <h2 className="text-sm font-semibold text-gray-900 block md:hidden">Chats</h2>
-                <Button 
-                  size="sm" 
-                  onClick={() => setActiveTab('friends')}
-                  className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1"
-                >
-                  <UserPlus className="w-3 h-3 mr-1 hidden md:block" />
-                  <UserPlus className="w-4 h-4 block md:hidden" />
-                  <span className="hidden md:block">New</span>
-                </Button>
-              </div>
-              
-              {/* Conversation List */}
-              <div className="flex-1 overflow-y-auto">
-                {messageThreads.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center px-6">
-                    <MessageCircle className="w-16 h-16 text-gray-300 mb-4" />
-                    <p className="text-gray-500 text-sm">No conversations</p>
-                    <p className="text-gray-400 text-xs">Send a message to start chatting</p>
+        <TabsContent value="messages" className="min-h-[70vh] bg-white dark:bg-gray-900">
+          {/* Mobile: Show either conversation list OR chat (not both) */}
+          {/* Desktop: Show side-by-side layout */}
+          <div className="h-full rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
+            
+            {/* MOBILE VIEW - Two-step flow */}
+            <div className="md:hidden h-full">
+              {!selectedFriendId ? (
+                /* Step 1: Conversation List */
+                <div className="flex flex-col h-full">
+                  {/* Header */}
+                  <div className="p-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Messages</h2>
                     <Button 
+                      size="sm" 
                       onClick={() => setActiveTab('friends')}
-                      className="mt-4 bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2"
+                      className="bg-blue-500 hover:bg-blue-600 text-white"
+                      data-testid="button-new-chat"
                     >
-                      View Friends
+                      <Plus className="w-4 h-4 mr-1" />
+                      New
                     </Button>
                   </div>
-                ) : (
-                  <div className="divide-y divide-gray-100">
-                    {messageThreads.map((thread: any) => {
-                      const friendUser = thread.user;
-                      const lastMessage = thread.lastMessage;
-                      const unreadCount = thread.unreadCount || 0;
-                      
-                      return (
-                        <div
-                          key={friendUser.id}
-                          onClick={() => setSelectedFriendId(friendUser.id)}
-                          className={`cursor-pointer transition-colors duration-150 hover:bg-gray-50 ${
-                            selectedFriendId === friendUser.id 
-                              ? 'bg-blue-50 border-r-3 border-blue-500' 
-                              : 'bg-white'
-                          }`}
+                  
+                  {/* Conversation List */}
+                  <div className="flex-1 overflow-y-auto">
+                    {messageThreads.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-full text-center px-6 py-12">
+                        <MessageCircle className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
+                        <p className="text-gray-600 dark:text-gray-400 font-medium mb-1">No conversations yet</p>
+                        <p className="text-gray-400 dark:text-gray-500 text-sm mb-4">Send a message to start chatting</p>
+                        <Button 
+                          onClick={() => setActiveTab('friends')}
+                          className="bg-blue-500 hover:bg-blue-600 text-white"
+                          data-testid="button-view-friends"
                         >
-                          {/* Mobile Layout - Avatar focused */}
-                          <div className="block md:hidden p-3">
-                            <div className="flex flex-col items-center space-y-2">
-                              <div className="relative">
-                                <Avatar className="w-12 h-12">
-                                  <AvatarImage src={friendUser.photoURL} />
-                                  <AvatarFallback className="bg-gray-400 text-white font-medium text-sm">
-                                    {friendUser.displayName?.charAt(0) || friendUser.username.charAt(0)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
-                                {unreadCount > 0 && (
-                                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                                    {unreadCount}
-                                  </div>
-                                )}
-                              </div>
-                              <p className="text-xs font-medium text-gray-900 truncate w-full text-center">
-                                {friendUser.displayName?.split(' ')[0] || friendUser.username}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Desktop Layout - Full info */}
-                          <div className="hidden md:block p-5">
-                            <div className="flex items-center space-x-4">
-                              <div className="relative">
+                          <Users className="w-4 h-4 mr-2" />
+                          View Friends
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                        {messageThreads.map((thread: any) => {
+                          const friendUser = thread.user;
+                          const lastMessage = thread.lastMessage;
+                          const unreadCount = thread.unreadCount || 0;
+                          
+                          return (
+                            <div
+                              key={friendUser.id}
+                              onClick={() => setSelectedFriendId(friendUser.id)}
+                              className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
+                              data-testid={`conversation-${friendUser.id}`}
+                            >
+                              {/* Avatar with status */}
+                              <div className="relative flex-shrink-0">
                                 <Avatar className="w-14 h-14">
                                   <AvatarImage src={friendUser.photoURL} />
-                                  <AvatarFallback className="bg-gray-400 text-white font-medium text-lg">
+                                  <AvatarFallback className="bg-blue-500 text-white font-semibold text-lg">
                                     {friendUser.displayName?.charAt(0) || friendUser.username.charAt(0)}
                                   </AvatarFallback>
                                 </Avatar>
-                                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
+                                <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></div>
                                 {unreadCount > 0 && (
-                                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center font-bold px-1">
                                     {unreadCount}
                                   </div>
                                 )}
                               </div>
+                              
+                              {/* Message preview */}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between mb-1">
-                                  <p className="font-semibold text-gray-900 truncate text-base">
+                                  <p className="font-semibold text-gray-900 dark:text-white truncate">
                                     {friendUser.displayName || friendUser.username}
                                   </p>
-                                  <span className="text-xs text-gray-400 flex-shrink-0">
+                                  <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 ml-2">
                                     {new Date(lastMessage.createdAt).toLocaleTimeString([], {
                                       hour: '2-digit',
                                       minute: '2-digit'
                                     })}
                                   </span>
                                 </div>
-                                <p className={`text-sm truncate ${unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+                                <p className={`text-sm truncate ${unreadCount > 0 ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
                                   {lastMessage.senderId === currentUser?.id ? 'You: ' : ''}{lastMessage.content}
                                 </p>
                               </div>
+                              
+                              {/* Chevron */}
+                              <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                              </svg>
                             </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Right Column: Current Conversation - iPhone Style */}
-            <div className="flex-1 flex flex-col">
-              {!selectedFriendId ? (
-                <div className="flex-1 flex items-center justify-center bg-gray-50">
-                  <div className="text-center">
-                    <MessageCircle className="w-20 h-20 text-gray-300 mx-auto mb-4" />
-                    <p className="text-xl font-medium text-gray-600 mb-2">Select a conversation</p>
-                    <p className="text-gray-500">Choose from your existing conversations</p>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
-                <>
-                  {/* Chat Header */}
+                /* Step 2: Chat View (Full Screen) */
+                <div className="flex flex-col h-full min-h-[70vh]">
+                  {/* Chat Header with Back Button */}
                   {(() => {
                     const selectedThread = messageThreads.find((t: any) => t.user.id === selectedFriendId);
                     const selectedFriendUser = selectedThread?.user;
                     
                     return (
-                      <div className="p-4 bg-gray-50 border-b border-gray-200">
-                        <div className="flex items-center space-x-3">
-                          <Avatar className="w-10 h-10">
-                            <AvatarImage src={selectedFriendUser?.photoURL} />
-                            <AvatarFallback className="bg-gray-400 text-white font-medium">
-                              {selectedFriendUser?.displayName?.charAt(0) || selectedFriendUser?.username?.charAt(0) || 'U'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h3 className="font-medium text-gray-900">
-                              {selectedFriendUser?.displayName || selectedFriendUser?.username || 'Friend'}
-                            </h3>
-                            <p className="text-sm text-green-600">Active now</p>
-                          </div>
+                      <div className="p-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedFriendId(null)}
+                          className="p-2 -ml-1"
+                          data-testid="button-back-to-chats"
+                        >
+                          <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </Button>
+                        <Avatar className="w-10 h-10">
+                          <AvatarImage src={selectedFriendUser?.photoURL} />
+                          <AvatarFallback className="bg-blue-500 text-white font-medium">
+                            {selectedFriendUser?.displayName?.charAt(0) || selectedFriendUser?.username?.charAt(0) || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900 dark:text-white">
+                            {selectedFriendUser?.displayName || selectedFriendUser?.username || 'Friend'}
+                          </h3>
+                          <p className="text-xs text-green-600">Active now</p>
                         </div>
                       </div>
                     );
                   })()}
                   
                   {/* Messages Area */}
-                  <div className="flex-1 overflow-y-auto p-4 bg-white">
+                  <div className="flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-900">
                     {messages.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full text-center">
-                        <MessageCircle className="w-16 h-16 text-gray-300 mb-4" />
-                        <p className="text-gray-500">No messages yet</p>
-                        <p className="text-gray-400 text-sm">Say hello to start the conversation!</p>
+                        <MessageCircle className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" />
+                        <p className="text-gray-500 dark:text-gray-400">No messages yet</p>
+                        <p className="text-gray-400 dark:text-gray-500 text-sm">Say hello!</p>
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -962,34 +945,25 @@ export default function Social() {
                             className={`flex ${message.senderId === currentUser?.id ? 'justify-end' : 'justify-start'}`}
                           >
                             <div
-                              className={`max-w-xs px-4 py-2 rounded-2xl ${
+                              className={`max-w-[80%] px-4 py-2 rounded-2xl ${
                                 message.senderId === currentUser?.id
-                                  ? 'bg-blue-500 text-white'
-                                  : 'bg-gray-100 text-gray-900'
+                                  ? 'bg-blue-500 text-white rounded-br-md'
+                                  : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-md'
                               }`}
                             >
-                              {(message as any).imageUrl ? (
-                                <div className="space-y-2">
-                                  <img 
-                                    src={(message as any).imageUrl} 
-                                    alt="Shared image" 
-                                    className="rounded-lg max-w-full h-auto"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none';
-                                    }}
-                                  />
-                                  <p className="text-sm leading-relaxed">{message.content}</p>
-                                </div>
-                              ) : (
-                                <p className="text-sm leading-relaxed">{message.content}</p>
+                              {(message as any).imageUrl && (
+                                <img 
+                                  src={(message as any).imageUrl} 
+                                  alt="Shared" 
+                                  className="rounded-lg max-w-full h-auto mb-2"
+                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
                               )}
+                              <p className="text-sm leading-relaxed">{message.content}</p>
                               <p className={`text-xs mt-1 ${
-                                message.senderId === currentUser?.id ? 'text-blue-100' : 'text-gray-500'
+                                message.senderId === currentUser?.id ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
                               }`}>
-                                {new Date(message.createdAt).toLocaleTimeString([], {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
+                                {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </p>
                             </div>
                           </div>
@@ -998,12 +972,13 @@ export default function Social() {
                     )}
                   </div>
                   
-                  {/* Message Input - Enhanced iPhone Style */}
-                  <div className="p-4 bg-white border-t border-gray-200">
-                    <div className="flex items-end space-x-3">
+                  {/* Message Input - Fixed at bottom */}
+                  <div className="p-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-end gap-2">
                       {/* Attachment Button */}
                       <Button
                         type="button"
+                        variant="ghost"
                         onClick={() => {
                           const input = document.createElement('input');
                           input.type = 'file';
@@ -1015,66 +990,49 @@ export default function Social() {
                                 const formData = new FormData();
                                 formData.append('image', file);
                                 formData.append('recipientId', selectedFriendId.toString());
-
                                 const response = await fetch('/api/social/messages/image', {
                                   method: 'POST',
-                                  headers: {
-                                    ...(await getAuthHeaders()),
-                                  },
+                                  headers: { ...(await getAuthHeaders()) },
                                   body: formData,
                                 });
-
                                 if (response.ok) {
-                                  const result = await response.json();
-                                  // Refresh messages
                                   refetchMessages();
-                                  toast({
-                                    title: "Image sent!",
-                                    description: "Your image has been shared successfully.",
-                                  });
+                                  toast({ title: "Image sent!", description: "Your image has been shared." });
                                 } else {
-                                  throw new Error('Failed to send image');
+                                  throw new Error('Failed');
                                 }
                               } catch (error) {
-                                console.error('Image upload error:', error);
-                                toast({
-                                  title: "Upload failed",
-                                  description: "Could not send image. Please try again.",
-                                  variant: "destructive",
-                                });
+                                toast({ title: "Upload failed", description: "Could not send image.", variant: "destructive" });
                               }
                             }
                           };
                           input.click();
                         }}
-                        className="w-12 h-12 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 p-0 flex items-center justify-center flex-shrink-0"
+                        className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 p-0 flex-shrink-0"
+                        data-testid="button-attach-image"
                       >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                       </Button>
                       
                       {/* Message Input */}
-                      <div className="flex-1 relative">
-                        <Textarea
+                      <div className="flex-1">
+                        <Input
                           placeholder="Message..."
                           value={newMessage}
                           onChange={(e) => setNewMessage(e.target.value)}
-                          className="w-full px-5 py-3 border border-gray-300 rounded-full resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 placeholder-gray-500 text-base"
-                          rows={1}
-                          style={{ maxHeight: '120px' }}
+                          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500"
                           onKeyPress={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault();
                               if (newMessage.trim() && selectedFriendId) {
-                                sendMessage.mutate({
-                                  recipientId: selectedFriendId,
-                                  content: newMessage.trim(),
-                                });
+                                sendMessage.mutate({ recipientId: selectedFriendId, content: newMessage.trim() });
                                 setNewMessage("");
                               }
                             }
                           }}
+                          data-testid="input-message"
                         />
                       </div>
                       
@@ -1082,24 +1040,266 @@ export default function Social() {
                       <Button
                         onClick={() => {
                           if (newMessage.trim() && selectedFriendId) {
-                            sendMessage.mutate({
-                              recipientId: selectedFriendId,
-                              content: newMessage.trim(),
-                            });
+                            sendMessage.mutate({ recipientId: selectedFriendId, content: newMessage.trim() });
                             setNewMessage("");
                           }
                         }}
                         disabled={!newMessage.trim() || sendMessage.isPending}
-                        className="w-12 h-12 rounded-full bg-blue-500 hover:bg-blue-600 text-white p-0 flex items-center justify-center flex-shrink-0"
+                        className="w-10 h-10 rounded-full bg-blue-500 hover:bg-blue-600 text-white p-0 flex-shrink-0"
+                        data-testid="button-send-message"
                       >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                         </svg>
                       </Button>
                     </div>
                   </div>
-                </>
+                </div>
               )}
+            </div>
+            
+            {/* DESKTOP VIEW - Side-by-side layout */}
+            <div className="hidden md:flex h-[70vh]">
+              {/* Left Column: Conversation List */}
+              <div className="w-80 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col">
+                {/* Header */}
+                <div className="p-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Messages</h2>
+                  <Button 
+                    size="sm" 
+                    onClick={() => setActiveTab('friends')}
+                    className="bg-blue-500 hover:bg-blue-600 text-white"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    New
+                  </Button>
+                </div>
+                
+                {/* Conversation List */}
+                <div className="flex-1 overflow-y-auto">
+                  {messageThreads.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center px-6">
+                      <MessageCircle className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" />
+                      <p className="text-gray-500 dark:text-gray-400 text-sm">No conversations</p>
+                      <Button 
+                        onClick={() => setActiveTab('friends')}
+                        className="mt-3 bg-blue-500 hover:bg-blue-600 text-white text-sm"
+                        size="sm"
+                      >
+                        View Friends
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                      {messageThreads.map((thread: any) => {
+                        const friendUser = thread.user;
+                        const lastMessage = thread.lastMessage;
+                        const unreadCount = thread.unreadCount || 0;
+                        
+                        return (
+                          <div
+                            key={friendUser.id}
+                            onClick={() => setSelectedFriendId(friendUser.id)}
+                            className={`flex items-center gap-3 p-4 cursor-pointer transition-colors ${
+                              selectedFriendId === friendUser.id 
+                                ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500' 
+                                : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                            }`}
+                          >
+                            <div className="relative flex-shrink-0">
+                              <Avatar className="w-12 h-12">
+                                <AvatarImage src={friendUser.photoURL} />
+                                <AvatarFallback className="bg-blue-500 text-white font-semibold">
+                                  {friendUser.displayName?.charAt(0) || friendUser.username.charAt(0)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></div>
+                              {unreadCount > 0 && (
+                                <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold px-1">
+                                  {unreadCount}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between mb-0.5">
+                                <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">
+                                  {friendUser.displayName || friendUser.username}
+                                </p>
+                                <span className="text-xs text-gray-400 flex-shrink-0">
+                                  {new Date(lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <p className={`text-sm truncate ${unreadCount > 0 ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
+                                {lastMessage.senderId === currentUser?.id ? 'You: ' : ''}{lastMessage.content}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Column: Chat */}
+              <div className="flex-1 flex flex-col bg-white dark:bg-gray-900">
+                {!selectedFriendId ? (
+                  <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-800/50">
+                    <div className="text-center">
+                      <MessageCircle className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                      <p className="text-lg font-medium text-gray-600 dark:text-gray-400 mb-2">Select a conversation</p>
+                      <p className="text-gray-400 dark:text-gray-500 text-sm">Choose from your existing conversations</p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Chat Header */}
+                    {(() => {
+                      const selectedThread = messageThreads.find((t: any) => t.user.id === selectedFriendId);
+                      const selectedFriendUser = selectedThread?.user;
+                      
+                      return (
+                        <div className="p-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="w-10 h-10">
+                              <AvatarImage src={selectedFriendUser?.photoURL} />
+                              <AvatarFallback className="bg-blue-500 text-white font-medium">
+                                {selectedFriendUser?.displayName?.charAt(0) || selectedFriendUser?.username?.charAt(0) || 'U'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <h3 className="font-semibold text-gray-900 dark:text-white">
+                                {selectedFriendUser?.displayName || selectedFriendUser?.username || 'Friend'}
+                              </h3>
+                              <p className="text-xs text-green-600">Active now</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    
+                    {/* Messages */}
+                    <div className="flex-1 overflow-y-auto p-4">
+                      {messages.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full text-center">
+                          <MessageCircle className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" />
+                          <p className="text-gray-500 dark:text-gray-400">No messages yet</p>
+                          <p className="text-gray-400 dark:text-gray-500 text-sm">Say hello!</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {messages.map((message: Message) => (
+                            <div
+                              key={message.id}
+                              className={`flex ${message.senderId === currentUser?.id ? 'justify-end' : 'justify-start'}`}
+                            >
+                              <div
+                                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
+                                  message.senderId === currentUser?.id
+                                    ? 'bg-blue-500 text-white rounded-br-md'
+                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-md'
+                                }`}
+                              >
+                                {(message as any).imageUrl && (
+                                  <img 
+                                    src={(message as any).imageUrl} 
+                                    alt="Shared" 
+                                    className="rounded-lg max-w-full h-auto mb-2"
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                  />
+                                )}
+                                <p className="text-sm leading-relaxed">{message.content}</p>
+                                <p className={`text-xs mt-1 ${
+                                  message.senderId === currentUser?.id ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
+                                }`}>
+                                  {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Message Input */}
+                    <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+                      <div className="flex items-end gap-3">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = 'image/*';
+                            input.onchange = async (e) => {
+                              const file = (e.target as HTMLInputElement).files?.[0];
+                              if (file && selectedFriendId) {
+                                try {
+                                  const formData = new FormData();
+                                  formData.append('image', file);
+                                  formData.append('recipientId', selectedFriendId.toString());
+                                  const response = await fetch('/api/social/messages/image', {
+                                    method: 'POST',
+                                    headers: { ...(await getAuthHeaders()) },
+                                    body: formData,
+                                  });
+                                  if (response.ok) {
+                                    refetchMessages();
+                                    toast({ title: "Image sent!" });
+                                  } else {
+                                    throw new Error('Failed');
+                                  }
+                                } catch (error) {
+                                  toast({ title: "Upload failed", variant: "destructive" });
+                                }
+                              }
+                            };
+                            input.click();
+                          }}
+                          className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 p-0 flex-shrink-0"
+                        >
+                          <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </Button>
+                        
+                        <div className="flex-1">
+                          <Input
+                            placeholder="Message..."
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-gray-50 dark:bg-gray-800"
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                if (newMessage.trim() && selectedFriendId) {
+                                  sendMessage.mutate({ recipientId: selectedFriendId, content: newMessage.trim() });
+                                  setNewMessage("");
+                                }
+                              }
+                            }}
+                          />
+                        </div>
+                        
+                        <Button
+                          onClick={() => {
+                            if (newMessage.trim() && selectedFriendId) {
+                              sendMessage.mutate({ recipientId: selectedFriendId, content: newMessage.trim() });
+                              setNewMessage("");
+                            }
+                          }}
+                          disabled={!newMessage.trim() || sendMessage.isPending}
+                          className="w-10 h-10 rounded-full bg-blue-500 hover:bg-blue-600 text-white p-0 flex-shrink-0"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                          </svg>
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </TabsContent>
