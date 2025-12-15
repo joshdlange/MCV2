@@ -1,0 +1,221 @@
+You are updating the Marvel Card Vault app.
+Do NOT refactor the whole app. Only add a visual “aura” system for cards on the Card Details screen.
+
+High-Level Goal
+
+On the card details page, every card should appear with a subtle glow/aura behind it that reflects its value/rarity.
+
+This is a visual design enhancement, not a major feature.
+
+It should make high-value cards feel more special without looking cheesy or distracting.
+
+The aura appears ONLY on the Card Details screen, not in binders, lists, or grids.
+
+1. Where to Implement
+
+Find the component that renders the Card Details view (where a single card is shown prominently).
+
+Often named something like CardDetails, CardDetailPage, CardView, etc.
+
+Identify the main card preview/image container (the element that visually shows the card).
+
+We will wrap this element in a new CardAura wrapper or apply aura classes around it.
+
+2. Data Inputs & Tier Logic
+
+We want the aura to be determined primarily by price, with support for manual override.
+
+Assume each card object has:
+
+estimatedValue (number, in USD) – if named differently, use the existing price field.
+
+Optionally: auraTierOverride or displayTier (string) – if present, it should override price-based tiers.
+
+A. Aura Tiers
+
+Implement 4 tiers:
+
+common – low value
+
+uncommon – mid value
+
+rare – high value
+
+grail – top tier
+
+B. Default Price-Based Mapping
+
+Create a small utility or config that maps price to tier, e.g.:
+
+estimatedValue < 5 → "common"
+
+5 <= estimatedValue < 25 → "uncommon"
+
+25 <= estimatedValue < 100 → "rare"
+
+estimatedValue >= 100 → "grail"
+
+Put these thresholds in a single config object so they can be tuned later.
+
+C. Manual Override
+
+If the card object has a auraTierOverride (or similar) field with values "common" | "uncommon" | "rare" | "grail", then use that instead of price.
+
+Pseudo-logic:
+
+const tier = card.auraTierOverride ?? getAuraTierFromPrice(card.estimatedValue);
+
+3. UI Implementation – Card Aura
+
+Create a reusable component or styling pattern, e.g. CardAura:
+
+<CardAura tier={tier}>
+  {/* existing card image / preview */}
+</CardAura>
+
+
+or use a wrapper div with tier-based classes.
+
+A. Visual Style (Base)
+
+The card itself must remain sharp and untouched.
+
+The aura lives behind the card:
+
+Use a wrapper div with position: relative;
+
+The aura is a ::before pseudo-element or inner div with position: absolute; z-index: -1.
+
+B. Common Styles Across All Tiers
+
+Soft, blurred radial gradient behind the card.
+
+Slight drop shadow for depth.
+
+Rounded shape that follows the card outline (can be a circle/oval slightly larger than the card).
+
+Subtle slow shimmer animation (Option 2B):
+
+Very low opacity pulsing or gentle expansion/contract of the glow.
+
+Keep animation performance-friendly (use opacity/transform, not expensive box-shadows).
+
+C. Tier-Specific Styles
+
+Create CSS classes like:
+
+.aura-common
+
+.aura-uncommon
+
+.aura-rare
+
+.aura-grail
+
+And define them roughly as:
+
+Common
+
+Very soft, low-opacity glow
+
+Neutral grey/soft white gradient
+
+Almost imperceptible, just enough to keep consistency that every card has an aura.
+
+Uncommon
+
+Slightly stronger glow
+
+Cool-toned (blue/teal) radial gradient
+
+Rare
+
+Noticeably brighter glow
+
+Purple/magenta or red-violet gradient
+
+Slightly more spread and intensity
+
+Grail
+
+Strongest glow (but still tasteful)
+
+Warm gold/orange/red gradient similar to the reference image you showed
+
+Larger radius, maybe layered gradients
+
+Slightly stronger shimmer / pulse (still slow and subtle)
+
+No particles or crazy FX yet — keep it clean and performant.
+
+4. Animation Details
+
+Use a single keyframes definition, e.g. @keyframes auraPulse:
+
+Animate opacity and/or transform: scale() between two close values (like 0.9 ↔ 1, 0.4 ↔ 0.6 opacity).
+
+Apply the animation to the aura element for all tiers, but:
+
+Commons: very low intensity (low opacity, shorter radius)
+
+Grails: slightly stronger (still not distracting)
+
+Example:
+
+.aura-common::before {
+  animation: auraPulse 6s ease-in-out infinite;
+}
+
+.aura-grail::before {
+  animation: auraPulse 4s ease-in-out infinite;
+}
+
+
+Keep animation durations long (4–8 seconds) so it feels like a soft breathing glow rather than a flashing effect.
+
+5. No Changes Outside Card Details
+
+Do not show auras in:
+
+Binder view
+
+Browse view
+
+Search results
+
+Collection grids
+
+The aura is only for the main Card Details screen.
+
+Do not implement binder-page glow interactions yet — just leave a small TODO comment in the code, e.g.:
+
+// TODO: In the future, consider a quick glow pulse when a card is added,
+// triggered from the binder flow. For now, aura effects live only on CardDetails.
+
+6. QA Checks
+
+Before finishing, verify:
+
+Every Card Details screen shows some aura (even low-value cards).
+
+Price-based tier mapping works correctly across sample cards of different values.
+
+Manual auraTierOverride (if present) wins over the price logic.
+
+Animations are smooth and not visually overwhelming on:
+
+Desktop
+
+Mobile
+
+No layout shift or overlap: the aura should never obscure the card art or text.
+
+No console errors or TypeScript issues.
+
+At the end, summarize:
+
+Components updated (e.g. CardDetails.tsx, CardAura.tsx)
+
+New CSS/SCSS modules or classes created
+
+Where the tier thresholds are defined so they can be tweaked later.

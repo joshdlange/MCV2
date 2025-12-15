@@ -7,8 +7,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Users, MessageCircle, Award, User, Lock, Clock, Check, X, Search, UserPlus, Plus, Grid, List } from "lucide-react";
+import { Users, MessageCircle, Award, User, Lock, Clock, Check, X, Search, UserPlus, Plus, Grid, List, Trophy, Star, Calendar, Info } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { useAuth } from "@/contexts/AuthContext";
@@ -55,6 +56,8 @@ interface UserBadge {
     description: string;
     iconUrl?: string;
     category: string;
+    rarity?: string;
+    unlockHint?: string;
   };
 }
 
@@ -92,6 +95,9 @@ export default function Social() {
   const [collectionViewMode, setCollectionViewMode] = useState<"grid" | "list">("grid");
   const [showCardDetail, setShowCardDetail] = useState(false);
   const [selectedCard, setSelectedCard] = useState<any>(null);
+  
+  // Badge detail modal state
+  const [selectedBadge, setSelectedBadge] = useState<{ badge: any; earnedAt?: string; isLocked?: boolean } | null>(null);
   
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -1346,7 +1352,12 @@ export default function Social() {
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                   {userBadges.map((userBadge: UserBadge) => (
-                    <div key={userBadge.id} className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center hover:shadow-md transition-all">
+                    <div 
+                      key={userBadge.id} 
+                      className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center hover:shadow-md transition-all cursor-pointer hover:scale-105"
+                      onClick={() => setSelectedBadge({ badge: userBadge.badge, earnedAt: userBadge.earnedAt, isLocked: false })}
+                      data-testid={`badge-card-${userBadge.badge.id}`}
+                    >
                       <div className="flex justify-center mb-3">
                         <div className={`w-14 h-14 rounded-full flex items-center justify-center border-2 ${getRarityStyle(userBadge.badge.rarity || 'common')}`}>
                           {userBadge.badge.iconUrl ? (
@@ -1390,7 +1401,12 @@ export default function Social() {
                     </h3>
                     <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
                       {lockedBadges.map((badge: any) => (
-                        <div key={badge.id} className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 text-center opacity-50 hover:opacity-70 transition-opacity">
+                        <div 
+                          key={badge.id} 
+                          className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 text-center opacity-50 hover:opacity-70 transition-opacity cursor-pointer"
+                          onClick={() => setSelectedBadge({ badge, isLocked: true })}
+                          data-testid={`locked-badge-card-${badge.id}`}
+                        >
                           <div className="w-10 h-10 mx-auto mb-2 rounded-full flex items-center justify-center bg-gray-200 dark:bg-gray-700">
                             {badge.iconUrl ? (
                               <img 
@@ -1403,7 +1419,7 @@ export default function Social() {
                             )}
                           </div>
                           <p className="font-medium text-gray-500 dark:text-gray-400 text-xs mb-1">{badge.name}</p>
-                          <p className="text-xs text-gray-400 dark:text-gray-500">{badge.unlockHint}</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 line-clamp-1">{badge.unlockHint}</p>
                         </div>
                       ))}
                     </div>
@@ -1745,6 +1761,97 @@ export default function Social() {
         isInCollection={false}
         isInWishlist={false}
       />
+
+      {/* Badge Detail Modal */}
+      <Dialog open={!!selectedBadge} onOpenChange={(open) => !open && setSelectedBadge(null)}>
+        <DialogContent className="max-w-md mx-auto" data-testid="badge-detail-modal">
+          {selectedBadge && (
+            <div className="text-center">
+              {/* Badge Icon - Large */}
+              <div className="flex justify-center mb-6">
+                <div className={`w-24 h-24 rounded-full flex items-center justify-center border-4 ${
+                  selectedBadge.isLocked 
+                    ? 'border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800' 
+                    : getRarityStyle(selectedBadge.badge.rarity || 'common')
+                } ${!selectedBadge.isLocked ? getRarityGlow(selectedBadge.badge.rarity || 'common') : ''}`}>
+                  {selectedBadge.badge.iconUrl ? (
+                    <img 
+                      src={selectedBadge.badge.iconUrl} 
+                      alt={selectedBadge.badge.name}
+                      className={`w-16 h-16 object-cover rounded-full ${selectedBadge.isLocked ? 'opacity-40 grayscale' : ''}`}
+                    />
+                  ) : selectedBadge.isLocked ? (
+                    <Lock className="w-10 h-10 text-gray-400" />
+                  ) : (
+                    <span className="text-4xl">{getRarityEmoji(selectedBadge.badge.rarity || 'common')}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Badge Name */}
+              <DialogHeader className="mb-4">
+                <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white flex items-center justify-center gap-2">
+                  {selectedBadge.isLocked && <Lock className="w-5 h-5 text-gray-400" />}
+                  {selectedBadge.badge.name}
+                </DialogTitle>
+              </DialogHeader>
+
+              {/* Category & Rarity Badges */}
+              <div className="flex justify-center gap-2 mb-4">
+                <span className={`text-sm px-3 py-1 rounded-full ${getBadgeColor(selectedBadge.badge.category || 'Achievement')}`}>
+                  {selectedBadge.badge.category || 'Achievement'}
+                </span>
+                {selectedBadge.badge.rarity && (
+                  <span className={`text-sm px-3 py-1 rounded-full ${getRarityStyle(selectedBadge.badge.rarity)} flex items-center gap-1`}>
+                    {getRarityEmoji(selectedBadge.badge.rarity)} {selectedBadge.badge.rarity.charAt(0).toUpperCase() + selectedBadge.badge.rarity.slice(1)}
+                  </span>
+                )}
+              </div>
+
+              {/* Full Description */}
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 mb-4">
+                <p className="text-gray-700 dark:text-gray-300 text-base leading-relaxed">
+                  {selectedBadge.badge.description || 'No description available.'}
+                </p>
+              </div>
+
+              {/* Unlock Hint (for locked badges) or Earned Date (for earned badges) */}
+              {selectedBadge.isLocked ? (
+                <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
+                  <div className="flex items-center justify-center gap-2 text-amber-600 dark:text-amber-400 mb-2">
+                    <Info className="w-4 h-4" />
+                    <span className="font-medium text-sm">How to Unlock</span>
+                  </div>
+                  <p className="text-amber-700 dark:text-amber-300 text-sm">
+                    {selectedBadge.badge.unlockHint || 'Keep exploring to discover how to unlock this power!'}
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
+                  <div className="flex items-center justify-center gap-2 text-green-600 dark:text-green-400">
+                    <Trophy className="w-5 h-5" />
+                    <span className="font-medium">Earned on {selectedBadge.earnedAt ? new Date(selectedBadge.earnedAt).toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    }) : 'Unknown'}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Close Button */}
+              <Button 
+                variant="outline" 
+                className="mt-6 w-full"
+                onClick={() => setSelectedBadge(null)}
+                data-testid="close-badge-modal"
+              >
+                Close
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
