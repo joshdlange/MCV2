@@ -211,84 +211,72 @@
 
 @keyframes auraPulse {
   0%, 100% {
-    opacity: 0.6;
-    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.7;
+    transform: scale(1);
   }
   50% {
-    opacity: 0.9;
-    transform: translate(-50%, -50%) scale(1.05);
+    opacity: 1;
+    transform: scale(1.02);
   }
 }
 
 @keyframes auraGrailPulse {
   0%, 100% {
-    opacity: 0.7;
-    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.8;
+    transform: scale(1);
   }
   50% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1.08);
+    transform: scale(1.04);
   }
 }
 
-/* Base aura glow element - positioned absolutely behind card */
+/* Base aura glow element - positioned absolutely behind card using box-shadow */
 .card-aura-glow {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 320px;
-  height: 420px;
-  border-radius: 24px;
+  width: 280px;
+  height: 392px;
+  border-radius: 12px;
   pointer-events: none;
   z-index: 0;
 }
 
-/* Common - Very subtle, almost imperceptible */
+/* Common - Very subtle gray glow */
 .aura-glow-common {
-  background: radial-gradient(ellipse at center, 
-    rgba(156, 163, 175, 0.25) 0%, 
-    rgba(107, 114, 128, 0.12) 40%, 
-    transparent 70%);
-  filter: blur(25px);
+  box-shadow: 
+    0 0 30px 10px rgba(156, 163, 175, 0.3),
+    0 0 60px 20px rgba(107, 114, 128, 0.15);
   animation: auraPulse 8s ease-in-out infinite;
 }
 
-/* Uncommon - Cool blue/teal tones */
+/* Uncommon - Cool blue/teal glow */
 .aura-glow-uncommon {
-  background: radial-gradient(ellipse at center, 
-    rgba(59, 130, 246, 0.4) 0%, 
-    rgba(14, 165, 233, 0.25) 35%, 
-    rgba(6, 182, 212, 0.12) 55%, 
-    transparent 75%);
-  filter: blur(30px);
+  box-shadow: 
+    0 0 35px 12px rgba(59, 130, 246, 0.5),
+    0 0 70px 25px rgba(14, 165, 233, 0.3),
+    0 0 100px 40px rgba(6, 182, 212, 0.15);
   animation: auraPulse 7s ease-in-out infinite;
 }
 
-/* Rare - Purple/magenta gradient */
+/* Rare - Purple/magenta glow */
 .aura-glow-rare {
-  background: radial-gradient(ellipse at center, 
-    rgba(168, 85, 247, 0.5) 0%, 
-    rgba(192, 38, 211, 0.3) 30%, 
-    rgba(236, 72, 153, 0.15) 50%, 
-    transparent 70%);
-  filter: blur(35px);
-  width: 340px;
-  height: 440px;
+  box-shadow: 
+    0 0 40px 15px rgba(168, 85, 247, 0.6),
+    0 0 80px 30px rgba(192, 38, 211, 0.35),
+    0 0 120px 50px rgba(236, 72, 153, 0.2);
   animation: auraPulse 6s ease-in-out infinite;
 }
 
-/* Grail - Warm gold/orange/red, strongest effect */
+/* Grail - Warm gold/orange/red glow - strongest effect */
 .aura-glow-grail {
-  background: radial-gradient(ellipse at center, 
-    rgba(251, 191, 36, 0.6) 0%, 
-    rgba(249, 115, 22, 0.4) 25%, 
-    rgba(239, 68, 68, 0.25) 45%, 
-    rgba(220, 38, 38, 0.12) 60%, 
-    transparent 80%);
-  filter: blur(40px);
-  width: 360px;
-  height: 460px;
+  box-shadow: 
+    0 0 50px 18px rgba(251, 191, 36, 0.7),
+    0 0 90px 35px rgba(249, 115, 22, 0.45),
+    0 0 130px 55px rgba(239, 68, 68, 0.25),
+    0 0 170px 70px rgba(220, 38, 38, 0.12);
   animation: auraGrailPulse 5s ease-in-out infinite;
 }
 
