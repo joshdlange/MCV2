@@ -12,7 +12,7 @@ import { PlusCircle, Upload, FolderPlus, FileText, X } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import type { CardSet } from "@shared/schema";
+import type { CardSet, MainSet } from "@shared/schema";
 
 export default function AdminCardManagement() {
   const [activeTab, setActiveTab] = useState("individual");
@@ -303,28 +303,37 @@ function CreateSetForm() {
     name: '',
     year: new Date().getFullYear(),
     description: '',
-    totalCards: ''
+    totalCards: '',
+    mainSetId: '' as string | number
   });
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Fetch main sets for the dropdown
+  const { data: mainSets = [] } = useQuery<MainSet[]>({
+    queryKey: ['/api/main-sets'],
+  });
 
   const createSetMutation = useMutation({
     mutationFn: async (setData: any) => {
       return apiRequest('POST', '/api/card-sets', {
         ...setData,
         year: parseInt(setData.year.toString()),
-        totalCards: parseInt(setData.totalCards) || 0
+        totalCards: parseInt(setData.totalCards) || 0,
+        mainSetId: setData.mainSetId ? parseInt(setData.mainSetId.toString()) : null
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/card-sets'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/main-sets'] });
       toast({ title: "Card set created successfully" });
       setFormData({
         name: '',
         year: new Date().getFullYear(),
         description: '',
-        totalCards: ''
+        totalCards: '',
+        mainSetId: ''
       });
     },
     onError: () => {
@@ -378,6 +387,29 @@ function CreateSetForm() {
             placeholder="e.g., 100"
             className="bg-white border-gray-200"
           />
+        </div>
+
+        <div>
+          <Label htmlFor="mainSet">Main Set (Optional)</Label>
+          <Select
+            value={formData.mainSetId?.toString() || "none"}
+            onValueChange={(value) => setFormData({ ...formData, mainSetId: value === "none" ? '' : value })}
+          >
+            <SelectTrigger className="bg-white border-gray-200">
+              <SelectValue placeholder="Select a main set (optional)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">None (Standalone Set)</SelectItem>
+              {mainSets.map((mainSet) => (
+                <SelectItem key={mainSet.id} value={mainSet.id.toString()}>
+                  {mainSet.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-gray-500 mt-1">
+            Leave empty for a standalone set, or select a main set to create a subset
+          </p>
         </div>
       </div>
 
