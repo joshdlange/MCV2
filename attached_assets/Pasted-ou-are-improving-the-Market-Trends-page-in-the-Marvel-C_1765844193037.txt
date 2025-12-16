@@ -1,0 +1,217 @@
+ou are improving the Market Trends page in the Marvel Card Vault app.
+
+The current version looks like a generic dashboard and uses questionable sample data (July/August dates). We want to:
+
+Make the layout clean and modern, consistent with the rest of the app.
+
+Define a clear, simple market index that can drive “buy vs sell” sentiment.
+
+Make Top Gainers / Top Losers actually readable and useful.
+
+Do NOT refactor the entire app. Only update the Market Trends page and any supporting utilities/components.
+
+1. Data Model (Front-end Shape)
+
+Assume that eventually the backend will provide data in a shape similar to:
+
+type DailyIndexPoint = {
+  date: string;        // ISO date string
+  indexValue: number;  // market index value or avg price
+};
+
+type Mover = {
+  cardName: string;
+  setName: string;
+  currentPrice: number;
+  previousPrice: number;
+  percentChange: number; // positive for gainers, negative for losers
+  imageUrl?: string;
+};
+
+type MarketTrendsData = {
+  dailyIndex: DailyIndexPoint[];  // at least last 30 days
+  gainers24h: Mover[];
+  losers24h: Mover[];
+  averagePrice7d: number;
+  averagePrice7dChangePct: number;
+  cardsSold24h: number;
+  highestSale24h: number;
+};
+
+
+If the actual data shape is different right now, create a mapping layer (mapRawMarketDataToMarketTrendsData) so the UI uses this normalized structure.
+
+Until the backend is ready, you can keep using mock data, but:
+
+It must cover the last 30 days from today, not hard-coded months.
+
+Use realistic values.
+
+2. Market Sentiment Logic (“Buyer vs Seller Market”)
+
+Using dailyIndex:
+
+const currentIndex = latest indexValue;
+const index30DaysAgo = indexValue from 30 days ago (or earliest point if <30 days);
+
+const pctChange = (currentIndex - index30DaysAgo) / index30DaysAgo * 100;
+
+
+Based on pctChange, compute:
+
+sentimentLabel:
+
+> +10% → "Seller's Market"
+
+-5% to +10% → "Neutral Market"
+
+< -5% → "Buyer’s Market"
+
+sentimentDescription:
+
+Seller's: "Prices trending up vs last 30 days—stronger for sellers."
+
+Neutral: "Prices are relatively stable vs last 30 days."
+
+Buyer’s: "Prices are down vs last 30 days—better entry points for buyers."
+
+Expose these values to the UI.
+
+3. Layout Redesign
+
+Refactor the Market Trends page into these sections:
+
+A. Header
+
+Title: “Marvel Card Market Trends”
+
+Subtitle: “Insights based on recent eBay sales”
+
+A pill/badge indicating the sentiment:
+
+e.g. [ Seller's Market · +12.3% vs last 30 days ]
+
+Color:
+
+Green for Seller’s
+
+Grey for Neutral
+
+Blue for Buyer’s
+
+B. Stat Tiles (3 cards)
+
+Use three consistent, compact tiles in one row:
+
+Average Price (7d)
+
+Big value: $60.16
+
+Subtext: “vs last 7 days: -7.3%”
+
+Cards Sold (24h)
+
+Value: 122
+
+Subtext: “Marvel trading cards”
+
+Highest Sale (24h)
+
+Value: $192.02
+
+Subtext: “Last 24 hours”
+
+(If you want a fourth tile later for “Lowest Sale” or “Median Price”, leave space in the layout, but keep 3 for now to avoid clutter.)
+
+C. Main Chart
+
+Single chart titled “30-Day Marvel Card Index”.
+
+X-axis: dates from dailyIndex (last 30 days).
+
+Y-axis: indexValue.
+
+No second chart unless it adds real value.
+
+Clean styling: thin red line with dots or just a line, matching the app’s existing design system.
+
+Ensure the X axis labels show real, recent dates (relative to now), not July/August hard-coded values.
+
+D. Top Gainers / Top Losers
+
+Place them side by side in one row, each as a white card with list items.
+
+For each list item:
+
+Optional thumbnail image on the left (imageUrl or placeholder).
+
+Card name (bold) + set name (small, muted).
+
+A small line under the name: e.g. $120.00 → $145.00
+
+Right-aligned percent change:
+
+Gainers: green text, +18.8%
+
+Losers: red text, -26.6%
+
+Boxes themselves:
+
+Soft green tint for gainers list background (rgba(0, 200, 83, 0.05) style).
+
+Soft red tint for losers list.
+
+Rounded corners, subtle shadow.
+
+Remove heavy borders.
+
+4. Styling Guidelines
+
+Use the same design language as the rest of Marvel Card Vault:
+
+White cards, rounded corners, soft shadows.
+
+Red as the primary accent.
+
+Light grey backgrounds for page sections.
+
+Remove:
+
+Thick outlines around tiles.
+
+Harsh color blocks.
+
+Any mismatched pastel boxes.
+
+Focus on readability and real insight, not “corporate dashboard” look.
+
+5. QA & Sanity Checks
+
+Before wrapping:
+
+Market sentiment pill correctly reflects 30-day change.
+
+Chart uses real (or at least realistic, recent) date labels covering the last 30 days.
+
+Stat tiles show correct values and deltas.
+
+Top gainers/losers:
+
+% matches currentPrice vs previousPrice.
+
+Values display as $X → $Y with correct formatting.
+
+Layout works on:
+
+Desktop
+
+Tablet/smaller laptop
+(On mobile, gainers/losers can stack vertically.)
+
+Finally, summarize:
+
+Components/files modified
+
+Any new utility functions (e.g. sentiment calculation, data mappers)
+
+Where to later plug in real backend/eBay data.
