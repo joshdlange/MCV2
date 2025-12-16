@@ -1,0 +1,182 @@
+PROMPT FOR REPLIT:
+
+You’re updating the Market Trends page in Marvel Card Vault again.
+The current version still looks like a generic daily dashboard with static July/August dates and mock data.
+
+We want to:
+
+Switch from noisy “daily index” to clean, month-over-month metrics.
+
+Show a 12-month trend chart that always uses recent months relative to today.
+
+Tighten the KPI layout and compress the movers section.
+
+Do not refactor the whole app. Only touch the Market Trends page and any related utilities.
+
+1. New data model: Monthly metrics
+
+Create a new type and normalizer:
+
+export type MonthlyMarketMetric = {
+  year: number;            // 2025
+  month: number;           // 1-12
+  totalSalesCount: number; // number of sales sampled for this month
+  totalSalesValue: number; // sum of sale prices
+  avgSalePrice: number;    // totalSalesValue / totalSalesCount
+};
+
+
+Extend the MarketTrendsData type to include:
+
+monthlyMetrics: MonthlyMarketMetric[]; // last 12 months, sorted ascending by date
+
+
+In mapRawMarketDataToMarketTrendsData(), populate monthlyMetrics.
+If the backend doesn’t yet provide real monthly data, use a generateMonthlyMockData() that:
+
+Creates 12 months from today going back 11 months.
+
+Fills in plausible totalSalesCount and avgSalePrice.
+
+NO hard-coded July/Aug; months must be dynamic.
+
+2. Monthly sentiment and KPIs
+
+Using monthlyMetrics:
+
+Let currentMonth = latest metric.
+
+Let previousMonth = metric just before it (if available).
+
+Compute:
+
+const volumeChangePct = percentage change in totalSalesCount;
+const avgPriceChangePct = percentage change in avgSalePrice;
+
+
+Use these to determine market sentiment:
+
+If avgPriceChangePct > +10 → "Seller's Market"
+
+If avgPriceChangePct < -5 → "Buyer’s Market"
+
+Else → "Neutral Market"
+
+Expose:
+
+sentimentLabel
+sentimentChangePct   // from avg price
+sentimentDescription // text string
+
+
+KPI cards should show:
+
+Market Volume (This Month)
+
+Value: currentMonth.totalSalesCount
+
+Subtext: {volumeChangePct}% vs last month
+
+Average Sale Price (This Month)
+
+Value: $currentMonth.avgSalePrice
+
+Subtext: {avgPriceChangePct}% vs last month
+
+Highest Sale (24h)
+
+Use existing value from MarketTrendsData.
+
+Update the layout so these three cards are slimmer, evenly spaced, and use your standard white card style (no thick borders).
+
+3. Main chart: 12-Month Marvel Card Market Trend
+
+Replace the existing 30-day daily chart with a new 12-month chart:
+
+Title: "12-Month Marvel Card Market Trend"
+
+X-axis: months from monthlyMetrics, displayed as "Jan", "Feb", etc.
+
+Y-axis: avgSalePrice.
+
+Use either:
+
+An area chart (line + gradient), or
+
+A line chart with subtle fill under the line.
+
+Colors:
+
+Line: your Marvel red.
+
+Fill: transparent red gradient (very light at the bottom).
+
+Ensure the x-axis labels are always last 12 months relative to today, not static.
+
+4. Compress Top Gainers / Losers into a single module
+
+Replace the two big side-by-side panels with one unified component:
+
+Card title: "Top Movers"
+
+Tabs: "24h" and "7d" (just wire them to the existing data for now, even if the data is the same).
+
+Within a tab, a pill or toggle: "Gainers" / "Losers".
+
+Each item row should show:
+
+Thumbnail image (or placeholder).
+
+Card name (bold) and set name (small, muted).
+
+A small price line: $previousPrice → $currentPrice.
+
+Right-aligned % change in green (gainers) or red (losers).
+
+Limit to 5 items per view.
+
+Use a simple list inside a white card; no colored huge panel backgrounds. Instead:
+
+Light green tint on the left border for gainers.
+
+Light red tint on the left border for losers.
+
+5. Visual polish
+
+Keep the hero background as a light top gradient.
+
+Keep the sentiment pill, but update the copy to use:
+
+Seller’s: "Seller's Market · +X% vs last month"
+
+Buyer’s: "Buyer’s Market · X% below last month"
+
+Neutral: "Neutral Market · ±X% vs last month"
+
+Below the pill, one sentence from sentimentDescription that explains what it means.
+
+6. QA checklist
+
+Before finishing:
+
+monthlyMetrics always contains up to 12 months ordered oldest → newest.
+
+Chart x-axis uses these months and never shows static July/August.
+
+KPI cards show correct MoM percentages and move correctly when mock data changes.
+
+Top Movers module:
+
+Shows correct price and % change fields.
+
+Tabs and toggles switch views without errors.
+
+Page looks good on:
+
+Desktop (main design target)
+
+Tablet / small laptop
+
+On narrow screens, the chart should stack above the movers module.
+
+Summarize which files you modified (e.g. MarketTrendsPage.tsx, marketSentiment.ts, marketTrendsMock.ts) and where monthlyMetrics is defined so we can later plug in real backend data.

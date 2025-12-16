@@ -1,6 +1,9 @@
-export type DailyIndexPoint = {
-  date: string;
-  indexValue: number;
+export type MonthlyMarketMetric = {
+  year: number;
+  month: number;
+  totalSalesCount: number;
+  totalSalesValue: number;
+  avgSalePrice: number;
 };
 
 export type Mover = {
@@ -13,12 +16,11 @@ export type Mover = {
 };
 
 export type MarketTrendsData = {
-  dailyIndex: DailyIndexPoint[];
+  monthlyMetrics: MonthlyMarketMetric[];
   gainers24h: Mover[];
   losers24h: Mover[];
-  averagePrice7d: number;
-  averagePrice7dChangePct: number;
-  cardsSold24h: number;
+  gainers7d: Mover[];
+  losers7d: Mover[];
   highestSale24h: number;
   lowestSale24h: number;
 };
@@ -29,34 +31,72 @@ export interface MarketSentiment {
   type: SentimentType;
   label: string;
   description: string;
-  percentChange: number;
+  avgPriceChangePct: number;
+  volumeChangePct: number;
   color: string;
   bgColor: string;
 }
 
-export function calculateMarketSentiment(dailyIndex: DailyIndexPoint[]): MarketSentiment {
-  if (dailyIndex.length < 2) {
+export interface MonthlyKPIs {
+  currentMonthVolume: number;
+  volumeChangePct: number;
+  currentMonthAvgPrice: number;
+  avgPriceChangePct: number;
+}
+
+export function calculateMonthlyKPIs(metrics: MonthlyMarketMetric[]): MonthlyKPIs {
+  if (metrics.length < 1) {
+    return {
+      currentMonthVolume: 0,
+      volumeChangePct: 0,
+      currentMonthAvgPrice: 0,
+      avgPriceChangePct: 0,
+    };
+  }
+
+  const current = metrics[metrics.length - 1];
+  const previous = metrics.length >= 2 ? metrics[metrics.length - 2] : null;
+
+  const volumeChangePct = previous && previous.totalSalesCount > 0
+    ? ((current.totalSalesCount - previous.totalSalesCount) / previous.totalSalesCount) * 100
+    : 0;
+
+  const avgPriceChangePct = previous && previous.avgSalePrice > 0
+    ? ((current.avgSalePrice - previous.avgSalePrice) / previous.avgSalePrice) * 100
+    : 0;
+
+  return {
+    currentMonthVolume: current.totalSalesCount,
+    volumeChangePct: parseFloat(volumeChangePct.toFixed(1)),
+    currentMonthAvgPrice: current.avgSalePrice,
+    avgPriceChangePct: parseFloat(avgPriceChangePct.toFixed(1)),
+  };
+}
+
+export function calculateMarketSentiment(metrics: MonthlyMarketMetric[]): MarketSentiment {
+  const kpis = calculateMonthlyKPIs(metrics);
+
+  if (metrics.length < 2) {
     return {
       type: 'neutral',
       label: 'Neutral Market',
       description: 'Not enough data to determine market sentiment.',
-      percentChange: 0,
+      avgPriceChangePct: 0,
+      volumeChangePct: 0,
       color: 'text-gray-600',
       bgColor: 'bg-gray-100',
     };
   }
 
-  const currentIndex = dailyIndex[dailyIndex.length - 1].indexValue;
-  const index30DaysAgo = dailyIndex[0].indexValue;
-  
-  const pctChange = ((currentIndex - index30DaysAgo) / index30DaysAgo) * 100;
+  const pctChange = kpis.avgPriceChangePct;
 
   if (pctChange > 10) {
     return {
       type: 'seller',
       label: "Seller's Market",
-      description: "Prices trending up vs last 30 days—stronger for sellers.",
-      percentChange: pctChange,
+      description: "Prices are up—stronger conditions for sellers looking to capitalize on increased values.",
+      avgPriceChangePct: pctChange,
+      volumeChangePct: kpis.volumeChangePct,
       color: 'text-green-700',
       bgColor: 'bg-green-100',
     };
@@ -64,8 +104,9 @@ export function calculateMarketSentiment(dailyIndex: DailyIndexPoint[]): MarketS
     return {
       type: 'buyer',
       label: "Buyer's Market",
-      description: "Prices are down vs last 30 days—better entry points for buyers.",
-      percentChange: pctChange,
+      description: "Prices are down—better entry points for buyers looking to expand their collection.",
+      avgPriceChangePct: pctChange,
+      volumeChangePct: kpis.volumeChangePct,
       color: 'text-blue-700',
       bgColor: 'bg-blue-100',
     };
@@ -73,8 +114,9 @@ export function calculateMarketSentiment(dailyIndex: DailyIndexPoint[]): MarketS
     return {
       type: 'neutral',
       label: 'Neutral Market',
-      description: "Prices are relatively stable vs last 30 days.",
-      percentChange: pctChange,
+      description: "Prices are relatively stable—balanced conditions for both buyers and sellers.",
+      avgPriceChangePct: pctChange,
+      volumeChangePct: kpis.volumeChangePct,
       color: 'text-gray-600',
       bgColor: 'bg-gray-100',
     };
@@ -106,11 +148,61 @@ interface RawMarketData {
   }>;
 }
 
+function aggregateDailyToMonthly(trendData: { date: string; averagePrice: number }[]): MonthlyMarketMetric[] {
+  if (!trendData || trendData.length === 0) {
+    return [];
+  }
+
+  const monthlyMap = new Map<string, { prices: number[]; count: number }>();
+
+  for (const day of trendData) {
+    const date = new Date(day.date);
+    const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+    
+    if (!monthlyMap.has(key)) {
+      monthlyMap.set(key, { prices: [], count: 0 });
+    }
+    
+    const entry = monthlyMap.get(key)!;
+    entry.prices.push(day.averagePrice);
+    entry.count += 1;
+  }
+
+  const metrics: MonthlyMarketMetric[] = [];
+  
+  Array.from(monthlyMap.entries()).forEach(([key, data]) => {
+    const [year, month] = key.split('-').map(Number);
+    const avgSalePrice = data.prices.reduce((a: number, b: number) => a + b, 0) / data.prices.length;
+    const estimatedVolume = data.count * 5;
+    
+    metrics.push({
+      year,
+      month,
+      totalSalesCount: estimatedVolume,
+      totalSalesValue: parseFloat((estimatedVolume * avgSalePrice).toFixed(2)),
+      avgSalePrice: parseFloat(avgSalePrice.toFixed(2)),
+    });
+  });
+
+  return metrics.sort((a, b) => {
+    if (a.year !== b.year) return a.year - b.year;
+    return a.month - b.month;
+  });
+}
+
 export function mapRawMarketDataToMarketTrendsData(raw: RawMarketData): MarketTrendsData {
-  const dailyIndex: DailyIndexPoint[] = raw.trendData.map(d => ({
-    date: d.date,
-    indexValue: d.averagePrice,
-  }));
+  let monthlyMetrics = aggregateDailyToMonthly(raw.trendData);
+  
+  if (monthlyMetrics.length < 2) {
+    monthlyMetrics = generateMonthlyMockData();
+  }
+  
+  if (raw.marketMovement.totalSold > 0 && monthlyMetrics.length > 0) {
+    const lastMonth = monthlyMetrics[monthlyMetrics.length - 1];
+    lastMonth.totalSalesCount = raw.marketMovement.totalSold;
+    lastMonth.avgSalePrice = raw.marketMovement.averagePrice;
+    lastMonth.totalSalesValue = lastMonth.totalSalesCount * lastMonth.avgSalePrice;
+  }
 
   const gainers24h: Mover[] = raw.topGainers.map(g => {
     const previousPrice = g.currentPrice / (1 + g.priceChange / 100);
@@ -137,38 +229,50 @@ export function mapRawMarketDataToMarketTrendsData(raw: RawMarketData): MarketTr
   });
 
   return {
-    dailyIndex,
+    monthlyMetrics,
     gainers24h,
     losers24h,
-    averagePrice7d: raw.marketMovement.averagePrice,
-    averagePrice7dChangePct: raw.marketMovement.percentChange,
-    cardsSold24h: raw.marketMovement.totalSold,
+    gainers7d: gainers24h,
+    losers7d: losers24h,
     highestSale24h: raw.marketMovement.highestSale,
     lowestSale24h: raw.marketMovement.lowestSale,
   };
 }
 
-export function generateRealisticMockData(): MarketTrendsData {
+export function generateMonthlyMockData(): MonthlyMarketMetric[] {
+  const metrics: MonthlyMarketMetric[] = [];
   const today = new Date();
-  const dailyIndex: DailyIndexPoint[] = [];
   
-  let basePrice = 55;
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
+  let basePrice = 52;
+  let baseVolume = 180;
+  
+  for (let i = 11; i >= 0; i--) {
+    const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
     
-    const fluctuation = (Math.random() - 0.5) * 8;
-    basePrice = Math.max(40, Math.min(75, basePrice + fluctuation));
+    const priceFluctuation = (Math.random() - 0.4) * 6;
+    basePrice = Math.max(35, Math.min(85, basePrice + priceFluctuation));
     
-    dailyIndex.push({
-      date: date.toISOString().split('T')[0],
-      indexValue: parseFloat(basePrice.toFixed(2)),
+    const volumeFluctuation = (Math.random() - 0.5) * 40;
+    baseVolume = Math.max(100, Math.min(350, baseVolume + volumeFluctuation));
+    
+    const totalSalesCount = Math.round(baseVolume);
+    const avgSalePrice = parseFloat(basePrice.toFixed(2));
+    const totalSalesValue = parseFloat((totalSalesCount * avgSalePrice).toFixed(2));
+    
+    metrics.push({
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      totalSalesCount,
+      totalSalesValue,
+      avgSalePrice,
     });
   }
+  
+  return metrics;
+}
 
-  const avgPrice7d = dailyIndex.slice(-7).reduce((sum, d) => sum + d.indexValue, 0) / 7;
-  const avgPrice7dPrev = dailyIndex.slice(-14, -7).reduce((sum, d) => sum + d.indexValue, 0) / 7;
-  const avgPriceChange = ((avgPrice7d - avgPrice7dPrev) / avgPrice7dPrev) * 100;
+export function generateRealisticMockData(): MarketTrendsData {
+  const monthlyMetrics = generateMonthlyMockData();
 
   const gainers24h: Mover[] = [
     { cardName: "Spider-Man #1", setName: "1990 Marvel Universe", currentPrice: 145.00, previousPrice: 122.00, percentChange: 18.85, imageUrl: "" },
@@ -186,14 +290,34 @@ export function generateRealisticMockData(): MarketTrendsData {
     { cardName: "Beast #33", setName: "1993 Marvel Universe", currentPrice: 7.50, previousPrice: 9.00, percentChange: -16.67, imageUrl: "" },
   ];
 
+  const gainers7d: Mover[] = [
+    { cardName: "Deadpool #12", setName: "1991 Marvel Universe", currentPrice: 88.00, previousPrice: 72.00, percentChange: 22.22, imageUrl: "" },
+    { cardName: "X-Men Team Card", setName: "1992 Marvel Masterpieces", currentPrice: 156.00, previousPrice: 132.00, percentChange: 18.18, imageUrl: "" },
+    { cardName: "Magneto Hologram", setName: "1993 Marvel Universe", currentPrice: 95.00, previousPrice: 82.00, percentChange: 15.85, imageUrl: "" },
+    { cardName: "Ghost Rider #77", setName: "1990 Marvel Universe", currentPrice: 54.00, previousPrice: 47.00, percentChange: 14.89, imageUrl: "" },
+    { cardName: "Punisher #41", setName: "1991 Marvel Universe", currentPrice: 42.00, previousPrice: 37.00, percentChange: 13.51, imageUrl: "" },
+  ];
+
+  const losers7d: Mover[] = [
+    { cardName: "Daredevil Common", setName: "1994 Marvel Flair", currentPrice: 6.00, previousPrice: 9.50, percentChange: -36.84, imageUrl: "" },
+    { cardName: "Hawkeye #28", setName: "1991 Marvel Universe", currentPrice: 4.25, previousPrice: 6.00, percentChange: -29.17, imageUrl: "" },
+    { cardName: "Black Widow Base", setName: "1992 Marvel Universe", currentPrice: 7.00, previousPrice: 9.50, percentChange: -26.32, imageUrl: "" },
+    { cardName: "Falcon #55", setName: "1990 Marvel Universe", currentPrice: 5.50, previousPrice: 7.00, percentChange: -21.43, imageUrl: "" },
+    { cardName: "Vision #63", setName: "1993 Marvel Universe", currentPrice: 8.25, previousPrice: 10.00, percentChange: -17.50, imageUrl: "" },
+  ];
+
   return {
-    dailyIndex,
+    monthlyMetrics,
     gainers24h,
     losers24h,
-    averagePrice7d: parseFloat(avgPrice7d.toFixed(2)),
-    averagePrice7dChangePct: parseFloat(avgPriceChange.toFixed(1)),
-    cardsSold24h: 122,
+    gainers7d,
+    losers7d,
     highestSale24h: 192.02,
     lowestSale24h: 11.51,
   };
+}
+
+export function getMonthLabel(month: number): string {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return months[month - 1] || '';
 }
