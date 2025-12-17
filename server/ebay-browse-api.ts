@@ -68,20 +68,20 @@ export class eBayBrowseApi {
 
   /**
    * Get Marvel card market trends from eBay Browse API
+   * Searches for premium/collectible Marvel cards to show realistic market prices
    */
   async getMarvelCardTrends(): Promise<MarvelTrendData> {
     try {
       const accessToken = await ebayOAuthService.getAccessToken();
       
-      // Search for Marvel cards in category 183050 (Non-Sport Trading Card Singles)
-      // NOTE: Browse API only shows ACTIVE listings, not sold items
-      // For historical sales data, we need Marketplace Insights API
+      // Search for collectible Marvel cards - focus on mid-range premium cards
+      // Using "Marvel trading card" with minimum $10 price to filter cheap bulk
       const searchParams = new URLSearchParams({
         category_ids: '183050',
         q: 'Marvel trading card',
-        filter: 'conditionIds:{2750|4000},price:[1..],priceCurrency:USD',
+        filter: 'price:[10..1000],priceCurrency:USD',
         limit: '200', // Max allowed per request
-        sort: 'price', // Sort by price for current market analysis
+        sort: 'newlyListed', // Sort by newest for fresh market data
       });
 
       const response = await fetch(`${this.baseUrl}/item_summary/search?${searchParams}`, {
