@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, TrendingDown, DollarSign, BarChart3, Award } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, BarChart3, ExternalLink, ShoppingCart, AlertCircle } from "lucide-react";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -18,11 +18,14 @@ import {
 import {
   MarketTrendsData,
   Mover,
+  RecentSale,
+  TimeRange,
   calculateMarketSentiment,
-  calculateMonthlyKPIs,
+  calculateDailyKPIs,
   mapRawMarketDataToMarketTrendsData,
-  generateRealisticMockData,
-  getMonthLabel,
+  filterTrendDataByRange,
+  formatChartLabels,
+  hasEnoughData,
 } from "@/lib/marketSentiment";
 
 ChartJS.register(
@@ -44,7 +47,7 @@ interface RawMarketData {
     highestSale: number;
     lowestSale: number;
   };
-  trendData: { date: string; averagePrice: number }[];
+  trendData: { date: string; averagePrice: number; totalSold: number }[];
   topGainers: Array<{
     name: string;
     priceChange: number;
@@ -58,6 +61,14 @@ interface RawMarketData {
     currentPrice: number;
     imageUrl?: string;
     itemUrl: string;
+  }>;
+  recentSales: Array<{
+    title: string;
+    price: number;
+    imageUrl?: string;
+    itemWebUrl?: string;
+    category?: string;
+    soldDate: string;
   }>;
 }
 
@@ -94,33 +105,44 @@ function MoverRow({ mover, isGainer }: { mover: Mover; isGainer: boolean }) {
     ? `+${mover.percentChange.toFixed(1)}%` 
     : `${mover.percentChange.toFixed(1)}%`;
 
+  const handleClick = () => {
+    if (mover.itemUrl) {
+      window.open(mover.itemUrl, '_blank');
+    }
+  };
+
   return (
-    <div className={`flex items-center justify-between py-2.5 px-3 border-l-3 ${isGainer ? 'border-l-green-400 bg-green-50/30' : 'border-l-red-400 bg-red-50/30'} rounded-r-lg mb-1.5 last:mb-0`}>
+    <div 
+      onClick={handleClick}
+      className={`flex items-center justify-between py-2.5 px-3 border-l-3 ${isGainer ? 'border-l-green-400 bg-green-50/30' : 'border-l-red-400 bg-red-50/30'} rounded-r-lg mb-1.5 last:mb-0 ${mover.itemUrl ? 'cursor-pointer hover:bg-gray-50' : ''}`}
+    >
       <div className="flex items-center gap-2.5 flex-1 min-w-0">
         {mover.imageUrl ? (
           <img 
             src={mover.imageUrl} 
             alt={mover.cardName}
-            className="w-8 h-11 object-cover rounded bg-gray-100"
+            className="w-10 h-14 object-cover rounded bg-gray-100"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';
             }}
           />
         ) : (
-          <div className="w-8 h-11 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
-            <Award className="w-4 h-4 text-gray-400" />
+          <div className="w-10 h-14 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
+            <ShoppingCart className="w-4 h-4 text-gray-400" />
           </div>
         )}
         <div className="min-w-0 flex-1">
           <p className="font-medium text-gray-900 text-sm truncate" data-testid="text-mover-name">
             {mover.cardName}
           </p>
-          {mover.setName && (
-            <p className="text-xs text-gray-400 truncate">{mover.setName}</p>
-          )}
           <p className="text-xs text-gray-400">
             {formatPrice(mover.previousPrice)} → {formatPrice(mover.currentPrice)}
           </p>
+          {mover.itemUrl && (
+            <p className="text-xs text-blue-500 flex items-center gap-1">
+              View on eBay <ExternalLink className="w-3 h-3" />
+            </p>
+          )}
         </div>
       </div>
       <span className={`text-sm font-semibold ml-2 ${isGainer ? 'text-green-600' : 'text-red-600'}`}>
@@ -130,19 +152,52 @@ function MoverRow({ mover, isGainer }: { mover: Mover; isGainer: boolean }) {
   );
 }
 
-function TopMoversModule({ marketData }: { marketData: MarketTrendsData }) {
-  const [timeframe, setTimeframe] = useState<'24h' | '7d'>('24h');
-  const [moverType, setMoverType] = useState<'gainers' | 'losers'>('gainers');
-
-  const getMovers = (): Mover[] => {
-    if (timeframe === '24h') {
-      return moverType === 'gainers' ? marketData.gainers24h : marketData.losers24h;
-    } else {
-      return moverType === 'gainers' ? marketData.gainers7d : marketData.losers7d;
+function RecentSaleCard({ sale }: { sale: RecentSale }) {
+  const handleClick = () => {
+    if (sale.itemWebUrl) {
+      window.open(sale.itemWebUrl, '_blank');
     }
   };
 
-  const movers = getMovers().slice(0, 5);
+  return (
+    <div 
+      onClick={handleClick}
+      className={`flex items-center gap-3 p-3 bg-gray-50 rounded-lg ${sale.itemWebUrl ? 'cursor-pointer hover:bg-gray-100' : ''}`}
+    >
+      {sale.imageUrl ? (
+        <img 
+          src={sale.imageUrl} 
+          alt={sale.title}
+          className="w-12 h-16 object-cover rounded bg-gray-200"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
+        />
+      ) : (
+        <div className="w-12 h-16 bg-gray-200 rounded flex items-center justify-center flex-shrink-0">
+          <ShoppingCart className="w-5 h-5 text-gray-400" />
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-gray-900 text-sm truncate">{sale.title}</p>
+        <p className="text-lg font-bold text-green-600">${sale.price.toFixed(2)}</p>
+        <p className="text-xs text-gray-400">
+          Sold {new Date(sale.soldDate).toLocaleDateString()}
+        </p>
+      </div>
+      {sale.itemWebUrl && (
+        <ExternalLink className="w-4 h-4 text-gray-400" />
+      )}
+    </div>
+  );
+}
+
+function TopMoversModule({ marketData }: { marketData: MarketTrendsData }) {
+  const [moverType, setMoverType] = useState<'gainers' | 'losers'>('gainers');
+
+  const movers = moverType === 'gainers' ? marketData.gainers : marketData.losers;
+  const displayMovers = movers.slice(0, 5);
+  const hasMovers = displayMovers.length > 0;
 
   return (
     <Card className="bg-white shadow-sm border-0 rounded-xl">
@@ -154,14 +209,8 @@ function TopMoversModule({ marketData }: { marketData: MarketTrendsData }) {
             ) : (
               <TrendingDown className="h-4 w-4 text-red-600" />
             )}
-            Top Movers
+            Price Movers
           </h3>
-          <Tabs value={timeframe} onValueChange={(v) => setTimeframe(v as '24h' | '7d')}>
-            <TabsList className="h-7 p-0.5 bg-gray-100">
-              <TabsTrigger value="24h" className="text-xs px-2.5 py-1 h-6" data-testid="tab-24h">24h</TabsTrigger>
-              <TabsTrigger value="7d" className="text-xs px-2.5 py-1 h-6" data-testid="tab-7d">7d</TabsTrigger>
-            </TabsList>
-          </Tabs>
         </div>
 
         <div className="flex gap-2 mb-4">
@@ -190,12 +239,16 @@ function TopMoversModule({ marketData }: { marketData: MarketTrendsData }) {
         </div>
 
         <div>
-          {movers.length > 0 ? (
-            movers.map((mover, idx) => (
+          {hasMovers ? (
+            displayMovers.map((mover, idx) => (
               <MoverRow key={idx} mover={mover} isGainer={moverType === 'gainers'} />
             ))
           ) : (
-            <p className="text-gray-500 text-center py-6 text-sm">No data available</p>
+            <div className="text-center py-8">
+              <AlertCircle className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-gray-500 text-sm">No price movement data yet</p>
+              <p className="text-gray-400 text-xs mt-1">Data will appear as we track more sales</p>
+            </div>
           )}
         </div>
       </CardContent>
@@ -203,7 +256,57 @@ function TopMoversModule({ marketData }: { marketData: MarketTrendsData }) {
   );
 }
 
+function RecentSalesModule({ marketData }: { marketData: MarketTrendsData }) {
+  const sales = marketData.recentSales.slice(0, 6);
+  const hasSales = sales.length > 0;
+
+  return (
+    <Card className="bg-white shadow-sm border-0 rounded-xl">
+      <CardContent className="p-4">
+        <h3 className="font-semibold text-gray-900 flex items-center gap-2 mb-4">
+          <ShoppingCart className="h-4 w-4 text-gray-600" />
+          Recent Notable Sales
+        </h3>
+
+        {hasSales ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {sales.map((sale, idx) => (
+              <RecentSaleCard key={idx} sale={sale} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <AlertCircle className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+            <p className="text-gray-500 text-sm">No recent sales data yet</p>
+            <p className="text-gray-400 text-xs mt-1">Sales data will appear as we collect more market info</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function NotEnoughDataCard() {
+  return (
+    <Card className="bg-amber-50 border-amber-200">
+      <CardContent className="p-6 text-center">
+        <AlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-3" />
+        <h3 className="font-semibold text-gray-900 mb-2">Building Your Market Data</h3>
+        <p className="text-gray-600 text-sm max-w-md mx-auto">
+          We're collecting real eBay sales data daily. As more data accumulates, you'll see detailed 
+          price trends, market sentiment, and top movers. Check back soon!
+        </p>
+        <p className="text-gray-400 text-xs mt-4">
+          Currently collecting data since July 2025
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function MarketTrends() {
+  const [timeRange, setTimeRange] = useState<TimeRange>('30d');
+  
   const { data: rawData, isLoading, error } = useQuery<RawMarketData>({
     queryKey: ['/api/market-trends'],
     refetchInterval: 5 * 60 * 1000,
@@ -216,8 +319,8 @@ export default function MarketTrends() {
           <div className="animate-pulse space-y-6">
             <div className="h-10 bg-gray-200 rounded-lg w-72 mx-auto"></div>
             <div className="h-8 bg-gray-200 rounded-full w-56 mx-auto"></div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[1, 2, 3].map(i => (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map(i => (
                 <div key={i} className="h-24 bg-gray-200 rounded-xl"></div>
               ))}
             </div>
@@ -244,26 +347,34 @@ export default function MarketTrends() {
     );
   }
 
-  let marketData: MarketTrendsData;
-  
-  if (!rawData || rawData.marketMovement.totalSold === 0 || rawData.trendData.length === 0) {
-    marketData = generateRealisticMockData();
-  } else {
-    marketData = mapRawMarketDataToMarketTrendsData(rawData);
-  }
+  const marketData: MarketTrendsData = rawData 
+    ? mapRawMarketDataToMarketTrendsData(rawData)
+    : {
+        trendData: [],
+        gainers: [],
+        losers: [],
+        recentSales: [],
+        highestSale: 0,
+        lowestSale: 0,
+        currentAvgPrice: 0,
+        percentChange: 0,
+        totalSold: 0,
+      };
 
-  const sentiment = calculateMarketSentiment(marketData.monthlyMetrics);
-  const kpis = calculateMonthlyKPIs(marketData.monthlyMetrics);
+  const filteredTrendData = filterTrendDataByRange(marketData.trendData, timeRange);
+  const hasData = hasEnoughData(filteredTrendData);
+  const sentiment = calculateMarketSentiment(filteredTrendData, timeRange);
+  const kpis = calculateDailyKPIs(filteredTrendData, timeRange);
 
-  const chartLabels = marketData.monthlyMetrics.map(m => getMonthLabel(m.month));
-  const chartValues = marketData.monthlyMetrics.map(m => m.avgSalePrice);
+  const chartLabels = formatChartLabels(filteredTrendData);
+  const chartPrices = filteredTrendData.map(d => d.averagePrice);
 
   const chartData = {
     labels: chartLabels,
     datasets: [
       {
         label: 'Avg Sale Price',
-        data: chartValues,
+        data: chartPrices,
         borderColor: '#dc2626',
         backgroundColor: (context: any) => {
           const ctx = context.chart.ctx;
@@ -278,8 +389,8 @@ export default function MarketTrends() {
         pointBackgroundColor: '#dc2626',
         pointBorderColor: '#ffffff',
         pointBorderWidth: 2,
-        pointRadius: 4,
-        pointHoverRadius: 6,
+        pointRadius: 3,
+        pointHoverRadius: 5,
       },
     ],
   };
@@ -309,11 +420,12 @@ export default function MarketTrends() {
         grid: { display: false },
         ticks: { 
           color: '#6b7280',
-          font: { size: 11, weight: 500 as const },
+          font: { size: 10 },
+          maxTicksLimit: 10,
         },
       },
       y: {
-        grid: { color: 'rgba(0, 0, 0, 0.04)' },
+        grid: { color: 'rgba(0, 0, 0, 0.05)' },
         ticks: {
           color: '#6b7280',
           font: { size: 11 },
@@ -323,82 +435,93 @@ export default function MarketTrends() {
     },
   };
 
-  const sentimentBadgeText = () => {
-    const pct = Math.abs(sentiment.avgPriceChangePct);
-    const sign = sentiment.avgPriceChangePct >= 0 ? '+' : '';
-    
-    if (sentiment.type === 'seller') {
-      return `${sentiment.label} · ${sign}${pct.toFixed(1)}% vs last month`;
-    } else if (sentiment.type === 'buyer') {
-      return `${sentiment.label} · ${pct.toFixed(1)}% below last month`;
-    } else {
-      return `${sentiment.label} · ±${pct.toFixed(1)}% vs last month`;
-    }
-  };
-
-  const volumeChangeColor = kpis.volumeChangePct >= 0 ? 'text-green-600' : 'text-red-600';
-  const priceChangeColor = kpis.avgPriceChangePct >= 0 ? 'text-green-600' : 'text-red-600';
+  const timeRangeLabel = timeRange === '30d' ? 'Last 30 Days' : timeRange === '60d' ? 'Last 60 Days' : 'Last 90 Days';
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-50" data-testid="page-market-trends">
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        
-        {/* Header */}
+    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-50 pb-20">
+      <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-page-title">
-            Marvel Card Market Trends
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2" data-testid="page-title">
+            Market Trends
           </h1>
-          
-          {/* Sentiment Badge */}
-          <div className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full ${sentiment.bgColor}`} data-testid="badge-sentiment">
-            <span className={`text-sm font-semibold ${sentiment.color}`}>
-              {sentimentBadgeText()}
-            </span>
+          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${sentiment.bgColor}`}>
+            {sentiment.type === 'seller' && <TrendingUp className={`h-4 w-4 ${sentiment.color}`} />}
+            {sentiment.type === 'buyer' && <TrendingDown className={`h-4 w-4 ${sentiment.color}`} />}
+            <span className={`font-semibold text-sm ${sentiment.color}`}>{sentiment.label}</span>
           </div>
-          <p className="text-sm text-gray-500 mt-2 max-w-md mx-auto">
+          <p className="text-gray-500 text-sm mt-2 max-w-lg mx-auto">
             {sentiment.description}
           </p>
         </div>
 
-        {/* KPI Tiles - 3 columns */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-          <StatTile
-            label="Market Volume"
-            value={kpis.currentMonthVolume.toLocaleString()}
-            subtext={`${kpis.volumeChangePct >= 0 ? '+' : ''}${kpis.volumeChangePct}% vs last month`}
-            subtextColor={volumeChangeColor}
-            icon={BarChart3}
-          />
-          <StatTile
-            label="Avg Sale Price"
-            value={`$${kpis.currentMonthAvgPrice.toFixed(2)}`}
-            subtext={`${kpis.avgPriceChangePct >= 0 ? '+' : ''}${kpis.avgPriceChangePct}% vs last month`}
-            subtextColor={priceChangeColor}
-            icon={DollarSign}
-          />
-          <StatTile
-            label="Highest Sale (24h)"
-            value={`$${marketData.highestSale24h.toFixed(2)}`}
-            subtext="Top sale today"
-            icon={TrendingUp}
-          />
+        <div className="flex justify-center mb-4">
+          <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)}>
+            <TabsList className="bg-white shadow-sm">
+              <TabsTrigger value="30d" className="px-4" data-testid="range-30d">30 Days</TabsTrigger>
+              <TabsTrigger value="60d" className="px-4" data-testid="range-60d">60 Days</TabsTrigger>
+              <TabsTrigger value="90d" className="px-4" data-testid="range-90d">90 Days</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
-        {/* 12-Month Chart */}
-        <Card className="bg-white shadow-sm border-0 rounded-xl mb-6">
-          <CardContent className="p-5">
-            <h2 className="text-base font-semibold text-gray-900 mb-4" data-testid="text-chart-title">
-              12-Month Marvel Card Market Trend
-            </h2>
-            <div className="h-64 w-full">
-              <Line data={chartData} options={chartOptions} />
+        {!hasData ? (
+          <NotEnoughDataCard />
+        ) : (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <StatTile 
+                label="Avg Price" 
+                value={`$${kpis.avgPrice.toFixed(2)}`}
+                subtext={`${kpis.priceChangePct >= 0 ? '+' : ''}${kpis.priceChangePct}% vs prior period`}
+                subtextColor={kpis.priceChangePct > 0 ? 'text-green-600' : kpis.priceChangePct < 0 ? 'text-red-600' : 'text-gray-500'}
+                icon={DollarSign}
+              />
+              <StatTile 
+                label="Total Volume" 
+                value={kpis.totalVolume.toLocaleString()}
+                subtext={`${kpis.volumeChangePct >= 0 ? '+' : ''}${kpis.volumeChangePct}% vs prior period`}
+                subtextColor={kpis.volumeChangePct > 0 ? 'text-green-600' : kpis.volumeChangePct < 0 ? 'text-red-600' : 'text-gray-500'}
+                icon={BarChart3}
+              />
+              <StatTile 
+                label="Highest Sale" 
+                value={`$${marketData.highestSale.toFixed(2)}`}
+                subtext={timeRangeLabel}
+                icon={TrendingUp}
+              />
+              <StatTile 
+                label="Lowest Sale" 
+                value={`$${marketData.lowestSale.toFixed(2)}`}
+                subtext={timeRangeLabel}
+                icon={TrendingDown}
+              />
             </div>
+
+            <Card className="bg-white shadow-sm border-0 rounded-xl">
+              <CardContent className="p-4">
+                <h3 className="font-semibold text-gray-900 mb-4">Price Trend - {timeRangeLabel}</h3>
+                <div className="h-64">
+                  <Line data={chartData} options={chartOptions} />
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TopMoversModule marketData={marketData} />
+          <RecentSalesModule marketData={marketData} />
+        </div>
+
+        <Card className="bg-gray-50 border-0">
+          <CardContent className="p-4 text-center">
+            <p className="text-xs text-gray-400">
+              Data sourced from eBay completed listings. Updated daily at 6:00 AM EST.
+              <br />
+              {filteredTrendData.length} days of data available. Historical data accumulates over time.
+            </p>
           </CardContent>
         </Card>
-
-        {/* Top Movers Module */}
-        <TopMoversModule marketData={marketData} />
-
       </div>
     </div>
   );

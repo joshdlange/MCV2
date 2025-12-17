@@ -104,7 +104,8 @@ export class MarketTrendsService {
           },
           trendData: [],
           topGainers: [],
-          topLosers: []
+          topLosers: [],
+          recentSales: []
         };
       }
 
