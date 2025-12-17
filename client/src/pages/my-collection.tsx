@@ -50,7 +50,7 @@ export default function MyCollection() {
   // Query for all cards in the selected set (for binder view)
   // Keep query warm when viewing a specific set to avoid data loss on view toggle
   const { data: allSetCards, isLoading: allSetCardsLoading } = useQuery<CardWithSet[]>({
-    queryKey: [`/api/cards/set/${selectedSet}`],
+    queryKey: [`/api/sets/${selectedSet}/cards`],
     enabled: collectionView === "cards" && selectedSet !== "all",
   });
 

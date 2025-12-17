@@ -362,7 +362,7 @@ export function CardDetailModal({
             {isEditing && (
               <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 space-y-4">
                 <div className="flex items-center justify-between">
-                  <p className="font-medium">Editing Card</p>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">Editing Card</p>
                   <div className="flex gap-2">
                     <Button
                       onClick={handleSaveEdit}
@@ -385,70 +385,70 @@ export function CardDetailModal({
                 
                 <div className="space-y-3">
                   <div>
-                    <Label htmlFor="cardName" className="text-xs">Card Name</Label>
+                    <Label htmlFor="cardName" className="text-xs text-gray-700 dark:text-gray-300">Card Name</Label>
                     <Input
                       id="cardName"
                       value={editedCard.name || ''}
                       onChange={(e) => setEditedCard({ ...editedCard, name: e.target.value })}
-                      className="bg-white text-black mt-1"
+                      className="bg-white text-gray-900 border-gray-300 mt-1"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label htmlFor="cardNumber" className="text-xs">Card Number</Label>
+                      <Label htmlFor="cardNumber" className="text-xs text-gray-700 dark:text-gray-300">Card Number</Label>
                       <Input
                         id="cardNumber"
                         value={editedCard.cardNumber || ''}
                         onChange={(e) => setEditedCard({ ...editedCard, cardNumber: e.target.value })}
-                        className="bg-white text-black mt-1"
+                        className="bg-white text-gray-900 border-gray-300 mt-1"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="rarity" className="text-xs">Rarity</Label>
+                      <Label htmlFor="rarity" className="text-xs text-gray-700 dark:text-gray-300">Rarity</Label>
                       <Input
                         id="rarity"
                         value={editedCard.rarity || ''}
                         onChange={(e) => setEditedCard({ ...editedCard, rarity: e.target.value })}
-                        className="bg-white text-black mt-1"
+                        className="bg-white text-gray-900 border-gray-300 mt-1"
                       />
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="estimatedValue" className="text-xs">Estimated Value</Label>
+                    <Label htmlFor="estimatedValue" className="text-xs text-gray-700 dark:text-gray-300">Estimated Value</Label>
                     <Input
                       id="estimatedValue"
                       type="number"
                       step="0.01"
                       value={editedCard.estimatedValue || ''}
                       onChange={(e) => setEditedCard({ ...editedCard, estimatedValue: e.target.value })}
-                      className="bg-white text-black mt-1"
+                      className="bg-white text-gray-900 border-gray-300 mt-1"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="frontImage" className="text-xs">Front Image URL</Label>
+                    <Label htmlFor="frontImage" className="text-xs text-gray-700 dark:text-gray-300">Front Image URL</Label>
                     <Input
                       id="frontImage"
                       value={editedCard.frontImageUrl || ''}
                       onChange={(e) => setEditedCard({ ...editedCard, frontImageUrl: e.target.value })}
-                      className="bg-white text-black mt-1"
+                      className="bg-white text-gray-900 border-gray-300 mt-1"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="backImage" className="text-xs">Back Image URL</Label>
+                    <Label htmlFor="backImage" className="text-xs text-gray-700 dark:text-gray-300">Back Image URL</Label>
                     <Input
                       id="backImage"
                       value={editedCard.backImageUrl || ''}
                       onChange={(e) => setEditedCard({ ...editedCard, backImageUrl: e.target.value })}
-                      className="bg-white text-black mt-1"
+                      className="bg-white text-gray-900 border-gray-300 mt-1"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="description" className="text-xs">Description</Label>
+                    <Label htmlFor="description" className="text-xs text-gray-700 dark:text-gray-300">Description</Label>
                     <Textarea
                       id="description"
                       value={editedCard.description || ''}
                       onChange={(e) => setEditedCard({ ...editedCard, description: e.target.value })}
-                      className="bg-white text-black mt-1"
+                      className="bg-white text-gray-900 border-gray-300 mt-1"
                       rows={2}
                     />
                   </div>
@@ -458,7 +458,7 @@ export function CardDetailModal({
                       checked={editedCard.isInsert || false}
                       onCheckedChange={(checked) => setEditedCard({ ...editedCard, isInsert: checked })}
                     />
-                    <Label htmlFor="isInsert" className="text-sm">Insert Card</Label>
+                    <Label htmlFor="isInsert" className="text-sm text-gray-700 dark:text-gray-300">Insert Card</Label>
                   </div>
                 </div>
               </div>
