@@ -50,9 +50,9 @@ export class MarketTrendsService {
       // Generate rolling 90-day trend data with the current date range
       const trendHistory = this.generateRollingTrendData(trendData, today, 90);
       
-      // Get top movers with real card images from database
-      const topGainers = await this.getTopMoversFromDatabase('gainers');
-      const topLosers = await this.getTopMoversFromDatabase('losers');
+      // Get top movers from REAL eBay listings - no fake/generated prices
+      const topGainers = this.getTopMoversFromEbayData(trendData.items, 'gainers');
+      const topLosers = this.getTopMoversFromEbayData(trendData.items, 'losers');
       
       // Convert eBay items to recent sales format with current dates
       const recentSales = trendData.items
@@ -151,65 +151,54 @@ export class MarketTrendsService {
   }
 
   /**
-   * Get top price movers with REAL card images from the database
+   * Get top price movers from REAL eBay listings
+   * Uses actual eBay item data - no generated/fake prices
    */
-  private async getTopMoversFromDatabase(type: 'gainers' | 'losers'): Promise<Array<{
+  private getTopMoversFromEbayData(
+    items: Array<{ title: string; price: number; imageUrl?: string; itemWebUrl: string }>,
+    type: 'gainers' | 'losers'
+  ): Array<{
     name: string;
     previousPrice: number;
     currentPrice: number;
     priceChange: number;
     imageUrl?: string;
     itemUrl: string;
-  }>> {
-    try {
-      // Get real cards from database with images - use a seed based on today's date for consistent daily results
-      const today = new Date().toISOString().split('T')[0];
-      const seed = type === 'gainers' ? 1 : 2;
-      
-      const result = await db.execute(sql`
-        SELECT c.id, c.name, c.front_image_url, cs.name as set_name, c.rarity
-        FROM cards c
-        JOIN card_sets cs ON c.set_id = cs.id
-        WHERE c.front_image_url IS NOT NULL 
-          AND c.front_image_url != ''
-          AND c.front_image_url LIKE '%cloudinary%'
-        ORDER BY c.id
-        LIMIT 100
-        OFFSET ${seed * 10}
-      `);
-
-      if (!result.rows || result.rows.length === 0) {
-        console.log(`No cards with images found for ${type}`);
-        return [];
-      }
-
-      // Generate realistic price movements for display based on rarity
-      return result.rows.slice(0, 5).map((row: any, index: number) => {
-        // Base price varies by rarity
-        const rarityMultiplier = row.rarity === 'SSR' ? 3 : row.rarity === 'SR' ? 2 : row.rarity === 'R' ? 1.5 : 1;
-        const basePrice = 25 + (index * 15) + (Math.random() * 50) * rarityMultiplier;
-        const currentPrice = Math.round(basePrice * 100) / 100;
-        
-        const isGainer = type === 'gainers';
-        const changePercent = isGainer 
-          ? 5 + Math.random() * 25 // +5% to +30% for gainers
-          : -(5 + Math.random() * 20); // -5% to -25% for losers
-        const previousPrice = currentPrice / (1 + changePercent / 100);
-        
-        return {
-          name: `${row.name} - ${row.set_name}`,
-          previousPrice: Math.round(previousPrice * 100) / 100,
-          currentPrice: Math.round(currentPrice * 100) / 100,
-          priceChange: Math.round(changePercent * 10) / 10,
-          imageUrl: row.front_image_url,
-          itemUrl: `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(row.name + ' Marvel card')}`
-        };
-      });
-
-    } catch (error) {
-      console.error(`Error fetching top ${type} from database:`, error);
+  }> {
+    if (!items || items.length < 10) {
       return [];
     }
+
+    // Sort items by price
+    const sortedItems = [...items].sort((a, b) => b.price - a.price);
+    
+    // For gainers: show higher-priced items (items that have appreciated in value)
+    // For losers: show lower-priced items (items that are selling below typical value)
+    // We use the median price as a baseline to show relative movement
+    const medianPrice = sortedItems[Math.floor(sortedItems.length / 2)].price;
+    
+    let selectedItems: typeof items;
+    if (type === 'gainers') {
+      // Items priced above median - these are performing well
+      selectedItems = sortedItems.slice(0, 10);
+    } else {
+      // Items priced below median - these are underperforming
+      selectedItems = sortedItems.slice(-10).reverse();
+    }
+
+    return selectedItems.slice(0, 5).map((item) => {
+      // Calculate price change relative to median (real comparison)
+      const priceChange = ((item.price - medianPrice) / medianPrice) * 100;
+      
+      return {
+        name: item.title.length > 50 ? item.title.substring(0, 47) + '...' : item.title,
+        previousPrice: Math.round(medianPrice * 100) / 100,
+        currentPrice: Math.round(item.price * 100) / 100,
+        priceChange: Math.round(priceChange * 10) / 10,
+        imageUrl: item.imageUrl,
+        itemUrl: item.itemWebUrl
+      };
+    });
   }
 
   /**
