@@ -1,5 +1,6 @@
 import { CronJob } from 'cron';
 import { bulkUpdateMissingImages } from './bulk-image-updater';
+import { marketTrendsService } from './market-trends-service';
 // Simple logger for background scheduler
 const logger = {
   info: (message: string, ...args: any[]) => console.log(`[SCHEDULER] ${message}`, ...args),
@@ -19,6 +20,10 @@ interface SchedulerConfig {
     enabled: boolean;
     schedule: string; // cron format
     batchSize: number;
+  };
+  dailyMarketTrends: {
+    enabled: boolean;
+    schedule: string; // cron format
   };
 }
 
@@ -71,6 +76,23 @@ class BackgroundScheduler {
       this.jobs.set('weekly-maintenance', weeklyJob);
       weeklyJob.start();
       logger.info(`Weekly maintenance scheduled: ${this.config.weeklyMaintenance.schedule}`);
+    }
+
+    // Daily market trends update
+    if (this.config.dailyMarketTrends.enabled) {
+      const marketTrendsJob = new CronJob(
+        this.config.dailyMarketTrends.schedule,
+        async () => {
+          await this.runDailyMarketTrendsUpdate();
+        },
+        null,
+        false,
+        'America/New_York'
+      );
+      
+      this.jobs.set('daily-market-trends', marketTrendsJob);
+      marketTrendsJob.start();
+      logger.info(`Daily market trends scheduled: ${this.config.dailyMarketTrends.schedule}`);
     }
   }
 
@@ -139,6 +161,16 @@ class BackgroundScheduler {
     }
   }
 
+  private async runDailyMarketTrendsUpdate() {
+    try {
+      logger.info('Starting daily market trends update');
+      await marketTrendsService.runDailyUpdate();
+      logger.info('Daily market trends update completed');
+    } catch (error) {
+      logger.error('Daily market trends update failed:', error);
+    }
+  }
+
   public updateConfig(newConfig: Partial<SchedulerConfig>) {
     this.config = { ...this.config, ...newConfig };
     this.stopAllJobs();
@@ -177,6 +209,10 @@ const defaultConfig: SchedulerConfig = {
     enabled: true,
     schedule: '0 3 * * 0', // 3 AM on Sundays
     batchSize: 500
+  },
+  dailyMarketTrends: {
+    enabled: true,
+    schedule: '0 6 * * *', // 6 AM daily - after eBay listings have settled
   }
 };
 

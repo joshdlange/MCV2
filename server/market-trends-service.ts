@@ -83,9 +83,10 @@ export class MarketTrendsService {
       highestSale: number;
       lowestSale: number;
     };
-    trendData: { date: string; averagePrice: number }[];
+    trendData: { date: string; averagePrice: number; totalSold: number }[];
     topGainers: any[];
     topLosers: any[];
+    recentSales: any[];
   }> {
     try {
       // Get latest trend
@@ -107,11 +108,12 @@ export class MarketTrendsService {
         };
       }
 
-      // Get 30-day history for trend chart
-      const trendHistory = await storage.getMarketTrendHistory(30);
+      // Get 90-day history for trend chart (supports 30/60/90 day views)
+      const trendHistory = await storage.getMarketTrendHistory(90);
       const trendData = trendHistory.map(trend => ({
         date: trend.date,
-        averagePrice: parseFloat(trend.averagePrice)
+        averagePrice: parseFloat(trend.averagePrice),
+        totalSold: trend.totalSold
       })).reverse(); // Reverse to show oldest first
 
       // Market movement data
@@ -126,12 +128,16 @@ export class MarketTrendsService {
       // Get top gainers and losers from card price history
       const topGainers = await this.getTopGainers();
       const topLosers = await this.getTopLosers();
+      
+      // Get recent notable sales from market_trend_items
+      const recentSales = await this.getRecentNotableSales();
 
       return {
         marketMovement,
         trendData,
         topGainers,
-        topLosers
+        topLosers,
+        recentSales
       };
 
     } catch (error) {
@@ -209,6 +215,40 @@ export class MarketTrendsService {
       }));
     } catch (error) {
       console.error('Error fetching top losers:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get recent notable sales from market_trend_items
+   */
+  private async getRecentNotableSales(): Promise<Array<{
+    title: string;
+    price: number;
+    imageUrl?: string;
+    itemWebUrl?: string;
+    category?: string;
+    soldDate: string;
+  }>> {
+    try {
+      const result = await db.execute(sql`
+        SELECT mti.title, mti.price, mti.image_url, mti.item_web_url, mti.category, mt.date
+        FROM market_trend_items mti
+        JOIN market_trends mt ON mti.trend_id = mt.id
+        ORDER BY CAST(mti.price AS DECIMAL) DESC
+        LIMIT 10
+      `);
+      
+      return result.rows.map((row: any) => ({
+        title: row.title,
+        price: parseFloat(row.price),
+        imageUrl: row.image_url,
+        itemWebUrl: row.item_web_url,
+        category: row.category,
+        soldDate: row.date
+      }));
+    } catch (error) {
+      console.error('Error fetching recent notable sales:', error);
       return [];
     }
   }
