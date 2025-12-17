@@ -74,12 +74,11 @@ export class eBayBrowseApi {
     try {
       const accessToken = await ebayOAuthService.getAccessToken();
       
-      // Search for collectible Marvel cards - focus on mid-range premium cards
-      // Using "Marvel trading card" with minimum $10 price to filter cheap bulk
+      // Search for ALL Marvel cards - no price filtering, show full market range
       const searchParams = new URLSearchParams({
         category_ids: '183050',
         q: 'Marvel trading card',
-        filter: 'price:[10..1000],priceCurrency:USD',
+        filter: 'priceCurrency:USD',
         limit: '200', // Max allowed per request
         sort: 'newlyListed', // Sort by newest for fresh market data
       });
