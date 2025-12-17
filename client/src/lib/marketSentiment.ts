@@ -163,6 +163,7 @@ interface RawMarketData {
   topGainers: Array<{
     name: string;
     priceChange: number;
+    previousPrice?: number;
     currentPrice: number;
     imageUrl?: string;
     itemUrl: string;
@@ -170,6 +171,7 @@ interface RawMarketData {
   topLosers: Array<{
     name: string;
     priceChange: number;
+    previousPrice?: number;
     currentPrice: number;
     imageUrl?: string;
     itemUrl: string;
@@ -186,7 +188,7 @@ interface RawMarketData {
 
 export function mapRawMarketDataToMarketTrendsData(raw: RawMarketData): MarketTrendsData {
   const gainers: Mover[] = raw.topGainers.map(g => {
-    const previousPrice = g.currentPrice / (1 + g.priceChange / 100);
+    const previousPrice = g.previousPrice ?? g.currentPrice / (1 + g.priceChange / 100);
     return {
       cardName: g.name,
       setName: '',
@@ -199,7 +201,7 @@ export function mapRawMarketDataToMarketTrendsData(raw: RawMarketData): MarketTr
   });
 
   const losers: Mover[] = raw.topLosers.map(l => {
-    const previousPrice = l.currentPrice / (1 + l.priceChange / 100);
+    const previousPrice = l.previousPrice ?? l.currentPrice / (1 + l.priceChange / 100);
     return {
       cardName: l.name,
       setName: '',
