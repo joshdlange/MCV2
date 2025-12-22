@@ -36,6 +36,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { User as UserType } from "@/types/schema";
 import { useLocation } from "wouter";
 import { useAppStore } from "@/lib/store";
+import { UpgradeModal } from "@/components/subscription/upgrade-modal";
 
 // Social Components
 function SocialFriendsSection() {
@@ -198,6 +199,7 @@ export default function Profile() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const [isEditing, setIsEditing] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [profileData, setProfileData] = useState({
     displayName: user?.displayName || '',
     bio: '',
@@ -656,7 +658,10 @@ export default function Profile() {
                         <li>• Advanced analytics</li>
                         <li>• Priority support</li>
                       </ul>
-                      <Button className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600">
+                      <Button 
+                        onClick={() => setShowUpgradeModal(true)}
+                        className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
+                      >
                         <Crown className="w-4 h-4 mr-2" />
                         Upgrade Now
                       </Button>
@@ -785,6 +790,13 @@ export default function Profile() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal 
+        isOpen={showUpgradeModal} 
+        onClose={() => setShowUpgradeModal(false)} 
+        currentPlan={userProfile?.plan || 'SIDE_KICK'}
+      />
     </div>
   );
 }

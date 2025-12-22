@@ -3570,6 +3570,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         ],
         mode: 'subscription',
+        allow_promotion_codes: true, // Enable promo codes at checkout
         success_url: `${req.headers.origin}/subscription-success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${req.headers.origin}/subscription-cancelled`,
         metadata: {
