@@ -1155,6 +1155,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Collection item not found" });
       }
       
+      // Award First Listing badge if item was successfully listed for sale
+      if (updatedItem.isForSale === true) {
+        badgeService.checkBadgesOnMarketplaceListing(req.user.id).catch(err => 
+          console.error('Background marketplace badge check failed:', err)
+        );
+      }
+      
       console.log('Collection item updated successfully:', updatedItem);
       res.json(updatedItem);
     } catch (error) {
@@ -1172,6 +1179,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedItem = await storage.updateCollectionItem(id, updates);
       if (!updatedItem) {
         return res.status(404).json({ message: "Collection item not found" });
+      }
+      
+      // Award First Listing badge if item was successfully listed for sale
+      if (updatedItem.isForSale === true) {
+        badgeService.checkBadgesOnMarketplaceListing(req.user.id).catch(err => 
+          console.error('Background marketplace badge check failed:', err)
+        );
       }
       
       res.json(updatedItem);

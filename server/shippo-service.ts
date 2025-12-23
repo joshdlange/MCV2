@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { shipments, orders, users } from "../shared/schema";
 import { eq } from "drizzle-orm";
+import { badgeService } from "./badge-service";
 
 const SHIPPO_API_KEY = process.env.SHIPPO_API_KEY;
 const SHIPPO_API_URL = "https://api.goshippo.com";
@@ -273,6 +274,16 @@ export const shippoService = {
             updates.deliveredAt = new Date();
           }
           await db.update(orders).set(updates).where(eq(orders.id, shipment[0].orderId));
+          
+          // Award First Sale badge to seller when order is delivered
+          if (orderStatus === "delivered") {
+            const order = await db.select().from(orders).where(eq(orders.id, shipment[0].orderId)).limit(1);
+            if (order.length) {
+              badgeService.checkBadgesOnMarketplaceSale(order[0].sellerId).catch(err => 
+                console.error('Background marketplace sale badge check failed:', err)
+              );
+            }
+          }
         }
       }
     }
