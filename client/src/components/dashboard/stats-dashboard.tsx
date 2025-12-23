@@ -17,7 +17,7 @@ export function StatsDashboard() {
     refetchOnWindowFocus: true,
   });
   
-  const { data: badgesData } = useQuery<{ badges: any[] }>({
+  const { data: userBadges } = useQuery<any[]>({
     queryKey: ["/api/user-badges"],
     staleTime: 60000,
   });
@@ -53,7 +53,7 @@ export function StatsDashboard() {
   const totalCards = stats.totalCards || 0;
   const totalValue = stats.totalValue ? parseFloat(stats.totalValue.toString()) : 0;
   const wishlistItems = (stats as any).wishlistItems || (stats as any).wishlistCount || 0;
-  const superpowersCount = badgesData?.badges?.length || 0;
+  const superpowersCount = userBadges?.length || 0;
 
   const statItems = [
     {
