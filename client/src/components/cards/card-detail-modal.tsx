@@ -180,10 +180,19 @@ export function CardDetailModal({
     }
   });
 
-  // Marketplace settings mutation
+  // Marketplace settings mutation - fetches collection item ID by card ID first
   const saveMarketplaceSettingsMutation = useMutation({
-    mutationFn: async (data: { id: number; isForSale: boolean; salePrice: string; condition: string; notes: string }) => {
-      return apiRequest('PATCH', `/api/collection/${data.id}`, {
+    mutationFn: async (data: { cardId: number; isForSale: boolean; salePrice: string; condition: string; notes: string }) => {
+      // First, fetch the collection item by card ID to get the real collection item ID
+      const collectionResponse = await apiRequest('GET', '/api/collection');
+      const collection = await collectionResponse.json();
+      const collectionItem = collection.find((item: any) => item.cardId === data.cardId);
+      
+      if (!collectionItem) {
+        throw new Error('Collection item not found. Please ensure the card is in your collection.');
+      }
+      
+      return apiRequest('PATCH', `/api/collection/${collectionItem.id}`, {
         isForSale: data.isForSale,
         salePrice: data.salePrice,
         condition: data.condition,
@@ -195,18 +204,18 @@ export function CardDetailModal({
       queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
       queryClient.invalidateQueries({ queryKey: ['/api/marketplace'] });
     },
-    onError: () => {
-      toast({ title: "Failed to save settings", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "Failed to save settings", description: error.message, variant: "destructive" });
     }
   });
 
   const handleSaveMarketplaceSettings = () => {
-    if (!collectionItemId) {
-      toast({ title: "Error", description: "Collection item not found", variant: "destructive" });
+    if (!card) {
+      toast({ title: "Error", description: "No card selected", variant: "destructive" });
       return;
     }
     saveMarketplaceSettingsMutation.mutate({
-      id: collectionItemId,
+      cardId: card.id,
       isForSale,
       salePrice,
       condition,
