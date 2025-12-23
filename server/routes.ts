@@ -3628,7 +3628,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const session = event.data.object as Stripe.Checkout.Session;
           const userId = parseInt(session.metadata?.userId || '0');
           
-          if (userId && session.subscription) {
+          // Check if this is a marketplace purchase
+          if (session.metadata?.type === 'marketplace_purchase') {
+            // Forward to marketplace payment confirmation handler
+            try {
+              await fetch(`${process.env.REPLIT_DOMAINS?.split(',')[0] ? 'https://' + process.env.REPLIT_DOMAINS.split(',')[0] : 'http://localhost:5000'}/api/marketplace/payment-confirmed`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  sessionId: session.id,
+                  paymentIntentId: session.payment_intent,
+                }),
+              });
+              console.log(`Marketplace payment confirmed for session ${session.id}`);
+            } catch (err) {
+              console.error('Failed to confirm marketplace payment:', err);
+            }
+          } else if (userId && session.subscription) {
             // Update user to Super Hero plan
             await storage.updateUser(userId, {
               plan: 'SUPER_HERO',
@@ -3637,6 +3653,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
               stripeSubscriptionId: session.subscription as string
             });
             console.log(`User ${userId} upgraded to Super Hero plan`);
+          }
+          break;
+
+        case 'checkout.session.expired':
+          const expiredSession = event.data.object as Stripe.Checkout.Session;
+          // Handle expired marketplace checkout sessions
+          if (expiredSession.metadata?.type === 'marketplace_purchase') {
+            const collectionItemId = parseInt(expiredSession.metadata.collectionItemId || '0');
+            if (collectionItemId) {
+              // Release the reservation
+              try {
+                const { listings, orders, userCollections } = await import('../shared/schema');
+                const { eq, and } = await import('drizzle-orm');
+                
+                // Find and cancel the pending order
+                const pendingOrder = await db
+                  .select({ order: orders, listing: listings })
+                  .from(orders)
+                  .innerJoin(listings, eq(orders.listingId, listings.id))
+                  .where(and(
+                    eq(orders.stripeCheckoutSessionId, expiredSession.id),
+                    eq(orders.status, 'payment_pending')
+                  ))
+                  .limit(1);
+                
+                if (pendingOrder.length) {
+                  await db.update(orders).set({
+                    status: 'cancelled',
+                    paymentStatus: 'expired',
+                    updatedAt: new Date(),
+                  }).where(eq(orders.id, pendingOrder[0].order.id));
+                  
+                  await db.update(listings).set({
+                    status: 'active',
+                    quantityAvailable: 1,
+                    updatedAt: new Date(),
+                  }).where(eq(listings.id, pendingOrder[0].listing.id));
+                  
+                  await db.update(userCollections).set({
+                    isForSale: true,
+                  }).where(eq(userCollections.id, collectionItemId));
+                  
+                  console.log(`Released expired reservation for collection item ${collectionItemId}`);
+                }
+              } catch (err) {
+                console.error('Failed to release expired reservation:', err);
+              }
+            }
           }
           break;
 

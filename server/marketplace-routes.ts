@@ -711,95 +711,128 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
   
   // Quick checkout from collection item (simplified flow for items marked isForSale)
   app.post("/api/marketplace/quick-checkout", authenticateUser, async (req: any, res) => {
+    const { collectionItemId } = req.body;
+    let reservedListingId: number | null = null;
+    let reservedCollectionItemId: number | null = null;
+    
     try {
       if (req.user.plan !== 'SUPER_HERO') {
         return res.status(403).json({ message: "Marketplace requires SUPER HERO subscription" });
       }
       
-      const { collectionItemId } = req.body;
-      
       if (!collectionItemId) {
         return res.status(400).json({ message: "Collection item ID is required" });
       }
       
-      // Get the collection item with card details
-      const collectionResult = await db
-        .select({
-          collection: userCollections,
-          card: cards,
-          cardSet: cardSets,
-        })
-        .from(userCollections)
-        .innerJoin(cards, eq(userCollections.cardId, cards.id))
-        .innerJoin(cardSets, eq(cards.setId, cardSets.id))
-        .where(and(
-          eq(userCollections.id, collectionItemId),
-          eq(userCollections.isForSale, true)
-        ))
-        .limit(1);
+      // Use transaction for atomic reservation to prevent race conditions
+      const result = await db.transaction(async (tx) => {
+        // Get the collection item with card details (within transaction)
+        const collectionResult = await tx
+          .select({
+            collection: userCollections,
+            card: cards,
+            cardSet: cardSets,
+          })
+          .from(userCollections)
+          .innerJoin(cards, eq(userCollections.cardId, cards.id))
+          .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+          .where(and(
+            eq(userCollections.id, collectionItemId),
+            eq(userCollections.isForSale, true)
+          ))
+          .limit(1);
+        
+        if (!collectionResult.length) {
+          throw new Error('ITEM_NOT_AVAILABLE');
+        }
+        
+        const { collection: collectionItem, card, cardSet } = collectionResult[0];
+        
+        // Can't buy your own item
+        if (collectionItem.userId === req.user.id) {
+          throw new Error('CANNOT_BUY_OWN_ITEM');
+        }
+        
+        // Check if there's already a pending order for this item
+        const existingOrder = await tx
+          .select()
+          .from(orders)
+          .innerJoin(listings, eq(orders.listingId, listings.id))
+          .where(and(
+            eq(listings.userCollectionId, collectionItemId),
+            eq(orders.status, 'payment_pending')
+          ))
+          .limit(1);
+        
+        if (existingOrder.length) {
+          throw new Error('ALREADY_PENDING');
+        }
+        
+        const itemPrice = parseFloat(collectionItem.salePrice || '0');
+        if (itemPrice <= 0) {
+          throw new Error('NO_VALID_PRICE');
+        }
+        
+        const shippingCost = 5.00;
+        const fees = calculateFees(itemPrice, shippingCost);
+        const cardName = `${card.name} - ${cardSet.name}`;
+        
+        // Immediately mark collection item as not for sale (reservation)
+        await tx.update(userCollections).set({
+          isForSale: false,
+        }).where(eq(userCollections.id, collectionItemId));
+        reservedCollectionItemId = collectionItemId;
+        
+        // Auto-create or find existing listing for this collection item
+        let listingRecord = await tx
+          .select()
+          .from(listings)
+          .where(eq(listings.userCollectionId, collectionItemId))
+          .limit(1);
+        
+        let listingId: number;
+        
+        if (!listingRecord.length) {
+          // Create a new listing on-the-fly
+          const [newListing] = await tx.insert(listings).values({
+            sellerId: collectionItem.userId,
+            userCollectionId: collectionItemId,
+            cardId: collectionItem.cardId,
+            price: itemPrice.toString(),
+            quantity: 1,
+            quantityAvailable: 0,
+            allowOffers: false,
+            description: collectionItem.notes || `${card.name} for sale`,
+            conditionSnapshot: collectionItem.condition || 'Near Mint',
+            status: 'reserved',
+            publishedAt: new Date(),
+          }).returning();
+          listingId = newListing.id;
+        } else {
+          listingId = listingRecord[0].id;
+          await tx.update(listings).set({
+            quantityAvailable: 0,
+            status: 'reserved',
+            updatedAt: new Date(),
+          }).where(eq(listings.id, listingId));
+        }
+        reservedListingId = listingId;
+        
+        return { collectionItem, card, cardSet, itemPrice, shippingCost, fees, cardName, listingId };
+      });
       
-      if (!collectionResult.length) {
-        return res.status(404).json({ message: "Item not found or not for sale" });
-      }
+      // Transaction succeeded - now create Stripe session (outside transaction)
+      const { collectionItem, itemPrice, shippingCost, fees, cardName, listingId } = result;
       
-      const { collection: collectionItem, card, cardSet } = collectionResult[0];
-      
-      // Can't buy your own item
-      if (collectionItem.userId === req.user.id) {
-        return res.status(400).json({ message: "You cannot purchase your own item" });
-      }
-      
-      const itemPrice = parseFloat(collectionItem.salePrice || '0');
-      if (itemPrice <= 0) {
-        return res.status(400).json({ message: "Item has no valid sale price" });
-      }
-      
-      // For quick checkout, we assume flat $5 shipping (can be refined later)
-      const shippingCost = 5.00;
-      const fees = calculateFees(itemPrice, shippingCost);
-      
-      const cardName = `${card.name} - ${cardSet.name}`;
-      
-      // Auto-create or find existing listing for this collection item
-      let listingRecord = await db
-        .select()
-        .from(listings)
-        .where(and(
-          eq(listings.userCollectionId, collectionItemId),
-          eq(listings.status, 'active')
-        ))
-        .limit(1);
-      
-      let listingId: number;
-      
-      if (!listingRecord.length) {
-        // Create a new listing on-the-fly
-        const [newListing] = await db.insert(listings).values({
-          sellerId: collectionItem.userId,
-          userCollectionId: collectionItemId,
-          cardId: collectionItem.cardId,
-          price: itemPrice.toString(),
-          quantity: 1,
-          quantityAvailable: 1,
-          allowOffers: false,
-          description: collectionItem.notes || `${card.name} for sale`,
-          conditionSnapshot: collectionItem.condition || 'Near Mint',
-          status: 'active',
-          publishedAt: new Date(),
-        }).returning();
-        listingId = newListing.id;
-      } else {
-        listingId = listingRecord[0].id;
-      }
-      
-      // Determine base URL
       const baseUrl = process.env.REPLIT_DOMAINS?.split(',')[0] 
         ? 'https://' + process.env.REPLIT_DOMAINS.split(',')[0] 
         : 'http://localhost:5000';
       
-      // Create Stripe checkout session
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
+        shipping_address_collection: {
+          allowed_countries: ['US', 'CA'],
+        },
         line_items: [{
           price_data: {
             currency: 'usd',
@@ -821,8 +854,9 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
           quantity: 1,
         }],
         mode: 'payment',
+        expires_at: Math.floor(Date.now() / 1000) + (30 * 60),
         success_url: `${baseUrl}/activity?tab=purchases&order=success`,
-        cancel_url: `${baseUrl}/marketplace`,
+        cancel_url: `${baseUrl}/marketplace?cancelled=true&itemId=${collectionItemId}`,
         metadata: {
           type: 'marketplace_purchase',
           listingId: listingId.toString(),
@@ -843,27 +877,107 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
         buyerId: req.user.id,
         sellerId: collectionItem.userId,
         quantity: 1,
-        itemPrice: itemPrice.toString(),
-        shippingCost: shippingCost.toString(),
-        platformFee: fees.platformFee.toString(),
-        stripeFee: fees.stripeFee.toString(),
-        total: fees.total.toString(),
-        sellerNet: fees.sellerNet.toString(),
+        itemPrice: itemPrice.toFixed(2),
+        shippingCost: shippingCost.toFixed(2),
+        platformFee: fees.platformFee.toFixed(2),
+        stripeFee: fees.stripeFee.toFixed(2),
+        total: fees.total.toFixed(2),
+        sellerNet: fees.sellerNet.toFixed(2),
         stripeCheckoutSessionId: session.id,
         status: 'payment_pending',
         paymentStatus: 'pending',
       }).returning();
-      
-      // TODO: Create notification for seller about new order pending
       
       res.json({
         url: session.url,
         orderId: order.id,
         orderNumber: order.orderNumber,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Quick checkout error:', error);
+      
+      // Rollback reservation if Stripe session creation or order insert failed
+      if (reservedCollectionItemId) {
+        try {
+          await db.update(userCollections).set({ isForSale: true })
+            .where(eq(userCollections.id, reservedCollectionItemId));
+        } catch (rollbackErr) {
+          console.error('Rollback collection item failed:', rollbackErr);
+        }
+      }
+      if (reservedListingId) {
+        try {
+          await db.update(listings).set({ status: 'active', quantityAvailable: 1, updatedAt: new Date() })
+            .where(eq(listings.id, reservedListingId));
+        } catch (rollbackErr) {
+          console.error('Rollback listing failed:', rollbackErr);
+        }
+      }
+      
+      // Return specific error messages
+      if (error.message === 'ITEM_NOT_AVAILABLE') {
+        return res.status(404).json({ message: "Item not found or not for sale" });
+      }
+      if (error.message === 'CANNOT_BUY_OWN_ITEM') {
+        return res.status(400).json({ message: "You cannot purchase your own item" });
+      }
+      if (error.message === 'ALREADY_PENDING') {
+        return res.status(409).json({ message: "This item already has a pending purchase" });
+      }
+      if (error.message === 'NO_VALID_PRICE') {
+        return res.status(400).json({ message: "Item has no valid sale price" });
+      }
+      
       res.status(500).json({ message: "Failed to create checkout session" });
+    }
+  });
+  
+  // Release reserved item if checkout is cancelled or expires
+  app.post("/api/marketplace/release-reservation", authenticateUser, async (req: any, res) => {
+    try {
+      const { collectionItemId } = req.body;
+      
+      if (!collectionItemId) {
+        return res.status(400).json({ message: "Collection item ID is required" });
+      }
+      
+      // Find pending orders for this item
+      const pendingOrder = await db
+        .select({ order: orders, listing: listings })
+        .from(orders)
+        .innerJoin(listings, eq(orders.listingId, listings.id))
+        .where(and(
+          eq(listings.userCollectionId, collectionItemId),
+          eq(orders.status, 'payment_pending'),
+          eq(orders.buyerId, req.user.id)
+        ))
+        .limit(1);
+      
+      if (pendingOrder.length) {
+        // Cancel the order
+        await db.update(orders).set({
+          status: 'cancelled',
+          paymentStatus: 'cancelled',
+          updatedAt: new Date(),
+        }).where(eq(orders.id, pendingOrder[0].order.id));
+        
+        // Re-activate the listing
+        await db.update(listings).set({
+          status: 'active',
+          quantityAvailable: 1,
+          updatedAt: new Date(),
+        }).where(eq(listings.id, pendingOrder[0].listing.id));
+        
+        // Re-enable sale on collection item
+        await db.update(userCollections).set({
+          isForSale: true,
+        }).where(eq(userCollections.id, collectionItemId));
+      }
+      
+      res.json({ message: "Reservation released" });
+    } catch (error) {
+      console.error('Release reservation error:', error);
+      res.status(500).json({ message: "Failed to release reservation" });
     }
   });
   
@@ -1478,23 +1592,50 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
         return res.status(404).json({ message: "Order not found" });
       }
       
-      // Update order status
+      // Get the Stripe session to retrieve shipping address
+      let shippingAddress = order[0].shippingAddress;
+      try {
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        if (session.shipping_details?.address) {
+          const addr = session.shipping_details.address;
+          shippingAddress = JSON.stringify({
+            name: session.shipping_details.name || '',
+            street1: addr.line1 || '',
+            street2: addr.line2 || '',
+            city: addr.city || '',
+            state: addr.state || '',
+            zip: addr.postal_code || '',
+            country: addr.country || 'US',
+          });
+        }
+      } catch (stripeErr) {
+        console.error('Failed to retrieve shipping from Stripe:', stripeErr);
+      }
+      
+      // Update order status and shipping address
       await db.update(orders).set({
         status: 'paid',
         paymentStatus: 'succeeded',
         stripePaymentIntentId: paymentIntentId,
+        shippingAddress,
         updatedAt: new Date(),
       }).where(eq(orders.id, order[0].id));
       
-      // Reduce listing quantity
+      // Mark listing as sold
       const listing = await db.select().from(listings).where(eq(listings.id, order[0].listingId)).limit(1);
       if (listing.length) {
-        const newQuantity = listing[0].quantityAvailable - order[0].quantity;
         await db.update(listings).set({
-          quantityAvailable: Math.max(0, newQuantity),
-          status: newQuantity <= 0 ? 'sold' : 'active',
+          quantityAvailable: 0,
+          status: 'sold',
           updatedAt: new Date(),
         }).where(eq(listings.id, order[0].listingId));
+        
+        // Keep collection item marked as not for sale (already purchased)
+        if (listing[0].userCollectionId) {
+          await db.update(userCollections).set({
+            isForSale: false,
+          }).where(eq(userCollections.id, listing[0].userCollectionId));
+        }
       }
       
       res.json({ message: "Order confirmed", orderId: order[0].id });

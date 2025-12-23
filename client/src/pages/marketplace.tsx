@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ import type { CollectionItem, CardWithSet, CardSet } from "@/types/schema";
 export default function Marketplace() {
   const { currentUser } = useAppStore();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -60,6 +62,34 @@ export default function Marketplace() {
       });
     }
   });
+
+  // Handle cancelled checkout - release reservation
+  const releaseReservationMutation = useMutation({
+    mutationFn: async (collectionItemId: number) => {
+      const response = await apiRequest('POST', '/api/marketplace/release-reservation', { collectionItemId });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/marketplace"] });
+    }
+  });
+
+  // Check for cancelled checkout on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const cancelled = params.get('cancelled');
+    const itemId = params.get('itemId');
+    
+    if (cancelled === 'true' && itemId) {
+      releaseReservationMutation.mutate(parseInt(itemId));
+      toast({
+        title: "Checkout cancelled",
+        description: "The item has been released and is available again.",
+      });
+      // Clean up URL
+      setLocation('/marketplace', { replace: true });
+    }
+  }, []);
 
   const { data: marketplaceItems, isLoading } = useQuery<CollectionItem[]>({
     queryKey: ["/api/marketplace", { search: searchQuery, setId: selectedSet, sort: sortBy }],
