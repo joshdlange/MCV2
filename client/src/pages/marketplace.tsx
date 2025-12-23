@@ -178,6 +178,13 @@ export default function Marketplace() {
             <p className="text-sm text-gray-500 mt-4">Only $5/month • Cancel anytime</p>
           </div>
         </div>
+
+        {/* Upgrade Modal for locked view */}
+        <UpgradeModal 
+          isOpen={showUpgradeModal} 
+          onClose={() => setShowUpgradeModal(false)} 
+          currentPlan={currentUser?.plan || 'SIDE_KICK'}
+        />
       </div>
     );
   }
@@ -452,6 +459,13 @@ export default function Marketplace() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal 
+        isOpen={showUpgradeModal} 
+        onClose={() => setShowUpgradeModal(false)} 
+        currentPlan={currentUser?.plan || 'SIDE_KICK'}
+      />
     </div>
   );
 }

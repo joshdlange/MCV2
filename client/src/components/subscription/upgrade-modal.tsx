@@ -141,8 +141,13 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
 
                 <div className="pt-4">
                   {plan.current ? (
-                    <Button variant="outline" className="w-full" disabled>
-                      Current Plan
+                    <Button 
+                      variant="outline" 
+                      className="w-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold border-2 border-gray-300 dark:border-gray-600" 
+                      disabled
+                    >
+                      <Check className="w-4 h-4 mr-2" />
+                      YOUR PLAN
                     </Button>
                   ) : plan.name === "Super Hero" ? (
                     <Button 
@@ -162,11 +167,7 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
                         </>
                       )}
                     </Button>
-                  ) : (
-                    <Button variant="outline" className="w-full" disabled>
-                      Free Plan
-                    </Button>
-                  )}
+                  ) : null}
                 </div>
               </CardContent>
             </Card>
