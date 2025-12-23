@@ -1412,9 +1412,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Marketplace
-  app.get("/api/marketplace", async (req, res) => {
+  // Marketplace - requires SUPER_HERO plan
+  app.get("/api/marketplace", authenticateUser, async (req: any, res) => {
     try {
+      // Check if user has SUPER_HERO plan
+      if (req.user.plan !== 'SUPER_HERO') {
+        return res.status(403).json({ 
+          message: "Marketplace access requires SUPER_HERO subscription",
+          upgradeRequired: true
+        });
+      }
+      
       const marketplaceItems = await storage.getMarketplaceItems();
       res.json(marketplaceItems);
     } catch (error) {

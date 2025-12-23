@@ -292,7 +292,7 @@ export default function Marketplace() {
       <UpgradeModal 
         isOpen={showUpgradeModal} 
         onClose={() => setShowUpgradeModal(false)} 
-        reason="marketplace"
+        currentPlan={currentUser?.plan || "SIDE_KICK"}
       />
     </div>
   );
