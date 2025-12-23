@@ -383,7 +383,10 @@ export default function Social() {
         },
         body: JSON.stringify({ recipientId }),
       });
-      if (!response.ok) throw new Error("Failed to send friend request");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to send friend request");
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -396,12 +399,25 @@ export default function Social() {
       setSearchResults([]);
       setSearchQuery("");
     },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to send friend request",
-        variant: "destructive",
-      });
+    onError: (error: Error) => {
+      const message = error.message;
+      if (message.includes("already")) {
+        toast({
+          title: "Request Pending",
+          description: "You've already sent a friend request to this person",
+        });
+      } else if (message.includes("friends")) {
+        toast({
+          title: "Already Friends",
+          description: "You're already friends with this person",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: message,
+          variant: "destructive",
+        });
+      }
     },
   });
 
