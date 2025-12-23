@@ -28,10 +28,8 @@ export default function SubscriptionSuccess() {
       }
 
       try {
-        const result = await apiRequest('/api/verify-checkout-session', {
-          method: 'POST',
-          body: JSON.stringify({ sessionId }),
-        });
+        const response = await apiRequest('POST', '/api/verify-checkout-session', { sessionId });
+        const result = await response.json();
         
         console.log('Checkout verification result:', result);
         setVerified(true);

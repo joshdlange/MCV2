@@ -92,10 +92,13 @@ const syncUserWithBackend = async (user: any) => {
       const selectedPlan = localStorage.getItem('selectedPlan');
       if (selectedPlan === 'SUPER_HERO' && data.user.plan === 'SIDE_KICK') {
         localStorage.removeItem('selectedPlan');
-        // Trigger upgrade flow
+        // Store a flag to show upgrade modal on next render
+        // This lets the app handle the upgrade flow properly through the UI
+        sessionStorage.setItem('showUpgradeOnLoad', 'true');
+        // Navigate to profile which has the upgrade button visible
         setTimeout(() => {
-          window.location.href = 'https://buy.stripe.com/3cI14n5dwegW7Bo8pP6kg00';
-        }, 1000); // Small delay to ensure UI is loaded
+          window.location.href = '/profile';
+        }, 500);
       } else if (selectedPlan) {
         localStorage.removeItem('selectedPlan');
       }

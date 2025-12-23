@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -223,6 +223,19 @@ export default function Profile() {
       friendActivity: true
     }
   });
+
+  // Check if we should show upgrade modal on load (from login flow)
+  useEffect(() => {
+    const shouldShowUpgrade = sessionStorage.getItem('showUpgradeOnLoad');
+    if (shouldShowUpgrade === 'true' && currentUser?.plan === 'SIDE_KICK') {
+      sessionStorage.removeItem('showUpgradeOnLoad');
+      setShowUpgradeModal(true);
+      toast({
+        title: "Complete Your Upgrade",
+        description: "Click below to finish upgrading to Super Hero!"
+      });
+    }
+  }, [currentUser?.plan]);
 
   // Fetch user profile data
   const { data: userProfile } = useQuery({

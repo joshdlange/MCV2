@@ -3625,14 +3625,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Stripe webhook endpoint to handle successful payments
   app.post('/api/stripe-webhook', async (req, res) => {
+    console.log('🔔 Stripe webhook received');
     const sig = req.headers['stripe-signature'];
     let event;
 
+    if (!sig) {
+      console.error('❌ Webhook Error: Missing stripe-signature header');
+      return res.status(400).send('Webhook Error: Missing signature');
+    }
+
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      console.error('❌ Webhook Error: STRIPE_WEBHOOK_SECRET not configured');
+      return res.status(500).send('Webhook Error: Server configuration issue');
+    }
+
     try {
-      // In production, you should set STRIPE_WEBHOOK_SECRET
-      event = stripe.webhooks.constructEvent(req.body, sig as string, process.env.STRIPE_WEBHOOK_SECRET || '');
+      event = stripe.webhooks.constructEvent(req.body, sig as string, process.env.STRIPE_WEBHOOK_SECRET);
+      console.log(`✅ Webhook verified - Event type: ${event.type}`);
     } catch (err: any) {
-      console.error('Webhook signature verification failed:', err.message);
+      console.error('❌ Webhook signature verification failed:', err.message);
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
