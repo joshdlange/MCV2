@@ -1,24 +1,65 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { UpgradeModal } from "@/components/subscription/upgrade-modal";
 import { useAppStore } from "@/lib/store";
-import { Star, Search, Filter, Crown, Lock } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Star, Search, Filter, Crown, Lock, ShoppingCart, CreditCard, Package, Loader2 } from "lucide-react";
 import type { CollectionItem, CardWithSet, CardSet } from "@/types/schema";
 
 export default function Marketplace() {
   const { currentUser } = useAppStore();
+  const { toast } = useToast();
   const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<CollectionItem | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSet, setSelectedSet] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("newest");
+
+  // Handle Buy Now button click
+  const handleBuyNow = (item: CollectionItem) => {
+    // Don't allow buying own items
+    if (item.userId === currentUser?.id) {
+      toast({ 
+        title: "Cannot purchase own item", 
+        description: "You cannot buy your own listed cards.",
+        variant: "destructive" 
+      });
+      return;
+    }
+    setSelectedItem(item);
+    setShowPurchaseModal(true);
+  };
+
+  // Create checkout session mutation
+  const createCheckoutMutation = useMutation({
+    mutationFn: async (collectionItemId: number) => {
+      const response = await apiRequest('POST', '/api/marketplace/quick-checkout', { collectionItemId });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onError: () => {
+      toast({ 
+        title: "Checkout failed", 
+        description: "Unable to create checkout session. Please try again.",
+        variant: "destructive" 
+      });
+    }
+  });
 
   const { data: marketplaceItems, isLoading } = useQuery<CollectionItem[]>({
     queryKey: ["/api/marketplace", { search: searchQuery, setId: selectedSet, sort: sortBy }],
@@ -248,28 +289,24 @@ export default function Marketplace() {
                   </div>
 
                   {/* Card Info */}
-                  <div className="p-3 space-y-1">
+                  <div className="p-3 space-y-2">
                     <h3 className="font-semibold text-sm text-gray-900 line-clamp-2 leading-tight">
                       {item.card.name}
                     </h3>
                     <p className="text-xs text-gray-600">
                       {item.card.set.name} #{item.card.cardNumber}
                     </p>
-                    <div className="flex items-center justify-between mt-2">
-                      <Badge variant="outline" className="text-xs">
-                        {item.condition}
-                      </Badge>
-                      <Button
-                        size="sm"
-                        className="h-6 px-2 text-xs bg-red-600 hover:bg-red-700 text-white"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Handle purchase logic here
-                        }}
-                      >
-                        Buy Now
-                      </Button>
-                    </div>
+                    <Button
+                      size="sm"
+                      className="w-full h-8 text-sm bg-red-600 hover:bg-red-700 text-white font-semibold"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleBuyNow(item);
+                      }}
+                      data-testid={`button-buy-now-${item.id}`}
+                    >
+                      Buy Now
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -294,6 +331,97 @@ export default function Marketplace() {
         onClose={() => setShowUpgradeModal(false)} 
         currentPlan={currentUser?.plan || "SIDE_KICK"}
       />
+
+      {/* Purchase Modal */}
+      <Dialog open={showPurchaseModal} onOpenChange={setShowPurchaseModal}>
+        <DialogContent className="sm:max-w-md bg-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-gray-900">Purchase Card</DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Review your purchase details below
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedItem && (
+            <div className="space-y-4">
+              {/* Card Preview */}
+              <div className="flex gap-4 p-4 bg-gray-50 rounded-lg">
+                <div className="w-20 h-28 bg-gray-200 rounded overflow-hidden flex-shrink-0">
+                  {selectedItem.card.frontImageUrl ? (
+                    <img 
+                      src={selectedItem.card.frontImageUrl} 
+                      alt={selectedItem.card.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
+                      <span className="text-red-600 font-bold text-xs text-center px-1">
+                        {selectedItem.card.name}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-gray-900">{selectedItem.card.name}</h4>
+                  <p className="text-sm text-gray-600">{selectedItem.card.set.name}</p>
+                  <p className="text-sm text-gray-500">Card #{selectedItem.card.cardNumber}</p>
+                  <Badge className="mt-1 bg-gray-100 text-gray-700 text-xs">
+                    {selectedItem.condition}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Price Breakdown */}
+              <div className="space-y-2 p-4 border rounded-lg">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Card Price</span>
+                  <span className="font-semibold text-gray-900">
+                    ${parseFloat(selectedItem.salePrice || "0").toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Shipping</span>
+                  <span className="text-gray-600">Calculated at checkout</span>
+                </div>
+                <div className="border-t pt-2 mt-2 flex justify-between">
+                  <span className="font-semibold text-gray-900">Subtotal</span>
+                  <span className="font-bold text-lg text-green-600">
+                    ${parseFloat(selectedItem.salePrice || "0").toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Checkout Button */}
+              <Button
+                className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-semibold text-lg"
+                onClick={() => {
+                  if (selectedItem) {
+                    createCheckoutMutation.mutate(selectedItem.id);
+                  }
+                }}
+                disabled={createCheckoutMutation.isPending}
+                data-testid="button-proceed-checkout"
+              >
+                {createCheckoutMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="mr-2 h-5 w-5" />
+                    Proceed to Checkout
+                  </>
+                )}
+              </Button>
+
+              <p className="text-xs text-center text-gray-500">
+                Secure payment powered by Stripe
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

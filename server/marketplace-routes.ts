@@ -709,6 +709,164 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
     }
   });
   
+  // Quick checkout from collection item (simplified flow for items marked isForSale)
+  app.post("/api/marketplace/quick-checkout", authenticateUser, async (req: any, res) => {
+    try {
+      if (req.user.plan !== 'SUPER_HERO') {
+        return res.status(403).json({ message: "Marketplace requires SUPER HERO subscription" });
+      }
+      
+      const { collectionItemId } = req.body;
+      
+      if (!collectionItemId) {
+        return res.status(400).json({ message: "Collection item ID is required" });
+      }
+      
+      // Get the collection item with card details
+      const collectionResult = await db
+        .select({
+          collection: userCollections,
+          card: cards,
+          cardSet: cardSets,
+        })
+        .from(userCollections)
+        .innerJoin(cards, eq(userCollections.cardId, cards.id))
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+        .where(and(
+          eq(userCollections.id, collectionItemId),
+          eq(userCollections.isForSale, true)
+        ))
+        .limit(1);
+      
+      if (!collectionResult.length) {
+        return res.status(404).json({ message: "Item not found or not for sale" });
+      }
+      
+      const { collection: collectionItem, card, cardSet } = collectionResult[0];
+      
+      // Can't buy your own item
+      if (collectionItem.userId === req.user.id) {
+        return res.status(400).json({ message: "You cannot purchase your own item" });
+      }
+      
+      const itemPrice = parseFloat(collectionItem.salePrice || '0');
+      if (itemPrice <= 0) {
+        return res.status(400).json({ message: "Item has no valid sale price" });
+      }
+      
+      // For quick checkout, we assume flat $5 shipping (can be refined later)
+      const shippingCost = 5.00;
+      const fees = calculateFees(itemPrice, shippingCost);
+      
+      const cardName = `${card.name} - ${cardSet.name}`;
+      
+      // Auto-create or find existing listing for this collection item
+      let listingRecord = await db
+        .select()
+        .from(listings)
+        .where(and(
+          eq(listings.userCollectionId, collectionItemId),
+          eq(listings.status, 'active')
+        ))
+        .limit(1);
+      
+      let listingId: number;
+      
+      if (!listingRecord.length) {
+        // Create a new listing on-the-fly
+        const [newListing] = await db.insert(listings).values({
+          sellerId: collectionItem.userId,
+          userCollectionId: collectionItemId,
+          cardId: collectionItem.cardId,
+          price: itemPrice.toString(),
+          quantity: 1,
+          quantityAvailable: 1,
+          allowOffers: false,
+          description: collectionItem.notes || `${card.name} for sale`,
+          conditionSnapshot: collectionItem.condition || 'Near Mint',
+          status: 'active',
+          publishedAt: new Date(),
+        }).returning();
+        listingId = newListing.id;
+      } else {
+        listingId = listingRecord[0].id;
+      }
+      
+      // Determine base URL
+      const baseUrl = process.env.REPLIT_DOMAINS?.split(',')[0] 
+        ? 'https://' + process.env.REPLIT_DOMAINS.split(',')[0] 
+        : 'http://localhost:5000';
+      
+      // Create Stripe checkout session
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: cardName,
+              description: `Condition: ${collectionItem.condition || 'Near Mint'}`,
+            },
+            unit_amount: Math.round(itemPrice * 100),
+          },
+          quantity: 1,
+        }, {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Shipping (Standard)',
+            },
+            unit_amount: Math.round(shippingCost * 100),
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        success_url: `${baseUrl}/activity?tab=purchases&order=success`,
+        cancel_url: `${baseUrl}/marketplace`,
+        metadata: {
+          type: 'marketplace_purchase',
+          listingId: listingId.toString(),
+          collectionItemId: collectionItemId.toString(),
+          buyerId: req.user.id.toString(),
+          sellerId: collectionItem.userId.toString(),
+          itemPrice: itemPrice.toString(),
+          shippingCost: shippingCost.toString(),
+        },
+      });
+      
+      // Create order record
+      const orderNumber = generateOrderNumber();
+      
+      const [order] = await db.insert(orders).values({
+        orderNumber,
+        listingId,
+        buyerId: req.user.id,
+        sellerId: collectionItem.userId,
+        quantity: 1,
+        itemPrice: itemPrice.toString(),
+        shippingCost: shippingCost.toString(),
+        platformFee: fees.platformFee.toString(),
+        stripeFee: fees.stripeFee.toString(),
+        total: fees.total.toString(),
+        sellerNet: fees.sellerNet.toString(),
+        stripeCheckoutSessionId: session.id,
+        status: 'payment_pending',
+        paymentStatus: 'pending',
+      }).returning();
+      
+      // TODO: Create notification for seller about new order pending
+      
+      res.json({
+        url: session.url,
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+      });
+    } catch (error) {
+      console.error('Quick checkout error:', error);
+      res.status(500).json({ message: "Failed to create checkout session" });
+    }
+  });
+  
   // Get my purchases (buyer)
   app.get("/api/marketplace/purchases", authenticateUser, async (req: any, res) => {
     try {
