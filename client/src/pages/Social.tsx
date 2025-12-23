@@ -598,7 +598,7 @@ export default function Social() {
                       placeholder="Find new friends..."
                       value={searchQuery}
                       onChange={handleSearchChange}
-                      className="pl-9 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:bg-white dark:focus:bg-gray-900"
+                      className="pl-9 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:bg-white dark:focus:bg-gray-900 text-black dark:text-white"
                     />
                   </div>
                   <Button
