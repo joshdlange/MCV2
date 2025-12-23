@@ -948,6 +948,14 @@ export class DatabaseStorage implements IStorage {
         isForSale: userCollections.isForSale,
         serialNumber: userCollections.serialNumber,
         notes: userCollections.notes,
+        seller: {
+          id: users.id,
+          username: users.username,
+          displayName: users.displayName,
+          photoURL: users.photoURL,
+          sellerRating: users.sellerRating,
+          sellerReviewCount: users.sellerReviewCount,
+        },
         card: {
           id: cards.id,
           name: cards.name,
@@ -974,6 +982,7 @@ export class DatabaseStorage implements IStorage {
         }
       })
       .from(userCollections)
+      .leftJoin(users, eq(userCollections.userId, users.id))
       .leftJoin(cards, eq(userCollections.cardId, cards.id))
       .leftJoin(cardSets, eq(cards.setId, cardSets.id))
       .where(eq(userCollections.isForSale, true));

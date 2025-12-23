@@ -54,10 +54,27 @@ export default function Marketplace() {
         window.location.href = data.url;
       }
     },
-    onError: () => {
+    onError: (error: Error) => {
+      // Extract the actual error message from the backend response
+      let errorMessage = "Unable to create checkout session. Please try again.";
+      if (error.message) {
+        // Error format from apiRequest is "status: {json body}"
+        const match = error.message.match(/\d+: (.+)/);
+        if (match) {
+          try {
+            const parsed = JSON.parse(match[1]);
+            if (parsed.message) {
+              errorMessage = parsed.message;
+            }
+          } catch {
+            // If not JSON, use the raw message
+            errorMessage = match[1];
+          }
+        }
+      }
       toast({ 
         title: "Checkout failed", 
-        description: "Unable to create checkout session. Please try again.",
+        description: errorMessage,
         variant: "destructive" 
       });
     }
@@ -407,6 +424,43 @@ export default function Marketplace() {
                   </Badge>
                 </div>
               </div>
+
+              {/* Seller Info */}
+              {selectedItem.seller && (
+                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                  <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                    {selectedItem.seller.photoURL ? (
+                      <img 
+                        src={selectedItem.seller.photoURL} 
+                        alt={selectedItem.seller.displayName || selectedItem.seller.username}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                        {(selectedItem.seller.displayName || selectedItem.seller.username || '?')[0].toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900 text-sm">
+                      Sold by {selectedItem.seller.displayName || selectedItem.seller.username}
+                    </p>
+                    <div className="flex items-center gap-1 text-xs text-gray-600">
+                      {selectedItem.seller.sellerRating && parseFloat(selectedItem.seller.sellerRating) > 0 ? (
+                        <>
+                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                          <span>{parseFloat(selectedItem.seller.sellerRating).toFixed(1)}</span>
+                          <span className="text-gray-400">
+                            ({selectedItem.seller.sellerReviewCount || 0} reviews)
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-gray-400">New seller</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Price Breakdown */}
               <div className="space-y-2 p-4 border rounded-lg">

@@ -155,8 +155,18 @@ export type CardWithSet = Card & {
   set: CardSet;
 };
 
+export type SellerInfo = {
+  id: number;
+  username: string;
+  displayName: string | null;
+  photoURL: string | null;
+  sellerRating: string | null;
+  sellerReviewCount: number | null;
+};
+
 export type CollectionItem = UserCollection & {
   card: CardWithSet;
+  seller?: SellerInfo;
 };
 
 export type WishlistItem = UserWishlist & {

@@ -15,8 +15,17 @@ const PLATFORM_FEE_PERCENT = 0.06; // 6%
 const STRIPE_FEE_PERCENT = 0.029; // 2.9%
 const STRIPE_FEE_FIXED = 0.30; // $0.30
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
+// Initialize Stripe with proper validation
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+if (!stripeSecretKey) {
+  console.error('⚠️ STRIPE_SECRET_KEY is not configured - marketplace checkout will fail');
+}
+
+// Only create Stripe instance if key is available
+let stripe: Stripe | null = null;
+if (stripeSecretKey) {
+  stripe = new Stripe(stripeSecretKey);
+}
 
 // Helper to calculate fees
 // Flow: Buyer pays total -> Stripe takes fee from gross -> Platform receives net -> Platform pays seller
@@ -586,6 +595,12 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
   // Create checkout session (initiate purchase)
   app.post("/api/marketplace/checkout", authenticateUser, async (req: any, res) => {
     try {
+      // Check if Stripe is configured
+      if (!stripe) {
+        console.error('🚨 STRIPE_SECRET_KEY not configured - Stripe instance is null!');
+        return res.status(500).json({ message: "Payment system not configured. Please contact support." });
+      }
+      
       if (req.user.plan !== 'SUPER_HERO') {
         return res.status(403).json({ message: "Marketplace requires SUPER HERO subscription" });
       }
@@ -715,7 +730,15 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
     let reservedListingId: number | null = null;
     let reservedCollectionItemId: number | null = null;
     
+    console.log('🛒 Quick checkout request:', { collectionItemId, userId: req.user?.id, userPlan: req.user?.plan });
+    
     try {
+      // Check if Stripe is configured
+      if (!stripe) {
+        console.error('🚨 STRIPE_SECRET_KEY not configured - Stripe instance is null!');
+        return res.status(500).json({ message: "Payment system not configured. Please contact support." });
+      }
+      
       if (req.user.plan !== 'SUPER_HERO') {
         return res.status(403).json({ message: "Marketplace requires SUPER HERO subscription" });
       }
@@ -888,13 +911,23 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
         paymentStatus: 'pending',
       }).returning();
       
+      console.log('✅ Quick checkout success:', { orderId: order.id, orderNumber: order.orderNumber, sessionId: session.id });
+      
       res.json({
         url: session.url,
         orderId: order.id,
         orderNumber: order.orderNumber,
       });
     } catch (error: any) {
-      console.error('Quick checkout error:', error);
+      console.error('🚨 Quick checkout error:', {
+        message: error.message,
+        code: error.code,
+        type: error.type,
+        stack: error.stack?.split('\n').slice(0, 5).join('\n'),
+        collectionItemId,
+        userId: req.user?.id,
+        userPlan: req.user?.plan,
+      });
       
       // Rollback reservation if Stripe session creation or order insert failed
       if (reservedCollectionItemId) {
@@ -1595,6 +1628,9 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
       // Get the Stripe session to retrieve shipping address
       let shippingAddress = order[0].shippingAddress;
       try {
+        if (!stripe) {
+          throw new Error('Stripe not configured');
+        }
         const session = await stripe.checkout.sessions.retrieve(sessionId);
         if (session.shipping_details?.address) {
           const addr = session.shipping_details.address;
