@@ -18,7 +18,7 @@ export function StatsDashboard() {
   });
   
   const { data: userBadges } = useQuery<any[]>({
-    queryKey: ["/api/user-badges"],
+    queryKey: ["/api/social/user-badges"],
     staleTime: 60000,
   });
 
