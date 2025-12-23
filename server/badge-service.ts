@@ -291,6 +291,31 @@ export class BadgeService {
   async checkBadgesOnFriendChange(userId: number): Promise<void> {
     await this.checkFriendshipIsMagic(userId);
   }
+
+  // 12. First Listing - Award when user lists their first item on marketplace
+  async checkFirstListing(userId: number): Promise<void> {
+    const badge = await this.getBadgeByName('First Listing');
+    if (!badge) return;
+    
+    await this.awardBadge(userId, badge.id);
+  }
+
+  // 13. First Sale - Award when user completes their first sale on marketplace
+  async checkFirstSale(userId: number): Promise<void> {
+    const badge = await this.getBadgeByName('First Sale');
+    if (!badge) return;
+    
+    await this.awardBadge(userId, badge.id);
+  }
+
+  // Badge checks for marketplace actions
+  async checkBadgesOnMarketplaceListing(userId: number): Promise<void> {
+    await this.checkFirstListing(userId);
+  }
+
+  async checkBadgesOnMarketplaceSale(userId: number): Promise<void> {
+    await this.checkFirstSale(userId);
+  }
 }
 
 export const badgeService = new BadgeService();
