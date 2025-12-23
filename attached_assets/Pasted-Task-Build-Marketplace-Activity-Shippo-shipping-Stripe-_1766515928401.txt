@@ -1,0 +1,173 @@
+Task: Build Marketplace + Activity + Shippo shipping + Stripe checkout + reviews + reporting/suspension
+Do NOT redesign the whole site. Only modify/add components needed.
+
+You are working in the Marvel Card Vault app codebase (React + TypeScript + existing backend + Postgres via Drizzle). Implement a real Marketplace MVP (US-only) with Shippo-rated shipping and Stripe payments. Follow Marvel Card Vault branding (red/black/white) and keep UI sleek, modern, minimal. Do not introduce mock data on these new marketplace screens.
+
+Requirements
+1) Marketplace listings
+
+Sellers can create a listing ONLY from a card they own in “My Collection”.
+
+Listing fields:
+
+price (Buy Now) required
+
+allow Make Offer (buyers can submit offers; seller can accept/decline)
+
+quantity supported
+
+description/notes REQUIRED with guidance text (condition, grading, defects, shipping notes)
+
+images:
+
+If card already has a stock image, allow using it (no upload required)
+
+If no stock image, require at least 1 uploaded image to create listing
+
+Listings appear in Marketplace browse with filters (set/year/character/card #/price range/graded vs raw).
+
+Only US buyers/sellers for now.
+
+2) Checkout + Stripe
+
+Buyer selects quantity and shipping option (Shippo rate).
+
+Use existing Stripe integration to collect payment:
+
+total = item_price + shipping
+
+store platform fee (default 6%) and stripe fee estimate
+
+Create Order record with statuses:
+paid → needs_shipping → label_created → shipped → in_transit → delivered → complete
+
+3) Shippo integration
+
+Use Shippo API (server-side only) to:
+
+rate shipments prior to checkout (USPS rates)
+
+purchase label after seller confirms package details in Ship modal
+
+store label_url + tracking_number
+
+Add a Shippo webhook endpoint to update shipment + order statuses automatically (delivered, in_transit, exception).
+
+Shipping address:
+
+Marketplace requires buyer to have a saved default address
+
+Allow entering a different address at checkout (saved as a one-off or optional save)
+
+4) Activity center (new left nav)
+
+Add new left nav item: Activity
+Tabs:
+
+Purchases (buyer): show order cards with status + Track Package + Message Seller
+
+Sales (seller): show order cards with status + “Needs Shipping” badge; include “Ship” icon/button opening Ship modal
+
+Trades (placeholder): show empty state “Trade Block coming soon”
+
+Reviews: show reviews received and review prompts for delivered purchases not yet reviewed
+
+5) Ship modal (seller)
+
+From Activity → Sales → Ship:
+
+Prefill buyer address and seller return address
+
+Require package details (weight, dimensions), allow package presets
+
+Show USPS rates from Shippo; select service; purchase label
+
+After label purchase, show “Print Label” + tracking number and mark order shipped
+
+6) Messaging tie-in
+
+In each order row (Purchases/Sales), add “Message” button:
+
+open existing messaging thread if exists between buyer/seller
+
+otherwise create a new thread tied to the order participants
+
+7) Reviews
+
+Buyer can leave 1 review per order after Delivered.
+
+Rating 1–5 + optional comment.
+
+Show seller rating on listings and seller profile.
+
+8) Safety: Report + Block + auto-suspend
+
+Add “Report user” and “Block user” actions from:
+
+order details
+
+seller profile / listing
+
+Policy:
+
+if a seller receives 3 unique reports from 3 different users within 90 days, set marketplace_suspended = true and prevent new listings + purchases until admin review.
+
+Add basic admin-only page or admin toggle to unsuspend.
+
+9) Payouts (manual ACH MVP)
+
+No Stripe Connect onboarding in this phase.
+
+Implement weekly payout batch generator:
+
+eligible orders = Delivered and not yet paid out
+
+export CSV of seller payout totals (seller, amount, order ids)
+
+mark payouts as “exported” and allow admin to mark as “paid”
+
+Compute payout:
+
+platform fee default 6% of item price (config constant)
+
+seller_net = item_price - platform_fee - stripe_fee
+
+shipping is not included in fee calculation
+
+Engineering constraints
+
+Add DB tables needed: listings, offers, orders, shipments, reviews, reports, blocks, payout batches.
+
+Add API routes for all CRUD and Shippo/Stripe flows.
+
+Do not break existing auth or navigation.
+
+Use clean UI components consistent with the rest of the app.
+
+No mock data. If eBay/market calls are rate-limited, show an empty-state message, not fake charts.
+
+QA & regression checklist (must complete)
+
+Can create listing from owned card; blocked if user doesn’t own the card
+
+Listing creation requires description; image required only when no stock image
+
+Marketplace browse loads, filters work, listing details open
+
+Shippo rates load at checkout; selected rate persists into Stripe payment total
+
+Stripe payment succeeds; order appears in Activity Purchases/Sales
+
+Sales show Needs Shipping; Ship modal buys label; label + tracking saved
+
+Shippo webhook updates statuses to in_transit and delivered
+
+Buyer can track package; buyer can review only after delivered
+
+Report/block works; 3 reports triggers marketplace suspension
+
+Payout batch generates accurate CSV and excludes already-paid orders
+
+Messaging opens/creates correct thread from an order
+
+No new console errors; mobile layout verified on key screens

@@ -30,6 +30,7 @@ import { emailService } from "./services/emailService";
 import * as emailTriggers from "./services/emailTriggers";
 import { startEmailCronJobs } from "./jobs/emailCron";
 import { uploadUserCardImage, uploadMainSetThumbnail } from "./cloudinary";
+import { registerMarketplaceRoutes } from "./marketplace-routes";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -3970,6 +3971,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to reject image" });
     }
   });
+
+  // Register marketplace routes
+  registerMarketplaceRoutes(app, authenticateUser);
 
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);

@@ -38,6 +38,12 @@ export const users = pgTable("users", {
   totalLogins: integer("total_logins").default(0).notNull(),
   lastInactivityEmailSent: timestamp("last_inactivity_email_sent"),
   lastWeeklyDigestSent: timestamp("last_weekly_digest_sent"),
+  // Marketplace fields
+  marketplaceSuspended: boolean("marketplace_suspended").default(false).notNull(),
+  marketplaceSuspendedAt: timestamp("marketplace_suspended_at"),
+  shippingAddressJson: text("shipping_address_json"), // JSON string for default shipping address
+  sellerRating: decimal("seller_rating", { precision: 3, scale: 2 }),
+  sellerReviewCount: integer("seller_review_count").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -439,6 +445,369 @@ export const insertUpcomingSetSchema = createInsertSchema(upcomingSets).omit({
   updatedAt: true,
   interestCount: true,
 });
+
+// ============================================
+// MARKETPLACE TABLES
+// ============================================
+
+// Marketplace Listings
+export const listings = pgTable("listings", {
+  id: serial("id").primaryKey(),
+  sellerId: integer("seller_id").references(() => users.id).notNull(),
+  userCollectionId: integer("user_collection_id").references(() => userCollections.id).notNull(),
+  cardId: integer("card_id").references(() => cards.id).notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  quantity: integer("quantity").default(1).notNull(),
+  quantityAvailable: integer("quantity_available").default(1).notNull(),
+  allowOffers: boolean("allow_offers").default(true).notNull(),
+  description: text("description").notNull(),
+  conditionSnapshot: text("condition_snapshot").notNull(),
+  customImages: text("custom_images").array(),
+  status: text("status").default("active").notNull(), // draft, active, sold, cancelled
+  publishedAt: timestamp("published_at"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  sellerIdIdx: index("listings_seller_id_idx").on(table.sellerId),
+  cardIdIdx: index("listings_card_id_idx").on(table.cardId),
+  statusIdx: index("listings_status_idx").on(table.status),
+}));
+
+// Offers on Listings
+export const offers = pgTable("offers", {
+  id: serial("id").primaryKey(),
+  listingId: integer("listing_id").references(() => listings.id).notNull(),
+  buyerId: integer("buyer_id").references(() => users.id).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  quantity: integer("quantity").default(1).notNull(),
+  message: text("message"),
+  status: text("status").default("pending").notNull(), // pending, accepted, declined, countered, withdrawn, expired
+  counterAmount: decimal("counter_amount", { precision: 10, scale: 2 }),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  listingIdIdx: index("offers_listing_id_idx").on(table.listingId),
+  buyerIdIdx: index("offers_buyer_id_idx").on(table.buyerId),
+  statusIdx: index("offers_status_idx").on(table.status),
+}));
+
+// Marketplace Orders
+export const orders = pgTable("orders", {
+  id: serial("id").primaryKey(),
+  orderNumber: text("order_number").notNull().unique(),
+  listingId: integer("listing_id").references(() => listings.id).notNull(),
+  offerId: integer("offer_id").references(() => offers.id),
+  buyerId: integer("buyer_id").references(() => users.id).notNull(),
+  sellerId: integer("seller_id").references(() => users.id).notNull(),
+  quantity: integer("quantity").default(1).notNull(),
+  itemPrice: decimal("item_price", { precision: 10, scale: 2 }).notNull(),
+  shippingCost: decimal("shipping_cost", { precision: 10, scale: 2 }).notNull(),
+  platformFee: decimal("platform_fee", { precision: 10, scale: 2 }).notNull(),
+  stripeFee: decimal("stripe_fee", { precision: 10, scale: 2 }).notNull(),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  sellerNet: decimal("seller_net", { precision: 10, scale: 2 }).notNull(),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  stripeCheckoutSessionId: text("stripe_checkout_session_id"),
+  shippingAddress: text("shipping_address").notNull(), // JSON string
+  status: text("status").default("payment_pending").notNull(), // payment_pending, paid, needs_shipping, label_created, shipped, in_transit, delivered, complete, cancelled, refunded
+  paymentStatus: text("payment_status").default("pending").notNull(), // pending, succeeded, failed, refunded
+  cancelledReason: text("cancelled_reason"),
+  deliveredAt: timestamp("delivered_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  buyerIdIdx: index("orders_buyer_id_idx").on(table.buyerId),
+  sellerIdIdx: index("orders_seller_id_idx").on(table.sellerId),
+  statusIdx: index("orders_status_idx").on(table.status),
+  listingIdIdx: index("orders_listing_id_idx").on(table.listingId),
+}));
+
+// Shipments (Shippo integration)
+export const shipments = pgTable("shipments", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").references(() => orders.id).notNull().unique(),
+  shippoShipmentId: text("shippo_shipment_id"),
+  shippoRateId: text("shippo_rate_id"),
+  shippoTransactionId: text("shippo_transaction_id"),
+  labelUrl: text("label_url"),
+  trackingNumber: text("tracking_number"),
+  trackingUrl: text("tracking_url"),
+  carrier: text("carrier"),
+  serviceLevel: text("service_level"),
+  fromAddressSnapshot: text("from_address_snapshot").notNull(), // JSON string
+  toAddressSnapshot: text("to_address_snapshot").notNull(), // JSON string
+  parcelSnapshot: text("parcel_snapshot"), // JSON string (weight, dimensions)
+  labelCost: decimal("label_cost", { precision: 10, scale: 2 }),
+  status: text("status").default("pending").notNull(), // pending, rates_fetched, label_purchased, in_transit, delivered, exception
+  purchasedAt: timestamp("purchased_at"),
+  lastWebhookAt: timestamp("last_webhook_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Reviews
+export const reviews = pgTable("reviews", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").references(() => orders.id).notNull().unique(),
+  reviewerId: integer("reviewer_id").references(() => users.id).notNull(),
+  revieweeId: integer("reviewee_id").references(() => users.id).notNull(),
+  rating: integer("rating").notNull(), // 1-5
+  comment: text("comment"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  revieweeIdIdx: index("reviews_reviewee_id_idx").on(table.revieweeId),
+}));
+
+// Reports
+export const reports = pgTable("reports", {
+  id: serial("id").primaryKey(),
+  reporterId: integer("reporter_id").references(() => users.id).notNull(),
+  targetUserId: integer("target_user_id").references(() => users.id),
+  listingId: integer("listing_id").references(() => listings.id),
+  orderId: integer("order_id").references(() => orders.id),
+  reason: text("reason").notNull(), // scam, inappropriate, counterfeit, harassment, other
+  description: text("description"),
+  status: text("status").default("open").notNull(), // open, under_review, resolved, dismissed
+  resolution: text("resolution"),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: integer("resolved_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  targetUserIdIdx: index("reports_target_user_id_idx").on(table.targetUserId),
+  statusIdx: index("reports_status_idx").on(table.status),
+}));
+
+// Blocks
+export const blocks = pgTable("blocks", {
+  id: serial("id").primaryKey(),
+  blockerId: integer("blocker_id").references(() => users.id).notNull(),
+  blockedUserId: integer("blocked_user_id").references(() => users.id).notNull(),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  blockerIdIdx: index("blocks_blocker_id_idx").on(table.blockerId),
+  blockedUserIdIdx: index("blocks_blocked_user_id_idx").on(table.blockedUserId),
+  uniqueBlock: uniqueIndex("blocks_unique_idx").on(table.blockerId, table.blockedUserId),
+}));
+
+// Payout Batches
+export const payoutBatches = pgTable("payout_batches", {
+  id: serial("id").primaryKey(),
+  adminId: integer("admin_id").references(() => users.id).notNull(),
+  dateRangeStart: timestamp("date_range_start").notNull(),
+  dateRangeEnd: timestamp("date_range_end").notNull(),
+  totalGross: decimal("total_gross", { precision: 10, scale: 2 }).notNull(),
+  totalFees: decimal("total_fees", { precision: 10, scale: 2 }).notNull(),
+  totalNet: decimal("total_net", { precision: 10, scale: 2 }).notNull(),
+  orderCount: integer("order_count").notNull(),
+  status: text("status").default("draft").notNull(), // draft, exported, paid
+  csvUrl: text("csv_url"),
+  paidAt: timestamp("paid_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Payout Batch Items (individual order payouts)
+export const payoutBatchItems = pgTable("payout_batch_items", {
+  id: serial("id").primaryKey(),
+  payoutBatchId: integer("payout_batch_id").references(() => payoutBatches.id).notNull(),
+  orderId: integer("order_id").references(() => orders.id).notNull().unique(),
+  sellerId: integer("seller_id").references(() => users.id).notNull(),
+  gross: decimal("gross", { precision: 10, scale: 2 }).notNull(),
+  fees: decimal("fees", { precision: 10, scale: 2 }).notNull(),
+  net: decimal("net", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Marketplace Relations
+export const listingsRelations = relations(listings, ({ one, many }) => ({
+  seller: one(users, {
+    fields: [listings.sellerId],
+    references: [users.id],
+  }),
+  userCollection: one(userCollections, {
+    fields: [listings.userCollectionId],
+    references: [userCollections.id],
+  }),
+  card: one(cards, {
+    fields: [listings.cardId],
+    references: [cards.id],
+  }),
+  offers: many(offers),
+  orders: many(orders),
+}));
+
+export const offersRelations = relations(offers, ({ one }) => ({
+  listing: one(listings, {
+    fields: [offers.listingId],
+    references: [listings.id],
+  }),
+  buyer: one(users, {
+    fields: [offers.buyerId],
+    references: [users.id],
+  }),
+}));
+
+export const ordersRelations = relations(orders, ({ one }) => ({
+  listing: one(listings, {
+    fields: [orders.listingId],
+    references: [listings.id],
+  }),
+  offer: one(offers, {
+    fields: [orders.offerId],
+    references: [offers.id],
+  }),
+  buyer: one(users, {
+    fields: [orders.buyerId],
+    references: [users.id],
+  }),
+  seller: one(users, {
+    fields: [orders.sellerId],
+    references: [users.id],
+  }),
+  shipment: one(shipments),
+  review: one(reviews),
+}));
+
+export const shipmentsRelations = relations(shipments, ({ one }) => ({
+  order: one(orders, {
+    fields: [shipments.orderId],
+    references: [orders.id],
+  }),
+}));
+
+export const reviewsRelations = relations(reviews, ({ one }) => ({
+  order: one(orders, {
+    fields: [reviews.orderId],
+    references: [orders.id],
+  }),
+  reviewer: one(users, {
+    fields: [reviews.reviewerId],
+    references: [users.id],
+    relationName: "reviewer",
+  }),
+  reviewee: one(users, {
+    fields: [reviews.revieweeId],
+    references: [users.id],
+    relationName: "reviewee",
+  }),
+}));
+
+// Marketplace Insert Schemas
+export const insertListingSchema = createInsertSchema(listings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  publishedAt: true,
+  quantityAvailable: true,
+});
+
+export const insertOfferSchema = createInsertSchema(offers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  status: true,
+});
+
+export const insertOrderSchema = createInsertSchema(orders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  orderNumber: true,
+  deliveredAt: true,
+  completedAt: true,
+});
+
+export const insertShipmentSchema = createInsertSchema(shipments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  purchasedAt: true,
+  lastWebhookAt: true,
+});
+
+export const insertReviewSchema = createInsertSchema(reviews).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertReportSchema = createInsertSchema(reports).omit({
+  id: true,
+  createdAt: true,
+  resolvedAt: true,
+  resolvedBy: true,
+  status: true,
+  resolution: true,
+});
+
+export const insertBlockSchema = createInsertSchema(blocks).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPayoutBatchSchema = createInsertSchema(payoutBatches).omit({
+  id: true,
+  createdAt: true,
+  paidAt: true,
+  csvUrl: true,
+});
+
+export const insertPayoutBatchItemSchema = createInsertSchema(payoutBatchItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Marketplace Types
+export type Listing = typeof listings.$inferSelect;
+export type InsertListing = z.infer<typeof insertListingSchema>;
+
+export type Offer = typeof offers.$inferSelect;
+export type InsertOffer = z.infer<typeof insertOfferSchema>;
+
+export type Order = typeof orders.$inferSelect;
+export type InsertOrder = z.infer<typeof insertOrderSchema>;
+
+export type Shipment = typeof shipments.$inferSelect;
+export type InsertShipment = z.infer<typeof insertShipmentSchema>;
+
+export type Review = typeof reviews.$inferSelect;
+export type InsertReview = z.infer<typeof insertReviewSchema>;
+
+export type Report = typeof reports.$inferSelect;
+export type InsertReport = z.infer<typeof insertReportSchema>;
+
+export type Block = typeof blocks.$inferSelect;
+export type InsertBlock = z.infer<typeof insertBlockSchema>;
+
+export type PayoutBatch = typeof payoutBatches.$inferSelect;
+export type InsertPayoutBatch = z.infer<typeof insertPayoutBatchSchema>;
+
+export type PayoutBatchItem = typeof payoutBatchItems.$inferSelect;
+export type InsertPayoutBatchItem = z.infer<typeof insertPayoutBatchItemSchema>;
+
+// Extended Marketplace Types
+export type ListingWithDetails = Listing & {
+  seller: User;
+  card: CardWithSet;
+  userCollection: UserCollection;
+};
+
+export type OrderWithDetails = Order & {
+  listing: Listing;
+  buyer: User;
+  seller: User;
+  shipment?: Shipment;
+  review?: Review;
+};
+
+export type OfferWithDetails = Offer & {
+  listing: Listing;
+  buyer: User;
+};
 
 // Types
 export type User = typeof users.$inferSelect;
