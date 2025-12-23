@@ -3760,6 +3760,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Verify checkout session and upgrade user (fallback if webhook fails)
+  app.post("/api/verify-checkout-session", authenticateUser, async (req: any, res) => {
+    try {
+      const { sessionId } = req.body;
+      const user = req.user;
+      
+      if (!sessionId) {
+        return res.status(400).json({ message: "Session ID is required" });
+      }
+
+      // Check if user is already upgraded
+      if (user.plan === 'SUPER_HERO' && user.subscriptionStatus === 'active') {
+        console.log(`User ${user.id} already upgraded to SUPER_HERO`);
+        return res.json({ 
+          success: true, 
+          message: "Already upgraded",
+          plan: user.plan,
+          subscriptionStatus: user.subscriptionStatus
+        });
+      }
+
+      // Retrieve the checkout session from Stripe
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      
+      // Verify the session belongs to this user
+      if (session.metadata?.userId !== user.id.toString()) {
+        console.error(`Session ${sessionId} userId mismatch: expected ${user.id}, got ${session.metadata?.userId}`);
+        return res.status(403).json({ message: "Session does not belong to this user" });
+      }
+
+      // Check if payment was successful
+      if (session.payment_status !== 'paid') {
+        console.log(`Session ${sessionId} payment status: ${session.payment_status}`);
+        return res.status(400).json({ message: "Payment not completed", paymentStatus: session.payment_status });
+      }
+
+      // Upgrade the user to Super Hero plan
+      const updatedUser = await storage.updateUser(user.id, {
+        plan: 'SUPER_HERO',
+        subscriptionStatus: 'active',
+        stripeCustomerId: session.customer as string,
+        stripeSubscriptionId: session.subscription as string
+      });
+
+      console.log(`User ${user.id} upgraded to Super Hero via verify-checkout-session fallback`);
+      
+      res.json({ 
+        success: true, 
+        message: "Successfully upgraded to Super Hero!",
+        plan: 'SUPER_HERO',
+        subscriptionStatus: 'active'
+      });
+    } catch (error: any) {
+      console.error('Error verifying checkout session:', error);
+      res.status(500).json({ message: 'Failed to verify checkout session', error: error.message });
+    }
+  });
+
   // Create customer portal session for billing management
   app.post("/api/create-portal-session", authenticateUser, async (req: any, res) => {
     try {
