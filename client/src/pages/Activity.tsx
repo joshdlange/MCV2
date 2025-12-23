@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { ShipModal } from "@/components/marketplace/ShipModal";
 import { 
   Package, ShoppingBag, TrendingUp, Star, MessageCircle, 
   Truck, CheckCircle, Clock, AlertCircle, ExternalLink,
@@ -215,6 +216,7 @@ export default function Activity() {
   const searchParams = new URLSearchParams(window.location.search);
   const initialTab = searchParams.get('tab') || 'purchases';
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [shipModalOrder, setShipModalOrder] = useState<{ id: number; orderNumber: string } | null>(null);
   
   const { data: purchases, isLoading: purchasesLoading } = useQuery<OrderData[]>({
     queryKey: ['/api/marketplace/purchases'],
@@ -228,8 +230,8 @@ export default function Activity() {
     ['paid', 'needs_shipping'].includes(s.order.status)
   ).length || 0;
   
-  const handleShip = (orderId: number) => {
-    setLocation(`/activity/ship/${orderId}`);
+  const handleShip = (orderId: number, orderNumber: string) => {
+    setShipModalOrder({ id: orderId, orderNumber });
   };
   
   const handleMessage = (userId: number) => {
@@ -349,7 +351,7 @@ export default function Activity() {
                     key={order.order.id}
                     order={order}
                     type="sale"
-                    onShip={() => handleShip(order.order.id)}
+                    onShip={() => handleShip(order.order.id, order.order.orderNumber)}
                     onMessage={() => order.buyer && handleMessage(order.buyer.id)}
                   />
                 ))}
@@ -385,6 +387,15 @@ export default function Activity() {
             </Card>
           </TabsContent>
         </Tabs>
+        
+        {shipModalOrder && (
+          <ShipModal
+            orderId={shipModalOrder.id}
+            orderNumber={shipModalOrder.orderNumber}
+            open={true}
+            onClose={() => setShipModalOrder(null)}
+          />
+        )}
       </div>
     </div>
   );

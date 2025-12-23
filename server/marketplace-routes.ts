@@ -19,13 +19,23 @@ const STRIPE_FEE_FIXED = 0.30; // $0.30
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
 // Helper to calculate fees
+// Flow: Buyer pays total -> Stripe takes fee from gross -> Platform receives net -> Platform pays seller
+// Platform takes 6% of item price only (not shipping) as revenue
+// Stripe takes 2.9% + $0.30 from the gross payment
+// Seller gets: grossPayment - stripeFee - platformFee
 function calculateFees(itemPrice: number, shippingCost: number) {
-  const platformFee = parseFloat((itemPrice * PLATFORM_FEE_PERCENT).toFixed(2));
   const total = itemPrice + shippingCost;
+  const platformFee = parseFloat((itemPrice * PLATFORM_FEE_PERCENT).toFixed(2));
   const stripeFee = parseFloat((total * STRIPE_FEE_PERCENT + STRIPE_FEE_FIXED).toFixed(2));
-  const sellerNet = parseFloat((itemPrice - platformFee - stripeFee).toFixed(2));
   
-  return { platformFee, stripeFee, total, sellerNet };
+  // What platform receives from Stripe (after Stripe fee is deducted at source)
+  const platformReceives = parseFloat((total - stripeFee).toFixed(2));
+  
+  // Seller gets: what platform receives minus the platform's 6% cut
+  // This means seller receives their item price + shipping minus fees
+  const sellerNet = parseFloat((platformReceives - platformFee).toFixed(2));
+  
+  return { platformFee, stripeFee, platformReceives, total, sellerNet };
 }
 
 // Generate order number
@@ -715,6 +725,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
             photoURL: users.photoURL,
           },
           shipment: shipments,
+          review: reviews,
         })
         .from(orders)
         .innerJoin(listings, eq(orders.listingId, listings.id))
@@ -722,6 +733,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
         .innerJoin(cardSets, eq(cards.setId, cardSets.id))
         .innerJoin(users, eq(orders.sellerId, users.id))
         .leftJoin(shipments, eq(orders.id, shipments.orderId))
+        .leftJoin(reviews, eq(orders.id, reviews.orderId))
         .where(eq(orders.buyerId, req.user.id))
         .orderBy(desc(orders.createdAt));
       
@@ -748,6 +760,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
             photoURL: users.photoURL,
           },
           shipment: shipments,
+          review: reviews,
         })
         .from(orders)
         .innerJoin(listings, eq(orders.listingId, listings.id))
@@ -755,6 +768,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
         .innerJoin(cardSets, eq(cards.setId, cardSets.id))
         .innerJoin(users, eq(orders.buyerId, users.id))
         .leftJoin(shipments, eq(orders.id, shipments.orderId))
+        .leftJoin(reviews, eq(orders.id, reviews.orderId))
         .where(eq(orders.sellerId, req.user.id))
         .orderBy(desc(orders.createdAt));
       
