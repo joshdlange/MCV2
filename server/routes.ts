@@ -1143,6 +1143,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/collection/:id", authenticateUser, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      
+      console.log('PATCH /api/collection/:id - updating collection item:', id, 'with:', updates);
+      
+      const updatedItem = await storage.updateCollectionItem(id, updates);
+      if (!updatedItem) {
+        return res.status(404).json({ message: "Collection item not found" });
+      }
+      
+      console.log('Collection item updated successfully:', updatedItem);
+      res.json(updatedItem);
+    } catch (error) {
+      console.error('Update collection item error:', error);
+      res.status(500).json({ message: "Failed to update collection item" });
+    }
+  });
+  
+  // Also support PUT for backwards compatibility
   app.put("/api/collection/:id", authenticateUser, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
