@@ -705,6 +705,7 @@ export default function Profile() {
                       <Button
                         variant="outline"
                         size="sm"
+                        className="bg-white text-black border-gray-300 hover:bg-gray-100"
                         onClick={() => setProfileData(prev => ({
                           ...prev,
                           privacySettings: {
@@ -725,6 +726,7 @@ export default function Profile() {
                       <Button
                         variant="outline"
                         size="sm"
+                        className="bg-white text-black border-gray-300 hover:bg-gray-100"
                         onClick={() => setProfileData(prev => ({
                           ...prev,
                           privacySettings: {
@@ -752,6 +754,7 @@ export default function Profile() {
                       <Button
                         variant="outline"
                         size="sm"
+                        className="bg-white text-black border-gray-300 hover:bg-gray-100"
                         onClick={() => setProfileData(prev => ({
                           ...prev,
                           notifications: {
@@ -772,6 +775,7 @@ export default function Profile() {
                       <Button
                         variant="outline"
                         size="sm"
+                        className="bg-white text-black border-gray-300 hover:bg-gray-100"
                         onClick={() => setProfileData(prev => ({
                           ...prev,
                           notifications: {
