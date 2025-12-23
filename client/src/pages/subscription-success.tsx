@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,13 +5,6 @@ import { CheckCircle, Zap, ArrowRight } from "lucide-react";
 
 export default function SubscriptionSuccess() {
   const [, setLocation] = useLocation();
-  const [sessionId, setSessionId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const id = urlParams.get('session_id');
-    setSessionId(id);
-  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-blue-900/20 flex items-center justify-center p-4">
@@ -47,12 +39,6 @@ export default function SubscriptionSuccess() {
               </div>
             </div>
           </div>
-
-          {sessionId && (
-            <div className="text-xs text-muted-foreground bg-gray-50 dark:bg-gray-800 p-3 rounded">
-              Session ID: {sessionId}
-            </div>
-          )}
 
           <Button 
             onClick={() => setLocation("/")}
