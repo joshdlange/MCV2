@@ -26,6 +26,7 @@ interface CardDetailModalProps {
   onClose: () => void;
   isInCollection?: boolean;
   isInWishlist?: boolean;
+  collectionItemId?: number;
   onAddToCollection?: () => void;
   onAddToWishlist?: () => void;
   onRemoveFromCollection?: () => void;
@@ -39,6 +40,7 @@ export function CardDetailModal({
   onClose,
   isInCollection = false,
   isInWishlist = false,
+  collectionItemId,
   onAddToCollection,
   onAddToWishlist,
   onRemoveFromCollection,
@@ -177,6 +179,40 @@ export function CardDetailModal({
       });
     }
   });
+
+  // Marketplace settings mutation
+  const saveMarketplaceSettingsMutation = useMutation({
+    mutationFn: async (data: { id: number; isForSale: boolean; salePrice: string; condition: string; notes: string }) => {
+      return apiRequest('PATCH', `/api/collection/${data.id}`, {
+        isForSale: data.isForSale,
+        salePrice: data.salePrice,
+        condition: data.condition,
+        notes: data.notes,
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Marketplace settings saved" });
+      queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/marketplace'] });
+    },
+    onError: () => {
+      toast({ title: "Failed to save settings", variant: "destructive" });
+    }
+  });
+
+  const handleSaveMarketplaceSettings = () => {
+    if (!collectionItemId) {
+      toast({ title: "Error", description: "Collection item not found", variant: "destructive" });
+      return;
+    }
+    saveMarketplaceSettingsMutation.mutate({
+      id: collectionItemId,
+      isForSale,
+      salePrice,
+      condition,
+      notes,
+    });
+  };
 
   const handleSaveEdit = () => {
     updateCardMutation.mutate(editedCard);
@@ -833,8 +869,12 @@ export function CardDetailModal({
                       />
                     </div>
 
-                    <Button className="w-full bg-marvel-red hover:bg-red-700 text-sm h-10">
-                      Save Settings
+                    <Button 
+                      className="w-full bg-marvel-red hover:bg-red-700 text-sm h-10"
+                      onClick={handleSaveMarketplaceSettings}
+                      disabled={saveMarketplaceSettingsMutation.isPending}
+                    >
+                      {saveMarketplaceSettingsMutation.isPending ? "Saving..." : "Save Settings"}
                     </Button>
                   </div>
                 </CollapsibleContent>

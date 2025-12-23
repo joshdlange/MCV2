@@ -397,6 +397,12 @@ export default function BrowseCards() {
     return collection.some(item => item.cardId === cardId);
   };
 
+  const getCollectionItemId = (cardId: number): number | undefined => {
+    if (!user || !collection) return undefined;
+    const item = collection.find(item => item.cardId === cardId);
+    return item?.id;
+  };
+
   const isCardInWishlist = (cardId: number) => {
     if (!user || !wishlist) return false;
     return wishlist.some((item: any) => item.cardId === cardId);
@@ -908,6 +914,7 @@ export default function BrowseCards() {
           onClose={() => setSelectedCard(null)}
           isInCollection={isCardInCollection(selectedCard.id)}
           isInWishlist={isCardInWishlist(selectedCard.id)}
+          collectionItemId={getCollectionItemId(selectedCard.id)}
           onAddToCollection={user ? () => addToCollectionMutation.mutate(selectedCard.id) : undefined}
           onRemoveFromCollection={user ? () => removeFromCollectionMutation.mutate(selectedCard.id) : undefined}
           onAddToWishlist={user ? () => addToWishlistMutation.mutate(selectedCard.id) : undefined}

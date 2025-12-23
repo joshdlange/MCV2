@@ -1033,6 +1033,7 @@ export default function MyCollection() {
           setSelectedCard(null);
         }}
         isInCollection={true}
+        collectionItemId={selectedCard ? collection.find(item => item.card.id === selectedCard.id)?.id : undefined}
         onRemoveFromCollection={() => {
           if (selectedCard) {
             const collectionItem = collection.find(item => item.card.id === selectedCard.id);
