@@ -403,7 +403,7 @@ export default function Profile() {
                       onChange={(e) => setProfileData(prev => ({ ...prev, displayName: e.target.value }))}
                       disabled={!isEditing}
                       placeholder="Your display name"
-                      className="bg-background text-foreground border-border"
+                      className="bg-white text-black border-gray-300 disabled:bg-gray-100 disabled:text-black"
                     />
                   </div>
                   <div>
@@ -414,7 +414,7 @@ export default function Profile() {
                       onChange={(e) => setProfileData(prev => ({ ...prev, location: e.target.value }))}
                       disabled={!isEditing}
                       placeholder="City, Country"
-                      className="bg-background text-foreground border-border"
+                      className="bg-white text-black border-gray-300 disabled:bg-gray-100 disabled:text-black"
                     />
                     <MapPin className="w-4 h-4 inline mr-1 mt-1 text-muted-foreground" />
                   </div>
@@ -428,7 +428,7 @@ export default function Profile() {
                     onChange={(e) => setProfileData(prev => ({ ...prev, website: e.target.value }))}
                     disabled={!isEditing}
                     placeholder="https://yourwebsite.com"
-                    className="bg-background text-foreground border-border"
+                    className="bg-white text-black border-gray-300 disabled:bg-gray-100 disabled:text-black"
                   />
                   <Globe className="w-4 h-4 inline mr-1 mt-1 text-muted-foreground" />
                 </div>
@@ -450,7 +450,7 @@ export default function Profile() {
                       }))}
                       disabled={!isEditing}
                       placeholder="123 Main Street"
-                      className="bg-background text-foreground border-border"
+                      className="bg-white text-black border-gray-300 disabled:bg-gray-100 disabled:text-black"
                     />
                   </div>
                   
@@ -466,7 +466,7 @@ export default function Profile() {
                         }))}
                         disabled={!isEditing}
                         placeholder="New York"
-                        className="bg-background text-foreground border-border"
+                        className="bg-white text-black border-gray-300 disabled:bg-gray-100 disabled:text-black"
                       />
                     </div>
                     <div>
@@ -480,7 +480,7 @@ export default function Profile() {
                         }))}
                         disabled={!isEditing}
                         placeholder="NY"
-                        className="bg-background text-foreground border-border"
+                        className="bg-white text-black border-gray-300 disabled:bg-gray-100 disabled:text-black"
                       />
                     </div>
                   </div>
@@ -497,7 +497,7 @@ export default function Profile() {
                         }))}
                         disabled={!isEditing}
                         placeholder="10001"
-                        className="bg-background text-foreground border-border"
+                        className="bg-white text-black border-gray-300 disabled:bg-gray-100 disabled:text-black"
                       />
                     </div>
                     <div>
@@ -511,7 +511,7 @@ export default function Profile() {
                         }))}
                         disabled={!isEditing}
                         placeholder="United States"
-                        className="bg-background text-foreground border-border"
+                        className="bg-white text-black border-gray-300 disabled:bg-gray-100 disabled:text-black"
                       />
                     </div>
                   </div>
@@ -526,7 +526,7 @@ export default function Profile() {
                     disabled={!isEditing}
                     placeholder="Tell us about yourself and your collecting interests..."
                     rows={4}
-                    className="bg-background text-foreground border-border"
+                    className="bg-white text-black border-gray-300 disabled:bg-gray-100 disabled:text-black"
                   />
                 </div>
 
