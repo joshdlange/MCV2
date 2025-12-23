@@ -23,7 +23,8 @@ import {
   Users,
   Store,
   User,
-  Calendar
+  Calendar,
+  Activity
 } from "lucide-react";
 
 const getNavigationItems = (userPlan: string): NavigationItem[] => [
@@ -35,6 +36,12 @@ const getNavigationItems = (userPlan: string): NavigationItem[] => [
     href: "/marketplace", 
     label: "Marketplace", 
     icon: "Store",
+    badge: userPlan === 'SIDE_KICK' ? "👑" : undefined
+  },
+  { 
+    href: "/activity", 
+    label: "Activity", 
+    icon: "Activity",
     badge: userPlan === 'SIDE_KICK' ? "👑" : undefined
   },
   { href: "/trends", label: "Market Trends", icon: "TrendingUp" },
@@ -55,6 +62,7 @@ const iconMap = {
   Users,
   Store,
   Calendar,
+  Activity,
 };
 
 export function Sidebar() {

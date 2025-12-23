@@ -36,6 +36,7 @@ import UpcomingSets from "@/pages/upcoming-sets";
 import ApiDemo from "@/pages/api-demo";
 import SubscriptionSuccess from "@/pages/subscription-success";
 import SubscriptionCancelled from "@/pages/subscription-cancelled";
+import Activity from "@/pages/Activity";
 import NotFound from "@/pages/not-found";
 
 function DesktopHeader() {
@@ -135,6 +136,7 @@ function Router() {
       <Route path="/my-collection" component={MyCollection} />
       <Route path="/wishlist" component={Wishlist} />
       <Route path="/marketplace" component={Marketplace} />
+      <Route path="/activity" component={Activity} />
       <Route path="/trends" component={MarketTrends} />
       <Route path="/upcoming-sets" component={UpcomingSets} />
       <Route path="/api-demo" component={ApiDemo} />

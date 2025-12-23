@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import express from "express";
 import { db } from "./db";
 import { 
   listings, offers, orders, shipments, reviews, reports, blocks,
@@ -8,6 +9,7 @@ import {
 import { eq, and, or, desc, asc, sql, ne, isNull, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import Stripe from "stripe";
+import { shippoService, PARCEL_PRESETS } from "./shippo-service";
 
 const PLATFORM_FEE_PERCENT = 0.06; // 6%
 const STRIPE_FEE_PERCENT = 0.029; // 2.9%
@@ -1158,6 +1160,175 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
     } catch (error) {
       console.error('Get shipping address error:', error);
       res.status(500).json({ message: "Failed to fetch shipping address" });
+    }
+  });
+  
+  // ============================================
+  // SHIPPING ENDPOINTS (Shippo Integration)
+  // ============================================
+  
+  // Get parcel presets
+  app.get("/api/marketplace/shipping/presets", authenticateUser, async (req: any, res) => {
+    res.json(PARCEL_PRESETS);
+  });
+  
+  // Get shipping rates for an order (seller only)
+  app.post("/api/marketplace/orders/:id/shipping/rates", authenticateUser, async (req: any, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const { parcel } = req.body;
+      
+      // Get order and verify seller
+      const order = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+      if (!order.length) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      if (order[0].sellerId !== req.user.id) {
+        return res.status(403).json({ message: "Only the seller can get shipping rates" });
+      }
+      
+      if (!['paid', 'needs_shipping'].includes(order[0].status)) {
+        return res.status(400).json({ message: "Order is not ready for shipping" });
+      }
+      
+      // Check if shipment record exists, if not create it
+      let shipment = await db.select().from(shipments).where(eq(shipments.orderId, orderId)).limit(1);
+      
+      if (!shipment.length) {
+        // Get seller address
+        const seller = await db.select({ shippingAddressJson: users.shippingAddressJson })
+          .from(users)
+          .where(eq(users.id, req.user.id))
+          .limit(1);
+        
+        if (!seller[0]?.shippingAddressJson) {
+          return res.status(400).json({ message: "Please set your shipping address first" });
+        }
+        
+        const fromAddress = JSON.parse(seller[0].shippingAddressJson);
+        const toAddress = JSON.parse(order[0].shippingAddress);
+        
+        await shippoService.createShipmentRecord(orderId, fromAddress, toAddress);
+      }
+      
+      // Get rates from Shippo
+      const rates = await shippoService.getShippingRatesForOrder(orderId, parcel);
+      
+      res.json({ rates });
+    } catch (error) {
+      console.error('Get shipping rates error:', error);
+      res.status(500).json({ message: "Failed to get shipping rates" });
+    }
+  });
+  
+  // Purchase shipping label (seller only)
+  app.post("/api/marketplace/orders/:id/shipping/purchase", authenticateUser, async (req: any, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const { rateId } = req.body;
+      
+      if (!rateId) {
+        return res.status(400).json({ message: "Rate ID is required" });
+      }
+      
+      // Get order and verify seller
+      const order = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+      if (!order.length) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      if (order[0].sellerId !== req.user.id) {
+        return res.status(403).json({ message: "Only the seller can purchase shipping labels" });
+      }
+      
+      // Purchase label
+      const result = await shippoService.purchaseLabelForOrder(orderId, rateId);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Purchase shipping label error:', error);
+      res.status(500).json({ message: "Failed to purchase shipping label" });
+    }
+  });
+  
+  // Get shipment details for an order
+  app.get("/api/marketplace/orders/:id/shipment", authenticateUser, async (req: any, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      
+      // Get order and verify access
+      const order = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+      if (!order.length) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      if (order[0].buyerId !== req.user.id && order[0].sellerId !== req.user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const shipment = await db.select().from(shipments).where(eq(shipments.orderId, orderId)).limit(1);
+      
+      res.json(shipment[0] || null);
+    } catch (error) {
+      console.error('Get shipment error:', error);
+      res.status(500).json({ message: "Failed to get shipment details" });
+    }
+  });
+  
+  // Shippo webhook (no auth - uses Shippo's verification)
+  app.post("/api/shippo-webhook", express.raw({ type: 'application/json' }), async (req, res) => {
+    try {
+      const event = JSON.parse(req.body.toString());
+      await shippoService.handleWebhook(event);
+      res.status(200).json({ received: true });
+    } catch (error) {
+      console.error('Shippo webhook error:', error);
+      res.status(400).json({ message: "Webhook processing failed" });
+    }
+  });
+  
+  // ============================================
+  // MARKETPLACE STRIPE WEBHOOK HANDLER
+  // ============================================
+  
+  // Handle marketplace payment confirmations (called from main Stripe webhook)
+  app.post("/api/marketplace/payment-confirmed", async (req, res) => {
+    try {
+      const { sessionId, paymentIntentId } = req.body;
+      
+      // Find order by checkout session ID
+      const order = await db.select().from(orders)
+        .where(eq(orders.stripeCheckoutSessionId, sessionId))
+        .limit(1);
+      
+      if (!order.length) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      // Update order status
+      await db.update(orders).set({
+        status: 'paid',
+        paymentStatus: 'succeeded',
+        stripePaymentIntentId: paymentIntentId,
+        updatedAt: new Date(),
+      }).where(eq(orders.id, order[0].id));
+      
+      // Reduce listing quantity
+      const listing = await db.select().from(listings).where(eq(listings.id, order[0].listingId)).limit(1);
+      if (listing.length) {
+        const newQuantity = listing[0].quantityAvailable - order[0].quantity;
+        await db.update(listings).set({
+          quantityAvailable: Math.max(0, newQuantity),
+          status: newQuantity <= 0 ? 'sold' : 'active',
+          updatedAt: new Date(),
+        }).where(eq(listings.id, order[0].listingId));
+      }
+      
+      res.json({ message: "Order confirmed", orderId: order[0].id });
+    } catch (error) {
+      console.error('Payment confirmation error:', error);
+      res.status(500).json({ message: "Failed to confirm payment" });
     }
   });
   
