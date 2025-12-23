@@ -3551,21 +3551,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User already has an active subscription" });
       }
 
+      // Use the actual Stripe Price ID for Super Hero Plan ($5/month)
+      const SUPER_HERO_PRICE_ID = 'price_1ShZCvHUwjq8stIzSBgrMa10';
+      
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [
           {
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: 'Marvel Card Vault - Super Hero Plan',
-                description: 'Unlimited card tracking, marketplace access, and advanced analytics',
-              },
-              unit_amount: 500, // $5.00 in cents
-              recurring: {
-                interval: 'month',
-              },
-            },
+            price: SUPER_HERO_PRICE_ID, // Use pre-defined Stripe price
             quantity: 1,
           },
         ],
