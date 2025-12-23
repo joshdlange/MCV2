@@ -6,6 +6,11 @@ import { startBackgroundPricing } from "./background-pricing";
 import path from "path";
 
 const app = express();
+
+// CRITICAL: Stripe webhook needs raw body for signature verification
+// This MUST come BEFORE express.json() middleware
+app.use('/api/stripe-webhook', express.raw({ type: 'application/json' }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
