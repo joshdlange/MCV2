@@ -7,9 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Edit, Trash2, UserPlus, Shield, User } from "lucide-react";
+import { Edit, Trash2, UserPlus, Shield, User, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+
+type SortField = 'lastLogin' | 'plan' | 'createdAt' | null;
+type SortDirection = 'asc' | 'desc';
 
 interface User {
   id: number;
@@ -27,6 +30,8 @@ export default function AdminUsers() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortField, setSortField] = useState<SortField>('lastLogin');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -86,10 +91,52 @@ export default function AdminUsers() {
     }
   };
 
-  const filteredUsers = users.filter((user: User) => 
-    user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="w-4 h-4 ml-1 opacity-50" />;
+    }
+    return sortDirection === 'asc' 
+      ? <ArrowUp className="w-4 h-4 ml-1" />
+      : <ArrowDown className="w-4 h-4 ml-1" />;
+  };
+
+  const filteredUsers = users
+    .filter((user: User) => 
+      user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a: User, b: User) => {
+      if (!sortField) return 0;
+      
+      let aValue: any;
+      let bValue: any;
+      
+      if (sortField === 'lastLogin') {
+        aValue = a.lastLogin ? new Date(a.lastLogin).getTime() : 0;
+        bValue = b.lastLogin ? new Date(b.lastLogin).getTime() : 0;
+      } else if (sortField === 'plan') {
+        aValue = a.plan;
+        bValue = b.plan;
+      } else if (sortField === 'createdAt') {
+        aValue = new Date(a.createdAt).getTime();
+        bValue = new Date(b.createdAt).getTime();
+      }
+      
+      if (sortDirection === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
 
   return (
     <div className="p-6 space-y-6">
@@ -135,10 +182,34 @@ export default function AdminUsers() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('plan')}
+                >
+                  <div className="flex items-center">
+                    Plan
+                    {getSortIcon('plan')}
+                  </div>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Onboarding</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('createdAt')}
+                >
+                  <div className="flex items-center">
+                    Created
+                    {getSortIcon('createdAt')}
+                  </div>
+                </th>
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('lastLogin')}
+                >
+                  <div className="flex items-center">
+                    Last Login
+                    {getSortIcon('lastLogin')}
+                  </div>
+                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
