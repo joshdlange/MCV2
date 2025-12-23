@@ -109,6 +109,12 @@ export default function Social() {
     const tabParam = urlParams.get('tab');
     if (tabParam === 'messages') {
       setActiveTab('messages');
+    } else if (tabParam === 'superpowers' || tabParam === 'badges') {
+      setActiveTab('badges');
+    } else if (tabParam === 'profile') {
+      setActiveTab('profile');
+    } else if (tabParam === 'friends') {
+      setActiveTab('friends');
     }
   }, []);
 

@@ -5,7 +5,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Info, Layers, Star, DollarSign, Heart, Plus, ArrowRight } from "lucide-react";
+import { Info, Layers, DollarSign, Heart, Plus, ArrowRight, Zap } from "lucide-react";
 import type { CollectionStats } from "@shared/schema";
 import { useLocation } from "wouter";
 
@@ -15,6 +15,11 @@ export function StatsDashboard() {
     queryKey: ["/api/stats"],
     staleTime: 0,
     refetchOnWindowFocus: true,
+  });
+  
+  const { data: badgesData } = useQuery<{ badges: any[] }>({
+    queryKey: ["/api/user-badges"],
+    staleTime: 60000,
   });
 
   if (isLoading) {
@@ -46,9 +51,9 @@ export function StatsDashboard() {
   }
 
   const totalCards = stats.totalCards || 0;
-  const insertCards = Number(stats.insertCards) || 0;
   const totalValue = stats.totalValue ? parseFloat(stats.totalValue.toString()) : 0;
   const wishlistItems = (stats as any).wishlistItems || (stats as any).wishlistCount || 0;
+  const superpowersCount = badgesData?.badges?.length || 0;
 
   const statItems = [
     {
@@ -59,16 +64,6 @@ export function StatsDashboard() {
       bgColor: "bg-red-50",
       iconColor: "text-white",
       tooltip: "Total cards in your collection. Add more from the Browse Cards page.",
-      onClick: () => setLocation("/my-collection")
-    },
-    {
-      label: "INSERTS",
-      value: insertCards.toLocaleString(),
-      icon: Star,
-      gradient: "from-amber-400 to-yellow-600",
-      bgColor: "bg-amber-50",
-      iconColor: "text-white",
-      tooltip: "Rare insert cards like autographs, memorabilia, foils, and special editions.",
       onClick: () => setLocation("/my-collection")
     },
     {
@@ -93,6 +88,16 @@ export function StatsDashboard() {
       tooltip: "Cards you're chasing. Add cards to track what you want.",
       onClick: () => setLocation("/wishlist")
     },
+    {
+      label: "SUPERPOWERS",
+      value: superpowersCount.toLocaleString(),
+      icon: Zap,
+      gradient: "from-purple-500 to-indigo-600",
+      bgColor: "bg-purple-50",
+      iconColor: "text-white",
+      tooltip: "Badges and achievements you've earned. Collect them all!",
+      onClick: () => setLocation("/social?tab=superpowers")
+    },
   ];
 
   return (
@@ -109,7 +114,7 @@ export function StatsDashboard() {
             >
               {/* Icon with gradient background */}
               <div className={`relative w-10 h-10 rounded-full bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}>
-                <stat.icon className={`w-5 h-5 ${stat.iconColor}`} strokeWidth={2.5} fill={stat.icon === Star || stat.icon === Heart ? "currentColor" : "none"} />
+                <stat.icon className={`w-5 h-5 ${stat.iconColor}`} strokeWidth={2.5} fill={stat.icon === Heart || stat.icon === Zap ? "currentColor" : "none"} />
                 <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
               </div>
               
