@@ -9,7 +9,9 @@ const app = express();
 
 // CRITICAL: Stripe webhook needs raw body for signature verification
 // This MUST come BEFORE express.json() middleware
+// Support both URL patterns: /api/stripe-webhook and /api/stripe/webhook
 app.use('/api/stripe-webhook', express.raw({ type: 'application/json' }));
+app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

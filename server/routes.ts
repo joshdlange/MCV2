@@ -3756,6 +3756,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Alias: Handle Stripe webhook at /api/stripe/webhook (Stripe Dashboard may use this URL)
+  // This is a copy of the above handler to support both URL patterns
+  app.post('/api/stripe/webhook', async (req, res) => {
+    console.log('🔔 Stripe webhook received at /api/stripe/webhook');
+    const sig = req.headers['stripe-signature'];
+    let event;
+
+    if (!sig) {
+      console.error('❌ Webhook Error: Missing stripe-signature header');
+      return res.status(400).send('Webhook Error: Missing signature');
+    }
+
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      console.error('❌ Webhook Error: STRIPE_WEBHOOK_SECRET not configured');
+      return res.status(500).send('Webhook Error: Server configuration issue');
+    }
+
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig as string, process.env.STRIPE_WEBHOOK_SECRET);
+      console.log(`✅ Webhook verified - Event type: ${event.type}`);
+    } catch (err: any) {
+      console.error('❌ Webhook signature verification failed:', err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed':
+          const session = event.data.object as Stripe.Checkout.Session;
+          const userId = parseInt(session.metadata?.userId || '0');
+          
+          // Check if this is a marketplace purchase
+          if (session.metadata?.type === 'marketplace_purchase') {
+            // Forward to marketplace payment confirmation handler
+            try {
+              await fetch(`${process.env.REPLIT_DOMAINS?.split(',')[0] ? 'https://' + process.env.REPLIT_DOMAINS.split(',')[0] : 'http://localhost:5000'}/api/marketplace/payment-confirmed`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  sessionId: session.id,
+                  paymentIntentId: session.payment_intent,
+                }),
+              });
+              console.log(`Marketplace payment confirmed for session ${session.id}`);
+            } catch (err) {
+              console.error('Failed to confirm marketplace payment:', err);
+            }
+          } else if (userId && session.subscription) {
+            // Update user to Super Hero plan
+            await storage.updateUser(userId, {
+              plan: 'SUPER_HERO',
+              subscriptionStatus: 'active',
+              stripeCustomerId: session.customer as string,
+              stripeSubscriptionId: session.subscription as string
+            });
+            console.log(`User ${userId} upgraded to Super Hero plan`);
+          }
+          break;
+
+        case 'customer.subscription.deleted':
+          const subscription = event.data.object as Stripe.Subscription;
+          // Find user by subscription ID and downgrade to free plan
+          const users = await storage.getAllUsers();
+          const subscribedUser = users.find(u => u.stripeSubscriptionId === subscription.id);
+          
+          if (subscribedUser) {
+            await storage.updateUser(subscribedUser.id, {
+              plan: 'SIDE_KICK',
+              subscriptionStatus: 'cancelled',
+              stripeSubscriptionId: null
+            });
+            console.log(`User ${subscribedUser.id} downgraded to Side Kick plan`);
+          }
+          break;
+
+        default:
+          console.log(`Unhandled event type ${event.type}`);
+      }
+
+      res.json({ received: true });
+    } catch (error) {
+      console.error('Error processing webhook:', error);
+      res.status(500).json({ message: 'Webhook processing failed' });
+    }
+  });
+
   // Get current subscription status
   app.get("/api/subscription-status", authenticateUser, async (req: any, res) => {
     try {
