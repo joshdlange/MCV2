@@ -1758,18 +1758,19 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
     }
   });
   
-  // Shippo webhook (no auth - uses Shippo's verification)
-  app.post("/api/shippo-webhook", express.raw({ type: 'application/json' }), async (req, res) => {
+  // Shippo webhook (no auth - uses URL token verification)
+  app.post("/api/shippo-webhook", express.json(), async (req, res) => {
     try {
-      const signature = req.headers['x-shippo-signature'] as string;
-      const payload = req.body.toString();
+      // Verify webhook token from URL query parameter
+      const token = req.query.token as string;
+      const expectedToken = process.env.SHIPPO_WEBHOOK_SECRET;
       
-      if (!shippoService.verifyWebhookSignature(payload, signature || '')) {
-        console.error('❌ Shippo webhook signature verification failed');
-        return res.status(401).json({ message: "Invalid signature" });
+      if (!expectedToken || token !== expectedToken) {
+        console.error('❌ Shippo webhook token verification failed');
+        return res.status(401).json({ message: "Invalid token" });
       }
       
-      const event = JSON.parse(payload);
+      const event = req.body;
       console.log('✅ Shippo webhook verified:', event.event);
       await shippoService.handleWebhook(event);
       res.status(200).json({ received: true });
