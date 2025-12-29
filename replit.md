@@ -5,6 +5,7 @@ Marvel Card Vault is a comprehensive web application for managing Marvel trading
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
+**IMPORTANT**: This is a live production app at marvelcardvault.com. All changes must be published to take effect - there's no need for dev-only changes.
 
 ## System Architecture
 
