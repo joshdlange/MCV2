@@ -1,7 +1,8 @@
 import { db } from "./db";
 import { shipments, orders, users } from "../shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { badgeService } from "./badge-service";
+import crypto from 'crypto';
 
 const SHIPPO_API_KEY = process.env.SHIPPO_API_KEY;
 const SHIPPO_API_URL = "https://api.goshippo.com";
@@ -77,6 +78,29 @@ async function shippoRequest(endpoint: string, method: string = "GET", body?: an
 }
 
 export const shippoService = {
+  verifyWebhookSignature(payload: string, signature: string): boolean {
+    const SHIPPO_WEBHOOK_SECRET = process.env.SHIPPO_WEBHOOK_SECRET;
+    if (!SHIPPO_WEBHOOK_SECRET) {
+      console.warn('⚠️ SHIPPO_WEBHOOK_SECRET not configured - webhook verification disabled');
+      return true;
+    }
+    
+    try {
+      const expectedSignature = crypto
+        .createHmac('sha256', SHIPPO_WEBHOOK_SECRET)
+        .update(payload)
+        .digest('hex');
+      
+      return crypto.timingSafeEqual(
+        Buffer.from(signature),
+        Buffer.from(expectedSignature)
+      );
+    } catch (error) {
+      console.error('Webhook signature verification error:', error);
+      return false;
+    }
+  },
+
   async createShipmentAndGetRates(
     fromAddress: ShippoAddress,
     toAddress: ShippoAddress,
@@ -215,11 +239,14 @@ export const shippoService = {
       updatedAt: new Date(),
     }).where(eq(shipments.orderId, orderId));
 
-    // Update order status to shipped
+    // Update order status to shipped (only if in valid state)
     await db.update(orders).set({
       status: "shipped",
       updatedAt: new Date(),
-    }).where(eq(orders.id, orderId));
+    }).where(and(
+      eq(orders.id, orderId),
+      inArray(orders.status, ['paid', 'needs_shipping', 'label_created'])
+    ));
 
     return {
       labelUrl: transaction.label_url,

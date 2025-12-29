@@ -31,20 +31,43 @@ if (stripeSecretKey) {
 // Flow: Buyer pays total -> Stripe takes fee from gross -> Platform receives net -> Platform pays seller
 // Platform takes 6% of item price only (not shipping) as revenue
 // Stripe takes 2.9% + $0.30 from the gross payment
-// Seller gets: grossPayment - stripeFee - platformFee
 function calculateFees(itemPrice: number, shippingCost: number) {
   const total = itemPrice + shippingCost;
+  
+  // Platform fee applies ONLY to item price (not shipping)
   const platformFee = parseFloat((itemPrice * PLATFORM_FEE_PERCENT).toFixed(2));
+  
+  // Stripe fee applies to total payment
   const stripeFee = parseFloat((total * STRIPE_FEE_PERCENT + STRIPE_FEE_FIXED).toFixed(2));
   
-  // What platform receives from Stripe (after Stripe fee is deducted at source)
+  // What platform receives from Stripe (after Stripe deducts their fee)
   const platformReceives = parseFloat((total - stripeFee).toFixed(2));
   
-  // Seller gets: what platform receives minus the platform's 6% cut
-  // This means seller receives their item price + shipping minus fees
-  const sellerNet = parseFloat((platformReceives - platformFee).toFixed(2));
+  // Calculate Stripe fee breakdown for transparency
+  const itemStripeFee = parseFloat((itemPrice * STRIPE_FEE_PERCENT).toFixed(2));
+  const shippingStripeFee = parseFloat((shippingCost * STRIPE_FEE_PERCENT + STRIPE_FEE_FIXED).toFixed(2));
   
-  return { platformFee, stripeFee, platformReceives, total, sellerNet };
+  // Seller receives:
+  // - Item price minus platform fee minus Stripe fee on item
+  // - Shipping cost minus Stripe fee on shipping
+  // This ensures seller gets full shipping reimbursement minus only processing
+  const sellerFromItem = parseFloat((itemPrice - platformFee - itemStripeFee).toFixed(2));
+  const sellerFromShipping = parseFloat((shippingCost - shippingStripeFee).toFixed(2));
+  const sellerNet = parseFloat((sellerFromItem + sellerFromShipping).toFixed(2));
+  
+  return { 
+    platformFee, 
+    stripeFee, 
+    platformReceives, 
+    total, 
+    sellerNet,
+    breakdown: {
+      itemStripeFee,
+      shippingStripeFee,
+      sellerFromItem,
+      sellerFromShipping,
+    }
+  };
 }
 
 // Generate order number
@@ -724,9 +747,106 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
     }
   });
   
+  // Get shipping quote for quick checkout
+  app.post("/api/marketplace/shipping/quick-quote", authenticateUser, async (req: any, res) => {
+    try {
+      if (req.user.plan !== 'SUPER_HERO') {
+        return res.status(403).json({ message: "Marketplace requires SUPER HERO subscription" });
+      }
+      
+      const { collectionItemId } = req.body;
+      
+      if (!collectionItemId) {
+        return res.status(400).json({ message: "Collection item ID required" });
+      }
+      
+      // Get buyer's shipping address
+      const [buyer] = await db.select({ 
+        shippingAddressJson: users.shippingAddressJson 
+      })
+        .from(users)
+        .where(eq(users.id, req.user.id))
+        .limit(1);
+      
+      if (!buyer?.shippingAddressJson) {
+        return res.status(400).json({ 
+          message: "Please set your shipping address in your profile first",
+          needsAddress: true 
+        });
+      }
+      
+      // Get seller's address and verify item availability
+      const [item] = await db
+        .select({
+          collectionItem: userCollections,
+          sellerAddress: users.shippingAddressJson,
+          sellerId: users.id,
+        })
+        .from(userCollections)
+        .innerJoin(users, eq(userCollections.userId, users.id))
+        .where(and(
+          eq(userCollections.id, collectionItemId),
+          eq(userCollections.isForSale, true)
+        ))
+        .limit(1);
+      
+      if (!item) {
+        return res.status(404).json({ message: "Item not available" });
+      }
+      
+      if (!item.sellerAddress) {
+        return res.status(400).json({ message: "Seller has not set a shipping address" });
+      }
+      
+      // Can't buy own items
+      if (item.sellerId === req.user.id) {
+        return res.status(400).json({ message: "You cannot purchase your own items" });
+      }
+      
+      const fromAddr = JSON.parse(item.sellerAddress);
+      const toAddr = JSON.parse(buyer.shippingAddressJson);
+      
+      // Get rates from Shippo using standard toploader parcel
+      const { shipmentId, rates } = await shippoService.createShipmentAndGetRates(
+        fromAddr,
+        toAddr,
+        {
+          length: 7,
+          width: 5,
+          height: 0.5,
+          weight: 2,
+          distance_unit: "in",
+          mass_unit: "oz",
+        }
+      );
+      
+      if (!rates.length) {
+        return res.status(400).json({ message: "No shipping rates available for this destination" });
+      }
+      
+      // Return cheapest USPS rate
+      const cheapestRate = rates.reduce((min, rate) => 
+        parseFloat(rate.amount) < parseFloat(min.amount) ? rate : min
+      );
+      
+      res.json({
+        shippingCost: parseFloat(cheapestRate.amount),
+        rateId: cheapestRate.object_id,
+        shipmentId,
+        carrier: cheapestRate.provider,
+        serviceLevel: cheapestRate.servicelevel.name,
+        estimatedDays: cheapestRate.estimated_days,
+        expiresAt: Date.now() + (15 * 60 * 1000),
+      });
+    } catch (error: any) {
+      console.error('Quick quote error:', error);
+      res.status(500).json({ message: "Failed to get shipping quote" });
+    }
+  });
+  
   // Quick checkout from collection item (simplified flow for items marked isForSale)
   app.post("/api/marketplace/quick-checkout", authenticateUser, async (req: any, res) => {
-    const { collectionItemId } = req.body;
+    const { collectionItemId, shippingCost: providedShippingCost, shippingRateId } = req.body;
     let reservedListingId: number | null = null;
     let reservedCollectionItemId: number | null = null;
     
@@ -796,7 +916,15 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
           throw new Error('NO_VALID_PRICE');
         }
         
-        const shippingCost = 5.00;
+        // Get shipping cost from request (from quick-quote endpoint) or default to $5
+        const shippingCost = parseFloat(providedShippingCost) || 5.00;
+        
+        // Validate shipping cost is reasonable (between $3-$50)
+        if (shippingCost < 3 || shippingCost > 50) {
+          console.error('Invalid shipping cost:', shippingCost);
+          throw new Error('INVALID_SHIPPING_COST');
+        }
+        
         const fees = calculateFees(itemPrice, shippingCost);
         const cardName = `${card.name} - ${cardSet.name}`;
         
@@ -888,6 +1016,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
           sellerId: collectionItem.userId.toString(),
           itemPrice: itemPrice.toString(),
           shippingCost: shippingCost.toString(),
+          shippingRateId: shippingRateId || '',
         },
       });
       
@@ -1231,6 +1360,23 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
   app.post("/api/marketplace/reports", authenticateUser, async (req: any, res) => {
     try {
       const { targetUserId, listingId, orderId, reason, description } = req.body;
+      
+      // Rate limit: max 5 reports per user per day
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const [recentReportsCount] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(reports)
+        .where(and(
+          eq(reports.reporterId, req.user.id),
+          sql`${reports.createdAt} >= ${oneDayAgo}`
+        ));
+      
+      const reportCount = Number(recentReportsCount?.count || 0);
+      if (reportCount >= 5) {
+        return res.status(429).json({ 
+          message: "You've reached the daily report limit (5 per day). Please try again tomorrow." 
+        });
+      }
       
       if (!reason || (!targetUserId && !listingId && !orderId)) {
         return res.status(400).json({ message: "Reason and at least one target required" });
@@ -1598,7 +1744,16 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
   // Shippo webhook (no auth - uses Shippo's verification)
   app.post("/api/shippo-webhook", express.raw({ type: 'application/json' }), async (req, res) => {
     try {
-      const event = JSON.parse(req.body.toString());
+      const signature = req.headers['x-shippo-signature'] as string;
+      const payload = req.body.toString();
+      
+      if (!shippoService.verifyWebhookSignature(payload, signature || '')) {
+        console.error('❌ Shippo webhook signature verification failed');
+        return res.status(401).json({ message: "Invalid signature" });
+      }
+      
+      const event = JSON.parse(payload);
+      console.log('✅ Shippo webhook verified:', event.event);
       await shippoService.handleWebhook(event);
       res.status(200).json({ received: true });
     } catch (error) {

@@ -1,0 +1,479 @@
+I need you to fix critical security and money-handling issues in my Marvel Card Vault marketplace. Make all code changes yourself - I will copy and paste your complete file contents.
+
+CRITICAL SECURITY FIXES (Priority 1 - Deploy Today):
+
+---
+
+FIX #1: Add Shippo Webhook Signature Verification
+FILE: server/shippo-service.ts
+
+PROBLEM: Line 60-77 has no signature verification on webhooks, allowing attackers to forge tracking updates.
+
+SOLUTION:
+1. Add these imports at the top:
+   import crypto from 'crypto';
+
+2. Add this new method to the shippoService object (after line 78, before createShipmentAndGetRates):
+
+  verifyWebhookSignature(payload: string, signature: string): boolean {
+    const SHIPPO_WEBHOOK_SECRET = process.env.SHIPPO_WEBHOOK_SECRET;
+    if (!SHIPPO_WEBHOOK_SECRET) {
+      console.warn('⚠️ SHIPPO_WEBHOOK_SECRET not configured - webhook verification disabled');
+      return true; // Allow in development, but log warning
+    }
+    
+    try {
+      const expectedSignature = crypto
+        .createHmac('sha256', SHIPPO_WEBHOOK_SECRET)
+        .update(payload)
+        .digest('hex');
+      
+      return crypto.timingSafeEqual(
+        Buffer.from(signature),
+        Buffer.from(expectedSignature)
+      );
+    } catch (error) {
+      console.error('Webhook signature verification error:', error);
+      return false;
+    }
+  },
+
+FILE: server/marketplace-routes.ts
+LOCATION: Line 1598-1608
+
+REPLACE THIS CODE:
+  app.post("/api/shippo-webhook", express.raw({ type: 'application/json' }), async (req, res) => {
+    try {
+      const event = JSON.parse(req.body.toString());
+      await shippoService.handleWebhook(event);
+      res.status(200).json({ received: true });
+    } catch (error) {
+      console.error('Shippo webhook error:', error);
+      res.status(400).json({ message: "Webhook processing failed" });
+    }
+  });
+
+WITH THIS CODE:
+  app.post("/api/shippo-webhook", express.raw({ type: 'application/json' }), async (req, res) => {
+    try {
+      const signature = req.headers['x-shippo-signature'] as string;
+      const payload = req.body.toString();
+      
+      // Verify webhook signature
+      if (!shippoService.verifyWebhookSignature(payload, signature || '')) {
+        console.error('❌ Shippo webhook signature verification failed');
+        return res.status(401).json({ message: "Invalid signature" });
+      }
+      
+      const event = JSON.parse(payload);
+      console.log('✅ Shippo webhook verified:', event.event);
+      await shippoService.handleWebhook(event);
+      res.status(200).json({ received: true });
+    } catch (error) {
+      console.error('Shippo webhook error:', error);
+      res.status(400).json({ message: "Webhook processing failed" });
+    }
+  });
+
+ACCEPTANCE CRITERIA:
+- Webhooks without valid signature return 401
+- Legitimate Shippo webhooks still process correctly
+- Development mode allows webhooks even without secret (with warning)
+
+---
+
+FIX #2: Fix Race Condition on Item Purchase
+FILE: server/marketplace-routes.ts
+LOCATION: Lines 778-806 (inside quick-checkout endpoint)
+
+PROBLEM: Two buyers can click "Buy Now" simultaneously and both get checkout sessions for the same item.
+
+FIND THIS CODE BLOCK (around line 778-806):
+      const result = await db.transaction(async (tx) => {
+        const [collectionItem] = await tx
+          .select()
+          .from(userCollections)
+          .where(eq(userCollections.id, collectionItemId))
+          .limit(1);
+        
+        if (!collectionItem) {
+          throw new Error('ITEM_NOT_AVAILABLE');
+        }
+
+REPLACE WITH THIS:
+      const result = await db.transaction(async (tx) => {
+        // SELECT FOR UPDATE with availability check - prevents race condition
+        const [collectionItem] = await tx
+          .select()
+          .from(userCollections)
+          .where(and(
+            eq(userCollections.id, collectionItemId),
+            eq(userCollections.isForSale, true) // ✅ Must still be available
+          ))
+          .limit(1)
+          .for('update'); // ✅ Row-level lock
+        
+        if (!collectionItem) {
+          throw new Error('ITEM_NOT_AVAILABLE');
+        }
+        
+        // Prevent buying own items
+        if (collectionItem.userId === req.user.id) {
+          throw new Error('CANNOT_BUY_OWN_ITEM');
+        }
+
+ACCEPTANCE CRITERIA:
+- If two users click "Buy Now" simultaneously, only one succeeds
+- Second user gets "Item not found or not for sale" error
+- User cannot purchase their own items
+
+---
+
+FIX #3: Add Order Ownership Check to Review Endpoint
+FILE: server/marketplace-routes.ts
+LOCATION: Line 1162 (POST review endpoint)
+
+PROBLEM: Missing authorization check - anyone can review anyone's order by guessing order ID.
+
+FIND THIS CODE (around line 1162):
+  app.post("/api/marketplace/orders/:id/review", authenticateUser, async (req: any, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const { rating, comment } = req.body;
+      
+      // Check if review already exists
+      const existingReview = await db
+        .select()
+        .from(reviews)
+
+ADD THIS CODE IMMEDIATELY AFTER "const { rating, comment } = req.body;" (around line 1167):
+
+      // Verify order ownership and status
+      const [order] = await db.select().from(orders)
+        .where(eq(orders.id, orderId))
+        .limit(1);
+      
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      // Only buyer can review
+      if (order.buyerId !== req.user.id) {
+        return res.status(403).json({ message: "Only the buyer can review this order" });
+      }
+      
+      // Order must be delivered
+      if (order.status !== 'delivered') {
+        return res.status(400).json({ message: "Order must be delivered before reviewing" });
+      }
+
+ACCEPTANCE CRITERIA:
+- Attempting to review someone else's order returns 403
+- Attempting to review before delivery returns 400
+- Only buyer can leave review, not seller
+
+---
+
+MONEY & SHIPPING FIXES (Priority 2):
+
+---
+
+FIX #4: Replace Hardcoded $5 Shipping with Shippo Quote
+FILE: server/marketplace-routes.ts
+
+STEP 1: Add new endpoint for getting shipping quotes (add BEFORE quick-checkout endpoint, around line 775):
+
+  // Get shipping quote for quick checkout
+  app.post("/api/marketplace/shipping/quick-quote", authenticateUser, async (req: any, res) => {
+    try {
+      if (req.user.plan !== 'SUPER_HERO') {
+        return res.status(403).json({ message: "Marketplace requires SUPER HERO subscription" });
+      }
+      
+      const { collectionItemId } = req.body;
+      
+      if (!collectionItemId) {
+        return res.status(400).json({ message: "Collection item ID required" });
+      }
+      
+      // Get buyer's shipping address
+      const [buyer] = await db.select({ 
+        shippingAddressJson: users.shippingAddressJson 
+      })
+        .from(users)
+        .where(eq(users.id, req.user.id))
+        .limit(1);
+      
+      if (!buyer?.shippingAddressJson) {
+        return res.status(400).json({ 
+          message: "Please set your shipping address in your profile first",
+          needsAddress: true 
+        });
+      }
+      
+      // Get seller's address and verify item availability
+      const [item] = await db
+        .select({
+          collectionItem: userCollections,
+          sellerAddress: users.shippingAddressJson,
+          sellerId: users.id,
+        })
+        .from(userCollections)
+        .innerJoin(users, eq(userCollections.userId, users.id))
+        .where(and(
+          eq(userCollections.id, collectionItemId),
+          eq(userCollections.isForSale, true)
+        ))
+        .limit(1);
+      
+      if (!item) {
+        return res.status(404).json({ message: "Item not available" });
+      }
+      
+      if (!item.sellerAddress) {
+        return res.status(400).json({ message: "Seller has not set a shipping address" });
+      }
+      
+      // Can't buy own items
+      if (item.sellerId === req.user.id) {
+        return res.status(400).json({ message: "You cannot purchase your own items" });
+      }
+      
+      const fromAddr = JSON.parse(item.sellerAddress);
+      const toAddr = JSON.parse(buyer.shippingAddressJson);
+      
+      // Get rates from Shippo using standard toploader parcel
+      const { shipmentId, rates } = await shippoService.createShipmentAndGetRates(
+        fromAddr,
+        toAddr,
+        {
+          length: 7,
+          width: 5,
+          height: 0.5,
+          weight: 2,
+          distance_unit: "in",
+          mass_unit: "oz",
+        }
+      );
+      
+      if (!rates.length) {
+        return res.status(400).json({ message: "No shipping rates available for this destination" });
+      }
+      
+      // Return cheapest USPS rate
+      const cheapestRate = rates.reduce((min, rate) => 
+        parseFloat(rate.amount) < parseFloat(min.amount) ? rate : min
+      );
+      
+      res.json({
+        shippingCost: parseFloat(cheapestRate.amount),
+        rateId: cheapestRate.object_id,
+        shipmentId,
+        carrier: cheapestRate.provider,
+        serviceLevel: cheapestRate.servicelevel.name,
+        estimatedDays: cheapestRate.estimated_days,
+        expiresAt: Date.now() + (15 * 60 * 1000), // 15 minutes
+      });
+    } catch (error: any) {
+      console.error('Quick quote error:', error);
+      res.status(500).json({ message: "Failed to get shipping quote" });
+    }
+  });
+
+STEP 2: Update quick-checkout to use real shipping cost
+FILE: server/marketplace-routes.ts
+LOCATION: Around line 792
+
+FIND THIS LINE:
+        const shippingCost = 5.00;
+
+REPLACE WITH:
+        // Get shipping cost from request (from quick-quote endpoint)
+        const shippingCost = parseFloat(req.body.shippingCost) || 5.00;
+        const shippingRateId = req.body.shippingRateId;
+        
+        // Validate shipping cost is reasonable (between $3-$50)
+        if (shippingCost < 3 || shippingCost > 50) {
+          console.error('Invalid shipping cost:', shippingCost);
+          throw new Error('NO_VALID_PRICE');
+        }
+
+STEP 3: Store shipping rate ID in order metadata
+LOCATION: Around line 892 (in Stripe session creation, metadata section)
+
+ADD THIS LINE to the metadata object:
+          shippingRateId: shippingRateId || '',
+
+ACCEPTANCE CRITERIA:
+- Calling /api/marketplace/shipping/quick-quote returns real Shippo rate
+- Quick checkout uses provided shipping cost, not hardcoded $5
+- Shipping cost is validated to be reasonable
+
+---
+
+FIX #5: Fix Fee Calculation to Show Seller Net Correctly
+FILE: server/marketplace-routes.ts
+LOCATION: Lines 30-48 (calculateFees function)
+
+REPLACE THE ENTIRE FUNCTION WITH:
+
+function calculateFees(itemPrice: number, shippingCost: number) {
+  const total = itemPrice + shippingCost;
+  
+  // Platform fee applies ONLY to item price (not shipping)
+  const platformFee = parseFloat((itemPrice * PLATFORM_FEE_PERCENT).toFixed(2));
+  
+  // Stripe fee applies to total payment
+  const stripeFee = parseFloat((total * STRIPE_FEE_PERCENT + STRIPE_FEE_FIXED).toFixed(2));
+  
+  // What platform receives from Stripe (after Stripe deducts their fee)
+  const platformReceives = parseFloat((total - stripeFee).toFixed(2));
+  
+  // Calculate Stripe fee breakdown for transparency
+  const itemStripeFee = parseFloat((itemPrice * STRIPE_FEE_PERCENT).toFixed(2));
+  const shippingStripeFee = parseFloat((shippingCost * STRIPE_FEE_PERCENT + STRIPE_FEE_FIXED).toFixed(2));
+  
+  // Seller receives:
+  // - Item price minus platform fee minus Stripe fee on item
+  // - Shipping cost minus Stripe fee on shipping
+  // This ensures seller gets full shipping reimbursement minus only processing
+  const sellerFromItem = parseFloat((itemPrice - platformFee - itemStripeFee).toFixed(2));
+  const sellerFromShipping = parseFloat((shippingCost - shippingStripeFee).toFixed(2));
+  const sellerNet = parseFloat((sellerFromItem + sellerFromShipping).toFixed(2));
+  
+  return { 
+    platformFee, 
+    stripeFee, 
+    platformReceives, 
+    total, 
+    sellerNet,
+    // Include breakdown for transparency/debugging
+    breakdown: {
+      itemStripeFee,
+      shippingStripeFee,
+      sellerFromItem,
+      sellerFromShipping,
+    }
+  };
+}
+
+ACCEPTANCE CRITERIA:
+- Seller net correctly separates item earnings from shipping reimbursement
+- Platform fee only applies to item price, not shipping
+- Stripe fee is accurately split between item and shipping
+
+---
+
+ADDITIONAL IMPROVEMENTS (Priority 3):
+
+---
+
+FIX #6: Add Status Validation to Label Purchase
+FILE: server/shippo-service.ts
+LOCATION: Around line 218 (in purchaseLabelForOrder)
+
+FIND THIS CODE:
+    // Update order status to shipped
+    await db.update(orders).set({
+      status: "shipped",
+      updatedAt: new Date(),
+    }).where(eq(orders.id, orderId));
+
+REPLACE WITH:
+    // Update order status to shipped (only if in valid state)
+    await db.update(orders).set({
+      status: "shipped",
+      updatedAt: new Date(),
+    }).where(and(
+      eq(orders.id, orderId),
+      inArray(orders.status, ['paid', 'needs_shipping', 'label_created'])
+    ));
+
+ACCEPTANCE CRITERIA:
+- Cannot purchase label for cancelled or refunded orders
+- Status transition is validated
+
+---
+
+FIX #7: Add Rate Limiting to Reports
+FILE: server/marketplace-routes.ts
+LOCATION: Around line 1230 (in POST /api/marketplace/reports)
+
+ADD THIS CODE after "try {" and before the validation checks:
+
+      // Rate limit: max 5 reports per user per day
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const [recentReportsCount] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(reports)
+        .where(and(
+          eq(reports.reporterId, req.user.id),
+          sql`${reports.createdAt} >= ${oneDayAgo}`
+        ));
+      
+      const reportCount = Number(recentReportsCount?.count || 0);
+      if (reportCount >= 5) {
+        return res.status(429).json({ 
+          message: "You've reached the daily report limit (5 per day). Please try again tomorrow." 
+        });
+      }
+
+ACCEPTANCE CRITERIA:
+- Users can only submit 5 reports per 24 hours
+- 6th report returns 429 Too Many Requests
+
+---
+
+ENVIRONMENT VARIABLES TO ADD:
+
+Add this to your .env file:
+SHIPPO_WEBHOOK_SECRET=your_shippo_webhook_secret_here
+
+Get the webhook secret from your Shippo dashboard under Webhooks settings.
+
+---
+
+TESTING CHECKLIST:
+
+After implementing, test these scenarios:
+
+1. Race Condition Test:
+   - Open 2 browser tabs as different users
+   - Click "Buy Now" on same item simultaneously
+   - Verify only one succeeds
+
+2. Webhook Security Test:
+   - Send a fake webhook to /api/shippo-webhook without signature
+   - Verify it returns 401
+
+3. Review IDOR Test:
+   - Try to POST review for someone else's order ID
+   - Verify 403 Forbidden
+
+4. Shipping Quote Test:
+   - Call /api/marketplace/shipping/quick-quote with test item
+   - Verify returns real Shippo rate (not $5)
+   - Complete purchase with that rate
+
+5. Fee Calculation Test:
+   - Create order with $100 item + $5 shipping
+   - Verify seller net = ~$98.71 (not $95.65)
+
+---
+
+DEPLOYMENT NOTES:
+
+1. Deploy to production
+2. Add SHIPPO_WEBHOOK_SECRET to environment variables
+3. Update Shippo webhook URL to point to your production domain
+4. Monitor logs for any webhook verification failures
+5. Test one real transaction end-to-end before announcing
+
+---
+
+CRITICAL: After implementing, provide me with:
+1. The complete updated marketplace-routes.ts file
+2. The complete updated shippo-service.ts file
+3. Confirmation that all tests passed
+
+Do you understand? Begin implementation now.
