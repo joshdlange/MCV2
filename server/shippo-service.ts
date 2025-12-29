@@ -101,6 +101,25 @@ export const shippoService = {
     }
   },
 
+  // Verify a rate ID and return its cost
+  async verifyRateAndGetCost(rateId: string): Promise<{ amount: number; currency: string; valid: boolean }> {
+    try {
+      const rate = await shippoRequest(`/rates/${rateId}`);
+      if (rate && rate.amount && rate.currency) {
+        // Verify currency is USD
+        if (rate.currency.toUpperCase() !== 'USD') {
+          console.warn(`Rate ${rateId} has non-USD currency: ${rate.currency}`);
+          return { amount: 0, currency: rate.currency, valid: false };
+        }
+        return { amount: parseFloat(rate.amount), currency: rate.currency, valid: true };
+      }
+      return { amount: 0, currency: '', valid: false };
+    } catch (error) {
+      console.error('Rate verification failed:', error);
+      return { amount: 0, currency: '', valid: false };
+    }
+  },
+
   async createShipmentAndGetRates(
     fromAddress: ShippoAddress,
     toAddress: ShippoAddress,

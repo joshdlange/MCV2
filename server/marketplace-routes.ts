@@ -846,11 +846,11 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
   
   // Quick checkout from collection item (simplified flow for items marked isForSale)
   app.post("/api/marketplace/quick-checkout", authenticateUser, async (req: any, res) => {
-    const { collectionItemId, shippingCost: providedShippingCost, shippingRateId } = req.body;
+    const { collectionItemId, shippingRateId } = req.body;
     let reservedListingId: number | null = null;
     let reservedCollectionItemId: number | null = null;
     
-    console.log('🛒 Quick checkout request:', { collectionItemId, userId: req.user?.id, userPlan: req.user?.plan });
+    console.log('🛒 Quick checkout request:', { collectionItemId, shippingRateId, userId: req.user?.id, userPlan: req.user?.plan });
     
     try {
       // Check if Stripe is configured
@@ -867,8 +867,31 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
         return res.status(400).json({ message: "Collection item ID is required" });
       }
       
-      // Use transaction for atomic reservation to prevent race conditions
+      // Require and verify shipping rate ID - no client-provided costs allowed
+      if (!shippingRateId) {
+        return res.status(400).json({ 
+          message: "Shipping quote required. Please get a shipping quote first.",
+          needsShippingQuote: true 
+        });
+      }
+      
+      const rateVerification = await shippoService.verifyRateAndGetCost(shippingRateId);
+      if (!rateVerification.valid) {
+        return res.status(400).json({ 
+          message: "Invalid or expired shipping rate. Please get a new quote.",
+          needsShippingQuote: true 
+        });
+      }
+      
+      const verifiedShippingCost = rateVerification.amount;
+      console.log('✅ Verified shipping cost from Shippo:', verifiedShippingCost);
+      
+      // Use transaction with advisory lock for atomic reservation
       const result = await db.transaction(async (tx) => {
+        // Acquire advisory lock on the collection item ID to prevent race conditions
+        // This blocks other transactions trying to purchase the same item
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(${collectionItemId})`);
+        
         // Get the collection item with card details (within transaction)
         const collectionResult = await tx
           .select({
@@ -916,14 +939,8 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
           throw new Error('NO_VALID_PRICE');
         }
         
-        // Get shipping cost from request (from quick-quote endpoint) or default to $5
-        const shippingCost = parseFloat(providedShippingCost) || 5.00;
-        
-        // Validate shipping cost is reasonable (between $3-$50)
-        if (shippingCost < 3 || shippingCost > 50) {
-          console.error('Invalid shipping cost:', shippingCost);
-          throw new Error('INVALID_SHIPPING_COST');
-        }
+        // Use the server-verified shipping cost (already validated before transaction)
+        const shippingCost = verifiedShippingCost;
         
         const fees = calculateFees(itemPrice, shippingCost);
         const cardName = `${card.name} - ${cardSet.name}`;
