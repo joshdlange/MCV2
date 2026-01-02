@@ -38,17 +38,17 @@ export function CardValue({ cardId, showRefresh = false, estimatedValue, current
 
   const refreshMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", `/api/refresh-card-pricing/${cardId}`);
+      const response = await apiRequest("POST", `/api/card-pricing/${cardId}/refresh`);
       return await response.json();
     },
     onSuccess: (data: any) => {
-      if (data.success) {
+      if (data.avgPrice !== undefined) {
         queryClient.invalidateQueries({
           queryKey: ["/api/card-pricing"]
         });
         toast({
           title: "Pricing Updated",
-          description: `New price: $${data.avgPrice.toFixed(2)}`
+          description: `New price: $${data.avgPrice.toFixed(2)} (${data.salesCount} sales found)`
         });
       } else {
         toast({
