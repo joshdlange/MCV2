@@ -429,7 +429,7 @@ export default function MarketTrends() {
         ticks: {
           color: '#6b7280',
           font: { size: 11 },
-          callback: (value: any) => `$${value}`,
+          callback: (value: any) => `$${Number(value).toFixed(2)}`,
         },
       },
     },

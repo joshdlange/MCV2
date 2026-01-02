@@ -808,7 +808,7 @@ export default function MyCollection() {
         ) : (
           // Sets View
           viewMode === "grid" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {collectionSets.map((set) => (
               <Card 
                 key={set.id} 
@@ -820,7 +820,7 @@ export default function MyCollection() {
               >
                 <CardContent className="p-0">
                   {/* Set Image */}
-                  <div className="relative aspect-[2.5/3.5] bg-gray-100 rounded-t-lg overflow-hidden">
+                  <div className="relative aspect-[3/4] bg-gray-100 rounded-t-lg overflow-hidden">
                     {set.firstCardImage ? (
                       <img
                         src={set.firstCardImage}
