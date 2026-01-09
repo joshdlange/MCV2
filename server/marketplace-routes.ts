@@ -1002,9 +1002,11 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
       // Transaction succeeded - now create Stripe session (outside transaction)
       const { collectionItem, itemPrice, shippingCost, fees, cardName, listingId } = result;
       
-      const baseUrl = process.env.REPLIT_DOMAINS?.split(',')[0] 
-        ? 'https://' + process.env.REPLIT_DOMAINS.split(',')[0] 
-        : 'http://localhost:5000';
+      // Use MARKETPLACE_PUBLIC_URL if set, otherwise use REPLIT_DOMAINS or localhost
+      const baseUrl = process.env.MARKETPLACE_PUBLIC_URL 
+        || (process.env.REPLIT_DOMAINS?.split(',')[0] 
+            ? 'https://' + process.env.REPLIT_DOMAINS.split(',')[0] 
+            : 'http://localhost:5000');
       
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
@@ -1079,7 +1081,9 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
         message: error.message,
         code: error.code,
         type: error.type,
+        stripeRequestId: error.requestId || 'N/A',
         rawError: error.raw?.message || error.statusCode || 'N/A',
+        declineCode: error.decline_code || 'N/A',
         stack: error.stack?.split('\n').slice(0, 5).join('\n'),
         collectionItemId,
         userId: req.user?.id,
