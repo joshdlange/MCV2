@@ -1079,10 +1079,12 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
         message: error.message,
         code: error.code,
         type: error.type,
+        rawError: error.raw?.message || error.statusCode || 'N/A',
         stack: error.stack?.split('\n').slice(0, 5).join('\n'),
         collectionItemId,
         userId: req.user?.id,
         userPlan: req.user?.plan,
+        stripeConfigured: !!stripe,
       });
       
       // Rollback reservation if Stripe session creation or order insert failed
@@ -1115,6 +1117,15 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
       }
       if (error.message === 'NO_VALID_PRICE') {
         return res.status(400).json({ message: "Item has no valid sale price" });
+      }
+      
+      // Stripe-specific errors
+      if (error.type === 'StripeCardError' || error.type === 'StripeInvalidRequestError') {
+        return res.status(400).json({ message: `Payment error: ${error.message}` });
+      }
+      if (error.type === 'StripeAuthenticationError' || error.type === 'StripeAPIError') {
+        console.error('Stripe API configuration error:', error.message);
+        return res.status(500).json({ message: "Payment system temporarily unavailable. Please try again later." });
       }
       
       res.status(500).json({ message: "Failed to create checkout session" });
