@@ -1150,6 +1150,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log('PATCH /api/collection/:id - updating collection item:', id, 'with:', updates);
       
+      // Check if user is trying to list for sale - require shipping address
+      if (updates.isForSale === true) {
+        const [user] = await db.select({ shippingAddressJson: users.shippingAddressJson })
+          .from(users).where(eq(users.id, req.user.id)).limit(1);
+        if (!user?.shippingAddressJson) {
+          return res.status(400).json({ 
+            message: "Please add your shipping address in your profile before listing items for sale",
+            requiresShippingAddress: true
+          });
+        }
+      }
+      
       const updatedItem = await storage.updateCollectionItem(id, updates);
       if (!updatedItem) {
         return res.status(404).json({ message: "Collection item not found" });
@@ -1175,6 +1187,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const updates = req.body;
+      
+      // Check if user is trying to list for sale - require shipping address
+      if (updates.isForSale === true) {
+        const [user] = await db.select({ shippingAddressJson: users.shippingAddressJson })
+          .from(users).where(eq(users.id, req.user.id)).limit(1);
+        if (!user?.shippingAddressJson) {
+          return res.status(400).json({ 
+            message: "Please add your shipping address in your profile before listing items for sale",
+            requiresShippingAddress: true
+          });
+        }
+      }
       
       const updatedItem = await storage.updateCollectionItem(id, updates);
       if (!updatedItem) {

@@ -165,6 +165,7 @@ export default function Marketplace() {
     },
     onError: (error: Error) => {
       let errorMessage = "Unable to create checkout session. Please try again.";
+      let requiresShippingAddress = false;
       if (error.message) {
         const match = error.message.match(/\d+: (.+)/);
         if (match) {
@@ -178,16 +179,28 @@ export default function Marketplace() {
                 fetchShippingQuote(selectedItem.id);
               }
             }
+            if (parsed.requiresShippingAddress) {
+              requiresShippingAddress = true;
+            }
           } catch {
             errorMessage = match[1];
           }
         }
       }
-      toast({ 
-        title: "Checkout failed", 
-        description: errorMessage,
-        variant: "destructive" 
-      });
+      if (requiresShippingAddress) {
+        toast({ 
+          title: "Shipping Address Required", 
+          description: "Please add your shipping address in your Profile settings before making a purchase.",
+          variant: "destructive",
+          duration: 8000
+        });
+      } else {
+        toast({ 
+          title: "Checkout failed", 
+          description: errorMessage,
+          variant: "destructive" 
+        });
+      }
     }
   });
 

@@ -867,6 +867,16 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
         return res.status(400).json({ message: "Collection item ID is required" });
       }
       
+      // Verify buyer has shipping address before proceeding
+      const [buyer] = await db.select({ shippingAddressJson: users.shippingAddressJson })
+        .from(users).where(eq(users.id, req.user.id)).limit(1);
+      if (!buyer?.shippingAddressJson) {
+        return res.status(400).json({ 
+          message: "Please add your shipping address before making a purchase",
+          requiresShippingAddress: true
+        });
+      }
+      
       // Require and verify shipping rate ID - no client-provided costs allowed
       if (!shippingRateId) {
         return res.status(400).json({ 

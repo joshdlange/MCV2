@@ -145,14 +145,42 @@ export default function MyCollection() {
 
   const updateCollectionItemMutation = useMutation({
     mutationFn: async ({ itemId, updates }: { itemId: number; updates: any }) => {
-      return apiRequest('PATCH', `/api/collection/${itemId}`, updates);
+      const response = await apiRequest('PATCH', `/api/collection/${itemId}`, updates);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
       toast({ title: "Collection item updated" });
     },
-    onError: () => {
-      toast({ title: "Failed to update collection item", variant: "destructive" });
+    onError: (error: Error) => {
+      let errorMessage = "Failed to update collection item";
+      let requiresShippingAddress = false;
+      if (error.message) {
+        const match = error.message.match(/\d+: (.+)/);
+        if (match) {
+          try {
+            const parsed = JSON.parse(match[1]);
+            if (parsed.message) {
+              errorMessage = parsed.message;
+            }
+            if (parsed.requiresShippingAddress) {
+              requiresShippingAddress = true;
+            }
+          } catch {
+            errorMessage = match[1];
+          }
+        }
+      }
+      if (requiresShippingAddress) {
+        toast({ 
+          title: "Shipping Address Required", 
+          description: "Please add your shipping address in your Profile settings before listing items for sale.",
+          variant: "destructive",
+          duration: 8000
+        });
+      } else {
+        toast({ title: errorMessage, variant: "destructive" });
+      }
     }
   });
 
