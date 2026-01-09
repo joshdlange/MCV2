@@ -161,14 +161,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user = await storage.createUser(userData);
         console.log('Created new user:', user.id, 'isAdmin:', user.isAdmin);
         
-        // Send welcome email to new user (non-blocking)
-        emailTriggers.onUserSignup({
-          email: user.email,
-          displayName: user.displayName || user.username,
-          username: user.username
-        }).catch(error => {
-          console.error('Failed to send welcome email:', error);
-        });
+        // Note: Welcome email is now sent after onboarding is complete
+        // so we have their actual chosen username, not just email prefix
         
         // Auto-friend new users with Joshua (admin user ID: 337)
         if (!isAdminEmail && user.id !== 337) {
@@ -287,6 +281,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         onboardingComplete: true
       });
       
+      // Send welcome email now that we have their actual username
+      emailTriggers.onUserSignup({
+        email: req.user.email,
+        displayName: updatedUser.displayName || username,
+        username: username
+      }).catch(error => {
+        console.error('Failed to send welcome email:', error);
+      });
+      
       res.json({ user: updatedUser });
     } catch (error) {
       console.error('Complete onboarding error:', error);
@@ -360,6 +363,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Delete user error:', error);
       res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // Get user profile
+  app.get("/api/user/profile", authenticateUser, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error('Get user profile error:', error);
+      res.status(500).json({ message: "Failed to fetch user profile" });
+    }
+  });
+
+  // Update user profile - includes shipping address sync
+  app.patch("/api/user/profile", authenticateUser, async (req: any, res) => {
+    try {
+      const { displayName, bio, location, website, address, privacySettings, notifications } = req.body;
+      
+      const updates: any = {};
+      
+      if (displayName !== undefined) updates.displayName = displayName;
+      if (bio !== undefined) updates.bio = bio;
+      if (location !== undefined) updates.location = location;
+      if (website !== undefined) updates.website = website;
+      
+      // Privacy settings
+      if (privacySettings) {
+        if (privacySettings.showEmail !== undefined) updates.showEmail = privacySettings.showEmail;
+        if (privacySettings.showCollection !== undefined) updates.showCollection = privacySettings.showCollection;
+        if (privacySettings.showWishlist !== undefined) updates.showWishlist = privacySettings.showWishlist;
+      }
+      
+      // Notification settings
+      if (notifications) {
+        if (notifications.emailUpdates !== undefined) updates.emailUpdates = notifications.emailUpdates;
+        if (notifications.priceAlerts !== undefined) updates.priceAlerts = notifications.priceAlerts;
+        if (notifications.friendActivity !== undefined) updates.friendActivity = notifications.friendActivity;
+      }
+      
+      // Convert address to shippingAddressJson for marketplace compatibility
+      if (address && (address.street || address.city || address.state || address.postalCode)) {
+        const shippingAddress = {
+          name: displayName || req.user.displayName || '',
+          street1: address.street || '',
+          street2: '',
+          city: address.city || '',
+          state: address.state || '',
+          zip: address.postalCode || '',
+          country: address.country || 'US',
+          phone: ''
+        };
+        updates.shippingAddressJson = JSON.stringify(shippingAddress);
+      }
+      
+      const updatedUser = await storage.updateUser(req.user.id, updates);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('Update user profile error:', error);
+      res.status(500).json({ message: "Failed to update user profile" });
     }
   });
 

@@ -99,7 +99,7 @@ export function welcomeTemplate(user: { displayName: string; username: string })
       <p style="margin: 0 0 10px; font-size: 14px; color: ${TEXT_PRIMARY};"><strong>Your Username:</strong> @${user.username}</p>
       <p style="margin: 0; font-size: 14px; color: ${TEXT_SECONDARY};">Ready to organize your Marvel collection</p>
     </div>
-    ${ctaButton('Track Your Collection', 'https://marvelcardvault.com/browse')}
+    ${ctaButton('Track Your Collection', 'https://marvelcardvault.com')}
   `;
   return baseTemplate({ title: 'Welcome to Marvel Card Vault', bodyHtml });
 }
@@ -353,7 +353,7 @@ export function addFirstCardTemplate(user: { displayName: string }): string {
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
       You haven't added any cards yet. Search our database of <strong style="color: ${TEXT_PRIMARY};">60,000+ Marvel cards</strong> to start organizing your collection.
     </p>
-    ${ctaButton('Add Your Cards', 'https://marvelcardvault.com/browse')}
+    ${ctaButton('Add Your Cards', 'https://marvelcardvault.com')}
   `;
   return baseTemplate({ title: 'Track Your First Card', bodyHtml });
 }
@@ -466,7 +466,7 @@ export function weeklyDigestTemplate(
       <h3 style="margin: 0 0 15px; font-size: 18px; color: ${TEXT_PRIMARY};">New Sets (${sets.length})</h3>
       ${setsHtml || '<p style="margin: 0; color: ${TEXT_SECONDARY};">No new sets this month</p>'}
     </div>
-    ${ctaButton('See New Sets', 'https://marvelcardvault.com/browse')}
+    ${ctaButton('See New Sets', 'https://marvelcardvault.com')}
   `;
   return baseTemplate({ title: 'Monthly Update', bodyHtml });
 }
