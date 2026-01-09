@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { badges, userBadges, users, messages, friends, cardSets, userCollections, cards } from "../shared/schema";
-import { eq, and, count, gte, lte, sql } from "drizzle-orm";
+import { eq, and, count, gte, lte, gt, sql } from "drizzle-orm";
 import { notificationService } from "./notification-service";
 
 export class BadgeService {
@@ -143,21 +143,30 @@ export class BadgeService {
     const badge = await this.getBadgeByName('Completionist');
     if (!badge) return;
 
-    // Get all years that have card sets
+    // Get all years that have card sets with valid totalCards > 0
     const years = await db.select({ year: cardSets.year })
       .from(cardSets)
+      .where(gt(cardSets.totalCards, 0))
       .groupBy(cardSets.year);
 
     for (const yearData of years) {
       const year = yearData.year;
       
-      // Get all sets from this year
+      // Get all sets from this year that have valid totalCards
       const setsFromYear = await db.select()
         .from(cardSets)
-        .where(eq(cardSets.year, year));
+        .where(and(
+          eq(cardSets.year, year),
+          gt(cardSets.totalCards, 0)
+        ));
+
+      // Must have at least one set to complete
+      if (setsFromYear.length === 0) continue;
 
       // Check if user has completed all sets from this year
       let yearCompleted = true;
+      let totalCardsCollected = 0;
+      
       for (const set of setsFromYear) {
         const userCardsInSet = await db.select({ count: count() })
           .from(userCollections)
@@ -167,13 +176,18 @@ export class BadgeService {
             eq(cards.setId, set.id)
           ));
 
-        if (userCardsInSet[0].count < set.totalCards) {
+        const userCount = Number(userCardsInSet[0].count);
+        totalCardsCollected += userCount;
+        
+        // User must have at least as many cards as the set requires
+        if (userCount < set.totalCards) {
           yearCompleted = false;
           break;
         }
       }
 
-      if (yearCompleted && setsFromYear.length > 0) {
+      // Only award if user actually has cards (not just comparing 0 to 0)
+      if (yearCompleted && totalCardsCollected > 0) {
         await this.awardBadge(userId, badge.id);
         return;
       }
