@@ -531,7 +531,7 @@ export default function Marketplace() {
                 value={addressForm.name}
                 onChange={(e) => setAddressForm({ ...addressForm, name: e.target.value })}
                 placeholder="John Smith"
-                className="mt-1"
+                className="mt-1 bg-white text-gray-900 border-gray-300 placeholder:text-gray-400"
               />
             </div>
             <div>
@@ -541,7 +541,7 @@ export default function Marketplace() {
                 value={addressForm.street1}
                 onChange={(e) => setAddressForm({ ...addressForm, street1: e.target.value })}
                 placeholder="123 Main Street"
-                className="mt-1"
+                className="mt-1 bg-white text-gray-900 border-gray-300 placeholder:text-gray-400"
                 required
               />
             </div>
@@ -552,7 +552,7 @@ export default function Marketplace() {
                 value={addressForm.street2 || ''}
                 onChange={(e) => setAddressForm({ ...addressForm, street2: e.target.value })}
                 placeholder="Apt, Suite, etc."
-                className="mt-1"
+                className="mt-1 bg-white text-gray-900 border-gray-300 placeholder:text-gray-400"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -563,7 +563,7 @@ export default function Marketplace() {
                   value={addressForm.city}
                   onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
                   placeholder="New York"
-                  className="mt-1"
+                  className="mt-1 bg-white text-gray-900 border-gray-300 placeholder:text-gray-400"
                   required
                 />
               </div>
@@ -574,7 +574,7 @@ export default function Marketplace() {
                   value={addressForm.state}
                   onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
                   placeholder="NY"
-                  className="mt-1"
+                  className="mt-1 bg-white text-gray-900 border-gray-300 placeholder:text-gray-400"
                   required
                 />
               </div>
@@ -587,7 +587,7 @@ export default function Marketplace() {
                   value={addressForm.zip}
                   onChange={(e) => setAddressForm({ ...addressForm, zip: e.target.value })}
                   placeholder="10001"
-                  className="mt-1"
+                  className="mt-1 bg-white text-gray-900 border-gray-300 placeholder:text-gray-400"
                   required
                 />
               </div>
@@ -598,7 +598,7 @@ export default function Marketplace() {
                   value={addressForm.phone || ''}
                   onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
                   placeholder="(555) 123-4567"
-                  className="mt-1"
+                  className="mt-1 bg-white text-gray-900 border-gray-300 placeholder:text-gray-400"
                 />
               </div>
             </div>
