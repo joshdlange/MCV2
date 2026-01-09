@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
@@ -12,8 +13,28 @@ import { UpgradeModal } from "@/components/subscription/upgrade-modal";
 import { useAppStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Star, Search, Filter, Crown, Lock, ShoppingCart, CreditCard, Package, Loader2 } from "lucide-react";
+import { Star, Search, Filter, Crown, Lock, ShoppingCart, CreditCard, Package, Loader2, MapPin, Truck } from "lucide-react";
 import type { CollectionItem, CardWithSet, CardSet } from "@/types/schema";
+
+interface ShippingAddress {
+  name: string;
+  street1: string;
+  street2?: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+  phone?: string;
+}
+
+interface ShippingQuote {
+  shippingCost: number;
+  rateId: string;
+  carrier: string;
+  serviceLevel: string;
+  estimatedDays: number;
+  expiresAt: number;
+}
 
 export default function Marketplace() {
   const { currentUser } = useAppStore();
@@ -23,14 +44,79 @@ export default function Marketplace() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const [showAddressModal, setShowAddressModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<CollectionItem | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSet, setSelectedSet] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("newest");
+  
+  const [shippingAddress, setShippingAddress] = useState<ShippingAddress | null>(null);
+  const [shippingQuote, setShippingQuote] = useState<ShippingQuote | null>(null);
+  const [isLoadingQuote, setIsLoadingQuote] = useState(false);
+  const [addressForm, setAddressForm] = useState<ShippingAddress>({
+    name: '',
+    street1: '',
+    street2: '',
+    city: '',
+    state: '',
+    zip: '',
+    country: 'US',
+    phone: '',
+  });
 
-  // Handle Buy Now button click
-  const handleBuyNow = (item: CollectionItem) => {
-    // Don't allow buying own items
+  const { data: savedAddress, refetch: refetchAddress } = useQuery<{ shippingAddress: ShippingAddress | null }>({
+    queryKey: ["/api/user/shipping-address"],
+    enabled: !!currentUser,
+  });
+
+  useEffect(() => {
+    if (savedAddress?.shippingAddress) {
+      setShippingAddress(savedAddress.shippingAddress);
+      setAddressForm(savedAddress.shippingAddress);
+    }
+  }, [savedAddress]);
+
+  const saveAddressMutation = useMutation({
+    mutationFn: async (address: ShippingAddress) => {
+      const response = await apiRequest('PATCH', '/api/user/shipping-address', { shippingAddress: address });
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchAddress();
+      toast({ title: "Address saved", description: "Your shipping address has been updated." });
+    },
+    onError: () => {
+      toast({ title: "Failed to save address", variant: "destructive" });
+    }
+  });
+
+  const fetchShippingQuote = async (collectionItemId: number) => {
+    setIsLoadingQuote(true);
+    setShippingQuote(null);
+    try {
+      const response = await apiRequest('POST', '/api/marketplace/shipping/quick-quote', { collectionItemId });
+      const data = await response.json();
+      setShippingQuote(data);
+    } catch (error: any) {
+      let errorMsg = "Failed to calculate shipping";
+      try {
+        const match = error.message?.match(/\d+: (.+)/);
+        if (match) {
+          const parsed = JSON.parse(match[1]);
+          errorMsg = parsed.message || errorMsg;
+          if (parsed.needsAddress) {
+            setShowAddressModal(true);
+            setShowPurchaseModal(false);
+          }
+        }
+      } catch {}
+      toast({ title: "Shipping Error", description: errorMsg, variant: "destructive" });
+    } finally {
+      setIsLoadingQuote(false);
+    }
+  };
+
+  const handleBuyNow = async (item: CollectionItem) => {
     if (item.userId === currentUser?.id) {
       toast({ 
         title: "Cannot purchase own item", 
@@ -39,14 +125,37 @@ export default function Marketplace() {
       });
       return;
     }
+    
     setSelectedItem(item);
-    setShowPurchaseModal(true);
+    setShippingQuote(null);
+    
+    if (!shippingAddress && !savedAddress?.shippingAddress) {
+      setShowAddressModal(true);
+    } else {
+      setShowPurchaseModal(true);
+      fetchShippingQuote(item.id);
+    }
   };
 
-  // Create checkout session mutation
+  const handleAddressSaveAndContinue = async () => {
+    if (!addressForm.street1 || !addressForm.city || !addressForm.state || !addressForm.zip) {
+      toast({ title: "Missing required fields", description: "Please fill in all required address fields.", variant: "destructive" });
+      return;
+    }
+    
+    await saveAddressMutation.mutateAsync(addressForm);
+    setShippingAddress(addressForm);
+    setShowAddressModal(false);
+    
+    if (selectedItem) {
+      setShowPurchaseModal(true);
+      fetchShippingQuote(selectedItem.id);
+    }
+  };
+
   const createCheckoutMutation = useMutation({
-    mutationFn: async (collectionItemId: number) => {
-      const response = await apiRequest('POST', '/api/marketplace/quick-checkout', { collectionItemId });
+    mutationFn: async ({ collectionItemId, shippingRateId }: { collectionItemId: number; shippingRateId: string }) => {
+      const response = await apiRequest('POST', '/api/marketplace/quick-checkout', { collectionItemId, shippingRateId });
       return response.json();
     },
     onSuccess: (data) => {
@@ -55,10 +164,8 @@ export default function Marketplace() {
       }
     },
     onError: (error: Error) => {
-      // Extract the actual error message from the backend response
       let errorMessage = "Unable to create checkout session. Please try again.";
       if (error.message) {
-        // Error format from apiRequest is "status: {json body}"
         const match = error.message.match(/\d+: (.+)/);
         if (match) {
           try {
@@ -66,8 +173,12 @@ export default function Marketplace() {
             if (parsed.message) {
               errorMessage = parsed.message;
             }
+            if (parsed.needsShippingQuote) {
+              if (selectedItem) {
+                fetchShippingQuote(selectedItem.id);
+              }
+            }
           } catch {
-            // If not JSON, use the raw message
             errorMessage = match[1];
           }
         }
@@ -386,8 +497,124 @@ export default function Marketplace() {
         currentPlan={currentUser?.plan || "SIDE_KICK"}
       />
 
+      {/* Shipping Address Modal */}
+      <Dialog open={showAddressModal} onOpenChange={setShowAddressModal}>
+        <DialogContent className="sm:max-w-md bg-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-red-600" />
+              Shipping Address
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Enter your shipping address to continue with checkout
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="name" className="text-sm font-medium text-gray-700">Full Name</Label>
+              <Input
+                id="name"
+                value={addressForm.name}
+                onChange={(e) => setAddressForm({ ...addressForm, name: e.target.value })}
+                placeholder="John Smith"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="street1" className="text-sm font-medium text-gray-700">Address Line 1 *</Label>
+              <Input
+                id="street1"
+                value={addressForm.street1}
+                onChange={(e) => setAddressForm({ ...addressForm, street1: e.target.value })}
+                placeholder="123 Main Street"
+                className="mt-1"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="street2" className="text-sm font-medium text-gray-700">Address Line 2</Label>
+              <Input
+                id="street2"
+                value={addressForm.street2 || ''}
+                onChange={(e) => setAddressForm({ ...addressForm, street2: e.target.value })}
+                placeholder="Apt, Suite, etc."
+                className="mt-1"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="city" className="text-sm font-medium text-gray-700">City *</Label>
+                <Input
+                  id="city"
+                  value={addressForm.city}
+                  onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
+                  placeholder="New York"
+                  className="mt-1"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="state" className="text-sm font-medium text-gray-700">State *</Label>
+                <Input
+                  id="state"
+                  value={addressForm.state}
+                  onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
+                  placeholder="NY"
+                  className="mt-1"
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="zip" className="text-sm font-medium text-gray-700">ZIP Code *</Label>
+                <Input
+                  id="zip"
+                  value={addressForm.zip}
+                  onChange={(e) => setAddressForm({ ...addressForm, zip: e.target.value })}
+                  placeholder="10001"
+                  className="mt-1"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone" className="text-sm font-medium text-gray-700">Phone</Label>
+                <Input
+                  id="phone"
+                  value={addressForm.phone || ''}
+                  onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
+                  placeholder="(555) 123-4567"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            
+            <Button
+              className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-semibold"
+              onClick={handleAddressSaveAndContinue}
+              disabled={saveAddressMutation.isPending}
+            >
+              {saveAddressMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save & Continue to Checkout"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Purchase Modal */}
-      <Dialog open={showPurchaseModal} onOpenChange={setShowPurchaseModal}>
+      <Dialog open={showPurchaseModal} onOpenChange={(open) => {
+        setShowPurchaseModal(open);
+        if (!open) {
+          setShippingQuote(null);
+        }
+      }}>
         <DialogContent className="sm:max-w-md bg-white">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-gray-900">Purchase Card</DialogTitle>
@@ -425,25 +652,25 @@ export default function Marketplace() {
                 </div>
               </div>
 
-              {/* Seller Info */}
+              {/* Seller Info - prioritize username */}
               {selectedItem.seller && (
                 <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
                   <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
                     {selectedItem.seller.photoURL ? (
                       <img 
                         src={selectedItem.seller.photoURL} 
-                        alt={selectedItem.seller.displayName || selectedItem.seller.username}
+                        alt={selectedItem.seller.username || 'Seller'}
                         className="w-full h-full object-cover"
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
-                        {(selectedItem.seller.displayName || selectedItem.seller.username || '?')[0].toUpperCase()}
+                        {(selectedItem.seller.username || selectedItem.seller.displayName || '?')[0].toUpperCase()}
                       </div>
                     )}
                   </div>
                   <div className="flex-1">
                     <p className="font-medium text-gray-900 text-sm">
-                      Sold by {selectedItem.seller.displayName || selectedItem.seller.username}
+                      Sold by @{selectedItem.seller.username || 'Seller'}
                     </p>
                     <div className="flex items-center gap-1 text-xs text-gray-600">
                       {selectedItem.seller.sellerRating && parseFloat(selectedItem.seller.sellerRating) > 0 ? (
@@ -462,7 +689,7 @@ export default function Marketplace() {
                 </div>
               )}
 
-              {/* Price Breakdown */}
+              {/* Price Breakdown with Shipping */}
               <div className="space-y-2 p-4 border rounded-lg">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Card Price</span>
@@ -471,26 +698,65 @@ export default function Marketplace() {
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Shipping</span>
-                  <span className="text-gray-600">Calculated at checkout</span>
+                  <span className="text-gray-500 flex items-center gap-1">
+                    <Truck className="h-3 w-3" />
+                    Shipping
+                  </span>
+                  {isLoadingQuote ? (
+                    <span className="text-gray-500 flex items-center gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Calculating...
+                    </span>
+                  ) : shippingQuote ? (
+                    <span className="text-gray-900 font-medium">
+                      ${shippingQuote.shippingCost.toFixed(2)}
+                      <span className="text-xs text-gray-500 ml-1">
+                        ({shippingQuote.carrier} {shippingQuote.serviceLevel})
+                      </span>
+                    </span>
+                  ) : (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-red-600"
+                      onClick={() => {
+                        if (!shippingAddress) {
+                          setShowAddressModal(true);
+                          setShowPurchaseModal(false);
+                        } else {
+                          fetchShippingQuote(selectedItem.id);
+                        }
+                      }}
+                    >
+                      {shippingAddress ? "Get Quote" : "Add Address"}
+                    </Button>
+                  )}
                 </div>
+                {shippingQuote && shippingQuote.estimatedDays && (
+                  <p className="text-xs text-gray-500 text-right">
+                    Est. delivery: {shippingQuote.estimatedDays} business days
+                  </p>
+                )}
                 <div className="border-t pt-2 mt-2 flex justify-between">
-                  <span className="font-semibold text-gray-900">Subtotal</span>
+                  <span className="font-semibold text-gray-900">Total</span>
                   <span className="font-bold text-lg text-green-600">
-                    ${parseFloat(selectedItem.salePrice || "0").toFixed(2)}
+                    ${(parseFloat(selectedItem.salePrice || "0") + (shippingQuote?.shippingCost || 0)).toFixed(2)}
                   </span>
                 </div>
               </div>
 
-              {/* Checkout Button */}
+              {/* Checkout Button - requires shipping quote */}
               <Button
-                className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-semibold text-lg"
+                className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-semibold text-lg disabled:bg-gray-400"
                 onClick={() => {
-                  if (selectedItem) {
-                    createCheckoutMutation.mutate(selectedItem.id);
+                  if (selectedItem && shippingQuote) {
+                    createCheckoutMutation.mutate({ 
+                      collectionItemId: selectedItem.id, 
+                      shippingRateId: shippingQuote.rateId 
+                    });
                   }
                 }}
-                disabled={createCheckoutMutation.isPending}
+                disabled={createCheckoutMutation.isPending || !shippingQuote || isLoadingQuote}
                 data-testid="button-proceed-checkout"
               >
                 {createCheckoutMutation.isPending ? (

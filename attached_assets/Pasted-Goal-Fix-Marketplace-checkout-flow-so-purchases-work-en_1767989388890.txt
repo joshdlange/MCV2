@@ -1,0 +1,208 @@
+Goal: Fix Marketplace checkout flow so purchases work end-to-end, collect shipping address when missing, calculate shipping properly, and show seller username (not legal name) in UI.
+
+Context / Current Bugs
+
+Checkout fails with toast: “Shipping quote required. Please get a shipping quote first.”
+
+Likely because buyer has no shipping address saved, so shipping quote API cannot run.
+
+Shipping is not calculating (modal shows “Calculated at checkout” but doesn’t actually calculate).
+
+Seller shown as real name (“Sold by Joshua Lange”) — should show username as primary display, with optional real name smaller (or omit real name entirely if we want privacy).
+
+Required Fixes
+A) Address requirement + Address capture UX
+
+Problem: Buyer can initiate purchase without a shipping address.
+
+Solution:
+
+Add a “Shipping Address” requirement to checkout flow:
+
+When user clicks Buy Now or Proceed to Checkout:
+
+If buyer has no saved shipping address OR address is incomplete, show an Address modal (or full-screen step) before attempting shipping quote or Stripe checkout.
+
+Address modal fields:
+
+Full name (optional if already have)
+
+Line 1 (required)
+
+Line 2
+
+City (required)
+
+State (required)
+
+Zip (required)
+
+Country (default US)
+
+Phone (optional)
+
+Save behavior:
+
+On submit, persist to the user profile (e.g., users.shippingAddress or profiles.shippingAddress JSON).
+
+Also keep as “default shipping address” for future purchases/trades.
+
+After saving address:
+
+Automatically re-run shipping quote and update UI.
+
+Validation:
+
+Block progress if required fields missing.
+
+Show friendly inline errors (not toast only).
+
+Acceptance Criteria:
+
+If buyer has no address, they are prompted to add one.
+
+Address is saved to their account and reused next time.
+
+Checkout no longer fails due to missing address.
+
+B) Shipping quote calculation (fix “Shipping quote required”)
+
+Problem: System expects a shipping quote but isn’t generating one.
+
+Solution:
+
+Add a “Get Shipping Quote” function that runs automatically after address is known.
+
+It should call the backend shipping service endpoint (Shippo or your shipping provider) to calculate rates.
+
+Shipping quote inputs must include:
+
+To address: buyer shipping address
+
+From address: seller shipping address (or fallback default “platform warehouse address” if seller has none)
+
+Parcel: use a default parcel for cards (e.g., 6x4 padded mailer)
+
+Weight: 1–2 oz default, configurable
+
+If seller address missing:
+
+Decide a policy:
+
+Either require sellers to set a shipping address before listing
+
+OR use a platform default “from” address and treat labels later
+
+For now implement:
+
+If seller has no address -> show message “Seller shipping address missing” and block purchase OR fallback to platform address.
+
+Store the selected shipping rate:
+
+Persist shippingQuoteId, shippingAmount, and carrier/service to the pending checkout order.
+
+Stripe checkout:
+
+Total charge = item price + shipping.
+
+Shipping line item should appear clearly in the UI and in Stripe metadata.
+
+UI updates:
+
+In the Purchase modal:
+
+Replace “Calculated at checkout” with either:
+
+“Shipping: $X.XX (USPS Ground Advantage)” once quote returns
+
+Or “Enter shipping address to calculate” if address missing
+
+Disable “Proceed to Checkout” until shipping quote exists.
+
+Acceptance Criteria:
+
+After entering address, shipping rate is calculated and displayed.
+
+Proceed to Checkout works and creates Stripe checkout session successfully.
+
+No more “Shipping quote required” errors.
+
+C) Seller name display (username vs real name)
+
+Problem: UI shows legal name.
+
+Solution:
+
+Seller display should use:
+
+Primary: seller.username or seller.displayName (whatever exists)
+
+Secondary (optional, smaller): seller.fullName ONLY if we choose to expose it.
+
+Add a privacy-safe fallback order:
+
+seller.username → seller.displayName → “Seller”
+
+Update anywhere this appears:
+
+Marketplace listing card
+
+Purchase modal “Sold by …”
+
+Order receipt / transaction record UI
+
+Acceptance Criteria:
+
+Purchase modal shows username as primary.
+
+No legal name is shown unless explicitly intended and styled as secondary.
+
+Implementation Notes (tell Replit to follow)
+
+Identify where the Purchase modal is built (likely a Marketplace component like PurchaseModal.tsx or similar).
+
+Identify how checkout is created:
+
+There is likely a backend route like /api/checkout/create or /api/stripe/checkout-session
+
+Add/modify backend routes:
+
+/api/shipping/quote (or similar)
+
+Must return list of rates + best default rate
+
+DB / user model updates:
+
+Add shippingAddress to user profile table (JSON column ideal)
+
+Ensure it’s fetched with user session so UI can prefill
+
+Update listing requirements:
+
+If needed, enforce seller shipping address exists before allowing listing creation
+
+QA Checklist
+
+Buyer without address:
+
+Click Buy Now → prompted for address → saved → shipping calculated → checkout works
+
+Buyer with address:
+
+Click Buy Now → shipping calculated automatically → checkout works
+
+Seller without address (depending on policy):
+
+Confirm correct fallback/block behavior
+
+Seller name display:
+
+Shows username everywhere, not legal name
+
+“Do NOT break existing flows”
+
+Keep current marketplace UI styling
+
+Keep Stripe integration intact
+
+No breaking schema migrations without safe defaults
