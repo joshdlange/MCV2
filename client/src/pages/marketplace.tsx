@@ -53,6 +53,7 @@ export default function Marketplace() {
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress | null>(null);
   const [shippingQuote, setShippingQuote] = useState<ShippingQuote | null>(null);
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
+  const [shippingQuoteError, setShippingQuoteError] = useState<string | null>(null);
   const [addressForm, setAddressForm] = useState<ShippingAddress>({
     name: '',
     street1: '',
@@ -93,6 +94,7 @@ export default function Marketplace() {
   const fetchShippingQuote = async (collectionItemId: number) => {
     setIsLoadingQuote(true);
     setShippingQuote(null);
+    setShippingQuoteError(null);
     try {
       const response = await apiRequest('POST', '/api/marketplace/shipping/quick-quote', { collectionItemId });
       const data = await response.json();
@@ -107,9 +109,11 @@ export default function Marketplace() {
           if (parsed.needsAddress) {
             setShowAddressModal(true);
             setShowPurchaseModal(false);
+            return;
           }
         }
       } catch {}
+      setShippingQuoteError(errorMsg);
       toast({ title: "Shipping Error", description: errorMsg, variant: "destructive" });
     } finally {
       setIsLoadingQuote(false);
@@ -128,6 +132,7 @@ export default function Marketplace() {
     
     setSelectedItem(item);
     setShippingQuote(null);
+    setShippingQuoteError(null);
     
     if (!shippingAddress && !savedAddress?.shippingAddress) {
       setShowAddressModal(true);
@@ -727,22 +732,20 @@ export default function Marketplace() {
                         ({shippingQuote.carrier} {shippingQuote.serviceLevel})
                       </span>
                     </span>
+                  ) : shippingQuoteError ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-red-600 text-xs">{shippingQuoteError}</span>
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="h-auto p-0 text-xs text-red-600 underline"
+                        onClick={() => fetchShippingQuote(selectedItem.id)}
+                      >
+                        Retry
+                      </Button>
+                    </div>
                   ) : (
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="h-auto p-0 text-red-600"
-                      onClick={() => {
-                        if (!shippingAddress) {
-                          setShowAddressModal(true);
-                          setShowPurchaseModal(false);
-                        } else {
-                          fetchShippingQuote(selectedItem.id);
-                        }
-                      }}
-                    >
-                      {shippingAddress ? "Get Quote" : "Add Address"}
-                    </Button>
+                    <span className="text-gray-400 text-xs">Awaiting calculation...</span>
                   )}
                 </div>
                 {shippingQuote && shippingQuote.estimatedDays && (
