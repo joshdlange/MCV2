@@ -265,3 +265,15 @@ export async function onWeeklyDigest(user: User, sets: NewSet[]): Promise<void> 
     console.error('Failed to send weekly digest email:', error);
   }
 }
+
+/**
+ * Trigger: Google Play Store Launch Announcement
+ */
+export async function onGooglePlayLaunch(user: User): Promise<void> {
+  try {
+    const html = templates.googlePlayLaunchTemplate({ displayName: user.displayName });
+    await sendEmail(user.email, 'MCV now available on Google Play', html, 'google-play-launch');
+  } catch (error) {
+    console.error('Failed to send Google Play launch email:', error);
+  }
+}

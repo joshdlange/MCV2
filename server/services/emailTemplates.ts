@@ -470,3 +470,36 @@ export function weeklyDigestTemplate(
   `;
   return baseTemplate({ title: 'Monthly Update', bodyHtml });
 }
+
+/**
+ * 16. Google Play Store Launch Announcement
+ */
+export function googlePlayLaunchTemplate(user: { displayName: string }): string {
+  const bodyHtml = `
+    <h1 style="margin: 0 0 20px; font-size: 28px; font-weight: 700; color: ${TEXT_PRIMARY}; text-align: center;">
+      Marvel Card Vault is Now on Google Play!
+    </h1>
+    <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
+      Hey ${user.displayName},
+    </p>
+    <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
+      We're thrilled to announce that <strong style="color: ${TEXT_PRIMARY};">Marvel Card Vault is officially available on the Google Play Store!</strong> Now you can manage your Marvel trading card collection on the go with our brand new Android app.
+    </p>
+    <div style="background-color: ${DARK_BG}; padding: 25px; border-radius: 8px; text-align: center; margin: 25px 0; border: 2px solid ${BRAND_RED};">
+      <p style="margin: 0 0 10px; font-size: 14px; color: ${TEXT_SECONDARY}; text-transform: uppercase; letter-spacing: 1px;">Beta User Exclusive</p>
+      <p style="margin: 0 0 5px; font-size: 24px; font-weight: 700; color: ${TEXT_PRIMARY};">3 Months Free</p>
+      <p style="margin: 0 0 15px; font-size: 16px; color: ${TEXT_SECONDARY};">Use promo code:</p>
+      <div style="background-color: ${CARD_BG}; display: inline-block; padding: 12px 30px; border-radius: 6px; border: 1px dashed ${BRAND_RED};">
+        <span style="font-size: 28px; font-weight: 700; color: ${BRAND_RED}; letter-spacing: 3px;">WNFREE3</span>
+      </div>
+    </div>
+    <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
+      As one of our early supporters, you get exclusive access to this promo code. Download the app and enter <strong style="color: ${TEXT_PRIMARY};">WNFREE3</strong> to unlock 3 months of premium features absolutely free!
+    </p>
+    ${ctaButton('Download on Google Play', 'https://play.google.com/store/apps/details?id=com.marvelcardvault.app&utm_source=na_Med')}
+    <p style="margin: 20px 0 0; font-size: 14px; text-align: center; color: ${TEXT_SECONDARY};">
+      Thank you for being part of the Marvel Card Vault community!
+    </p>
+  `;
+  return baseTemplate({ title: 'MCV now available on Google Play', bodyHtml });
+}

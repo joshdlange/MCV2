@@ -194,6 +194,62 @@ export const monthlyDigestJob = new CronJob(
 );
 
 /**
+ * Google Play Store Launch Email Campaign
+ * One-time job: January 10, 2026 at 10:00 AM Central Time
+ * Sends to ALL users announcing the Android app launch with promo code WNFREE3
+ */
+export const googlePlayLaunchJob = new CronJob(
+  '0 10 10 1 *', // 10:00 AM on January 10
+  async () => {
+    console.log('🚀 Running Google Play Store launch email campaign...');
+    
+    try {
+      // Get ALL users (this is a major announcement)
+      const allUsers = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          displayName: users.displayName,
+        })
+        .from(users)
+        .where(eq(users.emailUpdates, true)); // Only users who opted in to emails
+      
+      console.log(`📧 Sending Google Play launch announcement to ${allUsers.length} users`);
+      
+      let successCount = 0;
+      let errorCount = 0;
+      
+      for (const user of allUsers) {
+        try {
+          await emailTriggers.onGooglePlayLaunch({
+            email: user.email,
+            displayName: user.displayName || 'Collector',
+          });
+          successCount++;
+          
+          // Small delay to avoid overwhelming the email service
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+          console.error(`Failed to send to ${user.email}:`, error);
+          errorCount++;
+        }
+      }
+      
+      console.log(`✅ Google Play launch campaign completed: ${successCount} sent, ${errorCount} failed`);
+      
+      // Stop the job after it runs once (one-time campaign)
+      googlePlayLaunchJob.stop();
+      console.log('🛑 Google Play launch job stopped (one-time campaign complete)');
+    } catch (error) {
+      console.error('❌ Error in Google Play launch campaign:', error);
+    }
+  },
+  null,
+  false,
+  'America/Chicago' // Central Time
+);
+
+/**
  * Initialize and start all cron jobs
  * Can be disabled via EMAIL_CRON_ENABLED environment variable
  */
@@ -206,9 +262,11 @@ export function startEmailCronJobs() {
   console.log('📅 Starting email cron jobs...');
   monthlyNudgesJob.start();
   monthlyDigestJob.start();
+  googlePlayLaunchJob.start();
   console.log('✅ Email cron jobs started:');
   console.log('  - Monthly nudges: 9:00 AM on the 1st of each month');
   console.log('  - Monthly digest: 9:00 AM on the 1st of each month');
+  console.log('  - Google Play Launch: 10:00 AM Central on Jan 10, 2026 (one-time)');
 }
 
 /**
@@ -218,6 +276,7 @@ export function stopEmailCronJobs() {
   console.log('⏹️  Stopping email cron jobs...');
   monthlyNudgesJob.stop();
   monthlyDigestJob.stop();
+  googlePlayLaunchJob.stop();
 }
 
 /**
@@ -238,6 +297,12 @@ export function getEmailCronStatus() {
         schedule: '0 9 1 * *',
         running: monthlyDigestJob.running || false,
         description: 'Sends monthly digest of new sets and activity'
+      },
+      {
+        name: 'googlePlayLaunchJob',
+        schedule: '0 10 10 1 *',
+        running: googlePlayLaunchJob.running || false,
+        description: 'Google Play launch announcement - Jan 10, 2026 10 AM Central (one-time)'
       }
     ]
   };
