@@ -877,6 +877,9 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
         });
       }
       
+      // Store buyer shipping address for order
+      const buyerShippingAddress = buyer.shippingAddressJson;
+      
       // Require and verify shipping rate ID - no client-provided costs allowed
       if (!shippingRateId) {
         return res.status(400).json({ 
@@ -1064,6 +1067,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
         stripeFee: fees.stripeFee.toFixed(2),
         total: fees.total.toFixed(2),
         sellerNet: fees.sellerNet.toFixed(2),
+        shippingAddress: buyerShippingAddress,
         stripeCheckoutSessionId: session.id,
         status: 'payment_pending',
         paymentStatus: 'pending',
