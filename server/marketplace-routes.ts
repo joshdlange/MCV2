@@ -11,7 +11,8 @@ import { nanoid } from "nanoid";
 import Stripe from "stripe";
 import { shippoService, PARCEL_PRESETS } from "./shippo-service";
 
-const PLATFORM_FEE_PERCENT = 0.06; // 6%
+const PLATFORM_FEE_PERCENT = 0.05; // 5%
+const SHIPPING_MARKUP_PERCENT = 0.05; // 5% markup on shipping for platform profit
 const STRIPE_FEE_PERCENT = 0.029; // 2.9%
 const STRIPE_FEE_FIXED = 0.30; // $0.30
 
@@ -29,13 +30,20 @@ if (stripeSecretKey) {
 
 // Helper to calculate fees
 // Flow: Buyer pays total -> Stripe takes fee from gross -> Platform receives net -> Platform pays seller
-// Platform takes 6% of item price only (not shipping) as revenue
+// Platform takes 5% of item price as revenue + 5% markup on shipping
 // Stripe takes 2.9% + $0.30 from the gross payment
 function calculateFees(itemPrice: number, shippingCost: number) {
-  const total = itemPrice + shippingCost;
+  // Shipping markup for platform profit (5% on top of actual shipping cost)
+  const shippingMarkup = parseFloat((shippingCost * SHIPPING_MARKUP_PERCENT).toFixed(2));
+  const buyerShippingCost = parseFloat((shippingCost + shippingMarkup).toFixed(2));
+  
+  const total = itemPrice + buyerShippingCost;
   
   // Platform fee applies ONLY to item price (not shipping)
   const platformFee = parseFloat((itemPrice * PLATFORM_FEE_PERCENT).toFixed(2));
+  
+  // Total platform revenue = item platform fee + shipping markup
+  const platformRevenue = parseFloat((platformFee + shippingMarkup).toFixed(2));
   
   // Stripe fee applies to total payment
   const stripeFee = parseFloat((total * STRIPE_FEE_PERCENT + STRIPE_FEE_FIXED).toFixed(2));
@@ -45,11 +53,11 @@ function calculateFees(itemPrice: number, shippingCost: number) {
   
   // Calculate Stripe fee breakdown for transparency
   const itemStripeFee = parseFloat((itemPrice * STRIPE_FEE_PERCENT).toFixed(2));
-  const shippingStripeFee = parseFloat((shippingCost * STRIPE_FEE_PERCENT + STRIPE_FEE_FIXED).toFixed(2));
+  const shippingStripeFee = parseFloat((buyerShippingCost * STRIPE_FEE_PERCENT + STRIPE_FEE_FIXED).toFixed(2));
   
   // Seller receives:
   // - Item price minus platform fee minus Stripe fee on item
-  // - Shipping cost minus Stripe fee on shipping
+  // - Original shipping cost minus Stripe fee on shipping (not the marked-up amount)
   // This ensures seller gets full shipping reimbursement minus only processing
   const sellerFromItem = parseFloat((itemPrice - platformFee - itemStripeFee).toFixed(2));
   const sellerFromShipping = parseFloat((shippingCost - shippingStripeFee).toFixed(2));
@@ -61,11 +69,14 @@ function calculateFees(itemPrice: number, shippingCost: number) {
     platformReceives, 
     total, 
     sellerNet,
+    shippingMarkup,
+    buyerShippingCost,
     breakdown: {
       itemStripeFee,
       shippingStripeFee,
       sellerFromItem,
       sellerFromShipping,
+      platformRevenue,
     }
   };
 }
@@ -694,7 +705,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
             product_data: {
               name: 'Shipping',
             },
-            unit_amount: Math.round(shippingCost * 100),
+            unit_amount: Math.round(fees.buyerShippingCost * 100),
           },
           quantity: 1,
         }],
@@ -709,7 +720,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
           offerId: offerId?.toString() || '',
           quantity: quantity.toString(),
           itemPrice: itemPrice.toString(),
-          shippingCost: shippingCost.toString(),
+          shippingCost: fees.buyerShippingCost.toString(),
           shippingAddress: JSON.stringify(shippingAddress),
         },
       });
@@ -725,7 +736,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
         sellerId: listingData.sellerId,
         quantity,
         itemPrice: itemPrice.toString(),
-        shippingCost: shippingCost.toString(),
+        shippingCost: fees.buyerShippingCost.toString(),
         platformFee: fees.platformFee.toString(),
         stripeFee: fees.stripeFee.toString(),
         total: fees.total.toString(),
@@ -829,8 +840,12 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
         parseFloat(rate.amount) < parseFloat(min.amount) ? rate : min
       );
       
+      // Add 5% shipping markup for platform profit
+      const baseShippingCost = parseFloat(cheapestRate.amount);
+      const buyerShippingCost = parseFloat((baseShippingCost * (1 + SHIPPING_MARKUP_PERCENT)).toFixed(2));
+      
       res.json({
-        shippingCost: parseFloat(cheapestRate.amount),
+        shippingCost: buyerShippingCost,
         rateId: cheapestRate.object_id,
         shipmentId,
         carrier: cheapestRate.provider,
@@ -1032,7 +1047,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
             product_data: {
               name: 'Shipping (Standard)',
             },
-            unit_amount: Math.round(shippingCost * 100),
+            unit_amount: Math.round(fees.buyerShippingCost * 100),
           },
           quantity: 1,
         }],
@@ -1047,7 +1062,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
           buyerId: req.user.id.toString(),
           sellerId: collectionItem.userId.toString(),
           itemPrice: itemPrice.toString(),
-          shippingCost: shippingCost.toString(),
+          shippingCost: fees.buyerShippingCost.toString(),
           shippingRateId: shippingRateId || '',
         },
       });
@@ -1062,7 +1077,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
         sellerId: collectionItem.userId,
         quantity: 1,
         itemPrice: itemPrice.toFixed(2),
-        shippingCost: shippingCost.toFixed(2),
+        shippingCost: fees.buyerShippingCost.toFixed(2),
         platformFee: fees.platformFee.toFixed(2),
         stripeFee: fees.stripeFee.toFixed(2),
         total: fees.total.toFixed(2),
