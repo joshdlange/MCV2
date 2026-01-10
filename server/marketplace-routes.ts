@@ -2,8 +2,8 @@ import type { Express } from "express";
 import express from "express";
 import { db } from "./db";
 import { 
-  listings, offers, orders, shipments, reviews, reports, blocks,
-  users, userCollections, cards, cardSets,
+  listings, offers, orders, shipments, reviews, reports, blocks, notifications,
+  users, userCollections, cards, cardSets, payoutAccounts, payoutRequests,
   insertListingSchema, insertOfferSchema, insertReviewSchema, insertReportSchema, insertBlockSchema
 } from "../shared/schema";
 import { eq, and, or, desc, asc, sql, ne, isNull, inArray } from "drizzle-orm";
@@ -1783,6 +1783,451 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
     }
   });
   
+  // ============================================
+  // PAYOUT SYSTEM ENDPOINTS
+  // ============================================
+  
+  // Get seller earnings summary
+  app.get("/api/marketplace/earnings", authenticateUser, async (req: any, res) => {
+    try {
+      // Get all paid orders for this seller
+      const sellerOrders = await db.select()
+        .from(orders)
+        .where(and(
+          eq(orders.sellerId, req.user.id),
+          eq(orders.paymentStatus, 'succeeded')
+        ))
+        .orderBy(desc(orders.createdAt));
+      
+      // Calculate totals with proper categorization
+      let availableToWithdraw = 0;
+      let pendingDelivery = 0;
+      let pendingPayout = 0; // Funds in a pending payout request
+      let paidOut = 0;
+      let totalEarnings = 0;
+      
+      const orderBreakdowns = sellerOrders.map(order => {
+        const sellerNet = parseFloat(order.sellerNet);
+        const shippingLabelCost = parseFloat(order.shippingLabelCost || '0');
+        const netAfterLabel = sellerNet - shippingLabelCost;
+        
+        // Only count positive net (in case label cost exceeds seller net somehow)
+        const effectiveNet = Math.max(0, netAfterLabel);
+        totalEarnings += effectiveNet;
+        
+        // Determine status and eligibility
+        const isDelivered = order.status === 'delivered' || order.status === 'complete';
+        const isPayoutRequested = order.payoutStatus === 'requested';
+        const isPaid = order.payoutStatus === 'paid';
+        const isPayoutEligible = isDelivered && !isPaid && !isPayoutRequested;
+        
+        if (isPaid) {
+          paidOut += effectiveNet;
+        } else if (isPayoutRequested) {
+          pendingPayout += effectiveNet; // Already in a payout request
+        } else if (isDelivered) {
+          availableToWithdraw += effectiveNet;
+        } else {
+          pendingDelivery += effectiveNet;
+        }
+        
+        return {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          itemPrice: order.itemPrice,
+          shippingCost: order.shippingCost,
+          platformFee: order.platformFee,
+          stripeFee: order.stripeFee,
+          shippingLabelCost: order.shippingLabelCost || '0',
+          sellerNet: order.sellerNet,
+          netAfterLabel: effectiveNet.toFixed(2),
+          status: order.status,
+          payoutStatus: order.payoutStatus,
+          isPayoutEligible,
+          createdAt: order.createdAt,
+          deliveredAt: order.deliveredAt,
+        };
+      });
+      
+      res.json({
+        summary: {
+          availableToWithdraw: Math.max(0, availableToWithdraw).toFixed(2),
+          pendingDelivery: pendingDelivery.toFixed(2),
+          pendingPayout: pendingPayout.toFixed(2),
+          paidOut: paidOut.toFixed(2),
+          totalEarnings: totalEarnings.toFixed(2),
+        },
+        orders: orderBreakdowns,
+      });
+    } catch (error) {
+      console.error('Get earnings error:', error);
+      res.status(500).json({ message: "Failed to get earnings" });
+    }
+  });
+  
+  // Get or create payout account
+  app.get("/api/marketplace/payout-account", authenticateUser, async (req: any, res) => {
+    try {
+      const account = await db.select()
+        .from(payoutAccounts)
+        .where(eq(payoutAccounts.userId, req.user.id))
+        .limit(1);
+      
+      res.json(account[0] || null);
+    } catch (error) {
+      console.error('Get payout account error:', error);
+      res.status(500).json({ message: "Failed to get payout account" });
+    }
+  });
+  
+  // Save payout account
+  app.post("/api/marketplace/payout-account", authenticateUser, async (req: any, res) => {
+    try {
+      const { paypalEmail, venmoHandle, preferredMethod } = req.body;
+      
+      if (!paypalEmail && !venmoHandle) {
+        return res.status(400).json({ message: "Please provide PayPal email or Venmo handle" });
+      }
+      
+      // Check if account exists
+      const existing = await db.select()
+        .from(payoutAccounts)
+        .where(eq(payoutAccounts.userId, req.user.id))
+        .limit(1);
+      
+      if (existing.length) {
+        // Update existing
+        await db.update(payoutAccounts).set({
+          paypalEmail,
+          venmoHandle,
+          preferredMethod: preferredMethod || (paypalEmail ? 'paypal' : 'venmo'),
+          updatedAt: new Date(),
+        }).where(eq(payoutAccounts.userId, req.user.id));
+      } else {
+        // Create new
+        await db.insert(payoutAccounts).values({
+          userId: req.user.id,
+          paypalEmail,
+          venmoHandle,
+          preferredMethod: preferredMethod || (paypalEmail ? 'paypal' : 'venmo'),
+        });
+      }
+      
+      const account = await db.select()
+        .from(payoutAccounts)
+        .where(eq(payoutAccounts.userId, req.user.id))
+        .limit(1);
+      
+      res.json(account[0]);
+    } catch (error) {
+      console.error('Save payout account error:', error);
+      res.status(500).json({ message: "Failed to save payout account" });
+    }
+  });
+  
+  // Get payout requests for seller
+  app.get("/api/marketplace/payout-requests", authenticateUser, async (req: any, res) => {
+    try {
+      const requests = await db.select()
+        .from(payoutRequests)
+        .where(eq(payoutRequests.sellerId, req.user.id))
+        .orderBy(desc(payoutRequests.createdAt));
+      
+      res.json(requests);
+    } catch (error) {
+      console.error('Get payout requests error:', error);
+      res.status(500).json({ message: "Failed to get payout requests" });
+    }
+  });
+  
+  // Create payout request
+  app.post("/api/marketplace/payout-requests", authenticateUser, async (req: any, res) => {
+    try {
+      const { amount, method, orderIds } = req.body;
+      
+      if (!amount || amount <= 0) {
+        return res.status(400).json({ message: "Invalid payout amount" });
+      }
+      
+      // Check for existing pending payout request from this seller
+      const pendingRequest = await db.select()
+        .from(payoutRequests)
+        .where(and(
+          eq(payoutRequests.sellerId, req.user.id),
+          or(
+            eq(payoutRequests.status, 'requested'),
+            eq(payoutRequests.status, 'approved')
+          )
+        ))
+        .limit(1);
+      
+      if (pendingRequest.length) {
+        return res.status(400).json({ 
+          message: "You already have a pending payout request. Please wait for it to be processed." 
+        });
+      }
+      
+      // Get payout account
+      const account = await db.select()
+        .from(payoutAccounts)
+        .where(eq(payoutAccounts.userId, req.user.id))
+        .limit(1);
+      
+      if (!account.length) {
+        return res.status(400).json({ message: "Please set up your payout account first" });
+      }
+      
+      const payoutMethod = method || account[0].preferredMethod;
+      const destination = payoutMethod === 'paypal' 
+        ? account[0].paypalEmail 
+        : account[0].venmoHandle;
+      
+      if (!destination) {
+        return res.status(400).json({ message: `No ${payoutMethod} account configured` });
+      }
+      
+      // Verify the requested amount is available
+      const eligibleOrders = await db.select()
+        .from(orders)
+        .where(and(
+          eq(orders.sellerId, req.user.id),
+          eq(orders.paymentStatus, 'succeeded'),
+          or(eq(orders.status, 'delivered'), eq(orders.status, 'complete')),
+          ne(orders.payoutStatus, 'paid'),
+          ne(orders.payoutStatus, 'requested')
+        ));
+      
+      let availableAmount = 0;
+      const eligibleOrderBreakdown: any[] = [];
+      
+      for (const order of eligibleOrders) {
+        const sellerNet = parseFloat(order.sellerNet);
+        const labelCost = parseFloat(order.shippingLabelCost || '0');
+        const netAfterLabel = sellerNet - labelCost;
+        availableAmount += netAfterLabel;
+        eligibleOrderBreakdown.push({
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          amount: netAfterLabel,
+        });
+      }
+      
+      if (parseFloat(amount) > availableAmount) {
+        return res.status(400).json({ 
+          message: `Requested amount exceeds available balance ($${availableAmount.toFixed(2)})` 
+        });
+      }
+      
+      // Create payout request
+      const [request] = await db.insert(payoutRequests).values({
+        sellerId: req.user.id,
+        amount: amount.toString(),
+        method: payoutMethod,
+        destination,
+        status: 'requested',
+        breakdownJson: JSON.stringify(eligibleOrderBreakdown),
+      }).returning();
+      
+      // Mark selected orders as requested
+      if (orderIds && orderIds.length > 0) {
+        await db.update(orders).set({
+          payoutStatus: 'requested',
+          payoutRequestId: request.id,
+          updatedAt: new Date(),
+        }).where(inArray(orders.id, orderIds));
+      } else {
+        // Mark all eligible orders up to the requested amount
+        let remaining = parseFloat(amount);
+        for (const order of eligibleOrders) {
+          if (remaining <= 0) break;
+          const netAfterLabel = parseFloat(order.sellerNet) - parseFloat(order.shippingLabelCost || '0');
+          if (netAfterLabel <= remaining) {
+            await db.update(orders).set({
+              payoutStatus: 'requested',
+              payoutRequestId: request.id,
+              updatedAt: new Date(),
+            }).where(eq(orders.id, order.id));
+            remaining -= netAfterLabel;
+          }
+        }
+      }
+      
+      res.json(request);
+    } catch (error) {
+      console.error('Create payout request error:', error);
+      res.status(500).json({ message: "Failed to create payout request" });
+    }
+  });
+  
+  // Admin: Get all payout requests
+  app.get("/api/admin/payout-requests", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const status = req.query.status as string;
+      let query = db.select({
+        request: payoutRequests,
+        seller: {
+          id: users.id,
+          username: users.username,
+          email: users.email,
+        },
+      })
+        .from(payoutRequests)
+        .innerJoin(users, eq(payoutRequests.sellerId, users.id))
+        .orderBy(desc(payoutRequests.createdAt));
+      
+      if (status) {
+        query = query.where(eq(payoutRequests.status, status)) as any;
+      }
+      
+      const requests = await query;
+      res.json(requests);
+    } catch (error) {
+      console.error('Get admin payout requests error:', error);
+      res.status(500).json({ message: "Failed to get payout requests" });
+    }
+  });
+  
+  // Admin: Update payout request status
+  app.patch("/api/admin/payout-requests/:id", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const requestId = parseInt(req.params.id);
+      const { status, adminNotes } = req.body;
+      
+      if (!['approved', 'paid', 'rejected', 'on_hold'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      const [request] = await db.select()
+        .from(payoutRequests)
+        .where(eq(payoutRequests.id, requestId))
+        .limit(1);
+      
+      if (!request) {
+        return res.status(404).json({ message: "Payout request not found" });
+      }
+      
+      // Update the request
+      await db.update(payoutRequests).set({
+        status,
+        adminNotes,
+        processedBy: req.user.id,
+        processedAt: new Date(),
+        updatedAt: new Date(),
+      }).where(eq(payoutRequests.id, requestId));
+      
+      // If marked as paid, update all associated orders
+      if (status === 'paid') {
+        await db.update(orders).set({
+          payoutStatus: 'paid',
+          updatedAt: new Date(),
+        }).where(eq(orders.payoutRequestId, requestId));
+      } else if (status === 'rejected') {
+        // Release orders back to eligible
+        await db.update(orders).set({
+          payoutStatus: 'eligible',
+          payoutRequestId: null,
+          updatedAt: new Date(),
+        }).where(eq(orders.payoutRequestId, requestId));
+      }
+      
+      res.json({ message: "Payout request updated" });
+    } catch (error) {
+      console.error('Update payout request error:', error);
+      res.status(500).json({ message: "Failed to update payout request" });
+    }
+  });
+  
+  // Get seller's unread notifications count (for badge)
+  app.get("/api/marketplace/notifications/unread-count", authenticateUser, async (req: any, res) => {
+    try {
+      const result = await db.select({ count: sql<number>`count(*)::int` })
+        .from(notifications)
+        .where(and(
+          eq(notifications.userId, req.user.id),
+          eq(notifications.type, 'sale_made'),
+          eq(notifications.isRead, false)
+        ));
+      
+      res.json({ count: result[0]?.count || 0 });
+    } catch (error) {
+      console.error('Get unread count error:', error);
+      res.status(500).json({ message: "Failed to get notification count" });
+    }
+  });
+  
+  // Mark sale notifications as read
+  app.post("/api/marketplace/notifications/mark-read", authenticateUser, async (req: any, res) => {
+    try {
+      await db.update(notifications).set({
+        isRead: true,
+      }).where(and(
+        eq(notifications.userId, req.user.id),
+        eq(notifications.type, 'sale_made')
+      ));
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Mark notifications read error:', error);
+      res.status(500).json({ message: "Failed to mark notifications as read" });
+    }
+  });
+  
+  // Buyer: Confirm delivery (fallback when tracking stalls)
+  app.post("/api/marketplace/orders/:id/confirm-delivery", authenticateUser, async (req: any, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      
+      const [order] = await db.select()
+        .from(orders)
+        .where(eq(orders.id, orderId))
+        .limit(1);
+      
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      if (order.buyerId !== req.user.id) {
+        return res.status(403).json({ message: "Only the buyer can confirm delivery" });
+      }
+      
+      if (order.status === 'delivered' || order.status === 'complete') {
+        return res.status(400).json({ message: "Order already delivered" });
+      }
+      
+      if (!['shipped', 'in_transit', 'label_created'].includes(order.status)) {
+        return res.status(400).json({ message: "Order not yet shipped" });
+      }
+      
+      // Update order to delivered
+      await db.update(orders).set({
+        status: 'delivered',
+        deliveredAt: new Date(),
+        deliveredSource: 'buyer_confirmed',
+        payoutStatus: 'eligible',
+        updatedAt: new Date(),
+      }).where(eq(orders.id, orderId));
+      
+      // Update shipment status if exists
+      await db.update(shipments).set({
+        status: 'delivered',
+        updatedAt: new Date(),
+      }).where(eq(shipments.orderId, orderId));
+      
+      res.json({ message: "Delivery confirmed. Thank you!" });
+    } catch (error) {
+      console.error('Confirm delivery error:', error);
+      res.status(500).json({ message: "Failed to confirm delivery" });
+    }
+  });
+  
   // Shippo webhook (no auth - uses URL token verification)
   app.post("/api/shippo-webhook", express.json(), async (req, res) => {
     try {
@@ -1870,6 +2315,25 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
             isForSale: false,
           }).where(eq(userCollections.id, listing[0].userCollectionId));
         }
+      }
+      
+      // Create notification for seller
+      try {
+        await db.insert(notifications).values({
+          userId: order[0].sellerId,
+          type: 'sale_made',
+          title: 'You made a sale!',
+          message: `Order #${order[0].orderNumber} is ready to ship.`,
+          data: JSON.stringify({
+            orderId: order[0].id,
+            orderNumber: order[0].orderNumber,
+            total: order[0].total,
+          }),
+          isRead: false,
+        });
+        console.log(`Created sale notification for seller ${order[0].sellerId}, order ${order[0].orderNumber}`);
+      } catch (notifError) {
+        console.error('Failed to create sale notification:', notifError);
       }
       
       res.json({ message: "Order confirmed", orderId: order[0].id });

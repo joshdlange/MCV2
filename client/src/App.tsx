@@ -23,6 +23,7 @@ import Social from "@/pages/Social";
 import FriendProfile from "@/pages/FriendProfile";
 import AdminCardManagement from "@/pages/admin/card-management";
 import AdminUsers from "@/pages/admin/users";
+import AdminPayouts from "@/pages/admin/payouts";
 import AdminMainSets from "@/pages/admin/main-sets";
 import AdminUnassignedSets from "@/pages/admin/unassigned-sets";
 import AdminDashboard from "@/pages/admin/dashboard";
@@ -147,6 +148,7 @@ function Router() {
       <Route path="/admin/automation" component={AdminAutomation} />
       <Route path="/admin/cards" component={AdminCardManagement} />
       <Route path="/admin/users" component={AdminUsers} />
+      <Route path="/admin/payouts" component={AdminPayouts} />
       <Route path="/admin/main-sets" component={AdminMainSets} />
       <Route path="/admin/unassigned-sets" component={AdminUnassignedSets} />
       <Route path="/admin/upcoming-sets" component={AdminUpcomingSets} />

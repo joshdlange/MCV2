@@ -1,0 +1,109 @@
+You are working in the Marvel Card Vault codebase (web + API). We are LIVE in Google Play Open Testing and we must fix Marketplace buying + shipping + seller payout workflow ASAP.
+
+DO NOT refactor unrelated code. DO NOT change UI styling globally. Implement only what’s required below with minimal, safe changes. Provide a checklist of what you changed and where.
+
+GOALS (must all be completed)
+1) Fix buyer checkout failure: “Shipping quote required. Please get a shipping quote first.”
+2) Ensure buyer address is captured with an obvious CTA and is required before checkout.
+3) Ensure seller identity shown in purchase modal uses username (not real name) as primary display.
+4) Ensure shipping label + tracking flow is tested end-to-end and the UI makes it obvious where labels are downloaded.
+5) Implement seller payout tracking + payout request flow (manual payout via PayPal/Venmo) with statuses and a clear earnings breakdown.
+6) Add seller notification/visibility when a sale is made (in-app notification + Activity badge at minimum; email optional if already supported).
+
+CONSTRAINTS / PREFERENCES
+- Payments: Stripe collects funds (existing). Shipping: Shippo rates/labels (existing).
+- No Stripe Connect onboarding for sellers.
+- Payouts are MANUAL: sellers request payout in-app. Admin fulfills manually via Venmo or PayPal.
+- Payout eligibility: only after “Delivered”. BUT Shippo tracking can stall; build fallback:
+  A) If tracking doesn’t update for N days, allow buyer confirmation “Received?”.
+  B) If buyer confirms received, mark delivered.
+  C) If buyer does not respond, allow payout after X days from “Shipped”.
+- Marketplace fee: Marvel Card Vault takes 5% of ITEM PRICE (not shipping). Stripe fees deducted too. Shipping label cost should be reflected in breakdown.
+- Payout request can be any amount at any time once eligible; show 5–7 day expectations.
+- Seller name display: Username is primary. Real name can remain in shipping label; OK.
+
+STEP-BY-STEP IMPLEMENTATION REQUIREMENTS
+
+A) BUYER ADDRESS REQUIREMENT (checkout blocking)
+1. Identify where the purchase flow fails (likely marketplace purchase modal / checkout session creation).
+2. Add logic: if buyer profile has no shipping address, block checkout and show modal:
+   - “Add shipping address to continue”
+   - fields: name, address1, address2, city, state, zip, country, phone
+   - Save to buyer profile (persist for future purchases/trades)
+3. After saving, automatically retry shipping quote + proceed.
+
+B) SHIPPING QUOTE + CHECKOUT FLOW
+1. Confirm shipping rates endpoint: POST /api/marketplace/orders/:id/shipping/rates
+2. Ensure a shipping quote is fetched automatically after buyer has address + before Stripe checkout session is created.
+3. If shipping is charged to buyer, ensure the selected rate is attached to the order and used in Stripe line items / total.
+4. If a rate call fails, show actionable errors (not generic) and log server-side with orderId.
+
+C) SELLER SHIPPING LABEL FLOW (existing, but needs validation)
+1. Confirm label purchase endpoint: POST /api/marketplace/orders/:id/shipping/purchase
+2. Ensure shipments table stores labelUrl + trackingNumber + carrier + service + cost.
+3. In Activity → Sales tab, “Ship” button opens ShipModal:
+   - select package/preset
+   - select rate
+   - purchase label
+   - show “Download Label” button using labelUrl
+4. Add a second CTA: “Copy tracking number”
+5. Add server logs and UI states so seller knows the label was purchased successfully.
+
+D) SELLER SALE NOTIFICATION (missing)
+Implement minimal in-app notification:
+1. When Stripe webhook marks order as “paid”, create a notification record for seller:
+   - “You made a sale! Order #____ is ready to ship.”
+2. Add a badge counter in sidebar or Activity tab.
+3. Mark as read when seller visits Activity → Sales tab.
+(Email optional only if system already supports sending email reliably.)
+
+E) PAYOUT SYSTEM (manual, with statuses + request flow)
+Add payout tables and UI:
+1. Add/extend database schema:
+   - payout_accounts (userId, paypalEmail, venmoHandle, createdAt, updatedAt)
+   - payout_requests (id, sellerId, amount, method, destination, status, breakdownJson, createdAt, updatedAt, adminNotes)
+   - Add fields on orders: payoutStatus, deliveredAt, deliveredSource (carrier|buyer_confirmed|auto_timeout), sellerNet, platformFee, stripeFee, shippingLabelCost, shippingChargedToBuyer
+2. Define payout statuses:
+   - not_eligible, eligible, requested, approved, paid, rejected, on_hold
+3. Determine eligibility:
+   - delivered = carrier delivered OR buyer_confirmed delivered OR auto_timeout after X days from shipped
+4. Seller UI:
+   - Activity → Earnings tab (or add inside Sales tab if faster)
+   - shows totals: Available to withdraw, Pending delivery, Paid out
+   - list of orders with breakdown and current status
+   - “Request payout” button:
+       - choose method: PayPal / Venmo
+       - enter destination (save to payout_accounts)
+       - choose amount (<= available)
+       - show breakdown + 5–7 day expectation
+5. Admin UI:
+   - Admin panel page listing payout requests with filters (requested/approved/paid)
+   - Admin can approve/mark as paid/reject with notes
+   - When marked paid: set payout_requests.status=paid + log timestamp; update impacted orders to paid_out
+
+F) DELIVERED FALLBACKS (Shippo stall)
+1. Add scheduled check or on-demand logic:
+   - if shipped and no tracking updates for N days, show buyer prompt “Did it arrive?”
+2. Buyer confirmation UI:
+   - In Activity → Purchases: show “Confirm delivery” after N days of no updates
+   - If buyer confirms: mark deliveredSource=buyer_confirmed, deliveredAt=now
+3. Auto-timeout:
+   - if buyer doesn’t confirm after X days from shipped, auto mark deliveredSource=auto_timeout
+
+ACCEPTANCE CRITERIA (must be met)
+- Buyer cannot proceed to checkout without a saved shipping address.
+- On purchase: system automatically fetches shipping rates; checkout succeeds.
+- Seller sees buyer-facing display name as username (not real name) in purchase modal and marketplace UI.
+- Seller receives an in-app notification when an order is paid.
+- Seller can ship from Activity → Sales and download label + copy tracking.
+- Seller earnings show correct breakdown: item price, 5% platform fee, stripe fees, shipping label cost, net.
+- Seller can request payout via PayPal/Venmo; request appears in Admin; admin can mark as paid.
+- Delivered status can come from carrier, buyer confirmation, or auto-timeout.
+
+DELIVERABLES
+- List of files changed
+- DB migration scripts (or SQL) and any ORM updates
+- Screenshots (or described UI states) of the new flows
+- Test plan steps I can run locally to confirm everything
+
+Start by identifying the exact current checkout failure path (shipping quote required) and implement A + B first before moving on.

@@ -508,14 +508,20 @@ export const orders = pgTable("orders", {
   stripeFee: decimal("stripe_fee", { precision: 10, scale: 2 }).notNull(),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
   sellerNet: decimal("seller_net", { precision: 10, scale: 2 }).notNull(),
+  shippingLabelCost: decimal("shipping_label_cost", { precision: 10, scale: 2 }),
   stripePaymentIntentId: text("stripe_payment_intent_id"),
   stripeCheckoutSessionId: text("stripe_checkout_session_id"),
   shippingAddress: text("shipping_address").notNull(), // JSON string
   status: text("status").default("payment_pending").notNull(), // payment_pending, paid, needs_shipping, label_created, shipped, in_transit, delivered, complete, cancelled, refunded
   paymentStatus: text("payment_status").default("pending").notNull(), // pending, succeeded, failed, refunded
+  payoutStatus: text("payout_status").default("not_eligible").notNull(), // not_eligible, eligible, requested, approved, paid, rejected, on_hold
+  payoutRequestId: integer("payout_request_id"),
+  deliveredSource: text("delivered_source"), // carrier, buyer_confirmed, auto_timeout
   cancelledReason: text("cancelled_reason"),
+  shippedAt: timestamp("shipped_at"),
   deliveredAt: timestamp("delivered_at"),
   completedAt: timestamp("completed_at"),
+  buyerConfirmationRequestedAt: timestamp("buyer_confirmation_requested_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
@@ -523,6 +529,7 @@ export const orders = pgTable("orders", {
   sellerIdIdx: index("orders_seller_id_idx").on(table.sellerId),
   statusIdx: index("orders_status_idx").on(table.status),
   listingIdIdx: index("orders_listing_id_idx").on(table.listingId),
+  payoutStatusIdx: index("orders_payout_status_idx").on(table.payoutStatus),
 }));
 
 // Shipments (Shippo integration)
@@ -621,6 +628,36 @@ export const payoutBatchItems = pgTable("payout_batch_items", {
   net: decimal("net", { precision: 10, scale: 2 }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// Seller Payout Accounts (PayPal/Venmo info)
+export const payoutAccounts = pgTable("payout_accounts", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull().unique(),
+  paypalEmail: text("paypal_email"),
+  venmoHandle: text("venmo_handle"),
+  preferredMethod: text("preferred_method").default("paypal").notNull(), // paypal, venmo
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Seller Payout Requests
+export const payoutRequests = pgTable("payout_requests", {
+  id: serial("id").primaryKey(),
+  sellerId: integer("seller_id").references(() => users.id).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  method: text("method").notNull(), // paypal, venmo
+  destination: text("destination").notNull(), // email or handle
+  status: text("status").default("requested").notNull(), // requested, approved, paid, rejected, on_hold
+  breakdownJson: text("breakdown_json"), // JSON: list of order IDs and amounts included
+  adminNotes: text("admin_notes"),
+  processedBy: integer("processed_by").references(() => users.id),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  sellerIdIdx: index("payout_requests_seller_id_idx").on(table.sellerId),
+  statusIdx: index("payout_requests_status_idx").on(table.status),
+}));
 
 // Marketplace Relations
 export const listingsRelations = relations(listings, ({ one, many }) => ({
@@ -761,6 +798,20 @@ export const insertPayoutBatchItemSchema = createInsertSchema(payoutBatchItems).
   createdAt: true,
 });
 
+export const insertPayoutAccountSchema = createInsertSchema(payoutAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPayoutRequestSchema = createInsertSchema(payoutRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  processedAt: true,
+  processedBy: true,
+});
+
 // Marketplace Types
 export type Listing = typeof listings.$inferSelect;
 export type InsertListing = z.infer<typeof insertListingSchema>;
@@ -788,6 +839,12 @@ export type InsertPayoutBatch = z.infer<typeof insertPayoutBatchSchema>;
 
 export type PayoutBatchItem = typeof payoutBatchItems.$inferSelect;
 export type InsertPayoutBatchItem = z.infer<typeof insertPayoutBatchItemSchema>;
+
+export type PayoutAccount = typeof payoutAccounts.$inferSelect;
+export type InsertPayoutAccount = z.infer<typeof insertPayoutAccountSchema>;
+
+export type PayoutRequest = typeof payoutRequests.$inferSelect;
+export type InsertPayoutRequest = z.infer<typeof insertPayoutRequestSchema>;
 
 // Extended Marketplace Types
 export type ListingWithDetails = Listing & {

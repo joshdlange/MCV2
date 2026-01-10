@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Package, Truck, DollarSign, Clock, Check, ExternalLink } from "lucide-react";
+import { Package, Truck, DollarSign, Clock, Check, ExternalLink, Copy } from "lucide-react";
 
 interface ShipModalProps {
   orderId: number;
@@ -124,7 +124,21 @@ export function ShipModal({ orderId, orderNumber, open, onClose }: ShipModalProp
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600">Tracking Number:</span>
-                <span className="font-mono font-medium">{shipment.trackingNumber}</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-medium">{shipment.trackingNumber}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => {
+                      navigator.clipboard.writeText(shipment.trackingNumber);
+                      toast({ title: "Copied!", description: "Tracking number copied to clipboard" });
+                    }}
+                    data-testid="copy-tracking"
+                  >
+                    <Copy className="w-3 h-3" />
+                  </Button>
+                </div>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600">Status:</span>
@@ -140,6 +154,18 @@ export function ShipModal({ orderId, orderNumber, open, onClose }: ShipModalProp
               >
                 <Package className="w-4 h-4 mr-2" />
                 Download Label
+              </Button>
+              <Button 
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  navigator.clipboard.writeText(shipment.trackingNumber);
+                  toast({ title: "Copied!", description: "Tracking number copied to clipboard" });
+                }}
+                data-testid="copy-tracking-btn"
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                Copy Tracking
               </Button>
               {shipment.trackingUrl && (
                 <Button 
