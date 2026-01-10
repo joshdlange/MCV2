@@ -26,6 +26,14 @@ The application incorporates comprehensive performance optimizations for handlin
 - **Authentication & Authorization**: Leverages Firebase Authentication for user management, implements admin role-based access control, JWT token validation, and enforces subscription tier access.
 - **Upcoming Sets Tracker**: ✨ NEW (Nov 20, 2025) - Comprehensive system for managing and displaying upcoming Marvel card set releases with URL import, OpenGraph metadata scraping, image caching, countdown timers, and user interest tracking.
 - **Email Integration**: ✨ NEW (Nov 20, 2025) - Brevo SMTP integration for transactional emails with Nodemailer configuration (`server/email.ts`), Firebase to Brevo contact sync (`server/contactsSync.ts`), admin-only sync endpoint for CRM management, and comprehensive email automation system with 15 branded templates, event triggers, and scheduled cron jobs. ✅ UPDATED (Nov 21, 2025) - Inactivity reminders and weekly digest emails are limited to 1 email per month maximum to prevent email fatigue.
+- **Marketplace Fulfillment System**: ✨ NEW (Jan 10, 2026) - Complete seller payout workflow including:
+  - Earnings tracking with proper categorization: available, pending delivery, pending payout, paid out
+  - Payout account management (PayPal/Venmo) stored in `payout_accounts` table
+  - Payout request workflow with duplicate prevention (one pending request per seller)
+  - Admin payout approval interface at `/admin/payouts` with PayPal quick-pay links
+  - Notification badges for unread sales on Activity page Sales tab
+  - Buyer delivery confirmation for shipped orders
+  - Fee calculations: platform fee (10%), Stripe fee (2.9% + $0.30), shipping label costs deducted from seller earnings
 
 ### Data Flow
 - **Card Management**: Involves admin CSV uploads, background processing, eBay API integration for image finding, Cloudinary optimization, and periodic price data refreshes.
