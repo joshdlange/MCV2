@@ -973,11 +973,9 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
         const fees = calculateFees(itemPrice, shippingCost);
         const cardName = `${card.name} - ${cardSet.name}`;
         
-        // Immediately mark collection item as not for sale (reservation)
-        await tx.update(userCollections).set({
-          isForSale: false,
-        }).where(eq(userCollections.id, collectionItemId));
-        reservedCollectionItemId = collectionItemId;
+        // DON'T reserve item yet - item stays available until payment is confirmed
+        // This prevents exploitation where buyers start checkout but never pay
+        // Reservation happens in the Stripe webhook when payment succeeds
         
         // Auto-create or find existing listing for this collection item
         let listingRecord = await tx
@@ -989,28 +987,24 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
         let listingId: number;
         
         if (!listingRecord.length) {
-          // Create a new listing on-the-fly
+          // Create a new listing on-the-fly (status: active, still available)
           const [newListing] = await tx.insert(listings).values({
             sellerId: collectionItem.userId,
             userCollectionId: collectionItemId,
             cardId: collectionItem.cardId,
             price: itemPrice.toString(),
             quantity: 1,
-            quantityAvailable: 0,
+            quantityAvailable: 1,
             allowOffers: false,
             description: collectionItem.notes || `${card.name} for sale`,
             conditionSnapshot: collectionItem.condition || 'Near Mint',
-            status: 'reserved',
+            status: 'active',
             publishedAt: new Date(),
           }).returning();
           listingId = newListing.id;
         } else {
           listingId = listingRecord[0].id;
-          await tx.update(listings).set({
-            quantityAvailable: 0,
-            status: 'reserved',
-            updatedAt: new Date(),
-          }).where(eq(listings.id, listingId));
+          // Don't change listing status - keep it available
         }
         reservedListingId = listingId;
         
@@ -2287,6 +2281,30 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
         return res.status(404).json({ message: "Order not found" });
       }
       
+      // Check if item is still available (race condition protection)
+      const listing = await db.select().from(listings).where(eq(listings.id, order[0].listingId)).limit(1);
+      if (listing.length && listing[0].status === 'sold') {
+        // Item was already sold to someone else - need to refund
+        console.log(`Race condition: Item already sold, refunding payment for order ${order[0].orderNumber}`);
+        
+        if (stripe && paymentIntentId) {
+          try {
+            await stripe.refunds.create({ payment_intent: paymentIntentId as string });
+            console.log(`Refund issued for payment intent ${paymentIntentId}`);
+          } catch (refundErr) {
+            console.error('Failed to issue refund:', refundErr);
+          }
+        }
+        
+        await db.update(orders).set({
+          status: 'cancelled',
+          paymentStatus: 'refunded',
+          updatedAt: new Date(),
+        }).where(eq(orders.id, order[0].id));
+        
+        return res.json({ message: "Item already sold, refund issued", orderId: order[0].id, refunded: true });
+      }
+      
       // Get the Stripe session to retrieve shipping address
       let shippingAddress = order[0].shippingAddress;
       try {
@@ -2310,17 +2328,16 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
         console.error('Failed to retrieve shipping from Stripe:', stripeErr);
       }
       
-      // Update order status and shipping address
+      // Update order status to needs_shipping
       await db.update(orders).set({
-        status: 'paid',
+        status: 'needs_shipping',
         paymentStatus: 'succeeded',
         stripePaymentIntentId: paymentIntentId,
         shippingAddress,
         updatedAt: new Date(),
       }).where(eq(orders.id, order[0].id));
       
-      // Mark listing as sold
-      const listing = await db.select().from(listings).where(eq(listings.id, order[0].listingId)).limit(1);
+      // NOW mark listing as sold and remove from marketplace
       if (listing.length) {
         await db.update(listings).set({
           quantityAvailable: 0,
@@ -2328,7 +2345,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
           updatedAt: new Date(),
         }).where(eq(listings.id, order[0].listingId));
         
-        // Keep collection item marked as not for sale (already purchased)
+        // Mark collection item as not for sale (now actually sold)
         if (listing[0].userCollectionId) {
           await db.update(userCollections).set({
             isForSale: false,
