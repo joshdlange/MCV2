@@ -1687,9 +1687,13 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
   // SHIPPING ENDPOINTS (Shippo Integration)
   // ============================================
   
-  // Get parcel presets
+  // Get parcel presets - convert object to array with id included
   app.get("/api/marketplace/shipping/presets", authenticateUser, async (req: any, res) => {
-    res.json(PARCEL_PRESETS);
+    const presetsArray = Object.entries(PARCEL_PRESETS).map(([id, preset]) => ({
+      id,
+      ...preset,
+    }));
+    res.json(presetsArray);
   });
   
   // Get shipping rates for an order (seller only)
