@@ -3713,9 +3713,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Diagnostic endpoint to test if webhook route is reachable
+  app.get('/api/stripe/webhook', (req, res) => {
+    console.log('🔍 Stripe webhook route test (GET)');
+    res.json({ status: 'ok', message: 'Stripe webhook route is reachable', timestamp: new Date().toISOString() });
+  });
+  
+  app.get('/api/stripe-webhook', (req, res) => {
+    console.log('🔍 Stripe webhook route test (GET)');
+    res.json({ status: 'ok', message: 'Stripe webhook route is reachable', timestamp: new Date().toISOString() });
+  });
+
   // Stripe webhook endpoint to handle successful payments
   app.post('/api/stripe-webhook', async (req, res) => {
-    console.log('🔔 Stripe webhook received');
+    console.log('🔔 Stripe webhook received at /api/stripe-webhook');
+    console.log('Headers:', JSON.stringify(req.headers, null, 2));
     const sig = req.headers['stripe-signature'];
     let event;
 
@@ -3849,8 +3861,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Alias: Handle Stripe webhook at /api/stripe/webhook (Stripe Dashboard may use this URL)
   // This is a copy of the above handler to support both URL patterns
   app.post('/api/stripe/webhook', async (req, res) => {
-    console.log('🔔 Stripe webhook received at /api/stripe/webhook');
+    console.log('🔔🔔🔔 Stripe webhook received at /api/stripe/webhook 🔔🔔🔔');
+    console.log('Request method:', req.method);
+    console.log('Content-Type:', req.headers['content-type']);
+    console.log('Body type:', typeof req.body);
+    console.log('Body is Buffer:', Buffer.isBuffer(req.body));
     const sig = req.headers['stripe-signature'];
+    console.log('Stripe-Signature present:', !!sig);
     let event;
 
     if (!sig) {
