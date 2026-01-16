@@ -338,8 +338,17 @@ export const shippoService = {
 
 // Pre-defined parcel presets for trading cards
 export const PARCEL_PRESETS = {
+  letter_envelope: {
+    name: "Letter Envelope (Cheapest)",
+    length: 6,
+    width: 4.5,
+    height: 0.016, // Standard envelope thickness ~1/64 inch
+    weight: 0.5, // Half ounce for single card + sleeve
+    distance_unit: "in" as const,
+    mass_unit: "oz" as const,
+  },
   single_card_pwe: {
-    name: "Single Card (PWE)",
+    name: "Single Card (PWE - Plain White Envelope)",
     length: 6,
     width: 4,
     height: 0.25,

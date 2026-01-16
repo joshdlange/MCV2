@@ -230,53 +230,73 @@ export function ShipModal({ orderId, orderNumber, open, onClose }: ShipModalProp
                 <label className="text-sm font-medium">Select Shipping Service</label>
                 
                 <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {rates.map((rate: ShippingRate) => (
-                    <Card 
-                      key={rate.objectId}
-                      className={`cursor-pointer transition-all ${
+                  {rates.map((rate: ShippingRate, index: number) => (
+                    <div 
+                      key={rate.objectId || `rate-${index}`}
+                      className={`cursor-pointer transition-all rounded-lg border p-3 ${
                         selectedRate === rate.objectId 
-                          ? 'ring-2 ring-red-500 bg-red-50' 
-                          : 'hover:bg-gray-50'
+                          ? 'ring-2 ring-red-500 bg-red-50 border-red-300' 
+                          : 'hover:bg-gray-50 border-gray-200'
                       }`}
                       onClick={() => setSelectedRate(rate.objectId)}
                       data-testid={`rate-${rate.objectId}`}
                     >
-                      <CardContent className="p-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Truck className="w-5 h-5 text-gray-500" />
-                            <div>
-                              <p className="font-medium text-sm">{rate.provider}</p>
-                              <p className="text-xs text-gray-500">{rate.servicelevel?.name}</p>
-                            </div>
-                          </div>
-                          
-                          <div className="text-right">
-                            <div className="flex items-center gap-1 font-bold text-green-600">
-                              <DollarSign className="w-4 h-4" />
-                              {rate.amount}
-                            </div>
-                            <div className="flex items-center gap-1 text-xs text-gray-500">
-                              <Clock className="w-3 h-3" />
-                              {rate.estimatedDays} {rate.estimatedDays === 1 ? 'day' : 'days'}
-                            </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Truck className="w-5 h-5 text-gray-500" />
+                          <div>
+                            <p className="font-medium text-sm">{rate.provider}</p>
+                            <p className="text-xs text-gray-500">{rate.servicelevel?.name}</p>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                        
+                        <div className="text-right">
+                          <div className="flex items-center gap-1 font-bold text-green-600">
+                            <DollarSign className="w-4 h-4" />
+                            {rate.amount}
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-gray-500">
+                            <Clock className="w-3 h-3" />
+                            {rate.estimatedDays} {rate.estimatedDays === 1 ? 'day' : 'days'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
               
-              <Button 
-                onClick={handlePurchaseLabel}
-                disabled={!selectedRate || purchaseLabelMutation.isPending}
-                className="w-full bg-green-600 hover:bg-green-700"
-                data-testid="purchase-label"
-              >
-                {purchaseLabelMutation.isPending ? "Purchasing..." : "Purchase Shipping Label"}
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline"
+                  onClick={onClose}
+                  className="flex-1"
+                  data-testid="cancel-ship"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handlePurchaseLabel}
+                  disabled={!selectedRate || purchaseLabelMutation.isPending}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  data-testid="purchase-label"
+                >
+                  {purchaseLabelMutation.isPending ? "Purchasing..." : "Purchase Label"}
+                </Button>
+              </div>
             </>
+          )}
+          
+          {/* Show cancel button when no rates loaded yet */}
+          {rates.length === 0 && (
+            <Button 
+              variant="outline"
+              onClick={onClose}
+              className="w-full"
+              data-testid="close-modal"
+            >
+              Close
+            </Button>
           )}
         </div>
       </DialogContent>
