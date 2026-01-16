@@ -817,40 +817,63 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
       const fromAddr = JSON.parse(item.sellerAddress);
       const toAddr = JSON.parse(buyer.shippingAddressJson);
       
-      // Get rates from Shippo using standard toploader parcel
-      const { shipmentId, rates } = await shippoService.createShipmentAndGetRates(
-        fromAddr,
-        toAddr,
-        {
-          length: 7,
-          width: 5,
-          height: 0.5,
-          weight: 2,
-          distance_unit: "in",
-          mass_unit: "oz",
-        }
-      );
+      // Get rates for multiple parcel sizes so buyer can choose
+      const parcelOptions = [
+        { ...PARCEL_PRESETS.letter_envelope, id: 'letter_envelope' },
+        { ...PARCEL_PRESETS.single_card_pwe, id: 'single_card_pwe' },
+        { ...PARCEL_PRESETS.toploader_bubble, id: 'toploader_bubble' },
+      ];
       
-      if (!rates.length) {
+      // Get rates for each parcel size in parallel
+      const allRates: any[] = [];
+      for (const parcelOption of parcelOptions) {
+        try {
+          const { shipmentId, rates } = await shippoService.createShipmentAndGetRates(
+            fromAddr,
+            toAddr,
+            {
+              length: parcelOption.length,
+              width: parcelOption.width,
+              height: parcelOption.height,
+              weight: parcelOption.weight,
+              distance_unit: parcelOption.distance_unit,
+              mass_unit: parcelOption.mass_unit,
+            }
+          );
+          
+          // Add each rate with parcel info
+          for (const rate of rates) {
+            const baseShippingCost = parseFloat(rate.amount);
+            const buyerShippingCost = parseFloat((baseShippingCost * (1 + SHIPPING_MARKUP_PERCENT)).toFixed(2));
+            
+            allRates.push({
+              rateId: rate.object_id,
+              shipmentId,
+              parcelType: parcelOption.id,
+              parcelName: parcelOption.name,
+              carrier: rate.provider,
+              serviceLevel: rate.servicelevel.name,
+              serviceLevelToken: rate.servicelevel.token,
+              shippingCost: buyerShippingCost,
+              baseCost: baseShippingCost,
+              estimatedDays: rate.estimated_days,
+              durationTerms: rate.duration_terms,
+            });
+          }
+        } catch (err) {
+          console.warn(`Failed to get rates for ${parcelOption.name}:`, err);
+        }
+      }
+      
+      if (!allRates.length) {
         return res.status(400).json({ message: "No shipping rates available for this destination" });
       }
       
-      // Return cheapest USPS rate
-      const cheapestRate = rates.reduce((min, rate) => 
-        parseFloat(rate.amount) < parseFloat(min.amount) ? rate : min
-      );
-      
-      // Add 5% shipping markup for platform profit
-      const baseShippingCost = parseFloat(cheapestRate.amount);
-      const buyerShippingCost = parseFloat((baseShippingCost * (1 + SHIPPING_MARKUP_PERCENT)).toFixed(2));
+      // Sort by price (cheapest first)
+      allRates.sort((a, b) => a.shippingCost - b.shippingCost);
       
       res.json({
-        shippingCost: buyerShippingCost,
-        rateId: cheapestRate.object_id,
-        shipmentId,
-        carrier: cheapestRate.provider,
-        serviceLevel: cheapestRate.servicelevel.name,
-        estimatedDays: cheapestRate.estimated_days,
+        rates: allRates,
         expiresAt: Date.now() + (15 * 60 * 1000),
       });
     } catch (error: any) {

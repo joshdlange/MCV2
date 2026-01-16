@@ -27,12 +27,19 @@ interface ShippingAddress {
   phone?: string;
 }
 
-interface ShippingQuote {
-  shippingCost: number;
+interface ShippingRate {
   rateId: string;
+  shipmentId: string;
+  parcelType: string;
+  parcelName: string;
   carrier: string;
   serviceLevel: string;
+  shippingCost: number;
   estimatedDays: number;
+}
+
+interface ShippingQuote {
+  rates: ShippingRate[];
   expiresAt: number;
 }
 
@@ -52,6 +59,7 @@ export default function Marketplace() {
   
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress | null>(null);
   const [shippingQuote, setShippingQuote] = useState<ShippingQuote | null>(null);
+  const [selectedShippingRate, setSelectedShippingRate] = useState<ShippingRate | null>(null);
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
   const [shippingQuoteError, setShippingQuoteError] = useState<string | null>(null);
   const [addressForm, setAddressForm] = useState<ShippingAddress>({
@@ -94,11 +102,16 @@ export default function Marketplace() {
   const fetchShippingQuote = async (collectionItemId: number) => {
     setIsLoadingQuote(true);
     setShippingQuote(null);
+    setSelectedShippingRate(null);
     setShippingQuoteError(null);
     try {
       const response = await apiRequest('POST', '/api/marketplace/shipping/quick-quote', { collectionItemId });
       const data = await response.json();
       setShippingQuote(data);
+      // Auto-select cheapest rate (first in sorted list)
+      if (data.rates && data.rates.length > 0) {
+        setSelectedShippingRate(data.rates[0]);
+      }
     } catch (error: any) {
       let errorMsg = "Failed to calculate shipping";
       try {
@@ -132,6 +145,7 @@ export default function Marketplace() {
     
     setSelectedItem(item);
     setShippingQuote(null);
+    setSelectedShippingRate(null);
     setShippingQuoteError(null);
     
     if (!shippingAddress && !savedAddress?.shippingAddress) {
@@ -631,6 +645,7 @@ export default function Marketplace() {
         setShowPurchaseModal(open);
         if (!open) {
           setShippingQuote(null);
+          setSelectedShippingRate(null);
         }
       }}>
         <DialogContent className="sm:max-w-md bg-white">
@@ -707,8 +722,83 @@ export default function Marketplace() {
                 </div>
               )}
 
-              {/* Price Breakdown with Shipping */}
-              <div className="space-y-2 p-4 border rounded-lg">
+              {/* Shipping Options */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Truck className="h-4 w-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-900">Choose Shipping</span>
+                </div>
+                
+                {isLoadingQuote ? (
+                  <div className="flex items-center justify-center p-4 bg-gray-50 rounded-lg">
+                    <Loader2 className="h-5 w-5 animate-spin text-gray-500 mr-2" />
+                    <span className="text-gray-500">Finding best rates...</span>
+                  </div>
+                ) : shippingQuote?.rates && shippingQuote.rates.length > 0 ? (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {shippingQuote.rates.map((rate, index) => (
+                      <div
+                        key={rate.rateId}
+                        className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                          selectedShippingRate?.rateId === rate.rateId
+                            ? 'border-red-500 bg-red-50 ring-1 ring-red-500'
+                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        }`}
+                        onClick={() => setSelectedShippingRate(rate)}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-gray-900">
+                                ${rate.shippingCost.toFixed(2)}
+                              </span>
+                              {index === 0 && (
+                                <Badge className="bg-green-100 text-green-700 text-xs px-1.5 py-0">
+                                  Cheapest
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-600 mt-0.5">{rate.parcelName}</p>
+                            <p className="text-xs text-gray-500">
+                              {rate.carrier} {rate.serviceLevel} • {rate.estimatedDays} {rate.estimatedDays === 1 ? 'day' : 'days'}
+                            </p>
+                          </div>
+                          <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
+                            selectedShippingRate?.rateId === rate.rateId
+                              ? 'border-red-500 bg-red-500'
+                              : 'border-gray-300'
+                          }`}>
+                            {selectedShippingRate?.rateId === rate.rateId && (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : shippingQuoteError ? (
+                  <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+                    <p className="text-sm text-red-600">{shippingQuoteError}</p>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-xs text-red-600 underline mt-1"
+                      onClick={() => fetchShippingQuote(selectedItem.id)}
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-gray-50 rounded-lg text-center">
+                    <span className="text-gray-400 text-sm">Loading shipping options...</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Price Summary */}
+              <div className="space-y-2 p-4 border rounded-lg bg-gray-50">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Card Price</span>
                   <span className="font-semibold text-gray-900">
@@ -716,63 +806,31 @@ export default function Marketplace() {
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500 flex items-center gap-1">
-                    <Truck className="h-3 w-3" />
-                    Shipping
+                  <span className="text-gray-500">Shipping</span>
+                  <span className="text-gray-900">
+                    {selectedShippingRate ? `$${selectedShippingRate.shippingCost.toFixed(2)}` : '—'}
                   </span>
-                  {isLoadingQuote ? (
-                    <span className="text-gray-500 flex items-center gap-1">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Calculating...
-                    </span>
-                  ) : shippingQuote ? (
-                    <span className="text-gray-900 font-medium">
-                      ${shippingQuote.shippingCost.toFixed(2)}
-                      <span className="text-xs text-gray-500 ml-1">
-                        ({shippingQuote.carrier} {shippingQuote.serviceLevel})
-                      </span>
-                    </span>
-                  ) : shippingQuoteError ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-red-600 text-xs">{shippingQuoteError}</span>
-                      <Button
-                        variant="link"
-                        size="sm"
-                        className="h-auto p-0 text-xs text-red-600 underline"
-                        onClick={() => fetchShippingQuote(selectedItem.id)}
-                      >
-                        Retry
-                      </Button>
-                    </div>
-                  ) : (
-                    <span className="text-gray-400 text-xs">Awaiting calculation...</span>
-                  )}
                 </div>
-                {shippingQuote && shippingQuote.estimatedDays && (
-                  <p className="text-xs text-gray-500 text-right">
-                    Est. delivery: {shippingQuote.estimatedDays} business days
-                  </p>
-                )}
                 <div className="border-t pt-2 mt-2 flex justify-between">
                   <span className="font-semibold text-gray-900">Total</span>
                   <span className="font-bold text-lg text-green-600">
-                    ${(parseFloat(selectedItem.salePrice || "0") + (shippingQuote?.shippingCost || 0)).toFixed(2)}
+                    ${(parseFloat(selectedItem.salePrice || "0") + (selectedShippingRate?.shippingCost || 0)).toFixed(2)}
                   </span>
                 </div>
               </div>
 
-              {/* Checkout Button - requires shipping quote */}
+              {/* Checkout Button - requires selected shipping rate */}
               <Button
                 className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-semibold text-lg disabled:bg-gray-400"
                 onClick={() => {
-                  if (selectedItem && shippingQuote) {
+                  if (selectedItem && selectedShippingRate) {
                     createCheckoutMutation.mutate({ 
                       collectionItemId: selectedItem.id, 
-                      shippingRateId: shippingQuote.rateId 
+                      shippingRateId: selectedShippingRate.rateId 
                     });
                   }
                 }}
-                disabled={createCheckoutMutation.isPending || !shippingQuote || isLoadingQuote}
+                disabled={createCheckoutMutation.isPending || !selectedShippingRate || isLoadingQuote}
                 data-testid="button-proceed-checkout"
               >
                 {createCheckoutMutation.isPending ? (
