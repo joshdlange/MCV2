@@ -710,8 +710,8 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
           quantity: 1,
         }],
         mode: 'payment',
-        success_url: `${process.env.REPLIT_DOMAINS?.split(',')[0] ? 'https://' + process.env.REPLIT_DOMAINS.split(',')[0] : 'http://localhost:5000'}/activity?tab=purchases&order=success`,
-        cancel_url: `${process.env.REPLIT_DOMAINS?.split(',')[0] ? 'https://' + process.env.REPLIT_DOMAINS.split(',')[0] : 'http://localhost:5000'}/marketplace/${listingId}`,
+        success_url: `${process.env.MARKETPLACE_PUBLIC_URL || 'https://app.marvelcardvault.com'}/activity?tab=purchases&order=success`,
+        cancel_url: `${process.env.MARKETPLACE_PUBLIC_URL || 'https://app.marvelcardvault.com'}/marketplace/${listingId}`,
         metadata: {
           type: 'marketplace_purchase',
           listingId: listingId.toString(),
@@ -1037,11 +1037,8 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
       // Transaction succeeded - now create Stripe session (outside transaction)
       const { collectionItem, itemPrice, shippingCost, fees, cardName, listingId } = result;
       
-      // Use MARKETPLACE_PUBLIC_URL if set, otherwise use REPLIT_DOMAINS or localhost
-      const baseUrl = process.env.MARKETPLACE_PUBLIC_URL 
-        || (process.env.REPLIT_DOMAINS?.split(',')[0] 
-            ? 'https://' + process.env.REPLIT_DOMAINS.split(',')[0] 
-            : 'http://localhost:5000');
+      // Use MARKETPLACE_PUBLIC_URL if set, otherwise fallback to production domain
+      const baseUrl = process.env.MARKETPLACE_PUBLIC_URL || 'https://app.marvelcardvault.com';
       
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],

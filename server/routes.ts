@@ -3757,17 +3757,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Check if this is a marketplace purchase
           if (session.metadata?.type === 'marketplace_purchase') {
-            // Forward to marketplace payment confirmation handler
+            // Handle marketplace payment confirmation directly (no HTTP call for reliability)
             try {
-              await fetch(`${process.env.REPLIT_DOMAINS?.split(',')[0] ? 'https://' + process.env.REPLIT_DOMAINS.split(',')[0] : 'http://localhost:5000'}/api/marketplace/payment-confirmed`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  sessionId: session.id,
-                  paymentIntentId: session.payment_intent,
-                }),
-              });
-              console.log(`Marketplace payment confirmed for session ${session.id}`);
+              const { orders, listings, userCollections, notifications } = await import('../shared/schema');
+              const { eq } = await import('drizzle-orm');
+              
+              const order = await db.select().from(orders)
+                .where(eq(orders.stripeCheckoutSessionId, session.id))
+                .limit(1);
+              
+              if (order.length) {
+                // Race condition protection: check if item already sold
+                const listing = await db.select().from(listings).where(eq(listings.id, order[0].listingId)).limit(1);
+                if (listing.length && listing[0].status === 'sold') {
+                  console.log(`Race condition: Item already sold, refunding order ${order[0].orderNumber}`);
+                  if (session.payment_intent) {
+                    try {
+                      await stripe.refunds.create({ payment_intent: session.payment_intent as string });
+                      console.log(`Refund issued for payment intent ${session.payment_intent}`);
+                    } catch (refundErr) {
+                      console.error('Failed to issue refund:', refundErr);
+                    }
+                  }
+                  await db.update(orders).set({
+                    status: 'cancelled',
+                    paymentStatus: 'refunded',
+                    updatedAt: new Date(),
+                  }).where(eq(orders.id, order[0].id));
+                } else {
+                  // Normal flow: update order and mark as sold
+                  let shippingAddress = order[0].shippingAddress;
+                  if (session.shipping_details?.address) {
+                    const addr = session.shipping_details.address;
+                    shippingAddress = JSON.stringify({
+                      name: session.shipping_details.name || '',
+                      street1: addr.line1 || '',
+                      street2: addr.line2 || '',
+                      city: addr.city || '',
+                      state: addr.state || '',
+                      zip: addr.postal_code || '',
+                      country: addr.country || 'US',
+                    });
+                  }
+                  
+                  await db.update(orders).set({
+                    status: 'needs_shipping',
+                    paymentStatus: 'succeeded',
+                    stripePaymentIntentId: session.payment_intent as string,
+                    shippingAddress,
+                    updatedAt: new Date(),
+                  }).where(eq(orders.id, order[0].id));
+                  
+                  if (listing.length) {
+                    await db.update(listings).set({ quantityAvailable: 0, status: 'sold', updatedAt: new Date() }).where(eq(listings.id, order[0].listingId));
+                    if (listing[0].userCollectionId) {
+                      await db.update(userCollections).set({ isForSale: false }).where(eq(userCollections.id, listing[0].userCollectionId));
+                    }
+                  }
+                  
+                  await db.insert(notifications).values({
+                    userId: order[0].sellerId,
+                    type: 'sale_made',
+                    title: 'You made a sale!',
+                    message: `Order #${order[0].orderNumber} is ready to ship.`,
+                    data: JSON.stringify({ orderId: order[0].id, orderNumber: order[0].orderNumber, total: order[0].total }),
+                    isRead: false,
+                  });
+                  console.log(`✅ Marketplace payment confirmed for order ${order[0].orderNumber}`);
+                }
+              }
             } catch (err) {
               console.error('Failed to confirm marketplace payment:', err);
             }
@@ -3828,97 +3886,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 console.error('Failed to release expired reservation:', err);
               }
             }
-          }
-          break;
-
-        case 'customer.subscription.deleted':
-          const subscription = event.data.object as Stripe.Subscription;
-          // Find user by subscription ID and downgrade to free plan
-          const users = await storage.getAllUsers();
-          const subscribedUser = users.find(u => u.stripeSubscriptionId === subscription.id);
-          
-          if (subscribedUser) {
-            await storage.updateUser(subscribedUser.id, {
-              plan: 'SIDE_KICK',
-              subscriptionStatus: 'cancelled',
-              stripeSubscriptionId: null
-            });
-            console.log(`User ${subscribedUser.id} downgraded to Side Kick plan`);
-          }
-          break;
-
-        default:
-          console.log(`Unhandled event type ${event.type}`);
-      }
-
-      res.json({ received: true });
-    } catch (error) {
-      console.error('Error processing webhook:', error);
-      res.status(500).json({ message: 'Webhook processing failed' });
-    }
-  });
-
-  // Alias: Handle Stripe webhook at /api/stripe/webhook (Stripe Dashboard may use this URL)
-  // This is a copy of the above handler to support both URL patterns
-  app.post('/api/stripe/webhook', async (req, res) => {
-    console.log('🔔🔔🔔 Stripe webhook received at /api/stripe/webhook 🔔🔔🔔');
-    console.log('Request method:', req.method);
-    console.log('Content-Type:', req.headers['content-type']);
-    console.log('Body type:', typeof req.body);
-    console.log('Body is Buffer:', Buffer.isBuffer(req.body));
-    const sig = req.headers['stripe-signature'];
-    console.log('Stripe-Signature present:', !!sig);
-    let event;
-
-    if (!sig) {
-      console.error('❌ Webhook Error: Missing stripe-signature header');
-      return res.status(400).send('Webhook Error: Missing signature');
-    }
-
-    if (!process.env.STRIPE_WEBHOOK_SECRET) {
-      console.error('❌ Webhook Error: STRIPE_WEBHOOK_SECRET not configured');
-      return res.status(500).send('Webhook Error: Server configuration issue');
-    }
-
-    try {
-      event = stripe.webhooks.constructEvent(req.body, sig as string, process.env.STRIPE_WEBHOOK_SECRET);
-      console.log(`✅ Webhook verified - Event type: ${event.type}`);
-    } catch (err: any) {
-      console.error('❌ Webhook signature verification failed:', err.message);
-      return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
-
-    try {
-      switch (event.type) {
-        case 'checkout.session.completed':
-          const session = event.data.object as Stripe.Checkout.Session;
-          const userId = parseInt(session.metadata?.userId || '0');
-          
-          // Check if this is a marketplace purchase
-          if (session.metadata?.type === 'marketplace_purchase') {
-            // Forward to marketplace payment confirmation handler
-            try {
-              await fetch(`${process.env.REPLIT_DOMAINS?.split(',')[0] ? 'https://' + process.env.REPLIT_DOMAINS.split(',')[0] : 'http://localhost:5000'}/api/marketplace/payment-confirmed`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  sessionId: session.id,
-                  paymentIntentId: session.payment_intent,
-                }),
-              });
-              console.log(`Marketplace payment confirmed for session ${session.id}`);
-            } catch (err) {
-              console.error('Failed to confirm marketplace payment:', err);
-            }
-          } else if (userId && session.subscription) {
-            // Update user to Super Hero plan
-            await storage.updateUser(userId, {
-              plan: 'SUPER_HERO',
-              subscriptionStatus: 'active',
-              stripeCustomerId: session.customer as string,
-              stripeSubscriptionId: session.subscription as string
-            });
-            console.log(`User ${userId} upgraded to Super Hero plan`);
           }
           break;
 
