@@ -72,7 +72,8 @@ function generateSlug(name: string): string {
     .replace(/^-|-$/g, '');
 }
 
-function extractCardNumber(productName: string): string {
+function extractCardNumber(productName: string | undefined): string {
+  if (!productName) return '1';
   const hashMatch = productName.match(/#(\d+[A-Za-z]*)/);
   if (hashMatch) return hashMatch[1];
   
@@ -82,7 +83,8 @@ function extractCardNumber(productName: string): string {
   return '1';
 }
 
-function extractCardName(productName: string): string {
+function extractCardName(productName: string | undefined): string {
+  if (!productName) return 'Unknown Card';
   let name = productName
     .replace(/#\d+[A-Za-z]*/g, '')
     .replace(/^\d+\s*[-–]\s*/, '')
@@ -93,7 +95,7 @@ function extractCardName(productName: string): string {
 }
 
 async function searchPriceCharting(query: string): Promise<PriceChartingProduct[]> {
-  const apiKey = process.env.PRICECHARTING_API_KEY || '01dc522fa2613d0092f3a153f9bcc0e6bf964d72';
+  const apiKey = process.env.PRICECHARTING_API_KEY;
   
   const url = `https://www.pricecharting.com/api/products?t=${apiKey}&q=${encodeURIComponent(query)}`;
   
