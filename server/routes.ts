@@ -2123,7 +2123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get cards needing images - SKIP RECENTLY PROCESSED CARDS
       console.log(`[DEBUG] Executing database query for cards needing images (skipping recently processed)...`);
-      let whereClause = `WHERE (c.front_image_url IS NULL OR c.front_image_url = '')`;
+      let whereClause = `WHERE (c.front_image_url IS NULL OR c.front_image_url = '' OR c.front_image_url = 'https://res.cloudinary.com/dlwfuryyz/image/upload/v1748442577/card-placeholder_ysozlo.png')`;
       
       if (skipRecentlyFailed) {
         // Skip cards that have been processed recently using a different approach

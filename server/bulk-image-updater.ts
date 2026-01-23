@@ -81,7 +81,8 @@ export async function findCardsNeedingImages(
             isNull(cards.frontImageUrl),
             eq(cards.frontImageUrl, ''),
             eq(cards.frontImageUrl, '/images/image-coming-soon.png'),
-            eq(cards.frontImageUrl, '/images/placeholder.png')
+            eq(cards.frontImageUrl, '/images/placeholder.png'),
+            eq(cards.frontImageUrl, 'https://res.cloudinary.com/dlwfuryyz/image/upload/v1748442577/card-placeholder_ysozlo.png')
           ),
           // Apply skipRecentlyFailed logic if enabled (30 days) - only skip if updated_at exists and is recent
           options.skipRecentlyFailed ? 

@@ -290,15 +290,15 @@ export default function BulkImageUpdater() {
                 disabled={updating}
               />
               <Label htmlFor="randomOrder" className="text-sm text-gray-700 dark:text-gray-300">
-                Random order processing (prevents processing failed card clusters)
+                Random order (uncheck for newest cards first - recommended for new imports)
               </Label>
             </div>
             
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-sm">
-                <strong>Recommended:</strong> Keep "Skip recently failed" enabled to prioritize unprocessed cards. 
-                Use random order if you notice the system repeatedly processing the same failed cards.
+                <strong>Tip:</strong> Uncheck "Random order" to process newest cards first (great for newly imported sets). 
+                Cards with the Cloudinary placeholder image are now included in the search.
               </AlertDescription>
             </Alert>
           </div>
