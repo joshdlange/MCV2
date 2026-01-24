@@ -426,7 +426,7 @@ export default function MyCollection() {
                   onClick={() => setCardsViewMode("owned")}
                   className={`rounded-none px-3 ${cardsViewMode === "owned" ? "text-white" : "text-[#f73f32] hover:text-[#f73f32]"}`}
                 >
-                  View Owned
+                  Owned
                 </Button>
                 <Button
                   variant={cardsViewMode === "missing" ? "default" : "ghost"}
@@ -434,7 +434,7 @@ export default function MyCollection() {
                   onClick={() => setCardsViewMode("missing")}
                   className={`rounded-none px-3 ${cardsViewMode === "missing" ? "text-white" : "text-[#f73f32] hover:text-[#f73f32]"}`}
                 >
-                  View Missing
+                  Missing
                 </Button>
               </div>
             )}
@@ -928,7 +928,7 @@ export default function MyCollection() {
                           setCardsViewMode("owned");
                         }}
                       >
-                        View Owned
+                        Owned
                       </Button>
                       <Button
                         variant="outline"
@@ -941,7 +941,7 @@ export default function MyCollection() {
                           setCardsViewMode("missing");
                         }}
                       >
-                        View Missing
+                        Missing
                       </Button>
                     </div>
                   </div>
@@ -1026,7 +1026,7 @@ export default function MyCollection() {
                                   setCardsViewMode("owned");
                                 }}
                               >
-                                View Owned
+                                Owned
                               </Button>
                               <Button
                                 variant="default"
@@ -1039,7 +1039,7 @@ export default function MyCollection() {
                                   setCardsViewMode("missing");
                                 }}
                               >
-                                View Missing
+                                Missing
                               </Button>
                             </div>
                           </div>
