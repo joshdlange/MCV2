@@ -112,18 +112,19 @@ export default function MyCollection() {
     
     // For owned cards (collection items)
     const filteredCollection = collection?.filter(item => {
-      const matchesSearch = item.card.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.card.set.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.card.cardNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.card.rarity.toLowerCase().includes(searchQuery.toLowerCase());
+      if (!item.card) return false;
+      const matchesSearch = (item.card.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.card.set?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.card.cardNumber || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.card.rarity || '').toLowerCase().includes(searchQuery.toLowerCase());
       
-      const matchesSet = selectedSet === "all" || item.card.set.id.toString() === selectedSet;
+      const matchesSet = selectedSet === "all" || item.card.set?.id?.toString() === selectedSet;
       
       return matchesSearch && matchesSet;
     }).sort((a, b) => {
       // Sort cards by card number (1, 2, 3...)
-      const numA = parseInt(a.card.cardNumber) || 0;
-      const numB = parseInt(b.card.cardNumber) || 0;
+      const numA = parseInt(a.card?.cardNumber || '0') || 0;
+      const numB = parseInt(b.card?.cardNumber || '0') || 0;
       return numA - numB;
     }) || [];
     
@@ -548,7 +549,7 @@ export default function MyCollection() {
                 </div>
               ) : (
                 <BinderView
-                  ownedCards={collection?.filter(item => item.card.set.id.toString() === selectedSet) || []}
+                  ownedCards={collection?.filter(item => item.card?.set?.id?.toString() === selectedSet) || []}
                   allCardsInSet={allSetCards || []}
                   totalCardsInSet={allSetCards?.length || 0}
                   setName={cardSets?.find(s => s.id.toString() === selectedSet)?.name || ""}

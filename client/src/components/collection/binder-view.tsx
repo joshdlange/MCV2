@@ -29,9 +29,12 @@ interface BinderSlotProps {
   isPageComplete: boolean;
 }
 
+const PLACEHOLDER_IMAGE = 'https://res.cloudinary.com/dlwfuryyz/image/upload/v1748442577/card-placeholder_ysozlo.png';
+
 function BinderSlot({ card, slotIndex, onClick, isPageComplete }: BinderSlotProps) {
   const isOwned = card.owned;
-  const imageUrl = card.item?.card?.frontImageUrl || card.card?.frontImageUrl;
+  const rawImageUrl = card.item?.card?.frontImageUrl || card.card?.frontImageUrl;
+  const imageUrl = rawImageUrl && rawImageUrl !== PLACEHOLDER_IMAGE ? rawImageUrl : null;
   const cardName = card.item?.card?.name || card.card?.name || `Card #${card.cardNumber}`;
   const isInsert = card.item?.card?.isInsert || card.card?.isInsert;
 
@@ -110,7 +113,7 @@ export function BinderView({
   const cardsPerPage = 9;
 
   const ownedCardNumbers = useMemo(() => {
-    return new Set(ownedCards.map(item => parseInt(item.card.cardNumber) || 0));
+    return new Set(ownedCards.map(item => parseInt(item.card?.cardNumber || '0') || 0));
   }, [ownedCards]);
 
   const binderCards: BinderCard[] = useMemo(() => {
@@ -118,7 +121,7 @@ export function BinderView({
     
     for (let i = 1; i <= totalCardsInSet; i++) {
       const isOwned = ownedCardNumbers.has(i);
-      const ownedItem = ownedCards.find(item => parseInt(item.card.cardNumber) === i);
+      const ownedItem = ownedCards.find(item => parseInt(item.card?.cardNumber || '0') === i);
       const setCard = allCardsInSet.find(card => parseInt(card.cardNumber) === i);
       
       cards.push({

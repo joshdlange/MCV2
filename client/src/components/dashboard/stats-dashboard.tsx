@@ -89,13 +89,13 @@ export function StatsDashboard() {
       onClick: () => setLocation("/wishlist")
     },
     {
-      label: "SUPERPOWERS",
+      label: "POWERS",
       value: superpowersCount.toLocaleString(),
       icon: Zap,
       gradient: "from-purple-500 to-indigo-600",
       bgColor: "bg-purple-50",
       iconColor: "text-white",
-      tooltip: "Badges and achievements you've earned. Collect them all!",
+      tooltip: "Superpowers - Badges and achievements you've earned. Collect them all!",
       onClick: () => setLocation("/social?tab=superpowers")
     },
   ];

@@ -817,8 +817,26 @@ export class EbayPricingService {
         const soldItems = await this.fetchCompletedListings(searchQueries);
         
         if (soldItems.length === 0) {
-          console.log(`No eBay sold items found for card "${card.name}" - legitimate $0.00 value`);
-          // Legitimate $0.00 - no sales found but API call succeeded
+          console.log(`No eBay sold items found for card "${card.name}" - checking for existing cached price`);
+          
+          // Check if there's an existing cached price to preserve
+          const [existingCache] = await db
+            .select()
+            .from(cardPriceCache)
+            .where(eq(cardPriceCache.cardId, cardId))
+            .limit(1);
+          
+          if (existingCache && parseFloat(existingCache.avgPrice || '0') > 0) {
+            console.log(`Preserving existing cached price: $${existingCache.avgPrice} (last fetched: ${existingCache.lastFetched})`);
+            return {
+              avgPrice: parseFloat(existingCache.avgPrice),
+              salesCount: existingCache.salesCount || 0,
+              lastFetched: existingCache.lastFetched
+            };
+          }
+          
+          // Only set to $0 if there was no previous price
+          console.log(`No existing price to preserve - setting to $0.00`);
           await this.updatePriceCache(cardId, 0, [], 0);
           return {
             avgPrice: 0,
@@ -834,25 +852,51 @@ export class EbayPricingService {
 
         // FINAL PRICING VERIFICATION - Log exactly what pricing is based on
         console.log(`\n💰 FINAL PRICING CALCULATION for "${card.name}" from "${card.setName}" #${card.cardNumber}:`);
-        if (filteredItems.length > 0) {
+        
+        // Only update cache when we have new valid pricing data
+        if (filteredItems.length > 0 && avgPrice > 0) {
           console.log(`✅ PRICE: $${avgPrice.toFixed(2)} (average of ${filteredItems.length} verified listings)`);
           console.log(`📋 PRICING SOURCES:`);
           filteredItems.forEach((item, index) => {
             console.log(`   ${index + 1}. "${item.title}" - $${item.soldPrice.toFixed(2)}`);
           });
-        } else {
-          console.log(`❌ PRICE: $0.00 (no verified listings found - preventing inaccurate pricing)`);
-          console.log(`📋 REJECTED ${soldItems.length} listings that didn't match our strict criteria`);
+          
+          await this.updatePriceCache(cardId, avgPrice, recentSales, filteredItems.length);
+          console.log(`✅ Successfully updated pricing for card "${card.name}": $${avgPrice}`);
+          
+          return {
+            avgPrice,
+            salesCount: filteredItems.length,
+            lastFetched: new Date()
+          };
         }
-
-        // Update cache with new data
-        await this.updatePriceCache(cardId, avgPrice, recentSales, filteredItems.length);
-
-        console.log(`✅ Successfully updated pricing for card "${card.name}": $${avgPrice} (${filteredItems.length} relevant sales from ${soldItems.length} total)`);
-
+        
+        // No verified listings found - preserve existing price
+        console.log(`❌ No verified listings found - preserving existing price if available`);
+        console.log(`📋 REJECTED ${soldItems.length} listings that didn't match our strict criteria`);
+        
+        // Check for existing cached price to preserve
+        const [existingCache] = await db
+          .select()
+          .from(cardPriceCache)
+          .where(eq(cardPriceCache.cardId, cardId))
+          .limit(1);
+        
+        if (existingCache && parseFloat(existingCache.avgPrice || '0') > 0) {
+          console.log(`Preserving existing cached price: $${existingCache.avgPrice}`);
+          return {
+            avgPrice: parseFloat(existingCache.avgPrice),
+            salesCount: existingCache.salesCount || 0,
+            lastFetched: existingCache.lastFetched
+          };
+        }
+        
+        // No existing price - set to $0 and return
+        console.log(`No existing price to preserve - setting to $0.00 for new card`);
+        await this.updatePriceCache(cardId, 0, [], 0);
         return {
-          avgPrice,
-          salesCount: filteredItems.length,
+          avgPrice: 0,
+          salesCount: 0,
           lastFetched: new Date()
         };
 
