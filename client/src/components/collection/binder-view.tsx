@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, BookOpen, Grid3X3, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookOpen, Grid3X3, Sparkles, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { CollectionItem, CardWithSet } from "@shared/schema";
@@ -20,6 +20,7 @@ interface BinderViewProps {
   onCardClick: (item: CollectionItem | CardWithSet) => void;
   onViewModeChange?: (mode: "binder" | "grid") => void;
   viewMode?: "binder" | "grid";
+  onBack?: () => void;
 }
 
 interface BinderSlotProps {
@@ -106,7 +107,8 @@ export function BinderView({
   setName,
   onCardClick,
   onViewModeChange,
-  viewMode = "binder"
+  viewMode = "binder",
+  onBack
 }: BinderViewProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const [flipDirection, setFlipDirection] = useState<"left" | "right">("right");
@@ -183,8 +185,22 @@ export function BinderView({
 
   return (
     <div className="w-full">
+      {/* Back button */}
+      {onBack && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onBack}
+          className="text-gray-600 hover:text-gray-900 mb-3"
+          data-testid="button-back-to-sets"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back to Sets
+        </Button>
+      )}
+      
       <div className="flex items-center justify-between mb-4 px-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <h3 className="text-lg font-bold text-gray-900">{setName}</h3>
           <Badge className="bg-gray-100 text-gray-700 text-xs">
             {ownedCards.length}/{totalCardsInSet}

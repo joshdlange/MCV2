@@ -23,7 +23,7 @@ export default function MyCollection() {
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSet, setSelectedSet] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [collectionView, setCollectionView] = useState<"cards" | "sets">("sets");
   const [cardsViewMode, setCardsViewMode] = useState<"owned" | "missing">("owned");
   const [binderViewMode, setBinderViewMode] = useState<"binder" | "grid">("binder");
@@ -496,46 +496,6 @@ export default function MyCollection() {
       <div className="p-4 sm:p-6">
         {collectionView === "cards" ? (
           <>
-            {selectedSet !== "all" && (
-              <div className="flex items-center justify-between mb-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setCollectionView("sets");
-                    setSelectedSet("all");
-                  }}
-                  className="text-gray-600 hover:text-gray-900"
-                  data-testid="button-back-to-sets"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-1" />
-                  Back to Sets
-                </Button>
-                
-                {cardsViewMode === "owned" && (
-                  <div className="flex border border-gray-300 rounded-lg overflow-hidden">
-                    <Button
-                      variant={binderViewMode === "binder" ? "default" : "ghost"}
-                      size="sm"
-                      onClick={() => setBinderViewMode("binder")}
-                      className={`rounded-none px-2 ${binderViewMode === "binder" ? "text-white" : "text-gray-900"}`}
-                      data-testid="button-binder-mode"
-                    >
-                      <BookOpen className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant={binderViewMode === "grid" ? "default" : "ghost"}
-                      size="sm"
-                      onClick={() => setBinderViewMode("grid")}
-                      className={`rounded-none px-2 ${binderViewMode === "grid" ? "text-white" : "text-gray-900"}`}
-                      data-testid="button-expanded-grid-mode"
-                    >
-                      <Grid3X3 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
             
             {selectedSet !== "all" && cardsViewMode === "owned" && binderViewMode === "binder" ? (
               allSetCardsLoading || !cardSets ? (
@@ -563,6 +523,10 @@ export default function MyCollection() {
                   }}
                   onViewModeChange={setBinderViewMode}
                   viewMode={binderViewMode}
+                  onBack={() => {
+                    setCollectionView("sets");
+                    setSelectedSet("all");
+                  }}
                 />
               )
             ) : cardsViewMode === "missing" && missingCardsLoading ? (
