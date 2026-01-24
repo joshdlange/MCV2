@@ -11,35 +11,59 @@ interface MainSetTileProps {
   assignedSets: CardSet[];
 }
 
+const isPlaceholderImage = (url: string | null | undefined): boolean => {
+  if (!url) return true;
+  if (url.includes('1ZcGcRer-EEmpbUgDivHKVqU4Ck_G5TiF')) return true;
+  if (url.includes('superhero-fallback')) return true;
+  if (url.includes('card-placeholder_ysozlo')) return true;
+  if (url.includes('image-coming-soon')) return true;
+  return false;
+};
+
 export function MainSetTile({ mainSet, assignedSets }: MainSetTileProps) {
   const [thumbnailUrl, setThumbnailUrl] = useState<string>("/images/image-coming-soon.png");
   const [totalCards, setTotalCards] = useState<number>(0);
+  const [currentSetIndex, setCurrentSetIndex] = useState<number>(0);
 
-  // Calculate total cards
+  // Calculate total cards and reset index when assignedSets changes
   useEffect(() => {
     const total = assignedSets.reduce((sum, set) => {
       const cardCount = Number(set.totalCards) || 0;
       return sum + cardCount;
     }, 0);
     setTotalCards(total);
+    setCurrentSetIndex(0); // Reset index when sets change
   }, [assignedSets]);
 
-  const validSetId = assignedSets.length > 0 ? assignedSets[0].id : null;
+  const currentSetId = assignedSets.length > currentSetIndex ? assignedSets[currentSetIndex].id : null;
 
-  // ✅ Always run the hook, conditionally enable it
-  const { data: firstSetCards } = useQuery<CardWithSet[]>({
-    queryKey: ["/api/cards", { setId: validSetId }],
-    enabled: Boolean(validSetId && !mainSet.thumbnailImageUrl),
+  // Search across subsets until we find one with a valid card image
+  // Enable search if main set thumbnail is missing or is a placeholder
+  const { data: currentSetCards } = useQuery<CardWithSet[]>({
+    queryKey: ["/api/cards", { setId: currentSetId }],
+    enabled: Boolean(currentSetId && isPlaceholderImage(mainSet.thumbnailImageUrl) && thumbnailUrl === "/images/image-coming-soon.png"),
   });
 
   useEffect(() => {
-    if (mainSet.thumbnailImageUrl) {
+    if (mainSet.thumbnailImageUrl && !isPlaceholderImage(mainSet.thumbnailImageUrl)) {
       setThumbnailUrl(mainSet.thumbnailImageUrl);
-    } else if (firstSetCards && firstSetCards.length > 0) {
-      const firstCard = firstSetCards[0];
-      setThumbnailUrl(firstCard.frontImageUrl || "/images/image-coming-soon.png");
+    } else if (currentSetCards && currentSetCards.length > 0) {
+      // Find a card with a valid image
+      const cardWithImage = currentSetCards.find(card => 
+        card.frontImageUrl && !isPlaceholderImage(card.frontImageUrl)
+      );
+      
+      if (cardWithImage && cardWithImage.frontImageUrl) {
+        setThumbnailUrl(cardWithImage.frontImageUrl);
+      } else if (currentSetIndex < assignedSets.length - 1) {
+        // Try next subset if no valid image found
+        setCurrentSetIndex(prev => prev + 1);
+      }
+    } else if (currentSetCards && currentSetCards.length === 0 && currentSetIndex < assignedSets.length - 1) {
+      // Empty set, try next
+      setCurrentSetIndex(prev => prev + 1);
     }
-  }, [mainSet.thumbnailImageUrl, firstSetCards]);
+  }, [mainSet.thumbnailImageUrl, currentSetCards, currentSetIndex, assignedSets.length]);
 
   return (
     <Link href={`/browse/${mainSet.slug}`}>

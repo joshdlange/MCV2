@@ -274,23 +274,36 @@ export class BadgeService {
 
   // Run all retroactive badge checks for a user
   async runRetroactiveBadgeChecks(userId: number): Promise<void> {
-    await this.checkLoyalist(userId);
+    // Collection badges
+    await this.checkRookieCollector(userId);
+    await this.checkHundredClub(userId);
+    await this.checkVaultGuardian(userId);
     await this.checkCompletionist(userId);
     await this.checkHallOfFame(userId);
-    await this.checkChattyCathy(userId);
+    // Friend badges
+    await this.checkFriendlyFace(userId);
+    await this.checkSquadAssembled(userId);
     await this.checkFriendshipIsMagic(userId);
+    // Message badges
+    await this.checkChatterbox(userId);
+    await this.checkChattyCathy(userId);
+    // Login badges
+    await this.check7DayStreak(userId);
     await this.checkNightcrawler(userId);
+    await this.checkLoyalist(userId);
   }
 
   // Run badge checks when user performs specific actions
   async checkBadgesOnMessage(userId: number, messageContent: string): Promise<void> {
     await this.checkPottyMouth(userId, messageContent);
+    await this.checkChatterbox(userId);
     await this.checkChattyCathy(userId);
   }
 
   async checkBadgesOnLogin(userId: number): Promise<void> {
     await this.checkWelcomeBack(userId);
     await this.checkNightcrawler(userId);
+    await this.check7DayStreak(userId);
   }
 
   async checkBadgesOnPriceRefresh(userId: number): Promise<void> {
@@ -298,12 +311,126 @@ export class BadgeService {
   }
 
   async checkBadgesOnCollectionChange(userId: number): Promise<void> {
+    await this.checkRookieCollector(userId);
+    await this.checkHundredClub(userId);
+    await this.checkVaultGuardian(userId);
     await this.checkCompletionist(userId);
     await this.checkHallOfFame(userId);
   }
 
+  // Rookie Collector - First card added to collection
+  async checkRookieCollector(userId: number): Promise<void> {
+    const badge = await this.getBadgeByName('Rookie Collector');
+    if (!badge) {
+      console.log('[BADGE] Rookie Collector badge not found in database');
+      return;
+    }
+
+    const collectionCount = await db.select({ count: count() })
+      .from(userCollections)
+      .where(eq(userCollections.userId, userId));
+
+    if (Number(collectionCount[0].count) >= 1) {
+      console.log(`[BADGE] User ${userId} has ${collectionCount[0].count} cards, awarding Rookie Collector`);
+      await this.awardBadge(userId, badge.id);
+    }
+  }
+
+  // Hundred Club - 100 cards added
+  async checkHundredClub(userId: number): Promise<void> {
+    const badge = await this.getBadgeByName('Hundred Club');
+    if (!badge) return;
+
+    const collectionCount = await db.select({ count: count() })
+      .from(userCollections)
+      .where(eq(userCollections.userId, userId));
+
+    if (Number(collectionCount[0].count) >= 100) {
+      await this.awardBadge(userId, badge.id);
+    }
+  }
+
+  // Vault Guardian - 1000 cards added
+  async checkVaultGuardian(userId: number): Promise<void> {
+    const badge = await this.getBadgeByName('Vault Guardian');
+    if (!badge) return;
+
+    const collectionCount = await db.select({ count: count() })
+      .from(userCollections)
+      .where(eq(userCollections.userId, userId));
+
+    if (Number(collectionCount[0].count) >= 1000) {
+      await this.awardBadge(userId, badge.id);
+    }
+  }
+
   async checkBadgesOnFriendChange(userId: number): Promise<void> {
+    await this.checkFriendlyFace(userId);
+    await this.checkSquadAssembled(userId);
     await this.checkFriendshipIsMagic(userId);
+  }
+
+  // Friendly Face - First friend added
+  async checkFriendlyFace(userId: number): Promise<void> {
+    const badge = await this.getBadgeByName('Friendly Face');
+    if (!badge) return;
+
+    const friendCount = await db.select({ count: count() })
+      .from(friends)
+      .where(and(
+        sql`(${friends.requesterId} = ${userId} OR ${friends.recipientId} = ${userId})`,
+        eq(friends.status, 'accepted')
+      ));
+
+    if (Number(friendCount[0].count) >= 1) {
+      await this.awardBadge(userId, badge.id);
+    }
+  }
+
+  // Squad Assembled - 10 friends
+  async checkSquadAssembled(userId: number): Promise<void> {
+    const badge = await this.getBadgeByName('Squad Assembled');
+    if (!badge) return;
+
+    const friendCount = await db.select({ count: count() })
+      .from(friends)
+      .where(and(
+        sql`(${friends.requesterId} = ${userId} OR ${friends.recipientId} = ${userId})`,
+        eq(friends.status, 'accepted')
+      ));
+
+    if (Number(friendCount[0].count) >= 10) {
+      await this.awardBadge(userId, badge.id);
+    }
+  }
+
+  // Chatterbox - First message sent
+  async checkChatterbox(userId: number): Promise<void> {
+    const badge = await this.getBadgeByName('Chatterbox');
+    if (!badge) return;
+
+    const messageCount = await db.select({ count: count() })
+      .from(messages)
+      .where(eq(messages.senderId, userId));
+
+    if (Number(messageCount[0].count) >= 1) {
+      await this.awardBadge(userId, badge.id);
+    }
+  }
+
+  // 7-Day Streak - Login streak check
+  async check7DayStreak(userId: number): Promise<void> {
+    const badge = await this.getBadgeByName('7-Day Streak');
+    if (!badge) return;
+
+    const user = await db.select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (user[0] && user[0].loginStreak >= 7) {
+      await this.awardBadge(userId, badge.id);
+    }
   }
 
   // 12. First Listing - Award when user lists their first item on marketplace

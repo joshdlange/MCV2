@@ -16,8 +16,8 @@ import { ebayPricingService } from "./ebay-pricing";
 import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
 import { db } from "./db";
-import { cards, cardSets, emailLogs, pendingCardImages, insertPendingCardImageSchema } from "../shared/schema";
-import { sql, eq, ilike, and, or, isNull } from "drizzle-orm";
+import { cards, cardSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userBadges } from "../shared/schema";
+import { sql, eq, ilike, and, or, isNull, count } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
 import { badgeService } from "./badge-service";
@@ -3199,6 +3199,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Award badge error:', error);
       res.status(500).json({ message: "Failed to award badge" });
+    }
+  });
+
+  // Admin retroactive badge check for all users
+  app.post("/api/admin/badges/retroactive-check", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      // Get all users with at least one card
+      const usersWithCards = await db.select({ userId: userCollections.userId })
+        .from(userCollections)
+        .groupBy(userCollections.userId);
+
+      let processed = 0;
+      let badgesAwarded = 0;
+
+      for (const { userId } of usersWithCards) {
+        try {
+          // Count badges before
+          const beforeBadges = await db.select({ count: count() })
+            .from(userBadges)
+            .where(eq(userBadges.userId, userId));
+          
+          await badgeService.runRetroactiveBadgeChecks(userId);
+          
+          // Count badges after
+          const afterBadges = await db.select({ count: count() })
+            .from(userBadges)
+            .where(eq(userBadges.userId, userId));
+          
+          badgesAwarded += Number(afterBadges[0].count) - Number(beforeBadges[0].count);
+          processed++;
+        } catch (error) {
+          console.error(`Failed to check badges for user ${userId}:`, error);
+        }
+      }
+
+      console.log(`[ADMIN] Retroactive badge check complete: ${processed} users processed, ${badgesAwarded} badges awarded`);
+      res.json({ 
+        message: `Retroactive badge check complete`,
+        usersProcessed: processed,
+        badgesAwarded
+      });
+    } catch (error) {
+      console.error('Retroactive badge check error:', error);
+      res.status(500).json({ message: "Failed to run retroactive badge check" });
     }
   });
 

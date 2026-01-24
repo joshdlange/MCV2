@@ -18,11 +18,13 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
   const [loading, setLoading] = useState(false);
 
   const defaultFallbackUrl = "https://drive.google.com/uc?export=view&id=1ZcGcRer-EEmpbUgDivHKVqU4Ck_G5TiF";
+  const cloudinaryPlaceholder = "https://res.cloudinary.com/dlwfuryyz/image/upload/v1748442577/card-placeholder_ysozlo.png";
   
   const isPlaceholderImage = (url: string | null) => {
     if (!url) return true;
     if (url.includes('1ZcGcRer-EEmpbUgDivHKVqU4Ck_G5TiF')) return true;
     if (url.includes('superhero-fallback')) return true;
+    if (url.includes('card-placeholder_ysozlo')) return true;
     return false;
   };
 
@@ -51,11 +53,9 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
           return numA - numB;
         });
         
-        const defaultFallbackUrl = "https://drive.google.com/uc?export=view&id=1ZcGcRer-EEmpbUgDivHKVqU4Ck_G5TiF";
         const cardWithImage = sortedCards.find((card: any) => 
           card.frontImageUrl && 
-          card.frontImageUrl !== defaultFallbackUrl &&
-          !card.frontImageUrl.includes('1ZcGcRer-EEmpbUgDivHKVqU4Ck_G5TiF')
+          !isPlaceholderImage(card.frontImageUrl)
         );
         
         if (cardWithImage) {
