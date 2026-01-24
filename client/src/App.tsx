@@ -10,6 +10,7 @@ import { Search, MessageCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { NotificationBell } from "@/components/NotificationBell";
+import { useBackButton } from "@/hooks/useBackButton";
 import heroLogoWhite from "@assets/noun-super-hero-380874-FFFFFF.png";
 import { Login } from "@/components/auth/Login";
 import { Onboarding } from "@/components/auth/Onboarding";
@@ -162,6 +163,8 @@ function Router() {
 
 function AuthenticatedApp() {
   const { user, loading } = useAuth();
+  
+  useBackButton();
 
   if (loading) {
     return (
