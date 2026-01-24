@@ -22,27 +22,32 @@ export class BadgeService {
     return existingBadge.length > 0;
   }
 
-  // Award badge to user
+  // Award badge to user (uses ON CONFLICT to prevent race condition duplicates)
   async awardBadge(userId: number, badgeId: number): Promise<void> {
-    const hasEarned = await this.hasUserEarnedBadge(userId, badgeId);
-    if (hasEarned) return;
+    try {
+      // Use raw SQL with ON CONFLICT to prevent duplicates at database level
+      const result = await db.execute(sql`
+        INSERT INTO user_badges (user_id, badge_id) 
+        VALUES (${userId}, ${badgeId})
+        ON CONFLICT (user_id, badge_id) DO NOTHING
+        RETURNING id
+      `);
 
-    await db.insert(userBadges).values({
-      userId,
-      badgeId
-    });
+      // Only log and notify if a new badge was actually inserted
+      if (result.rows && result.rows.length > 0) {
+        const badge = await db.select()
+          .from(badges)
+          .where(eq(badges.id, badgeId))
+          .limit(1);
 
-    // Get badge details for logging
-    const badge = await db.select()
-      .from(badges)
-      .where(eq(badges.id, badgeId))
-      .limit(1);
-
-    if (badge[0]) {
-      console.log(`🏆 BADGE EARNED: User ${userId} earned "${badge[0].name}" (${badge[0].rarity})`);
-      
-      // Create notification for badge earned
-      await notificationService.createBadgeNotification(userId, badge[0].name, badge[0].rarity);
+        if (badge[0]) {
+          console.log(`🏆 BADGE EARNED: User ${userId} earned "${badge[0].name}" (${badge[0].rarity})`);
+          await notificationService.createBadgeNotification(userId, badge[0].name, badge[0].rarity);
+        }
+      }
+    } catch (error) {
+      // Silently handle any duplicate key errors as a safety net
+      console.log(`[BADGE] Could not award badge ${badgeId} to user ${userId}: ${error}`);
     }
   }
 
