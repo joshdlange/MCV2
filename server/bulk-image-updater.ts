@@ -63,7 +63,36 @@ export async function findCardsNeedingImages(
   console.log('🔍 Finding cards that need image updates...');
   
   try {
-    // Build the base query
+    const PLACEHOLDER_URL = 'https://res.cloudinary.com/dlwfuryyz/image/upload/v1748442577/card-placeholder_ysozlo.png';
+    const RETRY_INTERVAL_DAYS = 30;
+    
+    // Smart ordering strategy:
+    // 1. Cards NEVER searched (lastImageSearchAttempt is NULL) - ordered by newest card ID first
+    // 2. Cards searched but failed long ago (>30 days) - ordered by oldest attempt first
+    // This ensures newly imported cards are processed first, and old failures are retried eventually
+    
+    const baseCondition = or(
+      isNull(cards.frontImageUrl),
+      eq(cards.frontImageUrl, ''),
+      eq(cards.frontImageUrl, '/images/image-coming-soon.png'),
+      eq(cards.frontImageUrl, '/images/placeholder.png'),
+      eq(cards.frontImageUrl, PLACEHOLDER_URL)
+    );
+    
+    let whereCondition;
+    if (options.skipRecentlyFailed) {
+      // Only get cards that: have never been searched OR were searched more than 30 days ago
+      whereCondition = and(
+        baseCondition,
+        or(
+          isNull(cards.lastImageSearchAttempt),
+          sql`${cards.lastImageSearchAttempt} < NOW() - INTERVAL '${sql.raw(String(RETRY_INTERVAL_DAYS))} days'`
+        )
+      );
+    } else {
+      whereCondition = baseCondition;
+    }
+    
     let query = db
       .select({
         id: cards.id,
@@ -72,41 +101,40 @@ export async function findCardsNeedingImages(
         setName: cardSets.name,
         frontImageUrl: cards.frontImageUrl,
         description: cards.description,
+        lastImageSearchAttempt: cards.lastImageSearchAttempt,
       })
       .from(cards)
       .innerJoin(cardSets, eq(cards.setId, cardSets.id))
-      .where(
-        and(
-          or(
-            isNull(cards.frontImageUrl),
-            eq(cards.frontImageUrl, ''),
-            eq(cards.frontImageUrl, '/images/image-coming-soon.png'),
-            eq(cards.frontImageUrl, '/images/placeholder.png'),
-            eq(cards.frontImageUrl, 'https://res.cloudinary.com/dlwfuryyz/image/upload/v1748442577/card-placeholder_ysozlo.png')
-          ),
-          // Apply skipRecentlyFailed logic if enabled (30 days) - only skip if updated_at exists and is recent
-          options.skipRecentlyFailed ? 
-            sql`(updated_at IS NULL OR updated_at < NOW() - INTERVAL '30 days')` : 
-            sql`1=1`
-        )
-      );
+      .where(whereCondition);
 
     // Add ordering
     if (options.randomOrder) {
       query = query.orderBy(sql`RANDOM()`) as any;
     } else {
-      // Order by highest ID first (newest cards) to avoid processing old failed cards
-      query = query.orderBy(desc(cards.id)) as any;
+      // Smart priority queue:
+      // 1. Cards NEVER searched (lastImageSearchAttempt IS NULL) - ordered by newest card ID first
+      // 2. Cards searched long ago - ordered by OLDEST attempt first (so we retry cards that have waited the longest)
+      // Using explicit NULLS FIRST for PostgreSQL clarity
+      query = query.orderBy(
+        sql`${cards.lastImageSearchAttempt} ASC NULLS FIRST`,  // NULLs first, then oldest attempts
+        desc(cards.id)                                          // Within same group, newest cards first
+      ) as any;
     }
     
     // Add limit if specified
     const result = limit ? await (query as any).limit(limit) : await query;
     
-    console.log(`📊 Found ${result.length} cards needing images`);
+    const neverSearched = result.filter((c: any) => !c.lastImageSearchAttempt).length;
+    const retries = result.length - neverSearched;
+    
+    console.log(`📊 Found ${result.length} cards needing images:`);
+    console.log(`   🆕 ${neverSearched} never searched (prioritized)`);
+    console.log(`   🔄 ${retries} to retry (searched >30 days ago)`);
+    
     if (options.randomOrder) {
-      console.log('🎲 Using random order to avoid failed card clusters');
+      console.log('🎲 Using random order');
     } else {
-      console.log('📈 Prioritizing newer cards to avoid repeatedly processing old failures');
+      console.log('📈 Smart priority: new cards first, then oldest retries');
     }
     
     return result;
@@ -188,7 +216,7 @@ export async function bulkUpdateMissingImages(options: BulkUpdateOptions = {}): 
   const {
     limit,
     rateLimitMs = parseInt(process.env.EBAY_RATE_LIMIT_MS || '3000'),
-    skipRecentlyFailed = false,
+    skipRecentlyFailed = true,  // Default to true - always skip cards searched recently
     randomOrder = false,
     onProgress
   } = options;
@@ -240,6 +268,12 @@ export async function bulkUpdateMissingImages(options: BulkUpdateOptions = {}): 
       try {
         // Process the card
         const updateResult = await processCard(card);
+        
+        // ALWAYS update lastImageSearchAttempt after each search attempt (success or failure)
+        // This ensures we don't keep retrying the same cards repeatedly
+        await db.update(cards)
+          .set({ lastImageSearchAttempt: new Date() })
+          .where(eq(cards.id, card.id));
         
         if (updateResult.success) {
           result.successCount++;

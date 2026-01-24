@@ -2105,20 +2105,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const { limit, rateLimitMs, skipRecentlyFailed = false, randomOrder = false } = req.body;
+      const { limit, rateLimitMs, skipRecentlyFailed = true, randomOrder = false } = req.body;
       console.log(`[DEBUG] Request parameters - limit: ${limit}, rateLimitMs: ${rateLimitMs}, skipRecentlyFailed: ${skipRecentlyFailed}, randomOrder: ${randomOrder}`);
       const actualLimit = limit ? Math.min(parseInt(limit), 1000) : 50; // Max 1000 cards per request
       const actualRateLimit = rateLimitMs ? Math.max(parseInt(rateLimitMs), 500) : 1000; // Min 500ms
       
       console.log(`[DEBUG] Starting COMC bulk image update with limit: ${actualLimit}, rate limit: ${actualRateLimit}ms`);
       
-      // Smart ordering logic to avoid reprocessing failed cards
-      let orderClause = 'ORDER BY c.id DESC'; // Default: newest cards first (avoids old failures)
+      // Smart ordering logic: never-searched first, then oldest attempts
+      let orderClause = 'ORDER BY c.last_image_search_attempt ASC NULLS FIRST, c.id DESC';
       if (randomOrder) {
         orderClause = 'ORDER BY RANDOM()'; // Random order to avoid failed card clusters
-        console.log(`[DEBUG] Using random order to avoid failed card clusters`);
+        console.log(`[DEBUG] Using random order`);
       } else {
-        console.log(`[DEBUG] Using DESC order to prioritize newer cards over old failures`);
+        console.log(`[DEBUG] Using smart priority: never-searched first, then oldest attempts`);
       }
       
       // Get cards needing images - SKIP RECENTLY PROCESSED CARDS
