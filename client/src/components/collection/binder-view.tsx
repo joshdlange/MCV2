@@ -129,7 +129,7 @@ export function BinderView({
 
   const binderCards: BinderCard[] = useMemo(() => {
     // Use allCardsInSet as the source of truth for card numbers and order
-    return allCardsInSet.map((card) => {
+    const cards = allCardsInSet.map((card) => {
       const cardNum = card.cardNumber?.trim() || '';
       const ownedItem = ownedCardMap.get(cardNum);
       // Parse the card number for display, fallback to 0 for non-numeric
@@ -142,6 +142,8 @@ export function BinderView({
         card: card
       };
     });
+    // Sort by card number in chronological order
+    return cards.sort((a, b) => a.cardNumber - b.cardNumber);
   }, [allCardsInSet, ownedCardMap]);
 
   const totalPages = Math.ceil(binderCards.length / cardsPerPage);
@@ -245,11 +247,13 @@ export function BinderView({
       </div>
 
       <div 
-        className="relative rounded-2xl p-3 sm:p-4"
+        className="relative rounded-2xl p-2"
         style={{
           background: 'linear-gradient(135deg, #1e1e2f 0%, #141422 50%, #0d0d1a 100%)',
           boxShadow: 'inset 0 2px 20px rgba(0,0,0,0.5), 0 10px 40px rgba(0,0,0,0.3)',
-          maxHeight: 'calc(100vh - 280px)',
+          height: 'calc(100vh - 320px)',
+          minHeight: '300px',
+          maxHeight: '600px',
           display: 'flex',
           flexDirection: 'column'
         }}
@@ -261,17 +265,15 @@ export function BinderView({
           }}
         />
 
-        <div className="flex items-center justify-between mb-2 flex-shrink-0">
-          <Button
-            variant="ghost"
-            size="sm"
+        <div className="flex items-center justify-between mb-1 flex-shrink-0">
+          <button
             onClick={() => handlePageChange("prev")}
             disabled={currentPage === 0}
-            className="text-white hover:bg-white/10 disabled:opacity-30 h-8 w-8 p-0"
+            className="bg-white/20 text-white disabled:opacity-30 disabled:cursor-not-allowed h-8 w-8 rounded-full flex items-center justify-center border border-white/40"
             data-testid="button-prev-page"
           >
             <ChevronLeft className="h-5 w-5" />
-          </Button>
+          </button>
           
           <div className="flex items-center gap-2">
             <span className="text-white font-bold text-sm">
@@ -285,19 +287,17 @@ export function BinderView({
             )}
           </div>
           
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
             onClick={() => handlePageChange("next")}
             disabled={currentPage >= totalPages - 1}
-            className="text-white hover:bg-white/10 disabled:opacity-30 h-8 w-8 p-0"
+            className="bg-white/20 text-white disabled:opacity-30 disabled:cursor-not-allowed h-8 w-8 rounded-full flex items-center justify-center border border-white/40"
             data-testid="button-next-page"
           >
             <ChevronRight className="h-5 w-5" />
-          </Button>
+          </button>
         </div>
 
-        <div style={{ perspective: '1000px' }} className="flex-1 min-h-0">
+        <div style={{ perspective: '1000px' }} className="flex-1 min-h-0 overflow-hidden">
           <AnimatePresence mode="wait" custom={flipDirection}>
             <motion.div
               key={currentPage}
@@ -310,10 +310,9 @@ export function BinderView({
                 duration: 0.4, 
                 ease: [0.4, 0, 0.2, 1]
               }}
-              className={`grid grid-cols-3 gap-1.5 sm:gap-2 h-full
-                ${isPageComplete ? 'ring-2 ring-yellow-400/30 rounded-xl p-1' : ''}
+              className={`grid grid-cols-3 gap-1 h-full
+                ${isPageComplete ? 'ring-2 ring-yellow-400/30 rounded-xl p-0.5' : ''}
               `}
-              style={{ maxHeight: 'calc(100vh - 380px)' }}
             >
               {currentCards.map((card, index) => (
                 <BinderSlot

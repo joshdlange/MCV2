@@ -475,8 +475,8 @@ export default function MyCollection() {
                 size="sm"
                 onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
                 className={showFavoritesOnly 
-                  ? "bg-yellow-500 text-white border-yellow-500 hover:bg-yellow-600" 
-                  : "text-gray-700 border-gray-300 hover:bg-yellow-50 hover:border-yellow-400"}
+                  ? "bg-yellow-500 text-white border-2 border-yellow-600" 
+                  : "bg-white text-gray-800 border-2 border-gray-400"}
               >
                 <Star className={`h-4 w-4 mr-1 ${showFavoritesOnly ? 'fill-current' : ''}`} />
                 Favorites
