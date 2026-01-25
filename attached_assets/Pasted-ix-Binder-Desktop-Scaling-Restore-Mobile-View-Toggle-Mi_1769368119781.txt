@@ -1,0 +1,128 @@
+ix Binder Desktop Scaling + Restore Mobile View Toggle (Minimal Risk)
+
+PROJECT: Marvel Card Vault (APP project)
+CONSTRAINT: This is live in production with ~100 users. Make the smallest possible changes. No broad CSS sweeping changes. No refactors. No “cleanup.” Fix only the binder layout and the missing view toggle buttons.
+
+Problem A — Desktop Binder Layout (3×3 looks wrong on desktop)
+
+Right now the binder grid looks “off” on desktop: cards are too small relative to container and there’s too much empty space. We want:
+
+Always show exactly 3 columns × 3 rows
+
+Cards preserve aspect ratio
+
+Use available space better on desktop (bigger cards than current)
+
+Still no vertical scrolling required to view the 9 cards for that page
+
+Required behavior
+
+Binder container should fill available viewport space.
+
+Grid should center and scale up to use that space.
+
+Gaps should be responsive (smaller on smaller screens).
+
+No extra padding that forces the grid to shrink.
+
+Implementation rules (do this way)
+
+Find the binder page component + its CSS container (likely binder-view.tsx or similar).
+
+Ensure the binder grid container has a deterministic height:
+
+height: calc(100dvh - HEADER_AND_TOOLBAR_HEIGHT_PX);
+
+Use 100dvh (not 100vh) for modern browser correctness.
+
+Use CSS Grid with fixed 3×3:
+
+grid-template-columns: repeat(3, minmax(0, 1fr));
+
+grid-template-rows: repeat(3, minmax(0, 1fr));
+
+Each tile must preserve card aspect ratio while maximizing size:
+
+Wrap each image in a tile div that uses aspect-ratio (same as cards)
+
+The tile should size based on the grid cell, not its own fixed px.
+
+Use object-fit: contain for the image to avoid cropping.
+
+Reduce desktop dead space:
+
+Remove unnecessary max-width constraints on the grid wrapper
+
+Ensure container padding isn’t excessive on desktop
+
+Use gap: clamp(8px, 1vw, 16px) so spacing doesn’t blow up
+
+Deliverable: binder should look like the attached “good binder” style but scaled nicely on desktop (cards not tiny) and still fully visible without scrolling.
+
+Problem B — Mobile: View Toggle Buttons Missing (Top Right)
+
+On mobile, the buttons to switch views (grid/list or binder view toggles) are no longer visible in the top right. We must restore them.
+
+Required behavior
+
+On mobile, those buttons must be visible, tappable, and not hidden.
+
+They must not be pushed outside the screen.
+
+They must not be covered by overlays.
+
+They must remain visible across header states.
+
+Most likely causes to check and fix
+
+Parent container has overflow: hidden; causing the button group to clip.
+
+Button group lacks position rules and is flowing off-screen.
+
+z-index conflict (buttons under a header or overlay).
+
+Header layout changed to justify-content: space-between but right side container is too narrow.
+
+Fix approach
+
+Find the header/toolbar component that contains those buttons.
+
+Ensure:
+
+right-side container uses display:flex; align-items:center; gap: 8px;
+
+buttons do not have min-width that forces overflow
+
+container does NOT clip them (overflow: visible where necessary)
+
+add z-index if needed so they sit above content
+
+Do not change the button design system, just placement/visibility.
+
+Deliverable: On mobile, the top-right toggle buttons are visible again.
+
+Production Safety Requirements
+
+Do NOT change shared button styles globally in this pass.
+
+Do NOT touch unrelated pages.
+
+Make changes in as few files as possible.
+
+Provide:
+
+List of files changed
+
+Exact CSS/layout changes
+
+Screenshot or description of desktop binder before/after
+
+Confirmation of mobile toggle visibility restored
+
+Optional Safety Guard (strongly preferred)
+
+If possible, add a quick fallback:
+
+Keep the previous binder layout behind a boolean flag (constant) so we can revert easily if something breaks.
+
+Example: const USE_NEW_BINDER_LAYOUT = true; (single switch)

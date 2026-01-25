@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { CollectionItem, CardWithSet } from "@shared/schema";
 
+// Fallback flag - set to false to revert to old layout if needed
+const USE_NEW_BINDER_LAYOUT = true;
+
 interface BinderCard {
   cardNumber: number;
   owned: boolean;
@@ -54,8 +57,11 @@ function BinderSlot({ card, slotIndex, onClick, isPageComplete }: BinderSlotProp
         ${isPageComplete ? 'ring-2 ring-yellow-400/50' : ''}
       `}
       style={{
+        // Card tiles use aspect ratio and scale to fit grid cell
         aspectRatio: '2.5 / 3.5',
+        height: '100%',
         maxHeight: '100%',
+        width: 'auto',
         background: isOwned 
           ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)' 
           : 'linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%)'
@@ -248,11 +254,13 @@ export function BinderView({
       </div>
 
       <div 
-        className="relative rounded-2xl p-3"
+        className="relative rounded-2xl"
         style={{
           background: 'linear-gradient(135deg, #1e1e2f 0%, #141422 50%, #0d0d1a 100%)',
           boxShadow: 'inset 0 2px 20px rgba(0,0,0,0.5), 0 10px 40px rgba(0,0,0,0.3)',
-          height: 'min(calc(100vh - 200px), 650px)',
+          // New layout: fill available viewport, accounting for header (~180px)
+          height: USE_NEW_BINDER_LAYOUT ? 'calc(100dvh - 180px)' : 'min(calc(100vh - 200px), 650px)',
+          padding: USE_NEW_BINDER_LAYOUT ? 'clamp(8px, 1.5vw, 16px)' : '12px',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden'
@@ -310,12 +318,13 @@ export function BinderView({
                 duration: 0.4, 
                 ease: [0.4, 0, 0.2, 1]
               }}
-              className={`grid grid-cols-3 gap-2 place-items-center
+              className={`grid grid-cols-3 place-items-center h-full w-full
                 ${isPageComplete ? 'ring-2 ring-yellow-400/30 rounded-xl p-1' : ''}
               `}
               style={{ 
-                height: '100%',
-                gridTemplateRows: 'repeat(3, minmax(0, 1fr))'
+                gridTemplateRows: 'repeat(3, minmax(0, 1fr))',
+                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                gap: USE_NEW_BINDER_LAYOUT ? 'clamp(4px, 1vw, 12px)' : '8px'
               }}
             >
               {currentCards.map((card, index) => (

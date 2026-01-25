@@ -411,39 +411,66 @@ export default function MyCollection() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h2 className="text-lg sm:text-xl md:text-2xl font-bebas text-gray-900 tracking-wide">MY COLLECTION</h2>
+      <div className="bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 overflow-visible">
+        <div className="flex flex-col gap-3">
+          {/* Row 1: Title + Right-side toggle buttons (always visible) */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bebas text-gray-900 tracking-wide">MY COLLECTION</h2>
+            
+            {/* Right-side toggle buttons - always visible on mobile */}
+            <div className="flex items-center gap-2 flex-shrink-0 z-10">
+              {/* View Mode Toggle */}
+              <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+                <Button
+                  variant={collectionView === "cards" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setCollectionView("cards")}
+                  className={`rounded-none px-2 sm:px-3 ${collectionView === "cards" ? "text-white" : "text-[#f73f32]"}`}
+                >
+                  Cards
+                </Button>
+                <Button
+                  variant={collectionView === "sets" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setCollectionView("sets")}
+                  className={`rounded-none px-2 sm:px-3 ${collectionView === "sets" ? "text-white" : "text-[#f73f32]"}`}
+                >
+                  Sets
+                </Button>
+              </div>
+              
+              {/* Layout Toggle - Show for both cards and sets view */}
+              <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+                <Button
+                  variant={viewMode === "grid" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("grid")}
+                  className={`rounded-none px-2 ${viewMode === "grid" ? "text-white" : "text-gray-900"}`}
+                >
+                  <Grid3X3 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("list")}
+                  className={`rounded-none px-2 ${viewMode === "list" ? "text-white" : "text-gray-900"}`}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
           
+          {/* Row 2: Search and other controls */}
           <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
+            <div className="relative flex-1 min-w-[140px] max-w-[280px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 placeholder="Search your collection..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 w-64 bg-white text-gray-900 placeholder:text-gray-500"
+                className="pl-10 w-full bg-white text-gray-900 placeholder:text-gray-500"
               />
-            </div>
-            
-            {/* View Mode Toggle */}
-            <div className="flex border border-gray-300 rounded-lg overflow-hidden">
-              <Button
-                variant={collectionView === "cards" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setCollectionView("cards")}
-                className={`rounded-none px-3 ${collectionView === "cards" ? "text-white" : "text-[#f73f32] hover:text-[#f73f32]"}`}
-              >
-                Cards
-              </Button>
-              <Button
-                variant={collectionView === "sets" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setCollectionView("sets")}
-                className={`rounded-none px-3 ${collectionView === "sets" ? "text-white" : "text-[#f73f32] hover:text-[#f73f32]"}`}
-              >
-                Sets
-              </Button>
             </div>
             
             {/* Cards View Mode Toggle - Show only in cards view */}
@@ -453,7 +480,7 @@ export default function MyCollection() {
                   variant={cardsViewMode === "owned" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setCardsViewMode("owned")}
-                  className={`rounded-none px-3 ${cardsViewMode === "owned" ? "text-white" : "text-[#f73f32] hover:text-[#f73f32]"}`}
+                  className={`rounded-none px-2 sm:px-3 ${cardsViewMode === "owned" ? "text-white" : "text-[#f73f32]"}`}
                 >
                   Owned
                 </Button>
@@ -461,7 +488,7 @@ export default function MyCollection() {
                   variant={cardsViewMode === "missing" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setCardsViewMode("missing")}
-                  className={`rounded-none px-3 ${cardsViewMode === "missing" ? "text-white" : "text-[#f73f32] hover:text-[#f73f32]"}`}
+                  className={`rounded-none px-2 sm:px-3 ${cardsViewMode === "missing" ? "text-white" : "text-[#f73f32]"}`}
                 >
                   Missing
                 </Button>
@@ -483,41 +510,23 @@ export default function MyCollection() {
               </Button>
             )}
             
-            {/* Layout Toggle - Show for both cards and sets view */}
-            <div className="flex border border-gray-300 rounded-lg overflow-hidden">
-              <Button
-                variant={viewMode === "grid" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("grid")}
-                className={`rounded-none px-2 ${viewMode === "grid" ? "text-white" : "text-gray-900 hover:text-gray-900"}`}
-              >
-                <Grid3X3 className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("list")}
-                className={`rounded-none px-2 ${viewMode === "list" ? "text-white" : "text-gray-900 hover:text-gray-900"}`}
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
-            
             <Button
               variant="outline"
               size="sm"
               onClick={handleToggleSelectionMode}
-              className={isSelectionMode ? "bg-red-600 text-white border-red-600 hover:bg-red-700 hover:text-white" : "bg-gray-800 text-white border-gray-800 hover:bg-gray-700 hover:text-white"}
+              className={isSelectionMode ? "bg-red-600 text-white border-red-600" : "bg-gray-800 text-white border-gray-800"}
             >
               {isSelectionMode ? (
                 <>
-                  <Check className="mr-2 h-4 w-4" />
-                  Exit Selection
+                  <Check className="mr-1 sm:mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Exit Selection</span>
+                  <span className="sm:hidden">Exit</span>
                 </>
               ) : (
                 <>
-                  <div className="mr-2 w-4 h-4 border border-gray-400 rounded" />
-                  Select Items
+                  <div className="mr-1 sm:mr-2 w-4 h-4 border border-gray-400 rounded" />
+                  <span className="hidden sm:inline">Select Items</span>
+                  <span className="sm:hidden">Select</span>
                 </>
               )}
             </Button>
