@@ -318,13 +318,16 @@ export function BinderView({
                 duration: 0.4, 
                 ease: [0.4, 0, 0.2, 1]
               }}
-              className={`grid grid-cols-3 place-items-center h-full w-full
+              className={`grid grid-cols-3 place-items-center h-full mx-auto
                 ${isPageComplete ? 'ring-2 ring-yellow-400/30 rounded-xl p-1' : ''}
               `}
               style={{ 
                 gridTemplateRows: 'repeat(3, minmax(0, 1fr))',
                 gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                gap: USE_NEW_BINDER_LAYOUT ? 'clamp(4px, 1vw, 12px)' : '8px'
+                gap: '6px',
+                // Constrain width based on height to keep cards packed like mobile
+                maxWidth: 'calc((100% - 12px) * 0.75)',
+                aspectRatio: '3 / 4.2'
               }}
             >
               {currentCards.map((card, index) => (
