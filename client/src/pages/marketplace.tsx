@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Star, Search, Filter, Crown, Lock, ShoppingCart, CreditCard, Package, Loader2, MapPin, Truck } from "lucide-react";
 import type { CollectionItem, CardWithSet, CardSet } from "@/types/schema";
+import { formatCardName, formatSetName } from "@/lib/formatTitle";
 
 interface ShippingAddress {
   name: string;
@@ -457,11 +458,13 @@ export default function Marketplace() {
                         src={item.card.frontImageUrl}
                         alt={item.card.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                        loading="lazy"
+                        decoding="async"
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
                         <span className="text-red-600 font-bold text-xs text-center px-2">
-                          {item.card.name}
+                          {formatCardName(item.card.name)}
                         </span>
                       </div>
                     )}
@@ -488,10 +491,10 @@ export default function Marketplace() {
                   {/* Card Info */}
                   <div className="p-3 space-y-2">
                     <h3 className="font-semibold text-sm text-gray-900 line-clamp-2 leading-tight">
-                      {item.card.name}
+                      {formatCardName(item.card.name)}
                     </h3>
                     <p className="text-xs text-gray-600">
-                      {item.card.set.name} #{item.card.cardNumber}
+                      {formatSetName(item.card.set.name)} #{item.card.cardNumber}
                     </p>
                     <Button
                       size="sm"
@@ -670,14 +673,14 @@ export default function Marketplace() {
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
                       <span className="text-red-600 font-bold text-xs text-center px-1">
-                        {selectedItem.card.name}
+                        {formatCardName(selectedItem.card.name)}
                       </span>
                     </div>
                   )}
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900">{selectedItem.card.name}</h4>
-                  <p className="text-sm text-gray-600">{selectedItem.card.set.name}</p>
+                  <h4 className="font-semibold text-gray-900">{formatCardName(selectedItem.card.name)}</h4>
+                  <p className="text-sm text-gray-600">{formatSetName(selectedItem.card.set.name)}</p>
                   <p className="text-sm text-gray-500">Card #{selectedItem.card.cardNumber}</p>
                   <Badge className="mt-1 bg-gray-100 text-gray-700 text-xs">
                     {selectedItem.condition}

@@ -1,0 +1,180 @@
+Goal: Improve performance + fix Android back button behavior + normalize capitalization safely, with minimal risk.
+
+Context
+
+We have ~98 users now and the app is getting slow again. Screens render quickly, but images are loading slowly and the app feels laggy. Also, Android users expect the native back button to go to the previous screen inside the app — but right now it exits the app.
+
+Requirements (Do These In Order)
+1) Performance: Fix Slow Image Loading (Top Priority)
+
+Focus on reducing image load time and perceived lag across the app, especially:
+
+Browse lists (sets/cards)
+
+Collection views
+
+Marketplace list + detail
+
+Any screen with lots of thumbnails
+
+Constraints
+
+Do not break existing image URLs (Cloudinary/external hosting).
+
+Do not remove images; optimize loading behavior.
+
+Implement
+
+Lazy loading for list/grid images (only load when near viewport).
+
+Ensure images have explicit width/height to prevent layout shifts.
+
+Add placeholder/skeleton while loading (lightweight).
+
+Add caching strategy (browser + mobile webview caching).
+
+Use responsive image sizing:
+
+Use thumbnail-sized images in lists and full-size only on detail pages.
+
+If using Cloudinary, request scaled versions (ex: width=200/300 for thumbnails).
+
+Ensure we’re not accidentally fetching full-size images in list views.
+
+Ensure image components are not re-rendering unnecessarily.
+
+Deliverable
+
+Identify the heaviest screens and implement improvements.
+
+Provide a brief “before/after” checklist of what changed.
+
+2) Android: Fix Native Back Button Behavior (Capacitor)
+
+Inside the Android app, pressing the hardware/system back button currently exits the app. It should:
+
+Navigate back in the app’s history if possible
+
+Only exit the app if user is already at the root/home screen
+
+Implement
+
+Use Capacitor back button handling (App plugin / native back event)
+
+Integrate with our router (React Router / whichever router we use)
+
+Add logic:
+
+If we can go back: navigate(-1)
+
+If we are on the root route: require a double-press to exit OR show “Press back again to exit”
+
+Ensure this works on:
+
+Browse → Set → Cards
+
+Collection → Card Detail
+
+Marketplace → Listing → Checkout flow
+
+Any nested pages
+
+Deliverable
+
+Provide the exact files changed and explain how back navigation is now handled.
+
+3) Capitalization Cleanup (Sets + Card Titles)
+
+Some set names and card names have lowercase first letters and it looks junky. Fix display formatting so:
+
+The first letter of any set name or card title is capitalized (display layer only)
+
+Do not mutate stored data unless it’s safe and intentional
+
+Implement
+
+Create a shared utility like formatTitle() and use it wherever titles render.
+
+Handle edge cases:
+
+“1994 fleer…” should become “1994 Fleer…” (capitalize first letter after digits if needed)
+
+Preserve acronyms like “XMEN” or “SPIDER-MAN” if already uppercase
+
+Apply to:
+
+Set list
+
+Set detail headers
+
+Card list
+
+Card detail
+
+Marketplace listing title if applicable
+
+4) Safe “Debug / Unused Code” Review (No Breaking Changes)
+
+I suspect we have unused code, dead components, or leftover partial implementations. I do NOT want aggressive refactors.
+
+Do this safely
+
+Run lint/typecheck/build checks
+
+Identify unused files/imports with a tool-based approach:
+
+TypeScript compiler warnings
+
+ESLint unused rules
+
+Simple dependency graph check
+
+Only remove code if you are 100% sure it’s unused and not referenced dynamically.
+
+Prefer: “Report + recommendations” over mass deletion.
+
+Deliverable
+
+A short report listing:
+
+obvious unused modules/components
+
+duplicate logic
+
+risky areas you recommend leaving alone
+
+If you remove anything, keep it minimal and clearly justified.
+
+Rules
+
+Do not change unrelated features.
+
+Do not change styling broadly.
+
+Keep changes incremental and test after each requirement.
+
+What I suggest for the “self-debug” concern (so it doesn’t break stuff)
+
+Replit agents can “cleanup” themselves into disaster. The safest approach is:
+
+Step 1: Add guardrails
+
+Turn on strict linting and TypeScript checks (if not already)
+
+Add a “no unused vars/imports” rule but fix incrementally
+
+Step 2: Instrument, don’t refactor
+
+Add lightweight logging around image fetch / render counts (only in dev)
+
+Use React DevTools profiler (or console timing) to identify re-renders
+
+Step 3: Dead code removal only with proof
+
+Only remove code when there is zero import/reference via tooling
+
+Otherwise keep it, but document it
+
+If you want, I can also give you a second prompt that says:
+“Do not delete anything—only report dead code candidates.”
+That’s often the best first pass.

@@ -3,6 +3,7 @@ import { Star, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OptimizedImage } from "@/components/ui/optimized-image";
 import type { CardSet } from "@shared/schema";
+import { formatSetName } from "@/lib/formatTitle";
 
 interface SetThumbnailProps {
   set: CardSet;
@@ -108,12 +109,16 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
             src={convertGoogleDriveUrl(firstCardImage)}
             alt={`${set.name} - First Card`}
             className="w-full h-full object-cover"
+            loading="lazy"
+            decoding="async"
           />
         ) : set.imageUrl && !isPlaceholderImage(set.imageUrl) ? (
           <img
             src={convertGoogleDriveUrl(set.imageUrl)}
             alt={set.name}
             className="w-full h-full object-cover"
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <img
@@ -158,7 +163,7 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
       {/* Set Info */}
       <div className="p-3">
         <h3 className="font-medium text-gray-900 text-xs leading-tight mb-1 line-clamp-2 min-h-[2.5rem]">
-          {set.name}
+          {formatSetName(set.name)}
         </h3>
         <div className="flex items-center justify-between text-xs text-gray-600">
           <span>{set.year}</span>

@@ -7,10 +7,10 @@ import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { CardPricing } from "@/components/cards/card-pricing";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { convertGoogleDriveUrl } from "@/lib/utils";
 import type { CardWithSet, CollectionItem, WishlistItem } from "@/types/schema";
 import SimpleImage from "@/components/ui/simple-image";
 import { CardFilters } from "@/types";
+import { formatCardName, formatSetName } from "@/lib/formatTitle";
 
 interface CardGridProps {
   filters?: CardFilters;
@@ -331,9 +331,9 @@ export function CardGrid({
                 
                 <div className="p-2">
                   <h3 className="font-medium text-gray-900 text-xs truncate">
-                    {card.name} #{card.cardNumber}
+                    {formatCardName(card.name)} #{card.cardNumber}
                   </h3>
-                  <p className="text-xs text-gray-500 mb-2">{card.set?.name || 'Unknown Set'}</p>
+                  <p className="text-xs text-gray-500 mb-2">{formatSetName(card.set?.name) || 'Unknown Set'}</p>
                   
                   <div className="flex items-center justify-between mb-2">
                     {card.isInsert && (
@@ -408,10 +408,10 @@ export function CardGrid({
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0 pr-2">
                         <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-1">
-                          {card.name}
+                          {formatCardName(card.name)}
                         </h3>
                         <p className="text-xs text-gray-500 mb-1">
-                          {card.set.year} {card.set.name}
+                          {card.set.year} {formatSetName(card.set.name)}
                         </p>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-medium text-gray-600">

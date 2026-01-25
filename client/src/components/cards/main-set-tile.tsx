@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Layers } from "lucide-react";
 import { Link } from "wouter";
 import type { MainSet, CardSet, CardWithSet } from "@shared/schema";
+import { formatSetName } from "@/lib/formatTitle";
 
 interface MainSetTileProps {
   mainSet: MainSet;
@@ -89,7 +90,7 @@ export function MainSetTile({ mainSet, assignedSets }: MainSetTileProps) {
           </div>
           <div className="p-1.5 sm:p-2.5">
             <h3 className="font-medium text-xs sm:text-xs text-gray-900 mb-1 sm:mb-1.5 line-clamp-2 leading-tight group-hover:text-red-600 transition-colors min-h-[1.5rem] sm:min-h-[2rem]">
-              {mainSet.name}
+              {formatSetName(mainSet.name)}
             </h3>
             <div className="flex items-center justify-between text-xs text-gray-600">
               <span className="truncate text-xs sm:text-xs">{totalCards.toLocaleString()} cards</span>

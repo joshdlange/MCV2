@@ -19,6 +19,7 @@ import type { CardWithSet } from "@shared/schema";
 import { useCardPricing, useRefreshCardPricing } from "@/hooks/useCardPricing";
 import { auth } from "@/lib/firebase";
 import noCardImagePlaceholder from "@assets/no card image 4_1764019444486.png";
+import { formatCardName, formatSetName } from "@/lib/formatTitle";
 
 interface CardDetailModalProps {
   card: CardWithSet | null;
@@ -337,7 +338,7 @@ export function CardDetailModal({
           {/* Card Title - Centered */}
           <div className="flex-1 text-center px-2 min-w-0">
             <h2 className="text-base sm:text-lg font-bebas tracking-wide truncate text-white">
-              {isEditing ? 'Edit Card' : card.name}
+              {isEditing ? 'Edit Card' : formatCardName(card.name)}
             </h2>
             <p className="text-xs text-gray-400">#{card.cardNumber}</p>
           </div>
@@ -577,7 +578,7 @@ export function CardDetailModal({
             {/* Card Info */}
             {!isEditing && (
               <div className="text-center space-y-2 bg-gray-900 border border-gray-700 rounded-lg p-3">
-                <p className="text-sm text-white font-medium">{card.set?.name || (card as any).setName || 'Unknown Set'}</p>
+                <p className="text-sm text-white font-medium">{formatSetName(card.set?.name || (card as any).setName) || 'Unknown Set'}</p>
                 <div className="flex items-center justify-center gap-2 flex-wrap">
                   <Badge variant="outline" className="text-xs border-gray-500 text-gray-300 bg-gray-800">#{card.cardNumber}</Badge>
                   {card.variation && <Badge variant="outline" className="text-xs border-gray-500 text-gray-300 bg-gray-800">{card.variation}</Badge>}
