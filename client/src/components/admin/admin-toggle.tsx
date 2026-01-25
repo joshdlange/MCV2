@@ -26,9 +26,9 @@ export function AdminToggle() {
       {isAdminMode && (
         <Link href="/admin">
           <Button 
-            variant="outline" 
+            variant="default" 
             size="sm" 
-            className="w-full border-marvel-red text-marvel-red hover:bg-marvel-red hover:text-white transition-colors text-xs py-1.5 md:py-2"
+            className="w-full bg-red-600 text-white text-xs py-1.5 md:py-2"
           >
             <Settings className="w-3.5 h-3.5 md:w-4 md:h-4 mr-2" />
             Admin Tools

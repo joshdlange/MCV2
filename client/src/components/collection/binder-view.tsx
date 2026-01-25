@@ -46,8 +46,7 @@ function BinderSlot({ card, slotIndex, onClick, isPageComplete }: BinderSlotProp
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: slotIndex * 0.05, duration: 0.2 }}
       onClick={onClick}
-      className={`relative aspect-[2.5/3.5] rounded-lg overflow-hidden cursor-pointer 
-        transition-all duration-300 hover:scale-[1.02] hover:shadow-xl
+      className={`relative rounded-lg overflow-hidden cursor-pointer
         ${isOwned 
           ? 'ring-2 ring-green-500/50 shadow-lg shadow-green-500/20' 
           : 'ring-1 ring-gray-600/30'
@@ -55,6 +54,8 @@ function BinderSlot({ card, slotIndex, onClick, isPageComplete }: BinderSlotProp
         ${isPageComplete ? 'ring-2 ring-yellow-400/50' : ''}
       `}
       style={{
+        aspectRatio: '2.5 / 3.5',
+        maxHeight: '100%',
         background: isOwned 
           ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)' 
           : 'linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%)'
@@ -66,7 +67,7 @@ function BinderSlot({ card, slotIndex, onClick, isPageComplete }: BinderSlotProp
           <img
             src={imageUrl}
             alt={cardName}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
             loading="lazy"
           />
           {isInsert && (
@@ -250,7 +251,11 @@ export function BinderView({
         className="relative rounded-2xl p-3"
         style={{
           background: 'linear-gradient(135deg, #1e1e2f 0%, #141422 50%, #0d0d1a 100%)',
-          boxShadow: 'inset 0 2px 20px rgba(0,0,0,0.5), 0 10px 40px rgba(0,0,0,0.3)'
+          boxShadow: 'inset 0 2px 20px rgba(0,0,0,0.5), 0 10px 40px rgba(0,0,0,0.3)',
+          height: 'min(calc(100vh - 200px), 650px)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
         }}
       >
         <div 
@@ -260,7 +265,7 @@ export function BinderView({
           }}
         />
 
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-2 flex-shrink-0 relative z-10">
           <button
             onClick={() => handlePageChange("prev")}
             disabled={currentPage === 0}
@@ -292,7 +297,7 @@ export function BinderView({
           </button>
         </div>
 
-        <div style={{ perspective: '1000px' }}>
+        <div style={{ perspective: '1000px' }} className="flex-1 min-h-0 relative z-10">
           <AnimatePresence mode="wait" custom={flipDirection}>
             <motion.div
               key={currentPage}
@@ -305,9 +310,13 @@ export function BinderView({
                 duration: 0.4, 
                 ease: [0.4, 0, 0.2, 1]
               }}
-              className={`grid grid-cols-3 gap-2
+              className={`grid grid-cols-3 gap-2 place-items-center
                 ${isPageComplete ? 'ring-2 ring-yellow-400/30 rounded-xl p-1' : ''}
               `}
+              style={{ 
+                height: '100%',
+                gridTemplateRows: 'repeat(3, minmax(0, 1fr))'
+              }}
             >
               {currentCards.map((card, index) => (
                 <BinderSlot
@@ -331,7 +340,7 @@ export function BinderView({
           </AnimatePresence>
         </div>
 
-        <div className="mt-3 flex items-center justify-center gap-4">
+        <div className="mt-2 flex items-center justify-center gap-4 flex-shrink-0 relative z-10">
           <div className="flex items-center gap-1">
             {[...Array(Math.min(totalPages, 10))].map((_, i) => {
               const pageIndex = totalPages <= 10 ? i : 

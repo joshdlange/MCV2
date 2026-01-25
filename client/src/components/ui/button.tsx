@@ -5,16 +5,17 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground",
-        destructive: "bg-destructive text-destructive-foreground",
-        outline: "border-2 border-gray-400 bg-white text-gray-800",
-        secondary: "bg-gray-200 text-gray-800",
-        ghost: "bg-gray-100 text-gray-800",
-        link: "text-primary underline-offset-4",
+        default: "bg-red-600 text-white",
+        destructive: "bg-red-700 text-white",
+        outline: "border-2 border-gray-500 bg-white text-gray-900",
+        secondary: "bg-gray-700 text-white",
+        ghost: "bg-gray-200 text-gray-900",
+        link: "text-red-600 underline-offset-4 underline",
+        danger: "bg-red-800 text-white",
       },
       size: {
         default: "h-10 px-4 py-2",

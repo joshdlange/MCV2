@@ -1,0 +1,210 @@
+MISSION: Fix unreadable buttons + fix binder desktop layout so 3×3 binder page never requires scroll.
+
+Ground Rules (critical)
+
+Do NOT do broad UI redesign. Fix only what is required.
+
+No “best effort” guessing. Use a single source of truth for button styles.
+
+Remove hover effects globally where they are causing readability issues.
+
+After changes, every button must pass a basic contrast sanity check (readable at a glance).
+
+Binder must fit 3×3 cards fully inside the viewport (no vertical scrolling), while preserving card aspect ratio.
+
+1) Fix unreadable buttons everywhere (white-on-white, black-on-black)
+Problem
+
+Many buttons became unreadable (example: Admin Tools input/button area in left sidebar). There are also lingering hover effects even after attempted removal.
+
+Requirements
+A. Create one global button system
+
+Identify the button component(s) used throughout the app.
+
+If there is a shared Button component (e.g. client/src/components/ui/button.tsx), that becomes canonical.
+
+If multiple button implementations exist, consolidate so the whole app uses one.
+
+All buttons must have predictable variants:
+
+primary (Marvel red background, white text)
+
+secondary (dark background, white text)
+
+outline (transparent bg, border, readable text)
+
+ghost (minimal, readable on dark + light)
+
+danger (red but darker/stronger than hover states)
+
+B. Enforce readable default states (no more invisible buttons)
+
+Define CSS variables (or theme tokens) for:
+
+button background
+
+button text color
+
+button border color
+
+Ensure every variant has explicit text color and background color.
+
+No variant may inherit text color from parent containers.
+
+C. Kill hover effects (the correct way)
+
+We need to remove hover styles that break readability. Do not just “remove some hover classes” in random places.
+
+Implement one of these approaches:
+
+(Preferred) In the Button component: remove hover styles by default for ALL variants.
+
+Or: add a global CSS rule that neutralizes hover styling app-wide for buttons/links if they use common classes.
+
+Specifically remove:
+
+background color changes on hover that reduce contrast
+
+text color changes on hover that reduce contrast
+
+opacity hover that makes text faint
+
+If you keep hover at all, it must ONLY be:
+
+a subtle brightness change that does not change text color
+
+or a small shadow
+But my preference: no hover styling at all for now.
+
+D. Fix form/button in Admin sidebar
+
+In the left sidebar screenshot, the “Admin Tools” field/button area is unreadable.
+
+Locate the exact component rendering that Admin UI section.
+
+Ensure background, border, and text color are set explicitly.
+
+Ensure disabled states are readable (disabled should look disabled, but still visible).
+
+E. Deliverables for button work
+
+List the canonical button file path(s) used
+
+List every file changed
+
+Provide “before/after” screenshots or a short description of what was fixed
+
+Confirm hover styles are removed and show the exact CSS/component changes where hover was removed
+
+2) Binder page fix: 3×3 grid must fit without scrolling on desktop
+Problem
+
+Binder view looks great on mobile/tablet, but on desktop the card grid overflows vertically and forces scrolling.
+
+Requirements
+A. Binder grid must always fit in the viewport
+
+On any screen size, the binder content area must be sized so that:
+
+the 3×3 grid of cards is fully visible without vertical scrolling
+
+cards preserve aspect ratio
+
+cards scale down on desktop so the full grid fits
+
+B. Layout approach (must implement this exact concept)
+
+The binder page should have a container with height:
+
+calc(100vh - headerHeight - any top toolbars - padding)
+
+Inside that container:
+
+Use CSS Grid for a 3×3 layout (desktop)
+
+Cards should use aspect-ratio matching your card images (e.g., 2.5/3.5-ish). If you already know the ratio, use it consistently.
+
+Each card tile should scale based on available container height.
+
+C. No internal scroll
+
+The binder grid container must have overflow: hidden (or no overflow) so the page itself doesn’t scroll.
+
+Any scroll gestures on desktop should not be needed to view the 9 cards on a page.
+
+D. Maintain existing “carousel/paging” behavior
+
+In the screenshot, binder has paging (e.g., “2 of 12”).
+
+Keep that paging behavior.
+
+But ensure each page shows 9 cards in view without scroll.
+
+E. Specific sizing strategy (use one of these)
+
+Option 1 (preferred): grid + auto-resize using container height
+
+Determine container height
+
+Compute max card height as:
+
+(containerHeight - verticalGaps - padding) / 3
+
+Compute card width from aspect ratio.
+
+Apply to each tile.
+
+Option 2: pure CSS using aspect-ratio + max-height
+
+Container: fixed height (calc 100vh - chrome)
+
+Grid rows: repeat(3, 1fr) with minmax(0, 1fr)
+
+Each tile uses aspect-ratio and height: 100%
+
+Ensure the image inside uses object-fit: contain or cover depending on desired look, but it must not overflow.
+
+F. Deliverables for binder work
+
+Identify the binder component file (likely something like binder-view.tsx or similar)
+
+Provide exactly what CSS/layout changes were made
+
+Confirm with a desktop viewport test (e.g., 1440×900 and 1920×1080) that:
+
+page shows all 9 cards without scrolling
+
+cards keep aspect ratio and don’t look stretched
+
+Testing Checklist (must complete)
+
+Desktop: verify Admin sidebar “Admin Tools” UI is readable.
+
+Desktop: verify primary/secondary/outline buttons readable on:
+
+sidebar
+
+marketplace
+
+modals
+
+forms
+
+Verify hover does not change button colors anywhere.
+
+Binder page:
+
+Desktop: no scroll needed to see the 3×3 grid
+
+Mobile: existing good behavior remains unchanged
+
+Implementation Rules
+
+Make changes incremental and test after each section.
+
+Do not refactor unrelated components.
+
+Do not alter business logic.
+
+Keep PR-style change summary with file list and reasoning.
