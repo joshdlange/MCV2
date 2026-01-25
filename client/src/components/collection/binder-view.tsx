@@ -247,15 +247,10 @@ export function BinderView({
       </div>
 
       <div 
-        className="relative rounded-2xl p-2"
+        className="relative rounded-2xl p-3"
         style={{
           background: 'linear-gradient(135deg, #1e1e2f 0%, #141422 50%, #0d0d1a 100%)',
-          boxShadow: 'inset 0 2px 20px rgba(0,0,0,0.5), 0 10px 40px rgba(0,0,0,0.3)',
-          height: 'calc(100vh - 320px)',
-          minHeight: '300px',
-          maxHeight: '600px',
-          display: 'flex',
-          flexDirection: 'column'
+          boxShadow: 'inset 0 2px 20px rgba(0,0,0,0.5), 0 10px 40px rgba(0,0,0,0.3)'
         }}
       >
         <div 
@@ -265,7 +260,7 @@ export function BinderView({
           }}
         />
 
-        <div className="flex items-center justify-between mb-1 flex-shrink-0">
+        <div className="flex items-center justify-between mb-2">
           <button
             onClick={() => handlePageChange("prev")}
             disabled={currentPage === 0}
@@ -297,7 +292,7 @@ export function BinderView({
           </button>
         </div>
 
-        <div style={{ perspective: '1000px' }} className="flex-1 min-h-0 overflow-hidden">
+        <div style={{ perspective: '1000px' }}>
           <AnimatePresence mode="wait" custom={flipDirection}>
             <motion.div
               key={currentPage}
@@ -310,8 +305,8 @@ export function BinderView({
                 duration: 0.4, 
                 ease: [0.4, 0, 0.2, 1]
               }}
-              className={`grid grid-cols-3 gap-1 h-full
-                ${isPageComplete ? 'ring-2 ring-yellow-400/30 rounded-xl p-0.5' : ''}
+              className={`grid grid-cols-3 gap-2
+                ${isPageComplete ? 'ring-2 ring-yellow-400/30 rounded-xl p-1' : ''}
               `}
             >
               {currentCards.map((card, index) => (
@@ -336,7 +331,7 @@ export function BinderView({
           </AnimatePresence>
         </div>
 
-        <div className="mt-2 flex items-center justify-center gap-4 flex-shrink-0">
+        <div className="mt-3 flex items-center justify-center gap-4">
           <div className="flex items-center gap-1">
             {[...Array(Math.min(totalPages, 10))].map((_, i) => {
               const pageIndex = totalPages <= 10 ? i : 
