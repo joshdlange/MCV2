@@ -28,6 +28,11 @@ export default function MyCollection() {
   const [cardsViewMode, setCardsViewMode] = useState<"owned" | "missing">("owned");
   const [binderViewMode, setBinderViewMode] = useState<"binder" | "grid">("binder");
   const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [favoriteSetIds, setFavoriteSetIds] = useState<number[]>(() => {
+    const saved = localStorage.getItem('favoriteSetIds');
+    return saved ? JSON.parse(saved) : [];
+  });
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -54,6 +59,17 @@ export default function MyCollection() {
     enabled: collectionView === "cards" && selectedSet !== "all",
   });
 
+  // Handle favorite set toggle
+  const handleFavoriteSet = (setId: number) => {
+    setFavoriteSetIds(prev => {
+      const newIds = prev.includes(setId) 
+        ? prev.filter(id => id !== setId)
+        : [...prev, setId];
+      localStorage.setItem('favoriteSetIds', JSON.stringify(newIds));
+      return newIds;
+    });
+  };
+
   // Get unique sets from collection with completion data
   const collectionSets = Array.from(new Set(collection?.map(item => item.card?.set?.id) || []))
     .map(setId => {
@@ -73,12 +89,16 @@ export default function MyCollection() {
         ownedCards,
         totalCards,
         completionPercentage,
-        firstCardImage: collectionCard?.card?.frontImageUrl || setFromCardSets?.imageUrl
+        firstCardImage: collectionCard?.card?.frontImageUrl || setFromCardSets?.imageUrl,
+        isFavorite: favoriteSetIds.includes(set.id)
       };
     })
     .filter((set): set is NonNullable<typeof set> => set !== null)
     .sort((a, b) => {
-      // Sort by completion percentage (highest first), then by year (newest first)
+      // Sort favorites first
+      if (a.isFavorite && !b.isFavorite) return -1;
+      if (!a.isFavorite && b.isFavorite) return 1;
+      // Then by completion percentage (highest first), then by year (newest first)
       if (a.completionPercentage !== b.completionPercentage) {
         return b.completionPercentage - a.completionPercentage;
       }
@@ -120,9 +140,14 @@ export default function MyCollection() {
       
       const matchesSet = selectedSet === "all" || item.card.set?.id?.toString() === selectedSet;
       
-      return matchesSearch && matchesSet;
+      // Filter by favorites if enabled
+      const matchesFavorites = !showFavoritesOnly || item.isFavorite;
+      
+      return matchesSearch && matchesSet && matchesFavorites;
     }).sort((a, b) => {
-      // Sort cards by card number (1, 2, 3...)
+      // Sort favorites first, then by card number
+      if (a.isFavorite && !b.isFavorite) return -1;
+      if (!a.isFavorite && b.isFavorite) return 1;
       const numA = parseInt(a.card?.cardNumber || '0') || 0;
       const numB = parseInt(b.card?.cardNumber || '0') || 0;
       return numA - numB;
@@ -233,10 +258,14 @@ export default function MyCollection() {
         setId: item.card.set.id,
         variation: null,
         backImageUrl: null,
-        set: item.card.set
+        set: item.card.set,
+        alternateImages: null,
+        lastImageSearchAttempt: null
       };
+    } else if ('setId' in item) {
+      // This is a CardWithSet (missing card or card from allCardsInSet)
+      cardData = item as CardWithSet;
     } else {
-      // This should not happen with proper nested structure
       console.warn('Unexpected data structure in collection item:', item);
       return;
     }
@@ -437,6 +466,21 @@ export default function MyCollection() {
                   Missing
                 </Button>
               </div>
+            )}
+            
+            {/* Favorites Filter - Show in cards view for owned cards */}
+            {collectionView === "cards" && cardsViewMode === "owned" && (
+              <Button
+                variant={showFavoritesOnly ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                className={showFavoritesOnly 
+                  ? "bg-yellow-500 text-white border-yellow-500 hover:bg-yellow-600" 
+                  : "text-gray-700 border-gray-300 hover:bg-yellow-50 hover:border-yellow-400"}
+              >
+                <Star className={`h-4 w-4 mr-1 ${showFavoritesOnly ? 'fill-current' : ''}`} />
+                Favorites
+              </Button>
             )}
             
             {/* Layout Toggle - Show for both cards and sets view */}
@@ -827,6 +871,21 @@ export default function MyCollection() {
                         </span>
                       </div>
                     )}
+                    
+                    {/* Favorite Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleFavoriteSet(set.id);
+                      }}
+                      className={`absolute top-2 left-2 p-1.5 rounded-full transition-colors ${
+                        set.isFavorite 
+                          ? 'bg-yellow-500 text-white' 
+                          : 'bg-white/80 text-gray-400 hover:text-yellow-500'
+                      }`}
+                    >
+                      <Star className={`w-4 h-4 ${set.isFavorite ? 'fill-current' : ''}`} />
+                    </button>
                     
                     {/* Completion Badge */}
                     <div className="absolute top-2 right-2">

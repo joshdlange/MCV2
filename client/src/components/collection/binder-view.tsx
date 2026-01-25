@@ -37,6 +37,7 @@ function BinderSlot({ card, slotIndex, onClick, isPageComplete }: BinderSlotProp
   const rawImageUrl = card.item?.card?.frontImageUrl || card.card?.frontImageUrl;
   const imageUrl = rawImageUrl && rawImageUrl !== PLACEHOLDER_IMAGE ? rawImageUrl : null;
   const cardName = card.item?.card?.name || card.card?.name || `Card #${card.cardNumber}`;
+  const actualCardNumber = card.card?.cardNumber || card.item?.card?.cardNumber || String(card.cardNumber);
   const isInsert = card.item?.card?.isInsert || card.card?.isInsert;
 
   return (
@@ -73,19 +74,19 @@ function BinderSlot({ card, slotIndex, onClick, isPageComplete }: BinderSlotProp
               <Sparkles className="w-3 h-3" />
             </div>
           )}
-          <div className="absolute bottom-1 right-1 bg-green-600/90 text-white text-[10px] px-1.5 py-0.5 rounded font-bold shadow-lg">
-            #{card.cardNumber}
+          <div className="absolute bottom-1 right-1 bg-green-600/90 text-white text-[8px] px-1 py-0.5 rounded font-bold shadow-lg">
+            #{actualCardNumber}
           </div>
         </div>
       ) : (
         <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
-          <div className="w-10 h-10 rounded-full bg-gray-700/50 flex items-center justify-center mb-2">
-            <span className="text-gray-500 text-lg font-bold">?</span>
+          <div className="w-8 h-8 rounded-full bg-gray-700/50 flex items-center justify-center mb-1">
+            <span className="text-gray-500 text-sm font-bold">?</span>
           </div>
-          <span className="text-gray-400 text-[11px] font-medium leading-tight">
-            #{card.cardNumber}
+          <span className="text-gray-400 text-[10px] font-medium leading-tight">
+            #{actualCardNumber}
           </span>
-          <span className="text-gray-500 text-[9px] mt-1 line-clamp-2 leading-tight">
+          <span className="text-gray-500 text-[8px] mt-0.5 line-clamp-2 leading-tight px-1">
             {cardName !== `Card #${card.cardNumber}` ? cardName : 'Missing'}
           </span>
         </div>
@@ -114,28 +115,34 @@ export function BinderView({
   const [flipDirection, setFlipDirection] = useState<"left" | "right">("right");
   const cardsPerPage = 9;
 
-  const ownedCardNumbers = useMemo(() => {
-    return new Set(ownedCards.map(item => parseInt(item.card?.cardNumber || '0') || 0));
+  // Build a map of owned cards by their exact cardNumber string for accurate matching
+  const ownedCardMap = useMemo(() => {
+    const map = new Map<string, CollectionItem>();
+    ownedCards.forEach(item => {
+      const cardNum = item.card?.cardNumber?.trim();
+      if (cardNum) {
+        map.set(cardNum, item);
+      }
+    });
+    return map;
   }, [ownedCards]);
 
   const binderCards: BinderCard[] = useMemo(() => {
-    const cards: BinderCard[] = [];
-    
-    for (let i = 1; i <= totalCardsInSet; i++) {
-      const isOwned = ownedCardNumbers.has(i);
-      const ownedItem = ownedCards.find(item => parseInt(item.card?.cardNumber || '0') === i);
-      const setCard = allCardsInSet.find(card => parseInt(card.cardNumber) === i);
+    // Use allCardsInSet as the source of truth for card numbers and order
+    return allCardsInSet.map((card) => {
+      const cardNum = card.cardNumber?.trim() || '';
+      const ownedItem = ownedCardMap.get(cardNum);
+      // Parse the card number for display, fallback to 0 for non-numeric
+      const numericCardNumber = parseInt(cardNum) || 0;
       
-      cards.push({
-        cardNumber: i,
-        owned: isOwned,
+      return {
+        cardNumber: numericCardNumber,
+        owned: !!ownedItem,
         item: ownedItem,
-        card: setCard
-      });
-    }
-    
-    return cards;
-  }, [ownedCards, allCardsInSet, totalCardsInSet, ownedCardNumbers]);
+        card: card
+      };
+    });
+  }, [allCardsInSet, ownedCardMap]);
 
   const totalPages = Math.ceil(binderCards.length / cardsPerPage);
   const currentCards = binderCards.slice(
@@ -238,10 +245,13 @@ export function BinderView({
       </div>
 
       <div 
-        className="relative rounded-2xl p-4 sm:p-6"
+        className="relative rounded-2xl p-3 sm:p-4"
         style={{
           background: 'linear-gradient(135deg, #1e1e2f 0%, #141422 50%, #0d0d1a 100%)',
-          boxShadow: 'inset 0 2px 20px rgba(0,0,0,0.5), 0 10px 40px rgba(0,0,0,0.3)'
+          boxShadow: 'inset 0 2px 20px rgba(0,0,0,0.5), 0 10px 40px rgba(0,0,0,0.3)',
+          maxHeight: 'calc(100vh - 280px)',
+          display: 'flex',
+          flexDirection: 'column'
         }}
       >
         <div 
@@ -251,27 +261,26 @@ export function BinderView({
           }}
         />
 
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-2 flex-shrink-0">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => handlePageChange("prev")}
             disabled={currentPage === 0}
-            className="text-white hover:bg-white/10 disabled:opacity-30"
+            className="text-white hover:bg-white/10 disabled:opacity-30 h-8 w-8 p-0"
             data-testid="button-prev-page"
           >
             <ChevronLeft className="h-5 w-5" />
           </Button>
           
-          <div className="flex flex-col items-center">
-            <span className="text-white/60 text-xs">Page</span>
-            <span className="text-white font-bold text-lg">
+          <div className="flex items-center gap-2">
+            <span className="text-white font-bold text-sm">
               {currentPage + 1} <span className="text-white/40">of</span> {totalPages}
             </span>
             {isPageComplete && (
-              <span className="text-yellow-400 text-[10px] flex items-center gap-1 mt-1">
+              <span className="text-yellow-400 text-[10px] flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
-                Page Complete!
+                Complete!
               </span>
             )}
           </div>
@@ -281,14 +290,14 @@ export function BinderView({
             size="sm"
             onClick={() => handlePageChange("next")}
             disabled={currentPage >= totalPages - 1}
-            className="text-white hover:bg-white/10 disabled:opacity-30"
+            className="text-white hover:bg-white/10 disabled:opacity-30 h-8 w-8 p-0"
             data-testid="button-next-page"
           >
             <ChevronRight className="h-5 w-5" />
           </Button>
         </div>
 
-        <div style={{ perspective: '1000px' }}>
+        <div style={{ perspective: '1000px' }} className="flex-1 min-h-0">
           <AnimatePresence mode="wait" custom={flipDirection}>
             <motion.div
               key={currentPage}
@@ -301,9 +310,10 @@ export function BinderView({
                 duration: 0.4, 
                 ease: [0.4, 0, 0.2, 1]
               }}
-              className={`grid grid-cols-3 gap-2 sm:gap-3
+              className={`grid grid-cols-3 gap-1.5 sm:gap-2 h-full
                 ${isPageComplete ? 'ring-2 ring-yellow-400/30 rounded-xl p-1' : ''}
               `}
+              style={{ maxHeight: 'calc(100vh - 380px)' }}
             >
               {currentCards.map((card, index) => (
                 <BinderSlot
@@ -319,7 +329,7 @@ export function BinderView({
                 [...Array(cardsPerPage - currentCards.length)].map((_, i) => (
                   <div 
                     key={`empty-${i}`}
-                    className="aspect-[2.5/3.5] rounded-lg bg-gray-800/30 border border-gray-700/20"
+                    className="rounded-lg bg-gray-800/30 border border-gray-700/20"
                   />
                 ))
               }
@@ -327,8 +337,8 @@ export function BinderView({
           </AnimatePresence>
         </div>
 
-        <div className="mt-4 flex justify-center">
-          <div className="flex items-center gap-1.5">
+        <div className="mt-2 flex items-center justify-center gap-4 flex-shrink-0">
+          <div className="flex items-center gap-1">
             {[...Array(Math.min(totalPages, 10))].map((_, i) => {
               const pageIndex = totalPages <= 10 ? i : 
                 currentPage < 5 ? i :
@@ -342,9 +352,9 @@ export function BinderView({
                     setFlipDirection(pageIndex > currentPage ? "right" : "left");
                     setCurrentPage(pageIndex);
                   }}
-                  className={`w-2 h-2 rounded-full transition-all duration-200 
+                  className={`w-1.5 h-1.5 rounded-full transition-all duration-200 
                     ${pageIndex === currentPage 
-                      ? 'bg-white w-4' 
+                      ? 'bg-white w-3' 
                       : 'bg-white/30 hover:bg-white/50'
                     }
                   `}
@@ -353,11 +363,8 @@ export function BinderView({
               );
             })}
           </div>
-        </div>
-        
-        <div className="mt-3 flex justify-center">
-          <span className="text-white/40 text-xs">
-            {ownedOnPage}/9 cards on this page
+          <span className="text-white/40 text-[10px]">
+            {ownedOnPage}/9 on page
           </span>
         </div>
       </div>
