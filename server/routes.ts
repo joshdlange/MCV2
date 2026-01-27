@@ -16,7 +16,7 @@ import { ebayPricingService } from "./ebay-pricing";
 import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
 import { db } from "./db";
-import { cards, cardSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userBadges } from "../shared/schema";
+import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userBadges, migrationLogs, migrationLogCards } from "../shared/schema";
 import { sql, eq, ilike, and, or, isNull, count } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
@@ -4345,6 +4345,543 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Reject image error:', error);
       res.status(500).json({ message: "Failed to reject image" });
+    }
+  });
+
+  // ============================================
+  // MIGRATION CONSOLE ROUTES (Admin Only)
+  // ============================================
+
+  // Get card sets for migration (with filters)
+  app.get("/api/admin/migration/sets", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { type, hasCards, year, mainSetId, search, showArchived } = req.query;
+      
+      // Get all sets with card counts
+      const setsWithCounts = await db.execute(sql`
+        SELECT 
+          cs.id,
+          cs.name,
+          cs.year,
+          cs.slug,
+          cs.main_set_id as "mainSetId",
+          cs.image_url as "imageUrl",
+          cs.is_active as "isActive",
+          cs.created_at as "createdAt",
+          ms.name as "mainSetName",
+          ms.thumbnail_image_url as "mainSetThumbnail",
+          COUNT(c.id)::int as "cardCount"
+        FROM card_sets cs
+        LEFT JOIN main_sets ms ON cs.main_set_id = ms.id
+        LEFT JOIN cards c ON c.set_id = cs.id
+        WHERE 1=1
+          ${showArchived !== 'true' ? sql`AND cs.is_active = true` : sql``}
+          ${hasCards === 'true' ? sql`AND EXISTS (SELECT 1 FROM cards WHERE set_id = cs.id)` : sql``}
+          ${year ? sql`AND cs.year = ${parseInt(year as string)}` : sql``}
+          ${mainSetId ? sql`AND cs.main_set_id = ${parseInt(mainSetId as string)}` : sql``}
+          ${search ? sql`AND cs.name ILIKE ${'%' + search + '%'}` : sql``}
+        GROUP BY cs.id, ms.id
+        ORDER BY cs.year DESC, cs.name ASC
+        LIMIT 500
+      `);
+
+      res.json({ sets: setsWithCounts.rows });
+    } catch (error) {
+      console.error('Get migration sets error:', error);
+      res.status(500).json({ message: "Failed to fetch sets" });
+    }
+  });
+
+  // Get canonical (CSV-defined) sets
+  app.get("/api/admin/migration/canonical-sets", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { year, mainSetId, search } = req.query;
+      
+      // CSV-defined sets are those with main_set_id assigned (from Phase 1 import)
+      const canonicalSets = await db.execute(sql`
+        SELECT 
+          cs.id,
+          cs.name,
+          cs.year,
+          cs.slug,
+          cs.main_set_id as "mainSetId",
+          cs.image_url as "imageUrl",
+          cs.is_active as "isActive",
+          ms.name as "mainSetName",
+          ms.thumbnail_image_url as "mainSetThumbnail",
+          COUNT(c.id)::int as "cardCount"
+        FROM card_sets cs
+        LEFT JOIN main_sets ms ON cs.main_set_id = ms.id
+        LEFT JOIN cards c ON c.set_id = cs.id
+        WHERE cs.main_set_id IS NOT NULL
+          AND cs.is_active = true
+          ${year ? sql`AND cs.year = ${parseInt(year as string)}` : sql``}
+          ${mainSetId ? sql`AND cs.main_set_id = ${parseInt(mainSetId as string)}` : sql``}
+          ${search ? sql`AND cs.name ILIKE ${'%' + search + '%'}` : sql``}
+        GROUP BY cs.id, ms.id
+        ORDER BY cs.year DESC, cs.name ASC
+        LIMIT 500
+      `);
+
+      res.json({ sets: canonicalSets.rows });
+    } catch (error) {
+      console.error('Get canonical sets error:', error);
+      res.status(500).json({ message: "Failed to fetch canonical sets" });
+    }
+  });
+
+  // Get sample cards for a set
+  app.get("/api/admin/migration/sets/:setId/sample-cards", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const setId = parseInt(req.params.setId);
+      
+      const sampleCards = await db.execute(sql`
+        SELECT 
+          id,
+          card_number as "cardNumber",
+          name,
+          variation,
+          is_insert as "isInsert",
+          front_image_url as "frontImageUrl",
+          estimated_value as "estimatedValue"
+        FROM cards
+        WHERE set_id = ${setId}
+        ORDER BY card_number ASC
+        LIMIT 12
+      `);
+
+      res.json({ cards: sampleCards.rows });
+    } catch (error) {
+      console.error('Get sample cards error:', error);
+      res.status(500).json({ message: "Failed to fetch sample cards" });
+    }
+  });
+
+  // Preview migration (shows conflicts and card count)
+  app.post("/api/admin/migration/preview", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { sourceSetId, destinationSetId } = req.body;
+      
+      if (!sourceSetId || !destinationSetId) {
+        return res.status(400).json({ message: "Source and destination set IDs required" });
+      }
+
+      // Get source cards
+      const sourceCards = await db.execute(sql`
+        SELECT id, card_number, name FROM cards WHERE set_id = ${sourceSetId}
+      `);
+
+      // Get destination cards
+      const destCards = await db.execute(sql`
+        SELECT id, card_number, name FROM cards WHERE set_id = ${destinationSetId}
+      `);
+
+      // Find conflicts (same card_number in destination)
+      const destCardNumbers = new Set(destCards.rows.map((c: any) => c.card_number));
+      const conflicts = sourceCards.rows.filter((c: any) => destCardNumbers.has(c.card_number));
+
+      res.json({
+        sourceCardCount: sourceCards.rows.length,
+        destinationCardCount: destCards.rows.length,
+        conflictCount: conflicts.length,
+        conflicts: conflicts.slice(0, 20), // Show first 20 conflicts
+        canMigrate: sourceCards.rows.length > 0,
+      });
+    } catch (error) {
+      console.error('Preview migration error:', error);
+      res.status(500).json({ message: "Failed to preview migration" });
+    }
+  });
+
+  // Execute migration (move cards from source to destination)
+  app.post("/api/admin/migration/execute", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { sourceSetId, destinationSetId, forceInsert, notes } = req.body;
+      
+      if (!sourceSetId || !destinationSetId) {
+        return res.status(400).json({ message: "Source and destination set IDs required" });
+      }
+
+      if (sourceSetId === destinationSetId) {
+        return res.status(400).json({ message: "Source and destination cannot be the same" });
+      }
+
+      // Get all cards from source set
+      const cardsToMove = await db.select().from(cards).where(eq(cards.setId, sourceSetId));
+
+      if (cardsToMove.length === 0) {
+        return res.status(400).json({ message: "No cards to migrate in source set" });
+      }
+
+      // Create migration log
+      const [migrationLog] = await db.insert(migrationLogs).values({
+        adminUserId: req.user.id,
+        sourceSetId: sourceSetId,
+        destinationSetId: destinationSetId,
+        movedCardCount: cardsToMove.length,
+        insertForced: forceInsert || false,
+        notes: notes || null,
+        status: 'completed',
+      }).returning();
+
+      // Record each card movement for rollback capability
+      const cardLogEntries = cardsToMove.map(card => ({
+        migrationLogId: migrationLog.id,
+        cardId: card.id,
+        oldSetId: sourceSetId,
+        newSetId: destinationSetId,
+        oldIsInsert: card.isInsert,
+        newIsInsert: forceInsert ? true : card.isInsert,
+      }));
+
+      await db.insert(migrationLogCards).values(cardLogEntries);
+
+      // Update cards: move to destination set
+      if (forceInsert) {
+        await db.update(cards)
+          .set({ setId: destinationSetId, isInsert: true })
+          .where(eq(cards.setId, sourceSetId));
+      } else {
+        await db.update(cards)
+          .set({ setId: destinationSetId })
+          .where(eq(cards.setId, sourceSetId));
+      }
+
+      // Update card counts for both sets
+      await db.execute(sql`
+        UPDATE card_sets SET total_cards = (
+          SELECT COUNT(*) FROM cards WHERE set_id = card_sets.id
+        ) WHERE id IN (${sourceSetId}, ${destinationSetId})
+      `);
+
+      res.json({
+        success: true,
+        message: `Successfully migrated ${cardsToMove.length} cards`,
+        migrationLogId: migrationLog.id,
+        movedCardCount: cardsToMove.length,
+      });
+    } catch (error) {
+      console.error('Execute migration error:', error);
+      res.status(500).json({ message: "Failed to execute migration" });
+    }
+  });
+
+  // Migrate selected cards only
+  app.post("/api/admin/migration/execute-selected", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { cardIds, sourceSetId, destinationSetId, forceInsert, notes } = req.body;
+      
+      if (!cardIds || !Array.isArray(cardIds) || cardIds.length === 0) {
+        return res.status(400).json({ message: "Card IDs required" });
+      }
+
+      if (!destinationSetId) {
+        return res.status(400).json({ message: "Destination set ID required" });
+      }
+
+      // Get the cards to move
+      const cardsToMove = await db.select().from(cards)
+        .where(sql`id = ANY(${cardIds})`);
+
+      if (cardsToMove.length === 0) {
+        return res.status(400).json({ message: "No valid cards found" });
+      }
+
+      // Create migration log
+      const [migrationLog] = await db.insert(migrationLogs).values({
+        adminUserId: req.user.id,
+        sourceSetId: sourceSetId || cardsToMove[0].setId,
+        destinationSetId: destinationSetId,
+        movedCardCount: cardsToMove.length,
+        insertForced: forceInsert || false,
+        notes: notes || `Selected ${cardsToMove.length} cards`,
+        status: 'completed',
+      }).returning();
+
+      // Record each card movement
+      const cardLogEntries = cardsToMove.map(card => ({
+        migrationLogId: migrationLog.id,
+        cardId: card.id,
+        oldSetId: card.setId,
+        newSetId: destinationSetId,
+        oldIsInsert: card.isInsert,
+        newIsInsert: forceInsert ? true : card.isInsert,
+      }));
+
+      await db.insert(migrationLogCards).values(cardLogEntries);
+
+      // Update cards
+      for (const card of cardsToMove) {
+        await db.update(cards)
+          .set({ 
+            setId: destinationSetId, 
+            isInsert: forceInsert ? true : card.isInsert 
+          })
+          .where(eq(cards.id, card.id));
+      }
+
+      // Update card counts
+      const affectedSetIds = [...new Set([...cardsToMove.map(c => c.setId), destinationSetId])];
+      for (const setId of affectedSetIds) {
+        await db.execute(sql`
+          UPDATE card_sets SET total_cards = (
+            SELECT COUNT(*) FROM cards WHERE set_id = ${setId}
+          ) WHERE id = ${setId}
+        `);
+      }
+
+      res.json({
+        success: true,
+        message: `Successfully migrated ${cardsToMove.length} cards`,
+        migrationLogId: migrationLog.id,
+        movedCardCount: cardsToMove.length,
+      });
+    } catch (error) {
+      console.error('Execute selected migration error:', error);
+      res.status(500).json({ message: "Failed to execute migration" });
+    }
+  });
+
+  // Archive a set (hide from UI)
+  app.post("/api/admin/migration/archive-set/:setId", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const setId = parseInt(req.params.setId);
+      
+      // Check if set has cards
+      const cardCount = await db.execute(sql`
+        SELECT COUNT(*)::int as count FROM cards WHERE set_id = ${setId}
+      `);
+
+      if (cardCount.rows[0].count > 0) {
+        return res.status(400).json({ 
+          message: `Cannot archive set with ${cardCount.rows[0].count} cards. Migrate cards first.` 
+        });
+      }
+
+      await db.update(cardSets)
+        .set({ isActive: false })
+        .where(eq(cardSets.id, setId));
+
+      res.json({ success: true, message: "Set archived successfully" });
+    } catch (error) {
+      console.error('Archive set error:', error);
+      res.status(500).json({ message: "Failed to archive set" });
+    }
+  });
+
+  // Unarchive a set
+  app.post("/api/admin/migration/unarchive-set/:setId", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const setId = parseInt(req.params.setId);
+
+      await db.update(cardSets)
+        .set({ isActive: true })
+        .where(eq(cardSets.id, setId));
+
+      res.json({ success: true, message: "Set unarchived successfully" });
+    } catch (error) {
+      console.error('Unarchive set error:', error);
+      res.status(500).json({ message: "Failed to unarchive set" });
+    }
+  });
+
+  // Get migration logs
+  app.get("/api/admin/migration/logs", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const logs = await db.execute(sql`
+        SELECT 
+          ml.id,
+          ml.admin_user_id as "adminUserId",
+          ml.source_set_id as "sourceSetId",
+          ml.destination_set_id as "destinationSetId",
+          ml.moved_card_count as "movedCardCount",
+          ml.insert_forced as "insertForced",
+          ml.notes,
+          ml.status,
+          ml.rolled_back_at as "rolledBackAt",
+          ml.created_at as "createdAt",
+          ss.name as "sourceSetName",
+          ds.name as "destinationSetName",
+          u.username as "adminUsername"
+        FROM migration_logs ml
+        LEFT JOIN card_sets ss ON ml.source_set_id = ss.id
+        LEFT JOIN card_sets ds ON ml.destination_set_id = ds.id
+        LEFT JOIN users u ON ml.admin_user_id = u.id
+        ORDER BY ml.created_at DESC
+        LIMIT 100
+      `);
+
+      res.json({ logs: logs.rows });
+    } catch (error) {
+      console.error('Get migration logs error:', error);
+      res.status(500).json({ message: "Failed to fetch migration logs" });
+    }
+  });
+
+  // Rollback a migration
+  app.post("/api/admin/migration/rollback/:logId", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const logId = parseInt(req.params.logId);
+
+      // Get the migration log
+      const [migrationLog] = await db.select().from(migrationLogs).where(eq(migrationLogs.id, logId));
+
+      if (!migrationLog) {
+        return res.status(404).json({ message: "Migration log not found" });
+      }
+
+      if (migrationLog.status === 'rolled_back') {
+        return res.status(400).json({ message: "Migration already rolled back" });
+      }
+
+      // Get all card movements from this migration
+      const cardMovements = await db.select().from(migrationLogCards)
+        .where(eq(migrationLogCards.migrationLogId, logId));
+
+      if (cardMovements.length === 0) {
+        return res.status(400).json({ message: "No card movements found for this migration" });
+      }
+
+      // Rollback each card to its original set and isInsert state
+      for (const movement of cardMovements) {
+        await db.update(cards)
+          .set({ 
+            setId: movement.oldSetId,
+            isInsert: movement.oldIsInsert,
+          })
+          .where(eq(cards.id, movement.cardId));
+      }
+
+      // Update card counts for affected sets
+      const affectedSetIds = [...new Set([
+        ...cardMovements.map(m => m.oldSetId),
+        ...cardMovements.map(m => m.newSetId),
+      ])];
+
+      for (const setId of affectedSetIds) {
+        await db.execute(sql`
+          UPDATE card_sets SET total_cards = (
+            SELECT COUNT(*) FROM cards WHERE set_id = ${setId}
+          ) WHERE id = ${setId}
+        `);
+      }
+
+      // Update migration log status
+      await db.update(migrationLogs)
+        .set({ status: 'rolled_back', rolledBackAt: new Date() })
+        .where(eq(migrationLogs.id, logId));
+
+      res.json({ 
+        success: true, 
+        message: `Successfully rolled back ${cardMovements.length} cards`,
+        rolledBackCount: cardMovements.length,
+      });
+    } catch (error) {
+      console.error('Rollback migration error:', error);
+      res.status(500).json({ message: "Failed to rollback migration" });
+    }
+  });
+
+  // Get main sets (for filter dropdown)
+  app.get("/api/admin/migration/main-sets", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const allMainSets = await db.select({
+        id: mainSets.id,
+        name: mainSets.name,
+        thumbnailImageUrl: mainSets.thumbnailImageUrl,
+      }).from(mainSets).orderBy(mainSets.name);
+
+      res.json({ mainSets: allMainSets });
+    } catch (error) {
+      console.error('Get main sets error:', error);
+      res.status(500).json({ message: "Failed to fetch main sets" });
+    }
+  });
+
+  // Get all cards from a set (for selective migration)
+  app.get("/api/admin/migration/sets/:setId/all-cards", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const setId = parseInt(req.params.setId);
+      const { page = '1', limit = '50' } = req.query;
+      const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+      
+      const allCards = await db.execute(sql`
+        SELECT 
+          id,
+          card_number as "cardNumber",
+          name,
+          variation,
+          is_insert as "isInsert",
+          front_image_url as "frontImageUrl",
+          estimated_value as "estimatedValue"
+        FROM cards
+        WHERE set_id = ${setId}
+        ORDER BY card_number ASC
+        LIMIT ${parseInt(limit as string)}
+        OFFSET ${offset}
+      `);
+
+      const totalResult = await db.execute(sql`
+        SELECT COUNT(*)::int as count FROM cards WHERE set_id = ${setId}
+      `);
+
+      res.json({ 
+        cards: allCards.rows,
+        total: totalResult.rows[0].count,
+        page: parseInt(page as string),
+        limit: parseInt(limit as string),
+      });
+    } catch (error) {
+      console.error('Get all cards error:', error);
+      res.status(500).json({ message: "Failed to fetch cards" });
     }
   });
 
