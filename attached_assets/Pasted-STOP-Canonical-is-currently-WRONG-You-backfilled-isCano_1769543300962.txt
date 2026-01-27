@@ -1,0 +1,93 @@
+STOP. Canonical is currently WRONG.
+
+You backfilled isCanonical=true for any card_set with main_set_id, which is not the definition of canonical.
+That polluted Canonical with legacy sets that were already in the DB. We need canonical to mean ONE thing only:
+
+CANONICAL = the sets/subsets that exist in the master CSV taxonomy ("Marvel Sets & Subsets REDO - Sets To Sub Sets.csv").
+Legacy = everything else.
+
+This tool is the backbone. No guessing. Fix this deterministically.
+
+===========================
+PHASE 1 — Add deterministic canonical tracking
+===========================
+
+1) Add a new column on card_sets:
+- canonical_source TEXT NULL  (or canonical_batch_id TEXT)
+Allowed values:
+- 'csv_master'  (only for those created/confirmed by the master CSV)
+- NULL          (legacy / unknown)
+
+(We can keep isCanonical, but canonical_source is the real truth.)
+
+2) Immediately UNDO the bad backfill:
+- Set isCanonical=false for ALL card_sets (or ignore isCanonical entirely going forward)
+- Set canonical_source=NULL for ALL card_sets
+
+We are resetting canonical classification because it is currently polluted.
+
+===========================
+PHASE 2 — Stamp ONLY the CSV-defined sets as canonical
+===========================
+
+We already imported/created ~4,6xx sets from CSV previously. We must stamp ONLY those rows.
+
+Implement an idempotent “CSV Canonical Stamp” script that:
+- Reads the same master CSV used to create sets (the one we uploaded earlier)
+- For each CSV row, compute the same deterministic slug you used when creating card_sets (or match by slug)
+- Upsert/Update the matching card_sets row to:
+  - canonical_source='csv_master'
+  - isCanonical=true  (optional, derived from canonical_source)
+- IMPORTANT: Do NOT stamp anything not found in the CSV.
+- IMPORTANT: Do NOT use name similarity.
+
+If you cannot access the CSV in runtime, create an admin-only endpoint:
+POST /api/admin/canonical/rebuild
+that loads the CSV from the repo OR uses an already-saved copy of it in the project.
+
+After stamping, provide DB verification:
+- COUNT card_sets WHERE canonical_source='csv_master'  (should be ~4,688 or close)
+- Show 10 sample canonical sets with name/year/id/slug
+
+===========================
+PHASE 3 — Fix Migration Console queries
+===========================
+
+Legacy column MUST show:
+- card_sets.isActive=true
+- canonical_source IS NULL
+- optional "Has cards" filter can be applied
+
+Canonical column MUST show:
+- card_sets.isActive=true
+- canonical_source='csv_master'
+- must show even if 0 cards (coming soon)
+
+Remove any other logic (like main_set_id presence) from canonical selection.
+
+===========================
+PHASE 4 — Safety: protect production from canonical taxonomy explosion
+===========================
+
+Public browse sets MUST NOT show the whole canonical taxonomy.
+Keep the existing public browse logic unchanged (it shows only populated/live sets).
+Do not alter public browse queries in this task.
+
+===========================
+DELIVERABLES
+===========================
+- Exact SQL changes
+- Exact counts before/after:
+  - total card_sets
+  - canonical_source='csv_master'
+  - canonical_source IS NULL
+- Files changed
+- Confirmation that canonical list now contains ONLY CSV-defined sets (no legacy junk)
+
+===========================
+QA
+===========================
+1) Migration Console:
+   - Canonical search "Kakawow" shows only CSV-defined Kakawow sets (and not random legacy duplicates).
+   - Legacy contains old sets that were previously in DB.
+2) Select a legacy source and canonical destination and preview works.

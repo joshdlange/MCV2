@@ -78,6 +78,7 @@ export const cardSets = pgTable("card_sets", {
   isActive: boolean("is_active").default(true).notNull(),
   isCanonical: boolean("is_canonical").default(false).notNull(),
   isInsertSubset: boolean("is_insert_subset").default(false).notNull(),
+  canonicalSource: text("canonical_source"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

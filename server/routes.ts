@@ -4375,7 +4375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { type, hasCards, year, mainSetId, search, showArchived } = req.query;
       
-      // Get LEGACY sets only (isCanonical=false) with card counts
+      // Get LEGACY sets only (canonical_source IS NULL) with card counts
       const setsWithCounts = await db.execute(sql`
         SELECT 
           cs.id,
@@ -4387,6 +4387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           cs.is_active as "isActive",
           cs.is_canonical as "isCanonical",
           cs.is_insert_subset as "isInsertSubset",
+          cs.canonical_source as "canonicalSource",
           cs.created_at as "createdAt",
           ms.name as "mainSetName",
           ms.thumbnail_image_url as "mainSetThumbnail",
@@ -4394,7 +4395,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         FROM card_sets cs
         LEFT JOIN main_sets ms ON cs.main_set_id = ms.id
         LEFT JOIN cards c ON c.set_id = cs.id
-        WHERE cs.is_canonical = false
+        WHERE cs.canonical_source IS NULL
           ${showArchived !== 'true' ? sql`AND cs.is_active = true` : sql``}
           ${hasCards === 'true' ? sql`AND EXISTS (SELECT 1 FROM cards WHERE set_id = cs.id)` : sql``}
           ${year ? sql`AND cs.year = ${parseInt(year as string)}` : sql``}
@@ -4421,7 +4422,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { year, mainSetId, search, showArchived } = req.query;
       
-      // Canonical sets are those with isCanonical=true (from CSV import)
+      // Canonical sets are those with canonical_source='csv_master' (from CSV import)
       const canonicalSets = await db.execute(sql`
         SELECT 
           cs.id,
@@ -4433,13 +4434,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           cs.is_active as "isActive",
           cs.is_canonical as "isCanonical",
           cs.is_insert_subset as "isInsertSubset",
+          cs.canonical_source as "canonicalSource",
           ms.name as "mainSetName",
           ms.thumbnail_image_url as "mainSetThumbnail",
           COUNT(c.id)::int as "cardCount"
         FROM card_sets cs
         LEFT JOIN main_sets ms ON cs.main_set_id = ms.id
         LEFT JOIN cards c ON c.set_id = cs.id
-        WHERE cs.is_canonical = true
+        WHERE cs.canonical_source = 'csv_master'
           ${showArchived !== 'true' ? sql`AND cs.is_active = true` : sql``}
           ${year ? sql`AND cs.year = ${parseInt(year as string)}` : sql``}
           ${mainSetId ? sql`AND cs.main_set_id = ${parseInt(mainSetId as string)}` : sql``}
