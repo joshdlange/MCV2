@@ -17,7 +17,7 @@ import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
 import { db } from "./db";
 import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userBadges, migrationLogs, migrationLogCards } from "../shared/schema";
-import { sql, eq, ilike, and, or, isNull, count } from "drizzle-orm";
+import { sql, eq, ilike, and, or, isNull, count, exists, desc } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
 import { badgeService } from "./badge-service";
@@ -432,14 +432,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Main Sets Routes
   app.get("/api/main-sets", async (req, res) => {
     try {
-      const allMainSets = await storage.getMainSets();
-      
-      // HOTFIX: Filter out empty main sets (0 cards) from public view
-      // Admin users see all sets via admin routes; public users only see populated sets
-      const populatedMainSets = allMainSets.filter(ms => {
-        // totalCards is the sum of cards across all child card_sets
-        return (ms.totalCards || 0) > 0;
-      });
+      // HOTFIX: Only return main sets that have actual cards in the database
+      // Use EXISTS subquery to check for real cards (not stale totalCards field)
+      const populatedMainSets = await db
+        .select()
+        .from(mainSets)
+        .where(
+          exists(
+            db.select({ one: sql`1` })
+              .from(cards)
+              .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+              .where(eq(cardSets.mainSetId, mainSets.id))
+          )
+        )
+        .orderBy(desc(mainSets.createdAt));
       
       res.json(populatedMainSets);
     } catch (error) {
