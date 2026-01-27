@@ -1,0 +1,58 @@
+BUG: Migration Console preview works, but executing migration fails with:
+500: {"message":"Failed to execute migration"}
+
+This is blocking all progress. Fix this FIRST with minimal changes, admin-only, and do not touch public app.
+
+STEP 1 — Make the error actionable (server)
+In the migrate execute route (server/routes.ts), update the catch block so it returns:
+- HTTP 500 with:
+  - error.message
+  - error.stack (or at least error.name + message)
+  - sourceSetId, destinationSetId, cardCount being migrated
+Also log the full error to server console.
+
+Right now we only return “Failed to execute migration” which hides the real cause.
+
+STEP 2 — Reproduce with the exact example
+Use the currently selected case:
+- Source: “2025 Kakawow Aura Angel” (83 cards) set_id = 2243
+- Destination: “2025 Kakawow Aura Marvel - Angel” set_id = 6277 (canonical)
+Attempt migration and capture the *real* error.
+
+STEP 3 — Fix the actual cause (common culprits to check in order)
+A) Transaction / Drizzle schema mismatch
+- Confirm cards.setId column name matches schema (set_id vs setId) and update query accordingly.
+- Confirm destinationSetId exists in card_sets.
+- Confirm sourceSetId exists.
+- Confirm the update query uses correct eq() field.
+
+B) Foreign key constraints
+- Ensure cards.set_id FK → card_sets.id isn’t violated (destination must exist, it does).
+- If a migration_log_cards insert references missing migration_log_id, fix insertion order (create log row first, then log_cards).
+
+C) Logging insert failing
+- If migration_log_cards insertion is failing due to nulls or wrong field names, fix mapping.
+- Insert one row per card OR bulk insert, but ensure columns match DB.
+
+D) Conflict phrase enforcement mismatch
+- If server expects a phrase but client isn’t sending it, return 400 with a clear message (not 500).
+
+STEP 4 — Add “dry-run execute” safety
+Before updating cards, run:
+- SELECT COUNT(*) FROM cards WHERE set_id=source
+- SELECT COUNT(*) FROM card_sets WHERE id=destination
+If counts don’t match expected, return 400 with explanation.
+
+STEP 5 — QA (must do)
+- Re-run the Kakawow 83 card migration and confirm it succeeds.
+- Verify at least 3 migrated cards:
+  - set_id changed to destination
+  - image URLs preserved
+  - estimated_value preserved
+- Confirm user collections remain intact (card_id unchanged).
+- Confirm migration_logs entry created and rollback works.
+
+DELIVERABLES
+- The actual underlying error message you found (paste it)
+- Files changed
+- Confirmation migration + rollback both work

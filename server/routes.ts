@@ -4651,12 +4651,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `);
 
         // AUTO-ARCHIVE: If source set is now empty AND is non-canonical, archive it
-        const [sourceCardCount] = await tx.execute(sql`
+        const sourceCardCountResult = await tx.execute(sql`
           SELECT COUNT(*) as count FROM cards WHERE set_id = ${sourceSetId}
         `);
+        const sourceCardCount = sourceCardCountResult.rows[0] as { count: string };
         
         let sourceArchived = false;
-        if ((sourceCardCount as any).count === 0 && sourceSet && !sourceSet.isCanonical) {
+        if (parseInt(sourceCardCount.count) === 0 && sourceSet && !sourceSet.canonicalSource) {
           await tx.update(cardSets)
             .set({ isActive: false })
             .where(eq(cardSets.id, sourceSetId));
