@@ -75,6 +75,7 @@ export const cardSets = pgTable("card_sets", {
   imageUrl: text("image_url"),
   totalCards: integer("total_cards").default(0).notNull(),
   mainSetId: integer("main_set_id").references(() => mainSets.id),
+  isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -672,6 +673,36 @@ export const cardSetMigrations = pgTable("card_set_migrations", {
   canonicalSetIdIdx: index("card_set_migrations_canonical_set_id_idx").on(table.canonicalSetId),
 }));
 
+export const migrationLogs = pgTable("migration_logs", {
+  id: serial("id").primaryKey(),
+  adminUserId: integer("admin_user_id").references(() => users.id),
+  sourceSetId: integer("source_set_id").references(() => cardSets.id).notNull(),
+  destinationSetId: integer("destination_set_id").references(() => cardSets.id).notNull(),
+  movedCardCount: integer("moved_card_count").notNull(),
+  insertForced: boolean("insert_forced").default(false).notNull(),
+  notes: text("notes"),
+  status: text("status").default("completed").notNull(),
+  rolledBackAt: timestamp("rolled_back_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  adminUserIdIdx: index("migration_logs_admin_user_id_idx").on(table.adminUserId),
+  sourceSetIdIdx: index("migration_logs_source_set_id_idx").on(table.sourceSetId),
+  destinationSetIdIdx: index("migration_logs_destination_set_id_idx").on(table.destinationSetId),
+}));
+
+export const migrationLogCards = pgTable("migration_log_cards", {
+  id: serial("id").primaryKey(),
+  migrationLogId: integer("migration_log_id").references(() => migrationLogs.id).notNull(),
+  cardId: integer("card_id").references(() => cards.id).notNull(),
+  oldSetId: integer("old_set_id").references(() => cardSets.id).notNull(),
+  newSetId: integer("new_set_id").references(() => cardSets.id).notNull(),
+  oldIsInsert: boolean("old_is_insert").notNull(),
+  newIsInsert: boolean("new_is_insert").notNull(),
+}, (table) => ({
+  migrationLogIdIdx: index("migration_log_cards_migration_log_id_idx").on(table.migrationLogId),
+  cardIdIdx: index("migration_log_cards_card_id_idx").on(table.cardId),
+}));
+
 // Marketplace Relations
 export const listingsRelations = relations(listings, ({ one, many }) => ({
   seller: one(users, {
@@ -824,6 +855,22 @@ export const insertPayoutRequestSchema = createInsertSchema(payoutRequests).omit
   processedAt: true,
   processedBy: true,
 });
+
+export const insertMigrationLogSchema = createInsertSchema(migrationLogs).omit({
+  id: true,
+  createdAt: true,
+  rolledBackAt: true,
+});
+
+export const insertMigrationLogCardSchema = createInsertSchema(migrationLogCards).omit({
+  id: true,
+});
+
+// Migration Types
+export type MigrationLog = typeof migrationLogs.$inferSelect;
+export type InsertMigrationLog = z.infer<typeof insertMigrationLogSchema>;
+export type MigrationLogCard = typeof migrationLogCards.$inferSelect;
+export type InsertMigrationLogCard = z.infer<typeof insertMigrationLogCardSchema>;
 
 // Marketplace Types
 export type Listing = typeof listings.$inferSelect;

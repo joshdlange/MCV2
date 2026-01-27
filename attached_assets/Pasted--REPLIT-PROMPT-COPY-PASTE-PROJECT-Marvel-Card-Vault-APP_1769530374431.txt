@@ -1,0 +1,280 @@
+✅ REPLIT PROMPT (COPY/PASTE)
+
+PROJECT: Marvel Card Vault (APP project – LIVE in production)
+WHERE: Extend the existing Admin Tools section (do not create a separate app).
+GOAL: Build a “Migration Console” to safely move cards/sets into the new CSV-defined canonical structure without breaking user collections.
+
+Hard Safety Rules (must follow)
+
+No destructive operations by default (no deletes). Use archive/hide instead.
+
+No auto-migration based on fuzzy matching. Migration should be explicit: source → destination chosen by admin.
+
+Require a Preview step before any “Apply” step.
+
+Every migration must write to a migration log table so we can audit and optionally rollback.
+
+Use transactions (or best equivalent) so partial failures don’t corrupt data.
+
+Minimize blast radius: do not refactor unrelated components or global styling.
+
+Definitions (current DB schema)
+
+main_sets (id, name, thumbnail_image_url, ...)
+
+card_sets (id, name, year, main_set_id, image_url, total_cards, ...)
+
+cards (id, set_id, card_number, name, variation, is_insert, front_image_url, estimated_value, ...)
+
+Important: “Price data” lives on cards (e.g., estimated_value).
+When we move a card to another set, all card fields must remain unchanged except set_id and any rule-driven changes.
+
+Feature: Migration Console (Admin Tools)
+1) Admin-only access
+
+This entire console must be visible only to admins.
+
+If your app already has admin gating, reuse it.
+
+2) New Admin section: “Migration Console”
+
+Add a new tab/page inside Admin Tools with 3 panels:
+
+Panel A — Source (Legacy) Set Picker
+
+Searchable dropdown/table of card_sets (legacy)
+
+Filters:
+
+“Has cards” (card count > 0)
+
+Year
+
+Main set (if assigned)
+
+Text search
+
+Display per row:
+
+set id
+
+year
+
+name
+
+main set name (if any)
+
+card count
+
+thumbnail (use main set image if available, else set image)
+
+Panel B — Destination (Canonical) Set Picker
+
+Searchable list of canonical card_sets (the CSV-based ones)
+
+Same display fields as source
+
+Must clearly show the correct main_set and subset naming
+
+Panel C — Preview & Actions
+
+Shows side-by-side preview:
+
+Source Preview
+
+main set image (from main_sets.thumbnail_image_url)
+
+set name/year
+
+card count
+
+sample grid of first 12 cards with:
+
+card image thumbnail (front_image_url if exists)
+
+card_number + name
+
+variation
+
+is_insert
+
+estimated_value (if present)
+
+Destination Preview
+
+main set image
+
+set name/year
+
+current card count
+
+sample of first 12 cards already in destination (if any)
+
+3) Migration Actions
+Action 1: “Preview Migration”
+
+Before enabling migration, the system must compute and display:
+
+number of cards that would move
+
+whether destination already has cards
+
+potential conflicts:
+
+same card_number already exists in destination
+
+same (card_number + name) exists in destination
+
+show warning badges if conflicts exist
+
+Important: Do not block migration, but warn clearly.
+
+Action 2: “Migrate Set → Set” (Bulk Move)
+
+When admin clicks “Migrate (Move All Cards)”:
+
+What happens
+
+Update all cards where set_id = source_set_id
+
+Set cards.set_id = destination_set_id
+
+Do NOT change:
+
+images
+
+estimated_value
+
+variation
+
+anything else
+EXCEPT rules below.
+
+Insert subset rule (required)
+
+If the destination subset/set name indicates it is an insert subset:
+
+Set cards.is_insert = true for all moved cards
+
+We need a deterministic rule:
+
+Use a checkbox in UI: “Destination is insert subset” (admin-controlled)
+
+AND/OR auto-detect based on destination name containing keywords:
+
+“Insert”, “Inserts”, “Chase”, “Sketch”, “Autograph”, “Signature”, “Printing Plate”, “1/1”, “Variant”
+But do not rely only on auto-detection. Admin checkbox must override.
+
+Action 3: “Migrate Selected Cards Only” (Optional but valuable)
+
+Display a paginated list/grid of cards in source with checkboxes
+
+Allow selecting many and moving only those
+
+Same rules as bulk migration for preserving fields + insert override.
+
+Action 4: “Archive Legacy Set”
+
+After migration, if a source set has 0 cards:
+
+Allow “Archive legacy set” (hide from UI)
+Implementation options:
+
+Add card_sets.is_active boolean default true
+
+UI should show only active sets for normal users
+
+Admin can toggle show archived
+
+Do NOT delete sets.
+
+4) Protecting user collections (critical requirement)
+
+We must ensure that if users previously added cards under the “old wrong set,” they still see those cards after migration.
+
+Assumption: user collections link to cards.id (not by name).
+If so, migrating by changing cards.set_id will preserve everything.
+
+Required verification
+
+Identify how user collections are stored (table/relationship).
+
+Confirm that the relationship is by card_id.
+
+If there is any logic that matches by (set_name + card_number) instead of card_id, fix it so it uses card_id.
+
+Deliverable
+
+In your response, explicitly confirm which table stores user collections and how it references cards.
+
+5) Migration logging (required)
+
+Create a table: migration_logs (or similar):
+
+id (serial PK)
+
+admin_user_id (if available)
+
+source_set_id
+
+destination_set_id
+
+moved_card_count
+
+insert_forced (boolean)
+
+created_at
+
+notes (text)
+
+optional: moved_card_ids (json) OR a separate table migration_log_cards with rows per card_id for rollback
+
+Rollback is strongly preferred:
+
+store card_id + old_set_id + new_set_id
+
+allow “Rollback Migration” button in Admin Tools
+
+6) UI polish requirements (small but important)
+
+Make sure buttons are readable (don’t touch global styling, just this page if needed)
+
+Confirm images render fast using existing SimpleImage component and Cloudinary optimization if applicable.
+
+7) QA / Regression Checklist (must run)
+
+Confirm non-admin users cannot access Migration Console routes.
+
+Confirm migrating a set updates card browsing under the destination set immediately.
+
+Confirm users who owned migrated cards still see them in “My Collection.”
+
+Confirm card images and estimated_value remain intact post-move.
+
+Confirm insert rule sets is_insert=true correctly when enabled.
+
+Confirm no production crashes and no schema migration breaks deployment.
+
+Deliverables from Replit
+
+File list changed
+
+New DB migrations (if any) with exact SQL
+
+Explanation of how user collections are preserved (card_id verification)
+
+Demo walkthrough steps (how to migrate one set safely)
+
+How to use it initially (recommended workflow)
+
+Run “Preview Migration”
+
+Migrate 1 small set as a pilot
+
+Verify:
+
+destination shows cards
+
+user collection still intact
+
+Then proceed with larger migrations
