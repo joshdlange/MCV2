@@ -278,7 +278,7 @@ export default function MigrationConsole() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Years</SelectItem>
-                        {[2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018].map(y => (
+                        {[2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005, 2004, 2003, 2002, 2001, 2000, 1999, 1998, 1997, 1996, 1995, 1994, 1993, 1992, 1991, 1990].map(y => (
                           <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
                         ))}
                       </SelectContent>
@@ -302,7 +302,7 @@ export default function MigrationConsole() {
                   </div>
                 </div>
 
-                <div className="h-[300px] overflow-y-auto border rounded-md bg-white">
+                <div className="h-[400px] overflow-y-auto space-y-2 p-2 bg-gray-50 rounded-md">
                   {sourceLoading ? (
                     <div className="flex items-center justify-center h-full">
                       <Loader2 className="h-6 w-6 animate-spin text-red-600" />
@@ -312,37 +312,43 @@ export default function MigrationConsole() {
                       No sets found
                     </div>
                   ) : (
-                    <div className="divide-y divide-gray-100">
-                      {sourceSets.map((set) => (
-                        <div
-                          key={set.id}
-                          onClick={() => setSelectedSource(set)}
-                          className={`p-2 cursor-pointer hover:bg-red-50 transition-colors ${
-                            selectedSource?.id === set.id ? 'bg-red-100 border-l-4 border-red-600' : 'border-l-4 border-transparent'
-                          } ${!set.isActive ? 'opacity-60' : ''}`}
-                        >
-                          <div className="flex items-center gap-2">
-                            {(set.mainSetThumbnail || set.imageUrl) && (
+                    sourceSets.map((set) => (
+                      <div
+                        key={set.id}
+                        onClick={() => setSelectedSource(set)}
+                        className={`bg-white rounded-lg border p-3 cursor-pointer transition-all hover:shadow-md ${
+                          selectedSource?.id === set.id ? 'ring-2 ring-red-500 border-red-500' : 'border-gray-200 hover:border-red-300'
+                        } ${!set.isActive ? 'opacity-60' : ''}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-16 h-16 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
+                            {(set.mainSetThumbnail || set.imageUrl) ? (
                               <SimpleImage
                                 src={set.mainSetThumbnail || set.imageUrl || ''}
                                 alt={set.name}
-                                className="w-8 h-8 rounded object-cover flex-shrink-0"
+                                className="w-full h-full object-cover"
                               />
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-sm text-gray-900 truncate">{formatTitle(set.name)}</div>
-                              <div className="text-xs text-gray-600">
-                                {set.year} • {set.cardCount} cards
-                                {!set.isActive && <span className="ml-1 text-amber-600">(Archived)</span>}
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                                No img
                               </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-gray-900">{formatTitle(set.name)}</div>
+                            <div className="text-sm text-gray-600 mt-1">
+                              {set.year} • {set.cardCount} cards
                             </div>
-                            <div className="text-xs text-gray-400 flex-shrink-0">
-                              #{set.id}
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-gray-400">#{set.id}</span>
+                              {!set.isActive && (
+                                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">Archived</span>
+                              )}
                             </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))
                   )}
                 </div>
               </CardContent>
@@ -373,14 +379,14 @@ export default function MigrationConsole() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Years</SelectItem>
-                      {[2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018].map(y => (
+                      {[2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005, 2004, 2003, 2002, 2001, 2000, 1999, 1998, 1997, 1996, 1995, 1994, 1993, 1992, 1991, 1990].map(y => (
                         <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="h-[300px] overflow-y-auto border rounded-md bg-white">
+                <div className="h-[400px] overflow-y-auto space-y-2 p-2 bg-gray-50 rounded-md">
                   {destLoading ? (
                     <div className="flex items-center justify-center h-full">
                       <Loader2 className="h-6 w-6 animate-spin text-green-600" />
@@ -390,39 +396,43 @@ export default function MigrationConsole() {
                       No canonical sets found
                     </div>
                   ) : (
-                    <div className="divide-y divide-gray-100">
-                      {destSets.map((set) => (
-                        <div
-                          key={set.id}
-                          onClick={() => setSelectedDest(set)}
-                          className={`p-2 cursor-pointer hover:bg-green-50 transition-colors ${
-                            selectedDest?.id === set.id ? 'bg-green-100 border-l-4 border-green-600' : 'border-l-4 border-transparent'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            {(set.mainSetThumbnail || set.imageUrl) && (
+                    destSets.map((set) => (
+                      <div
+                        key={set.id}
+                        onClick={() => setSelectedDest(set)}
+                        className={`bg-white rounded-lg border p-3 cursor-pointer transition-all hover:shadow-md ${
+                          selectedDest?.id === set.id ? 'ring-2 ring-green-500 border-green-500' : 'border-gray-200 hover:border-green-300'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-16 h-16 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
+                            {(set.mainSetThumbnail || set.imageUrl) ? (
                               <SimpleImage
                                 src={set.mainSetThumbnail || set.imageUrl || ''}
                                 alt={set.name}
-                                className="w-8 h-8 rounded object-cover flex-shrink-0"
+                                className="w-full h-full object-cover"
                               />
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-sm text-gray-900 truncate">{formatTitle(set.name)}</div>
-                              <div className="text-xs text-gray-600">
-                                {set.year} • {set.cardCount} cards
-                                {detectInsertSubset(set.name) && (
-                                  <span className="ml-1 text-purple-600">(Insert)</span>
-                                )}
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                                No img
                               </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-gray-900">{formatTitle(set.name)}</div>
+                            <div className="text-sm text-gray-600 mt-1">
+                              {set.year} • {set.cardCount} cards
                             </div>
-                            <div className="text-xs text-gray-400 flex-shrink-0">
-                              #{set.id}
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-gray-400">#{set.id}</span>
+                              {detectInsertSubset(set.name) && (
+                                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">Insert</span>
+                              )}
                             </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))
                   )}
                 </div>
               </CardContent>
