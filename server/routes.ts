@@ -4516,7 +4516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      const { sourceSetId, destinationSetId, forceInsert, notes } = req.body;
+      const { sourceSetId, destinationSetId, forceInsert, notes, allowConflicts } = req.body;
       
       if (!sourceSetId || !destinationSetId) {
         return res.status(400).json({ message: "Source and destination set IDs required" });
@@ -4533,51 +4533,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No cards to migrate in source set" });
       }
 
-      // Create migration log
-      const [migrationLog] = await db.insert(migrationLogs).values({
-        adminUserId: req.user.id,
-        sourceSetId: sourceSetId,
-        destinationSetId: destinationSetId,
-        movedCardCount: cardsToMove.length,
-        insertForced: forceInsert || false,
-        notes: notes || null,
-        status: 'completed',
-      }).returning();
-
-      // Record each card movement for rollback capability
-      const cardLogEntries = cardsToMove.map(card => ({
-        migrationLogId: migrationLog.id,
-        cardId: card.id,
-        oldSetId: sourceSetId,
-        newSetId: destinationSetId,
-        oldIsInsert: card.isInsert,
-        newIsInsert: forceInsert ? true : card.isInsert,
-      }));
-
-      await db.insert(migrationLogCards).values(cardLogEntries);
-
-      // Update cards: move to destination set
-      if (forceInsert) {
-        await db.update(cards)
-          .set({ setId: destinationSetId, isInsert: true })
-          .where(eq(cards.setId, sourceSetId));
-      } else {
-        await db.update(cards)
-          .set({ setId: destinationSetId })
-          .where(eq(cards.setId, sourceSetId));
+      // Check for conflicts unless explicitly allowed
+      if (!allowConflicts) {
+        const destCards = await db.select({ cardNumber: cards.cardNumber }).from(cards).where(eq(cards.setId, destinationSetId));
+        const destCardNumbers = new Set(destCards.map(c => c.cardNumber));
+        const conflicts = cardsToMove.filter(c => destCardNumbers.has(c.cardNumber));
+        if (conflicts.length > 0) {
+          return res.status(400).json({ 
+            message: `${conflicts.length} card number conflicts exist. Enable 'Allow Conflicts' to proceed.`,
+            conflictCount: conflicts.length,
+          });
+        }
       }
 
-      // Update card counts for both sets
-      await db.execute(sql`
-        UPDATE card_sets SET total_cards = (
-          SELECT COUNT(*) FROM cards WHERE set_id = card_sets.id
-        ) WHERE id IN (${sourceSetId}, ${destinationSetId})
-      `);
+      // Execute migration in a transaction for atomicity
+      const result = await db.transaction(async (tx) => {
+        // Create migration log
+        const [migrationLog] = await tx.insert(migrationLogs).values({
+          adminUserId: req.user.id,
+          sourceSetId: sourceSetId,
+          destinationSetId: destinationSetId,
+          movedCardCount: cardsToMove.length,
+          insertForced: forceInsert || false,
+          notes: notes || null,
+          status: 'completed',
+        }).returning();
+
+        // Record each card movement for rollback capability
+        const cardLogEntries = cardsToMove.map(card => ({
+          migrationLogId: migrationLog.id,
+          cardId: card.id,
+          oldSetId: sourceSetId,
+          newSetId: destinationSetId,
+          oldIsInsert: card.isInsert,
+          newIsInsert: forceInsert ? true : card.isInsert,
+        }));
+
+        await tx.insert(migrationLogCards).values(cardLogEntries);
+
+        // Update cards: move to destination set
+        if (forceInsert) {
+          await tx.update(cards)
+            .set({ setId: destinationSetId, isInsert: true })
+            .where(eq(cards.setId, sourceSetId));
+        } else {
+          await tx.update(cards)
+            .set({ setId: destinationSetId })
+            .where(eq(cards.setId, sourceSetId));
+        }
+
+        // Update card counts for both sets
+        await tx.execute(sql`
+          UPDATE card_sets SET total_cards = (
+            SELECT COUNT(*) FROM cards WHERE set_id = card_sets.id
+          ) WHERE id IN (${sourceSetId}, ${destinationSetId})
+        `);
+
+        return migrationLog;
+      });
 
       res.json({
         success: true,
         message: `Successfully migrated ${cardsToMove.length} cards`,
-        migrationLogId: migrationLog.id,
+        migrationLogId: result.id,
         movedCardCount: cardsToMove.length,
       });
     } catch (error) {
@@ -4611,53 +4629,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No valid cards found" });
       }
 
-      // Create migration log
-      const [migrationLog] = await db.insert(migrationLogs).values({
-        adminUserId: req.user.id,
-        sourceSetId: sourceSetId || cardsToMove[0].setId,
-        destinationSetId: destinationSetId,
-        movedCardCount: cardsToMove.length,
-        insertForced: forceInsert || false,
-        notes: notes || `Selected ${cardsToMove.length} cards`,
-        status: 'completed',
-      }).returning();
+      // Execute in a transaction for atomicity
+      const result = await db.transaction(async (tx) => {
+        // Create migration log
+        const [migrationLog] = await tx.insert(migrationLogs).values({
+          adminUserId: req.user.id,
+          sourceSetId: sourceSetId || cardsToMove[0].setId,
+          destinationSetId: destinationSetId,
+          movedCardCount: cardsToMove.length,
+          insertForced: forceInsert || false,
+          notes: notes || `Selected ${cardsToMove.length} cards`,
+          status: 'completed',
+        }).returning();
 
-      // Record each card movement
-      const cardLogEntries = cardsToMove.map(card => ({
-        migrationLogId: migrationLog.id,
-        cardId: card.id,
-        oldSetId: card.setId,
-        newSetId: destinationSetId,
-        oldIsInsert: card.isInsert,
-        newIsInsert: forceInsert ? true : card.isInsert,
-      }));
+        // Record each card movement
+        const cardLogEntries = cardsToMove.map(card => ({
+          migrationLogId: migrationLog.id,
+          cardId: card.id,
+          oldSetId: card.setId,
+          newSetId: destinationSetId,
+          oldIsInsert: card.isInsert,
+          newIsInsert: forceInsert ? true : card.isInsert,
+        }));
 
-      await db.insert(migrationLogCards).values(cardLogEntries);
+        await tx.insert(migrationLogCards).values(cardLogEntries);
 
-      // Update cards
-      for (const card of cardsToMove) {
-        await db.update(cards)
-          .set({ 
-            setId: destinationSetId, 
-            isInsert: forceInsert ? true : card.isInsert 
-          })
-          .where(eq(cards.id, card.id));
-      }
+        // Update cards
+        for (const card of cardsToMove) {
+          await tx.update(cards)
+            .set({ 
+              setId: destinationSetId, 
+              isInsert: forceInsert ? true : card.isInsert 
+            })
+            .where(eq(cards.id, card.id));
+        }
 
-      // Update card counts
-      const affectedSetIds = [...new Set([...cardsToMove.map(c => c.setId), destinationSetId])];
-      for (const setId of affectedSetIds) {
-        await db.execute(sql`
+        // Update card counts
+        const affectedSetIds = [...new Set([...cardsToMove.map(c => c.setId), destinationSetId])];
+        for (const setId of affectedSetIds) {
+          await tx.execute(sql`
           UPDATE card_sets SET total_cards = (
             SELECT COUNT(*) FROM cards WHERE set_id = ${setId}
           ) WHERE id = ${setId}
         `);
-      }
+        }
+
+        return migrationLog;
+      });
 
       res.json({
         success: true,
         message: `Successfully migrated ${cardsToMove.length} cards`,
-        migrationLogId: migrationLog.id,
+        migrationLogId: result.id,
         movedCardCount: cardsToMove.length,
       });
     } catch (error) {
@@ -4782,34 +4805,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No card movements found for this migration" });
       }
 
-      // Rollback each card to its original set and isInsert state
-      for (const movement of cardMovements) {
-        await db.update(cards)
-          .set({ 
-            setId: movement.oldSetId,
-            isInsert: movement.oldIsInsert,
-          })
-          .where(eq(cards.id, movement.cardId));
-      }
+      // Execute rollback in a transaction for atomicity
+      await db.transaction(async (tx) => {
+        // Rollback each card to its original set and isInsert state
+        for (const movement of cardMovements) {
+          await tx.update(cards)
+            .set({ 
+              setId: movement.oldSetId,
+              isInsert: movement.oldIsInsert,
+            })
+            .where(eq(cards.id, movement.cardId));
+        }
 
-      // Update card counts for affected sets
-      const affectedSetIds = [...new Set([
-        ...cardMovements.map(m => m.oldSetId),
-        ...cardMovements.map(m => m.newSetId),
-      ])];
+        // Update card counts for affected sets
+        const affectedSetIds = [...new Set([
+          ...cardMovements.map(m => m.oldSetId),
+          ...cardMovements.map(m => m.newSetId),
+        ])];
 
-      for (const setId of affectedSetIds) {
-        await db.execute(sql`
-          UPDATE card_sets SET total_cards = (
-            SELECT COUNT(*) FROM cards WHERE set_id = ${setId}
-          ) WHERE id = ${setId}
-        `);
-      }
+        for (const setId of affectedSetIds) {
+          await tx.execute(sql`
+            UPDATE card_sets SET total_cards = (
+              SELECT COUNT(*) FROM cards WHERE set_id = ${setId}
+            ) WHERE id = ${setId}
+          `);
+        }
 
-      // Update migration log status
-      await db.update(migrationLogs)
-        .set({ status: 'rolled_back', rolledBackAt: new Date() })
-        .where(eq(migrationLogs.id, logId));
+        // Update migration log status
+        await tx.update(migrationLogs)
+          .set({ status: 'rolled_back', rolledBackAt: new Date() })
+          .where(eq(migrationLogs.id, logId));
+      });
 
       res.json({ 
         success: true, 

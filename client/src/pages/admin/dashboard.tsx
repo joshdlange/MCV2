@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, FolderOpen, Edit, PlusCircle, Settings, Calendar, Image } from "lucide-react";
+import { Users, FolderOpen, Edit, PlusCircle, Settings, Calendar, Image, ArrowLeftRight } from "lucide-react";
 
 export default function AdminDashboard() {
   const adminTools = [
@@ -54,6 +54,13 @@ export default function AdminDashboard() {
       href: "/admin/image-approvals",
       icon: Image,
       color: "bg-pink-500"
+    },
+    {
+      title: "Migration Console",
+      description: "Safely migrate cards between sets with rollback capability",
+      href: "/admin/migration-console",
+      icon: ArrowLeftRight,
+      color: "bg-indigo-500"
     }
   ];
 
