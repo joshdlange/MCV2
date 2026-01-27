@@ -707,6 +707,30 @@ export const migrationLogCards = pgTable("migration_log_cards", {
   cardIdIdx: index("migration_log_cards_card_id_idx").on(table.cardId),
 }));
 
+// Admin Audit Log for tracking administrative actions (archives, deletes, etc.)
+export const adminAuditLogs = pgTable("admin_audit_logs", {
+  id: serial("id").primaryKey(),
+  adminUserId: integer("admin_user_id").references(() => users.id),
+  actionType: text("action_type").notNull(), // archive_set, delete_set, unarchive_set, etc.
+  entityType: text("entity_type").notNull(), // card_set, main_set, card, etc.
+  entityId: integer("entity_id").notNull(),
+  entityName: text("entity_name"), // for reference after deletion
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  adminUserIdIdx: index("admin_audit_logs_admin_user_id_idx").on(table.adminUserId),
+  actionTypeIdx: index("admin_audit_logs_action_type_idx").on(table.actionType),
+  createdAtIdx: index("admin_audit_logs_created_at_idx").on(table.createdAt),
+}));
+
+export const insertAdminAuditLogSchema = createInsertSchema(adminAuditLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAdminAuditLog = z.infer<typeof insertAdminAuditLogSchema>;
+export type AdminAuditLog = typeof adminAuditLogs.$inferSelect;
+
 // Marketplace Relations
 export const listingsRelations = relations(listings, ({ one, many }) => ({
   seller: one(users, {

@@ -22,6 +22,8 @@ interface CardSet {
   mainSetId: number | null;
   imageUrl: string | null;
   isActive: boolean;
+  isCanonical: boolean;
+  isInsertSubset: boolean;
   mainSetName: string | null;
   mainSetThumbnail: string | null;
   cardCount: number;
@@ -37,12 +39,22 @@ interface SampleCard {
   estimatedValue: string | null;
 }
 
+interface ConflictInfo {
+  cardNumber: string;
+  sourceCardId: number;
+  sourceCardName: string;
+  destCardId: number;
+  destCardName: string;
+}
+
 interface PreviewResult {
   sourceCardCount: number;
   destinationCardCount: number;
   conflictCount: number;
-  conflicts: { id: number; card_number: string; name: string }[];
+  conflicts: ConflictInfo[];
   canMigrate: boolean;
+  destinationIsInsertSubset: boolean;
+  destinationIsCanonical: boolean;
 }
 
 interface MigrationLog {
@@ -84,7 +96,23 @@ export default function MigrationConsole() {
   
   const [forceInsert, setForceInsert] = useState(false);
   const [allowConflicts, setAllowConflicts] = useState(false);
+  const [conflictConfirmText, setConflictConfirmText] = useState("");
   const [migrationNotes, setMigrationNotes] = useState("");
+
+  // Conflict confirmation requires typing the exact phrase
+  const CONFLICT_CONFIRM_PHRASE = "MIGRATE WITH CONFLICTS";
+  const conflictConfirmValid = conflictConfirmText === CONFLICT_CONFIRM_PHRASE;
+
+  // Archive with cards confirmation
+  const [archiveConfirmText, setArchiveConfirmText] = useState("");
+  const ARCHIVE_CONFIRM_PHRASE = "ARCHIVE WITH CARDS";
+  const archiveConfirmValid = archiveConfirmText === ARCHIVE_CONFIRM_PHRASE;
+
+  // Delete set confirmation
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const DELETE_CONFIRM_PHRASE = "DELETE SET";
+  const deleteConfirmValid = deleteConfirmText === DELETE_CONFIRM_PHRASE;
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const { data: sourceSetsData, isLoading: sourceLoading } = useQuery({
     queryKey: ['/api/admin/migration/sets', sourceSearch, sourceYear, sourceHasCards, showArchived],
@@ -140,7 +168,7 @@ export default function MigrationConsole() {
       sourceSetId: selectedSource?.id,
       destinationSetId: selectedDest?.id,
       forceInsert,
-      allowConflicts,
+      allowConflicts: conflictConfirmValid ? CONFLICT_CONFIRM_PHRASE : null, // Send phrase, not boolean
       notes: migrationNotes || null,
     }).then(res => res.json()),
     onSuccess: (data) => {
@@ -152,6 +180,8 @@ export default function MigrationConsole() {
       setSelectedSource(null);
       setSelectedDest(null);
       setForceInsert(false);
+      setAllowConflicts(false);
+      setConflictConfirmText("");
       setMigrationNotes("");
     },
     onError: (error: any) => {
@@ -164,7 +194,8 @@ export default function MigrationConsole() {
   });
 
   const archiveSet = useMutation({
-    mutationFn: (setId: number) => apiRequest('POST', `/api/admin/migration/archive-set/${setId}`).then(res => res.json()),
+    mutationFn: ({ setId, confirmWithCards }: { setId: number; confirmWithCards?: string }) => 
+      apiRequest('POST', `/api/admin/migration/archive-set/${setId}`, { confirmWithCards }).then(res => res.json()),
     onSuccess: () => {
       toast({
         title: "Set Archived",
@@ -172,11 +203,34 @@ export default function MigrationConsole() {
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/migration/sets'] });
       setSelectedSource(null);
+      setArchiveConfirmText("");
     },
     onError: (error: any) => {
       toast({
         title: "Archive Failed",
         description: error.message || "Failed to archive set",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteSet = useMutation({
+    mutationFn: ({ setId, confirmDelete }: { setId: number; confirmDelete: string }) => 
+      apiRequest('DELETE', `/api/admin/migration/delete-set/${setId}`, { confirmDelete }).then(res => res.json()),
+    onSuccess: (data) => {
+      toast({
+        title: "Set Deleted",
+        description: data.message || "The set has been permanently deleted.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/migration/sets'] });
+      setSelectedSource(null);
+      setDeleteConfirmText("");
+      setShowDeleteDialog(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete set",
         variant: "destructive",
       });
     },
@@ -425,8 +479,13 @@ export default function MigrationConsole() {
                             </div>
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-xs text-gray-400">#{set.id}</span>
-                              {detectInsertSubset(set.name) && (
-                                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">Insert</span>
+                              {(set.isInsertSubset || detectInsertSubset(set.name)) && (
+                                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
+                                  {set.isInsertSubset ? 'Insert Subset' : 'Insert?'}
+                                </span>
+                              )}
+                              {set.isCanonical && (
+                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Canonical</span>
                               )}
                             </div>
                           </div>
@@ -535,11 +594,15 @@ export default function MigrationConsole() {
                       </div>
                     </div>
 
-                    {isInsertDetected && (
-                      <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <div className="flex items-center gap-2 text-sm text-blue-800">
-                          <AlertTriangle className="h-4 w-4" />
-                          <span>Insert subset detected in destination name</span>
+                    {(preview?.destinationIsInsertSubset || isInsertDetected) && (
+                      <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                        <div className="flex items-center gap-2 text-sm text-purple-800">
+                          <CheckCircle className="h-4 w-4" />
+                          <span>
+                            {preview?.destinationIsInsertSubset 
+                              ? 'Destination is marked as Insert Subset - cards will be marked as inserts'
+                              : 'Insert subset detected in destination name'}
+                          </span>
                         </div>
                       </div>
                     )}
@@ -556,15 +619,41 @@ export default function MigrationConsole() {
                     </div>
 
                     {preview && preview.conflictCount > 0 && (
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id="allowConflicts"
-                          checked={allowConflicts}
-                          onCheckedChange={(checked) => setAllowConflicts(!!checked)}
-                        />
-                        <Label htmlFor="allowConflicts" className="text-sm text-amber-700">
-                          Allow conflicts (duplicate card numbers)
-                        </Label>
+                      <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 space-y-3">
+                        <div className="flex items-center gap-2 text-amber-800 font-medium">
+                          <AlertTriangle className="h-4 w-4" />
+                          <span>{preview.conflictCount} Duplicate Card Numbers</span>
+                        </div>
+                        
+                        <div className="max-h-32 overflow-y-auto space-y-1 text-xs">
+                          {preview.conflicts.slice(0, 20).map((conflict, i) => (
+                            <div key={i} className="flex items-center gap-2 text-gray-600">
+                              <span className="font-mono bg-gray-100 px-1 rounded">#{conflict.cardNumber}</span>
+                              <span className="truncate">{conflict.sourceCardName}</span>
+                              <span className="text-gray-400">→</span>
+                              <span className="truncate text-amber-700">{conflict.destCardName}</span>
+                            </div>
+                          ))}
+                          {preview.conflicts.length > 20 && (
+                            <div className="text-gray-400 italic">...and {preview.conflicts.length - 20} more</div>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="conflictConfirm" className="text-xs text-amber-700">
+                            Type <span className="font-mono font-bold">MIGRATE WITH CONFLICTS</span> to proceed:
+                          </Label>
+                          <Input
+                            id="conflictConfirm"
+                            placeholder="MIGRATE WITH CONFLICTS"
+                            value={conflictConfirmText}
+                            onChange={(e) => {
+                              setConflictConfirmText(e.target.value);
+                              setAllowConflicts(e.target.value === CONFLICT_CONFIRM_PHRASE);
+                            }}
+                            className={`font-mono text-sm ${conflictConfirmValid ? 'border-green-500 bg-green-50' : 'border-amber-300'}`}
+                          />
+                        </div>
                       </div>
                     )}
 
@@ -581,29 +670,93 @@ export default function MigrationConsole() {
                     <Button
                       className="w-full bg-red-600 hover:bg-red-700"
                       onClick={() => executeMigration.mutate()}
-                      disabled={executeMigration.isPending || !preview.canMigrate || (preview.conflictCount > 0 && !allowConflicts)}
+                      disabled={executeMigration.isPending || !preview.canMigrate || (preview.conflictCount > 0 && !conflictConfirmValid)}
                     >
                       {executeMigration.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Migrate {preview.sourceCardCount} Cards
+                      {preview.conflictCount > 0 && conflictConfirmValid && (
+                        <span className="ml-2 text-amber-200">(with {preview.conflictCount} conflicts)</span>
+                      )}
                     </Button>
 
-                    {preview.conflictCount > 0 && !allowConflicts && (
+                    {preview.conflictCount > 0 && !conflictConfirmValid && (
                       <div className="text-xs text-amber-600 text-center">
-                        Enable "Allow conflicts" above to proceed with migration
+                        Type the confirmation phrase above to proceed with conflicts
                       </div>
                     )}
 
-                    {selectedSource && selectedSource.cardCount === 0 && (
+                    {selectedSource && selectedSource.cardCount === 0 && selectedSource.isActive && (
                       <Button
                         variant="outline"
                         className="w-full"
-                        onClick={() => archiveSet.mutate(selectedSource.id)}
+                        onClick={() => archiveSet.mutate({ setId: selectedSource.id })}
                         disabled={archiveSet.isPending}
                       >
                         {archiveSet.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         <Archive className="mr-2 h-4 w-4" />
                         Archive Empty Legacy Set
                       </Button>
+                    )}
+
+                    {selectedSource && selectedSource.cardCount > 0 && selectedSource.isActive && (
+                      <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 space-y-3">
+                        <div className="flex items-center gap-2 text-amber-800 font-medium text-sm">
+                          <AlertTriangle className="h-4 w-4" />
+                          <span>Archive Set With {selectedSource.cardCount} Cards</span>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="archiveConfirm" className="text-xs text-amber-700">
+                            Type <span className="font-mono font-bold">ARCHIVE WITH CARDS</span> to archive:
+                          </Label>
+                          <Input
+                            id="archiveConfirm"
+                            placeholder="ARCHIVE WITH CARDS"
+                            value={archiveConfirmText}
+                            onChange={(e) => setArchiveConfirmText(e.target.value)}
+                            className={`font-mono text-sm ${archiveConfirmValid ? 'border-green-500 bg-green-50' : 'border-amber-300'}`}
+                          />
+                        </div>
+                        <Button
+                          variant="outline"
+                          className="w-full border-amber-500 text-amber-700 hover:bg-amber-100"
+                          onClick={() => archiveSet.mutate({ setId: selectedSource.id, confirmWithCards: archiveConfirmText })}
+                          disabled={archiveSet.isPending || !archiveConfirmValid}
+                        >
+                          {archiveSet.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          <Archive className="mr-2 h-4 w-4" />
+                          Archive With Cards
+                        </Button>
+                      </div>
+                    )}
+
+                    {selectedSource && selectedSource.cardCount === 0 && !selectedSource.isCanonical && selectedSource.isActive && (
+                      <div className="p-3 bg-red-50 rounded-lg border border-red-200 space-y-3">
+                        <div className="flex items-center gap-2 text-red-800 font-medium text-sm">
+                          <AlertTriangle className="h-4 w-4" />
+                          <span>Permanently Delete Empty Set</span>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="deleteConfirm" className="text-xs text-red-700">
+                            Type <span className="font-mono font-bold">DELETE SET</span> to permanently delete:
+                          </Label>
+                          <Input
+                            id="deleteConfirm"
+                            placeholder="DELETE SET"
+                            value={deleteConfirmText}
+                            onChange={(e) => setDeleteConfirmText(e.target.value)}
+                            className={`font-mono text-sm ${deleteConfirmValid ? 'border-green-500 bg-green-50' : 'border-red-300'}`}
+                          />
+                        </div>
+                        <Button
+                          variant="outline"
+                          className="w-full border-red-500 text-red-700 hover:bg-red-100"
+                          onClick={() => deleteSet.mutate({ setId: selectedSource.id, confirmDelete: deleteConfirmText })}
+                          disabled={deleteSet.isPending || !deleteConfirmValid}
+                        >
+                          {deleteSet.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Delete Permanently
+                        </Button>
+                      </div>
                     )}
                   </div>
                 )}

@@ -16,7 +16,7 @@ import { ebayPricingService } from "./ebay-pricing";
 import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
 import { db } from "./db";
-import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userBadges, migrationLogs, migrationLogCards } from "../shared/schema";
+import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userBadges, migrationLogs, migrationLogCards, adminAuditLogs } from "../shared/schema";
 import { sql, eq, ilike, and, or, isNull, count, exists, desc } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
@@ -4375,7 +4375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { type, hasCards, year, mainSetId, search, showArchived } = req.query;
       
-      // Get all sets with card counts
+      // Get LEGACY sets only (isCanonical=false) with card counts
       const setsWithCounts = await db.execute(sql`
         SELECT 
           cs.id,
@@ -4385,6 +4385,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           cs.main_set_id as "mainSetId",
           cs.image_url as "imageUrl",
           cs.is_active as "isActive",
+          cs.is_canonical as "isCanonical",
+          cs.is_insert_subset as "isInsertSubset",
           cs.created_at as "createdAt",
           ms.name as "mainSetName",
           ms.thumbnail_image_url as "mainSetThumbnail",
@@ -4392,7 +4394,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         FROM card_sets cs
         LEFT JOIN main_sets ms ON cs.main_set_id = ms.id
         LEFT JOIN cards c ON c.set_id = cs.id
-        WHERE 1=1
+        WHERE cs.is_canonical = false
           ${showArchived !== 'true' ? sql`AND cs.is_active = true` : sql``}
           ${hasCards === 'true' ? sql`AND EXISTS (SELECT 1 FROM cards WHERE set_id = cs.id)` : sql``}
           ${year ? sql`AND cs.year = ${parseInt(year as string)}` : sql``}
@@ -4410,16 +4412,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get canonical (CSV-defined) sets
+  // Get canonical (CSV-defined) sets - now uses isCanonical flag
   app.get("/api/admin/migration/canonical-sets", authenticateUser, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) {
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      const { year, mainSetId, search } = req.query;
+      const { year, mainSetId, search, showArchived } = req.query;
       
-      // CSV-defined sets are those with main_set_id assigned (from Phase 1 import)
+      // Canonical sets are those with isCanonical=true (from CSV import)
       const canonicalSets = await db.execute(sql`
         SELECT 
           cs.id,
@@ -4429,14 +4431,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           cs.main_set_id as "mainSetId",
           cs.image_url as "imageUrl",
           cs.is_active as "isActive",
+          cs.is_canonical as "isCanonical",
+          cs.is_insert_subset as "isInsertSubset",
           ms.name as "mainSetName",
           ms.thumbnail_image_url as "mainSetThumbnail",
           COUNT(c.id)::int as "cardCount"
         FROM card_sets cs
         LEFT JOIN main_sets ms ON cs.main_set_id = ms.id
         LEFT JOIN cards c ON c.set_id = cs.id
-        WHERE cs.main_set_id IS NOT NULL
-          AND cs.is_active = true
+        WHERE cs.is_canonical = true
+          ${showArchived !== 'true' ? sql`AND cs.is_active = true` : sql``}
           ${year ? sql`AND cs.year = ${parseInt(year as string)}` : sql``}
           ${mainSetId ? sql`AND cs.main_set_id = ${parseInt(mainSetId as string)}` : sql``}
           ${search ? sql`AND cs.name ILIKE ${'%' + search + '%'}` : sql``}
@@ -4496,26 +4500,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Source and destination set IDs required" });
       }
 
-      // Get source cards
+      // Get destination set info (for isInsertSubset check)
+      const [destSet] = await db.select({
+        isInsertSubset: cardSets.isInsertSubset,
+        isCanonical: cardSets.isCanonical,
+      }).from(cardSets).where(eq(cardSets.id, destinationSetId));
+
+      // Get source cards with details for conflict reporting
       const sourceCards = await db.execute(sql`
-        SELECT id, card_number, name FROM cards WHERE set_id = ${sourceSetId}
+        SELECT id, card_number as "cardNumber", name, front_image_url as "frontImageUrl"
+        FROM cards WHERE set_id = ${sourceSetId}
       `);
 
-      // Get destination cards
+      // Get destination cards with details
       const destCards = await db.execute(sql`
-        SELECT id, card_number, name FROM cards WHERE set_id = ${destinationSetId}
+        SELECT id, card_number as "cardNumber", name, front_image_url as "frontImageUrl"
+        FROM cards WHERE set_id = ${destinationSetId}
       `);
 
-      // Find conflicts (same card_number in destination)
-      const destCardNumbers = new Set(destCards.rows.map((c: any) => c.card_number));
-      const conflicts = sourceCards.rows.filter((c: any) => destCardNumbers.has(c.card_number));
+      // Build destination card map for conflict detection
+      const destCardMap = new Map(destCards.rows.map((c: any) => [c.cardNumber, c]));
+      
+      // Find conflicts with detailed info
+      const conflicts = sourceCards.rows
+        .filter((c: any) => destCardMap.has(c.cardNumber))
+        .map((sourceCard: any) => ({
+          cardNumber: sourceCard.cardNumber,
+          sourceCardId: sourceCard.id,
+          sourceCardName: sourceCard.name,
+          destCardId: destCardMap.get(sourceCard.cardNumber)?.id,
+          destCardName: destCardMap.get(sourceCard.cardNumber)?.name,
+        }));
 
       res.json({
         sourceCardCount: sourceCards.rows.length,
         destinationCardCount: destCards.rows.length,
         conflictCount: conflicts.length,
-        conflicts: conflicts.slice(0, 20), // Show first 20 conflicts
+        conflicts: conflicts.slice(0, 50), // Show first 50 conflicts
         canMigrate: sourceCards.rows.length > 0,
+        destinationIsInsertSubset: destSet?.isInsertSubset || false,
+        destinationIsCanonical: destSet?.isCanonical || false,
       });
     } catch (error) {
       console.error('Preview migration error:', error);
@@ -4540,6 +4564,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Source and destination cannot be the same" });
       }
 
+      // Get source set info (to check if non-canonical for auto-archive)
+      const [sourceSet] = await db.select({
+        isCanonical: cardSets.isCanonical,
+        isActive: cardSets.isActive,
+      }).from(cardSets).where(eq(cardSets.id, sourceSetId));
+
+      // Get destination set info (for isInsertSubset enforcement)
+      const [destSet] = await db.select({
+        isInsertSubset: cardSets.isInsertSubset,
+      }).from(cardSets).where(eq(cardSets.id, destinationSetId));
+
+      // Determine if we should force insert (explicit forceInsert OR destination.isInsertSubset)
+      const shouldForceInsert = forceInsert || destSet?.isInsertSubset || false;
+
       // Get all cards from source set
       const cardsToMove = await db.select().from(cards).where(eq(cards.setId, sourceSetId));
 
@@ -4547,30 +4585,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No cards to migrate in source set" });
       }
 
-      // Check for conflicts unless explicitly allowed
-      if (!allowConflicts) {
-        const destCards = await db.select({ cardNumber: cards.cardNumber }).from(cards).where(eq(cards.setId, destinationSetId));
-        const destCardNumbers = new Set(destCards.map(c => c.cardNumber));
-        const conflicts = cardsToMove.filter(c => destCardNumbers.has(c.cardNumber));
-        if (conflicts.length > 0) {
-          return res.status(400).json({ 
-            message: `${conflicts.length} card number conflicts exist. Enable 'Allow Conflicts' to proceed.`,
-            conflictCount: conflicts.length,
-          });
-        }
+      // Check for conflicts
+      const destCards = await db.select({ cardNumber: cards.cardNumber }).from(cards).where(eq(cards.setId, destinationSetId));
+      const destCardNumbers = new Set(destCards.map(c => c.cardNumber));
+      const conflicts = cardsToMove.filter(c => destCardNumbers.has(c.cardNumber));
+      const conflictCount = conflicts.length;
+
+      // Block migration if conflicts exist and not explicitly allowed
+      // Server-side enforcement: allowConflicts must be the exact phrase
+      if (conflictCount > 0 && allowConflicts !== 'MIGRATE WITH CONFLICTS') {
+        return res.status(400).json({ 
+          message: `${conflictCount} card number conflicts exist. Type "MIGRATE WITH CONFLICTS" to proceed.`,
+          conflictCount: conflictCount,
+        });
       }
+
+      // Determine migration status
+      const migrationStatus = conflictCount > 0 ? 'completed_with_conflicts' : 'completed';
 
       // Execute migration in a transaction for atomicity
       const result = await db.transaction(async (tx) => {
-        // Create migration log
+        // Create migration log with enhanced fields
         const [migrationLog] = await tx.insert(migrationLogs).values({
           adminUserId: req.user.id,
           sourceSetId: sourceSetId,
           destinationSetId: destinationSetId,
           movedCardCount: cardsToMove.length,
-          insertForced: forceInsert || false,
+          insertForced: shouldForceInsert,
+          conflictCount: conflictCount,
+          sourceArchived: false, // Will update after checking
           notes: notes || null,
-          status: 'completed',
+          status: migrationStatus,
         }).returning();
 
         // Record each card movement for rollback capability
@@ -4580,13 +4625,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           oldSetId: sourceSetId,
           newSetId: destinationSetId,
           oldIsInsert: card.isInsert,
-          newIsInsert: forceInsert ? true : card.isInsert,
+          newIsInsert: shouldForceInsert ? true : card.isInsert,
         }));
 
         await tx.insert(migrationLogCards).values(cardLogEntries);
 
         // Update cards: move to destination set
-        if (forceInsert) {
+        if (shouldForceInsert) {
           await tx.update(cards)
             .set({ setId: destinationSetId, isInsert: true })
             .where(eq(cards.setId, sourceSetId));
@@ -4603,14 +4648,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ) WHERE id IN (${sourceSetId}, ${destinationSetId})
         `);
 
-        return migrationLog;
+        // AUTO-ARCHIVE: If source set is now empty AND is non-canonical, archive it
+        const [sourceCardCount] = await tx.execute(sql`
+          SELECT COUNT(*) as count FROM cards WHERE set_id = ${sourceSetId}
+        `);
+        
+        let sourceArchived = false;
+        if ((sourceCardCount as any).count === 0 && sourceSet && !sourceSet.isCanonical) {
+          await tx.update(cardSets)
+            .set({ isActive: false })
+            .where(eq(cardSets.id, sourceSetId));
+          
+          // Update the log to reflect archival
+          await tx.update(migrationLogs)
+            .set({ sourceArchived: true })
+            .where(eq(migrationLogs.id, migrationLog.id));
+          
+          sourceArchived = true;
+        }
+
+        return { ...migrationLog, sourceArchived };
       });
 
       res.json({
         success: true,
-        message: `Successfully migrated ${cardsToMove.length} cards`,
+        message: `Successfully migrated ${cardsToMove.length} cards${result.sourceArchived ? ' (source set auto-archived)' : ''}`,
         migrationLogId: result.id,
         movedCardCount: cardsToMove.length,
+        conflictCount: conflictCount,
+        insertForced: shouldForceInsert,
+        sourceArchived: result.sourceArchived,
+        status: migrationStatus,
       });
     } catch (error) {
       console.error('Execute migration error:', error);
@@ -4711,23 +4779,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const setId = parseInt(req.params.setId);
+      const { confirmWithCards } = req.body; // Typed "ARCHIVE WITH CARDS" confirmation
       
+      // Get set info
+      const [set] = await db.select({
+        name: cardSets.name,
+        isCanonical: cardSets.isCanonical,
+      }).from(cardSets).where(eq(cardSets.id, setId));
+
+      if (!set) {
+        return res.status(404).json({ message: "Set not found" });
+      }
+
       // Check if set has cards
       const cardCount = await db.execute(sql`
         SELECT COUNT(*)::int as count FROM cards WHERE set_id = ${setId}
       `);
 
-      if (cardCount.rows[0].count > 0) {
+      const hasCards = cardCount.rows[0].count > 0;
+
+      // If set has cards, require explicit confirmation
+      if (hasCards && confirmWithCards !== 'ARCHIVE WITH CARDS') {
         return res.status(400).json({ 
-          message: `Cannot archive set with ${cardCount.rows[0].count} cards. Migrate cards first.` 
+          message: `Set has ${cardCount.rows[0].count} cards. Type "ARCHIVE WITH CARDS" to confirm.`,
+          cardCount: cardCount.rows[0].count,
+          requiresConfirmation: true,
         });
       }
 
+      // Archive the set
       await db.update(cardSets)
         .set({ isActive: false })
         .where(eq(cardSets.id, setId));
 
-      res.json({ success: true, message: "Set archived successfully" });
+      // Log the action
+      await db.insert(adminAuditLogs).values({
+        adminUserId: req.user.id,
+        actionType: 'archive_set',
+        entityType: 'card_set',
+        entityId: setId,
+        entityName: set.name,
+        notes: hasCards ? `Archived with ${cardCount.rows[0].count} cards` : 'Archived empty set',
+      });
+
+      res.json({ 
+        success: true, 
+        message: hasCards 
+          ? `Set archived successfully (contained ${cardCount.rows[0].count} cards)` 
+          : "Set archived successfully" 
+      });
     } catch (error) {
       console.error('Archive set error:', error);
       res.status(500).json({ message: "Failed to archive set" });
@@ -4743,14 +4843,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const setId = parseInt(req.params.setId);
 
+      // Get set info for audit log
+      const [set] = await db.select({ name: cardSets.name }).from(cardSets).where(eq(cardSets.id, setId));
+
       await db.update(cardSets)
         .set({ isActive: true })
         .where(eq(cardSets.id, setId));
+
+      // Log the action
+      await db.insert(adminAuditLogs).values({
+        adminUserId: req.user.id,
+        actionType: 'unarchive_set',
+        entityType: 'card_set',
+        entityId: setId,
+        entityName: set?.name || null,
+        notes: null,
+      });
 
       res.json({ success: true, message: "Set unarchived successfully" });
     } catch (error) {
       console.error('Unarchive set error:', error);
       res.status(500).json({ message: "Failed to unarchive set" });
+    }
+  });
+
+  // Delete a set permanently (dangerous - requires typing confirmation)
+  app.delete("/api/admin/migration/delete-set/:setId", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const setId = parseInt(req.params.setId);
+      const { confirmDelete } = req.body; // Must be "DELETE SET"
+
+      // Get set info
+      const [set] = await db.select({
+        name: cardSets.name,
+        isCanonical: cardSets.isCanonical,
+      }).from(cardSets).where(eq(cardSets.id, setId));
+
+      if (!set) {
+        return res.status(404).json({ message: "Set not found" });
+      }
+
+      // Check if set has cards - MUST be 0 to delete
+      const cardCount = await db.execute(sql`
+        SELECT COUNT(*)::int as count FROM cards WHERE set_id = ${setId}
+      `);
+
+      if (cardCount.rows[0].count > 0) {
+        return res.status(400).json({ 
+          message: `Cannot delete set with ${cardCount.rows[0].count} cards. Migrate all cards first.`,
+          cardCount: cardCount.rows[0].count,
+        });
+      }
+
+      // Require exact confirmation phrase
+      if (confirmDelete !== 'DELETE SET') {
+        return res.status(400).json({ 
+          message: 'Type "DELETE SET" to permanently delete this set.',
+          requiresConfirmation: true,
+        });
+      }
+
+      // Check for references in other tables (migration logs, etc.)
+      const migrationRefs = await db.execute(sql`
+        SELECT COUNT(*)::int as count FROM migration_logs 
+        WHERE source_set_id = ${setId} OR destination_set_id = ${setId}
+      `);
+
+      // Delete the set
+      await db.delete(cardSets).where(eq(cardSets.id, setId));
+
+      // Log the action
+      await db.insert(adminAuditLogs).values({
+        adminUserId: req.user.id,
+        actionType: 'delete_set',
+        entityType: 'card_set',
+        entityId: setId,
+        entityName: set.name,
+        notes: `Permanently deleted. Had ${migrationRefs.rows[0].count} migration log references.`,
+      });
+
+      res.json({ 
+        success: true, 
+        message: `Set "${set.name}" permanently deleted`,
+        deletedSetName: set.name,
+      });
+    } catch (error) {
+      console.error('Delete set error:', error);
+      res.status(500).json({ message: "Failed to delete set" });
     }
   });
 
@@ -4831,6 +5014,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .where(eq(cards.id, movement.cardId));
         }
 
+        // If source set was auto-archived during migration, restore it
+        if (migrationLog.sourceArchived) {
+          await tx.update(cardSets)
+            .set({ isActive: true })
+            .where(eq(cardSets.id, migrationLog.sourceSetId));
+        }
+
         // Update card counts for affected sets
         const affectedSetIds = [...new Set([
           ...cardMovements.map(m => m.oldSetId),
@@ -4853,8 +5043,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ 
         success: true, 
-        message: `Successfully rolled back ${cardMovements.length} cards`,
+        message: `Successfully rolled back ${cardMovements.length} cards${migrationLog.sourceArchived ? ' (source set restored)' : ''}`,
         rolledBackCount: cardMovements.length,
+        sourceRestored: migrationLog.sourceArchived || false,
       });
     } catch (error) {
       console.error('Rollback migration error:', error);
