@@ -1,0 +1,482 @@
+legacy_set_id,legacy_name,legacy_year,legacy_main_set_id,legacy_main_set_name,legacy_card_count,suggested_canonical_set_id,suggested_canonical_name,suggested_confidence,reason
+1617,"marvel 2023 eternals",2023,,,451,4650,"2023 Flair Marvel",67,token_overlap_67%
+1608,"marvel 2022 wandavision",2022,,,435,4417,"2022 Panini Marvel Versus",50,token_overlap_50%
+2179,"2025 Topps Chrome - Base",2025,80,"Marvel 2025 Topps Chrome",310,6461,"2025 Topps Chrome Marvel",75,token_overlap_75%
+1201,"marvel 1995 fleer overpower",1995,24,"Marvel 1995 Fleer Overpower ",301,4,"1995 Fleer Marvel Masterpieces",75,token_overlap_75%
+2120,"marvel 2025 topps finest x men '97",2025,79,"marvel 2025 topps finest x men '97",298,2495,"2025 Topps Chrome Marvel - Air Marvel Shadowbox",50,token_overlap_50%
+1150,"marvel 1992 universe",1992,8,"Marvel 1992 Universe ",205,2628,"1992 Impel Marvel Universe",75,token_overlap_75%
+1498,"marvel 2022 metal universe spider man",2022,63,"Marvel 2022 Metal Universe Spider Man ",201,4415,"2022 Fleer Ultra Marvel Avengers - Universe Power Supreme",38,token_overlap_38%
+1188,"marvel 1994 universe",1994,22,"Marvel 1994 Universe ",200,2670,"1994 Fleer Marvel Universe",75,token_overlap_75%
+1501,"marvel 2022 metal universe spider man Gold",2022,63,"Marvel 2022 Metal Universe Spider Man ",200,4398,"2022 Fleer Ultra Marvel Avengers - Medallions Gold",45,subset_term_match_45%
+1502,"marvel 2022 metal universe spider man Grandiose",2022,63,"Marvel 2022 Metal Universe Spider Man ",200,4415,"2022 Fleer Ultra Marvel Avengers - Universe Power Supreme",38,token_overlap_38%
+1503,"marvel 2022 metal universe spider man Green",2022,63,"Marvel 2022 Metal Universe Spider Man ",200,4392,"2022 Fleer Ultra Marvel Avengers - Green Foil",43,token_overlap_43%
+1506,"marvel 2022 metal universe spider man Neon Blue",2022,63,"Marvel 2022 Metal Universe Spider Man ",200,4401,"2022 Fleer Ultra Marvel Avengers - Medallions Sappire Blue",38,token_overlap_38%
+1507,"marvel 2022 metal universe spider man Orange",2022,63,"Marvel 2022 Metal Universe Spider Man ",200,4402,"2022 Fleer Ultra Marvel Avengers - Orange Foil",43,token_overlap_43%
+1509,"marvel 2022 metal universe spider man Pink",2022,63,"Marvel 2022 Metal Universe Spider Man ",200,4482,"2022 Upper Deck Allure Marvel Studios - Pink",43,token_overlap_43%
+1515,"marvel 2022 metal universe spider man Precious Metal Gems Green",2022,63,"Marvel 2022 Metal Universe Spider Man ",200,4392,"2022 Fleer Ultra Marvel Avengers - Green Foil",33,token_overlap_33%
+1516,"marvel 2022 metal universe spider man Precious Metal Gems Red",2022,63,"Marvel 2022 Metal Universe Spider Man ",200,4391,"2022 Fleer Ultra Marvel Avengers - Greatest Battles Red Foil",33,token_overlap_33%
+1517,"marvel 2022 metal universe spider man Printing Plate",2022,63,"Marvel 2022 Metal Universe Spider Man ",200,4551,"2022-23 Upper Deck Marvel Annual - Holograms Printing Plate Black",45,subset_term_match_45%
+1518,"marvel 2022 metal universe spider man Purple",2022,63,"Marvel 2022 Metal Universe Spider Man ",200,4432,"2022 SkyBox Marvel Masterpieces - Epic Purple Foil",43,token_overlap_43%
+1520,"marvel 2022 metal universe spider man Turquoise",2022,63,"Marvel 2022 Metal Universe Spider Man ",200,4415,"2022 Fleer Ultra Marvel Avengers - Universe Power Supreme",38,token_overlap_38%
+1521,"marvel 2022 metal universe spider man Yellow",2022,63,"Marvel 2022 Metal Universe Spider Man ",200,4505,"2022 Upper Deck Allure Marvel Studios - Yellow Taxi",40,subset_term_match_40%
+1803,"marvel 2023 upper deck platinum Printing Plate",2023,69,"Marvel 2023 Upper Deck Platinum",200,5269,"2023 Upper Deck Marvel Platinum - Printing Plates Black",75,token_overlap_75%
+2244,"2025 Kakawow - SILVER",2025,82,"2025 Kakawow Aura Marvel",193,6285,"2025 Kakawow Aura Marvel - Aura Silver",75,same_main_set_75%
+1157,"marvel 1993 universe",1993,16,"Marvel 1993 Universe ",190,2656,"1993 SkyBox Marvel Universe",75,token_overlap_75%
+1290,"marvel 2008 masterpieces",2008,47,"Marvel 2008 Masterpieces ",180,2834,"2008 Upper Deck Marvel Masterpieces Set 2",50,token_overlap_50%
+1626,"Base - 2023 flair",2023,65,"Marvel 2023 Flair ",174,4650,"2023 Flair Marvel",67,token_overlap_67%
+1124,"marvel 1990 universe",1990,6,"Marvel 1990 Universe",162,2614,"1990 Impel Marvel Universe",75,token_overlap_75%
+1128,"marvel 1991 universe",1991,5,"Marvel 1991 Universe ",162,2626,"1991 Marvel Employees",67,token_overlap_67%
+2125,"marvel 2025 topps finest x men '97 greatest hits",2025,79,"marvel 2025 topps finest x men '97",160,6561,"2025 Topps Chrome Marvel - X-Men Giant Size 50th Anniversary",44,token_overlap_44%
+2138,"marvel 2025 topps finest x men '97 previously on x men",2025,79,"marvel 2025 topps finest x men '97",160,6561,"2025 Topps Chrome Marvel - X-Men Giant Size 50th Anniversary",44,token_overlap_44%
+1183,"marvel 1994 ultra x men",1994,21,"Marvel 1994 Ultra X-Men ",155,2661,"1994 Flair Marvel Annual",50,token_overlap_50%
+1196,"marvel 1995 flair",1995,23,"Marvel 1995 Flair ",152,2687,"1995 Flair Marvel Annual",75,token_overlap_75%
+1202,"marvel 1995 masterpieces",1995,25,"Marvel 1995 Masterpieces ",151,4,"1995 Fleer Marvel Masterpieces",75,token_overlap_75%
+1213,"marvel 1995 ultra spider man",1995,27,"Marvel 1995 Ultra Spider Man ",151,2687,"1995 Flair Marvel Annual",40,token_overlap_40%
+1450,"marvel 2022 allure Green Quartz",2022,60,"Marvel 2022 Allure ",151,4459,"2022 Upper Deck Allure Marvel Studios - Green Quartz",63,token_overlap_63%
+1171,"marvel 1994 fleer amazing spider man",1994,19,"Marvel 1994 Fleer Amazing Spider Man",150,2670,"1994 Fleer Marvel Universe",50,token_overlap_50%
+1468,"marvel 2022 allure White Diamond",2022,60,"Marvel 2022 Allure ",150,4504,"2022 Upper Deck Allure Marvel Studios - White Diamond",63,token_overlap_63%
+2040,"marvel 2024 topps chrome Spider Web Refractor",2024,74,"Marvel 2024 Topps Chrome ",150,5738,"2024 Topps Chrome Marvel - Spider-man Gold Gold Refractor",78,subset_term_match_78%
+1226,"marvel 1995 ultra x men",1995,28,"Marvel 1995 Ultra X-Men ",150,2687,"1995 Flair Marvel Annual",50,token_overlap_50%
+1445,"marvel 2022 allure",2022,60,"Marvel 2022 Allure ",150,4417,"2022 Panini Marvel Versus",50,token_overlap_50%
+1447,"marvel 2022 allure Blue Line",2022,60,"Marvel 2022 Allure ",150,4452,"2022 Upper Deck Allure Marvel Studios - Blue Line",63,token_overlap_63%
+1448,"marvel 2022 allure Golden",2022,60,"Marvel 2022 Allure ",150,4417,"2022 Panini Marvel Versus",50,token_overlap_50%
+1459,"marvel 2022 allure Portal",2022,60,"Marvel 2022 Allure ",150,4484,"2022 Upper Deck Allure Marvel Studios - Portal",57,token_overlap_57%
+1460,"marvel 2022 allure Purple Die Cut",2022,60,"Marvel 2022 Allure ",150,4487,"2022 Upper Deck Allure Marvel Studios - Purple Rainbow Die Cut",60,token_overlap_60%
+1462,"marvel 2022 allure Red",2022,60,"Marvel 2022 Allure ",150,4417,"2022 Panini Marvel Versus",50,token_overlap_50%
+1464,"marvel 2022 allure Steel",2022,60,"Marvel 2022 Allure ",150,4493,"2022 Upper Deck Allure Marvel Studios - Steel",57,token_overlap_57%
+1204,"marvel 1995 masterpieces Emotion Signature",1995,25,"Marvel 1995 Masterpieces ",148,2700,"1995 Fleer Marvel Masterpieces - E-Motion Signature Series",62,subset_term_match_62%
+1221,"marvel 1995 ultra spider man premier",1995,,,148,2687,"1995 Flair Marvel Annual",33,token_overlap_33%
+1161,"marvel 1994 flair",1994,18,"Marvel 1994 Flair ",142,2661,"1994 Flair Marvel Annual",75,token_overlap_75%
+1470,"marvel 2022 beginnings vol 2 series 1",2022,61,"Marvel 2022 Beginnings",142,4417,"2022 Panini Marvel Versus",40,token_overlap_40%
+1174,"marvel 1994 masterpieces",1994,20,"Marvel 1994 Masterpieces ",141,2677,"1994 Marvel Checklists",67,token_overlap_67%
+2237,"Marvel 2025 Topps Finest X-Men '97 Sentinels Scan",2025,79,"marvel 2025 topps finest x men '97",120,6561,"2025 Topps Chrome Marvel - X-Men Giant Size 50th Anniversary",44,token_overlap_44%
+1618,"marvel 2023 eternals Black",2023,,,115,5071,"2023 Upper Deck Marvel Eternals - Black",72,subset_term_match_72%
+1620,"marvel 2023 eternals Gold",2023,,,115,5085,"2023 Upper Deck Marvel Eternals - Gold",72,subset_term_match_72%
+1623,"marvel 2023 eternals Printing Plate",2023,,,115,5069,"2023 Upper Deck Marvel Eternals",60,token_overlap_60%
+1577,"marvel 2022 ultra avengers Printing Plate",2022,64,"Marvel 2022 Ultra Avengers ",108,4393,"2022 Fleer Ultra Marvel Avengers - Jambalaya",67,token_overlap_67%
+1222,"marvel 1995 ultra spider man premier Gold Foil Signature",1995,27,"Marvel 1995 Ultra Spider Man ",107,2700,"1995 Fleer Marvel Masterpieces - E-Motion Signature Series",33,token_overlap_33%
+1458,"marvel 2022 allure Pink",2022,60,"Marvel 2022 Allure ",104,4482,"2022 Upper Deck Allure Marvel Studios - Pink",57,token_overlap_57%
+1331,"marvel 2016 masterpieces Buyback",2016,54,"Marvel 2016 Masterpieces ",103,3380,"2016 Upper Deck Marvel Masterpieces",60,token_overlap_60%
+1455,"marvel 2022 allure Magenta",2022,60,"Marvel 2022 Allure ",102,4473,"2022 Upper Deck Allure Marvel Studios - Magenta",62,subset_term_match_62%
+1851,"marvel 2024 skybox masterpieces '92 platinum",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",102,6004,"2024 Upper Deck Marvel Masterpieces '92 Platinum",71,token_overlap_71%
+1227,"marvel 1995 ultra x men all chromium",1995,28,"Marvel 1995 Ultra X-Men ",101,2688,"1995 Flair Marvel Annual - Chromium",50,token_overlap_50%
+1861,"marvel 2024 skybox masterpieces '92 platinum Emerald Surge Variant",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6020,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Emerald Surge",78,token_overlap_78%
+1152,"marvel 1992 x men series 1 Autograph",1992,14,"Marvel 1992 X-Men Series 1 ",100,2628,"1992 Impel Marvel Universe",40,token_overlap_40%
+2172,"Canonical Blasts Flair",2023,65,"Marvel 2023 Flair ",100,4655,"2023 Flair Marvel - Canonical Blasts",60,token_overlap_60%
+1142,"marvel 1992 masterpieces Autograph",1992,,,100,1,"1992 SkyBox Marvel Masterpieces",75,token_overlap_75%
+1248,"marvel 1996 masterpieces",1996,34,"Marvel 1996 Masterpieces ",100,2730,"1996 Fleer/SkyBox Marvel Masterpieces",60,token_overlap_60%
+1250,"marvel 1996 ultra x men",1996,35,"Marvel 1996 Ultra X-Men ",100,2742,"1996 Ultra Marvel Onslaught",75,token_overlap_75%
+1251,"marvel 1996 ultra x men wolverine",1996,36,"Marvel 1996 Ultra X-Men: Wolverine ",100,2742,"1996 Ultra Marvel Onslaught",60,token_overlap_60%
+1403,"marvel 2020 upper deck annual Printing Plate",2020,58,"Marvel 20-21 Upper Deck Annual ",100,4133,"2020-21 Upper Deck Marvel Annual",71,token_overlap_71%
+1878,"marvel 2024 skybox masterpieces '92 platinum Purple Crystals Variant",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6045,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Purple Crystals",78,token_overlap_78%
+1880,"marvel 2024 skybox masterpieces '92 platinum Rainbow Variant",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6046,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Rainbow",75,token_overlap_75%
+1885,"marvel 2024 skybox masterpieces '92 platinum Variant",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6004,"2024 Upper Deck Marvel Masterpieces '92 Platinum",71,token_overlap_71%
+1886,"marvel 2024 skybox masterpieces '92 platinum Wood",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6064,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Wood",75,token_overlap_75%
+1151,"marvel 1992 x men series 1",1992,14,"Marvel 1992 X-Men Series 1 ",100,2628,"1992 Impel Marvel Universe",50,token_overlap_50%
+1158,"marvel 1993 x men series 2",1993,17,"Marvel 1993 X-Men Series 2 ",100,2648,"1993 Marvel Comics Slamcaps Series 1",60,token_overlap_60%
+1239,"marvel 1996 fleer spider man premium",1996,31,"Marvel 1996 Fleer Spider Man Premium ",100,2737,"1996 Fleer/SkyBox Marvel Motion - Spider-Man Comic Promos",56,token_overlap_56%
+1415,"marvel 2021 upper deck annual Holograms Printing Plate",2021,,,100,4318,"2021-22 Upper Deck Marvel Annual - Printing Plates Black",67,token_overlap_67%
+1419,"marvel 2021 upper deck annual Printing Plate",2021,,,100,4287,"2021-22 Upper Deck Marvel Annual",71,token_overlap_71%
+1423,"marvel 2021 upper deck annual Silver Sparkle Printing Plate",2021,,,100,4324,"2021-22 Upper Deck Marvel Annual - Silver Sparkle",78,token_overlap_78%
+1446,"marvel 2022 allure Black Rainbow",2022,60,"Marvel 2022 Allure ",100,4451,"2022 Upper Deck Allure Marvel Studios - Black Rainbow",68,subset_term_match_68%
+1456,"marvel 2022 allure Orange Die Cut",2022,60,"Marvel 2022 Allure ",100,4481,"2022 Upper Deck Allure Marvel Studios - Orange Slice Die Cut",60,token_overlap_60%
+1465,"marvel 2022 allure Storm",2022,60,"Marvel 2022 Allure ",100,4494,"2022 Upper Deck Allure Marvel Studios - Storm",57,token_overlap_57%
+1469,"marvel 2022 allure Yellow Taxi",2022,60,"Marvel 2022 Allure ",100,4505,"2022 Upper Deck Allure Marvel Studios - Yellow Taxi",68,subset_term_match_68%
+1499,"marvel 2022 metal universe spider man comic cuts",2022,63,"Marvel 2022 Metal Universe Spider Man ",100,4415,"2022 Fleer Ultra Marvel Avengers - Universe Power Supreme",38,token_overlap_38%
+1595,"marvel 2022 upper deck annual Hologram Printing Plate",2022,,,100,4551,"2022-23 Upper Deck Marvel Annual - Holograms Printing Plate Black",75,subset_term_match_75%
+1599,"marvel 2022 upper deck annual Printing Plate",2022,,,100,4551,"2022-23 Upper Deck Marvel Annual - Holograms Printing Plate Black",78,subset_term_match_78%
+1603,"marvel 2022 upper deck annual Silver Sparkle Printing Plate",2022,,,100,4572,"2022-23 Upper Deck Marvel Annual - Silver Sparkle",78,token_overlap_78%
+1619,"marvel 2023 eternals Blue",2023,,,100,5072,"2023 Upper Deck Marvel Eternals - Blue",67,token_overlap_67%
+1621,"marvel 2023 eternals Green",2023,,,100,5086,"2023 Upper Deck Marvel Eternals - Green",67,token_overlap_67%
+1624,"marvel 2023 eternals Purple",2023,,,100,5092,"2023 Upper Deck Marvel Eternals - Purple",67,token_overlap_67%
+1625,"marvel 2023 eternals Silver",2023,,,100,5094,"2023 Upper Deck Marvel Eternals - Silver",72,subset_term_match_72%
+1670,"marvel 2023 fleer ultra wolverine Printing Plate",2023,66,"Marvel 2023 Fleer Ultra Wolverine ",100,4766,"2023 Fleer Ultra Marvel Wolverine",71,token_overlap_71%
+1720,"marvel 2023 upper deck anime volume 2 Autograph",2023,68,"Marvel 2023 Upper Deck Anime Volume 2",100,4995,"2023 Upper Deck Marvel Anime Vol. 2",71,token_overlap_71%
+1753,"marvel 2023 upper deck annual Printing Plate",2023,,,100,5502,"2023-24 Upper Deck Marvel Annual",71,token_overlap_71%
+1854,"marvel 2024 skybox masterpieces '92 platinum Blue Traxx",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6011,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Blue Traxx",78,token_overlap_78%
+1855,"marvel 2024 skybox masterpieces '92 platinum Blue Traxx Variant",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6011,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Blue Traxx",78,token_overlap_78%
+1856,"marvel 2024 skybox masterpieces '92 platinum Canvas",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6012,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Canvas",75,token_overlap_75%
+1857,"marvel 2024 skybox masterpieces '92 platinum Clear Cut",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6013,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Clear Cut",78,token_overlap_78%
+1860,"marvel 2024 skybox masterpieces '92 platinum Emerald Surge",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6020,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Emerald Surge",78,token_overlap_78%
+1862,"marvel 2024 skybox masterpieces '92 platinum Golden Treasures",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6027,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Golden Treasures",78,token_overlap_78%
+1863,"marvel 2024 skybox masterpieces '92 platinum Golden Treasures Variant",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6027,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Golden Treasures",78,token_overlap_78%
+1864,"marvel 2024 skybox masterpieces '92 platinum Holofoil",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6028,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Holofoil",75,token_overlap_75%
+1865,"marvel 2024 skybox masterpieces '92 platinum Leather",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6030,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Leather",75,token_overlap_75%
+1866,"marvel 2024 skybox masterpieces '92 platinum Lenticular",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6031,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Lenticular",75,token_overlap_75%
+1867,"marvel 2024 skybox masterpieces '92 platinum Metallurgy",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6032,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Metallurgy",75,token_overlap_75%
+1868,"marvel 2024 skybox masterpieces '92 platinum Orange Lava",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6034,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Orange Lava",78,token_overlap_78%
+1869,"marvel 2024 skybox masterpieces '92 platinum Orange Lava Variant",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6034,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Orange Lava",78,token_overlap_78%
+1870,"marvel 2024 skybox masterpieces '92 platinum Pink Lasers",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6035,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Pink Lasers",78,token_overlap_78%
+1871,"marvel 2024 skybox masterpieces '92 platinum Pink Lasers Variant",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6035,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Pink Lasers",78,token_overlap_78%
+1872,"marvel 2024 skybox masterpieces '92 platinum Plexi",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6036,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Plexi",75,token_overlap_75%
+1877,"marvel 2024 skybox masterpieces '92 platinum Purple Crystals",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6045,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Purple Crystals",78,token_overlap_78%
+1879,"marvel 2024 skybox masterpieces '92 platinum Rainbow",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",100,6046,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Rainbow",75,token_overlap_75%
+1283,"marvel 2002 topps spider man movie",2002,45,"Marvel 2002 Topps Spider Man Movie ",99,2796,"2002 Marvel Spider-Man",67,token_overlap_67%
+1229,"marvel 1995 ultra x men all chromium Gold Signature",1995,28,"Marvel 1995 Ultra X-Men ",99,2700,"1995 Fleer Marvel Masterpieces - E-Motion Signature Series",40,subset_term_match_40%
+1332,"marvel 2016 masterpieces buyback Autograph",2016,54,"Marvel 2016 Masterpieces ",99,3380,"2016 Upper Deck Marvel Masterpieces",60,token_overlap_60%
+1137,"marvel 1992 comic images spider man II",1992,12,"Marvel 1992 Comic Images Spider Man",97,2636,"1992 Marvel Comics UK Overkill/Exploits of Spider-Man",44,token_overlap_44%
+1377,"marvel 2020 masterpieces",2020,57,"Marvel 2020 Masterpieces ",97,4030,"2020 SkyBox Marvel Masterpieces",75,token_overlap_75%
+1289,"marvel 2007 masterpieces",2007,46,"Marvel 2007 Masterpieces ",91,2810,"2007 SkyBox Marvel Masterpieces",75,token_overlap_75%
+1887,"2024 Marvel Masterpieces Nahuel Grego Base",2024,72,"Marvel 2024 Skybox Masterpieces Nahuel Grego",91,6065,"2024 Upper Deck Marvel Masterpieces Nahuel Grego",71,token_overlap_71%
+1236,"marvel 1996 fleer amalgam",1996,29,"Marvel 1996 Fleer Amalgam ",91,2730,"1996 Fleer/SkyBox Marvel Masterpieces",60,token_overlap_60%
+1328,"marvel 2016 masterpieces",2016,54,"Marvel 2016 Masterpieces ",91,3380,"2016 Upper Deck Marvel Masterpieces",60,token_overlap_60%
+1132,"marvel 1992 comic images punisher guts & gunpowder",1992,10,"Marvel 1992 Comic Images Punisher Guts & Gunpowder ",90,2277,"1992 SkyBox Marvel Masterpieces - Lost Marvel Bonus Cards",29,token_overlap_29%
+1136,"marvel 1992 comic images spider man",1992,12,"Marvel 1992 Comic Images Spider Man",90,2636,"1992 Marvel Comics UK Overkill/Exploits of Spider-Man",44,token_overlap_44%
+1139,"marvel 1992 comic images wolverine from then 'til now II",1992,13,"Marvel 1992 Comic Images Wolverine: From then 'til now II ",90,2277,"1992 SkyBox Marvel Masterpieces - Lost Marvel Bonus Cards",20,token_overlap_20%
+1263,"marvel 1997 fleer x men oasis",1997,39,"Marvel 1997 Fleer X-Men Oasis ",90,2755,"1997 Fleer/SkyBox Marvel Premium QFX",50,token_overlap_50%
+1693,"marvel 2023 masterpieces preserved amber",2023,62,"Marvel 2022 Masterpieces ",90,5226,"2023 Upper Deck Marvel Platinum - Amber Crystals",43,token_overlap_43%
+1694,"marvel 2023 masterpieces preserved amber Orange",2023,62,"Marvel 2022 Masterpieces ",90,4667,"2023 Flair Marvel - Iridescence Orange Achievements",50,token_overlap_50%
+1691,"marvel 2023 masterpieces metallurgy",2023,62,"Marvel 2022 Masterpieces ",90,4682,"2023 Flair Marvel - Summer",50,token_overlap_50%
+1692,"marvel 2023 masterpieces preliminary art",2023,62,"Marvel 2022 Masterpieces ",90,4662,"2023 Flair Marvel - Flairium Original Art Achievements",43,token_overlap_43%
+1695,"marvel 2023 masterpieces preserved amber Red",2023,62,"Marvel 2022 Masterpieces ",90,4668,"2023 Flair Marvel - Iridescence Red Achievements",50,token_overlap_50%
+1710,"marvel 2023 upper deck allegiance infinity trilogy Printing Plate",2023,67,"Marvel 2023 Upper Deck Allegiance Infinity Trilogy ",90,4930,"2023 Upper Deck Marvel Allegiance: The Infinity Trilogy",78,token_overlap_78%
+1904,"marvel 2024 skybox masterpieces nahuel grego Printing Plate",2024,72,"Marvel 2024 Skybox Masterpieces Nahuel Grego",90,5653,"2024 SkyBox Marvel Masterpieces XL - Yellow Printing Plates",63,token_overlap_63%
+1895,"marvel 2024 skybox masterpieces nahuel grego Gold Spectrum Autograph",2024,72,"Marvel 2024 Skybox Masterpieces Nahuel Grego",90,6084,"2024 Upper Deck Marvel Masterpieces Nahuel Grego - Gold Spectrum Autographs",73,subset_term_match_73%
+1905,"marvel 2024 skybox masterpieces nahuel grego Timeless Red Autograph",2024,72,"Marvel 2024 Skybox Masterpieces Nahuel Grego",90,6100,"2024 Upper Deck Marvel Masterpieces Nahuel Grego - Timeless Red Autographs",70,token_overlap_70%
+1907,"marvel 2024 skybox masterpieces nahuel grego Variant Cover Autograph",2024,72,"Marvel 2024 Skybox Masterpieces Nahuel Grego",90,6101,"2024 Upper Deck Marvel Masterpieces Nahuel Grego - Variant Cover",78,token_overlap_78%
+1908,"marvel 2024 skybox masterpieces nahuel grego Variant Cover Printing Plate",2024,72,"Marvel 2024 Skybox Masterpieces Nahuel Grego",90,6101,"2024 Upper Deck Marvel Masterpieces Nahuel Grego - Variant Cover",70,token_overlap_70%
+1906,"2024 Marvel Masterpieces nahuel grego Variant Cover",2024,72,"Marvel 2024 Skybox Masterpieces Nahuel Grego",90,6101,"2024 Upper Deck Marvel Masterpieces Nahuel Grego - Variant Cover",78,token_overlap_78%
+2132,"marvel 2025 topps finest x men '97 Laser Refractor",2025,79,"marvel 2025 topps finest x men '97",90,2494,"2025 Topps Chrome Marvel - Air Marvel Red Wave Refractor",55,subset_term_match_55%
+2123,"marvel 2025 topps finest x men '97 Gold Refractor",2025,79,"marvel 2025 topps finest x men '97",90,6521,"2025 Topps Chrome Marvel - Iron Man Gold Refractor",73,subset_term_match_73%
+1127,"marvel 1991 comic images x men",1991,,,90,2619,"1991 Comic Images Marvel Comics First Covers II",50,token_overlap_50%
+1341,"marvel 2016 masterpieces Purple Foil",2016,54,"Marvel 2016 Masterpieces ",90,3389,"2016 Upper Deck Marvel Masterpieces - Epic Purple Foil",68,subset_term_match_68%
+1485,"marvel 2022 masterpieces",2022,62,"Marvel 2022 Masterpieces ",90,4420,"2022 SkyBox Marvel Masterpieces",75,token_overlap_75%
+1489,"marvel 2022 masterpieces Green Foil",2022,62,"Marvel 2022 Masterpieces ",90,4431,"2022 SkyBox Marvel Masterpieces - Emerald Green Foil",76,subset_term_match_76%
+1490,"marvel 2022 masterpieces Orange Foil",2022,62,"Marvel 2022 Masterpieces ",90,4438,"2022 SkyBox Marvel Masterpieces - Legendary Orange Foil",76,subset_term_match_76%
+1491,"marvel 2022 masterpieces Printing Plate",2022,62,"Marvel 2022 Masterpieces ",90,4420,"2022 SkyBox Marvel Masterpieces",60,token_overlap_60%
+1492,"marvel 2022 masterpieces Purple Foil",2022,62,"Marvel 2022 Masterpieces ",90,4432,"2022 SkyBox Marvel Masterpieces - Epic Purple Foil",76,subset_term_match_76%
+1494,"marvel 2022 masterpieces Silver Auto Foil",2022,62,"Marvel 2022 Masterpieces ",90,4446,"2022 SkyBox Marvel Masterpieces - Silver Spectrum Foil Autographs",70,subset_term_match_70%
+1609,"marvel 2022 wandavision Black",2022,,,90,4417,"2022 Panini Marvel Versus",50,token_overlap_50%
+1610,"marvel 2022 wandavision Gold",2022,,,90,4433,"2022 SkyBox Marvel Masterpieces - Gold Foil",53,subset_term_match_53%
+1611,"marvel 2022 wandavision Green Vision",2022,,,90,4392,"2022 Fleer Ultra Marvel Avengers - Green Foil",43,token_overlap_43%
+1612,"marvel 2022 wandavision Mind Stone Yellow",2022,,,90,4505,"2022 Upper Deck Allure Marvel Studios - Yellow Taxi",43,subset_term_match_43%
+1613,"marvel 2022 wandavision Printing Plate",2022,,,90,4551,"2022-23 Upper Deck Marvel Annual - Holograms Printing Plate Black",48,subset_term_match_48%
+1614,"marvel 2022 wandavision Purple Spell",2022,,,90,4432,"2022 SkyBox Marvel Masterpieces - Epic Purple Foil",43,token_overlap_43%
+1615,"marvel 2022 wandavision Scarlet Red",2022,,,90,4424,"2022 SkyBox Marvel Masterpieces - Battle Spectrum Red",43,token_overlap_43%
+1616,"marvel 2022 wandavision White Vision",2022,,,90,4417,"2022 Panini Marvel Versus",40,token_overlap_40%
+2136,"marvel 2025 topps finest x men '97 Orange Refractor",2025,79,"marvel 2025 topps finest x men '97",90,6586,"2025 Topps Chrome Marvel Studios - Autographs Orange Refractor",68,subset_term_match_68%
+2145,"marvel 2025 topps finest x men '97 Protector Refractor",2025,79,"marvel 2025 topps finest x men '97",90,2494,"2025 Topps Chrome Marvel - Air Marvel Red Wave Refractor",55,subset_term_match_55%
+2147,"marvel 2025 topps finest x men '97 Red Refractor",2025,79,"marvel 2025 topps finest x men '97",90,2494,"2025 Topps Chrome Marvel - Air Marvel Red Wave Refractor",68,subset_term_match_68%
+2149,"marvel 2025 topps finest x men '97 Refractor",2025,79,"marvel 2025 topps finest x men '97",90,6489,"2025 Topps Chrome Marvel - Clawed Chrome Red Refractor",62,subset_term_match_62%
+2156,"marvel 2025 topps finest x men '97 SuperFractor",2025,79,"marvel 2025 topps finest x men '97",90,2496,"2025 Topps Chrome Marvel - Air Marvel Superfractor",57,token_overlap_57%
+2158,"marvel 2025 topps finest x men '97 X-Fractor",2025,79,"marvel 2025 topps finest x men '97",90,6572,"2025 Topps Chrome Marvel - X-Men Giant Size 50th Anniversary Relics X-Fractor",45,token_overlap_45%
+1737,"marvel 2023 upper deck anime volume 2 woodblock echo Autograph",2023,68,"Marvel 2023 Upper Deck Anime Volume 2",88,5022,"2023 Upper Deck Marvel Anime Vol. 2 - Woodblock Echo",78,token_overlap_78%
+1363,"marvel 2018 masterpieces",2018,56,"Marvel 2018 Masterpieces ",87,3766,"2018 Upper Deck Marvel Masterpieces",60,token_overlap_60%
+1909,"2024 MM XL Base",2024,73,"Marvel 2024 Skybox Masterpieces XL ",86,5638,"2024 SkyBox Marvel Masterpieces XL",40,token_overlap_40%
+1923,"marvel 2024 skybox masterpieces xl Printing Plate",2024,73,"Marvel 2024 Skybox Masterpieces XL ",86,5653,"2024 SkyBox Marvel Masterpieces XL - Yellow Printing Plates",75,token_overlap_75%
+1931,"2024 MM XL What If",2024,73,"Marvel 2024 Skybox Masterpieces XL ",86,5650,"2024 SkyBox Marvel Masterpieces XL - What If",57,token_overlap_57%
+1924,"marvel 2024 skybox masterpieces xl Printing Plate What If Variant",2024,73,"Marvel 2024 Skybox Masterpieces XL ",86,5650,"2024 SkyBox Marvel Masterpieces XL - What If",70,token_overlap_70%
+2245,"Aura Check Card /75",2025,82,"2025 Kakawow Aura Marvel",83,6279,"2025 Kakawow Aura Marvel - Aura Check",55,same_main_set_55%
+1265,"marvel 1997 premium x men 97 timelines",1997,40,"Marvel 1997 Premium X-Men 97 Timelines ",82,2755,"1997 Fleer/SkyBox Marvel Premium QFX",50,token_overlap_50%
+1260,"marvel 1997 fleer ultra spider man",1997,38,"Marvel 1997 Fleer Ultra Spider Man ",82,2745,"1997 Fleer Spider-Man - Marvel OverPower Characters",71,token_overlap_71%
+1261,"marvel 1997 fleer ultra spider man Blue Foil",1997,38,"Marvel 1997 Fleer Ultra Spider Man ",81,2745,"1997 Fleer Spider-Man - Marvel OverPower Characters",63,token_overlap_63%
+1262,"marvel 1997 fleer ultra spider man Red Foil",1997,38,"Marvel 1997 Fleer Ultra Spider Man ",81,2745,"1997 Fleer Spider-Man - Marvel OverPower Characters",63,token_overlap_63%
+1373,"marvel 2018 ultra x men",2018,,,81,3766,"2018 Upper Deck Marvel Masterpieces",40,token_overlap_40%
+1540,"marvel 2022 ultra avengers Animation Cels Red Auto",2022,64,"Marvel 2022 Ultra Avengers ",81,4346,"2022 Fleer Ultra Marvel Avengers - Animation Cels Red Autographs",78,token_overlap_78%
+1131,"marvel 1992 comic images ghost rider II",1992,9,"Marvel 1992 Comic Images Ghost Rider II ",80,2277,"1992 SkyBox Marvel Masterpieces - Lost Marvel Bonus Cards",29,token_overlap_29%
+1375,"marvel 2018 ultra x men Rainbow Foil",2018,,,75,3783,"2018 Upper Deck Marvel Masterpieces - Orange Foil",48,subset_term_match_48%
+1374,"marvel 2018 ultra x men Gold Foil",2018,,,75,3777,"2018 Upper Deck Marvel Masterpieces - Gold Foil",67,subset_term_match_67%
+1376,"marvel 2018 ultra x men Silver Foil",2018,,,74,3750,"2018 Upper Deck Marvel Black Panther - Silver Foil",58,subset_term_match_58%
+1278,"marvel 2000 topps x men the movie",2000,43,"Marvel 2000 Topps X-Men: The Movie ",73,2782,"2000 Toy Biz Marvel Greatest Moments",33,token_overlap_33%
+1296,"marvel 2009 rittenhouse spider man archives",2009,48,"Marvel 2009 Rittenhouse Spider Man Archives",73,2846,"2009 Galletas Marinela Marvel",33,token_overlap_33%
+1135,"marvel 1992 comic images silver surfer",1992,11,"Marvel 1992 Comic Images Silver Surfer ",72,2628,"1992 Impel Marvel Universe",33,token_overlap_33%
+1297,"marvel 2009 rittenhouse spider man archives Foil",2009,48,"Marvel 2009 Rittenhouse Spider Man Archives",72,2846,"2009 Galletas Marinela Marvel",29,token_overlap_29%
+1300,"marvel 2010 rittenhouse 70 years of comics Metallic Ink",2010,49,"Marvel 2010 Rittenhouse: 70 years of comics ",72,2288,"2010 Rittenhouse 70 Years of Marvel Comics - Marvel Tribute",78,token_overlap_78%
+1522,"marvel 2022 shang chi",2022,,,70,4417,"2022 Panini Marvel Versus",50,token_overlap_50%
+1523,"marvel 2022 shang chi Blue",2022,,,70,4358,"2022 Fleer Ultra Marvel Avengers - Blue Foil",43,token_overlap_43%
+1524,"marvel 2022 shang chi Dragon Scale",2022,,,70,4393,"2022 Fleer Ultra Marvel Avengers - Jambalaya",33,token_overlap_33%
+1525,"marvel 2022 shang chi Gold",2022,,,70,4433,"2022 SkyBox Marvel Masterpieces - Gold Foil",53,subset_term_match_53%
+1526,"marvel 2022 shang chi Patina",2022,,,70,4417,"2022 Panini Marvel Versus",40,token_overlap_40%
+1527,"marvel 2022 shang chi Red",2022,,,70,4424,"2022 SkyBox Marvel Masterpieces - Battle Spectrum Red",43,token_overlap_43%
+1528,"marvel 2022 shang chi Silver",2022,,,70,4572,"2022-23 Upper Deck Marvel Annual - Silver Sparkle",43,subset_term_match_43%
+1449,"marvel 2022 allure Golden Auto",2022,60,"Marvel 2022 Allure ",61,4450,"2022 Upper Deck Allure Marvel Studios",50,token_overlap_50%
+1461,"marvel 2022 allure Purple Die Cut Auto",2022,60,"Marvel 2022 Allure ",61,4487,"2022 Upper Deck Allure Marvel Studios - Purple Rainbow Die Cut",60,token_overlap_60%
+1463,"marvel 2022 allure Red Auto",2022,60,"Marvel 2022 Allure ",61,4450,"2022 Upper Deck Allure Marvel Studios",50,token_overlap_50%
+2121,"marvel 2025 topps finest x men '97 children of the atom",2025,79,"marvel 2025 topps finest x men '97",60,6273,"2025 Clover Press The Marvel Art of Michael Allred",40,token_overlap_40%
+1118,"marvel 1984 super heroes",1984,,,60,2593,"1984 Leaf Marvel Super Heroes Secret Wars Stickers",50,token_overlap_50%
+1367,"marvel 2018 masterpieces Legendary Orange",2018,56,"Marvel 2018 Masterpieces ",60,3766,"2018 Upper Deck Marvel Masterpieces",60,token_overlap_60%
+2108,"marvel 2024 upper deck studios ud canvas Printing Plate",2024,77,"Marvel 2024 Upper Deck Studios ",55,6182,"2024 Upper Deck Marvel Studios Series 1 - UD Canvas",78,token_overlap_78%
+2173,"Base Artist Autograph",2023,65,"Marvel 2023 Flair ",50,4652,"2023 Flair Marvel - Artist Autograph",45,subset_term_match_45%
+1585,"marvel 2022 ultra avengers value stamp relics",2022,,,50,2381,"2022 Fleer Ultra Marvel Avengers - Marvel Value Stamps Relics",75,token_overlap_75%
+1354,"marvel 2017 spider man metals",2017,,,50,3409,"2017 Fleer Ultra Marvel Spider-Man",67,token_overlap_67%
+1568,"marvel 2022 ultra avengers medallion Amethyst",2022,64,"Marvel 2022 Ultra Avengers ",50,4395,"2022 Fleer Ultra Marvel Avengers - Medallions Amethyst",71,token_overlap_71%
+1570,"marvel 2022 ultra avengers medallion Emerald Green",2022,64,"Marvel 2022 Ultra Avengers ",50,4397,"2022 Fleer Ultra Marvel Avengers - Medallions Emerald Green",75,token_overlap_75%
+1571,"marvel 2022 ultra avengers medallion Gold",2022,64,"Marvel 2022 Ultra Avengers ",50,4398,"2022 Fleer Ultra Marvel Avengers - Medallions Gold",76,subset_term_match_76%
+1572,"marvel 2022 ultra avengers medallion Platinum",2022,64,"Marvel 2022 Ultra Avengers ",50,4399,"2022 Fleer Ultra Marvel Avengers - Medallions Platinum",71,token_overlap_71%
+1573,"marvel 2022 ultra avengers medallion Ruby Red",2022,64,"Marvel 2022 Ultra Avengers ",50,4400,"2022 Fleer Ultra Marvel Avengers - Medallions Ruby Red",75,token_overlap_75%
+1574,"marvel 2022 ultra avengers medallion Sapphire Blue",2022,64,"Marvel 2022 Ultra Avengers ",50,4358,"2022 Fleer Ultra Marvel Avengers - Blue Foil",71,token_overlap_71%
+1606,"marvel 2022 upper deck annual suspended animation",2022,,,50,4584,"2022-23 Upper Deck Marvel Annual - Suspended Animation Tier 1",78,token_overlap_78%
+2151,"marvel 2025 topps finest x men '97 remember it",2025,79,"marvel 2025 topps finest x men '97",50,6561,"2025 Topps Chrome Marvel - X-Men Giant Size 50th Anniversary",44,token_overlap_44%
+1258,"marvel 1997 fleer spider man international",1997,,,49,2745,"1997 Fleer Spider-Man - Marvel OverPower Characters",71,token_overlap_71%
+1508,"marvel 2022 metal universe spider man palladium",2022,63,"Marvel 2022 Metal Universe Spider Man ",49,4415,"2022 Fleer Ultra Marvel Avengers - Universe Power Supreme",38,token_overlap_38%
+1846,"marvel 2023 upper deck what if Printing Plate Marvel Universe",2023,70,"Marvel 2023 Upper Deck What If ",49,2559,"2023 Upper Deck Marvel What If…? - 1990 Marvel Universe",78,token_overlap_78%
+1365,"marvel 2018 masterpieces Epic Purple",2018,56,"Marvel 2018 Masterpieces ",46,3766,"2018 Upper Deck Marvel Masterpieces",60,token_overlap_60%
+1321,"marvel 2015 fleer retro metal Red",2015,52,"Marvel 2015 Fleer Retro ",43,2322,"2015 Fleer Retro Marvel - 1995 Flair Marvel Metal Blaster",68,subset_term_match_68%
+1333,"marvel 2016 masterpieces Gold Foil",2016,54,"Marvel 2016 Masterpieces ",43,3390,"2016 Upper Deck Marvel Masterpieces - Gold Foil Signature Series",63,subset_term_match_63%
+1480,"marvel 2022 beginnings vol 2 series 1 Red",2022,61,"Marvel 2022 Beginnings",43,4424,"2022 SkyBox Marvel Masterpieces - Battle Spectrum Red",43,token_overlap_43%
+1319,"marvel 2015 fleer retro metal Blue",2015,52,"Marvel 2015 Fleer Retro ",42,2322,"2015 Fleer Retro Marvel - 1995 Flair Marvel Metal Blaster",68,subset_term_match_68%
+1320,"marvel 2015 fleer retro metal Green",2015,52,"Marvel 2015 Fleer Retro ",42,2322,"2015 Fleer Retro Marvel - 1995 Flair Marvel Metal Blaster",68,subset_term_match_68%
+2176,"Flair 2023 Power Blasts",2023,65,"Marvel 2023 Flair ",40,4655,"2023 Flair Marvel - Canonical Blasts",60,token_overlap_60%
+2178,"Solar Flair 2023",2023,65,"Marvel 2023 Flair ",40,4678,"2023 Flair Marvel - Solar Flair",75,token_overlap_75%
+1340,"marvel 2016 masterpieces Orange Foil",2016,54,"Marvel 2016 Masterpieces ",40,3396,"2016 Upper Deck Marvel Masterpieces - Legendary Orange Foil",68,subset_term_match_68%
+2239,"Marvel 2025 Topps Finest X-Men '97 Short Print",2025,79,"marvel 2025 topps finest x men '97",39,6561,"2025 Topps Chrome Marvel - X-Men Giant Size 50th Anniversary",44,token_overlap_44%
+1119,"marvel 1990 comic images spider man team up",1990,,,37,2612,"1990 Comic Images Marvel Comics Jim Lee",50,token_overlap_50%
+2175,"Acrylic Aether",2023,65,"Marvel 2023 Flair ",34,4651,"2023 Flair Marvel - Acrylic Aether",40,token_overlap_40%
+1346,"marvel 2016 masterpieces What If",2016,54,"Marvel 2016 Masterpieces ",32,3407,"2016 Upper Deck Marvel Masterpieces - What If...",71,token_overlap_71%
+1721,"marvel 2023 upper deck anime volume 2 chibi Tier 1",2023,68,"Marvel 2023 Upper Deck Anime Volume 2",31,5004,"2023 Upper Deck Marvel Anime Vol. 2 - Chibi",75,token_overlap_75%
+2217,"Marvel 2025 Topps Chrome Avengers Infinity Die-Cut",2025,80,"Marvel 2025 Topps Chrome",30,6475,"2025 Topps Chrome Marvel - Avengers Infinity",75,token_overlap_75%
+2174,"Iridescence",2023,65,"Marvel 2023 Flair ",30,4664,"2023 Flair Marvel - Iridescence",25,token_overlap_25%
+2112,"marvel 2024 upper deck studios ud portraits Printing Plate",2024,77,"Marvel 2024 Upper Deck Studios ",30,6184,"2024 Upper Deck Marvel Studios Series 1 - UD Portraits",78,token_overlap_78%
+2241,"Marvel 2025 Topps Finest X-Men '97 Voice Actor Autograph Variation",2025,79,"marvel 2025 topps finest x men '97",25,6545,"2025 Topps Chrome Marvel - The New Avengers 20th Anniversary Autograph Relics",41,subset_term_match_41%
+1500,"marvel 2022 metal universe spider man comic cuts autograph",2022,63,"Marvel 2022 Metal Universe Spider Man ",25,4423,"2022 SkyBox Marvel Masterpieces - Battle Spectrum Green Autograph",36,subset_term_match_36%
+2171,"Carved",2023,65,"Marvel 2023 Flair ",24,4656,"2023 Flair Marvel - Carved",25,token_overlap_25%
+1267,"marvel 1998 fleer creators collection sketchboard Blue",1998,41,"Marvel 1998 Fleer Creators Collection ",24,2768,"1998 Marvel Creators Collection - Sketchboards Blue",71,token_overlap_71%
+1269,"marvel 1998 fleer creators collection sketchboard White",1998,41,"Marvel 1998 Fleer Creators Collection ",24,2770,"1998 Marvel Creators Collection - Sketchboards White",71,token_overlap_71%
+1268,"marvel 1998 fleer creators collection sketchboard Grey",1998,41,"Marvel 1998 Fleer Creators Collection ",24,2769,"1998 Marvel Creators Collection - Sketchboards Grey",71,token_overlap_71%
+1200,"marvel 1995 flair power blast",1995,23,"Marvel 1995 Flair ",24,2687,"1995 Flair Marvel Annual",60,token_overlap_60%
+1217,"marvel 1995 ultra spider man Gold Foil Signature Series",1995,27,"Marvel 1995 Ultra Spider Man ",24,2700,"1995 Fleer Marvel Masterpieces - E-Motion Signature Series",44,token_overlap_44%
+1270,"marvel 1998 fleer creators collection sketchboard Yellow",1998,41,"Marvel 1998 Fleer Creators Collection ",24,2771,"1998 Marvel Creators Collection - Sketchboards Yellow",76,subset_term_match_76%
+1653,"marvel 2023 fleer ultra wolverine greatest battles Printing Plate",2023,66,"Marvel 2023 Fleer Ultra Wolverine ",22,4795,"2023 Fleer Ultra Marvel Wolverine - Greatest Battles",78,token_overlap_78%
+2139,"marvel 2025 topps finest x men '97 previously on x men Gold Refractor",2025,79,"marvel 2025 topps finest x men '97",20,6521,"2025 Topps Chrome Marvel - Iron Man Gold Refractor",60,subset_term_match_60%
+1897,"marvel 2024 skybox masterpieces nahuel grego holofoil Crackle",2024,72,"Marvel 2024 Skybox Masterpieces Nahuel Grego",20,6086,"2024 Upper Deck Marvel Masterpieces Nahuel Grego - Holofoil Crackle",78,token_overlap_78%
+1899,"marvel 2024 skybox masterpieces nahuel grego holofoil Lava Autograph",2024,72,"Marvel 2024 Skybox Masterpieces Nahuel Grego",20,6085,"2024 Upper Deck Marvel Masterpieces Nahuel Grego - Holofoil",67,token_overlap_67%
+1900,"marvel 2024 skybox masterpieces nahuel grego holofoil Tinsel",2024,72,"Marvel 2024 Skybox Masterpieces Nahuel Grego",20,6090,"2024 Upper Deck Marvel Masterpieces Nahuel Grego - Holofoil Tinsel",78,token_overlap_78%
+1896,"marvel 2024 skybox masterpieces nahuel grego holofoil",2024,72,"Marvel 2024 Skybox Masterpieces Nahuel Grego",20,6085,"2024 Upper Deck Marvel Masterpieces Nahuel Grego - Holofoil",75,token_overlap_75%
+1902,"marvel 2024 skybox masterpieces nahuel grego holofoil Windows Autograph",2024,72,"Marvel 2024 Skybox Masterpieces Nahuel Grego",20,6085,"2024 Upper Deck Marvel Masterpieces Nahuel Grego - Holofoil",67,token_overlap_67%
+1898,"marvel 2024 skybox masterpieces nahuel grego holofoil Diamonds",2024,72,"Marvel 2024 Skybox Masterpieces Nahuel Grego",20,6087,"2024 Upper Deck Marvel Masterpieces Nahuel Grego - Holofoil Diamonds",78,token_overlap_78%
+1901,"marvel 2024 skybox masterpieces nahuel grego holofoil Triangulation",2024,72,"Marvel 2024 Skybox Masterpieces Nahuel Grego",20,6091,"2024 Upper Deck Marvel Masterpieces Nahuel Grego - Holofoil Triangulation",78,token_overlap_78%
+2127,"marvel 2025 topps finest x men '97 greatest hits Laser Refractor",2025,79,"marvel 2025 topps finest x men '97",20,2494,"2025 Topps Chrome Marvel - Air Marvel Red Wave Refractor",45,subset_term_match_45%
+2130,"marvel 2025 topps finest x men '97 greatest hits SuperFractor",2025,79,"marvel 2025 topps finest x men '97",20,6573,"2025 Topps Chrome Marvel - X-Men Giant Size 50th Anniversary SuperFractor",50,token_overlap_50%
+2126,"marvel 2025 topps finest x men '97 greatest hits Gold Refractor",2025,79,"marvel 2025 topps finest x men '97",20,6521,"2025 Topps Chrome Marvel - Iron Man Gold Refractor",60,subset_term_match_60%
+2128,"marvel 2025 topps finest x men '97 greatest hits Orange Refractor",2025,79,"marvel 2025 topps finest x men '97",20,6512,"2025 Topps Chrome Marvel - Human Torch Refractor (Red & Orange)",55,subset_term_match_55%
+2129,"marvel 2025 topps finest x men '97 greatest hits Red Refractor",2025,79,"marvel 2025 topps finest x men '97",20,2494,"2025 Topps Chrome Marvel - Air Marvel Red Wave Refractor",55,subset_term_match_55%
+2131,"marvel 2025 topps finest x men '97 greatest hits X-Fractor",2025,79,"marvel 2025 topps finest x men '97",20,6572,"2025 Topps Chrome Marvel - X-Men Giant Size 50th Anniversary Relics X-Fractor",45,token_overlap_45%
+2122,"marvel 2025 topps finest x men '97 children of the atom SuperFractor",2025,79,"marvel 2025 topps finest x men '97",20,6465,"2025 Topps Chrome Marvel - 35 Years of Ghost Rider Superfractor",45,token_overlap_45%
+1170,"marvel 1994 flair power blast",1994,18,"Marvel 1994 Flair ",20,2661,"1994 Flair Marvel Annual",60,token_overlap_60%
+1228,"marvel 1995 ultra x men all chromium Alternate X Embossed",1995,28,"Marvel 1995 Ultra X-Men ",20,2688,"1995 Flair Marvel Annual - Chromium",38,token_overlap_38%
+1510,"marvel 2022 metal universe spider man planet metal",2022,63,"Marvel 2022 Metal Universe Spider Man ",20,4415,"2022 Fleer Ultra Marvel Avengers - Universe Power Supreme",38,token_overlap_38%
+1511,"marvel 2022 metal universe spider man planet metal Copper",2022,63,"Marvel 2022 Metal Universe Spider Man ",20,4415,"2022 Fleer Ultra Marvel Avengers - Universe Power Supreme",38,token_overlap_38%
+1512,"marvel 2022 metal universe spider man planet metal Gold",2022,63,"Marvel 2022 Metal Universe Spider Man ",20,4398,"2022 Fleer Ultra Marvel Avengers - Medallions Gold",40,subset_term_match_40%
+1513,"marvel 2022 metal universe spider man planet metal Platinum",2022,63,"Marvel 2022 Metal Universe Spider Man ",20,4399,"2022 Fleer Ultra Marvel Avengers - Medallions Platinum",38,token_overlap_38%
+1597,"marvel 2022 upper deck annual multiple dimensions",2022,,,20,4556,"2022-23 Upper Deck Marvel Annual - Multiple Dimensions Lenticulars",78,token_overlap_78%
+1742,"marvel 2023 upper deck annual cold war",2023,,,20,5502,"2023-24 Upper Deck Marvel Annual",71,token_overlap_71%
+2140,"marvel 2025 topps finest x men '97 previously on x men Laser Refractor",2025,79,"marvel 2025 topps finest x men '97",20,2494,"2025 Topps Chrome Marvel - Air Marvel Red Wave Refractor",45,subset_term_match_45%
+2141,"marvel 2025 topps finest x men '97 previously on x men Orange Refractor",2025,79,"marvel 2025 topps finest x men '97",20,6512,"2025 Topps Chrome Marvel - Human Torch Refractor (Red & Orange)",55,subset_term_match_55%
+2142,"marvel 2025 topps finest x men '97 previously on x men Red Refractor",2025,79,"marvel 2025 topps finest x men '97",20,2494,"2025 Topps Chrome Marvel - Air Marvel Red Wave Refractor",55,subset_term_match_55%
+2143,"marvel 2025 topps finest x men '97 previously on x men SuperFractor",2025,79,"marvel 2025 topps finest x men '97",20,6573,"2025 Topps Chrome Marvel - X-Men Giant Size 50th Anniversary SuperFractor",50,token_overlap_50%
+2144,"marvel 2025 topps finest x men '97 previously on x men X-Fractor",2025,79,"marvel 2025 topps finest x men '97",20,6572,"2025 Topps Chrome Marvel - X-Men Giant Size 50th Anniversary Relics X-Fractor",45,token_overlap_45%
+1329,"marvel 2016 masterpieces battle spectra",2016,54,"Marvel 2016 Masterpieces ",19,3381,"2016 Upper Deck Marvel Masterpieces - Battle Spectra",71,token_overlap_71%
+1722,"marvel 2023 upper deck anime volume 2 chibi Tier 2",2023,68,"Marvel 2023 Upper Deck Anime Volume 2",19,5004,"2023 Upper Deck Marvel Anime Vol. 2 - Chibi",75,token_overlap_75%
+1728,"marvel 2023 upper deck anime volume 2 hanafuda SP",2023,68,"Marvel 2023 Upper Deck Anime Volume 2",19,5006,"2023 Upper Deck Marvel Anime Vol. 2 - Hanafuda",75,token_overlap_75%
+1472,"marvel 2022 beginnings vol 2 series 1 Blue",2022,61,"Marvel 2022 Beginnings",17,4358,"2022 Fleer Ultra Marvel Avengers - Blue Foil",43,token_overlap_43%
+1636,"marvel 2023 fleer ultra wolverine aliases Printing Plate",2023,66,"Marvel 2023 Fleer Ultra Wolverine ",16,4775,"2023 Fleer Ultra Marvel Wolverine - Aliases Printing Plates Black",78,token_overlap_78%
+1690,"marvel 2023 masterpieces battle spectrum Teal",2023,62,"Marvel 2022 Masterpieces ",15,2568,"2023 Upper Deck Marvel What If…? - Marvel Masterpieces Battle Spectrum",56,token_overlap_56%
+1687,"marvel 2023 masterpieces battle spectrum Gold",2023,62,"Marvel 2022 Masterpieces ",15,2568,"2023 Upper Deck Marvel What If…? - Marvel Masterpieces Battle Spectrum",56,token_overlap_56%
+1688,"marvel 2023 masterpieces battle spectrum Green Auto",2023,62,"Marvel 2022 Masterpieces ",15,2568,"2023 Upper Deck Marvel What If…? - Marvel Masterpieces Battle Spectrum",56,token_overlap_56%
+1689,"marvel 2023 masterpieces battle spectrum Red",2023,62,"Marvel 2022 Masterpieces ",15,2568,"2023 Upper Deck Marvel What If…? - Marvel Masterpieces Battle Spectrum",56,token_overlap_56%
+1686,"marvel 2023 masterpieces battle spectrum",2023,62,"Marvel 2022 Masterpieces ",15,2568,"2023 Upper Deck Marvel What If…? - Marvel Masterpieces Battle Spectrum",56,token_overlap_56%
+1114,"2024 upper deck x men '97 sdcc",2024,,,15,5824,"2024 Upper Deck Marvel Avengers",50,token_overlap_50%
+1115,"2024 upper deck x men '97 sdcc Gold Foilboard",2024,,,15,5834,"2024 Upper Deck Marvel Avengers - Gold",55,subset_term_match_55%
+1116,"2024 upper deck x men '97 sdcc Silver Foilboard",2024,,,15,5795,"2024 Upper Deck Marvel Allegiance Secret Wars - Foilboard",50,token_overlap_50%
+1536,"marvel 2022 ultra avengers 1st appearances Printing Plate",2022,64,"Marvel 2022 Ultra Avengers ",15,4332,"2022 Fleer Ultra Marvel Avengers - 1st Appearances",75,token_overlap_75%
+1734,"marvel 2023 upper deck anime volume 2 stax SP",2023,68,"Marvel 2023 Upper Deck Anime Volume 2",15,5018,"2023 Upper Deck Marvel Anime Vol. 2 - Stax",75,token_overlap_75%
+1919,"2024 MM XL HoloFoil",2024,73,"Marvel 2024 Skybox Masterpieces XL ",15,5643,"2024 SkyBox Marvel Masterpieces XL - Holofoil",50,token_overlap_50%
+1466,"marvel 2022 allure Sunrise",2022,60,"Marvel 2022 Allure ",14,4495,"2022 Upper Deck Allure Marvel Studios - Sunrise",57,token_overlap_57%
+1910,"2024 MM XL Battle Spectrum",2024,73,"Marvel 2024 Skybox Masterpieces XL ",14,5639,"2024 SkyBox Marvel Masterpieces XL - Battle Spectrum",57,token_overlap_57%
+1279,"marvel 2000 topps x men the movie clear cling",2000,43,"Marvel 2000 Topps X-Men: The Movie ",12,2782,"2000 Toy Biz Marvel Greatest Moments",25,token_overlap_25%
+1392,"marvel 2020 masterpieces Silver Spectrum Artist Autograph",2020,57,"Marvel 2020 Masterpieces ",12,4050,"2020 SkyBox Marvel Masterpieces - Silver Spectrum Foil Autographs",63,token_overlap_63%
+1173,"marvel 1994 fleer amazing spider man suspended animation",1994,19,"Marvel 1994 Fleer Amazing Spider Man",12,2672,"1994 Fleer Marvel Universe - Jumbo Suspended Animation",63,token_overlap_63%
+1364,"marvel 2018 masterpieces Autograph",2018,56,"Marvel 2018 Masterpieces ",12,3766,"2018 Upper Deck Marvel Masterpieces",60,token_overlap_60%
+1850,"marvel 2023 upper deck what if zombies glow in the dark",2023,70,"Marvel 2023 Upper Deck What If ",11,4863,"2023 Upper Deck Funko Pop Marvel Infinity Saga - Glow-in-the-Dark",67,token_overlap_67%
+1234,"marvel 1995 ultra x men sinister observations",1995,28,"Marvel 1995 Ultra X-Men ",10,2687,"1995 Flair Marvel Annual",33,token_overlap_33%
+2238,"Marvel 2025 Topps Finest X-Men '97 Sketch Card",2025,79,"marvel 2025 topps finest x men '97",10,6474,"2025 Topps Chrome Marvel - Artist Sketch Black Foil",50,token_overlap_50%
+1280,"marvel 2000 topps x men the movie x foil",2000,43,"Marvel 2000 Topps X-Men: The Movie ",10,2782,"2000 Toy Biz Marvel Greatest Moments",29,token_overlap_29%
+1678,"marvel 2023 fleer ultra wolverine team affiliations Printing Plate",2023,66,"Marvel 2023 Fleer Ultra Wolverine ",10,4820,"2023 Fleer Ultra Marvel Wolverine - Team Affiliations",78,token_overlap_78%
+1890,"marvel 2024 skybox masterpieces nahuel grego canvas gallery Printing Plate",2024,72,"Marvel 2024 Skybox Masterpieces Nahuel Grego",10,6067,"2024 Upper Deck Marvel Masterpieces Nahuel Grego - Canvas Gallery",70,token_overlap_70%
+1912,"marvel 2024 skybox masterpieces xl Black Foil Canvas High Series",2024,73,"Marvel 2024 Skybox Masterpieces XL ",10,5641,"2024 SkyBox Marvel Masterpieces XL - Epic Purple Foil",63,subset_term_match_63%
+1916,"marvel 2024 skybox masterpieces xl Gallery Canvas High Series",2024,73,"Marvel 2024 Skybox Masterpieces XL ",10,5638,"2024 SkyBox Marvel Masterpieces XL",56,token_overlap_56%
+1889,"2024 Marvel Masterpieces Nahuel Grego Canvas gallery",2024,72,"Marvel 2024 Skybox Masterpieces Nahuel Grego",10,6067,"2024 Upper Deck Marvel Masterpieces Nahuel Grego - Canvas Gallery",78,token_overlap_78%
+1925,"marvel 2024 skybox masterpieces xl Red Foil Canvas High Series",2024,73,"Marvel 2024 Skybox Masterpieces XL ",10,5641,"2024 SkyBox Marvel Masterpieces XL - Epic Purple Foil",65,subset_term_match_65%
+2133,"marvel 2025 topps finest x men '97 Laser Refractor SP",2025,79,"marvel 2025 topps finest x men '97",10,2494,"2025 Topps Chrome Marvel - Air Marvel Red Wave Refractor",49,subset_term_match_49%
+2124,"marvel 2025 topps finest x men '97 Gold Refractor SP",2025,79,"marvel 2025 topps finest x men '97",10,6521,"2025 Topps Chrome Marvel - Iron Man Gold Refractor",66,subset_term_match_66%
+1175,"marvel 1994 masterpieces Bronze Holofoil",1994,20,"Marvel 1994 Masterpieces ",10,2664,"1994 Fleer Marvel Masterpieces Hildebrandt Brothers - Bronze Holofoils",50,token_overlap_50%
+1179,"marvel 1994 masterpieces Gold Holofoil",1994,20,"Marvel 1994 Masterpieces ",10,2666,"1994 Fleer Marvel Masterpieces Hildebrandt Brothers - Gold Holofoils",55,subset_term_match_55%
+1182,"marvel 1994 masterpieces Silver Holofoil",1994,20,"Marvel 1994 Masterpieces ",10,2669,"1994 Fleer Marvel Masterpieces Hildebrandt Brothers - Silver Holofoils",55,subset_term_match_55%
+1181,"marvel 1994 masterpieces powerblast",1994,20,"Marvel 1994 Masterpieces ",10,2668,"1994 Fleer Marvel Masterpieces Hildebrandt Brothers - PowerBlast",57,token_overlap_57%
+1235,"marvel 1995 ultra x men suspended animation",1995,28,"Marvel 1995 Ultra X-Men ",10,2687,"1995 Flair Marvel Annual",33,token_overlap_33%
+1284,"marvel 2002 topps spider man movie Spider-Sense Glow Puzzle Stickers",2002,45,"Marvel 2002 Topps Spider Man Movie ",10,2796,"2002 Marvel Spider-Man",40,token_overlap_40%
+1339,"marvel 2016 masterpieces Legendary Orange",2016,,,10,3396,"2016 Upper Deck Marvel Masterpieces - Legendary Orange Foil",63,token_overlap_63%
+1551,"marvel 2022 ultra avengers earth's mightiest",2022,64,"Marvel 2022 Ultra Avengers ",10,4393,"2022 Fleer Ultra Marvel Avengers - Jambalaya",67,token_overlap_67%
+1557,"marvel 2022 ultra avengers earth's mightiest Printing Plate",2022,64,"Marvel 2022 Ultra Avengers ",10,4368,"2022 Fleer Ultra Marvel Avengers - Earth's Mightiest Spin-Offs",67,token_overlap_67%
+1558,"marvel 2022 ultra avengers earth's mightiest Red Foil",2022,64,"Marvel 2022 Ultra Avengers ",10,4378,"2022 Fleer Ultra Marvel Avengers - Earth's Mightiest Spin-Offs Red Foil",78,subset_term_match_78%
+1723,"marvel 2023 upper deck anime volume 2 chibi Tier 3",2023,68,"Marvel 2023 Upper Deck Anime Volume 2",10,5004,"2023 Upper Deck Marvel Anime Vol. 2 - Chibi",75,token_overlap_75%
+1743,"marvel 2023 upper deck annual creators corner",2023,,,10,5506,"2023-24 Upper Deck Marvel Annual - Creators Corner Autographs",78,token_overlap_78%
+1913,"marvel 2024 skybox masterpieces xl Canvas High Series",2024,73,"Marvel 2024 Skybox Masterpieces XL ",10,5638,"2024 SkyBox Marvel Masterpieces XL",63,token_overlap_63%
+2137,"marvel 2025 topps finest x men '97 Orange Refractor SP",2025,79,"marvel 2025 topps finest x men '97",10,6512,"2025 Topps Chrome Marvel - Human Torch Refractor (Red & Orange)",61,subset_term_match_61%
+2146,"marvel 2025 topps finest x men '97 Protector Refractor SP",2025,79,"marvel 2025 topps finest x men '97",10,2494,"2025 Topps Chrome Marvel - Air Marvel Red Wave Refractor",49,subset_term_match_49%
+2148,"marvel 2025 topps finest x men '97 Red Refractor SP",2025,79,"marvel 2025 topps finest x men '97",10,2494,"2025 Topps Chrome Marvel - Air Marvel Red Wave Refractor",61,subset_term_match_61%
+2150,"marvel 2025 topps finest x men '97 Refractor SP",2025,79,"marvel 2025 topps finest x men '97",10,2494,"2025 Topps Chrome Marvel - Air Marvel Red Wave Refractor",55,subset_term_match_55%
+2155,"marvel 2025 topps finest x men '97 SP",2025,79,"marvel 2025 topps finest x men '97",10,6561,"2025 Topps Chrome Marvel - X-Men Giant Size 50th Anniversary",44,token_overlap_44%
+2157,"marvel 2025 topps finest x men '97 SuperFractor SP",2025,79,"marvel 2025 topps finest x men '97",10,2496,"2025 Topps Chrome Marvel - Air Marvel Superfractor",50,token_overlap_50%
+2159,"marvel 2025 topps finest x men '97 X-Fractor SP",2025,79,"marvel 2025 topps finest x men '97",10,6572,"2025 Topps Chrome Marvel - X-Men Giant Size 50th Anniversary Relics X-Fractor",45,token_overlap_45%
+2152,"marvel 2025 topps finest x men '97 remember it Laser Refractor",2025,79,"marvel 2025 topps finest x men '97",10,2494,"2025 Topps Chrome Marvel - Air Marvel Red Wave Refractor",45,subset_term_match_45%
+2153,"marvel 2025 topps finest x men '97 remember it SuperFractor",2025,79,"marvel 2025 topps finest x men '97",10,6573,"2025 Topps Chrome Marvel - X-Men Giant Size 50th Anniversary SuperFractor",50,token_overlap_50%
+2154,"marvel 2025 topps finest x men '97 remember it X-Fractor",2025,79,"marvel 2025 topps finest x men '97",10,6572,"2025 Topps Chrome Marvel - X-Men Giant Size 50th Anniversary Relics X-Fractor",45,token_overlap_45%
+1159,"marvel 1993 x men series 2 gold",1993,17,"Marvel 1993 X-Men Series 2 ",9,2648,"1993 Marvel Comics Slamcaps Series 1",60,token_overlap_60%
+1220,"marvel 1995 ultra spider man masterpieces",1995,27,"Marvel 1995 Ultra Spider Man ",9,2698,"1995 Fleer Marvel Masterpieces - Canvas",50,token_overlap_50%
+1257,"marvel 1997 fleer premium qfx PhotoGrafix ClearChromes",1997,37,"Marvel 1997 Fleer Premium QFX ",9,2758,"1997 Fleer/SkyBox Marvel Premium QFX - PhotoGrafix ClearChrome",75,token_overlap_75%
+1192,"marvel 1994 universe powerblast Silver",1994,,,9,2280,"1994 Flair Marvel Annual - Flair Marvel Universe PowerBlast",67,token_overlap_67%
+1186,"marvel 1994 ultra x men portrait",1994,21,"Marvel 1994 Ultra X-Men ",9,2661,"1994 Flair Marvel Annual",40,token_overlap_40%
+1190,"marvel 1994 universe Hologram",1994,22,"Marvel 1994 Universe ",9,2670,"1994 Fleer Marvel Universe",75,token_overlap_75%
+1191,"marvel 1994 universe powerblast",1994,22,"Marvel 1994 Universe ",9,2670,"1994 Fleer Marvel Universe",75,token_overlap_75%
+1218,"marvel 1995 ultra spider man golden web",1995,27,"Marvel 1995 Ultra Spider Man ",9,2687,"1995 Flair Marvel Annual",29,token_overlap_29%
+1231,"marvel 1995 ultra x men hunters stalkers",1995,28,"Marvel 1995 Ultra X-Men ",9,2687,"1995 Flair Marvel Annual",33,token_overlap_33%
+1214,"marvel 1995 ultra spider man Clear Chrome",1995,27,"Marvel 1995 Ultra Spider Man ",8,2687,"1995 Flair Marvel Annual",29,token_overlap_29%
+1763,"marvel 2023 upper deck platinum Artist Auto Blue Rainbow",2023,69,"Marvel 2023 Upper Deck Platinum",8,5228,"2023 Upper Deck Marvel Platinum - Blue Rainbow",78,token_overlap_78%
+1962,"marvel 2024 topps chrome character autograph",2024,74,"Marvel 2024 Topps Chrome ",8,2412,"2024 Topps Chrome Marvel - Marvel Character Autographs SuperFractor",71,token_overlap_71%
+1965,"marvel 2024 topps chrome character autograph Gold Wave",2024,74,"Marvel 2024 Topps Chrome ",8,2406,"2024 Topps Chrome Marvel - Marvel Character Autographs Gold Wave Refractor",78,token_overlap_78%
+1969,"marvel 2024 topps chrome character autograph Papradascha Sapphire",2024,74,"Marvel 2024 Topps Chrome ",8,2447,"2024 Topps Chrome Sapphire Edition Marvel - Marvel Character Autographs Papradascha",78,token_overlap_78%
+1972,"marvel 2024 topps chrome character autograph Red Sapphire",2024,74,"Marvel 2024 Topps Chrome ",8,2450,"2024 Topps Chrome Sapphire Edition Marvel - Marvel Character Autographs Red Sapphire",78,token_overlap_78%
+1944,"marvel 2024 topps chrome authentic marvel comic book artist autograph Green Gamma Ray Wave",2024,74,"Marvel 2024 Topps Chrome ",8,2393,"2024 Topps Chrome Marvel - Authentic Marvel Comic Book Artist Autographs Green Gamma RayWave Refractor",77,token_overlap_77%
+1232,"marvel 1995 ultra x men hunters stalkers Gold",1995,28,"Marvel 1995 Ultra X-Men ",8,2708,"1995 Metal Marvel - Gold Blasters",45,subset_term_match_45%
+1765,"marvel 2023 upper deck platinum Artist Auto Orange Rainbow",2023,69,"Marvel 2023 Upper Deck Platinum",8,5264,"2023 Upper Deck Marvel Platinum - Orange Rainbow Autographs",78,token_overlap_78%
+1964,"marvel 2024 topps chrome character autograph Black Wave",2024,74,"Marvel 2024 Topps Chrome ",8,2405,"2024 Topps Chrome Marvel - Marvel Character Autographs Black Wave Refractor",78,token_overlap_78%
+1973,"marvel 2024 topps chrome character autograph Sapphire",2024,74,"Marvel 2024 Topps Chrome ",8,2412,"2024 Topps Chrome Marvel - Marvel Character Autographs SuperFractor",71,token_overlap_71%
+1129,"marvel 1991 universe Hologram",1991,5,"Marvel 1991 Universe ",7,2622,"1991 Impel Marvel Universe II - Autographed Hologram",62,subset_term_match_62%
+1125,"marvel 1990 universe Diamond Preview",1990,6,"Marvel 1990 Universe",7,2614,"1990 Impel Marvel Universe",60,token_overlap_60%
+1294,"marvel 2008 masterpieces Fleer Avengers",2008,47,"Marvel 2008 Masterpieces ",7,2835,"2008 Upper Deck Marvel Masterpieces Set 2 - Avengers",57,token_overlap_57%
+1295,"marvel 2008 masterpieces Fleer Marvel Heroines",2008,47,"Marvel 2008 Masterpieces ",7,2285,"2008 Upper Deck Marvel Masterpieces Set 2 - Marvel Heroines",57,token_overlap_57%
+1138,"marvel 1992 comic images spider man prism",1992,12,"Marvel 1992 Comic Images Spider Man",6,2636,"1992 Marvel Comics UK Overkill/Exploits of Spider-Man",44,token_overlap_44%
+1140,"marvel 1992 comic images wolverine from then 'til now II prism",1992,13,"Marvel 1992 Comic Images Wolverine: From then 'til now II ",6,2277,"1992 SkyBox Marvel Masterpieces - Lost Marvel Bonus Cards",18,token_overlap_18%
+1252,"marvel 1996 ultra x men wolverine Holoflash",1996,36,"Marvel 1996 Ultra X-Men: Wolverine ",6,2742,"1996 Ultra Marvel Onslaught",50,token_overlap_50%
+2134,"marvel 2025 topps finest x men '97 omega level",2025,79,"marvel 2025 topps finest x men '97",6,6561,"2025 Topps Chrome Marvel - X-Men Giant Size 50th Anniversary",44,token_overlap_44%
+1184,"marvel 1994 ultra x men fatal attractions",1994,21,"Marvel 1994 Ultra X-Men ",6,2280,"1994 Flair Marvel Annual - Flair Marvel Universe PowerBlast",33,token_overlap_33%
+1185,"marvel 1994 ultra x men greatest battles",1994,21,"Marvel 1994 Ultra X-Men ",6,2280,"1994 Flair Marvel Annual - Flair Marvel Universe PowerBlast",33,token_overlap_33%
+1187,"marvel 1994 ultra x men team triptych",1994,21,"Marvel 1994 Ultra X-Men ",6,2280,"1994 Flair Marvel Annual - Flair Marvel Universe PowerBlast",33,token_overlap_33%
+1219,"marvel 1995 ultra spider man holoblast",1995,27,"Marvel 1995 Ultra Spider Man ",6,2691,"1995 Flair Marvel Annual - HoloBlast",50,token_overlap_50%
+1233,"marvel 1995 ultra x men hunters stalkers Silver",1995,28,"Marvel 1995 Ultra X-Men ",6,2712,"1995 Metal Marvel - Silver Flasher",45,subset_term_match_45%
+1237,"marvel 1996 fleer amalgam holopix",1996,29,"Marvel 1996 Fleer Amalgam ",6,2730,"1996 Fleer/SkyBox Marvel Masterpieces",60,token_overlap_60%
+1240,"marvel 1996 fleer spider man premium canvas",1996,31,"Marvel 1996 Fleer Spider Man Premium ",6,2737,"1996 Fleer/SkyBox Marvel Motion - Spider-Man Comic Promos",56,token_overlap_56%
+1471,"marvel 2022 beginnings vol 2 series 1 Black",2022,61,"Marvel 2022 Beginnings",6,4396,"2022 Fleer Ultra Marvel Avengers - Medallions Black Opal",43,subset_term_match_43%
+1475,"marvel 2022 beginnings vol 2 series 1 Green Rainbow Mirror World",2022,61,"Marvel 2022 Beginnings",6,4480,"2022 Upper Deck Allure Marvel Studios - Nemesis Green Rainbow",44,token_overlap_44%
+1344,"marvel 2016 masterpieces Silver Foil Achievements",2016,54,"Marvel 2016 Masterpieces ",5,3389,"2016 Upper Deck Marvel Masterpieces - Epic Purple Foil",53,subset_term_match_53%
+2043,"marvel 2024 topps chrome wolverine 50th anniversary Black Wave",2024,74,"Marvel 2024 Topps Chrome ",5,2427,"2024 Topps Chrome Marvel - Marvel Giant-Sized 50th Anniversary Black Wave Refractor",75,subset_term_match_75%
+1287,"marvel 2002 topps spider man movie Web-Shooter Clear",2002,45,"Marvel 2002 Topps Spider Man Movie ",5,2796,"2002 Marvel Spider-Man",44,token_overlap_44%
+1285,"marvel 2002 topps spider man movie Spidey Hologram",2002,45,"Marvel 2002 Topps Spider Man Movie ",5,2796,"2002 Marvel Spider-Man",50,token_overlap_50%
+1288,"marvel 2002 topps spider man movie Web-Tech Foil",2002,45,"Marvel 2002 Topps Spider Man Movie ",5,2796,"2002 Marvel Spider-Man",44,token_overlap_44%
+1074,"2024 skybox metal universe avengers a soldier's metal SP",2024,4,"2024 Skybox Metal Universe Avengers ",5,5654,"2024 SkyBox Metal Universe Marvel Avengers",76,subset_term_match_76%
+1126,"marvel 1990 universe Hologram",1990,6,"Marvel 1990 Universe",5,2614,"1990 Impel Marvel Universe",75,token_overlap_75%
+1153,"marvel 1992 x men series 1 hologram",1992,14,"Marvel 1992 X-Men Series 1 ",5,2628,"1992 Impel Marvel Universe",40,token_overlap_40%
+1154,"marvel 1992 x men series 1 hologram Autograph",1992,14,"Marvel 1992 X-Men Series 1 ",5,2628,"1992 Impel Marvel Universe",33,token_overlap_33%
+1724,"marvel 2023 upper deck anime volume 2 chibi Tier 4",2023,68,"Marvel 2023 Upper Deck Anime Volume 2",5,5004,"2023 Upper Deck Marvel Anime Vol. 2 - Chibi",75,token_overlap_75%
+1764,"marvel 2023 upper deck platinum Artist Auto Green Rainbow",2023,69,"Marvel 2023 Upper Deck Platinum",5,5259,"2023 Upper Deck Marvel Platinum - Green Rainbow Autographs",78,token_overlap_78%
+1852,"marvel 2024 skybox masterpieces '92 platinum battle spectrum",2024,71,"Marvel 2024 Skybox Masterpieces '92 Platinum ",5,6005,"2024 Upper Deck Marvel Masterpieces '92 Platinum - Battle Spectrum",78,token_overlap_78%
+2042,"marvel 2024 topps chrome wolverine 50th anniversary",2024,74,"Marvel 2024 Topps Chrome ",5,2426,"2024 Topps Chrome Marvel - Marvel Giant-Sized 50th Anniversary",75,token_overlap_75%
+2045,"marvel 2024 topps chrome wolverine 50th anniversary Superfractor",2024,74,"Marvel 2024 Topps Chrome ",5,2431,"2024 Topps Chrome Marvel - Marvel Giant-Sized 50th Anniversary SuperFractor",78,token_overlap_78%
+1926,"marvel 2024 skybox masterpieces xl Red Foil Canvas Variant",2024,73,"Marvel 2024 Skybox Masterpieces XL ",4,5641,"2024 SkyBox Marvel Masterpieces XL - Epic Purple Foil",72,subset_term_match_72%
+1122,"marvel 1990 comic images spider man team up Punisher",1990,,,4,2612,"1990 Comic Images Marvel Comics Jim Lee",44,token_overlap_44%
+1160,"marvel 1993 x men series 2 hologram",1993,17,"Marvel 1993 X-Men Series 2 ",4,2648,"1993 Marvel Comics Slamcaps Series 1",60,token_overlap_60%
+1172,"marvel 1994 fleer amazing spider man hologram",1994,19,"Marvel 1994 Fleer Amazing Spider Man",4,2667,"1994 Fleer Marvel Masterpieces Hildebrandt Brothers - Masterprints",43,token_overlap_43%
+1224,"marvel 1995 ultra spider man premier Spider Man Premier",1995,,,4,2687,"1995 Flair Marvel Annual",33,token_overlap_33%
+1482,"marvel 2022 beginnings vol 2 series 1 Violet Rainbow",2022,61,"Marvel 2022 Beginnings",4,4407,"2022 Fleer Ultra Marvel Avengers - Rainbow Foil",43,token_overlap_43%
+1133,"marvel 1992 comic images punisher guts & gunpowder Prism",1992,10,"Marvel 1992 Comic Images Punisher Guts & Gunpowder ",3,2277,"1992 SkyBox Marvel Masterpieces - Lost Marvel Bonus Cards",25,token_overlap_25%
+1134,"marvel 1992 comic images punisher guts & gunpowder Scratch & Sniff",1992,10,"Marvel 1992 Comic Images Punisher Guts & Gunpowder ",3,2277,"1992 SkyBox Marvel Masterpieces - Lost Marvel Bonus Cards",22,token_overlap_22%
+1914,"marvel 2024 skybox masterpieces xl Canvas Variant",2024,73,"Marvel 2024 Skybox Masterpieces XL ",3,5638,"2024 SkyBox Marvel Masterpieces XL",71,token_overlap_71%
+1927,"marvel 2024 skybox masterpieces xl Silver Foil Variant",2024,73,"Marvel 2024 Skybox Masterpieces XL ",3,5641,"2024 SkyBox Marvel Masterpieces XL - Epic Purple Foil",78,subset_term_match_78%
+1337,"marvel 2016 masterpieces Holofoil",2016,54,"Marvel 2016 Masterpieces ",3,3392,"2016 Upper Deck Marvel Masterpieces - Holofoil",67,token_overlap_67%
+1372,"marvel 2018 masterpieces What If",2018,56,"Marvel 2018 Masterpieces ",3,3795,"2018 Upper Deck Marvel Masterpieces - What If",71,token_overlap_71%
+1478,"marvel 2022 beginnings vol 2 series 1 Rainbow",2022,61,"Marvel 2022 Beginnings",3,4407,"2022 Fleer Ultra Marvel Avengers - Rainbow Foil",43,token_overlap_43%
+1479,"marvel 2022 beginnings vol 2 series 1 Rainbow Foil",2022,61,"Marvel 2022 Beginnings",3,4407,"2022 Fleer Ultra Marvel Avengers - Rainbow Foil",62,subset_term_match_62%
+2135,"marvel 2025 topps finest x men '97 omega level SuperFractor",2025,79,"marvel 2025 topps finest x men '97",3,6573,"2025 Topps Chrome Marvel - X-Men Giant Size 50th Anniversary SuperFractor",50,token_overlap_50%
+1474,"marvel 2022 beginnings vol 2 series 1 Blue Rainbow Cosmic Cube",2022,61,"Marvel 2022 Beginnings",2,4490,"2022 Upper Deck Allure Marvel Studios - Red Rainbow Autographs High Series",36,token_overlap_36%
+1249,"marvel 1996 masterpieces Double Impact",1996,34,"Marvel 1996 Masterpieces ",2,2732,"1996 Fleer/SkyBox Marvel Masterpieces - Double Impact",71,token_overlap_71%
+1245,"marvel 1996 fleer vision Hydro Armor",1996,33,"Marvel 1996 Fleer Vision ",2,2283,"1996 Fleer/SkyBox Marvel Vision - Marvel Vision Tattoos",67,token_overlap_67%
+1391,"marvel 2020 masterpieces Red Spectrum",2020,57,"Marvel 2020 Masterpieces ",2,4049,"2020 SkyBox Marvel Masterpieces - Red Spectrum Foil",71,token_overlap_71%
+1123,"marvel 1990 comic images spider man team up Wolverine",1990,,,2,2612,"1990 Comic Images Marvel Comics Jim Lee",44,token_overlap_44%
+1230,"marvel 1995 ultra x men all chromium Lethal Weapons Holo-Flash",1995,28,"Marvel 1995 Ultra X-Men ",2,2688,"1995 Flair Marvel Annual - Chromium",30,token_overlap_30%
+1292,"marvel 2008 masterpieces Die-Cut",2008,47,"Marvel 2008 Masterpieces ",2,2837,"2008 Upper Deck Marvel Masterpieces Set 2 - Hulk Die Cut",56,token_overlap_56%
+1334,"marvel 2016 masterpieces Gold Foil Achievements",2016,54,"Marvel 2016 Masterpieces ",2,3390,"2016 Upper Deck Marvel Masterpieces - Gold Foil Signature Series",63,subset_term_match_63%
+1338,"marvel 2016 masterpieces Kaleidoscope",2016,54,"Marvel 2016 Masterpieces ",2,3380,"2016 Upper Deck Marvel Masterpieces",60,token_overlap_60%
+1343,"marvel 2016 masterpieces Silver Autograph",2016,54,"Marvel 2016 Masterpieces ",2,3404,"2016 Upper Deck Marvel Masterpieces - Silver Spectrum Autograph",73,subset_term_match_73%
+1473,"marvel 2022 beginnings vol 2 series 1 Blue Cosmic Cube",2022,61,"Marvel 2022 Beginnings",2,4401,"2022 Fleer Ultra Marvel Avengers - Medallions Sappire Blue",38,token_overlap_38%
+1484,"marvel 2022 beginnings vol 2 series 1 White Rainbow Beyond",2022,61,"Marvel 2022 Beginnings",2,4407,"2022 Fleer Ultra Marvel Avengers - Rainbow Foil",38,token_overlap_38%
+1622,"marvel 2023 eternals Immortals And Mortals",2023,,,2,5087,"2023 Upper Deck Marvel Eternals - Immortals and Mortals",75,token_overlap_75%
+1579,"marvel 2022 ultra avengers Silver Age",2022,64,"Marvel 2022 Ultra Avengers ",2,4393,"2022 Fleer Ultra Marvel Avengers - Jambalaya",67,token_overlap_67%
+1504,"marvel 2022 metal universe spider man Light FX Neon Blue",2022,63,"Marvel 2022 Metal Universe Spider Man ",1,4401,"2022 Fleer Ultra Marvel Avengers - Medallions Sappire Blue",30,token_overlap_30%
+1149,"marvel 1992 masterpieces Rainbow",1992,,,1,1,"1992 SkyBox Marvel Masterpieces",75,token_overlap_75%
+2240,"Marvel 2025 Topps Finest X-Men '97 Da Nanana Naaa",2025,79,"marvel 2025 topps finest x men '97",1,6561,"2025 Topps Chrome Marvel - X-Men Giant Size 50th Anniversary",44,token_overlap_44%
+1148,"marvel 1992 masterpieces Purple Crystals",1992,,,1,2643,"1992 SkyBox Marvel Masterpieces - Promos",60,token_overlap_60%
+1145,"marvel 1992 masterpieces Blue Traxx",1992,,,1,2643,"1992 SkyBox Marvel Masterpieces - Promos",60,token_overlap_60%
+1243,"marvel 1996 fleer vision Deep Space Armor",1996,33,"Marvel 1996 Fleer Vision ",1,2283,"1996 Fleer/SkyBox Marvel Vision - Marvel Vision Tattoos",57,token_overlap_57%
+1254,"marvel 1996 ultra x men wolverine Promo",1996,36,"Marvel 1996 Ultra X-Men: Wolverine ",1,2742,"1996 Ultra Marvel Onslaught",50,token_overlap_50%
+1259,"marvel 1997 fleer spider man international Dave DeVries",1997,,,1,2745,"1997 Fleer Spider-Man - Marvel OverPower Characters",63,token_overlap_63%
+1244,"marvel 1996 fleer vision Exo Battle Armor",1996,33,"Marvel 1996 Fleer Vision ",1,2283,"1996 Fleer/SkyBox Marvel Vision - Marvel Vision Tattoos",57,token_overlap_57%
+1253,"marvel 1996 ultra x men wolverine Mirage",1996,36,"Marvel 1996 Ultra X-Men: Wolverine ",1,2744,"1996 Ultra Marvel Onslaught - Mirage",67,token_overlap_67%
+1286,"marvel 2002 topps spider man movie Title Card",2002,45,"Marvel 2002 Topps Spider Man Movie ",1,2796,"2002 Marvel Spider-Man",50,token_overlap_50%
+1291,"marvel 2008 masterpieces Bronze Marvel Knights",2008,47,"Marvel 2008 Masterpieces ",1,2286,"2008 Upper Deck Marvel Masterpieces Set 3 - Marvel Knights",57,token_overlap_57%
+1246,"marvel 1996 fleer vision Spider-Man Team-Up",1996,33,"Marvel 1996 Fleer Vision ",1,2737,"1996 Fleer/SkyBox Marvel Motion - Spider-Man Comic Promos",56,token_overlap_56%
+1274,"marvel 1998 the silver age autograph Blue Ink",1998,42,"Marvel 1998 The Silver Age ",1,2772,"1998 SkyBox Marvel: The Silver Age",65,subset_term_match_65%
+1383,"marvel 2020 masterpieces Cyan Printing Plate",2020,57,"Marvel 2020 Masterpieces ",1,4044,"2020 SkyBox Marvel Masterpieces - Printing Plates Cyan",79,subset_term_match_79%
+1378,"marvel 2020 masterpieces Artist Autograph",2020,57,"Marvel 2020 Masterpieces ",1,4030,"2020 SkyBox Marvel Masterpieces",60,token_overlap_60%
+1393,"marvel 2020 masterpieces Speckle",2020,57,"Marvel 2020 Masterpieces ",1,4030,"2020 SkyBox Marvel Masterpieces",75,token_overlap_75%
+1379,"marvel 2020 masterpieces Autograph",2020,57,"Marvel 2020 Masterpieces ",1,4030,"2020 SkyBox Marvel Masterpieces",75,token_overlap_75%
+1120,"marvel 1990 comic images spider man team up Gray Hulk",1990,,,1,2612,"1990 Comic Images Marvel Comics Jim Lee",40,token_overlap_40%
+1121,"marvel 1990 comic images spider man team up Hulk",1990,,,1,2612,"1990 Comic Images Marvel Comics Jim Lee",44,token_overlap_44%
+1130,"marvel 1991 universe Hologram Stan Lee",1991,5,"Marvel 1991 Universe ",1,2622,"1991 Impel Marvel Universe II - Autographed Hologram",62,subset_term_match_62%
+1197,"marvel 1995 flair Buyback",1995,,,1,2687,"1995 Flair Marvel Annual",75,token_overlap_75%
+1205,"marvel 1995 masterpieces Emotion Signature Series",1995,,,1,2700,"1995 Fleer Marvel Masterpieces - E-Motion Signature Series",76,subset_term_match_76%
+1206,"marvel 1995 masterpieces Emotion Signatures",1995,,,1,2698,"1995 Fleer Marvel Masterpieces - Canvas",60,token_overlap_60%
+1216,"marvel 1995 ultra spider man Gold Foil Signature",1995,,,1,2700,"1995 Fleer Marvel Masterpieces - E-Motion Signature Series",38,token_overlap_38%
+1162,"marvel 1994 flair Inaugural Edition",1994,18,"Marvel 1994 Flair ",1,2661,"1994 Flair Marvel Annual",60,token_overlap_60%
+1164,"marvel 1994 flair Part I",1994,18,"Marvel 1994 Flair ",1,2661,"1994 Flair Marvel Annual",75,token_overlap_75%
+1165,"marvel 1994 flair Part II",1994,18,"Marvel 1994 Flair ",1,2661,"1994 Flair Marvel Annual",60,token_overlap_60%
+1166,"marvel 1994 flair Part III",1994,18,"Marvel 1994 Flair ",1,2661,"1994 Flair Marvel Annual",60,token_overlap_60%
+1167,"marvel 1994 flair Part IV",1994,18,"Marvel 1994 Flair ",1,2661,"1994 Flair Marvel Annual",60,token_overlap_60%
+1168,"marvel 1994 flair Part V",1994,18,"Marvel 1994 Flair ",1,2661,"1994 Flair Marvel Annual",75,token_overlap_75%
+1169,"marvel 1994 flair Part VI",1994,18,"Marvel 1994 Flair ",1,2661,"1994 Flair Marvel Annual",60,token_overlap_60%
+1178,"marvel 1994 masterpieces Gold Foil Signatures",1994,20,"Marvel 1994 Masterpieces ",1,2665,"1994 Fleer Marvel Masterpieces Hildebrandt Brothers - Gold Foil Signature",63,subset_term_match_63%
+1215,"marvel 1995 ultra spider man ClearChrome",1995,27,"Marvel 1995 Ultra Spider Man ",1,2687,"1995 Flair Marvel Annual",33,token_overlap_33%
+1223,"marvel 1995 ultra spider man premier Gold Foil Signature Series",1995,,,1,2700,"1995 Fleer Marvel Masterpieces - E-Motion Signature Series",40,token_overlap_40%
+1225,"marvel 1995 ultra spider man Team Ups Gold Foil Signature Series",1995,,,1,2700,"1995 Fleer Marvel Masterpieces - E-Motion Signature Series",36,token_overlap_36%
+1264,"marvel 1997 fleer x men oasis Chromium",1997,39,"Marvel 1997 Fleer X-Men Oasis ",1,2755,"1997 Fleer/SkyBox Marvel Premium QFX",50,token_overlap_50%
+1273,"marvel 1998 the silver age autograph Black Ink",1998,42,"Marvel 1998 The Silver Age ",1,2772,"1998 SkyBox Marvel: The Silver Age",63,token_overlap_63%
+1293,"marvel 2008 masterpieces Fantastic Four Memorabilia",2008,47,"Marvel 2008 Masterpieces ",1,2836,"2008 Upper Deck Marvel Masterpieces Set 2 - Fantastic Four Movie Memorabilia",60,token_overlap_60%
+1336,"marvel 2016 masterpieces Gold Foil Signatures",2016,,,1,3390,"2016 Upper Deck Marvel Masterpieces - Gold Foil Signature Series",63,subset_term_match_63%
+1342,"marvel 2016 masterpieces Red Gallery",2016,,,1,3380,"2016 Upper Deck Marvel Masterpieces",60,token_overlap_60%
+1348,"marvel 2016 masterpieces What If Auto",2016,,,1,3407,"2016 Upper Deck Marvel Masterpieces - What If...",71,token_overlap_71%
+1371,"marvel 2018 masterpieces Silver Spectrum Foil Autograph",2018,,,1,3777,"2018 Upper Deck Marvel Masterpieces - Gold Foil",57,token_overlap_57%
+1345,"marvel 2016 masterpieces Silver Spectrum Auto",2016,54,"Marvel 2016 Masterpieces ",1,3404,"2016 Upper Deck Marvel Masterpieces - Silver Spectrum Autograph",63,token_overlap_63%
+1347,"marvel 2016 masterpieces What If Achievements",2016,54,"Marvel 2016 Masterpieces ",1,3407,"2016 Upper Deck Marvel Masterpieces - What If...",71,token_overlap_71%
+1368,"marvel 2018 masterpieces Preliminary Art",2018,56,"Marvel 2018 Masterpieces ",1,3785,"2018 Upper Deck Marvel Masterpieces - Preliminary Art",71,token_overlap_71%
+1369,"marvel 2018 masterpieces Rainbow Foil",2018,56,"Marvel 2018 Masterpieces ",1,3783,"2018 Upper Deck Marvel Masterpieces - Orange Foil",62,subset_term_match_62%
+1370,"marvel 2018 masterpieces Silver Spectrum Auto",2018,56,"Marvel 2018 Masterpieces ",1,3766,"2018 Upper Deck Marvel Masterpieces",50,token_overlap_50%
+1457,"marvel 2022 allure Orange Slice",2022,60,"Marvel 2022 Allure ",1,4450,"2022 Upper Deck Allure Marvel Studios",50,token_overlap_50%
+1467,"marvel 2022 allure Sunrise Auto",2022,60,"Marvel 2022 Allure ",1,4495,"2022 Upper Deck Allure Marvel Studios - Sunrise",57,token_overlap_57%
+1451,"marvel 2022 allure infinity stones",2022,60,"Marvel 2022 Allure ",1,4450,"2022 Upper Deck Allure Marvel Studios",50,token_overlap_50%
+1452,"marvel 2022 allure infinity stones Gold",2022,60,"Marvel 2022 Allure ",1,4462,"2022 Upper Deck Allure Marvel Studios - Infinity Stones Mind Stone Gold",60,subset_term_match_60%
+1454,"marvel 2022 allure infinity stones Power Stone",2022,60,"Marvel 2022 Allure ",1,4463,"2022 Upper Deck Allure Marvel Studios - Infinity Stones Power Stone",70,token_overlap_70%
+1453,"marvel 2022 allure infinity stones Mind Stone",2022,60,"Marvel 2022 Allure ",1,4461,"2022 Upper Deck Allure Marvel Studios - Infinity Stones Mind Stone",70,token_overlap_70%
+1476,"marvel 2022 beginnings vol 2 series 1 Orange Rainbow Bridge",2022,61,"Marvel 2022 Beginnings",1,4402,"2022 Fleer Ultra Marvel Avengers - Orange Foil",38,token_overlap_38%
+1477,"marvel 2022 beginnings vol 2 series 1 Purple Rainbow Reality",2022,61,"Marvel 2022 Beginnings",1,4487,"2022 Upper Deck Allure Marvel Studios - Purple Rainbow Die Cut",40,token_overlap_40%
+1481,"marvel 2022 beginnings vol 2 series 1 Red Supernova",2022,61,"Marvel 2022 Beginnings",1,4424,"2022 SkyBox Marvel Masterpieces - Battle Spectrum Red",43,token_overlap_43%
+1483,"marvel 2022 beginnings vol 2 series 1 White Rainbow",2022,61,"Marvel 2022 Beginnings",1,4407,"2022 Fleer Ultra Marvel Avengers - Rainbow Foil",43,token_overlap_43%
+1505,"marvel 2022 metal universe spider man Light FX Pink",2022,63,"Marvel 2022 Metal Universe Spider Man ",1,4415,"2022 Fleer Ultra Marvel Avengers - Universe Power Supreme",33,token_overlap_33%
+1514,"marvel 2022 metal universe spider man Platinum Portraits",2022,63,"Marvel 2022 Metal Universe Spider Man ",1,4399,"2022 Fleer Ultra Marvel Avengers - Medallions Platinum",38,token_overlap_38%
+1519,"marvel 2022 metal universe spider man Skyscraper Shadow Box",2022,63,"Marvel 2022 Metal Universe Spider Man ",1,4415,"2022 Fleer Ultra Marvel Avengers - Universe Power Supreme",33,token_overlap_33%
+1488,"marvel 2022 masterpieces Gold Signature",2022,62,"Marvel 2022 Masterpieces ",1,4433,"2022 SkyBox Marvel Masterpieces - Gold Foil",67,token_overlap_67%
+2160,"Wolverine [Toy Biz Promo]",2025,,,0,,,0,no_match_found
+2161,"Wolverine [Mutant Genesis]",2025,,,0,,,0,no_match_found
+2162,"Spider-Man [Part V]",2025,,,0,6352,"2025 Kakawow Aura Marvel - The Legend of Spider-Man Black",20,token_overlap_20%
+2164,"Secret Lair X Marvel's Deadpool [Rainbow Foil]",2025,,,0,6767,"2025 Topps Now Marvel - Blue Foil",22,subset_term_match_22%
+2165,"Spider-Man Vs. Doctor Octopus [Battle Spectra]",2025,,,0,6352,"2025 Kakawow Aura Marvel - The Legend of Spider-Man Black",20,token_overlap_20%
+2166,"Wolverine [VirtualVision]",2025,,,0,,,0,no_match_found
+2167,"Captain America",2025,,,0,6596,"2025 Topps Chrome Marvel Studios - Captain America Refractor",25,token_overlap_25%
+2168,"Captain America [VirtualVision]",2025,,,0,6596,"2025 Topps Chrome Marvel Studios - Captain America Refractor",25,token_overlap_25%
+2163,"Hulk [Promo]",2025,,,0,6511,"2025 Topps Chrome Marvel - Hulk Green Lazer",14,token_overlap_14%
+2169,"Hulk [VirtualVision]",2025,,,0,6511,"2025 Topps Chrome Marvel - Hulk Green Lazer",14,token_overlap_14%
+2170,"Fantastic Four [Mini-Magazines]",2025,,,0,6613,"2025 Topps Chrome Marvel Studios - Fantastic Four Autographs",25,token_overlap_25%
+1147,"marvel 1992 masterpieces lost marvel Autograph",1992,7,"Marvel 1992 Masterpieces ",0,1,"1992 SkyBox Marvel Masterpieces",75,same_main_set_75%
+1146,"marvel 1992 masterpieces lost marvel",1992,,,0,1,"1992 SkyBox Marvel Masterpieces",75,token_overlap_75%
+2246,"Single Script Art - Blue",2025,82,"2025 Kakawow Aura Marvel",0,6336,"2025 Kakawow Aura Marvel - Script Art Single Blue",65,same_main_set_65%
+1163,"marvel 1994 flair Mutant Genesis",1994,18,"Marvel 1994 Flair ",0,2661,"1994 Flair Marvel Annual",60,token_overlap_60%
+1180,"marvel 1994 masterpieces Misprint",1994,20,"Marvel 1994 Masterpieces ",0,2661,"1994 Flair Marvel Annual",50,token_overlap_50%
