@@ -10,6 +10,7 @@ import { Star, Heart, Plus, Trash2, Search, Grid3X3, List } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { WishlistItem, CardWithSet } from "@shared/schema";
+import { formatCardName, formatSetName } from "@/lib/formatTitle";
 
 export default function Wishlist() {
   const [, setLocation] = useLocation();
@@ -193,7 +194,7 @@ export default function Wishlist() {
                     {item.card.frontImageUrl ? (
                       <img
                         src={item.card.frontImageUrl}
-                        alt={item.card.name}
+                        alt={formatCardName(item.card.name)}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                       />
                     ) : (
@@ -217,10 +218,10 @@ export default function Wishlist() {
                   {/* Card Info */}
                   <div className="p-3 space-y-1">
                     <h3 className="font-semibold text-sm text-gray-900 line-clamp-2 leading-tight">
-                      {item.card.name}
+                      {formatCardName(item.card.name)}
                     </h3>
                     <p className="text-xs text-gray-600">
-                      {item.card.set.name} #{item.card.cardNumber}
+                      {formatSetName(item.card.set.name)} #{item.card.cardNumber}
                     </p>
                     
                     {item.maxPrice && (
@@ -277,13 +278,13 @@ export default function Wishlist() {
                       {item.card.frontImageUrl ? (
                         <img
                           src={item.card.frontImageUrl}
-                          alt={item.card.name}
+                          alt={formatCardName(item.card.name)}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                         />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
                           <span className="text-red-600 font-bold text-xs text-center px-1">
-                            {item.card.name}
+                            {formatCardName(item.card.name)}
                           </span>
                         </div>
                       )}
@@ -294,10 +295,10 @@ export default function Wishlist() {
                       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-base md:text-lg text-gray-900 truncate">
-                            {item.card.name}
+                            {formatCardName(item.card.name)}
                           </h3>
                           <p className="text-sm text-gray-600 mt-1">
-                            {item.card.set.name} #{item.card.cardNumber}
+                            {formatSetName(item.card.set.name)} #{item.card.cardNumber}
                           </p>
                           <p className="text-xs text-gray-500 mt-1">
                             {item.card.rarity}

@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
 import { useCardPricing } from "@/hooks/useCardPricing";
 import type { CardWithSet, CollectionItem, InsertUserCollection, InsertUserWishlist, WishlistItem } from "@shared/schema";
+import { formatCardName, formatSetName } from "@/lib/formatTitle";
 
 interface TrendingCardProps {
   card: CardWithSet;
@@ -60,7 +61,7 @@ function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
           {/* Front overlay with card name */}
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4">
             <h3 className="text-white font-bold text-lg tracking-wide font-bebas">
-              {card.name}
+              {formatCardName(card.name)}
             </h3>
           </div>
 
@@ -83,13 +84,13 @@ function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
         <div className="absolute inset-0 w-full h-full backface-hidden rotate-y-180 bg-gradient-to-br from-gray-900 to-black rounded-lg p-2 md:p-4 flex flex-col justify-between text-white shadow-lg">
           <div>
             <h3 className="font-bold text-sm md:text-xl mb-1 md:mb-2 font-bebas tracking-wide text-center leading-tight">
-              {card.name}
+              {formatCardName(card.name)}
             </h3>
             
             <div className="space-y-1 md:space-y-3 text-xs md:text-sm">
               <div>
                 <span className="text-gray-300">Set:</span>
-                <span className="ml-1 md:ml-2 text-xs">{(card as any).setName || card.set?.name}</span>
+                <span className="ml-1 md:ml-2 text-xs">{formatSetName((card as any).setName || card.set?.name)}</span>
               </div>
 
               <div>

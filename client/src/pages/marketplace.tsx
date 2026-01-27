@@ -402,7 +402,7 @@ export default function Marketplace() {
                   <SelectItem value="all">All Sets</SelectItem>
                   {cardSets?.map((set) => (
                     <SelectItem key={set.id} value={set.id.toString()}>
-                      {set.name}
+                      {formatSetName(set.name)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -456,7 +456,7 @@ export default function Marketplace() {
                     {item.card.frontImageUrl ? (
                       <img
                         src={item.card.frontImageUrl}
-                        alt={item.card.name}
+                        alt={formatCardName(item.card.name)}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                         loading="lazy"
                         decoding="async"
@@ -667,7 +667,7 @@ export default function Marketplace() {
                   {selectedItem.card.frontImageUrl ? (
                     <img 
                       src={selectedItem.card.frontImageUrl} 
-                      alt={selectedItem.card.name}
+                      alt={formatCardName(selectedItem.card.name)}
                       className="w-full h-full object-cover"
                     />
                   ) : (

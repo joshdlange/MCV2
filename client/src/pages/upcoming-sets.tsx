@@ -8,6 +8,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import useEmblaCarousel from 'embla-carousel-react';
+import { formatSetName } from "@/lib/formatTitle";
 
 interface UpcomingSet {
   id: number;
@@ -162,7 +163,7 @@ function UpcomingSetCarousel({ sets }: { sets: UpcomingSet[] }) {
                     <div className="aspect-video bg-gray-100 overflow-hidden relative">
                       <img 
                         src={set.thumbnailUrl} 
-                        alt={set.name} 
+                        alt={formatSetName(set.name)} 
                         className="w-full h-full object-cover"
                       />
                       {set.dateConfidence === 'confirmed' && (
@@ -175,7 +176,7 @@ function UpcomingSetCarousel({ sets }: { sets: UpcomingSet[] }) {
                   <CardContent className="p-5 space-y-4">
                     <div>
                       <h3 className="text-xl font-bebas tracking-wide text-gray-900 mb-2" data-testid={`text-carousel-setname-${set.id}`}>
-                        {set.name}
+                        {formatSetName(set.name)}
                       </h3>
                       
                       <div className="flex flex-wrap gap-2 mb-3">
@@ -365,7 +366,7 @@ export default function UpcomingSets() {
                       <CardContent className="p-6 space-y-4">
                         <div>
                           <h3 className="text-xl font-bold text-gray-900 mb-2" data-testid={`text-setname-${set.id}`}>
-                            {set.name}
+                            {formatSetName(set.name)}
                           </h3>
                           <div className="flex flex-wrap gap-2">
                             {set.manufacturer && (

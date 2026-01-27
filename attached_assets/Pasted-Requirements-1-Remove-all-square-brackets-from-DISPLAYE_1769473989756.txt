@@ -1,0 +1,94 @@
+Requirements
+1) Remove all square brackets from DISPLAYED names
+
+Any card name or set name containing [ or ] should have those characters removed in the UI only.
+
+Examples:
+
+Iron Man [Blue] #1 → Iron Man Blue #1
+
+Thena [SuperFractor] #2 → Thena SuperFractor #2
+
+marvel 2024 upper deck spider man renditions impel
+→ Marvel 2024 Upper Deck Spider Man Renditions Impel
+
+⚠️ Do not mutate database values unless explicitly instructed later.
+This should be handled via a shared formatter.
+
+2) Capitalization rules (must be consistent everywhere)
+
+Create or update a single shared formatter utility (likely formatTitle.ts) and use it consistently.
+
+Capitalization rules:
+
+First letter must always be capitalized
+
+Title-case words (except small words like “of”, “and”, “the”, unless at start)
+
+Preserve numbers and symbols
+
+Preserve known acronyms if already uppercase (XMEN, SPIDER-MAN, etc.)
+
+Normalize excessive spacing
+
+Examples:
+
+marvel card vault → Marvel Card Vault
+
+2024 marvel masterpieces featuring nauel grego
+→ 2024 Marvel Masterpieces Featuring Nauel Grego
+
+3) Where this MUST be applied
+
+Apply the formatter to all display points, including but not limited to:
+
+Set list
+
+Set detail header
+
+Card grid tiles
+
+Card detail modal
+
+Binder view
+
+Marketplace listing titles
+
+Wishlist
+
+Any “Back to Sets” / breadcrumb headers
+
+Do not rely on “some components already do it.”
+Ensure all user-visible titles pass through the formatter.
+
+4) Implementation constraints (important)
+
+Use one formatter function
+
+No regex scattered across components
+
+No DB migrations
+
+No backend changes
+
+No renaming of image files or URLs
+
+5) Deliverables (required)
+
+When finished, report:
+
+Formatter function code
+
+Files where it was applied
+
+Confirmation that no DB writes occur
+
+3 example before/after strings from the app
+
+Safety Rule
+
+If a title is already clean and capitalized, do not change it.
+
+Why this matters
+
+Inconsistent casing and leftover bracket syntax makes the app feel unpolished and hurts trust. This fix must be deterministic, reversible, and low-risk.

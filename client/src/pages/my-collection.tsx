@@ -15,6 +15,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
 import type { CollectionItem, CardWithSet, CardSet } from "@shared/schema";
+import { formatCardName, formatSetName } from "@/lib/formatTitle";
 
 export default function MyCollection() {
   const [, setLocation] = useLocation();
@@ -758,13 +759,13 @@ export default function MyCollection() {
                         {('card' in item ? item.card.frontImageUrl : item.frontImageUrl) ? (
                           <img
                             src={('card' in item ? item.card.frontImageUrl : item.frontImageUrl) ?? ''}
-                            alt={'card' in item ? item.card.name : item.name}
+                            alt={'card' in item ? formatCardName(item.card.name) : formatCardName(item.name)}
                             className="w-full h-full object-cover"
                           />
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
                             <span className="text-red-600 font-bold text-xs text-center px-1">
-                              {('card' in item ? item.card.name : item.name).substring(0, 8)}
+                              {formatCardName(('card' in item ? item.card.name : item.name)).substring(0, 8)}
                             </span>
                           </div>
                         )}
@@ -775,10 +776,10 @@ export default function MyCollection() {
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0 pr-2">
                             <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-1">
-                              {'card' in item ? item.card.name : item.name}
+                              {formatCardName('card' in item ? item.card.name : item.name)}
                             </h3>
                             <p className="text-xs text-gray-500 mb-1">
-                              {'card' in item ? item.card.set.year + ' ' + item.card.set.name : item.set.year + ' ' + item.set.name}
+                              {'card' in item ? item.card.set.year + ' ' + formatSetName(item.card.set.name) : item.set.year + ' ' + formatSetName(item.set.name)}
                             </p>
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-medium text-gray-600">
@@ -870,13 +871,13 @@ export default function MyCollection() {
                     {set.firstCardImage ? (
                       <img
                         src={set.firstCardImage}
-                        alt={set.name}
+                        alt={formatSetName(set.name)}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
                         <span className="text-red-600 font-bold text-sm text-center px-4">
-                          {set.name}
+                          {formatSetName(set.name)}
                         </span>
                       </div>
                     )}
@@ -918,7 +919,7 @@ export default function MyCollection() {
                   <div className="p-4 space-y-3">
                     <div>
                       <h3 className="font-semibold text-gray-900 line-clamp-2 leading-tight">
-                        {set.name}
+                        {formatSetName(set.name)}
                       </h3>
                       <p className="text-sm text-gray-600">{set.year}</p>
                     </div>
@@ -1000,13 +1001,13 @@ export default function MyCollection() {
                         {set.firstCardImage ? (
                           <img
                             src={set.firstCardImage}
-                            alt={set.name}
+                            alt={formatSetName(set.name)}
                             className="w-full h-full object-cover"
                           />
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
                             <span className="text-red-600 font-bold text-xs text-center px-1">
-                              {set.name.substring(0, 10)}
+                              {formatSetName(set.name).substring(0, 10)}
                             </span>
                           </div>
                         )}
@@ -1016,7 +1017,7 @@ export default function MyCollection() {
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-gray-900 text-lg md:text-base truncate">{set.name}</h3>
+                            <h3 className="font-semibold text-gray-900 text-lg md:text-base truncate">{formatSetName(set.name)}</h3>
                             <p className="text-sm text-gray-600 mt-1">{set.year}</p>
                             
                             {/* Progress Bar */}

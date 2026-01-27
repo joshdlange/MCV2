@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, BookOpen, Grid3X3, Sparkles, ArrowLeft } fro
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { CollectionItem, CardWithSet } from "@shared/schema";
+import { formatCardName, formatSetName } from "@/lib/formatTitle";
 
 // Fallback flag - set to false to revert to old layout if needed
 const USE_NEW_BINDER_LAYOUT = true;
@@ -39,7 +40,8 @@ function BinderSlot({ card, slotIndex, onClick, isPageComplete }: BinderSlotProp
   const isOwned = card.owned;
   const rawImageUrl = card.item?.card?.frontImageUrl || card.card?.frontImageUrl;
   const imageUrl = rawImageUrl && rawImageUrl !== PLACEHOLDER_IMAGE ? rawImageUrl : null;
-  const cardName = card.item?.card?.name || card.card?.name || `Card #${card.cardNumber}`;
+  const rawCardName = card.item?.card?.name || card.card?.name || `Card #${card.cardNumber}`;
+  const cardName = formatCardName(rawCardName);
   const actualCardNumber = card.card?.cardNumber || card.item?.card?.cardNumber || String(card.cardNumber);
   const isInsert = card.item?.card?.isInsert || card.card?.isInsert;
 

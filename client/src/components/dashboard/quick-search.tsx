@@ -6,6 +6,7 @@ import { Star, Search } from "lucide-react";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { useLocation } from "wouter";
 import type { CardWithSet, CardSet } from "@shared/schema";
+import { formatSetName } from "@/lib/formatTitle";
 
 export function QuickSearch() {
   const [, setLocation] = useLocation();
@@ -61,7 +62,7 @@ export function QuickSearch() {
             <SelectItem value="all">All Sets</SelectItem>
             {cardSets?.map((set) => (
               <SelectItem key={set.id} value={set.id.toString()}>
-                {set.name}
+                {formatSetName(set.name)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -92,7 +93,7 @@ export function QuickSearch() {
             <SelectItem value="all">All Sets</SelectItem>
             {cardSets?.map((set) => (
               <SelectItem key={set.id} value={set.id.toString()}>
-                {set.name}
+                {formatSetName(set.name)}
               </SelectItem>
             ))}
           </SelectContent>

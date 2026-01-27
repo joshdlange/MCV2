@@ -18,6 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation, useParams, Link } from "wouter";
 import type { CardSet, CardWithSet, CollectionItem, MainSet } from "@shared/schema";
+import { formatCardName, formatSetName } from "@/lib/formatTitle";
 
 interface CardFilters {
   setId?: number;

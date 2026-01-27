@@ -9,6 +9,7 @@ import { CardFilters } from "@/types";
 import { Search, ChevronDown, ChevronUp } from "lucide-react";
 import type { CardSet } from "@shared/schema";
 import { useLocation } from "wouter";
+import { formatSetName } from "@/lib/formatTitle";
 
 export default function CardSearch() {
   const [location] = useLocation();
@@ -99,7 +100,7 @@ export default function CardSearch() {
                     <SelectItem value="all">All Sets</SelectItem>
                     {cardSets?.map((set) => (
                       <SelectItem key={set.id} value={set.id.toString()}>
-                        {set.name}
+                        {formatSetName(set.name)}
                       </SelectItem>
                     ))}
                   </SelectContent>
