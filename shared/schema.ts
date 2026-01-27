@@ -659,6 +659,19 @@ export const payoutRequests = pgTable("payout_requests", {
   statusIdx: index("payout_requests_status_idx").on(table.status),
 }));
 
+export const cardSetMigrations = pgTable("card_set_migrations", {
+  id: serial("id").primaryKey(),
+  legacySetId: integer("legacy_set_id").references(() => cardSets.id).notNull(),
+  canonicalSetId: integer("canonical_set_id").references(() => cardSets.id).notNull(),
+  confidence: integer("confidence").notNull(),
+  reason: text("reason"),
+  status: text("status").default("pending").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  legacySetIdIdx: index("card_set_migrations_legacy_set_id_idx").on(table.legacySetId),
+  canonicalSetIdIdx: index("card_set_migrations_canonical_set_id_idx").on(table.canonicalSetId),
+}));
+
 // Marketplace Relations
 export const listingsRelations = relations(listings, ({ one, many }) => ({
   seller: one(users, {

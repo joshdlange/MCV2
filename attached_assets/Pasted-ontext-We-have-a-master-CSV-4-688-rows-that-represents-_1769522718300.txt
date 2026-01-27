@@ -1,0 +1,171 @@
+ontext:
+We have a master CSV (4,688 rows) that represents the ONLY set/subset structure we want going forward. The DB has messy/duplicate/wrong subsets from prior imports (e.g., “Gold Signature” vs “Gold Sig”). Some sets may intentionally be “unassigned” to a main set today.
+
+Goal:
+Create the official structure in the DB based on the CSV and safely migrate existing sets/cards into it without breaking production.
+
+Hard Rules
+
+No deletes.
+
+No renames of existing production records in place.
+
+No moving cards yet until a mapping preview is generated and I approve.
+
+This is live in production with ~100 users → smallest changes possible, reversible steps.
+
+Phase 1 — Import CSV structure (ADD-ONLY, safe)
+1A) Upsert main_sets (from CSV)
+
+Create or find main_sets rows for each distinct “Main Set Name”
+
+Use a stable slug generator (lowercase, hyphenated) so duplicates don’t occur
+
+Do not overwrite existing notes/thumbnail unless empty
+
+1B) Upsert card_sets (from CSV)
+
+For each CSV row:
+
+Determine target main_set_id (from the main set created above)
+
+Create a card_sets row if it does not exist as a CSV-defined set
+
+Fields:
+
+year = Set Year
+
+name = exact desired display name derived from:
+
+If Sub Set Name is “Base”: use "YEAR Main Set Name" or "YEAR Main Set Name - Base" (whichever our app already expects)
+
+Otherwise: "YEAR Main Set Name - Sub Set Name"
+
+slug = unique and stable based on year + main set + subset
+
+main_set_id = parent
+
+This step must be add-only: do not delete or change existing “legacy” card_sets.
+
+Deliverable after Phase 1
+
+Output counts:
+
+how many main_sets added
+
+how many card_sets added
+
+how many already existed
+
+Phase 2 — Create a safe mapping system (no card moves yet)
+
+We need to map existing DB card_sets into the new CSV-defined card_sets.
+
+2A) Add mapping table (preferred)
+
+Create a new table, e.g. card_set_migrations (or card_set_aliases):
+
+id serial PK
+
+legacy_set_id integer FK → card_sets.id (existing wrong/duplicate)
+
+canonical_set_id integer FK → card_sets.id (CSV-defined target)
+
+confidence integer (0–100)
+
+reason text
+
+created_at timestamp default now()
+
+(If you cannot add a new table, create a CSV export mapping file only — but table is preferred.)
+
+2B) Generate a “Mapping Preview Report” (NO DB writes)
+
+For every existing DB card_set that is NOT an exact CSV match (including DB_ONLY and CLOSE_MATCH), generate a report:
+
+Fields:
+
+legacy_set_id
+
+legacy_name
+
+legacy_year
+
+legacy_main_set_id (if exists)
+
+legacy_main_set_name (if exists)
+
+legacy_card_count
+
+suggested_canonical_set_id
+
+suggested_canonical_name
+
+suggested_confidence
+
+reason (e.g., “same year + high token overlap”, “subset token match”, etc.)
+
+Rules for suggestion:
+
+Match year first (must match)
+
+Prefer matches where:
+
+main set name is very similar
+
+subset tokens match (“Gold Signature” ~ “Gold Sig”)
+
+Do NOT suggest a match if confidence < 80
+
+Put those in a “NEEDS_REVIEW” bucket
+
+Outputs:
+
+mapping-preview-high-confidence.csv (confidence >= 80)
+
+mapping-preview-needs-review.csv (confidence < 80)
+
+Deliverable after Phase 2
+
+Save both CSVs to disk and tell me where
+
+Summarize:
+
+how many high-confidence mappings
+
+how many need review
+
+top 20 legacy sets by card_count that still need review
+
+Phase 3 — Apply migration ONLY after approval (not yet)
+
+Do NOT execute Phase 3 until I explicitly say “apply”.
+
+Phase 3 would:
+
+Insert the approved mappings into card_set_migrations
+
+Update cards.set_id from legacy → canonical (in batches)
+
+Produce a change log CSV with every moved card id
+
+Then mark legacy sets as archived/hidden (never delete)
+
+But again: do not run this yet.
+
+Extra: Handling “unassigned” legacy sets
+
+Some existing card_sets may have blank main_set association by design.
+For now:
+
+Include them in mapping preview anyway (they can still be mapped by year + name)
+
+Do NOT auto-attach them to main_sets unless confidence is very high AND it’s part of the mapping.
+
+What I want back from you (Replit)
+
+Confirmation Phase 1 completed (counts + any errors)
+
+The two mapping preview CSVs (paths)
+
+A short explanation of the confidence rules used
