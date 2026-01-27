@@ -1,0 +1,58 @@
+BUG: Migration Console shows “No canonical sets found”.
+This is blocking the entire workflow.
+
+We need to fix this FIRST. Do not touch anything else.
+
+Likely causes:
+A) card_sets.isCanonical was added but never populated from the CSV import, so there are 0 canonical sets.
+B) Canonical query is filtering too aggressively (year filter, has-cards filter, isActive filter, etc.).
+
+STEP 1 — Prove the root cause with DB checks (server-side)
+Add a temporary admin-only debug endpoint OR log output in the server:
+
+Return counts:
+1) SELECT COUNT(*) FROM card_sets;
+2) SELECT COUNT(*) FROM card_sets WHERE "isCanonical" = true;
+3) SELECT COUNT(*) FROM card_sets WHERE "isCanonical" = true AND "isActive" = true;
+4) SELECT COUNT(*) FROM main_sets; (optional)
+
+Also return a small sample list:
+- 10 canonical sets: id, name, year, isActive, isCanonical
+- If count is zero, say so.
+
+STEP 2 — Fix population of isCanonical (if count is zero or too low)
+We must stamp canonical sets deterministically from the CSV import process, not by fuzzy matching.
+
+Implement one of these deterministic backfills (choose the safest given our codebase):
+
+Option A (preferred): Re-run the same CSV import logic (Phase 1) as an idempotent upsert,
+but ensure every row upserted from the CSV includes: isCanonical=true.
+This will correctly stamp all spreadsheet-defined sets.
+
+Option B: If the CSV import code isn’t available at runtime, add a one-time admin action:
+“Backfill isCanonical from canonical_import table” (if such table exists),
+OR “Backfill from stored CSV file in repo” (if present).
+Do NOT attempt name similarity matching.
+
+After backfill, re-check counts:
+- isCanonical=true should be ~4,600+ (based on our CSV import results earlier)
+
+STEP 3 — Fix the UI filtering so canonical sets display
+Right now the Canonical column shows a Year dropdown set to 2025 and then “No canonical sets found”.
+This likely means the UI is filtering canonical sets by year and returning none.
+
+Changes required:
+- Default the canonical “Year” filter to “All Years”, not a specific year.
+- Show canonical sets even if they have 0 cards (that’s expected for Coming Soon).
+- Only filter canonical sets by isCanonical=true and isActive=true (unless “Show archived” is checked).
+
+STEP 4 — QA
+- Migration Console: Canonical list populates with canonical sets.
+- Searching in canonical works (e.g., search “Kakawow” returns multiple).
+- Selecting a canonical destination works.
+- No changes to public browse, collection, marketplace.
+
+DELIVERABLES:
+- Which root cause was true (A or B)
+- DB counts before/after
+- Files changed
