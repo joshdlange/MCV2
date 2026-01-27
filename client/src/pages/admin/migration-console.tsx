@@ -239,12 +239,12 @@ export default function MigrationConsole() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="migrate" className="flex items-center gap-2">
+        <TabsList className="bg-gray-100">
+          <TabsTrigger value="migrate" className="flex items-center gap-2 data-[state=active]:bg-red-600 data-[state=active]:text-white">
             <ArrowLeftRight className="h-4 w-4" />
             Migrate Cards
           </TabsTrigger>
-          <TabsTrigger value="logs" className="flex items-center gap-2">
+          <TabsTrigger value="logs" className="flex items-center gap-2 data-[state=active]:bg-red-600 data-[state=active]:text-white">
             <History className="h-4 w-4" />
             Migration Logs
           </TabsTrigger>
@@ -273,7 +273,7 @@ export default function MigrationConsole() {
                   </div>
                   <div className="flex gap-2">
                     <Select value={sourceYear || "all"} onValueChange={(v) => setSourceYear(v === "all" ? "" : v)}>
-                      <SelectTrigger className="w-[120px]">
+                      <SelectTrigger className="w-[120px] bg-white border-gray-300 text-gray-900">
                         <SelectValue placeholder="Year" />
                       </SelectTrigger>
                       <SelectContent>
@@ -302,41 +302,35 @@ export default function MigrationConsole() {
                   </div>
                 </div>
 
-                <div className="h-[300px] overflow-y-auto border rounded-md">
+                <div className="h-[300px] overflow-y-auto border rounded-md bg-white">
                   {sourceLoading ? (
                     <div className="flex items-center justify-center h-full">
-                      <Loader2 className="h-6 w-6 animate-spin" />
+                      <Loader2 className="h-6 w-6 animate-spin text-red-600" />
                     </div>
                   ) : sourceSets.length === 0 ? (
                     <div className="flex items-center justify-center h-full text-gray-500">
                       No sets found
                     </div>
                   ) : (
-                    <div className="divide-y">
+                    <div className="divide-y divide-gray-100">
                       {sourceSets.map((set) => (
                         <div
                           key={set.id}
                           onClick={() => setSelectedSource(set)}
-                          className={`p-3 cursor-pointer hover:bg-gray-50 ${
-                            selectedSource?.id === set.id ? 'bg-orange-50 border-l-4 border-orange-500' : ''
+                          className={`p-3 cursor-pointer hover:bg-red-50 transition-colors ${
+                            selectedSource?.id === set.id ? 'bg-red-100 border-l-4 border-red-600' : 'border-l-4 border-transparent'
                           } ${!set.isActive ? 'opacity-60' : ''}`}
                         >
-                          <div className="flex items-center gap-3">
-                            {(set.mainSetThumbnail || set.imageUrl) && (
-                              <SimpleImage
-                                src={set.mainSetThumbnail || set.imageUrl || ''}
-                                alt={set.name}
-                                className="w-10 h-10 rounded object-cover"
-                              />
-                            )}
+                          <div className="flex items-center justify-between">
                             <div className="flex-1 min-w-0">
-                              <div className="font-medium text-sm truncate">{formatTitle(set.name)}</div>
-                              <div className="text-xs text-gray-500 flex items-center gap-2">
-                                <span>{set.year}</span>
-                                <span>•</span>
-                                <span>{set.cardCount} cards</span>
-                                {!set.isActive && <Badge variant="outline" className="text-xs">Archived</Badge>}
+                              <div className="font-semibold text-sm text-gray-900 truncate">{formatTitle(set.name)}</div>
+                              <div className="text-xs text-gray-600 mt-1">
+                                {set.year} • {set.cardCount} cards
+                                {!set.isActive && <span className="ml-2 text-amber-600">(Archived)</span>}
                               </div>
+                            </div>
+                            <div className="text-right text-xs text-gray-500 ml-2">
+                              ID: {set.id}
                             </div>
                           </div>
                         </div>
@@ -367,7 +361,7 @@ export default function MigrationConsole() {
                     />
                   </div>
                   <Select value={destYear || "all"} onValueChange={(v) => setDestYear(v === "all" ? "" : v)}>
-                    <SelectTrigger className="w-[120px]">
+                    <SelectTrigger className="w-[120px] bg-white border-gray-300 text-gray-900">
                       <SelectValue placeholder="Year" />
                     </SelectTrigger>
                     <SelectContent>
@@ -379,43 +373,37 @@ export default function MigrationConsole() {
                   </Select>
                 </div>
 
-                <div className="h-[300px] overflow-y-auto border rounded-md">
+                <div className="h-[300px] overflow-y-auto border rounded-md bg-white">
                   {destLoading ? (
                     <div className="flex items-center justify-center h-full">
-                      <Loader2 className="h-6 w-6 animate-spin" />
+                      <Loader2 className="h-6 w-6 animate-spin text-green-600" />
                     </div>
                   ) : destSets.length === 0 ? (
                     <div className="flex items-center justify-center h-full text-gray-500">
                       No canonical sets found
                     </div>
                   ) : (
-                    <div className="divide-y">
+                    <div className="divide-y divide-gray-100">
                       {destSets.map((set) => (
                         <div
                           key={set.id}
                           onClick={() => setSelectedDest(set)}
-                          className={`p-3 cursor-pointer hover:bg-gray-50 ${
-                            selectedDest?.id === set.id ? 'bg-green-50 border-l-4 border-green-500' : ''
+                          className={`p-3 cursor-pointer hover:bg-green-50 transition-colors ${
+                            selectedDest?.id === set.id ? 'bg-green-100 border-l-4 border-green-600' : 'border-l-4 border-transparent'
                           }`}
                         >
-                          <div className="flex items-center gap-3">
-                            {(set.mainSetThumbnail || set.imageUrl) && (
-                              <SimpleImage
-                                src={set.mainSetThumbnail || set.imageUrl || ''}
-                                alt={set.name}
-                                className="w-10 h-10 rounded object-cover"
-                              />
-                            )}
+                          <div className="flex items-center justify-between">
                             <div className="flex-1 min-w-0">
-                              <div className="font-medium text-sm truncate">{formatTitle(set.name)}</div>
-                              <div className="text-xs text-gray-500 flex items-center gap-2">
-                                <span>{set.year}</span>
-                                <span>•</span>
-                                <span>{set.cardCount} cards</span>
+                              <div className="font-semibold text-sm text-gray-900 truncate">{formatTitle(set.name)}</div>
+                              <div className="text-xs text-gray-600 mt-1">
+                                {set.year} • {set.cardCount} cards
                                 {detectInsertSubset(set.name) && (
-                                  <Badge variant="secondary" className="text-xs">Insert</Badge>
+                                  <span className="ml-2 text-purple-600">(Insert)</span>
                                 )}
                               </div>
+                            </div>
+                            <div className="text-right text-xs text-gray-500 ml-2">
+                              ID: {set.id}
                             </div>
                           </div>
                         </div>
