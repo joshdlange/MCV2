@@ -76,6 +76,8 @@ export const cardSets = pgTable("card_sets", {
   totalCards: integer("total_cards").default(0).notNull(),
   mainSetId: integer("main_set_id").references(() => mainSets.id),
   isActive: boolean("is_active").default(true).notNull(),
+  isCanonical: boolean("is_canonical").default(false).notNull(),
+  isInsertSubset: boolean("is_insert_subset").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -680,8 +682,10 @@ export const migrationLogs = pgTable("migration_logs", {
   destinationSetId: integer("destination_set_id").references(() => cardSets.id).notNull(),
   movedCardCount: integer("moved_card_count").notNull(),
   insertForced: boolean("insert_forced").default(false).notNull(),
+  conflictCount: integer("conflict_count").default(0).notNull(),
+  sourceArchived: boolean("source_archived").default(false).notNull(),
   notes: text("notes"),
-  status: text("status").default("completed").notNull(),
+  status: text("status").default("completed").notNull(), // completed, completed_with_conflicts, failed, rolled_back
   rolledBackAt: timestamp("rolled_back_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({

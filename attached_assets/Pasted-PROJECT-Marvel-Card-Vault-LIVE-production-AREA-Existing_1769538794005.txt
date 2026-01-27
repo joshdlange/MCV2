@@ -1,0 +1,196 @@
+PROJECT: Marvel Card Vault (LIVE production)
+AREA: Existing Admin Tools → Migration Console
+GOAL: Upgrade the Migration Console into a safe, permanent “Data Backbone” tool for unifying sets/subsets and moving cards correctly without breaking production.
+
+NON-NEGOTIABLES (SAFETY RULES)
+1) No fuzzy auto-mapping. Admin explicitly chooses Source Set and Destination Set for every action.
+2) No destructive deletes by default. Archiving is the default. Deletion must be gated (type-to-confirm).
+3) Every action must be logged and rollbackable.
+4) Do not change public user experiences (Browse/My Collection/Marketplace) except where explicitly stated below.
+5) Preserve images, pricing, and all card metadata during migrations. Only set_id changes (plus controlled rules like is_insert).
+
+--------------------------------------------
+1) DEFINE CANONICAL VS LEGACY (LISTS MUST NEVER MIX)
+--------------------------------------------
+Add to card_sets:
+- isCanonical BOOLEAN NOT NULL DEFAULT FALSE
+- isInsertSubset BOOLEAN NOT NULL DEFAULT FALSE
+- isActive BOOLEAN NOT NULL DEFAULT TRUE   (already exists)
+
+Meaning:
+- isCanonical=true → set/subset exists in the master spreadsheet list (source of truth taxonomy)
+- isCanonical=false → legacy/imported/messy/temporary sets
+- isInsertSubset=true → any card in this subset must have is_insert=true
+
+Stamp canonical sets:
+- Update the CSV import/upsert logic so every imported canonical card_sets row is saved with isCanonical=true.
+- Do NOT guess canonical via naming similarity. It must be deterministic.
+- Leave existing legacy sets as isCanonical=false.
+
+Migration Console list filters:
+- Legacy column shows ONLY: isCanonical=false AND isActive=true
+- Canonical column shows ONLY: isCanonical=true AND isActive=true
+- Provide optional toggles to “Show Archived” for each column (admin only).
+
+--------------------------------------------
+2) CORE MIGRATION CAPABILITIES
+--------------------------------------------
+A) Bulk move (entire set)
+Admin selects:
+- Source legacy set (FROM)
+- Destination canonical set (TO)
+
+System must:
+- Preview → Validate → Apply in a DB transaction
+- Then refresh both lists from server
+
+B) Move selected cards (needed for future step, include now if feasible)
+- Show cards in source with pagination + checkboxes
+- Move only selected cards to destination
+- Same validation rules apply
+
+--------------------------------------------
+3) PREVENT BAD MERGES: DUPLICATE CARD_NUMBER VALIDATION
+--------------------------------------------
+Rule:
+“Within a given subset/set, you cannot have two cards with the same card_number.
+Parallel/variant subsets have their own set where that same card_number can exist.”
+
+Validation BEFORE migrating Source → Destination:
+- Determine the card_numbers that will be moved.
+- Find conflicts where destination already contains any of those same card_numbers.
+
+Conflict definition:
+- destination has card_number=X AND migrating batch contains card_number=X.
+- card_number is the uniqueness key (do NOT rely on name).
+
+Required behavior:
+- By default: BLOCK migration if conflicts exist.
+- Show conflict report (first 50 rows):
+  - card_number
+  - migrating card id + name
+  - existing destination card id + name
+
+Override (admin-only, explicit):
+- Allow proceed ONLY if admin types: MIGRATE WITH CONFLICTS
+- Log status = completed_with_conflicts
+- Log conflict_count and sample conflict list (in notes or a dedicated field)
+
+--------------------------------------------
+4) INSERT RULE ENFORCEMENT (AUTO + CONTROLLED)
+--------------------------------------------
+Destination set has isInsertSubset boolean.
+
+During migration:
+- If destination.isInsertSubset=true → force cards.is_insert=true for all moved cards
+- If destination.isInsertSubset=false → do not change is_insert unless admin chooses override
+
+UI:
+- Allow admin to toggle destination.isInsertSubset in the console (admin-only)
+- Provide “Force insert for this migration” checkbox override
+
+Log:
+- insert_forced true/false
+
+--------------------------------------------
+5) PRESERVE IMAGES, PRICING, AND METADATA
+--------------------------------------------
+Migration must NOT modify any of these fields:
+- front_image_url / back_image_url / alternate_images
+- estimated_value and any other price fields
+- variation, name, rarity, description, timestamps
+Only change:
+- cards.set_id
+- cards.is_insert (only if rule applies / override)
+
+--------------------------------------------
+6) POST-MIGRATION: REFRESH + AUTO-ARCHIVE EMPTY SOURCE SET
+--------------------------------------------
+After successful migration:
+- Re-fetch legacy list + canonical list + preview counts from server (no stale UI state).
+- If source set now has 0 cards AND isCanonical=false:
+  - auto-archive it: card_sets.isActive=false
+  - set migration_logs.source_archived=true
+- Source set must disappear from the Legacy list immediately (because archived or has no cards + filtered).
+
+Rollback requirements:
+- Restore cards.set_id and old_is_insert using migration_log_cards.
+- If source was auto-archived, set isActive=true again.
+
+--------------------------------------------
+7) ARCHIVE AND DELETE SUBSET/SET MANAGEMENT (NEW)
+--------------------------------------------
+We need admin tools to clean duplicates like “Gold Signature” vs “Gold Sigs”.
+
+Add to Migration Console (or a new Admin Tools section “Set Manager”):
+A) Archive subset/set:
+- Button: “Archive Set”
+- Sets card_sets.isActive=false
+- Only enable if:
+  - (preferred) set has 0 cards
+  - If set has cards, show warning + require typing ARCHIVE WITH CARDS
+
+B) Delete subset/set (dangerous, admin-only):
+- Button: “Delete Set Permanently”
+- Hard rule: only allow deletion if:
+  - set has 0 cards
+  - AND set is not referenced anywhere else
+- Require typing: DELETE SET
+- Log deletions in an audit log (who/when/which set_id)
+- If deletion is too risky right now, implement UI + API but keep it disabled behind a config flag.
+
+C) Duplicate cleaner workflow:
+- If two subsets are duplicates:
+  1) Migrate cards from wrong subset → correct canonical subset
+  2) Auto-archive wrong subset (isActive=false)
+  3) Optionally delete wrong subset later if it remains empty
+
+--------------------------------------------
+8) LOGGING & AUDIT (REQUIRED)
+--------------------------------------------
+We already have:
+- migration_logs
+- migration_log_cards
+
+Enhance migration_logs with:
+- status: completed / completed_with_conflicts / failed / rolled_back
+- conflict_count INT DEFAULT 0
+- insert_forced BOOLEAN DEFAULT FALSE
+- admin_user_id (if available)
+
+Every migration must:
+- Write one migration_logs row
+- Write one migration_log_cards row per moved card (card_id, old_set_id, new_set_id, old_is_insert, new_is_insert)
+- Update status accordingly
+
+Also add a simple “Admin Audit Log” table for deletes/archives:
+- id, admin_user_id, action_type, entity_type, entity_id, notes, created_at
+
+--------------------------------------------
+9) ADMIN PREVIEW UX REQUIREMENTS
+--------------------------------------------
+Preview panel must show:
+- Source set summary: year/name/card count + 12 card thumbnails (if images exist)
+- Destination set summary: year/name/card count + 12 thumbnails (if any)
+- Main set images should render if available (main_sets.thumbnail_image_url)
+- Keep preview light: max 12 images each, paginated card lists
+
+--------------------------------------------
+10) QA / REGRESSION CHECKLIST (MANDATORY)
+--------------------------------------------
+- Non-admin cannot access migration routes/pages.
+- Legacy list contains NO canonical sets; canonical list contains NO legacy sets.
+- Try migration into destination with duplicate card_numbers → blocked + conflict report.
+- Migrate into empty destination → success; images/price preserved.
+- After migration, legacy source auto-archives if empty.
+- Rollback restores set_id + is_insert and re-activates legacy source if it was auto-archived.
+- Archive/delete set tools:
+  - archive works and hides set from normal users
+  - delete only works when set has 0 cards and requires typing DELETE SET
+
+DELIVERABLES FROM REPLIT
+1) File list changed
+2) Exact DB migration SQL
+3) API routes changed/added
+4) QA steps performed + results
+5) Confirmation that public app UX is unchanged (except admin tools)
