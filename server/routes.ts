@@ -432,8 +432,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Main Sets Routes
   app.get("/api/main-sets", async (req, res) => {
     try {
-      const mainSets = await storage.getMainSets();
-      res.json(mainSets);
+      const allMainSets = await storage.getMainSets();
+      
+      // HOTFIX: Filter out empty main sets (0 cards) from public view
+      // Admin users see all sets via admin routes; public users only see populated sets
+      const populatedMainSets = allMainSets.filter(ms => {
+        // totalCards is the sum of cards across all child card_sets
+        return (ms.totalCards || 0) > 0;
+      });
+      
+      res.json(populatedMainSets);
     } catch (error) {
       console.error('Get main sets error:', error);
       res.status(500).json({ message: "Failed to fetch main sets" });
