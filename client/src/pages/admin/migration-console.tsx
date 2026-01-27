@@ -272,12 +272,12 @@ export default function MigrationConsole() {
                     />
                   </div>
                   <div className="flex gap-2">
-                    <Select value={sourceYear} onValueChange={setSourceYear}>
+                    <Select value={sourceYear || "all"} onValueChange={(v) => setSourceYear(v === "all" ? "" : v)}>
                       <SelectTrigger className="w-[120px]">
                         <SelectValue placeholder="Year" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Years</SelectItem>
+                        <SelectItem value="all">All Years</SelectItem>
                         {[2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018].map(y => (
                           <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
                         ))}
@@ -366,12 +366,12 @@ export default function MigrationConsole() {
                       className="pl-10"
                     />
                   </div>
-                  <Select value={destYear} onValueChange={setDestYear}>
+                  <Select value={destYear || "all"} onValueChange={(v) => setDestYear(v === "all" ? "" : v)}>
                     <SelectTrigger className="w-[120px]">
                       <SelectValue placeholder="Year" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Years</SelectItem>
+                      <SelectItem value="all">All Years</SelectItem>
                       {[2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018].map(y => (
                         <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
                       ))}
