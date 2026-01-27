@@ -268,7 +268,7 @@ export default function MigrationConsole() {
                       placeholder="Search sets..."
                       value={sourceSearch}
                       onChange={(e) => setSourceSearch(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 bg-white text-gray-900 border-gray-300"
                     />
                   </div>
                   <div className="flex gap-2">
@@ -317,20 +317,27 @@ export default function MigrationConsole() {
                         <div
                           key={set.id}
                           onClick={() => setSelectedSource(set)}
-                          className={`p-3 cursor-pointer hover:bg-red-50 transition-colors ${
+                          className={`p-2 cursor-pointer hover:bg-red-50 transition-colors ${
                             selectedSource?.id === set.id ? 'bg-red-100 border-l-4 border-red-600' : 'border-l-4 border-transparent'
                           } ${!set.isActive ? 'opacity-60' : ''}`}
                         >
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {(set.mainSetThumbnail || set.imageUrl) && (
+                              <SimpleImage
+                                src={set.mainSetThumbnail || set.imageUrl || ''}
+                                alt={set.name}
+                                className="w-8 h-8 rounded object-cover flex-shrink-0"
+                              />
+                            )}
                             <div className="flex-1 min-w-0">
-                              <div className="font-semibold text-sm text-gray-900 truncate">{formatTitle(set.name)}</div>
-                              <div className="text-xs text-gray-600 mt-1">
+                              <div className="font-medium text-sm text-gray-900 truncate">{formatTitle(set.name)}</div>
+                              <div className="text-xs text-gray-600">
                                 {set.year} • {set.cardCount} cards
-                                {!set.isActive && <span className="ml-2 text-amber-600">(Archived)</span>}
+                                {!set.isActive && <span className="ml-1 text-amber-600">(Archived)</span>}
                               </div>
                             </div>
-                            <div className="text-right text-xs text-gray-500 ml-2">
-                              ID: {set.id}
+                            <div className="text-xs text-gray-400 flex-shrink-0">
+                              #{set.id}
                             </div>
                           </div>
                         </div>
@@ -357,7 +364,7 @@ export default function MigrationConsole() {
                       placeholder="Search canonical sets..."
                       value={destSearch}
                       onChange={(e) => setDestSearch(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 bg-white text-gray-900 border-gray-300"
                     />
                   </div>
                   <Select value={destYear || "all"} onValueChange={(v) => setDestYear(v === "all" ? "" : v)}>
@@ -388,22 +395,29 @@ export default function MigrationConsole() {
                         <div
                           key={set.id}
                           onClick={() => setSelectedDest(set)}
-                          className={`p-3 cursor-pointer hover:bg-green-50 transition-colors ${
+                          className={`p-2 cursor-pointer hover:bg-green-50 transition-colors ${
                             selectedDest?.id === set.id ? 'bg-green-100 border-l-4 border-green-600' : 'border-l-4 border-transparent'
                           }`}
                         >
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {(set.mainSetThumbnail || set.imageUrl) && (
+                              <SimpleImage
+                                src={set.mainSetThumbnail || set.imageUrl || ''}
+                                alt={set.name}
+                                className="w-8 h-8 rounded object-cover flex-shrink-0"
+                              />
+                            )}
                             <div className="flex-1 min-w-0">
-                              <div className="font-semibold text-sm text-gray-900 truncate">{formatTitle(set.name)}</div>
-                              <div className="text-xs text-gray-600 mt-1">
+                              <div className="font-medium text-sm text-gray-900 truncate">{formatTitle(set.name)}</div>
+                              <div className="text-xs text-gray-600">
                                 {set.year} • {set.cardCount} cards
                                 {detectInsertSubset(set.name) && (
-                                  <span className="ml-2 text-purple-600">(Insert)</span>
+                                  <span className="ml-1 text-purple-600">(Insert)</span>
                                 )}
                               </div>
                             </div>
-                            <div className="text-right text-xs text-gray-500 ml-2">
-                              ID: {set.id}
+                            <div className="text-xs text-gray-400 flex-shrink-0">
+                              #{set.id}
                             </div>
                           </div>
                         </div>
