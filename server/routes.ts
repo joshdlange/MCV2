@@ -454,49 +454,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Still Populating: Canonical main sets with at least one empty canonical subset
+  // Still Populating: Canonical main sets with zero cards across all subsets
   // These are NOT shown in the active Master Sets section (which requires actual cards)
+  // OPTIMIZED: Uses aggregation with LEFT JOIN instead of scalar subqueries
   app.get("/api/main-sets/still-populating", async (req, res) => {
     try {
-      // A main set qualifies for "Still Populating" if:
-      // 1. It has at least one child card_set that is canonical (canonical_source = 'csv_master' OR is_canonical = true)
-      // 2. At least one of those canonical subsets has 0 cards
-      // 3. It does NOT appear in the active Master Sets section (no cards at all)
-      //    This ensures no duplicates between sections
+      // Optimized query using aggregation with JOINs to find main sets where:
+      // 1. Has at least one canonical subset
+      // 2. Total cards across ALL subsets = 0
       const stillPopulatingMainSets = await db.execute(sql`
-        SELECT DISTINCT ms.*,
-          COALESCE(
-            (SELECT MAX(cs2.year) FROM card_sets cs2 WHERE cs2.main_set_id = ms.id),
-            0
-          ) as sort_year
+        WITH card_counts AS (
+          SELECT set_id, COUNT(*) as card_count
+          FROM cards
+          GROUP BY set_id
+        ),
+        main_set_stats AS (
+          SELECT 
+            cs.main_set_id,
+            MAX(cs.year) as max_year,
+            SUM(CASE WHEN cs.canonical_source = 'csv_master' OR cs.is_canonical = true THEN 1 ELSE 0 END) as canonical_count,
+            COALESCE(SUM(cc.card_count), 0) as total_cards
+          FROM card_sets cs
+          LEFT JOIN card_counts cc ON cc.set_id = cs.id
+          WHERE cs.main_set_id IS NOT NULL
+            AND cs.is_active = true
+          GROUP BY cs.main_set_id
+          HAVING SUM(CASE WHEN cs.canonical_source = 'csv_master' OR cs.is_canonical = true THEN 1 ELSE 0 END) > 0
+        )
+        SELECT ms.*, COALESCE(mss.max_year, 0) as sort_year
         FROM main_sets ms
-        WHERE 
-          -- Has at least one canonical subset (canonical_source = 'csv_master' OR is_canonical = true)
-          EXISTS (
-            SELECT 1 FROM card_sets cs 
-            WHERE cs.main_set_id = ms.id 
-            AND (cs.canonical_source = 'csv_master' OR cs.is_canonical = true)
-            AND cs.is_active = true
-          )
-          -- At least one canonical subset has 0 cards
-          AND EXISTS (
-            SELECT 1 FROM card_sets cs
-            WHERE cs.main_set_id = ms.id
-            AND (cs.canonical_source = 'csv_master' OR cs.is_canonical = true)
-            AND cs.is_active = true
-            AND NOT EXISTS (
-              SELECT 1 FROM cards c WHERE c.set_id = cs.id
-            )
-          )
-          -- NOT already in active Master Sets section (those have cards)
-          -- This prevents duplicates - a set with mixed populated/empty subsets 
-          -- will appear in active Master Sets, not here
-          AND NOT EXISTS (
-            SELECT 1 FROM cards c
-            INNER JOIN card_sets cs ON c.set_id = cs.id
-            WHERE cs.main_set_id = ms.id
-          )
-        ORDER BY sort_year DESC, ms.name ASC
+        INNER JOIN main_set_stats mss ON mss.main_set_id = ms.id
+        WHERE mss.total_cards = 0
+        ORDER BY mss.max_year DESC, ms.name ASC
       `);
       
       res.json(stillPopulatingMainSets.rows);
