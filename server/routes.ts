@@ -823,6 +823,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get card sets by main set ID (for edit dialog - only loads assigned sets)
+  app.get("/api/card-sets/by-main-set/:mainSetId", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const mainSetId = parseInt(req.params.mainSetId);
+      const assignedSets = await db.select()
+        .from(cardSets)
+        .where(eq(cardSets.mainSetId, mainSetId))
+        .orderBy(desc(cardSets.year), cardSets.name);
+      
+      res.json(assignedSets);
+    } catch (error) {
+      console.error('Get card sets by main set error:', error);
+      res.status(500).json({ message: "Failed to fetch card sets" });
+    }
+  });
+
+  // Search card sets with pagination for assignment (admin only)
+  app.get("/api/card-sets/search-for-assignment", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { q, limit = "50" } = req.query as { q?: string; limit?: string };
+      
+      if (!q || q.length < 2) {
+        return res.json([]);
+      }
+      
+      const searchPattern = `%${q}%`;
+      const searchResults = await db.select()
+        .from(cardSets)
+        .where(
+          or(
+            ilike(cardSets.name, searchPattern),
+            sql`${cardSets.year}::text LIKE ${searchPattern}`
+          )
+        )
+        .orderBy(desc(cardSets.year), cardSets.name)
+        .limit(parseInt(limit));
+      
+      res.json(searchResults);
+    } catch (error) {
+      console.error('Search card sets for assignment error:', error);
+      res.status(500).json({ message: "Failed to search card sets" });
+    }
+  });
+
   // Get unassigned card sets (mainSetId IS NULL)
   app.get("/api/card-sets/unassigned", authenticateUser, async (req: any, res) => {
     try {
