@@ -497,16 +497,16 @@ export default function MigrationConsole() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="overflow-hidden">
               <CardHeader>
                 <CardTitle>Preview & Actions</CardTitle>
                 <CardDescription>Review before migrating</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 overflow-x-hidden">
                 {selectedSource && (
-                  <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                  <div className="p-3 bg-orange-50 rounded-lg border border-orange-200 overflow-hidden">
                     <div className="font-medium text-sm text-orange-800">Source Set</div>
-                    <div className="text-sm">{formatTitle(selectedSource.name)}</div>
+                    <div className="text-sm break-words">{formatTitle(selectedSource.name)}</div>
                     <div className="text-xs text-orange-600">{selectedSource.cardCount} cards</div>
                     
                     {sourceCards.length > 0 && (
@@ -551,9 +551,9 @@ export default function MigrationConsole() {
                 )}
 
                 {selectedDest && (
-                  <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="p-3 bg-green-50 rounded-lg border border-green-200 overflow-hidden">
                     <div className="font-medium text-sm text-green-800">Destination Set</div>
-                    <div className="text-sm">{formatTitle(selectedDest.name)}</div>
+                    <div className="text-sm break-words">{formatTitle(selectedDest.name)}</div>
                     <div className="text-xs text-green-600">{selectedDest.cardCount} cards</div>
                     
                     {destCards.length > 0 && (
