@@ -454,6 +454,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Still Populating: Canonical main sets with at least one empty canonical subset
+  // These are NOT shown in the active Master Sets section (which requires actual cards)
+  app.get("/api/main-sets/still-populating", async (req, res) => {
+    try {
+      // A main set qualifies for "Still Populating" if:
+      // 1. It has at least one child card_set that is canonical (canonical_source = 'csv_master' OR is_canonical = true)
+      // 2. At least one of those canonical subsets has 0 cards
+      // 3. It does NOT appear in the active Master Sets section (no cards at all)
+      //    This ensures no duplicates between sections
+      const stillPopulatingMainSets = await db.execute(sql`
+        SELECT DISTINCT ms.*,
+          COALESCE(
+            (SELECT MAX(cs2.year) FROM card_sets cs2 WHERE cs2.main_set_id = ms.id),
+            0
+          ) as sort_year
+        FROM main_sets ms
+        WHERE 
+          -- Has at least one canonical subset (canonical_source = 'csv_master' OR is_canonical = true)
+          EXISTS (
+            SELECT 1 FROM card_sets cs 
+            WHERE cs.main_set_id = ms.id 
+            AND (cs.canonical_source = 'csv_master' OR cs.is_canonical = true)
+            AND cs.is_active = true
+          )
+          -- At least one canonical subset has 0 cards
+          AND EXISTS (
+            SELECT 1 FROM card_sets cs
+            WHERE cs.main_set_id = ms.id
+            AND (cs.canonical_source = 'csv_master' OR cs.is_canonical = true)
+            AND cs.is_active = true
+            AND NOT EXISTS (
+              SELECT 1 FROM cards c WHERE c.set_id = cs.id
+            )
+          )
+          -- NOT already in active Master Sets section (those have cards)
+          -- This prevents duplicates - a set with mixed populated/empty subsets 
+          -- will appear in active Master Sets, not here
+          AND NOT EXISTS (
+            SELECT 1 FROM cards c
+            INNER JOIN card_sets cs ON c.set_id = cs.id
+            WHERE cs.main_set_id = ms.id
+          )
+        ORDER BY sort_year DESC, ms.name ASC
+      `);
+      
+      res.json(stillPopulatingMainSets.rows);
+    } catch (error) {
+      console.error('Get still-populating main sets error:', error);
+      res.status(500).json({ message: "Failed to fetch still-populating main sets" });
+    }
+  });
+
   app.get("/api/main-sets/:identifier", authenticateUser, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) {

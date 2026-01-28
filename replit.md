@@ -27,6 +27,13 @@ The application incorporates comprehensive performance optimizations for handlin
 - **Upcoming Sets Tracker**: ✨ NEW (Nov 20, 2025) - Comprehensive system for managing and displaying upcoming Marvel card set releases with URL import, OpenGraph metadata scraping, image caching, countdown timers, and user interest tracking.
 - **Email Integration**: ✨ NEW (Nov 20, 2025) - Brevo SMTP integration for transactional emails with Nodemailer configuration (`server/email.ts`), Firebase to Brevo contact sync (`server/contactsSync.ts`), admin-only sync endpoint for CRM management, and comprehensive email automation system with 15 branded templates, event triggers, and scheduled cron jobs. ✅ UPDATED (Nov 21, 2025) - Inactivity reminders and weekly digest emails are limited to 1 email per month maximum to prevent email fatigue.
 - **Migration Console**: ✨ NEW (Jan 27, 2026) - Admin-only tool for safely migrating cards between sets. Features include source/destination set pickers with search/filter, preview with conflict detection, transaction-wrapped execute/rollback operations, archive instead of delete pattern, and full audit logging via `migration_logs` and `migration_log_cards` tables. Protects user collections by keeping card_ids stable.
+- **Still Populating Section**: ✨ NEW (Jan 28, 2026) - Browse → Master Sets now shows a "Still Populating" section below active sets for canonical master sets that have no cards yet. Features:
+  - Grayscale locked tile appearance with amber "Coming Soon" styling
+  - Click shows branded modal (no navigation) with hammer icon
+  - Sorted by year DESC, name ASC
+  - Only shows canonical sets (canonical_source='csv_master' OR is_canonical=true)
+  - Empty subsets inside active sets show "Coming Soon" badge
+  - Admins can upload thumbnails for Still Populating sets via edit button
 - **Marketplace Fulfillment System**: ✨ NEW (Jan 10, 2026) - Complete seller payout workflow including:
   - Earnings tracking with proper categorization: available, pending delivery, pending payout, paid out
   - Payout account management (PayPal/Venmo) stored in `payout_accounts` table

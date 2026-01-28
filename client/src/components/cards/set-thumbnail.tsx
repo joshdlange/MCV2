@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Star, Edit } from "lucide-react";
+import { Star, Edit, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { OptimizedImage } from "@/components/ui/optimized-image";
 import type { CardSet } from "@shared/schema";
 import { formatSetName } from "@/lib/formatTitle";
@@ -167,7 +168,14 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
         </h3>
         <div className="flex items-center justify-between text-xs text-gray-600">
           <span>{set.year}</span>
-          <span>{set.totalCards} cards</span>
+          {set.totalCards === 0 ? (
+            <Badge variant="secondary" className="bg-amber-100 text-amber-700 border-amber-200 text-xs px-1.5 py-0.5">
+              <Clock className="w-3 h-3 mr-1" />
+              Coming Soon
+            </Badge>
+          ) : (
+            <span>{set.totalCards} cards</span>
+          )}
         </div>
       </div>
     </div>

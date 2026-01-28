@@ -1,0 +1,181 @@
+PROJECT: Marvel Card Vault (LIVE production app)
+TASK: Add a “Still Populating” section to Browse → Master Sets, with strict guardrails.
+
+IMPORTANT CONTEXT
+- The app is live with ~100 users.
+- We are migrating data incrementally over days.
+- Live behavior for existing populated sets MUST remain unchanged.
+- This feature exists to support incremental canonical migration without confusing users.
+
+===========================
+HIGH-LEVEL GOAL
+===========================
+
+Add a SECOND section below the active master sets grid called:
+
+"Still Populating"
+
+This section shows CANONICAL master sets that are intentionally empty or partially populated, so we can migrate sets one-by-one without disrupting the live experience.
+
+This section:
+- Is visible to users
+- Is NOT clickable
+- Is visually branded and intentional
+- Does NOT surface legacy junk
+
+===========================
+STRICT DEFINITIONS (DO NOT GUESS)
+===========================
+
+CANONICAL MASTER SET
+A main_set is canonical if:
+- It originates from the master CSV taxonomy
+- It has at least one child card_set with:
+  canonical_source = 'csv_master' (preferred)
+  OR isCanonical = true
+
+DO NOT infer canonical status from:
+- name similarity
+- main_set_id existence
+- year matching
+
+LEGACY MASTER SET
+Any main_set that does NOT meet the canonical definition above.
+
+===========================
+WHAT QUALIFIES AS “STILL POPULATING”
+===========================
+
+A CANONICAL master set belongs in the "Still Populating" section IF:
+
+- It is canonical (as defined above)
+- It has AT LEAST ONE canonical subset (card_set) with ZERO cards
+- Regardless of whether other subsets under the same master set have cards
+- It is isActive = true
+
+This allows:
+- Mixed states (some subsets populated, some coming soon)
+- Incremental migration without hiding the entire master set
+
+===========================
+PUBLIC UI BEHAVIOR (CRITICAL)
+===========================
+
+Browse → Master Sets page:
+
+SECTION 1 (UNCHANGED):
+"Master Sets"
+- Show ONLY master sets with >0 cards (existing behavior)
+- Fully clickable
+- No UI changes here
+
+SECTION 2 (NEW):
+"Still Populating"
+- Appears BELOW active sets
+- Shows CANONICAL master sets only
+- Sorted by:
+  Year DESC, then Name ASC
+- Tiles are:
+  - NOT clickable
+  - Visually locked (grayscale or overlay)
+  - Show main_sets.thumbnail_image_url
+  - If image missing, show a branded placeholder
+
+When a user clicks a Still Populating tile:
+- DO NOT navigate
+- Show a branded modal or toast:
+  Title: “Still Populating”
+  Body: “We’re actively building this set. Check back soon.”
+  Styling:
+    - Bangers font
+    - Thor hammer icon
+
+===========================
+SUBSET BEHAVIOR (INSIDE SETS)
+===========================
+
+When a user opens an ACTIVE master set:
+
+- Subsets WITH cards:
+  - Behave exactly as they do today
+
+- Subsets with ZERO cards:
+  - Are visible
+  - Show a “Coming Soon” badge
+  - Are clickable
+  - Opening them shows a branded empty state:
+    - Bangers font
+    - Thor hammer icon
+    - Message explaining the subset is still being populated
+
+===========================
+ADMIN CAPABILITIES (SAFE ONLY)
+===========================
+
+Admins MUST be able to:
+- Edit ONLY main_sets.thumbnail_image_url
+- This applies to both active and still-populating sets
+- Purpose: make Still Populating section visually appealing
+
+DO NOT:
+- Allow deleting main sets in this task
+- Allow hard deletes anywhere
+- Auto-generate images
+- Touch card or subset images here
+
+===========================
+ARCHIVE / DELETION RULES
+===========================
+
+- Soft delete ONLY (archive pattern)
+- When a LEGACY master set has zero cards:
+  - Admin may archive it
+  - It must NEVER appear in public browse
+- Canonical empty master sets:
+  - Are NOT archived
+  - Appear ONLY in Still Populating
+
+===========================
+API / DATA ACCESS (DO NOT BREAK PROD)
+===========================
+
+DO NOT overload or reuse existing routes in risky ways.
+
+Required behavior:
+- Existing /api/main-sets continues to return ONLY populated master sets (unchanged)
+- Still Populating logic can:
+  - Either be implemented via a new endpoint
+  - OR safely added as a second query in the same page load
+- All filtering must happen at the DB level (not client-side guessing)
+
+===========================
+WHAT NOT TO DO (IMPORTANT)
+===========================
+
+- DO NOT show all CSV-defined sets publicly
+- DO NOT surface legacy empty sets
+- DO NOT make Still Populating tiles navigable
+- DO NOT change how user collections, marketplace, or existing browse flows work
+- DO NOT add feature flags or global switches
+
+===========================
+QA REQUIREMENTS (MANDATORY)
+===========================
+
+1) Existing populated sets appear exactly as before
+2) No duplicate master sets appear
+3) Canonical empty subsets show “Coming Soon” inside active sets
+4) Canonical empty master sets appear ONLY in Still Populating
+5) Legacy empty master sets do NOT appear anywhere
+6) No change to card counts, user collections, or marketplace behavior
+
+===========================
+DELIVERABLES
+===========================
+
+- Files changed
+- New/updated API queries
+- Screenshot or confirmation of:
+  - Active sets section unchanged
+  - Still Populating section visible and non-clickable
+  - Admin image editing working
