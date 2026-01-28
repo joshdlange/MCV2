@@ -17,7 +17,7 @@ import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
 import { db } from "./db";
 import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userBadges, migrationLogs, migrationLogCards, adminAuditLogs } from "../shared/schema";
-import { sql, eq, ilike, and, or, isNull, count, exists, desc } from "drizzle-orm";
+import { sql, eq, ne, ilike, and, or, isNull, count, exists, desc } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
 import { badgeService } from "./badge-service";
@@ -4919,13 +4919,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const hasCards = cardCount.rows[0].count > 0;
 
-      // If set has cards, require explicit confirmation
-      if (hasCards && confirmWithCards !== 'ARCHIVE WITH CARDS') {
-        return res.status(400).json({ 
-          message: `Set has ${cardCount.rows[0].count} cards. Type "ARCHIVE WITH CARDS" to confirm.`,
-          cardCount: cardCount.rows[0].count,
-          requiresConfirmation: true,
-        });
+      // If set has cards, check if any user has these cards in their collection
+      if (hasCards) {
+        const userCollectionCount = await db.execute(sql`
+          SELECT 
+            COUNT(DISTINCT uc.user_id)::int as user_count,
+            COUNT(uc.id)::int as entry_count
+          FROM user_collections uc
+          JOIN cards c ON uc.card_id = c.id
+          WHERE c.set_id = ${setId}
+        `);
+        
+        const userCount = userCollectionCount.rows[0].user_count || 0;
+        const entryCount = userCollectionCount.rows[0].entry_count || 0;
+        
+        if (userCount > 0) {
+          return res.status(400).json({ 
+            message: `Cannot archive: ${userCount} user${userCount === 1 ? ' has' : 's have'} ${entryCount} cards from this set in their collection. Migrate cards first.`,
+            userCount,
+            entryCount,
+            blocked: true,
+          });
+        }
+        
+        // No users have these cards, require explicit confirmation
+        if (confirmWithCards !== 'ARCHIVE WITH CARDS') {
+          return res.status(400).json({ 
+            message: `Set has ${cardCount.rows[0].count} cards (no users have them). Type "ARCHIVE WITH CARDS" to confirm.`,
+            cardCount: cardCount.rows[0].count,
+            requiresConfirmation: true,
+          });
+        }
       }
 
       // Archive the set
@@ -4985,6 +5009,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Unarchive set error:', error);
       res.status(500).json({ message: "Failed to unarchive set" });
+    }
+  });
+
+  // Promote a legacy set to canonical/master set status
+  app.post("/api/admin/migration/promote-to-canonical/:setId", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const setId = parseInt(req.params.setId);
+      const { confirmPromotion, year } = req.body; // Require confirmation phrase and year
+
+      // Get set info
+      const [set] = await db.select({
+        id: cardSets.id,
+        name: cardSets.name,
+        isCanonical: cardSets.isCanonical,
+        canonicalSource: cardSets.canonicalSource,
+        year: cardSets.year,
+        mainSetId: cardSets.mainSetId,
+      }).from(cardSets).where(eq(cardSets.id, setId));
+
+      if (!set) {
+        return res.status(404).json({ message: "Set not found" });
+      }
+
+      if (set.isCanonical || set.canonicalSource === 'csv_master') {
+        return res.status(400).json({ message: "This set is already canonical" });
+      }
+
+      // Check for existing canonical set with same name
+      const existingCanonical = await db.select({ id: cardSets.id, name: cardSets.name })
+        .from(cardSets)
+        .where(and(
+          eq(cardSets.name, set.name),
+          eq(cardSets.isCanonical, true),
+          ne(cardSets.id, setId)
+        ));
+
+      if (existingCanonical.length > 0) {
+        return res.status(400).json({ 
+          message: `A canonical set with this name already exists (ID: ${existingCanonical[0].id})`,
+          existingSetId: existingCanonical[0].id,
+        });
+      }
+
+      // Require confirmation
+      if (confirmPromotion !== 'PROMOTE TO CANONICAL') {
+        return res.status(400).json({ 
+          message: 'Type "PROMOTE TO CANONICAL" to confirm.',
+          requiresConfirmation: true,
+        });
+      }
+
+      // Get card count for logging
+      const cardCount = await db.execute(sql`
+        SELECT COUNT(*)::int as count FROM cards WHERE set_id = ${setId}
+      `);
+
+      // Get count of subsets (sets that have this set as parent)
+      const subsetCount = await db.execute(sql`
+        SELECT COUNT(*)::int as count FROM card_sets WHERE parent_set_id = ${setId}
+      `);
+
+      // Validate and coerce year if provided
+      let finalYear = set.year;
+      if (year !== undefined && year !== null && year !== '') {
+        const parsedYear = parseInt(year, 10);
+        if (!isNaN(parsedYear) && parsedYear >= 1900 && parsedYear <= 2100) {
+          finalYear = parsedYear;
+        }
+        // If invalid year provided, just keep existing year
+      }
+
+      // Promote to canonical
+      await db.update(cardSets)
+        .set({ 
+          isCanonical: true,
+          canonicalSource: 'promoted',
+          year: finalYear,
+          isActive: true, // Ensure it's active
+        })
+        .where(eq(cardSets.id, setId));
+
+      // Log the action
+      await db.insert(adminAuditLogs).values({
+        adminUserId: req.user.id,
+        actionType: 'promote_to_canonical',
+        entityType: 'card_set',
+        entityId: setId,
+        entityName: set.name,
+        notes: `Promoted to canonical with ${cardCount.rows[0].count} cards and ${subsetCount.rows[0].count} subsets`,
+      });
+
+      res.json({ 
+        success: true, 
+        message: `"${set.name}" promoted to canonical master set`,
+        cardCount: cardCount.rows[0].count,
+        subsetCount: subsetCount.rows[0].count,
+      });
+    } catch (error) {
+      console.error('Promote to canonical error:', error);
+      res.status(500).json({ message: "Failed to promote set to canonical" });
     }
   });
 

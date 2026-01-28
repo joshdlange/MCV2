@@ -114,6 +114,12 @@ export default function MigrationConsole() {
   const deleteConfirmValid = deleteConfirmText === DELETE_CONFIRM_PHRASE;
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
+  // Promote to canonical confirmation
+  const [promoteConfirmText, setPromoteConfirmText] = useState("");
+  const PROMOTE_CONFIRM_PHRASE = "PROMOTE TO CANONICAL";
+  const promoteConfirmValid = promoteConfirmText === PROMOTE_CONFIRM_PHRASE;
+  const [promoteYear, setPromoteYear] = useState<string>("");
+
   const { data: sourceSetsData, isLoading: sourceLoading } = useQuery({
     queryKey: ['/api/admin/migration/sets', sourceSearch, sourceYear, sourceHasCards, showArchived],
     queryFn: () => {
@@ -249,6 +255,32 @@ export default function MigrationConsole() {
       toast({
         title: "Restore Failed",
         description: error.message || "Failed to restore set",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const promoteToCanonical = useMutation({
+    mutationFn: ({ setId, confirmPromotion, year }: { setId: number; confirmPromotion: string; year?: string }) => 
+      apiRequest('POST', `/api/admin/migration/promote-to-canonical/${setId}`, { 
+        confirmPromotion, 
+        year: year ? parseInt(year) : null 
+      }).then(res => res.json()),
+    onSuccess: (data) => {
+      toast({
+        title: "Set Promoted",
+        description: data.message || "The set is now a canonical master set.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/migration/sets'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/migration/canonical-sets'] });
+      setSelectedSource(null);
+      setPromoteConfirmText("");
+      setPromoteYear("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Promotion Failed",
+        description: error.message || "Failed to promote set to canonical",
         variant: "destructive",
       });
     },
@@ -755,6 +787,58 @@ export default function MigrationConsole() {
                         >
                           {deleteSet.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                           Delete Permanently
+                        </Button>
+                      </div>
+                    )}
+
+                    {selectedSource && !selectedSource.isCanonical && selectedSource.isActive && (
+                      <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 space-y-3">
+                        <div className="flex items-center gap-2 text-blue-800 font-medium text-sm">
+                          <CheckCircle className="h-4 w-4" />
+                          <span>Promote to Canonical Master Set</span>
+                        </div>
+                        <div className="text-xs text-blue-600">
+                          This will mark this set as a canonical/master set. All subsets will be preserved.
+                          {selectedSource.cardCount > 0 && ` Contains ${selectedSource.cardCount} cards.`}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="promoteYear" className="text-xs text-blue-700">
+                            Set Year (optional - update if needed):
+                          </Label>
+                          <Input
+                            id="promoteYear"
+                            type="number"
+                            placeholder={selectedSource.year?.toString() || "e.g. 2024"}
+                            value={promoteYear}
+                            onChange={(e) => setPromoteYear(e.target.value)}
+                            className="text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="promoteConfirm" className="text-xs text-blue-700">
+                            Type <span className="font-mono font-bold">PROMOTE TO CANONICAL</span> to confirm:
+                          </Label>
+                          <Input
+                            id="promoteConfirm"
+                            placeholder="PROMOTE TO CANONICAL"
+                            value={promoteConfirmText}
+                            onChange={(e) => setPromoteConfirmText(e.target.value)}
+                            className={`font-mono text-sm ${promoteConfirmValid ? 'border-green-500 bg-green-50' : 'border-blue-300'}`}
+                          />
+                        </div>
+                        <Button
+                          variant="outline"
+                          className="w-full border-blue-500 text-blue-700 hover:bg-blue-100"
+                          onClick={() => promoteToCanonical.mutate({ 
+                            setId: selectedSource.id, 
+                            confirmPromotion: promoteConfirmText,
+                            year: promoteYear || undefined
+                          })}
+                          disabled={promoteToCanonical.isPending || !promoteConfirmValid}
+                        >
+                          {promoteToCanonical.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Promote to Canonical
                         </Button>
                       </div>
                     )}
