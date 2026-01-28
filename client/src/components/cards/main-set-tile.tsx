@@ -21,6 +21,31 @@ const isPlaceholderImage = (url: string | null | undefined): boolean => {
   return false;
 };
 
+const needsProxy = (url: string): boolean => {
+  const proxyDomains = [
+    'i.ebayimg.com',
+    'ebayimg.com',
+    'i5.walmartimages.com',
+    'walmartimages.com',
+    'cdn.shopify.com',
+    'm.media-amazon.com',
+    'media-amazon.com',
+    'assets.dacw.co',
+    'dacardworld1.imgix.net',
+    'collectorsavenue.com',
+    'tradercracks.com',
+    'thetoytemple.com'
+  ];
+  return proxyDomains.some(domain => url.includes(domain));
+};
+
+const getProxiedUrl = (url: string): string => {
+  if (needsProxy(url)) {
+    return `/api/proxy-image?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+};
+
 export function MainSetTile({ mainSet, assignedSets }: MainSetTileProps) {
   const [thumbnailUrl, setThumbnailUrl] = useState<string>("/images/image-coming-soon.png");
   const [totalCards, setTotalCards] = useState<number>(0);
@@ -47,7 +72,8 @@ export function MainSetTile({ mainSet, assignedSets }: MainSetTileProps) {
 
   useEffect(() => {
     if (mainSet.thumbnailImageUrl && !isPlaceholderImage(mainSet.thumbnailImageUrl)) {
-      setThumbnailUrl(mainSet.thumbnailImageUrl);
+      // Use proxy for external images that might block hotlinking
+      setThumbnailUrl(getProxiedUrl(mainSet.thumbnailImageUrl));
     } else if (currentSetCards && currentSetCards.length > 0) {
       // Find a card with a valid image
       const cardWithImage = currentSetCards.find(card => 
@@ -55,7 +81,7 @@ export function MainSetTile({ mainSet, assignedSets }: MainSetTileProps) {
       );
       
       if (cardWithImage && cardWithImage.frontImageUrl) {
-        setThumbnailUrl(cardWithImage.frontImageUrl);
+        setThumbnailUrl(getProxiedUrl(cardWithImage.frontImageUrl));
       } else if (currentSetIndex < assignedSets.length - 1) {
         // Try next subset if no valid image found
         setCurrentSetIndex(prev => prev + 1);

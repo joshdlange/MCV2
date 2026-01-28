@@ -26,7 +26,19 @@ export async function proxyImage(req: Request, res: Response) {
       'storage.googleapis.com',
       'images.pricecharting.com',
       'drive.google.com',
-      'res.cloudinary.com'
+      'res.cloudinary.com',
+      'i.ebayimg.com',
+      'ebayimg.com',
+      'i5.walmartimages.com',
+      'walmartimages.com',
+      'cdn.shopify.com',
+      'm.media-amazon.com',
+      'media-amazon.com',
+      'assets.dacw.co',
+      'dacardworld1.imgix.net',
+      'collectorsavenue.com',
+      'tradercracks.com',
+      'thetoytemple.com'
     ];
     
     const isAllowed = allowedDomains.some(domain => imageUrl.includes(domain));
