@@ -29,7 +29,7 @@ import { syncFirebaseUsersToBrevo } from "./contactsSync";
 import { emailService } from "./services/emailService";
 import * as emailTriggers from "./services/emailTriggers";
 import { startEmailCronJobs } from "./jobs/emailCron";
-import { uploadUserCardImage, uploadMainSetThumbnail } from "./cloudinary";
+import { uploadUserCardImage, uploadMainSetThumbnail, downloadAndUploadToCloudinary, isCloudinaryUrl } from "./cloudinary";
 import { registerMarketplaceRoutes } from "./marketplace-routes";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -578,6 +578,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const id = parseInt(req.params.id);
       const validatedData = insertMainSetSchema.partial().parse(req.body);
+      
+      // Prevent empty thumbnailImageUrl from overwriting existing values
+      // Only update thumbnail if it's actually provided with a non-empty value
+      if (validatedData.thumbnailImageUrl !== undefined) {
+        if (!validatedData.thumbnailImageUrl || validatedData.thumbnailImageUrl.trim() === '') {
+          // Empty value - remove from update to preserve existing thumbnail
+          delete validatedData.thumbnailImageUrl;
+          console.log(`Ignoring empty thumbnailImageUrl for main set ${id} to preserve existing value`);
+        } else if (!isCloudinaryUrl(validatedData.thumbnailImageUrl)) {
+          // External URL - download and upload to Cloudinary
+          console.log(`Downloading external thumbnail for main set ${id}: ${validatedData.thumbnailImageUrl}`);
+          try {
+            const cloudinaryUrl = await downloadAndUploadToCloudinary(validatedData.thumbnailImageUrl, id);
+            validatedData.thumbnailImageUrl = cloudinaryUrl;
+            console.log(`Successfully converted external URL to Cloudinary: ${cloudinaryUrl}`);
+          } catch (downloadError) {
+            console.error('Failed to download external image, keeping original URL:', downloadError);
+            // Keep the original URL if download fails
+          }
+        }
+      }
+      
       const mainSet = await storage.updateMainSet(id, validatedData);
       
       if (!mainSet) {
