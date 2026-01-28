@@ -581,7 +581,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/main-sets/:id", authenticateUser, async (req: any, res) => {
+  const updateMainSetHandler = async (req: any, res: any) => {
     try {
       if (!req.user.isAdmin) {
         return res.status(403).json({ message: "Admin access required" });
@@ -600,7 +600,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Update main set error:', error);
       res.status(500).json({ message: "Failed to update main set" });
     }
-  });
+  };
+  
+  app.put("/api/main-sets/:id", authenticateUser, updateMainSetHandler);
+  app.patch("/api/main-sets/:id", authenticateUser, updateMainSetHandler);
 
   app.delete("/api/main-sets/:id", authenticateUser, async (req: any, res) => {
     try {

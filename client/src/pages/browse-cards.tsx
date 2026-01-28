@@ -920,13 +920,13 @@ export default function BrowseCards() {
                       <CardContent className="p-0">
                         <div className="relative aspect-[3/4] sm:aspect-[2.5/3.5] overflow-hidden rounded-t-lg">
                           <img
-                            src={mainSet.thumbnailImageUrl || "/images/image-coming-soon.png"}
+                            src={mainSet.thumbnailImageUrl || "/uploads/marvel-card-vault-logo.png"}
                             alt={mainSet.name}
                             className="w-full h-full object-cover grayscale opacity-60"
                             loading="lazy"
                             onError={(e) => {
                               const target = e.target as HTMLImageElement;
-                              target.src = "/images/image-coming-soon.png";
+                              target.src = "/uploads/marvel-card-vault-logo.png";
                             }}
                           />
                           <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
@@ -1071,7 +1071,7 @@ export default function BrowseCards() {
                   <img
                     src={mainSetThumbnailFile 
                       ? URL.createObjectURL(mainSetThumbnailFile) 
-                      : (editingMainSet.thumbnailImageUrl || "/images/image-coming-soon.png")}
+                      : (editingMainSet.thumbnailImageUrl || "/uploads/marvel-card-vault-logo.png")}
                     alt={editingMainSet.name}
                     className="w-full h-full object-cover"
                   />
