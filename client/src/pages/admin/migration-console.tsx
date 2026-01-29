@@ -388,7 +388,7 @@ export default function MigrationConsole() {
                   </div>
                 </div>
 
-                <div className="h-[400px] overflow-y-auto space-y-2 p-2 bg-gray-50 rounded-md">
+                <div className="h-[600px] overflow-y-auto space-y-2 p-2 bg-gray-50 rounded-md">
                   {sourceLoading ? (
                     <div className="flex items-center justify-center h-full">
                       <Loader2 className="h-6 w-6 animate-spin text-red-600" />
@@ -472,7 +472,7 @@ export default function MigrationConsole() {
                   </Select>
                 </div>
 
-                <div className="h-[400px] overflow-y-auto space-y-2 p-2 bg-gray-50 rounded-md">
+                <div className="h-[600px] overflow-y-auto space-y-2 p-2 bg-gray-50 rounded-md">
                   {destLoading ? (
                     <div className="flex items-center justify-center h-full">
                       <Loader2 className="h-6 w-6 animate-spin text-green-600" />
