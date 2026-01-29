@@ -4674,7 +4674,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      const { sourceSetId, destinationSetId, forceInsert, notes, allowConflicts } = req.body;
+      const { sourceSetId, destinationSetId, forceInsert, notes, allowConflicts, newMainSetId, newSetName } = req.body;
       
       if (!sourceSetId || !destinationSetId) {
         return res.status(400).json({ message: "Source and destination set IDs required" });
@@ -4693,6 +4693,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get destination set info (for isInsertSubset enforcement)
       const [destSet] = await db.select({
         isInsertSubset: cardSets.isInsertSubset,
+        name: cardSets.name,
+        mainSetId: cardSets.mainSetId,
       }).from(cardSets).where(eq(cardSets.id, destinationSetId));
 
       // Determine if we should force insert (explicit forceInsert OR destination.isInsertSubset)
@@ -4767,6 +4769,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             SELECT COUNT(*) FROM cards WHERE set_id = card_sets.id
           ) WHERE id IN (${sourceSetId}, ${destinationSetId})
         `);
+
+        // Update destination set name and/or main set if provided
+        const destSetUpdates: { name?: string; mainSetId?: number } = {};
+        if (newSetName && newSetName.trim()) {
+          destSetUpdates.name = newSetName.trim();
+        }
+        if (newMainSetId) {
+          destSetUpdates.mainSetId = newMainSetId;
+        }
+        if (Object.keys(destSetUpdates).length > 0) {
+          await tx.update(cardSets)
+            .set(destSetUpdates)
+            .where(eq(cardSets.id, destinationSetId));
+        }
 
         // AUTO-ARCHIVE: If source set is now empty AND is non-canonical, archive it
         const sourceCardCountResult = await tx.execute(sql`

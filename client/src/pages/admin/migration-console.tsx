@@ -98,6 +98,10 @@ export default function MigrationConsole() {
   const [allowConflicts, setAllowConflicts] = useState(false);
   const [conflictConfirmText, setConflictConfirmText] = useState("");
   const [migrationNotes, setMigrationNotes] = useState("");
+  
+  // New: Main set assignment and name editing during migration
+  const [newMainSetId, setNewMainSetId] = useState<number | null>(null);
+  const [newSetName, setNewSetName] = useState<string>("");
 
   // Conflict confirmation requires typing the exact phrase
   const CONFLICT_CONFIRM_PHRASE = "MIGRATE WITH CONFLICTS";
@@ -169,6 +173,13 @@ export default function MigrationConsole() {
     enabled: activeTab === 'logs',
   });
 
+  // Fetch main sets for assigning parent during migration
+  const { data: mainSetsData } = useQuery({
+    queryKey: ['/api/main-sets'],
+    queryFn: () => apiRequest('GET', '/api/main-sets').then(res => res.json()),
+  });
+  const mainSets = mainSetsData || [];
+
   const executeMigration = useMutation({
     mutationFn: () => apiRequest('POST', '/api/admin/migration/execute', {
       sourceSetId: selectedSource?.id,
@@ -176,6 +187,8 @@ export default function MigrationConsole() {
       forceInsert,
       allowConflicts: conflictConfirmValid ? CONFLICT_CONFIRM_PHRASE : null, // Send phrase, not boolean
       notes: migrationNotes || null,
+      newMainSetId: newMainSetId || null,
+      newSetName: newSetName.trim() || null,
     }).then(res => res.json()),
     onSuccess: (data) => {
       toast({
@@ -183,12 +196,15 @@ export default function MigrationConsole() {
         description: data.message,
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/migration'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/main-sets'] });
       setSelectedSource(null);
       setSelectedDest(null);
       setForceInsert(false);
       setAllowConflicts(false);
       setConflictConfirmText("");
       setMigrationNotes("");
+      setNewMainSetId(null);
+      setNewSetName("");
     },
     onError: (error: any) => {
       toast({
@@ -688,6 +704,46 @@ export default function MigrationConsole() {
                         </div>
                       </div>
                     )}
+
+                    {/* Main Set Assignment */}
+                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 space-y-3">
+                      <div className="text-sm font-medium text-blue-800">Destination Set Options</div>
+                      
+                      <div>
+                        <Label htmlFor="newSetName" className="text-xs text-blue-700">Rename Set (optional)</Label>
+                        <Input
+                          id="newSetName"
+                          placeholder={selectedDest?.name || "New set name..."}
+                          value={newSetName}
+                          onChange={(e) => setNewSetName(e.target.value)}
+                          className="text-sm"
+                        />
+                        <div className="text-xs text-gray-500 mt-1">Leave blank to keep current name</div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="mainSetPicker" className="text-xs text-blue-700">Assign to Main Set (optional)</Label>
+                        <Select
+                          value={newMainSetId?.toString() || ""}
+                          onValueChange={(val) => setNewMainSetId(val ? parseInt(val) : null)}
+                        >
+                          <SelectTrigger className="text-sm">
+                            <SelectValue placeholder={selectedDest?.mainSetName || "Select a main set..."} />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-60">
+                            <SelectItem value="">Keep current / No change</SelectItem>
+                            {mainSets.map((ms: any) => (
+                              <SelectItem key={ms.id} value={ms.id.toString()}>
+                                {ms.name} ({ms.year})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {selectedDest?.mainSetName && (
+                          <div className="text-xs text-gray-500 mt-1">Currently under: {selectedDest.mainSetName}</div>
+                        )}
+                      </div>
+                    </div>
 
                     <div>
                       <Label htmlFor="notes" className="text-sm">Notes (optional)</Label>
