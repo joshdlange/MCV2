@@ -13,8 +13,9 @@
   --popover-foreground: 0 0% 98%;
   --card: 0 0% 100%; /* White card background */
   --card-foreground: 0 0% 8%; /* Dark text on white cards */
-  --border: 0 0% 20%; /* Dark border */
-  --input: 0 0% 12%; /* Dark input background */
+  --border: 0 0% 80%; /* Light gray border for inputs */
+  --input: 0 0% 100%; /* White input background */
+  --input-foreground: 0 0% 8%; /* Dark text in inputs */
   --primary: 4 92% 58%; /* Marvel Red #ed1d24 */
   --primary-foreground: 0 0% 98%;
   --secondary: 0 0% 12%;

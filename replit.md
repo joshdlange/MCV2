@@ -6,6 +6,7 @@ Marvel Card Vault is a comprehensive web application for managing Marvel trading
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 **IMPORTANT**: This is a live production app at marvelcardvault.com. All changes must be published to take effect - there's no need for dev-only changes.
+**UI RULE**: NO black backgrounds in text input fields anywhere in the app. All inputs, textareas, and selects must have white/light backgrounds with dark text for visibility. This applies to all existing and future features.
 
 ## System Architecture
 
