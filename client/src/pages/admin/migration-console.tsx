@@ -105,7 +105,7 @@ export default function MigrationConsole() {
 
   // Conflict confirmation requires typing the exact phrase
   const CONFLICT_CONFIRM_PHRASE = "MIGRATE WITH CONFLICTS";
-  const conflictConfirmValid = conflictConfirmText === CONFLICT_CONFIRM_PHRASE;
+  const conflictConfirmValid = conflictConfirmText.trim() === CONFLICT_CONFIRM_PHRASE;
 
   // Archive with cards confirmation
   const [archiveConfirmText, setArchiveConfirmText] = useState("");
