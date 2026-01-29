@@ -716,8 +716,17 @@ export default function MigrationConsole() {
                         Type the confirmation phrase above to proceed with conflicts
                       </div>
                     )}
+                  </div>
+                )}
 
-                    {selectedSource && selectedSource.cardCount === 0 && selectedSource.isActive && (
+                {/* Source Set Actions - shown when only source is selected (no destination needed) */}
+                {selectedSource && !selectedDest && selectedSource.isActive && (
+                  <div className="space-y-3">
+                    <div className="text-sm font-medium text-gray-700 border-b pb-2">
+                      Source Set Actions
+                    </div>
+
+                    {selectedSource.cardCount === 0 && (
                       <Button
                         variant="outline"
                         className="w-full"
@@ -730,11 +739,14 @@ export default function MigrationConsole() {
                       </Button>
                     )}
 
-                    {selectedSource && selectedSource.cardCount > 0 && selectedSource.isActive && (
+                    {selectedSource.cardCount > 0 && (
                       <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 space-y-3">
                         <div className="flex items-center gap-2 text-amber-800 font-medium text-sm">
                           <AlertTriangle className="h-4 w-4" />
                           <span>Archive Set With {selectedSource.cardCount} Cards</span>
+                        </div>
+                        <div className="text-xs text-amber-600">
+                          Will only succeed if no users have these cards in their collection.
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="archiveConfirm" className="text-xs text-amber-700">
@@ -761,7 +773,7 @@ export default function MigrationConsole() {
                       </div>
                     )}
 
-                    {selectedSource && selectedSource.cardCount === 0 && !selectedSource.isCanonical && selectedSource.isActive && (
+                    {selectedSource.cardCount === 0 && !selectedSource.isCanonical && (
                       <div className="p-3 bg-red-50 rounded-lg border border-red-200 space-y-3">
                         <div className="flex items-center gap-2 text-red-800 font-medium text-sm">
                           <AlertTriangle className="h-4 w-4" />
@@ -791,7 +803,7 @@ export default function MigrationConsole() {
                       </div>
                     )}
 
-                    {selectedSource && !selectedSource.isCanonical && selectedSource.isActive && (
+                    {!selectedSource.isCanonical && (
                       <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 space-y-3">
                         <div className="flex items-center gap-2 text-blue-800 font-medium text-sm">
                           <CheckCircle className="h-4 w-4" />
@@ -845,9 +857,9 @@ export default function MigrationConsole() {
                   </div>
                 )}
 
-                {!selectedSource && !selectedDest && (
+                {!selectedSource && (
                   <div className="text-center text-gray-500 py-8">
-                    Select a source and destination set to preview migration
+                    Select a source set to see available actions
                   </div>
                 )}
               </CardContent>
