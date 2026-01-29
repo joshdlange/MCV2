@@ -724,14 +724,14 @@ export default function MigrationConsole() {
                       <div>
                         <Label htmlFor="mainSetPicker" className="text-xs text-blue-700">Assign to Main Set (optional)</Label>
                         <Select
-                          value={newMainSetId?.toString() || ""}
-                          onValueChange={(val) => setNewMainSetId(val ? parseInt(val) : null)}
+                          value={newMainSetId?.toString() || "none"}
+                          onValueChange={(val) => setNewMainSetId(val === "none" ? null : parseInt(val))}
                         >
                           <SelectTrigger className="text-sm">
                             <SelectValue placeholder={selectedDest?.mainSetName || "Select a main set..."} />
                           </SelectTrigger>
                           <SelectContent className="max-h-60">
-                            <SelectItem value="">Keep current / No change</SelectItem>
+                            <SelectItem value="none">Keep current / No change</SelectItem>
                             {mainSets.map((ms: any) => (
                               <SelectItem key={ms.id} value={ms.id.toString()}>
                                 {ms.name} ({ms.year})
