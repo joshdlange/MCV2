@@ -5036,7 +5036,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const setId = parseInt(req.params.setId);
-      const { confirmPromotion, year } = req.body; // Require confirmation phrase and year
+      const { confirmPromotion, year, mainSetId, newName } = req.body; // Require confirmation phrase, year, and optional main set/name
 
       // Get set info
       const [set] = await db.select({
@@ -5100,14 +5100,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // If invalid year provided, just keep existing year
       }
 
-      // Promote to canonical
+      // Build update object
+      const updateData: any = {
+        isCanonical: true,
+        canonicalSource: 'promoted',
+        year: finalYear,
+        isActive: true, // Ensure it's active
+      };
+      
+      // Add main set assignment if provided
+      if (mainSetId) {
+        updateData.mainSetId = mainSetId;
+      }
+      
+      // Add name change if provided
+      if (newName && newName.trim()) {
+        updateData.name = newName.trim();
+      }
+
+      // Promote to canonical (and optionally assign to main set / rename)
       await db.update(cardSets)
-        .set({ 
-          isCanonical: true,
-          canonicalSource: 'promoted',
-          year: finalYear,
-          isActive: true, // Ensure it's active
-        })
+        .set(updateData)
         .where(eq(cardSets.id, setId));
 
       // Log the action
@@ -5122,9 +5135,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ 
         success: true, 
-        message: `"${set.name}" promoted to canonical master set`,
+        message: `"${newName?.trim() || set.name}" promoted to canonical${mainSetId ? ' (assigned to main set)' : ''}`,
         cardCount: cardCount.rows[0].count,
         subsetCount: subsetCount.rows[0].count,
+        mainSetAssigned: !!mainSetId,
+        renamed: !!(newName?.trim()),
       });
     } catch (error) {
       console.error('Promote to canonical error:', error);

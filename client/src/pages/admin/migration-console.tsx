@@ -123,6 +123,8 @@ export default function MigrationConsole() {
   const PROMOTE_CONFIRM_PHRASE = "PROMOTE TO CANONICAL";
   const promoteConfirmValid = promoteConfirmText === PROMOTE_CONFIRM_PHRASE;
   const [promoteYear, setPromoteYear] = useState<string>("");
+  const [promoteMainSetId, setPromoteMainSetId] = useState<number | null>(null);
+  const [promoteNewName, setPromoteNewName] = useState<string>("");
 
   const { data: sourceSetsData, isLoading: sourceLoading } = useQuery({
     queryKey: ['/api/admin/migration/sets', sourceSearch, sourceYear, sourceHasCards, showArchived],
@@ -277,21 +279,32 @@ export default function MigrationConsole() {
   });
 
   const promoteToCanonical = useMutation({
-    mutationFn: ({ setId, confirmPromotion, year }: { setId: number; confirmPromotion: string; year?: string }) => 
+    mutationFn: ({ setId, confirmPromotion, year, mainSetId, newName }: { 
+      setId: number; 
+      confirmPromotion: string; 
+      year?: string;
+      mainSetId?: number;
+      newName?: string;
+    }) => 
       apiRequest('POST', `/api/admin/migration/promote-to-canonical/${setId}`, { 
         confirmPromotion, 
-        year: year ? parseInt(year) : null 
+        year: year ? parseInt(year) : null,
+        mainSetId: mainSetId || null,
+        newName: newName || null
       }).then(res => res.json()),
     onSuccess: (data) => {
       toast({
         title: "Set Promoted",
-        description: data.message || "The set is now a canonical master set.",
+        description: data.message || "The set is now a canonical subset.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/migration/sets'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/migration/canonical-sets'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/main-sets'] });
       setSelectedSource(null);
       setPromoteConfirmText("");
       setPromoteYear("");
+      setPromoteMainSetId(null);
+      setPromoteNewName("");
     },
     onError: (error: any) => {
       toast({
@@ -863,15 +876,54 @@ export default function MigrationConsole() {
                       <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 space-y-3">
                         <div className="flex items-center gap-2 text-blue-800 font-medium text-sm">
                           <CheckCircle className="h-4 w-4" />
-                          <span>Promote to Canonical Master Set</span>
+                          <span>Promote to Canonical Subset</span>
                         </div>
                         <div className="text-xs text-blue-600">
-                          This will mark this set as a canonical/master set. All subsets will be preserved.
-                          {selectedSource.cardCount > 0 && ` Contains ${selectedSource.cardCount} cards.`}
+                          Convert this legacy set into a canonical subset under a main set. All {selectedSource.cardCount} cards will remain in this set.
                         </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="promoteMainSet" className="text-xs text-blue-700 font-medium">
+                            Assign to Main Set:
+                          </Label>
+                          <Select
+                            value={promoteMainSetId?.toString() || "none"}
+                            onValueChange={(val) => setPromoteMainSetId(val === "none" ? null : parseInt(val))}
+                          >
+                            <SelectTrigger className="text-sm">
+                              <SelectValue placeholder="Select a main set..." />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-60">
+                              <SelectItem value="none">No main set (standalone)</SelectItem>
+                              {mainSets.map((ms: any) => (
+                                <SelectItem key={ms.id} value={ms.id.toString()}>
+                                  {ms.name} ({ms.year})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {selectedSource.mainSetName && (
+                            <div className="text-xs text-gray-500">Currently under: {selectedSource.mainSetName}</div>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="promoteNewName" className="text-xs text-blue-700">
+                            Rename Set (optional):
+                          </Label>
+                          <Input
+                            id="promoteNewName"
+                            placeholder={selectedSource.name || "New name..."}
+                            value={promoteNewName}
+                            onChange={(e) => setPromoteNewName(e.target.value)}
+                            className="text-sm"
+                          />
+                          <div className="text-xs text-gray-500">Leave blank to keep current name</div>
+                        </div>
+
                         <div className="space-y-2">
                           <Label htmlFor="promoteYear" className="text-xs text-blue-700">
-                            Set Year (optional - update if needed):
+                            Set Year (optional):
                           </Label>
                           <Input
                             id="promoteYear"
@@ -882,6 +934,7 @@ export default function MigrationConsole() {
                             className="text-sm"
                           />
                         </div>
+
                         <div className="space-y-2">
                           <Label htmlFor="promoteConfirm" className="text-xs text-blue-700">
                             Type <span className="font-mono font-bold">PROMOTE TO CANONICAL</span> to confirm:
@@ -900,7 +953,9 @@ export default function MigrationConsole() {
                           onClick={() => promoteToCanonical.mutate({ 
                             setId: selectedSource.id, 
                             confirmPromotion: promoteConfirmText,
-                            year: promoteYear || undefined
+                            year: promoteYear || undefined,
+                            mainSetId: promoteMainSetId || undefined,
+                            newName: promoteNewName.trim() || undefined
                           })}
                           disabled={promoteToCanonical.isPending || !promoteConfirmValid}
                         >
