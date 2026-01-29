@@ -5087,7 +5087,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get count of subsets (sets that have this set as parent)
       const subsetCount = await db.execute(sql`
-        SELECT COUNT(*)::int as count FROM card_sets WHERE parent_set_id = ${setId}
+        SELECT COUNT(*)::int as count FROM card_sets WHERE main_set_id = ${setId}
       `);
 
       // Validate and coerce year if provided
