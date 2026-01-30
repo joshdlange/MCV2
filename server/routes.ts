@@ -5396,6 +5396,226 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Canonical taxonomy CSV import - ADD ONLY (no updates)
+  app.post("/api/admin/canonical-taxonomy-import", authenticateUser, upload.single('csv'), async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const dryRun = req.body.dryRun === 'true';
+      
+      if (!req.file) {
+        return res.status(400).json({ message: "CSV file required" });
+      }
+
+      // Slug generation function - deterministic and normalized
+      const generateSlug = (text: string): string => {
+        return text
+          .toLowerCase()
+          .trim()
+          .replace(/['']/g, '')           // Remove apostrophes
+          .replace(/[&]/g, 'and')         // Replace & with and
+          .replace(/[^\w\s-]/g, '')       // Remove special chars except spaces/hyphens
+          .replace(/\s+/g, '-')           // Replace spaces with hyphens
+          .replace(/-+/g, '-')            // Collapse multiple hyphens
+          .replace(/^-|-$/g, '');         // Remove leading/trailing hyphens
+      };
+
+      // Parse CSV
+      const csvContent = req.file.buffer.toString('utf-8');
+      const lines = csvContent.split('\n').filter(line => line.trim());
+      const headers = lines[0].split(',').map(h => h.trim());
+      
+      // Find column indices
+      const yearIdx = headers.findIndex(h => h.toLowerCase().includes('year'));
+      const mainSetIdx = headers.findIndex(h => h.toLowerCase().includes('main set'));
+      const subsetIdx = headers.findIndex(h => h.toLowerCase().includes('sub set'));
+      
+      if (yearIdx === -1 || mainSetIdx === -1 || subsetIdx === -1) {
+        return res.status(400).json({ 
+          message: "CSV must have columns: Set Year, Main Set Name, Sub Set Name",
+          foundHeaders: headers,
+        });
+      }
+
+      // Parse CSV rows (handle quoted fields with commas)
+      const parseCSVLine = (line: string): string[] => {
+        const result: string[] = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            result.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        result.push(current.trim());
+        return result;
+      };
+
+      // Collect unique main sets and subsets from CSV
+      const mainSetsFromCSV = new Map<string, { name: string; slug: string }>();
+      const subsetsFromCSV: Array<{ year: number; mainSetName: string; mainSetSlug: string; subsetName: string; subsetSlug: string }> = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = parseCSVLine(lines[i]);
+        if (cols.length < Math.max(yearIdx, mainSetIdx, subsetIdx) + 1) continue;
+        
+        const year = parseInt(cols[yearIdx]);
+        const mainSetName = cols[mainSetIdx]?.trim();
+        const subsetName = cols[subsetIdx]?.trim();
+        
+        if (!year || !mainSetName) continue;
+        
+        const mainSetSlug = generateSlug(mainSetName);
+        
+        // Track unique main sets
+        if (!mainSetsFromCSV.has(mainSetSlug)) {
+          mainSetsFromCSV.set(mainSetSlug, { name: mainSetName, slug: mainSetSlug });
+        }
+        
+        // For subsets, create a compound slug: year-mainsetslug-subsetslug
+        // If subset is empty, use "base" as the subset name
+        const actualSubsetName = subsetName || 'Base';
+        const subsetSlug = `${year}-${mainSetSlug}-${generateSlug(actualSubsetName)}`;
+        
+        subsetsFromCSV.push({
+          year,
+          mainSetName,
+          mainSetSlug,
+          subsetName: actualSubsetName,
+          subsetSlug,
+        });
+      }
+
+      // Get existing main sets by slug
+      const existingMainSets = await db.execute(sql`
+        SELECT id, slug, name FROM main_sets
+      `);
+      const existingMainSetSlugs = new Set(existingMainSets.rows.map((r: any) => r.slug));
+      const mainSetIdBySlug = new Map(existingMainSets.rows.map((r: any) => [r.slug, r.id]));
+
+      // Get existing card_sets by slug
+      const existingCardSets = await db.execute(sql`
+        SELECT id, slug, name FROM card_sets
+      `);
+      const existingCardSetSlugs = new Set(existingCardSets.rows.map((r: any) => r.slug));
+
+      // Determine what to ADD (not update)
+      const mainSetsToAdd: Array<{ name: string; slug: string }> = [];
+      for (const [slug, data] of mainSetsFromCSV) {
+        if (!existingMainSetSlugs.has(slug)) {
+          mainSetsToAdd.push(data);
+        }
+      }
+
+      const subsetsToAdd: Array<{ year: number; mainSetSlug: string; subsetName: string; subsetSlug: string }> = [];
+      const seenSubsetSlugs = new Set<string>();
+      for (const subset of subsetsFromCSV) {
+        if (!existingCardSetSlugs.has(subset.subsetSlug) && !seenSubsetSlugs.has(subset.subsetSlug)) {
+          subsetsToAdd.push(subset);
+          seenSubsetSlugs.add(subset.subsetSlug);
+        }
+      }
+
+      // DRY RUN: Return report without making changes
+      if (dryRun) {
+        return res.json({
+          dryRun: true,
+          summary: {
+            totalMainSetsInCSV: mainSetsFromCSV.size,
+            totalSubsetsInCSV: subsetsFromCSV.length,
+            mainSetsToAdd: mainSetsToAdd.length,
+            subsetsToAdd: subsetsToAdd.length,
+            mainSetsSkipped: mainSetsFromCSV.size - mainSetsToAdd.length,
+            subsetsSkipped: subsetsFromCSV.length - subsetsToAdd.length,
+          },
+          mainSetsToAdd: mainSetsToAdd.slice(0, 50), // Sample
+          subsetsToAdd: subsetsToAdd.slice(0, 100), // Sample
+        });
+      }
+
+      // APPLY: Insert new entries
+      let mainSetsAdded = 0;
+      let subsetsAdded = 0;
+      const newMainSetIds = new Map<string, number>();
+
+      // Insert new main sets
+      for (const ms of mainSetsToAdd) {
+        const result = await db.execute(sql`
+          INSERT INTO main_sets (name, slug, created_at)
+          VALUES (${ms.name}, ${ms.slug}, NOW())
+          RETURNING id
+        `);
+        newMainSetIds.set(ms.slug, result.rows[0].id as number);
+        mainSetsAdded++;
+      }
+
+      // Combine existing + new main set IDs
+      for (const [slug, id] of mainSetIdBySlug) {
+        if (!newMainSetIds.has(slug)) {
+          newMainSetIds.set(slug, id as number);
+        }
+      }
+
+      // Insert new subsets
+      for (const sub of subsetsToAdd) {
+        const mainSetId = newMainSetIds.get(sub.mainSetSlug);
+        if (!mainSetId) {
+          console.warn(`Main set not found for slug: ${sub.mainSetSlug}`);
+          continue;
+        }
+
+        await db.execute(sql`
+          INSERT INTO card_sets (name, year, slug, main_set_id, is_active, is_canonical, canonical_source, total_cards, created_at)
+          VALUES (${sub.subsetName}, ${sub.year}, ${sub.subsetSlug}, ${mainSetId}, true, true, 'csv_master', 0, NOW())
+        `);
+        subsetsAdded++;
+      }
+
+      // Log the import
+      await db.insert(adminAuditLogs).values({
+        adminUserId: req.user.id,
+        actionType: 'canonical_taxonomy_import',
+        entityType: 'taxonomy',
+        entityId: null,
+        entityName: req.file.originalname || 'taxonomy_import.csv',
+        notes: `Added ${mainSetsAdded} main sets, ${subsetsAdded} subsets. Skipped ${mainSetsFromCSV.size - mainSetsAdded} existing main sets, ${subsetsFromCSV.length - subsetsAdded} existing subsets.`,
+      });
+
+      // Verification counts
+      const finalCounts = await db.execute(sql`
+        SELECT 
+          (SELECT COUNT(*) FROM main_sets) as total_main_sets,
+          (SELECT COUNT(*) FROM card_sets WHERE canonical_source = 'csv_master') as canonical_subsets
+      `);
+
+      res.json({
+        success: true,
+        applied: {
+          mainSetsAdded,
+          subsetsAdded,
+          mainSetsSkipped: mainSetsFromCSV.size - mainSetsAdded,
+          subsetsSkipped: subsetsFromCSV.length - subsetsAdded,
+        },
+        verification: {
+          totalMainSets: finalCounts.rows[0].total_main_sets,
+          totalCanonicalSubsets: finalCounts.rows[0].canonical_subsets,
+        },
+      });
+
+    } catch (error) {
+      console.error('Canonical taxonomy import error:', error);
+      res.status(500).json({ message: "Failed to import taxonomy", error: String(error) });
+    }
+  });
+
   // Register marketplace routes
   registerMarketplaceRoutes(app, authenticateUser);
 

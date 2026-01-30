@@ -1,0 +1,79 @@
+TASK: Update Canonical Master Set + Subset Taxonomy from an UPDATED CSV (source of truth)
+
+CONTEXT
+- App is LIVE in production.
+- We already have canonical taxonomy import logic (from the master CSV) and a migration console.
+- Canonical means: rows coming from the master CSV taxonomy ONLY (canonical_source='csv_master').
+- Public browse must not be disrupted: do NOT change any public pages/routes/filters in this task.
+
+GOAL
+I will upload a NEW/UPDATED canonical taxonomy CSV (sets + subsets).
+You must ingest it safely so canonical taxonomy is updated (add missing main sets, add missing subsets, update names if needed), without touching cards or user collections.
+
+IMPORTANT CONSTRAINTS
+1) NO CARD MIGRATIONS in this task.
+2) NO CARD CREATION in this task.
+3) NO DELETES. If something is removed from the CSV, do not delete it—mark it archived (isActive=false) OR leave it untouched (prefer leave untouched for now).
+4) Must be IDEMPOTENT: re-running the import should not create duplicates.
+5) Deterministic canonical stamping ONLY via this CSV:
+   - canonical_source='csv_master'
+   - isCanonical=true (if still used)
+6) Must not rely on “main_set_id exists” or similarity matching.
+
+CSV FORMAT ASSUMPTIONS
+The CSV contains, per row, the canonical taxonomy entries:
+- year
+- main_set (master set name)
+- subset (card_set/subset name)
+(If there are other columns, ignore them for taxonomy import.)
+
+IMPLEMENTATION REQUIREMENTS
+A) Create/Update main_sets
+- Key: slug (deterministic)
+- Upsert by slug:
+  - If exists: update name if changed (but do not wipe thumbnail_image_url)
+  - If new: create with name, slug
+- Preserve existing thumbnail_image_url always unless it is null and CSV provides one (it likely won’t)
+
+B) Create/Update card_sets (subsets)
+- Each subset belongs to a main_set_id
+- Key: slug must be deterministic and collision-resistant:
+  - include year + main_set slug + subset slug
+- Upsert by slug:
+  - If exists: update name/year/description if provided, preserve image_url
+  - Set canonical_source='csv_master', isCanonical=true, isActive=true
+- Ensure duplicates do not occur if the subset name differs slightly; slug logic must be stable and based on normalized name.
+
+C) Never modify cards table
+- Do not touch cards.set_id
+- Do not touch canonical_set_id if it exists
+- Do not touch user_collections or marketplace tables
+
+D) Produce a DRY RUN report first (admin-only)
+Before applying, generate a report:
+- main_sets: will add X, will update Y
+- card_sets: will add X, will update Y
+- potential conflicts: slugs that would collide (if any)
+Save as CSV(s) to disk and provide paths.
+
+E) Apply import after dry-run automatically (since I am explicitly asking you to upload and update)
+- Run in a transaction
+- Log a canonical_import_log entry:
+  - timestamp, file name, counts added/updated
+
+F) Post-import verification output
+Print counts:
+- total canonical card_sets where canonical_source='csv_master'
+- total canonical main_sets (those with >=1 canonical child subset)
+Show 10 sample canonical entries.
+
+QA CHECKLIST
+- Public browse still shows what it did before (no regression).
+- Canonical migration console canonical list still works and is NOT polluted by legacy.
+- No duplicates created for the same subset due to slug instability.
+
+DELIVERABLES
+- Files changed
+- The exact slug rules used for main_sets and card_sets
+- Dry run CSV report path
+- Apply results counts
