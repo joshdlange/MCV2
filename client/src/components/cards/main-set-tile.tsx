@@ -47,7 +47,8 @@ const getProxiedUrl = (url: string): string => {
 };
 
 export function MainSetTile({ mainSet, assignedSets }: MainSetTileProps) {
-  const [thumbnailUrl, setThumbnailUrl] = useState<string>("/images/image-coming-soon.png");
+  const [thumbnailUrl, setThumbnailUrl] = useState<string>("/uploads/marvel-card-vault-logo.png");
+  const [isUsingPlaceholder, setIsUsingPlaceholder] = useState<boolean>(true);
   const [totalCards, setTotalCards] = useState<number>(0);
   const [currentSetIndex, setCurrentSetIndex] = useState<number>(0);
 
@@ -67,13 +68,14 @@ export function MainSetTile({ mainSet, assignedSets }: MainSetTileProps) {
   // Enable search if main set thumbnail is missing or is a placeholder
   const { data: currentSetCards } = useQuery<CardWithSet[]>({
     queryKey: ["/api/cards", { setId: currentSetId }],
-    enabled: Boolean(currentSetId && isPlaceholderImage(mainSet.thumbnailImageUrl) && thumbnailUrl === "/images/image-coming-soon.png"),
+    enabled: Boolean(currentSetId && isPlaceholderImage(mainSet.thumbnailImageUrl) && isUsingPlaceholder),
   });
 
   useEffect(() => {
     if (mainSet.thumbnailImageUrl && !isPlaceholderImage(mainSet.thumbnailImageUrl)) {
       // Use proxy for external images that might block hotlinking
       setThumbnailUrl(getProxiedUrl(mainSet.thumbnailImageUrl));
+      setIsUsingPlaceholder(false);
     } else if (currentSetCards && currentSetCards.length > 0) {
       // Find a card with a valid image
       const cardWithImage = currentSetCards.find(card => 
@@ -82,6 +84,7 @@ export function MainSetTile({ mainSet, assignedSets }: MainSetTileProps) {
       
       if (cardWithImage && cardWithImage.frontImageUrl) {
         setThumbnailUrl(getProxiedUrl(cardWithImage.frontImageUrl));
+        setIsUsingPlaceholder(false);
       } else if (currentSetIndex < assignedSets.length - 1) {
         // Try next subset if no valid image found
         setCurrentSetIndex(prev => prev + 1);
@@ -100,11 +103,12 @@ export function MainSetTile({ mainSet, assignedSets }: MainSetTileProps) {
             <img
               src={thumbnailUrl}
               alt={mainSet.name}
-              className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+              className={`w-full h-full object-cover transition-transform duration-200 group-hover:scale-105 ${isUsingPlaceholder ? 'grayscale opacity-60' : ''}`}
               loading="lazy"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
-                target.src = "/images/image-coming-soon.png";
+                target.src = "/uploads/marvel-card-vault-logo.png";
+                setIsUsingPlaceholder(true);
               }}
             />
             <div className="absolute top-1.5 right-1.5">
