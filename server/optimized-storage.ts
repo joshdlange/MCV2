@@ -43,6 +43,15 @@ const performanceTracker = {
   }
 };
 
+// Trending cards cache - refreshes every 6 hours
+interface TrendingCache {
+  cards: any[];
+  lastUpdated: number;
+  rotationSeed: number;
+}
+let trendingCache: TrendingCache | null = null;
+const TRENDING_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
+
 export class OptimizedStorage {
   /**
    * Get paginated cards with lightweight payload - OPTIMIZED
@@ -425,17 +434,30 @@ export class OptimizedStorage {
   }
 
   /**
-   * Get trending cards with enhanced algorithm: median pricing, quality images, insert preference, master set variety
+   * Get trending cards with enhanced algorithm - OPTIMIZED with caching
+   * Uses efficient database sampling instead of loading all cards
    */
   async getTrendingCardsOptimized(limit: number = 10) {
     const startTime = Date.now();
+    const currentRotationSeed = Math.floor(Date.now() / TRENDING_CACHE_TTL);
+    
+    // Check cache first
+    if (trendingCache && 
+        trendingCache.rotationSeed === currentRotationSeed && 
+        Date.now() - trendingCache.lastUpdated < TRENDING_CACHE_TTL) {
+      performanceTracker.logQuery(`getTrendingCardsOptimized(${limit}) [CACHED]`, startTime);
+      return trendingCache.cards.slice(0, limit);
+    }
     
     try {
-      // Time-based seed for rotation (changes every 6 hours)
-      const rotationSeed = Math.floor(Date.now() / (6 * 60 * 60 * 1000));
+      // Strategy: Get a smart sample of high-quality cards from database
+      // 1. Popular cards (most collected) - top 50
+      // 2. Insert cards with images - random 50
+      // 3. Recently priced cards - top 50
+      // Then score and diversify in memory (only ~150 cards instead of 68k)
 
-      // Get all cards with images and pricing, then apply scoring in JavaScript
-      const allCards = await db
+      // Query 1: Most collected cards with images
+      const popularCards = await db
         .select({
           id: cards.id,
           name: cards.name,
@@ -445,67 +467,97 @@ export class OptimizedStorage {
           setYear: cardSets.year,
           isInsert: cards.isInsert,
           rarity: cards.rarity,
-          avgPrice: cardPriceCache.avgPrice,
-          priceDate: cardPriceCache.createdAt,
           mainSetId: cardSets.mainSetId,
-          collectionCount: sql<number>`COUNT(${userCollections.id})`
+          collectionCount: sql<number>`(SELECT COUNT(*) FROM user_collections WHERE card_id = ${cards.id})`
         })
         .from(cards)
         .innerJoin(cardSets, eq(cards.setId, cardSets.id))
-        .leftJoin(userCollections, eq(cards.id, userCollections.cardId))
-        .leftJoin(cardPriceCache, eq(cards.id, cardPriceCache.cardId))
-        .where(isNotNull(cards.frontImageUrl)) // Must have image
-        .groupBy(
-          cards.id, cardSets.id, cardSets.name, cardSets.year, cards.name, 
-          cards.cardNumber, cards.frontImageUrl, cards.isInsert, cards.rarity, 
-          cardPriceCache.avgPrice, cardPriceCache.createdAt, cardSets.mainSetId
-        );
+        .where(isNotNull(cards.frontImageUrl))
+        .orderBy(sql`(SELECT COUNT(*) FROM user_collections WHERE card_id = ${cards.id}) DESC`)
+        .limit(50);
 
-      // Calculate price percentiles for median range
-      const prices = allCards
-        .map(card => parseFloat(card.avgPrice || '0'))
-        .filter(price => price > 0)
-        .sort((a, b) => a - b);
-      
-      const percentile25 = prices[Math.floor(prices.length * 0.25)] || 1;
-      const percentile75 = prices[Math.floor(prices.length * 0.75)] || 10;
+      // Query 2: Insert cards with images (seeded random for variety)
+      const insertCards = await db
+        .select({
+          id: cards.id,
+          name: cards.name,
+          cardNumber: cards.cardNumber,
+          frontImageUrl: cards.frontImageUrl,
+          setName: cardSets.name,
+          setYear: cardSets.year,
+          isInsert: cards.isInsert,
+          rarity: cards.rarity,
+          mainSetId: cardSets.mainSetId,
+          collectionCount: sql<number>`0`
+        })
+        .from(cards)
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+        .where(and(
+          isNotNull(cards.frontImageUrl),
+          eq(cards.isInsert, true)
+        ))
+        .orderBy(sql`(${cards.id} % 1000 + ${currentRotationSeed % 1000}) % 1000`)
+        .limit(50);
 
-      // Apply enhanced scoring to each card
-      const scoredCards = allCards.map(card => {
-        const price = parseFloat(card.avgPrice || '0');
-        let score = 0;
+      // Query 3: Recent high-value cards
+      const pricedCards = await db
+        .select({
+          id: cards.id,
+          name: cards.name,
+          cardNumber: cards.cardNumber,
+          frontImageUrl: cards.frontImageUrl,
+          setName: cardSets.name,
+          setYear: cardSets.year,
+          isInsert: cards.isInsert,
+          rarity: cards.rarity,
+          mainSetId: cardSets.mainSetId,
+          collectionCount: sql<number>`0`,
+          avgPrice: cardPriceCache.avgPrice
+        })
+        .from(cards)
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+        .innerJoin(cardPriceCache, eq(cards.id, cardPriceCache.cardId))
+        .where(isNotNull(cards.frontImageUrl))
+        .orderBy(desc(cardPriceCache.createdAt))
+        .limit(50);
 
-        // Base collection popularity
-        score += (card.collectionCount || 0) * 1.0;
-
-        // Insert card bonus (10 points)
-        if (card.isInsert) score += 10.0;
-
-        // Price quality score (median range preferred)
-        if (price >= percentile25 && price <= percentile75) {
-          score += 8.0;
-        } else if (price > 0) {
-          score += 4.0;
+      // Merge and deduplicate candidates
+      const cardMap = new Map<number, any>();
+      [...popularCards, ...insertCards, ...pricedCards].forEach(card => {
+        if (!cardMap.has(card.id)) {
+          cardMap.set(card.id, card);
+        } else {
+          // Merge collection counts
+          const existing = cardMap.get(card.id);
+          existing.collectionCount = Math.max(existing.collectionCount || 0, card.collectionCount || 0);
         }
+      });
 
-        // Image quality bonus (already filtered for images)
-        score += 5.0;
+      const candidates = Array.from(cardMap.values());
 
-        // Rotation factor for variety
-        score += ((card.id * rotationSeed) % 100) * 0.1;
-
+      // Score candidates
+      const scoredCards = candidates.map(card => {
+        let score = 0;
+        score += (card.collectionCount || 0) * 2.0;
+        if (card.isInsert) score += 15.0;
+        if (card.avgPrice && parseFloat(card.avgPrice) > 0) score += 10.0;
+        score += ((card.id * currentRotationSeed) % 100) * 0.1;
         return { ...card, score };
       });
 
-      // Sort by score and select diverse cards by master set
-      const candidates = scoredCards
-        .sort((a, b) => b.score - a.score)
-        .slice(0, limit * 3); // Get more candidates for diversity
+      // Sort and diversify
+      scoredCards.sort((a, b) => b.score - a.score);
+      const diverseResults = this.ensureMasterSetDiversity(scoredCards, Math.max(limit, 20));
 
-      const diverseResults = this.ensureMasterSetDiversity(candidates, limit);
+      // Cache results
+      trendingCache = {
+        cards: diverseResults,
+        lastUpdated: Date.now(),
+        rotationSeed: currentRotationSeed
+      };
 
       performanceTracker.logQuery(`getTrendingCardsOptimized(${limit})`, startTime);
-      return diverseResults;
+      return diverseResults.slice(0, limit);
     } catch (error) {
       console.error('Error in getTrendingCardsOptimized:', error);
       return this.getTrendingCardsFallback(limit);
