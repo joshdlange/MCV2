@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Star, ArrowLeft, Plus, Edit, Filter, Grid3X3, List, X, Save, Home, Image, DollarSign, Loader2, Hammer, Lock } from "lucide-react";
+import { Search, Star, ArrowLeft, Plus, Edit, Filter, Grid3X3, List, X, Save, Home, Image, DollarSign, Loader2 } from "lucide-react";
 import { CardGrid } from "@/components/cards/card-grid";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { SetThumbnail } from "@/components/cards/set-thumbnail";
@@ -79,11 +79,6 @@ export default function BrowseCards() {
     queryKey: ["/api/main-sets"],
   });
 
-  const { data: stillPopulatingMainSets } = useQuery<MainSet[]>({
-    queryKey: ["/api/main-sets/still-populating"],
-  });
-
-  const [stillPopulatingModal, setStillPopulatingModal] = useState<MainSet | null>(null);
   const [editingMainSet, setEditingMainSet] = useState<MainSet | null>(null);
   const [mainSetThumbnailFile, setMainSetThumbnailFile] = useState<File | null>(null);
 
@@ -321,7 +316,6 @@ export default function BrowseCards() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/main-sets'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/main-sets/still-populating'] });
       setEditingMainSet(null);
       setMainSetThumbnailFile(null);
       toast({
@@ -914,66 +908,6 @@ export default function BrowseCards() {
               </div>
             </div>
 
-            {stillPopulatingMainSets && stillPopulatingMainSets.length > 0 && (
-              <div className="mt-12">
-                <div className="flex items-center gap-3 mb-6">
-                  <Hammer className="w-6 h-6 text-amber-500" />
-                  <h3 className="text-lg font-semibold text-gray-900 font-bangers tracking-wide">Still Populating</h3>
-                  <span className="text-sm text-gray-500">({stillPopulatingMainSets.length} sets coming soon)</span>
-                </div>
-                <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-2 md:gap-3">
-                  {stillPopulatingMainSets.map((mainSet) => (
-                    <Card
-                      key={mainSet.id}
-                      className="group cursor-pointer hover:shadow-md transition-all bg-white border border-gray-200 relative overflow-hidden"
-                      onClick={() => setStillPopulatingModal(mainSet)}
-                    >
-                      <CardContent className="p-0">
-                        <div className="relative aspect-[3/4] sm:aspect-[2.5/3.5] overflow-hidden rounded-t-lg">
-                          <img
-                            src={mainSet.thumbnailImageUrl || "/uploads/marvel-card-vault-logo.png"}
-                            alt={mainSet.name}
-                            className="w-full h-full object-cover grayscale opacity-60"
-                            loading="lazy"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.src = "/uploads/marvel-card-vault-logo.png";
-                            }}
-                          />
-                          <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                            <div className="bg-amber-500/90 rounded-full p-2">
-                              <Lock className="w-4 h-4 text-white" />
-                            </div>
-                          </div>
-                          {isAdminMode && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="absolute top-2 right-2 h-7 w-7 p-0 rounded-full bg-white/90 text-gray-600 hover:bg-white hover:text-blue-600 shadow-sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingMainSet(mainSet);
-                              }}
-                            >
-                              <Edit className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                        </div>
-                        <div className="p-1.5 sm:p-2.5">
-                          <h3 className="font-medium text-xs sm:text-xs text-gray-600 mb-1 sm:mb-1.5 line-clamp-2 leading-tight min-h-[1.5rem] sm:min-h-[2rem]">
-                            {formatSetName(mainSet.name)}
-                          </h3>
-                          <div className="flex items-center text-xs text-amber-600">
-                            <Hammer className="w-3 h-3 mr-1" />
-                            <span>Coming Soon</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         ) : (
           <div className="space-y-8">
@@ -1039,33 +973,6 @@ export default function BrowseCards() {
         />
       )}
 
-      {stillPopulatingModal && (
-        <Dialog open={!!stillPopulatingModal} onOpenChange={() => setStillPopulatingModal(null)}>
-          <DialogContent className="sm:max-w-md text-center">
-            <DialogHeader className="space-y-4">
-              <div className="flex justify-center">
-                <div className="bg-amber-100 rounded-full p-4">
-                  <Hammer className="w-10 h-10 text-amber-500" />
-                </div>
-              </div>
-              <DialogTitle className="font-bangers text-2xl tracking-wide text-gray-900">
-                Still Populating
-              </DialogTitle>
-              <DialogDescription className="text-base text-gray-600">
-                We're actively building <span className="font-semibold text-gray-800">{stillPopulatingModal.name}</span>. Check back soon!
-              </DialogDescription>
-            </DialogHeader>
-            <div className="pt-4">
-              <Button 
-                onClick={() => setStillPopulatingModal(null)}
-                className="bg-amber-500 hover:bg-amber-600 text-white"
-              >
-                Got it!
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
 
       {editingMainSet && (
         <Dialog open={!!editingMainSet} onOpenChange={() => { setEditingMainSet(null); setMainSetThumbnailFile(null); }}>
