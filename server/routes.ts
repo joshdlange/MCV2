@@ -1358,18 +1358,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Find column mappings
       const keys = Object.keys(rows[0]);
-      const nameKey = keys.find(k => k === 'name' || k === 'cardname');
+      const nameKey = keys.find(k => k === 'name' || k === 'cardname' || k === 'cardtitle');
       const cardNumberKey = keys.find(k => k === 'cardnumber' || k === 'number' || k === 'card#' || k === 'no');
       const setIdKey = keys.find(k => k === 'setid' || k === 'set');
       const subsetKey = keys.find(k => k === 'subsetid' || k === 'subset' || k === 'subsetname');
+      const fullComboKey = keys.find(k => k === 'fullcombo');
+      const mainSetKey = keys.find(k => k === 'mainset');
+      const yearKey = keys.find(k => k === 'year');
 
       if (!nameKey || !cardNumberKey) {
         return res.status(400).json({ 
-          message: `CSV must have name and cardNumber columns. Found: ${keys.join(', ')}` 
+          message: `CSV must have name/cardtitle and cardNumber columns. Found: ${keys.join(', ')}` 
         });
       }
 
-      console.log(`[BULK IMPORT] Columns: name="${nameKey}", cardNumber="${cardNumberKey}", setId="${setIdKey || 'N/A'}", subset="${subsetKey || 'N/A'}"`);
+      // If no setId column, we need fullCombo or mainset+subset to lookup sets
+      const useSetLookup = !setIdKey && (fullComboKey || (mainSetKey && subsetKey));
+      
+      console.log(`[BULK IMPORT] Columns: name="${nameKey}", cardNumber="${cardNumberKey}", setId="${setIdKey || 'N/A'}", fullCombo="${fullComboKey || 'N/A'}", mainSet="${mainSetKey || 'N/A'}", subset="${subsetKey || 'N/A'}"`);
+      console.log(`[BULK IMPORT] Set lookup mode: ${useSetLookup ? 'by name' : 'by ID'}`);
+
+      // Pre-build set lookup cache if using name-based matching
+      let setCache: Map<string, number> = new Map();
+      if (useSetLookup) {
+        console.log(`[BULK IMPORT] Building set name lookup cache...`);
+        const allSets = await db.select({ id: cardSets.id, name: cardSets.name }).from(cardSets).where(eq(cardSets.isActive, true));
+        for (const set of allSets) {
+          // Normalize: lowercase, trim, remove extra spaces
+          const normalizedName = set.name.toLowerCase().trim().replace(/\s+/g, ' ');
+          setCache.set(normalizedName, set.id);
+        }
+        console.log(`[BULK IMPORT] Cached ${setCache.size} active sets for lookup`);
+      }
 
       // Process rows in batches starting from offset
       const rowsToProcess = rows.slice(startOffset);
@@ -1403,7 +1423,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const row = batch[i];
               const name = row[nameKey]?.trim();
               const cardNumber = row[cardNumberKey]?.trim();
-              const setId = row[setIdKey]?.trim() ? parseInt(row[setIdKey]) : null;
+              
+              // Determine setId - either from direct ID column or by name lookup
+              let setId: number | null = null;
+              
+              if (setIdKey && row[setIdKey]?.trim()) {
+                setId = parseInt(row[setIdKey]);
+              } else if (useSetLookup) {
+                // Try fullCombo first, then construct from mainset + subset
+                let lookupName = '';
+                if (fullComboKey && row[fullComboKey]?.trim()) {
+                  lookupName = row[fullComboKey].trim();
+                } else if (mainSetKey && row[mainSetKey]?.trim()) {
+                  const mainSet = row[mainSetKey].trim();
+                  const subset = subsetKey && row[subsetKey]?.trim() ? row[subsetKey].trim() : 'Base';
+                  lookupName = `${mainSet} - ${subset}`;
+                }
+                
+                if (lookupName) {
+                  const normalized = lookupName.toLowerCase().trim().replace(/\s+/g, ' ');
+                  setId = setCache.get(normalized) || null;
+                  
+                  if (!setId) {
+                    // Log first 10 missing sets to help debug
+                    if (errors.length < 10) {
+                      errors.push(`Row ${startOffset + batchStart + i + 2}: Set not found: "${lookupName}"`);
+                    }
+                    errorCount++;
+                    continue;
+                  }
+                }
+              }
 
               if (!name || !cardNumber) {
                 errors.push(`Row ${startOffset + batchStart + i + 2}: Missing name or cardNumber`);
@@ -1412,7 +1462,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
 
               if (!setId) {
-                errors.push(`Row ${startOffset + batchStart + i + 2}: Missing setId`);
+                if (errors.length < 10) {
+                  errors.push(`Row ${startOffset + batchStart + i + 2}: Missing setId`);
+                }
                 errorCount++;
                 continue;
               }
