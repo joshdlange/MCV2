@@ -73,6 +73,8 @@ export function Sidebar() {
 
   const { data: collectionStats } = useQuery({
     queryKey: ["/api/stats"],
+    staleTime: 30000, // Consider data fresh for 30 seconds to prevent refetch on menu open
+    placeholderData: { totalCards: 0 }, // Show immediately while loading
   });
 
   const IconComponent = ({ iconName }: { iconName: string }) => {
