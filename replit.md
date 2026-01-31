@@ -29,6 +29,11 @@ The application incorporates comprehensive performance optimizations for handlin
 - **Email Integration**: ✨ NEW (Nov 20, 2025) - Brevo SMTP integration for transactional emails with Nodemailer configuration (`server/email.ts`), Firebase to Brevo contact sync (`server/contactsSync.ts`), admin-only sync endpoint for CRM management, and comprehensive email automation system with 15 branded templates, event triggers, and scheduled cron jobs. ✅ UPDATED (Nov 21, 2025) - Inactivity reminders and weekly digest emails are limited to 1 email per month maximum to prevent email fatigue.
 - **Migration Console**: ✨ NEW (Jan 27, 2026) - Admin-only tool for safely migrating cards between sets. Features include source/destination set pickers with search/filter, preview with conflict detection, transaction-wrapped execute/rollback operations, archive instead of delete pattern, and full audit logging via `migration_logs` and `migration_log_cards` tables. Protects user collections by keeping card_ids stable.
 - **Canonical Taxonomy**: ✅ EXPANDED (Jan 30, 2026) - Successfully imported 58 new main sets and 564 new subsets from updated CSV. Total: 492 main sets, 5,201 canonical subsets. Import was ADD-ONLY with no modifications to existing data.
+- **Performance Hardening for Large Imports**: ✅ NEW (Jan 31, 2026) - Prepared system for 200k+ card catalog imports:
+  - All card-listing endpoints (`/api/sets/:setId/cards`, `/api/missing-cards/:setId`) now paginated with LIMIT/OFFSET (default 36, max 100)
+  - New `idx_cards_set_id_id` index for optimized pagination queries
+  - New `/api/admin/bulk-card-import` endpoint with batch processing (2000 rows/batch), progress logging `[BULK IMPORT]`, event loop yielding, resumable via `startOffset` parameter
+  - Frontend binder/missing views fetch all pages automatically to display complete card lists
 - **Still Populating Section**: ✨ NEW (Jan 28, 2026) - Browse → Master Sets now shows a "Still Populating" section below active sets for canonical master sets that have no cards yet. Features:
   - Grayscale locked tile appearance with amber "Coming Soon" styling
   - Click shows branded modal (no navigation) with hammer icon

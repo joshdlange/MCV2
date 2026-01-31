@@ -1039,8 +1039,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/sets/:setId/cards", async (req, res) => {
     try {
       const setId = parseInt(req.params.setId);
-      const cards = await storage.getCardsBySet(setId);
-      res.json(cards);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 36, 100); // Max 100
+      const offset = (page - 1) * limit;
+      
+      // Use paginated query for performance with large sets
+      const result = await db.execute(sql`
+        SELECT 
+          c.id, c.set_id as "setId", c.card_number as "cardNumber", c.name, 
+          c.variation, c.is_insert as "isInsert", c.front_image_url as "frontImageUrl",
+          c.back_image_url as "backImageUrl", c.description, c.rarity, 
+          c.estimated_value as "estimatedValue", c.created_at as "createdAt",
+          cs.name as "setName", cs.slug as "setSlug", cs.year as "setYear",
+          cs.description as "setDescription", cs.image_url as "setImageUrl",
+          cs.total_cards as "setTotalCards", cs.main_set_id as "setMainSetId"
+        FROM cards c
+        LEFT JOIN card_sets cs ON c.set_id = cs.id
+        WHERE c.set_id = ${setId}
+        ORDER BY 
+          CASE WHEN c.card_number ~ '^[0-9]+$' THEN c.card_number::integer ELSE 999999 END,
+          c.card_number, c.id
+        LIMIT ${limit} OFFSET ${offset}
+      `);
+      
+      const countResult = await db.execute(sql`
+        SELECT COUNT(*)::int as total FROM cards WHERE set_id = ${setId}
+      `);
+      
+      const cards = result.rows.map((row: any) => ({
+        id: row.id,
+        setId: row.setId,
+        cardNumber: row.cardNumber,
+        name: row.name,
+        variation: row.variation,
+        isInsert: row.isInsert,
+        frontImageUrl: row.frontImageUrl,
+        backImageUrl: row.backImageUrl,
+        description: row.description,
+        rarity: row.rarity,
+        estimatedValue: row.estimatedValue,
+        createdAt: row.createdAt,
+        set: {
+          id: row.setId,
+          name: row.setName,
+          slug: row.setSlug,
+          year: row.setYear,
+          description: row.setDescription,
+          imageUrl: row.setImageUrl,
+          totalCards: row.setTotalCards,
+          mainSetId: row.setMainSetId
+        }
+      }));
+      
+      res.json({
+        cards,
+        total: countResult.rows[0].total,
+        page,
+        limit,
+        totalPages: Math.ceil(countResult.rows[0].total / limit)
+      });
     } catch (error) {
       console.error('Get cards by set error:', error);
       res.status(500).json({ message: "Failed to fetch cards for set" });
@@ -1248,6 +1305,199 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // BULK CATALOG IMPORT - Batched processing for large imports (200k+ cards)
+  // Processes in batches to avoid blocking the event loop and allows resuming
+  app.post("/api/admin/bulk-card-import", authenticateUser, upload.single('file'), async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: 'No CSV file provided' });
+      }
+
+      const BATCH_SIZE = parseInt(req.body.batchSize) || 2000;
+      const startOffset = parseInt(req.body.startOffset) || 0;
+      const dryRun = req.body.dryRun === 'true';
+
+      console.log(`[BULK IMPORT] Starting. Batch size: ${BATCH_SIZE}, Start offset: ${startOffset}, Dry run: ${dryRun}`);
+
+      // Parse CSV
+      const rows: any[] = [];
+      let csvBuffer = req.file.buffer;
+      if (csvBuffer[0] === 0xEF && csvBuffer[1] === 0xBB && csvBuffer[2] === 0xBF) {
+        csvBuffer = csvBuffer.slice(3);
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        const stream = Readable.from(csvBuffer);
+        stream
+          .pipe(csv({
+            mapHeaders: ({ header }: { header: string }) => header.trim().toLowerCase().replace(/[\s_-]/g, ''),
+            skipEmptyLines: true
+          }))
+          .on('data', (row: any) => rows.push(row))
+          .on('error', reject)
+          .on('end', resolve);
+      });
+
+      console.log(`[BULK IMPORT] Parsed ${rows.length} total rows`);
+
+      if (rows.length === 0) {
+        return res.status(400).json({ message: 'CSV file is empty' });
+      }
+
+      // Find column mappings
+      const keys = Object.keys(rows[0]);
+      const nameKey = keys.find(k => k === 'name' || k === 'cardname');
+      const cardNumberKey = keys.find(k => k === 'cardnumber' || k === 'number' || k === 'card#' || k === 'no');
+      const setIdKey = keys.find(k => k === 'setid' || k === 'set');
+      const subsetKey = keys.find(k => k === 'subsetid' || k === 'subset' || k === 'subsetname');
+
+      if (!nameKey || !cardNumberKey) {
+        return res.status(400).json({ 
+          message: `CSV must have name and cardNumber columns. Found: ${keys.join(', ')}` 
+        });
+      }
+
+      console.log(`[BULK IMPORT] Columns: name="${nameKey}", cardNumber="${cardNumberKey}", setId="${setIdKey || 'N/A'}", subset="${subsetKey || 'N/A'}"`);
+
+      // Process rows in batches starting from offset
+      const rowsToProcess = rows.slice(startOffset);
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
+      const setIdsUpdated = new Set<number>();
+
+      for (let batchStart = 0; batchStart < rowsToProcess.length; batchStart += BATCH_SIZE) {
+        const batchEnd = Math.min(batchStart + BATCH_SIZE, rowsToProcess.length);
+        const batch = rowsToProcess.slice(batchStart, batchEnd);
+        const batchNum = Math.floor(batchStart / BATCH_SIZE) + 1;
+        const totalBatches = Math.ceil(rowsToProcess.length / BATCH_SIZE);
+
+        console.log(`[BULK IMPORT] Processing batch ${batchNum}/${totalBatches} (rows ${startOffset + batchStart + 1}-${startOffset + batchEnd})`);
+
+        if (dryRun) {
+          // Just validate, don't insert
+          for (const row of batch) {
+            const name = row[nameKey]?.trim();
+            const cardNumber = row[cardNumberKey]?.trim();
+            if (name && cardNumber) successCount++;
+            else errorCount++;
+          }
+        } else {
+          // Prepare batch insert data
+          const insertData: any[] = [];
+          
+          for (let i = 0; i < batch.length; i++) {
+            try {
+              const row = batch[i];
+              const name = row[nameKey]?.trim();
+              const cardNumber = row[cardNumberKey]?.trim();
+              const setId = row[setIdKey]?.trim() ? parseInt(row[setIdKey]) : null;
+
+              if (!name || !cardNumber) {
+                errors.push(`Row ${startOffset + batchStart + i + 2}: Missing name or cardNumber`);
+                errorCount++;
+                continue;
+              }
+
+              if (!setId) {
+                errors.push(`Row ${startOffset + batchStart + i + 2}: Missing setId`);
+                errorCount++;
+                continue;
+              }
+
+              setIdsUpdated.add(setId);
+
+              insertData.push({
+                name,
+                cardNumber,
+                setId,
+                isInsert: (row.isinsert || row.insert)?.toLowerCase() === 'true',
+                rarity: row.rarity?.trim() || 'Common',
+                frontImageUrl: (row.frontimageurl || row.frontimage || row.imageurl || row.image)?.trim() || null,
+                backImageUrl: (row.backimageurl || row.backimage)?.trim() || null,
+                description: (row.description || row.desc)?.trim() || null,
+                variation: row.variation?.trim() || null,
+              });
+            } catch (rowError: any) {
+              errors.push(`Row ${startOffset + batchStart + i + 2}: ${rowError.message}`);
+              errorCount++;
+            }
+          }
+
+          // Batch insert using Drizzle
+          if (insertData.length > 0) {
+            try {
+              await db.insert(cards).values(insertData);
+              successCount += insertData.length;
+              console.log(`[BULK IMPORT] Batch ${batchNum} committed: ${insertData.length} cards`);
+            } catch (batchError: any) {
+              console.error(`[BULK IMPORT] Batch ${batchNum} failed:`, batchError.message);
+              // Fall back to individual inserts for this batch
+              for (const cardData of insertData) {
+                try {
+                  await storage.createCard(cardData);
+                  successCount++;
+                } catch (e: any) {
+                  errors.push(`Card ${cardData.cardNumber} "${cardData.name}": ${e.message}`);
+                  errorCount++;
+                }
+              }
+            }
+          }
+        }
+
+        // Yield to event loop between batches to keep server responsive
+        await new Promise(resolve => setImmediate(resolve));
+      }
+
+      // Update card counts for affected sets
+      if (!dryRun && setIdsUpdated.size > 0) {
+        console.log(`[BULK IMPORT] Updating card counts for ${setIdsUpdated.size} sets`);
+        for (const setId of setIdsUpdated) {
+          try {
+            const cardCount = await db
+              .select({ count: sql<number>`count(*)::int` })
+              .from(cards)
+              .where(eq(cards.setId, setId));
+            
+            await db
+              .update(cardSets)
+              .set({ totalCards: cardCount[0]?.count || 0 })
+              .where(eq(cardSets.id, setId));
+          } catch (e) {
+            console.log(`[BULK IMPORT] Failed to update count for set ${setId}`);
+          }
+        }
+      }
+
+      // Clear cache
+      try {
+        const { ultraOptimizedStorage } = await import('./ultra-optimized-storage');
+        ultraOptimizedStorage.clearCache();
+      } catch (e) {}
+
+      console.log(`[BULK IMPORT] Complete. Success: ${successCount}, Errors: ${errorCount}`);
+
+      res.json({
+        message: dryRun ? 'Dry run complete' : `Imported ${successCount} cards`,
+        successCount,
+        errorCount,
+        totalRows: rows.length,
+        processedFrom: startOffset,
+        processedTo: startOffset + rowsToProcess.length,
+        errors: errors.slice(0, 50), // First 50 errors only
+        resumeOffset: errorCount > 0 ? startOffset + successCount + errorCount : null
+      });
+    } catch (error: any) {
+      console.error('[BULK IMPORT] Fatal error:', error);
+      res.status(500).json({ message: `Bulk import failed: ${error.message}` });
+    }
+  });
+
   // Update card (admin only)
   app.put("/api/cards/:id", authenticateUser, async (req: any, res) => {
     try {
@@ -1434,11 +1684,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get missing cards for a specific set
+  // Get missing cards for a specific set (paginated)
   app.get("/api/missing-cards/:setId", authenticateUser, async (req: any, res) => {
     try {
       const setId = parseInt(req.params.setId);
       const userId = req.user.id;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 36, 100); // Max 100
+      const offset = (page - 1) * limit;
       
       const result = await db.execute(sql`
         SELECT 
@@ -1465,6 +1718,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ELSE 999999
           END ASC,
           cards.card_number ASC
+        LIMIT ${limit} OFFSET ${offset}
+      `);
+      
+      const countResult = await db.execute(sql`
+        SELECT COUNT(*)::int as total
+        FROM cards
+        WHERE cards.set_id = ${setId}
+        AND cards.id NOT IN (
+          SELECT card_id FROM user_collections WHERE user_id = ${userId}
+        )
       `);
       
       const missingCards = result.rows.map((row: any) => ({
@@ -1483,7 +1746,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }));
       
-      res.json(missingCards);
+      res.json({
+        cards: missingCards,
+        total: countResult.rows[0].total,
+        page,
+        limit,
+        totalPages: Math.ceil(countResult.rows[0].total / limit)
+      });
     } catch (error) {
       console.error('Missing cards fetch error:', error);
       res.status(500).json({ message: "Failed to fetch missing cards" });

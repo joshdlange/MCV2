@@ -1,0 +1,114 @@
+TASK: Final performance hardening before large (200k–250k) card import
+
+CONTEXT
+- App is live in production.
+- We are about to bulk import ~200k cards.
+- We want to improve read performance and protect the live app during the import.
+- Do NOT change UI behavior or data correctness.
+
+GOAL
+Implement ONLY the three most critical performance safeguards:
+1) Guaranteed pagination everywhere cards are listed
+2) Correct database indexes for real-world queries
+3) Safe, batched background-style imports that do not block live traffic
+
+====================================
+1) PAGINATION SAFETY (CRITICAL)
+====================================
+
+Audit EVERY endpoint that returns cards (public + admin):
+
+- Cards by set
+- Cards by subset
+- My Collection
+- Marketplace
+- Admin card lists
+
+Rules:
+- NO endpoint may return all cards by default
+- Every list endpoint must require:
+  - limit (default 24 or 36)
+  - cursor or offset (cursor preferred: id > lastId)
+- Hard cap max limit at 100
+
+If any endpoint currently does:
+  SELECT * FROM cards WHERE set_id = X
+without LIMIT → FIX IT.
+
+Deliverable:
+- List of endpoints audited
+- Confirmation that all card lists are paginated
+
+====================================
+2) DATABASE INDEX HARDENING
+====================================
+
+Add or verify the following indexes exist (Postgres):
+
+- cards(set_id, id)
+- cards(set_id, card_number)
+- cards(canonical_set_id, id)   (if canonical_set_id exists)
+- card_sets(main_set_id, isActive)
+- cards(id)  (PK already exists)
+
+These indexes must match actual ORDER BY clauses used in queries.
+
+Do NOT add speculative indexes.
+Do NOT remove existing indexes.
+
+Deliverable:
+- Exact SQL for indexes added (if any)
+- Confirmation none are missing
+
+====================================
+3) SAFE BULK IMPORT EXECUTION
+====================================
+
+The upcoming catalog import (~200k cards) MUST NOT degrade the live app.
+
+Implement import safeguards:
+
+- Imports run in batches of 1,000–5,000 rows
+- Each batch committed independently
+- Progress logged after each batch
+- Import is resumable if interrupted
+- Import endpoints are admin-only
+- No long-running request that blocks the server event loop
+
+If imports currently run synchronously in a single request:
+→ Refactor to batched loop with progress logging.
+
+Deliverable:
+- Confirmation import runs in batches
+- Batch size used
+- Where progress is logged (console or DB)
+
+====================================
+IMPORTANT CONSTRAINTS
+====================================
+
+- Do NOT touch:
+  - migration logic
+  - canonical logic
+  - public browse filtering
+  - user collections
+  - image logic
+- Do NOT refactor unrelated code
+- Do NOT add new features
+
+This is a targeted performance hardening pass only.
+
+====================================
+QA CHECKLIST
+====================================
+
+- Browsing cards feels the same or faster
+- No endpoint returns massive payloads
+- Live app remains responsive during admin imports
+- No production regressions
+
+Report back with:
+- Files changed
+- Index SQL
+- Pagination confirmation
+- Import batching confirmation

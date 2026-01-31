@@ -217,11 +217,22 @@ export default function BrowseCards() {
 
   const addAllMutation = useMutation({
     mutationFn: async (setId: number) => {
-      const cardsResponse = await fetch(`/api/sets/${setId}/cards`);
-      const cards: CardWithSet[] = await cardsResponse.json();
+      // Fetch all cards in batches for large sets
+      let allCards: CardWithSet[] = [];
+      let page = 1;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const cardsResponse = await fetch(`/api/sets/${setId}/cards?page=${page}&limit=100`);
+        const data = await cardsResponse.json();
+        const cards = data.cards || data;
+        allCards = [...allCards, ...cards];
+        hasMore = data.totalPages ? page < data.totalPages : false;
+        page++;
+      }
       
       const collectionCardIds = collection?.map(item => item.cardId) || [];
-      const newCards = cards.filter(card => !collectionCardIds.includes(card.id));
+      const newCards = allCards.filter(card => !collectionCardIds.includes(card.id));
       
       if (newCards.length === 0) {
         throw new Error('All cards from this set are already in your collection!');
@@ -237,7 +248,7 @@ export default function BrowseCards() {
       });
       
       await Promise.all(promises);
-      return { addedCount: newCards.length, totalCards: cards.length };
+      return { addedCount: newCards.length, totalCards: allCards.length };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/collection'] });

@@ -47,16 +47,37 @@ export default function MyCollection() {
     queryKey: ["/api/card-sets"],
   });
 
-  // Query for missing cards when in missing view mode
+  // Helper to fetch all pages from a paginated endpoint
+  const fetchAllPages = async (baseUrl: string): Promise<CardWithSet[]> => {
+    let allCards: CardWithSet[] = [];
+    let page = 1;
+    let hasMore = true;
+    
+    while (hasMore) {
+      const response = await fetch(`${baseUrl}${baseUrl.includes('?') ? '&' : '?'}page=${page}&limit=100`);
+      const data = await response.json();
+      const cards = data.cards || data;
+      if (Array.isArray(cards)) {
+        allCards = [...allCards, ...cards];
+      }
+      hasMore = data.totalPages ? page < data.totalPages : false;
+      page++;
+    }
+    return allCards;
+  };
+
+  // Query for missing cards when in missing view mode (fetch all pages)
   const { data: missingCards, isLoading: missingCardsLoading } = useQuery<CardWithSet[]>({
-    queryKey: [`/api/missing-cards/${selectedSet}`],
+    queryKey: [`/api/missing-cards/${selectedSet}`, 'all-pages'],
+    queryFn: () => fetchAllPages(`/api/missing-cards/${selectedSet}`),
     enabled: collectionView === "cards" && cardsViewMode === "missing" && selectedSet !== "all",
   });
 
-  // Query for all cards in the selected set (for binder view)
+  // Query for all cards in the selected set (for binder view - fetch all pages)
   // Keep query warm when viewing a specific set to avoid data loss on view toggle
   const { data: allSetCards, isLoading: allSetCardsLoading } = useQuery<CardWithSet[]>({
-    queryKey: [`/api/sets/${selectedSet}/cards`],
+    queryKey: [`/api/sets/${selectedSet}/cards`, 'all-pages'],
+    queryFn: () => fetchAllPages(`/api/sets/${selectedSet}/cards`),
     enabled: collectionView === "cards" && selectedSet !== "all",
   });
 
