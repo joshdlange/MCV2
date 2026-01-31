@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Layers } from "lucide-react";
 import { Link } from "wouter";
-import type { MainSet, CardSet, CardWithSet } from "@shared/schema";
+import type { MainSet, CardSet } from "@shared/schema";
 import { formatSetName } from "@/lib/formatTitle";
 
 interface MainSetTileProps {
@@ -47,53 +46,23 @@ const getProxiedUrl = (url: string): string => {
 };
 
 export function MainSetTile({ mainSet, assignedSets }: MainSetTileProps) {
-  const [thumbnailUrl, setThumbnailUrl] = useState<string>("/uploads/marvel-card-vault-logo.png");
-  const [isUsingPlaceholder, setIsUsingPlaceholder] = useState<boolean>(true);
   const [totalCards, setTotalCards] = useState<number>(0);
-  const [currentSetIndex, setCurrentSetIndex] = useState<number>(0);
 
-  // Calculate total cards and reset index when assignedSets changes
+  // Calculate total cards when assignedSets changes
   useEffect(() => {
     const total = assignedSets.reduce((sum, set) => {
       const cardCount = Number(set.totalCards) || 0;
       return sum + cardCount;
     }, 0);
     setTotalCards(total);
-    setCurrentSetIndex(0); // Reset index when sets change
   }, [assignedSets]);
 
-  const currentSetId = assignedSets.length > currentSetIndex ? assignedSets[currentSetIndex].id : null;
-
-  // Search across subsets until we find one with a valid card image
-  // Enable search if main set thumbnail is missing or is a placeholder
-  const { data: currentSetCards } = useQuery<CardWithSet[]>({
-    queryKey: ["/api/cards", { setId: currentSetId }],
-    enabled: Boolean(currentSetId && isPlaceholderImage(mainSet.thumbnailImageUrl) && isUsingPlaceholder),
-  });
-
-  useEffect(() => {
-    if (mainSet.thumbnailImageUrl && !isPlaceholderImage(mainSet.thumbnailImageUrl)) {
-      // Use proxy for external images that might block hotlinking
-      setThumbnailUrl(getProxiedUrl(mainSet.thumbnailImageUrl));
-      setIsUsingPlaceholder(false);
-    } else if (currentSetCards && currentSetCards.length > 0) {
-      // Find a card with a valid image
-      const cardWithImage = currentSetCards.find(card => 
-        card.frontImageUrl && !isPlaceholderImage(card.frontImageUrl)
-      );
-      
-      if (cardWithImage && cardWithImage.frontImageUrl) {
-        setThumbnailUrl(getProxiedUrl(cardWithImage.frontImageUrl));
-        setIsUsingPlaceholder(false);
-      } else if (currentSetIndex < assignedSets.length - 1) {
-        // Try next subset if no valid image found
-        setCurrentSetIndex(prev => prev + 1);
-      }
-    } else if (currentSetCards && currentSetCards.length === 0 && currentSetIndex < assignedSets.length - 1) {
-      // Empty set, try next
-      setCurrentSetIndex(prev => prev + 1);
-    }
-  }, [mainSet.thumbnailImageUrl, currentSetCards, currentSetIndex, assignedSets.length]);
+  // Determine thumbnail - use main set thumbnail if available, otherwise use placeholder
+  const hasThumbnail = mainSet.thumbnailImageUrl && !isPlaceholderImage(mainSet.thumbnailImageUrl);
+  const thumbnailUrl = hasThumbnail 
+    ? getProxiedUrl(mainSet.thumbnailImageUrl!) 
+    : "/uploads/marvel-card-vault-logo.png";
+  const isUsingPlaceholder = !hasThumbnail;
 
   return (
     <Link href={`/browse/${mainSet.slug}`}>
@@ -108,7 +77,7 @@ export function MainSetTile({ mainSet, assignedSets }: MainSetTileProps) {
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.src = "/uploads/marvel-card-vault-logo.png";
-                setIsUsingPlaceholder(true);
+                target.classList.add('grayscale', 'opacity-60');
               }}
             />
             <div className="absolute top-1.5 right-1.5">
