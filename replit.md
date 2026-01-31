@@ -1,7 +1,7 @@
 # Marvel Card Vault - Replit Development Guide
 
 ## Overview
-Marvel Card Vault is a comprehensive web application for managing Marvel trading card collections. Its main purpose is to support large-scale card databases (60,000+ cards) with optimized performance, user authentication, subscription management, and advanced collection tracking features. The project aims to provide a robust platform for collectors to organize, track, and manage their Marvel trading card assets, enhancing the collecting experience with powerful tools and integrations.
+Marvel Card Vault is a comprehensive web application for managing Marvel trading card collections. Its main purpose is to support large-scale card databases (342,000+ cards) with optimized performance, user authentication, subscription management, and advanced collection tracking features. The project aims to provide a robust platform for collectors to organize, track, and manage their Marvel trading card assets, enhancing the collecting experience with powerful tools and integrations.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -41,6 +41,12 @@ The application incorporates comprehensive performance optimizations for handlin
   - New `idx_cards_set_id_id` index for optimized pagination queries
   - New `/api/admin/bulk-card-import` endpoint with batch processing (2000 rows/batch), progress logging `[BULK IMPORT]`, event loop yielding, resumable via `startOffset` parameter
   - Frontend binder/missing views fetch all pages automatically to display complete card lists
+- **Major Card Import Successful**: ✅ COMPLETED (Jan 31, 2026) - Imported 162,493 cards from 171,737-row CSV:
+  - Fixed PostgreSQL regexp normalization bug in Node.js by switching to JavaScript string normalization
+  - Used papaparse for proper CSV parsing with batch inserts and ON CONFLICT handling
+  - Final card count: 342,315 cards across 4,368 sets with cards
+  - Only 8,968 errors (mostly invalid FULL COMBO values like year-only entries)
+  - Card counts updated for 2,496 sets affected by import
 - **Still Populating Section**: ✨ NEW (Jan 28, 2026) - Browse → Master Sets now shows a "Still Populating" section below active sets for canonical master sets that have no cards yet. Features:
   - Grayscale locked tile appearance with amber "Coming Soon" styling
   - Click shows branded modal (no navigation) with hammer icon
