@@ -28,7 +28,14 @@ The application incorporates comprehensive performance optimizations for handlin
 - **Upcoming Sets Tracker**: ✨ NEW (Nov 20, 2025) - Comprehensive system for managing and displaying upcoming Marvel card set releases with URL import, OpenGraph metadata scraping, image caching, countdown timers, and user interest tracking.
 - **Email Integration**: ✨ NEW (Nov 20, 2025) - Brevo SMTP integration for transactional emails with Nodemailer configuration (`server/email.ts`), Firebase to Brevo contact sync (`server/contactsSync.ts`), admin-only sync endpoint for CRM management, and comprehensive email automation system with 15 branded templates, event triggers, and scheduled cron jobs. ✅ UPDATED (Nov 21, 2025) - Inactivity reminders and weekly digest emails are limited to 1 email per month maximum to prevent email fatigue.
 - **Migration Console**: ✨ NEW (Jan 27, 2026) - Admin-only tool for safely migrating cards between sets. Features include source/destination set pickers with search/filter, preview with conflict detection, transaction-wrapped execute/rollback operations, archive instead of delete pattern, and full audit logging via `migration_logs` and `migration_log_cards` tables. Protects user collections by keeping card_ids stable.
-- **Canonical Taxonomy**: ✅ EXPANDED (Jan 30, 2026) - Successfully imported 58 new main sets and 564 new subsets from updated CSV. Total: 492 main sets, 5,201 canonical subsets. Import was ADD-ONLY with no modifications to existing data.
+- **Canonical Taxonomy**: ✅ EXPANDED (Jan 31, 2026) - Successfully imported 58 new main sets and 564 new subsets from updated CSV. Total: 401 active canonical main sets, 5,049 active canonical subsets. Import was ADD-ONLY with no modifications to existing data.
+- **Legacy Set Archive System**: ✅ NEW (Jan 31, 2026) - Deterministic canonical definition implemented:
+  - Added `is_canonical` and `canonical_source` columns to `main_sets` table
+  - main_sets marked canonical if they have at least one canonical child card_set
+  - Public `/api/main-sets` now filters by `isActive=true AND isCanonical=true` - no legacy duplicates in browse
+  - Admin route `/api/admin/main-sets` returns all sets including archived for admin tools
+  - Legacy cleanup endpoints: `/api/admin/archive-legacy/dry-run` and `/api/admin/archive-legacy/apply`
+  - Archived 75 legacy main_sets and 133 legacy card_sets (soft delete, is_active=false)
 - **Performance Hardening for Large Imports**: ✅ NEW (Jan 31, 2026) - Prepared system for 200k+ card catalog imports:
   - All card-listing endpoints (`/api/sets/:setId/cards`, `/api/missing-cards/:setId`) now paginated with LIMIT/OFFSET (default 36, max 100)
   - New `idx_cards_set_id_id` index for optimized pagination queries
