@@ -1,0 +1,109 @@
+TASK: Archive legacy sets/subsets created before 2026-01-25 (soft delete only, production-safe)
+
+CONTEXT
+- Marvel Card Vault is LIVE in production.
+- We are preparing for a large card import and want to clean up legacy taxonomy.
+- We must NOT delete anything yet — archive only.
+- User collections must remain intact. If users have cards tied to archived legacy sets, those cards should still exist and remain in their collection (no data loss).
+
+GOAL
+Archive (soft delete) all legacy main sets + subsets that were created before 2026-01-25, WITHOUT deleting cards, and WITHOUT breaking user collections or the public app.
+
+IMPORTANT CLARIFICATIONS / ASSUMPTIONS
+- “Archive” means: set is hidden from public browsing and normal navigation, but remains in DB for admin reference and potential rollback.
+- Archiving should NOT delete cards.
+- If cards from an archived set exist in user collections, they remain there and should still render normally wherever user collections display cards.
+- We do not need these legacy sets in browse anymore; we are moving toward canonical taxonomy.
+
+========================================
+PHASE 1 — Add safe archive fields if missing
+========================================
+1) Ensure these exist:
+- card_sets.isActive BOOLEAN DEFAULT TRUE NOT NULL   (already likely)
+- main_sets.isActive BOOLEAN DEFAULT TRUE NOT NULL   (add if missing)
+- Optional: archived_at TIMESTAMP NULL (nice-to-have)
+
+2) Admin-only ability to view archived items remains available (do not remove).
+
+========================================
+PHASE 2 — DRY RUN REPORT (REQUIRED FIRST)
+========================================
+Create an admin-only DRY RUN endpoint/script that outputs a CSV report with:
+
+For main_sets created before 2026-01-25:
+- main_set_id, name, created_at
+- count of child card_sets
+- total cards under the main_set (sum across subsets)
+- how many of those cards appear in user_collections (count distinct card_id joins)
+- whether this main_set is canonical (has any canonical child subsets) — if yes, DO NOT archive it
+
+For card_sets created before 2026-01-25:
+- set_id, name, year, main_set_id, created_at
+- card count in that set
+- count of those cards in user_collections
+- canonical_source / isCanonical flag
+- Mark an “archive_candidate” boolean
+
+CRITICAL RULES FOR ARCHIVE CANDIDATES
+- Only archive LEGACY taxonomy:
+  - canonical_source IS NULL (or isCanonical=false)
+- Never archive anything canonical.
+- Never archive a main_set if it has any canonical child subset.
+- Never archive a main_set if it contains any canonical subsets even if it is old.
+- Archive should be safe even if users have cards from those sets.
+
+Output files:
+- archive-dryrun-main_sets.csv
+- archive-dryrun-card_sets.csv
+Show summary counts:
+- main_sets candidates: X
+- card_sets candidates: Y
+- total cards under candidates: Z
+- total user_collections affected: N (cards remain; this is for awareness only)
+
+========================================
+PHASE 3 — APPLY ARCHIVE (ADMIN-ONLY, CONFIRMATION REQUIRED)
+========================================
+Add an Admin tool button: “Archive Legacy Sets (pre-2026-01-25)”
+
+When clicked:
+1) Show the dry-run summary counts and require typing:
+   ARCHIVE LEGACY SETS
+2) Run in a DB transaction (or safe batches):
+   - Set main_sets.isActive=false for candidate legacy main_sets
+   - Set card_sets.isActive=false for candidate legacy card_sets
+   - Set archived_at=NOW() (if field exists)
+3) Write an audit log row:
+   - timestamp, admin user, cutoff date, counts archived
+
+DO NOT:
+- Delete any sets
+- Delete any cards
+- Modify cards.set_id
+- Modify user_collections rows
+
+========================================
+PHASE 4 — PUBLIC APP SAFETY
+========================================
+- Public browse/master set listings should automatically exclude isActive=false items.
+- Admin views can still show archived sets with a “Show archived” toggle.
+- User collections should continue to display cards normally even if their set is archived.
+  - If any UI currently hides cards whose parent set is inactive, fix that:
+    - User collection rendering must be based on the card itself, not set activity.
+
+========================================
+PHASE 5 — QA CHECKLIST
+========================================
+1) Before archive: pick 1 user account with known legacy cards
+2) Apply archive
+3) Confirm:
+   - Browse no longer shows archived legacy sets/subsets
+   - The user still sees the cards in their collection (no missing images/titles)
+   - Card detail pages still work
+   - Admin can still find archived sets/subsets with “Show archived”
+
+DELIVERABLES
+- Exact SQL changes (if any)
+- Dry-run CSV outputs + summary
+- The exact archive query conditions
+- Confirmation that canonical data was not touched

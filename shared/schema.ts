@@ -63,6 +63,8 @@ export const mainSets = pgTable("main_sets", {
   slug: text("slug").notNull().unique(),
   notes: text("notes"),
   thumbnailImageUrl: text("thumbnail_image_url"),
+  isActive: boolean("is_active").default(true).notNull(),
+  archivedAt: timestamp("archived_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -79,6 +81,7 @@ export const cardSets = pgTable("card_sets", {
   isCanonical: boolean("is_canonical").default(false).notNull(),
   isInsertSubset: boolean("is_insert_subset").default(false).notNull(),
   canonicalSource: text("canonical_source"),
+  archivedAt: timestamp("archived_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
