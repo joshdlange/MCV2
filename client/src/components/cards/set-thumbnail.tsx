@@ -123,7 +123,7 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
           />
         ) : (
           <img
-            src="/uploads/superhero-fallback.svg"
+            src="/uploads/set-placeholder.jpg"
             alt={`${set.name} - Image Coming Soon`}
             className="w-full h-full object-cover"
             onError={(e) => {
