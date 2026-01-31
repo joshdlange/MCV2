@@ -434,15 +434,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // HOTFIX: Only return main sets that have actual cards in the database
       // Use EXISTS subquery to check for real cards (not stale totalCards field)
+      // Also exclude archived main sets (isActive = false)
       const populatedMainSets = await db
         .select()
         .from(mainSets)
         .where(
-          exists(
-            db.select({ one: sql`1` })
-              .from(cards)
-              .innerJoin(cardSets, eq(cards.setId, cardSets.id))
-              .where(eq(cardSets.mainSetId, mainSets.id))
+          and(
+            eq(mainSets.isActive, true),
+            exists(
+              db.select({ one: sql`1` })
+                .from(cards)
+                .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+                .where(eq(cardSets.mainSetId, mainSets.id))
+            )
           )
         )
         .orderBy(desc(mainSets.createdAt));
@@ -485,6 +489,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         FROM main_sets ms
         INNER JOIN main_set_stats mss ON mss.main_set_id = ms.id
         WHERE mss.total_cards = 0
+          AND ms.is_active = true
         ORDER BY mss.max_year DESC, ms.name ASC
       `);
       
@@ -5887,6 +5892,180 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register marketplace routes
   registerMarketplaceRoutes(app, authenticateUser);
+
+  // ============================================
+  // LEGACY SET ARCHIVE SYSTEM
+  // ============================================
+
+  // DRY RUN - Generate report of legacy sets/subsets that would be archived
+  app.get("/api/admin/archive-legacy/dry-run", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const cutoffDate = '2026-01-25';
+      console.log(`[ARCHIVE DRY RUN] Analyzing legacy sets created before ${cutoffDate}`);
+
+      // Get candidate main_sets (non-canonical only)
+      const mainSetCandidates = await db.execute(sql`
+        SELECT 
+          ms.id,
+          ms.name,
+          ms.created_at,
+          ms.is_active,
+          (SELECT COUNT(*) FROM card_sets cs WHERE cs.main_set_id = ms.id) as child_set_count,
+          (SELECT COUNT(*) FROM cards c JOIN card_sets cs ON c.set_id = cs.id WHERE cs.main_set_id = ms.id) as total_cards,
+          (SELECT COUNT(DISTINCT uc.card_id) FROM user_collections uc 
+           JOIN cards c ON uc.card_id = c.id 
+           JOIN card_sets cs ON c.set_id = cs.id 
+           WHERE cs.main_set_id = ms.id) as cards_in_collections,
+          (SELECT COUNT(*) FROM card_sets cs WHERE cs.main_set_id = ms.id 
+           AND (cs.canonical_source IS NOT NULL OR cs.is_canonical = true)) as canonical_child_count
+        FROM main_sets ms
+        WHERE ms.created_at < ${cutoffDate}::timestamp
+        AND ms.is_active = true
+        ORDER BY ms.created_at ASC
+      `);
+
+      // Filter out main sets that have canonical children
+      const archivableMainSets = mainSetCandidates.rows.filter((row: any) => 
+        parseInt(row.canonical_child_count) === 0
+      );
+
+      // Get candidate card_sets (non-canonical only)
+      const cardSetCandidates = await db.execute(sql`
+        SELECT 
+          cs.id,
+          cs.name,
+          cs.year,
+          cs.main_set_id,
+          cs.created_at,
+          cs.is_active,
+          cs.canonical_source,
+          cs.is_canonical,
+          (SELECT COUNT(*) FROM cards c WHERE c.set_id = cs.id) as card_count,
+          (SELECT COUNT(*) FROM user_collections uc 
+           JOIN cards c ON uc.card_id = c.id 
+           WHERE c.set_id = cs.id) as cards_in_collections
+        FROM card_sets cs
+        WHERE cs.created_at < ${cutoffDate}::timestamp
+        AND cs.is_active = true
+        AND cs.canonical_source IS NULL
+        AND cs.is_canonical = false
+        ORDER BY cs.created_at ASC
+      `);
+
+      // Calculate summary
+      const summary = {
+        cutoffDate,
+        mainSetCandidates: archivableMainSets.length,
+        cardSetCandidates: cardSetCandidates.rows.length,
+        totalCardsUnderMainSets: archivableMainSets.reduce((sum: number, r: any) => sum + parseInt(r.total_cards || 0), 0),
+        totalCardsUnderCardSets: cardSetCandidates.rows.reduce((sum: number, r: any) => sum + parseInt(r.card_count || 0), 0),
+        userCollectionsAffectedFromMainSets: archivableMainSets.reduce((sum: number, r: any) => sum + parseInt(r.cards_in_collections || 0), 0),
+        userCollectionsAffectedFromCardSets: cardSetCandidates.rows.reduce((sum: number, r: any) => sum + parseInt(r.cards_in_collections || 0), 0),
+        skippedMainSetsWithCanonicalChildren: mainSetCandidates.rows.length - archivableMainSets.length,
+      };
+
+      // Generate CSV content
+      const mainSetsCsv = [
+        'main_set_id,name,created_at,child_set_count,total_cards,cards_in_collections,has_canonical_children,archive_candidate',
+        ...mainSetCandidates.rows.map((row: any) => {
+          const hasCanonical = parseInt(row.canonical_child_count) > 0;
+          return `${row.id},"${(row.name || '').replace(/"/g, '""')}",${row.created_at},${row.child_set_count},${row.total_cards},${row.cards_in_collections},${hasCanonical},${!hasCanonical}`;
+        })
+      ].join('\n');
+
+      const cardSetsCsv = [
+        'set_id,name,year,main_set_id,created_at,card_count,cards_in_collections,canonical_source,is_canonical,archive_candidate',
+        ...cardSetCandidates.rows.map((row: any) => 
+          `${row.id},"${(row.name || '').replace(/"/g, '""')}",${row.year},${row.main_set_id || ''},${row.created_at},${row.card_count},${row.cards_in_collections},${row.canonical_source || ''},${row.is_canonical},true`
+        )
+      ].join('\n');
+
+      console.log(`[ARCHIVE DRY RUN] Complete. Main sets: ${summary.mainSetCandidates}, Card sets: ${summary.cardSetCandidates}`);
+
+      res.json({
+        summary,
+        mainSets: archivableMainSets,
+        cardSets: cardSetCandidates.rows,
+        csvData: {
+          mainSets: mainSetsCsv,
+          cardSets: cardSetsCsv
+        }
+      });
+    } catch (error: any) {
+      console.error('[ARCHIVE DRY RUN] Error:', error);
+      res.status(500).json({ message: `Dry run failed: ${error.message}` });
+    }
+  });
+
+  // APPLY ARCHIVE - Actually archive the legacy sets (soft delete)
+  app.post("/api/admin/archive-legacy/apply", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { confirmationText } = req.body;
+      if (confirmationText !== 'ARCHIVE LEGACY SETS') {
+        return res.status(400).json({ 
+          message: "Confirmation required. Please type 'ARCHIVE LEGACY SETS' to proceed." 
+        });
+      }
+
+      const cutoffDate = '2026-01-25';
+      const now = new Date();
+      console.log(`[ARCHIVE APPLY] Starting archive of legacy sets created before ${cutoffDate}`);
+
+      // Archive main_sets that have no canonical children
+      const mainSetResult = await db.execute(sql`
+        UPDATE main_sets ms
+        SET is_active = false, archived_at = ${now}
+        WHERE ms.created_at < ${cutoffDate}::timestamp
+        AND ms.is_active = true
+        AND NOT EXISTS (
+          SELECT 1 FROM card_sets cs 
+          WHERE cs.main_set_id = ms.id 
+          AND (cs.canonical_source IS NOT NULL OR cs.is_canonical = true)
+        )
+        RETURNING id, name
+      `);
+
+      // Archive card_sets that are non-canonical
+      const cardSetResult = await db.execute(sql`
+        UPDATE card_sets
+        SET is_active = false, archived_at = ${now}
+        WHERE created_at < ${cutoffDate}::timestamp
+        AND is_active = true
+        AND canonical_source IS NULL
+        AND is_canonical = false
+        RETURNING id, name
+      `);
+
+      // Log the archive action
+      console.log(`[ARCHIVE APPLY] Archived ${mainSetResult.rows.length} main sets, ${cardSetResult.rows.length} card sets`);
+
+      // Clear caches
+      try {
+        const { ultraOptimizedStorage } = await import('./ultra-optimized-storage');
+        ultraOptimizedStorage.clearCache();
+      } catch (e) {}
+
+      res.json({
+        success: true,
+        message: `Archived ${mainSetResult.rows.length} main sets and ${cardSetResult.rows.length} card sets`,
+        archivedMainSets: mainSetResult.rows.length,
+        archivedCardSets: cardSetResult.rows.length,
+        cutoffDate,
+        archivedAt: now.toISOString()
+      });
+    } catch (error: any) {
+      console.error('[ARCHIVE APPLY] Error:', error);
+      res.status(500).json({ message: `Archive failed: ${error.message}` });
+    }
+  });
 
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);

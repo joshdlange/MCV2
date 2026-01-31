@@ -462,6 +462,7 @@ export class DatabaseStorage implements IStorage {
   async getCardSets(): Promise<CardSet[]> {
     try {
       // Optimized single query with JOIN and GROUP BY instead of N+1 queries
+      // Excludes archived sets (isActive = false)
       const setsWithCounts = await db
         .select({
           id: cardSets.id,
@@ -476,6 +477,7 @@ export class DatabaseStorage implements IStorage {
         })
         .from(cardSets)
         .leftJoin(cards, eq(cardSets.id, cards.setId))
+        .where(eq(cardSets.isActive, true))
         .groupBy(cardSets.id, cardSets.name, cardSets.slug, cardSets.year, cardSets.description, cardSets.imageUrl, cardSets.mainSetId, cardSets.createdAt)
         .orderBy(desc(cardSets.year), cardSets.name);
       
@@ -1672,13 +1674,16 @@ export class DatabaseStorage implements IStorage {
         return [];
       }
       
-      // Simple pattern matching for card sets
+      // Simple pattern matching for card sets (excludes archived sets)
       const sets = await db.select()
         .from(cardSets)
         .where(
-          or(
-            ilike(cardSets.name, `%${query}%`),
-            ilike(cardSets.description, `%${query}%`)
+          and(
+            eq(cardSets.isActive, true),
+            or(
+              ilike(cardSets.name, `%${query}%`),
+              ilike(cardSets.description, `%${query}%`)
+            )
           )
         )
         .limit(10);
