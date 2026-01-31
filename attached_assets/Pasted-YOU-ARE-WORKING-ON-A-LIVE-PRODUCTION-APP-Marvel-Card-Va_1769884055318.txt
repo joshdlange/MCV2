@@ -1,0 +1,100 @@
+YOU ARE WORKING ON A LIVE PRODUCTION APP (Marvel Card Vault). DO NOT BREAK BROWSE, COLLECTIONS, OR CARD LOOKUPS. 
+Goal: hide/archive ALL legacy (non-canonical) sets from the PUBLIC browse UI, so only canonical sets remain visible.
+
+CRITICAL RULES
+1) Do NOT delete cards. Do NOT delete main_sets or card_sets by default. We will SOFT-ARCHIVE via isActive=false.
+2) User collections must remain intact (they reference cards by card_id). We are not changing card ids.
+3) Public browse must ONLY show canonical sets (plus the separate "Coming Soon" section later). For now: remove legacy duplicates from browse by archiving them and filtering isActive.
+4) Admin tools can still view archived sets for safety.
+
+STEP 0 — CONFIRM CURRENT SCHEMA & DATA
+- Confirm main_sets and card_sets tables have:
+  - main_sets: id, name, slug, created_at, (maybe notes, thumbnail_image_url)
+  - card_sets: id, name, year, main_set_id, total_cards, created_at, isActive boolean
+- Confirm whether card_sets has is_canonical OR "canonical" is inferred by main_set_id presence. 
+- We already imported canonical sets from the master canonical CSV. Canonical sets are those created from that CSV import.
+
+IMPORTANT: We need a reliable definition of canonical vs legacy.
+Choose ONE approach and enforce it everywhere:
+A) Canonical is defined by a dedicated boolean column on card_sets (isCanonical) AND/OR main_sets (isCanonical)
+OR
+B) Canonical is defined by membership in an import table (canonical_set_registry) keyed by canonical slug/year/name.
+
+DO NOT GUESS. Make the canonical definition deterministic.
+
+STEP 1 — FIX API ROUTES AND DUPLICATES
+- Search server/routes.ts for duplicate /api/main-sets routes and consolidate to ONE canonical source.
+- Ensure /api/main-sets (PUBLIC) returns ONLY:
+  - main_sets where isActive=true (if exists on main_sets) AND
+  - only those main sets that have at least one ACTIVE canonical card_set child with cards > 0
+  - and exclude legacy main_sets entirely.
+- If main_sets does not have isActive, add it (default true) and apply migration safely.
+- Ensure /api/main-sets does NOT accidentally return placeholder canonical sets with 0 cards unless explicitly asked by admin.
+
+Create explicit routes:
+1) GET /api/main-sets (PUBLIC)
+   - returns main sets that have ANY active canonical card_sets with total_cards > 0
+2) GET /api/admin/main-sets (ADMIN ONLY)
+   - returns all main sets including archived and including canonical sets with 0 cards, for admin work
+
+Also ensure storage.getMainSets() (or wherever the browse data comes from) uses the PUBLIC route for normal browsing, not admin routes.
+
+STEP 2 — BUILD A SAFE "LEGACY CLEANUP" TOOL (DRY RUN + APPLY)
+We need to archive ALL legacy sets created before 2026-01-25 that are NOT canonical.
+But do it safely and with a dry run first.
+
+Create admin endpoints:
+
+A) GET /api/admin/legacy-cleanup/dry-run?before=2026-01-25
+Return:
+- list of candidate main_sets + card_sets that would be archived
+- counts: how many main_sets, how many card_sets, how many cards impacted
+Rules for legacy candidate selection:
+- created_at < before date
+- NOT canonical (based on the deterministic canonical definition you implement)
+- isActive=true currently
+- For card_sets: allow archiving even if total_cards > 0 (since they are legacy duplicates), but ONLY if they have NOT been selected as destination canonical sets.
+- DO NOT archive any set that is explicitly canonical.
+
+B) POST /api/admin/legacy-cleanup/apply
+Request body: { before: "2026-01-25", confirmPhrase: "ARCHIVE LEGACY SETS" }
+This must:
+- Run in a DB transaction
+- Set isActive=false on legacy card_sets and legacy main_sets (if main_sets has isActive)
+- Create a log record of everything archived (who/when/ids/counts)
+- Return summary counts
+
+C) POST /api/admin/legacy-cleanup/rollback (optional but preferred)
+- Use the log table to restore isActive=true for anything touched by apply
+
+If rollback is too much, at least log everything so we can manually undo.
+
+STEP 3 — UPDATE THE UI SO DUPLICATES DO NOT SHOW
+- Browse Cards page must only render main sets returned from PUBLIC /api/main-sets.
+- Verify that once legacy sets are archived, they disappear from browse.
+- Verify canonical sets remain visible.
+
+STEP 4 — FIX "HAMBURGER MENU" SLOWNESS WITHOUT RISK
+- Do NOT make heavy stats calls block sidebar rendering.
+- If /api/stats takes ~300-400ms and triggers on sidebar open, do:
+  - Cache it for 6 hours server-side
+  - AND client-side: lazy load stats after sidebar initial render (setTimeout(0) or useEffect)
+  - Ensure menu opens instantly even if stats pending.
+
+STEP 5 — QA / REGRESSION CHECKLIST (MANDATORY)
+Run these checks before deploying:
+1) PUBLIC browse shows NO legacy duplicates (only canonical sets)
+2) Clicking a canonical main set works; subsets list loads; cards load
+3) No user collection data lost: pick a user with cards and confirm their collection still shows
+4) Admin Migration Console still works and can view archived sets via admin routes
+5) Ensure no route collisions: only one /api/main-sets handler exists
+6) Sidebar/hamburger opens instantly; stats load after
+7) Confirm the IDs of canonical sets were NOT changed
+
+DELIVERABLES
+- Provide the code changes with file list
+- Provide how to run the dry-run endpoint and confirm the exact counts before applying
+- Provide the apply step with the confirm phrase gate
+
+IMPORTANT: DO NOT DELETE ANYTHING. ONLY ARCHIVE (isActive=false). 
+We can delete later once we are 100% confident.

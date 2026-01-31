@@ -430,17 +430,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Main Sets Routes
+  // PUBLIC: Only return CANONICAL main sets that are active and have actual cards
   app.get("/api/main-sets", async (req, res) => {
     try {
-      // HOTFIX: Only return main sets that have actual cards in the database
-      // Use EXISTS subquery to check for real cards (not stale totalCards field)
-      // Also exclude archived main sets (isActive = false)
+      // Filter by:
+      // 1. isActive = true (not archived)
+      // 2. isCanonical = true (from CSV import, not legacy duplicates)
+      // 3. Has at least one card in database
       const populatedMainSets = await db
         .select()
         .from(mainSets)
         .where(
           and(
             eq(mainSets.isActive, true),
+            eq(mainSets.isCanonical, true),
             exists(
               db.select({ one: sql`1` })
                 .from(cards)
@@ -802,17 +805,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all main sets
-  app.get("/api/main-sets", authenticateUser, async (req: any, res) => {
+  // ADMIN: Get all main sets including archived and legacy (for admin tools)
+  app.get("/api/admin/main-sets", authenticateUser, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) {
         return res.status(403).json({ message: "Admin access required" });
       }
       
-      const mainSets = await storage.getMainSets();
-      res.json(mainSets);
+      const allMainSets = await storage.getMainSets();
+      res.json(allMainSets);
     } catch (error) {
-      console.error('Get main sets error:', error);
+      console.error('Get admin main sets error:', error);
       res.status(500).json({ message: "Failed to fetch main sets" });
     }
   });

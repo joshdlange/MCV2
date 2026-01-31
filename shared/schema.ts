@@ -64,6 +64,8 @@ export const mainSets = pgTable("main_sets", {
   notes: text("notes"),
   thumbnailImageUrl: text("thumbnail_image_url"),
   isActive: boolean("is_active").default(true).notNull(),
+  isCanonical: boolean("is_canonical").default(false).notNull(),
+  canonicalSource: text("canonical_source"),
   archivedAt: timestamp("archived_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
