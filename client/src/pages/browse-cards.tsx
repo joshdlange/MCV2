@@ -927,6 +927,7 @@ export default function BrowseCards() {
                       onFavorite={() => handleFavoriteSet(set.id)}
                       showAdminControls={isAdminMode}
                       onEdit={() => handleEditSet(set.id)}
+                      mainSetName={currentMainSet?.name}
                     />
                   ))}
                 </div>
@@ -948,6 +949,7 @@ export default function BrowseCards() {
                       onFavorite={() => handleFavoriteSet(set.id)}
                       showAdminControls={isAdminMode}
                       onEdit={() => handleEditSet(set.id)}
+                      mainSetName={currentMainSet?.name}
                     />
                   ))}
                 </div>

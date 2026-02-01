@@ -1,0 +1,86 @@
+PROJECT: Marvel Card Vault (LIVE in production)
+GOAL: Improve subset naming in user-facing UI without changing the database or breaking migration/admin tools.
+
+CONTEXT
+Right now, many subsets are stored in `card_sets.name` as a full string in the format:
+  "<Main Set Name> - <Subset Name>"
+Example:
+  "2025 Topps Marvel Comic Book Heroes 1975 Golden Anniversary - Black & Gold"
+But in user-facing UI, this is redundant because the user is already inside the main set page.
+We want the user to see ONLY the subset portion (e.g., "Black & Gold"), while admins should still see the full name.
+
+IMPORTANT CONSTRAINTS (DO NOT VIOLATE)
+1) DO NOT modify any `card_sets.name` values in the DB.
+2) DO NOT change canonical/legacy logic, migration console behavior, or any route that is used for admin-only management.
+3) This must be a UI display-only change for non-admin views.
+4) Must work across desktop + mobile. No text truncation confusion.
+5) Must not break search/filter. Search should still work against the full set name in the DB.
+
+REQUIREMENTS
+A) USER-FACING DISPLAY (NON-ADMIN)
+- On any non-admin user-facing screens that show subsets under a main set (like the screenshot grid):
+  - Display label should be a "Short Subset Name":
+    - If card_sets.name contains " - " AND begins with the main set name, show only the portion after the FIRST " - ".
+      Example:
+        main set: "2025 Topps Marvel Comic Book Heroes 1975 Golden Anniversary"
+        subset: "2025 Topps Marvel Comic Book Heroes 1975 Golden Anniversary - Black & Gold"
+        display => "Black & Gold"
+    - If card_sets.name exactly equals the main set name (no subset delimiter), display => "Base Set"
+    - If card_sets.name does NOT include " - " or does not match the expected prefix, do NOT attempt risky parsing:
+        display => card_sets.name (fallback)
+- Also display a small "Year" or keep the year line as-is, but the primary title should be short.
+- The cards count line stays as-is (ex: "4 cards").
+
+B) ADMIN DISPLAY
+- In Admin mode (Admin toggle on OR on /admin routes), continue to display the FULL name exactly as stored.
+- Admin views include:
+  - Migration Console lists
+  - Admin set editors
+  - Any admin tools pages where identifying the full canonical string matters
+No shortening in admin.
+
+C) WHERE TO APPLY
+Search for any components rendering card_set tiles/cards sets lists, especially:
+- browse -> main set details page where subsets are shown (grid)
+- any marketplace browse sets UI (if it reuses same component)
+- set-thumbnail / set tile components
+- any “Card Sets” section pages
+
+Implement the short name logic in ONE shared utility to avoid inconsistencies:
+- Create `client/src/lib/setDisplayName.ts` (or similar)
+- Export function:
+  `getCardSetDisplayName({ cardSetName, mainSetName, isAdmin }): string`
+- Use it wherever subset tiles are rendered in non-admin contexts.
+
+D) HOW TO DETECT ADMIN
+We already have Admin Mode toggle in the UI.
+- Use the existing “admin mode” state/hook/store the app uses (do NOT invent a new one).
+- Also treat any route under `/admin/*` as admin context even if toggle is off.
+So `isAdmin = adminToggleEnabled || pathname startsWith '/admin'`.
+
+E) UI POLISH
+- Increase readability on mobile:
+  - the subset title should wrap to max 2 lines (clamp) and not overflow
+  - if it’s “Base Set” show a small pill/badge “Base”
+- Ensure the edit icon / admin buttons remain unchanged.
+
+F) QA / REGRESSION CHECKLIST (MUST DO)
+1) Non-admin user:
+   - Browse -> open a main set -> view subset grid
+   - Confirm subset titles show ONLY subset portion or “Base Set”
+   - Confirm navigation still works
+2) Admin mode ON:
+   - Same page should show FULL names (main + subset)
+3) Migration console:
+   - Source + destination lists still show full names, and search still finds full names
+4) Search:
+   - Searching for “Golden Anniversary” still finds the subset sets even if the display label is “Black & Gold”
+5) Edge cases:
+   - A set name with multiple “ - ” only splits on the first delimiter after the prefix match
+   - A set name that doesn’t start with main set name falls back safely
+6) No database writes performed for this feature.
+
+DELIVERABLE
+- Implement the shared helper + update the relevant components
+- Keep the change minimal and safe for production
+- Report which files changed and what manual QA you performed.

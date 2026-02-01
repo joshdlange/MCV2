@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { CardSet } from "@shared/schema";
 import { formatSetName } from "@/lib/formatTitle";
+import { getCardSetDisplayName } from "@/lib/setDisplayName";
+import { useAppStore } from "@/lib/store";
+import { useLocation } from "wouter";
 
 interface SetThumbnailProps {
   set: CardSet;
@@ -12,11 +15,21 @@ interface SetThumbnailProps {
   onFavorite: () => void;
   showAdminControls?: boolean;
   onEdit?: () => void;
+  mainSetName?: string | null;
 }
 
-export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminControls, onEdit }: SetThumbnailProps) {
+export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminControls, onEdit, mainSetName }: SetThumbnailProps) {
   const [firstCardImage, setFirstCardImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { isAdminMode } = useAppStore();
+  const [location] = useLocation();
+  
+  const isAdminContext = isAdminMode || location.startsWith('/admin');
+  const { displayName, isBaseSet } = getCardSetDisplayName({
+    cardSetName: set.name,
+    mainSetName,
+    isAdmin: isAdminContext
+  });
   
   const placeholderImage = "/uploads/set-placeholder.jpg";
   
@@ -150,9 +163,16 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
 
       {/* Set Info */}
       <div className="p-3">
-        <h3 className="font-medium text-gray-900 text-xs leading-tight mb-1 line-clamp-2 min-h-[2.5rem]">
-          {formatSetName(set.name)}
-        </h3>
+        <div className="flex items-start gap-1 mb-1">
+          {isBaseSet && (
+            <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200 text-xs px-1.5 py-0 shrink-0">
+              Base
+            </Badge>
+          )}
+          <h3 className="font-medium text-gray-900 text-xs leading-tight line-clamp-2 min-h-[2rem]">
+            {isAdminContext ? formatSetName(set.name) : displayName}
+          </h3>
+        </div>
         <div className="flex items-center justify-between text-xs text-gray-600">
           <span>{set.year}</span>
           {set.totalCards === 0 ? (
