@@ -844,17 +844,21 @@ export default function BrowseCards() {
               <div>
                 <h4 className="text-md font-semibold text-gray-900 mb-4">Card Sets</h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-                  {searchResults.sets.map((set) => (
-                    <SetThumbnail
-                      key={set.id}
-                      set={set}
-                      onClick={() => handleSetClick(set)}
-                      isFavorite={favoriteSetIds.includes(set.id)}
-                      onFavorite={() => handleFavoriteSet(set.id)}
-                      showAdminControls={isAdminMode}
-                      onEdit={() => handleEditSet(set.id)}
-                    />
-                  ))}
+                  {searchResults.sets.map((set) => {
+                    const parentMainSet = set.mainSetId ? mainSets?.find(ms => ms.id === set.mainSetId) : null;
+                    return (
+                      <SetThumbnail
+                        key={set.id}
+                        set={set}
+                        onClick={() => handleSetClick(set)}
+                        isFavorite={favoriteSetIds.includes(set.id)}
+                        onFavorite={() => handleFavoriteSet(set.id)}
+                        showAdminControls={isAdminMode}
+                        onEdit={() => handleEditSet(set.id)}
+                        mainSetName={parentMainSet?.name}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             )}
