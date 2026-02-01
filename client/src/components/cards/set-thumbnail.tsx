@@ -42,9 +42,10 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const cards = await response.json();
+      const data = await response.json();
+      const cards = data.items ?? data.cards ?? data;
       
-      if (cards.length > 0) {
+      if (Array.isArray(cards) && cards.length > 0) {
         const sortedCards = cards.sort((a: any, b: any) => {
           const numA = parseInt(a.cardNumber) || 999999;
           const numB = parseInt(b.cardNumber) || 999999;
