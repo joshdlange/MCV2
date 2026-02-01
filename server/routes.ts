@@ -1630,6 +1630,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Patch card (admin only) - partial update
+  app.patch("/api/cards/:id", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      const id = parseInt(req.params.id);
+      const existingCard = await storage.getCard(id);
+      if (!existingCard) {
+        return res.status(404).json({ message: "Card not found" });
+      }
+      
+      const updatedCard = await storage.updateCard(id, req.body);
+      if (!updatedCard) {
+        return res.status(404).json({ message: "Card not found" });
+      }
+      
+      // Clear cache when cards are updated
+      try {
+        const { ultraOptimizedStorage } = await import('./ultra-optimized-storage');
+        ultraOptimizedStorage.clearCache();
+      } catch (e) {
+        console.log('Cache clear skipped:', e);
+      }
+      
+      res.json(updatedCard);
+    } catch (error) {
+      console.error('Patch card error:', error);
+      res.status(500).json({ message: "Failed to update card" });
+    }
+  });
+
   // Delete card (admin only)
   app.delete("/api/cards/:id", authenticateUser, async (req: any, res) => {
     try {
