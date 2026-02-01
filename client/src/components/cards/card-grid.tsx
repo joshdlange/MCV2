@@ -19,6 +19,28 @@ interface CardGridProps {
   viewMode?: "grid" | "list";
 }
 
+const fetchAllPages = async (baseUrl: string): Promise<CardWithSet[]> => {
+  let allCards: CardWithSet[] = [];
+  let page = 1;
+  let hasMore = true;
+  const MAX_PAGES = 50;
+  
+  while (hasMore && page <= MAX_PAGES) {
+    const response = await fetch(`${baseUrl}${baseUrl.includes('?') ? '&' : '?'}page=${page}&limit=100`);
+    const data = await response.json();
+    const cards = data.cards || data;
+    if (Array.isArray(cards)) {
+      allCards = [...allCards, ...cards];
+      hasMore = data.totalPages ? page < data.totalPages : cards.length === 100;
+      page++;
+    } else {
+      hasMore = false;
+    }
+  }
+  
+  return allCards;
+};
+
 export function CardGrid({ 
   filters = {}, 
   showAddToCollection = true, 
@@ -35,18 +57,26 @@ export function CardGrid({
   
   const queryParams = new URLSearchParams();
   if (!filters.setId) {
-    // Only apply these filters for general card search, not set-specific queries
     if (filters.search) queryParams.set('search', filters.search);
     if (filters.rarity) queryParams.set('rarity', filters.rarity);
     if (filters.isInsert !== undefined) queryParams.set('isInsert', filters.isInsert.toString());
   }
 
-  const { data: cardsResponse, isLoading } = useQuery<{ items?: CardWithSet[]; cards?: CardWithSet[] }>({
-    queryKey: [filters.setId ? apiEndpoint : `${apiEndpoint}?${queryParams.toString()}`],
+  const { data: allSetCards, isLoading: setCardsLoading } = useQuery<CardWithSet[]>({
+    queryKey: [apiEndpoint, 'all-pages'],
+    queryFn: () => fetchAllPages(apiEndpoint),
+    enabled: !!filters.setId,
   });
 
-  // Handle both paginated response format (items) and direct array format (cards)
-  const cards = cardsResponse?.items || cardsResponse?.cards || cardsResponse || [];
+  const { data: cardsResponse, isLoading: generalCardsLoading } = useQuery<{ items?: CardWithSet[]; cards?: CardWithSet[] }>({
+    queryKey: [`${apiEndpoint}?${queryParams.toString()}`],
+    enabled: !filters.setId,
+  });
+
+  const isLoading = filters.setId ? setCardsLoading : generalCardsLoading;
+  const cards = filters.setId 
+    ? (allSetCards || []) 
+    : (cardsResponse?.items || cardsResponse?.cards || cardsResponse || []);
 
   // Fetch user's collection and wishlist to show status indicators
   const { data: collection } = useQuery<CollectionItem[]>({

@@ -11,9 +11,10 @@ interface SetThumbnailProps {
   onFavorite: () => void;
   showAdminControls?: boolean;
   onEdit?: () => void;
+  firstCardImage?: string | null;
 }
 
-export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminControls, onEdit }: SetThumbnailProps) {
+export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminControls, onEdit, firstCardImage }: SetThumbnailProps) {
   const placeholderImage = "/uploads/set-placeholder.jpg";
   
   const isPlaceholderImage = (url: string | null) => {
@@ -35,8 +36,13 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
     return url;
   };
   
-  const hasValidImage = set.imageUrl && !isPlaceholderImage(set.imageUrl);
-  const imageUrl = hasValidImage ? convertGoogleDriveUrl(set.imageUrl!) : placeholderImage;
+  const hasValidSetImage = set.imageUrl && !isPlaceholderImage(set.imageUrl);
+  const hasValidFirstCardImage = firstCardImage && !isPlaceholderImage(firstCardImage);
+  const imageUrl = hasValidSetImage 
+    ? convertGoogleDriveUrl(set.imageUrl!) 
+    : hasValidFirstCardImage 
+      ? convertGoogleDriveUrl(firstCardImage!)
+      : placeholderImage;
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();

@@ -98,6 +98,19 @@ export default function BrowseCards() {
     enabled: setSearchQuery.length >= 2,
   });
 
+  // Fetch first card images for all sets to show as thumbnails
+  const setIdsForImages = useMemo(() => {
+    if (!cardSets) return [];
+    return cardSets.filter(set => !set.imageUrl || set.imageUrl.includes('placeholder') || set.imageUrl.includes('superhero-fallback')).map(s => s.id);
+  }, [cardSets]);
+  
+  const { data: firstCardImages } = useQuery<Record<number, string>>({
+    queryKey: ["/api/card-sets/first-images", setIdsForImages.join(',')],
+    queryFn: () => fetch(`/api/card-sets/first-images?setIds=${setIdsForImages.join(',')}`).then(res => res.json()),
+    enabled: setIdsForImages.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
   // All mutations with optimistic updates for instant UI feedback
   const addToCollectionMutation = useMutation({
     mutationFn: (cardId: number) => 
@@ -853,6 +866,7 @@ export default function BrowseCards() {
                       onFavorite={() => handleFavoriteSet(set.id)}
                       showAdminControls={isAdminMode}
                       onEdit={() => handleEditSet(set.id)}
+                      firstCardImage={firstCardImages?.[set.id]}
                     />
                   ))}
                 </div>
@@ -927,6 +941,7 @@ export default function BrowseCards() {
                       onFavorite={() => handleFavoriteSet(set.id)}
                       showAdminControls={isAdminMode}
                       onEdit={() => handleEditSet(set.id)}
+                      firstCardImage={firstCardImages?.[set.id]}
                     />
                   ))}
                 </div>
@@ -948,6 +963,7 @@ export default function BrowseCards() {
                       onFavorite={() => handleFavoriteSet(set.id)}
                       showAdminControls={isAdminMode}
                       onEdit={() => handleEditSet(set.id)}
+                      firstCardImage={firstCardImages?.[set.id]}
                     />
                   ))}
                 </div>

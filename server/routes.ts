@@ -831,6 +831,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get first card images for multiple sets (for thumbnails)
+  app.get("/api/card-sets/first-images", async (req, res) => {
+    try {
+      const setIdsParam = req.query.setIds as string;
+      if (!setIdsParam) {
+        return res.json({});
+      }
+      const setIds = setIdsParam.split(',').map(id => parseInt(id)).filter(id => !isNaN(id));
+      if (setIds.length === 0) {
+        return res.json({});
+      }
+      
+      const result = await db.execute(sql`
+        SELECT DISTINCT ON (set_id) 
+          set_id as "setId", 
+          front_image_url as "frontImageUrl"
+        FROM cards 
+        WHERE set_id = ANY(${sql.raw(`ARRAY[${setIds.join(',')}]::int[]`)}) 
+          AND front_image_url IS NOT NULL 
+          AND front_image_url != ''
+          AND front_image_url NOT LIKE '%placeholder%'
+          AND front_image_url NOT LIKE '%superhero-fallback%'
+        ORDER BY set_id, 
+          CASE WHEN card_number ~ '^[0-9]+$' THEN card_number::integer ELSE 999999 END,
+          card_number, id
+      `);
+      
+      const imageMap: Record<number, string> = {};
+      for (const row of result.rows as any[]) {
+        imageMap[row.setId] = row.frontImageUrl;
+      }
+      
+      res.json(imageMap);
+    } catch (error) {
+      console.error('Get first card images error:', error);
+      res.status(500).json({ message: "Failed to fetch first card images" });
+    }
+  });
+
   // Get card sets by main set ID (for edit dialog - only loads assigned sets)
   app.get("/api/card-sets/by-main-set/:mainSetId", authenticateUser, async (req: any, res) => {
     try {
