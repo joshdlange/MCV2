@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Star, Edit, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,10 +12,12 @@ interface SetThumbnailProps {
   onFavorite: () => void;
   showAdminControls?: boolean;
   onEdit?: () => void;
-  firstCardImage?: string | null;
 }
 
-export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminControls, onEdit, firstCardImage }: SetThumbnailProps) {
+export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminControls, onEdit }: SetThumbnailProps) {
+  const [firstCardImage, setFirstCardImage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  
   const placeholderImage = "/uploads/set-placeholder.jpg";
   
   const isPlaceholderImage = (url: string | null) => {
@@ -24,6 +27,44 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
     if (url.includes('card-placeholder_ysozlo')) return true;
     if (url.includes('set-placeholder')) return true;
     return false;
+  };
+
+  useEffect(() => {
+    if (isPlaceholderImage(set.imageUrl) && set.id && set.totalCards > 0) {
+      setLoading(true);
+      fetchFirstCardImage();
+    }
+  }, [set.id, set.imageUrl]);
+
+  const fetchFirstCardImage = async () => {
+    try {
+      const response = await fetch(`/api/cards?setId=${set.id}&limit=50`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const cards = await response.json();
+      
+      if (cards.length > 0) {
+        const sortedCards = cards.sort((a: any, b: any) => {
+          const numA = parseInt(a.cardNumber) || 999999;
+          const numB = parseInt(b.cardNumber) || 999999;
+          return numA - numB;
+        });
+        
+        const cardWithImage = sortedCards.find((card: any) => 
+          card.frontImageUrl && 
+          !isPlaceholderImage(card.frontImageUrl)
+        );
+        
+        if (cardWithImage) {
+          setFirstCardImage(cardWithImage.frontImageUrl);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch first card image:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const convertGoogleDriveUrl = (url: string) => {
@@ -61,16 +102,22 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
     >
       {/* Set Image */}
       <div className="aspect-[2.5/3.5] bg-gray-100 overflow-hidden relative">
-        <img
-          src={imageUrl}
-          alt={set.name}
-          className="w-full h-full object-cover"
-          loading="lazy"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.src = placeholderImage;
-          }}
-        />
+        {loading ? (
+          <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+            <div className="animate-spin w-6 h-6 border-2 border-white border-t-transparent rounded-full"></div>
+          </div>
+        ) : (
+          <img
+            src={imageUrl}
+            alt={set.name}
+            className="w-full h-full object-cover"
+            loading="lazy"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = placeholderImage;
+            }}
+          />
+        )}
 
         {/* Overlay Controls */}
         <div className="absolute top-2 right-2 flex gap-1">
