@@ -11,6 +11,17 @@ import type { CardWithSet, CollectionItem, WishlistItem } from "@/types/schema";
 import SimpleImage from "@/components/ui/simple-image";
 import { CardFilters } from "@/types";
 import { formatCardName, formatSetName } from "@/lib/formatTitle";
+import { getCardSetDisplayName } from "@/lib/setDisplayName";
+
+// Helper to extract main set name from FULL COMBO format "MainSet - Subset"
+function extractMainSetName(fullComboName: string): string {
+  const delimiter = " - ";
+  const idx = fullComboName.indexOf(delimiter);
+  if (idx > 0) {
+    return fullComboName.substring(0, idx);
+  }
+  return fullComboName;
+}
 
 interface CardGridProps {
   filters?: CardFilters;
@@ -363,7 +374,12 @@ export function CardGrid({
                   <h3 className="font-medium text-gray-900 text-xs truncate">
                     {formatCardName(card.name)} #{card.cardNumber}
                   </h3>
-                  <p className="text-xs text-gray-500 mb-2">{formatSetName(card.set?.name) || 'Unknown Set'}</p>
+                  {(() => {
+                    const setName = card.set?.name || 'Unknown Set';
+                    const mainSetName = extractMainSetName(setName);
+                    const { displayName } = getCardSetDisplayName({ cardSetName: setName, mainSetName, isAdmin: false });
+                    return <p className="text-xs text-gray-500 mb-2">{displayName}</p>;
+                  })()}
                   
                   <div className="flex items-center justify-between mb-2">
                     {card.isInsert && (
@@ -440,9 +456,12 @@ export function CardGrid({
                         <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-1">
                           {formatCardName(card.name)}
                         </h3>
-                        <p className="text-xs text-gray-500 mb-1">
-                          {card.set.year} {formatSetName(card.set.name)}
-                        </p>
+                        {(() => {
+                          const setName = card.set?.name || '';
+                          const mainSetName = extractMainSetName(setName);
+                          const { displayName } = getCardSetDisplayName({ cardSetName: setName, mainSetName, isAdmin: false });
+                          return <p className="text-xs text-gray-500 mb-1">{card.set.year} {displayName}</p>;
+                        })()}
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-medium text-gray-600">
                             #{card.cardNumber}
