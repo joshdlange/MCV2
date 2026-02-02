@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Star, Edit, Clock } from "lucide-react";
+import { Star, Edit, Clock, Lock, Hammer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { CardSet } from "@shared/schema";
 import { formatSetName } from "@/lib/formatTitle";
 import { getCardSetDisplayName } from "@/lib/setDisplayName";
@@ -21,8 +22,11 @@ interface SetThumbnailProps {
 export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminControls, onEdit, mainSetName }: SetThumbnailProps) {
   const [firstCardImage, setFirstCardImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showStillPopulatingModal, setShowStillPopulatingModal] = useState(false);
   const { isAdminMode } = useAppStore();
   const [location] = useLocation();
+  
+  const isEmpty = set.totalCards === 0;
   
   const isAdminContext = isAdminMode || location.startsWith('/admin');
   const { displayName, isBaseSet } = getCardSetDisplayName({
@@ -109,10 +113,21 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
     if (onEdit) onEdit();
   };
 
+  const handleClick = () => {
+    if (isEmpty) {
+      setShowStillPopulatingModal(true);
+    } else {
+      onClick();
+    }
+  };
+
   return (
+    <>
     <div 
-      className="group relative bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
-      onClick={onClick}
+      className={`group relative bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden ${
+        isEmpty ? 'border-amber-200' : 'border-gray-200'
+      }`}
+      onClick={handleClick}
     >
       {/* Set Image */}
       <div className="aspect-[2.5/3.5] bg-gray-100 overflow-hidden relative">
@@ -121,16 +136,25 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
             <div className="animate-spin w-6 h-6 border-2 border-white border-t-transparent rounded-full"></div>
           </div>
         ) : (
+          <>
           <img
             src={imageUrl}
             alt={set.name}
-            className="w-full h-full object-cover"
+            className={`w-full h-full object-cover ${isEmpty ? 'grayscale opacity-60' : ''}`}
             loading="lazy"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.src = placeholderImage;
             }}
           />
+          {isEmpty && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+              <div className="bg-amber-500/90 rounded-full p-3">
+                <Lock className="w-6 h-6 text-white" />
+              </div>
+            </div>
+          )}
+          </>
         )}
 
         {/* Overlay Controls */}
@@ -186,5 +210,35 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
         </div>
       </div>
     </div>
+    
+    <Dialog open={showStillPopulatingModal} onOpenChange={setShowStillPopulatingModal}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-amber-600">
+            <Hammer className="w-5 h-5" />
+            Still Populating
+          </DialogTitle>
+        </DialogHeader>
+        <div className="text-center py-4">
+          <div className="bg-amber-100 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+            <Hammer className="w-8 h-8 text-amber-600" />
+          </div>
+          <h3 className="font-semibold text-gray-900 mb-2">{displayName}</h3>
+          <p className="text-gray-600 text-sm">
+            We're still adding cards to this set. Check back soon!
+          </p>
+        </div>
+        <div className="flex justify-center">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowStillPopulatingModal(false)}
+            className="border-amber-200 text-amber-700 hover:bg-amber-50"
+          >
+            Got it
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
