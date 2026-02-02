@@ -33,6 +33,7 @@ import AdminAutomation from "@/pages/admin/automation";
 import AdminUpcomingSets from "@/pages/admin/upcoming-sets";
 import AdminImageApprovals from "@/pages/admin/image-approvals";
 import AdminMigrationConsole from "@/pages/admin/migration-console";
+import AdminBaseSetPopulation from "@/pages/admin/base-set-population";
 import CardSearch from "@/pages/card-search";
 import MarketTrends from "@/pages/market-trends";
 import UpcomingSets from "@/pages/upcoming-sets";
@@ -156,6 +157,7 @@ function Router() {
       <Route path="/admin/upcoming-sets" component={AdminUpcomingSets} />
       <Route path="/admin/image-approvals" component={AdminImageApprovals} />
       <Route path="/admin/migration-console" component={AdminMigrationConsole} />
+      <Route path="/admin/base-set-population" component={AdminBaseSetPopulation} />
       <Route path="/subscription-success" component={SubscriptionSuccess} />
       <Route path="/subscription-cancelled" component={SubscriptionCancelled} />
       <Route component={NotFound} />

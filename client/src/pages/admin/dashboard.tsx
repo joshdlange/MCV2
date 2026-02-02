@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, FolderOpen, Edit, PlusCircle, Settings, Calendar, Image, ArrowLeftRight } from "lucide-react";
+import { Users, FolderOpen, Edit, PlusCircle, Settings, Calendar, Image, ArrowLeftRight, Copy } from "lucide-react";
 
 export default function AdminDashboard() {
   const adminTools = [
@@ -61,6 +61,13 @@ export default function AdminDashboard() {
       href: "/admin/migration-console",
       icon: ArrowLeftRight,
       color: "bg-indigo-500"
+    },
+    {
+      title: "Base Set Population",
+      description: "Populate empty base sets by copying card data from variants",
+      href: "/admin/base-set-population",
+      icon: Copy,
+      color: "bg-teal-500"
     }
   ];
 

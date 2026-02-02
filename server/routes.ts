@@ -6469,6 +6469,412 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ BASE SET POPULATION TOOL ============
+  
+  // Get all main sets with empty base subsets
+  app.get("/api/admin/empty-base-sets", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      // Find main sets where the base subset (name = mainSetName - mainSetName) has 0 cards
+      const result = await db.execute(sql`
+        SELECT 
+          ms.id as main_set_id,
+          ms.name as main_set_name,
+          cs.id as base_set_id,
+          cs.name as base_set_name,
+          cs.total_cards as base_card_count,
+          cs.year,
+          (
+            SELECT json_agg(json_build_object(
+              'id', sibling.id,
+              'name', sibling.name,
+              'total_cards', sibling.total_cards,
+              'is_insert_subset', sibling.is_insert_subset
+            ) ORDER BY sibling.total_cards DESC NULLS LAST)
+            FROM card_sets sibling
+            WHERE sibling.main_set_id = ms.id
+              AND sibling.is_active = true
+              AND sibling.id != cs.id
+              AND (sibling.total_cards > 0 OR sibling.total_cards IS NOT NULL)
+          ) as sibling_sets
+        FROM main_sets ms
+        JOIN card_sets cs ON cs.main_set_id = ms.id
+        WHERE ms.is_active = true
+          AND cs.is_active = true
+          AND cs.name = CONCAT(ms.name, ' - ', ms.name)
+          AND (cs.total_cards = 0 OR cs.total_cards IS NULL)
+        ORDER BY cs.year DESC, ms.name
+      `);
+
+      // For each result, suggest the best source subset
+      const resultsWithSuggestions = result.rows.map((row: any) => {
+        const siblings = row.sibling_sets || [];
+        let suggestedSource = null;
+        let suggestionReason = '';
+
+        // Find the best source - prefer largest non-insert subset
+        const nonInserts = siblings.filter((s: any) => !s.is_insert_subset && s.total_cards > 0);
+        const inserts = siblings.filter((s: any) => s.is_insert_subset && s.total_cards > 0);
+        
+        // Check for common parallel names that typically match base
+        const parallelNames = ['Black Foil', 'Blue Foil', 'Chrome', 'Base Chrome', 'Silver', 'Gold'];
+        
+        for (const name of parallelNames) {
+          const match = siblings.find((s: any) => 
+            s.name.toLowerCase().includes(name.toLowerCase()) && s.total_cards >= 50
+          );
+          if (match) {
+            suggestedSource = match;
+            suggestionReason = `Common parallel "${name}" with ${match.total_cards} cards`;
+            break;
+          }
+        }
+        
+        // If no parallel found, use largest non-insert
+        if (!suggestedSource && nonInserts.length > 0) {
+          suggestedSource = nonInserts[0];
+          suggestionReason = `Largest non-insert subset with ${suggestedSource.total_cards} cards`;
+        }
+        
+        // Fallback to largest insert if no non-insert available
+        if (!suggestedSource && inserts.length > 0) {
+          suggestedSource = inserts[0];
+          suggestionReason = `Largest subset (insert) with ${suggestedSource.total_cards} cards`;
+        }
+
+        return {
+          mainSetId: row.main_set_id,
+          mainSetName: row.main_set_name,
+          baseSetId: row.base_set_id,
+          baseSetName: row.base_set_name,
+          year: row.year,
+          siblingCount: siblings.length,
+          siblings: siblings.slice(0, 10), // Limit to top 10
+          suggestedSourceId: suggestedSource?.id || null,
+          suggestedSourceName: suggestedSource?.name || null,
+          suggestedSourceCardCount: suggestedSource?.total_cards || 0,
+          suggestionReason
+        };
+      });
+
+      res.json({
+        total: resultsWithSuggestions.length,
+        sets: resultsWithSuggestions
+      });
+    } catch (error: any) {
+      console.error('[EMPTY BASE SETS] Error:', error);
+      res.status(500).json({ message: `Failed to get empty base sets: ${error.message}` });
+    }
+  });
+
+  // Preview copying cards from source to base set
+  app.get("/api/admin/base-set-population/preview", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const sourceSetId = parseInt(req.query.sourceSetId as string);
+      const baseSetId = parseInt(req.query.baseSetId as string);
+
+      if (!sourceSetId || !baseSetId) {
+        return res.status(400).json({ message: "sourceSetId and baseSetId are required" });
+      }
+
+      // Get source cards
+      const sourceCards = await db.execute(sql`
+        SELECT id, card_number, name, variation
+        FROM cards
+        WHERE set_id = ${sourceSetId}
+        ORDER BY card_number
+      `);
+
+      // Get existing base cards (should be empty but check anyway)
+      const existingBaseCards = await db.execute(sql`
+        SELECT id, card_number, name
+        FROM cards
+        WHERE set_id = ${baseSetId}
+      `);
+
+      // Get set info
+      const sourceSet = await db.execute(sql`
+        SELECT cs.name, cs.total_cards, ms.name as main_set_name
+        FROM card_sets cs
+        JOIN main_sets ms ON cs.main_set_id = ms.id
+        WHERE cs.id = ${sourceSetId}
+      `);
+
+      const baseSet = await db.execute(sql`
+        SELECT cs.name, cs.total_cards
+        FROM card_sets cs
+        WHERE cs.id = ${baseSetId}
+      `);
+
+      res.json({
+        sourceSetId,
+        sourceSetName: sourceSet.rows[0]?.name || 'Unknown',
+        sourceCardCount: sourceCards.rows.length,
+        baseSetId,
+        baseSetName: baseSet.rows[0]?.name || 'Unknown',
+        existingBaseCardCount: existingBaseCards.rows.length,
+        sampleCards: sourceCards.rows.slice(0, 10).map((c: any) => ({
+          cardNumber: c.card_number,
+          name: c.name
+        }))
+      });
+    } catch (error: any) {
+      console.error('[BASE SET PREVIEW] Error:', error);
+      res.status(500).json({ message: `Preview failed: ${error.message}` });
+    }
+  });
+
+  // Execute: Copy card names/numbers from source to base set
+  app.post("/api/admin/base-set-population/execute", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { sourceSetId, baseSetId } = req.body;
+
+      if (!sourceSetId || !baseSetId) {
+        return res.status(400).json({ message: "sourceSetId and baseSetId are required" });
+      }
+
+      console.log(`[BASE SET POPULATE] Copying cards from set ${sourceSetId} to base set ${baseSetId}`);
+
+      // Validate source and base belong to same main set
+      const validation = await db.execute(sql`
+        SELECT 
+          s.main_set_id as source_main_set_id,
+          b.main_set_id as base_main_set_id,
+          ms.name as main_set_name,
+          b.name as base_set_name
+        FROM card_sets s
+        JOIN card_sets b ON b.id = ${baseSetId}
+        JOIN main_sets ms ON ms.id = b.main_set_id
+        WHERE s.id = ${sourceSetId}
+      `);
+
+      if (validation.rows.length === 0) {
+        return res.status(400).json({ message: "Source or base set not found" });
+      }
+
+      const { source_main_set_id, base_main_set_id, main_set_name, base_set_name } = validation.rows[0] as any;
+      
+      if (source_main_set_id !== base_main_set_id) {
+        return res.status(400).json({ message: "Source and base sets must belong to the same main set" });
+      }
+
+      // Verify base set is the canonical base subset (name = "MainSetName - MainSetName")
+      const expectedBaseName = `${main_set_name} - ${main_set_name}`;
+      if (base_set_name !== expectedBaseName) {
+        return res.status(400).json({ message: "Target set is not the canonical base subset for this main set" });
+      }
+
+      // Get source cards
+      const sourceCards = await db.execute(sql`
+        SELECT card_number, name, description, rarity
+        FROM cards
+        WHERE set_id = ${sourceSetId}
+        ORDER BY card_number
+      `);
+
+      if (sourceCards.rows.length === 0) {
+        return res.status(400).json({ message: "Source set has no cards to copy" });
+      }
+
+      // Check if base set already has cards
+      const existingCount = await db.execute(sql`
+        SELECT COUNT(*) as count FROM cards WHERE set_id = ${baseSetId}
+      `);
+
+      if (parseInt(existingCount.rows[0].count) > 0) {
+        return res.status(400).json({ 
+          message: `Base set already has ${existingCount.rows[0].count} cards. Clear them first or use a different approach.` 
+        });
+      }
+
+      // Use transaction for atomic insert
+      await db.execute(sql`BEGIN`);
+      
+      try {
+        // Bulk insert using VALUES clause
+        const cardRows = sourceCards.rows as any[];
+        const batchSize = 100;
+        let insertedCount = 0;
+
+        for (let i = 0; i < cardRows.length; i += batchSize) {
+          const batch = cardRows.slice(i, i + batchSize);
+          
+          for (const card of batch) {
+            await db.execute(sql`
+              INSERT INTO cards (set_id, card_number, name, description, rarity, is_insert)
+              VALUES (${baseSetId}, ${card.card_number}, ${card.name}, ${card.description}, ${card.rarity}, false)
+            `);
+            insertedCount++;
+          }
+        }
+
+        // Update base set card count
+        await db.execute(sql`
+          UPDATE card_sets SET total_cards = ${insertedCount} WHERE id = ${baseSetId}
+        `);
+
+        await db.execute(sql`COMMIT`);
+
+        console.log(`[BASE SET POPULATE] Inserted ${insertedCount} cards into base set ${baseSetId}`);
+
+        res.json({
+          success: true,
+          message: `Populated base set with ${insertedCount} cards`,
+          insertedCount,
+          sourceSetId,
+          baseSetId
+        });
+      } catch (txError: any) {
+        await db.execute(sql`ROLLBACK`);
+        throw txError;
+      }
+    } catch (error: any) {
+      console.error('[BASE SET POPULATE] Error:', error);
+      res.status(500).json({ message: `Population failed: ${error.message}` });
+    }
+  });
+
+  // Batch execute: Populate multiple base sets at once
+  app.post("/api/admin/base-set-population/batch-execute", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { items } = req.body; // Array of { sourceSetId, baseSetId }
+
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: "items array is required" });
+      }
+
+      console.log(`[BATCH BASE SET POPULATE] Processing ${items.length} sets`);
+
+      const results = [];
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const item of items) {
+        const { sourceSetId, baseSetId } = item;
+        
+        try {
+          // Validate source and base belong to same main set
+          const validation = await db.execute(sql`
+            SELECT 
+              s.main_set_id as source_main_set_id,
+              b.main_set_id as base_main_set_id,
+              ms.name as main_set_name,
+              b.name as base_set_name
+            FROM card_sets s
+            JOIN card_sets b ON b.id = ${baseSetId}
+            JOIN main_sets ms ON ms.id = b.main_set_id
+            WHERE s.id = ${sourceSetId}
+          `);
+
+          if (validation.rows.length === 0) {
+            results.push({ baseSetId, success: false, error: 'Source or base set not found' });
+            errorCount++;
+            continue;
+          }
+
+          const { source_main_set_id, base_main_set_id, main_set_name, base_set_name } = validation.rows[0] as any;
+          
+          if (source_main_set_id !== base_main_set_id) {
+            results.push({ baseSetId, success: false, error: 'Source and base sets must belong to the same main set' });
+            errorCount++;
+            continue;
+          }
+
+          // Verify base set is the canonical base subset
+          const expectedBaseName = `${main_set_name} - ${main_set_name}`;
+          if (base_set_name !== expectedBaseName) {
+            results.push({ baseSetId, success: false, error: 'Target set is not the canonical base subset' });
+            errorCount++;
+            continue;
+          }
+
+          // Get source cards
+          const sourceCards = await db.execute(sql`
+            SELECT card_number, name, description, rarity
+            FROM cards
+            WHERE set_id = ${sourceSetId}
+            ORDER BY card_number
+          `);
+
+          if (sourceCards.rows.length === 0) {
+            results.push({ baseSetId, success: false, error: 'Source set has no cards' });
+            errorCount++;
+            continue;
+          }
+
+          // Check if base set already has cards
+          const existingCount = await db.execute(sql`
+            SELECT COUNT(*) as count FROM cards WHERE set_id = ${baseSetId}
+          `);
+
+          if (parseInt(existingCount.rows[0].count) > 0) {
+            results.push({ baseSetId, success: false, error: 'Base set already has cards' });
+            errorCount++;
+            continue;
+          }
+
+          // Use transaction for each set's population
+          await db.execute(sql`BEGIN`);
+          
+          try {
+            // Insert cards
+            let insertedCount = 0;
+            for (const card of sourceCards.rows as any[]) {
+              await db.execute(sql`
+                INSERT INTO cards (set_id, card_number, name, description, rarity, is_insert)
+                VALUES (${baseSetId}, ${card.card_number}, ${card.name}, ${card.description}, ${card.rarity}, false)
+              `);
+              insertedCount++;
+            }
+
+            // Update card count
+            await db.execute(sql`
+              UPDATE card_sets SET total_cards = ${insertedCount} WHERE id = ${baseSetId}
+            `);
+
+            await db.execute(sql`COMMIT`);
+            results.push({ baseSetId, success: true, insertedCount });
+            successCount++;
+          } catch (txError: any) {
+            await db.execute(sql`ROLLBACK`);
+            throw txError;
+          }
+        } catch (err: any) {
+          results.push({ baseSetId, success: false, error: err.message });
+          errorCount++;
+        }
+      }
+
+      console.log(`[BATCH BASE SET POPULATE] Complete: ${successCount} success, ${errorCount} errors`);
+
+      res.json({
+        success: true,
+        message: `Processed ${items.length} sets: ${successCount} successful, ${errorCount} errors`,
+        successCount,
+        errorCount,
+        results
+      });
+    } catch (error: any) {
+      console.error('[BATCH BASE SET POPULATE] Error:', error);
+      res.status(500).json({ message: `Batch population failed: ${error.message}` });
+    }
+  });
+
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);
 
