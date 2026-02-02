@@ -17,7 +17,7 @@ import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
 import { db } from "./db";
 import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userBadges, migrationLogs, migrationLogCards, adminAuditLogs } from "../shared/schema";
-import { sql, eq, ne, ilike, and, or, isNull, count, exists, desc } from "drizzle-orm";
+import { sql, eq, ne, ilike, like, and, or, isNull, count, exists, desc } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
 import { badgeService } from "./badge-service";
@@ -2929,6 +2929,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.status(500).json({ 
         message: "Failed to update missing images",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Migrate comc.com images to Cloudinary in batches
+  app.post("/api/admin/migrate-comc-to-cloudinary", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const batchSize = Math.min(req.body.batchSize || 50, 100);
+      
+      // Get cards with comc.com images
+      const cardsToMigrate = await db
+        .select({ id: cards.id, frontImageUrl: cards.frontImageUrl })
+        .from(cards)
+        .where(like(cards.frontImageUrl, '%comc.com%'))
+        .limit(batchSize);
+
+      if (cardsToMigrate.length === 0) {
+        return res.json({ message: "No comc.com images remaining", migrated: 0, failed: 0, remaining: 0 });
+      }
+
+      const { v2: cloudinary } = await import('cloudinary');
+      
+      let migrated = 0;
+      let failed = 0;
+
+      for (const card of cardsToMigrate) {
+        try {
+          const response = await fetch(card.frontImageUrl!, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'Accept': 'image/*,*/*;q=0.8',
+            },
+          });
+
+          if (!response.ok) {
+            failed++;
+            continue;
+          }
+
+          const contentType = response.headers.get('content-type') || 'image/jpeg';
+          if (!contentType.startsWith('image/')) {
+            failed++;
+            continue;
+          }
+
+          const arrayBuffer = await response.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          if (buffer.length > 10 * 1024 * 1024) {
+            failed++;
+            continue;
+          }
+
+          const result = await cloudinary.uploader.upload(
+            `data:${contentType};base64,${buffer.toString('base64')}`,
+            {
+              folder: 'marvel-cards',
+              public_id: `card_${card.id}_${Date.now()}`,
+              resource_type: 'image',
+              transformation: [
+                { width: 800, height: 1120, crop: 'fit', quality: 'auto' },
+                { format: 'auto' }
+              ]
+            }
+          );
+
+          await db.update(cards)
+            .set({ frontImageUrl: result.secure_url })
+            .where(eq(cards.id, card.id));
+          
+          migrated++;
+        } catch (error) {
+          failed++;
+          console.error(`[COMC MIGRATE] Card ${card.id} failed:`, error);
+        }
+      }
+
+      // Count remaining
+      const [{ count }] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(cards)
+        .where(like(cards.frontImageUrl, '%comc.com%'));
+
+      console.log(`[COMC MIGRATE] Batch complete: ${migrated} migrated, ${failed} failed, ${count} remaining`);
+      
+      res.json({ 
+        message: "Batch complete", 
+        migrated, 
+        failed, 
+        remaining: count,
+        batchSize
+      });
+    } catch (error) {
+      console.error('[COMC MIGRATE] Error:', error);
+      res.status(500).json({ 
+        message: "Migration failed",
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
