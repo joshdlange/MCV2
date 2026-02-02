@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { getOptimizedImageUrl } from "@/lib/imageOptimizer";
 
 interface SimpleImageProps {
   src: string;
@@ -9,18 +10,6 @@ interface SimpleImageProps {
   width?: number;
   height?: number;
   priority?: boolean;
-}
-
-function getOptimizedCloudinaryUrl(src: string, width: number): string {
-  if (!src) return src;
-  
-  if (src.includes('res.cloudinary.com')) {
-    const parts = src.split('/upload/');
-    if (parts.length === 2) {
-      return `${parts[0]}/upload/w_${width},q_auto,f_auto/${parts[1]}`;
-    }
-  }
-  return src;
 }
 
 export default function SimpleImage({ 
