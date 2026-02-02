@@ -1597,6 +1597,181 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // BULK IMAGE IMPORT - Update card images from CSV with image_url column
+  // Matches cards by FULL COMBO (set name) + card number, only updates cards without images
+  app.post("/api/admin/bulk-image-import", authenticateUser, upload.single('file'), async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: 'No CSV file provided' });
+      }
+
+      const BATCH_SIZE = parseInt(req.body.batchSize) || 500;
+      const dryRun = req.body.dryRun === 'true';
+      const forceUpdate = req.body.forceUpdate === 'true'; // Update even if card already has image
+
+      console.log(`[BULK IMAGE IMPORT] Starting. Batch size: ${BATCH_SIZE}, Dry run: ${dryRun}, Force update: ${forceUpdate}`);
+
+      // Parse CSV
+      const rows: any[] = [];
+      let csvBuffer = req.file.buffer;
+      if (csvBuffer[0] === 0xEF && csvBuffer[1] === 0xBB && csvBuffer[2] === 0xBF) {
+        csvBuffer = csvBuffer.slice(3);
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        const stream = Readable.from(csvBuffer);
+        stream
+          .pipe(csv({
+            mapHeaders: ({ header }: { header: string }) => header.trim().toLowerCase().replace(/[\s_-]/g, ''),
+            skipEmptyLines: true
+          }))
+          .on('data', (row: any) => rows.push(row))
+          .on('error', reject)
+          .on('end', resolve);
+      });
+
+      console.log(`[BULK IMAGE IMPORT] Parsed ${rows.length} total rows`);
+
+      // Find column mappings
+      const keys = Object.keys(rows[0] || {});
+      const cardNumberKey = keys.find(k => k === 'cardnumber' || k === 'number' || k === 'card#' || k === 'no');
+      const imageUrlKey = keys.find(k => k === 'imageurl' || k === 'image' || k === 'frontimageurl');
+      const fullComboKey = keys.find(k => k === 'fullcombo');
+
+      console.log(`[BULK IMAGE IMPORT] Columns found: cardNumber="${cardNumberKey}", imageUrl="${imageUrlKey}", fullCombo="${fullComboKey}"`);
+
+      if (!cardNumberKey || !imageUrlKey || !fullComboKey) {
+        return res.status(400).json({ 
+          message: `CSV must have Card Number, image_url, and FULL COMBO columns. Found: ${keys.join(', ')}` 
+        });
+      }
+
+      // Filter only rows with image URLs
+      const rowsWithImages = rows.filter(row => {
+        const url = row[imageUrlKey]?.trim();
+        return url && url.startsWith('http');
+      });
+
+      console.log(`[BULK IMAGE IMPORT] Found ${rowsWithImages.length} rows with image URLs`);
+
+      if (rowsWithImages.length === 0) {
+        return res.json({ message: 'No rows with image URLs found', successCount: 0 });
+      }
+
+      // Build set name lookup cache
+      console.log(`[BULK IMAGE IMPORT] Building set name lookup cache...`);
+      const allSets = await db.select({ id: cardSets.id, name: cardSets.name }).from(cardSets).where(eq(cardSets.isActive, true));
+      const setCache: Map<string, number> = new Map();
+      for (const set of allSets) {
+        const normalizedName = set.name.toLowerCase().trim().replace(/\s+/g, ' ');
+        setCache.set(normalizedName, set.id);
+      }
+      console.log(`[BULK IMAGE IMPORT] Cached ${setCache.size} active sets`);
+
+      let successCount = 0;
+      let skippedCount = 0;
+      let notFoundCount = 0;
+      let alreadyHasImageCount = 0;
+      const errors: string[] = [];
+
+      // Process in batches
+      for (let batchStart = 0; batchStart < rowsWithImages.length; batchStart += BATCH_SIZE) {
+        const batchEnd = Math.min(batchStart + BATCH_SIZE, rowsWithImages.length);
+        const batch = rowsWithImages.slice(batchStart, batchEnd);
+        const batchNum = Math.floor(batchStart / BATCH_SIZE) + 1;
+        const totalBatches = Math.ceil(rowsWithImages.length / BATCH_SIZE);
+
+        console.log(`[BULK IMAGE IMPORT] Processing batch ${batchNum}/${totalBatches} (${batchStart + 1}-${batchEnd})`);
+
+        for (const row of batch) {
+          try {
+            const fullCombo = row[fullComboKey]?.trim();
+            const cardNumber = row[cardNumberKey]?.toString().trim();
+            const imageUrl = row[imageUrlKey]?.trim();
+
+            if (!fullCombo || !cardNumber || !imageUrl) {
+              skippedCount++;
+              continue;
+            }
+
+            // Normalize full combo to match set name
+            const normalizedCombo = fullCombo.toLowerCase().trim().replace(/\s+/g, ' ');
+            const setId = setCache.get(normalizedCombo);
+
+            if (!setId) {
+              notFoundCount++;
+              if (errors.length < 20) {
+                errors.push(`Set not found: "${fullCombo}"`);
+              }
+              continue;
+            }
+
+            // Find card by set ID and card number
+            const existingCards = await db.select()
+              .from(cards)
+              .where(and(
+                eq(cards.setId, setId),
+                eq(cards.cardNumber, cardNumber)
+              ))
+              .limit(1);
+
+            if (existingCards.length === 0) {
+              notFoundCount++;
+              if (errors.length < 50) {
+                errors.push(`Card not found: ${fullCombo} #${cardNumber}`);
+              }
+              continue;
+            }
+
+            const card = existingCards[0];
+
+            // Check if card already has an image (unless force update)
+            const PLACEHOLDER_URL = 'https://res.cloudinary.com/dlwfuryyz/image/upload/v1748442577/card-placeholder_ysozlo.png';
+            if (!forceUpdate && card.frontImageUrl && card.frontImageUrl !== PLACEHOLDER_URL) {
+              alreadyHasImageCount++;
+              continue;
+            }
+
+            // Update card with new image URL
+            if (!dryRun) {
+              await db.update(cards)
+                .set({ frontImageUrl: imageUrl })
+                .where(eq(cards.id, card.id));
+            }
+
+            successCount++;
+          } catch (e: any) {
+            if (errors.length < 50) {
+              errors.push(`Error: ${e.message}`);
+            }
+          }
+        }
+
+        // Yield to event loop
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+
+      console.log(`[BULK IMAGE IMPORT] Complete. Updated: ${successCount}, Skipped: ${skippedCount}, Not found: ${notFoundCount}, Already has image: ${alreadyHasImageCount}`);
+
+      res.json({
+        message: dryRun ? 'Dry run complete' : `Updated ${successCount} card images`,
+        successCount,
+        skippedCount,
+        notFoundCount,
+        alreadyHasImageCount,
+        totalRowsWithImages: rowsWithImages.length,
+        errors: errors.slice(0, 50)
+      });
+    } catch (error: any) {
+      console.error('[BULK IMAGE IMPORT] Fatal error:', error);
+      res.status(500).json({ message: `Bulk image import failed: ${error.message}` });
+    }
+  });
+
   // Update card (admin only)
   app.put("/api/cards/:id", authenticateUser, async (req: any, res) => {
     try {
