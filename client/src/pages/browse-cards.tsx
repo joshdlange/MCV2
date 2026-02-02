@@ -645,7 +645,9 @@ export default function BrowseCards() {
   if (selectedSet) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <div className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-4">
+        {/* Sticky header container */}
+        <div className="sticky top-0 z-40 bg-gray-50">
+          <div className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-4">
           <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-4">
               <Button
@@ -751,6 +753,8 @@ export default function BrowseCards() {
             )}
           </div>
         </div>
+        </div>
+        {/* End sticky header container */}
 
         <div className="p-6">
           <CardGrid filters={filters} viewMode={viewMode} />
@@ -761,7 +765,9 @@ export default function BrowseCards() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-4">
+      {/* Sticky header for browse view */}
+      <div className="sticky top-0 z-40 bg-gray-50">
+        <div className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-4">
         <div className="flex flex-col space-y-4">
           <div className="flex items-center justify-between">
             <div>
@@ -822,7 +828,9 @@ export default function BrowseCards() {
             </Select>
           </div>
         </div>
+        </div>
       </div>
+      {/* End sticky header for browse view */}
 
       <div className="p-6">
         {shouldShowSearchResults ? (
