@@ -1,0 +1,91 @@
+REPLIT — STOP building a new admin UI. We are doing a one-time import via scripts (dry-run + apply) to minimize risk to production.
+
+GOAL
+Import ~9,800 front images from Marvel_Cards_with_Images.csv, upload to Cloudinary with portrait-safe transformations, then update cards.front_image_url for matched cards.
+
+DO NOT BUILD
+- No /admin/image-import page
+- No new UI
+- No changes to public routes
+- No changes to browse logic
+- No schema changes unless absolutely necessary (prefer writing logs as CSV files)
+
+INPUT
+- Use the CSV file already uploaded in Replit Files: Marvel_Cards_with_Images.csv
+- Column headers are:
+  Card Number, Card Title, Main Set, Subset, year, FULL COMBO, image_url
+  (Ignore any empty column)
+
+MATCHING (MUST MATCH BIG IMPORT EXACTLY)
+1) Find card_set:
+   - normalizedFullCombo = normalize(FULL COMBO)
+   - match to card_sets.name normalized the same way
+   - IMPORTANT: card_sets.name is the full set name and should equal FULL COMBO
+2) Find card:
+   - match by (set_id + Card Number) to cards.set_id + cards.card_number
+3) Do NOT match by Card Title.
+
+NORMALIZE FUNCTION (USE EXACT SAME AS run_import.mjs)
+lowercase().trim().replace(/\s+/g,' ')
+(do not add more aggressive normalization)
+
+SCRIPT PLAN (NO UI)
+Create two scripts in /scripts:
+
+1) scripts/image_import_dry_run.mjs
+   - Reads CSV
+   - Counts:
+     total_rows
+     rows_with_image_url
+     blank_image_url
+     matched_set
+     unmatched_set
+     matched_card
+     unmatched_card
+     would_skip_already_has_front_image_url
+     duplicates_in_csv_by(set+card_number)
+   - Writes a report CSV:
+     image-import-dryrun-report.csv
+     with columns: row_index, full_combo, card_number, image_url, status, reason, set_id, card_id, existing_front_image_url
+   - Prints a short summary to console
+
+2) scripts/image_import_apply.mjs
+   - Reads CSV
+   - For rows where image_url is not blank:
+     - match set_id + card_id exactly as above
+     - if cards.front_image_url already exists: SKIP by default
+     - else upload to Cloudinary and update DB
+   - Batching:
+     - process in batches of 100 rows
+     - concurrency 3–5 uploads at a time
+     - retries: 2 on transient download/upload failures
+   - Create output logs as files:
+     image-import-apply-report.csv (all rows)
+     image-import-failures.csv (only failures/unmatched)
+   - Must be resumable:
+     - store last processed row index in a local file: image-import-checkpoint.json
+     - on rerun, continue where it left off
+
+CLOUDINARY UPLOAD REQUIREMENTS (PORTRAIT SAFE)
+- No stretching
+- Always store a portrait 2:3 display URL
+- Use Cloudinary transformations:
+  f_auto,q_auto
+  a_auto (respect EXIF)
+  ar_2:3,c_fill,g_auto
+- Store the resulting Cloudinary secure_url (or transformed delivery URL) in cards.front_image_url
+- Folder convention:
+  marvel-card-vault/cards/{year}/{sanitized_full_combo}/{card_number}
+
+SAFETY
+- No writes in dry-run. No Cloudinary calls in dry-run.
+- Apply script should update ONLY cards.front_image_url (and optionally cards.last_image_search_attempt if needed)
+- Do not touch card_id, set_id, collections, pricing, etc.
+
+DELIVERABLES
+- Add the two scripts
+- Add npm commands:
+  "image:dry-run": "node scripts/image_import_dry_run.mjs"
+  "image:apply": "node scripts/image_import_apply.mjs"
+- After scripts are created, run dry-run and show me the summary output.
+- Do NOT run apply until I confirm after reviewing the dry-run report.
