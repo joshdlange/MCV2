@@ -11,6 +11,8 @@ interface SimpleImageProps {
   priority?: boolean;
 }
 
+const CLOUDINARY_CLOUD_NAME = 'marvelcardvault';
+
 function getOptimizedCloudinaryUrl(src: string, width: number): string {
   if (!src) return src;
   
@@ -21,6 +23,14 @@ function getOptimizedCloudinaryUrl(src: string, width: number): string {
       return `${parts[0]}/upload/w_${width},q_auto,f_auto/${parts[1]}`;
     }
   }
+  
+  // Use Cloudinary fetch for external images (comc.com, etc.)
+  // Cloudinary will fetch, cache, and optimize these on-demand
+  if (src.includes('comc.com') || src.includes('i.ebayimg.com')) {
+    const encodedUrl = encodeURIComponent(src);
+    return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/fetch/w_${width},q_auto,f_auto/${encodedUrl}`;
+  }
+  
   return src;
 }
 
