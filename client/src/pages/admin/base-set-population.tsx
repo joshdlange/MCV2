@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Check, X, ChevronDown, ChevronUp, Search, Copy, AlertCircle } from "lucide-react";
+import { Loader2, Check, X, ChevronDown, ChevronUp, Search, Copy, AlertCircle, Layers } from "lucide-react";
 
 interface SiblingSet {
   id: number;
@@ -280,7 +281,43 @@ export default function BaseSetPopulation() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-medium text-lg truncate">{set.mainSetName}</h3>
                       <Badge variant="outline">{set.year}</Badge>
-                      <Badge variant="secondary">{set.siblingCount} subsets</Badge>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Badge 
+                            variant="secondary" 
+                            className="cursor-pointer hover:bg-gray-300 transition-colors"
+                          >
+                            <Layers className="h-3 w-3 mr-1" />
+                            {set.siblingCount} subsets
+                          </Badge>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 max-h-64 overflow-auto p-0" align="start">
+                          <div className="p-3 border-b bg-gray-50">
+                            <p className="font-medium text-sm">{set.mainSetName}</p>
+                            <p className="text-xs text-gray-500">{set.siblingCount} subsets in this main set</p>
+                          </div>
+                          <div className="p-2 space-y-1">
+                            {set.siblings.length > 0 ? (
+                              set.siblings.map(sibling => (
+                                <div 
+                                  key={sibling.id}
+                                  className="flex items-center justify-between p-2 rounded hover:bg-gray-50 text-sm"
+                                >
+                                  <span className="truncate flex-1">{sibling.name.split(' - ').pop()}</span>
+                                  <div className="flex items-center gap-2 ml-2 shrink-0">
+                                    <span className="text-xs text-gray-500">{sibling.total_cards} cards</span>
+                                    {sibling.is_insert_subset && (
+                                      <Badge variant="outline" className="text-xs py-0">insert</Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-sm text-gray-500 p-2">No subsets available</p>
+                            )}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     
                     {hasValidSource ? (
