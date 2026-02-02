@@ -1,0 +1,199 @@
+REPLIT — Marvel Card Vault (LIVE / PRODUCTION-SAFE)
+TASK: Import ~9,800 card FRONT images from CSV into Cloudinary + update cards.front_image_url, with SAFE handling of landscape images (rotate/crop) so the UI stays clean and fast.
+
+CRITICAL CONTEXT
+- This app is LIVE with ~100 users. Do NOT break production.
+- I am uploading the SAME CSV format used for the big card import, now with a column containing image URLs for the front image.
+- This task must ONLY add/replace image URLs (and optionally track orientation metadata). No schema changes that affect browse logic, no UI regressions.
+- We will likely repeat this process with a larger follow-up CSV containing new image URLs, so build it to be reusable and fast (idempotent + resumable).
+
+NON-NEGOTIABLE “DON’T SCREW ME” PRE-CHECK (MUST DO BEFORE CODING)
+Before writing any code changes:
+1) Parse the uploaded CSV in a small throwaway script inside the project and PRINT (in chat) the exact column headers you detected.
+2) PRINT the exact matching key you will use to locate:
+   - the destination card_set
+   - the destination card record
+3) Confirm that matching key is IDENTICAL to the key used for the big card import.
+4) DO NOT proceed until you have verified:
+   - You will NOT match by card title
+   - You will match by set identity + card_number (primary)
+If anything is uncertain, stop and ask me.
+
+GOAL
+For each CSV row where image_url is present:
+1) Find the exact existing card record that row corresponds to using the same set+card matching used by the big import.
+2) Fetch the remote image_url
+3) Upload to Cloudinary (with correct transformation so it ends up portrait 2:3 and doesn’t wreck UI layout)
+4) Write the resulting Cloudinary secure_url to cards.front_image_url (or store the “final” transformed URL)
+5) If image_url is blank → skip
+6) If card already has front_image_url → default is SKIP (no overwrite) unless overwrite mode enabled
+
+IMPORTANT: This tool must be admin-only and must not alter user collections (collections link by card_id).
+
+LANDSCAPE IMAGE HANDLING (VERY IMPORTANT)
+Some COMC images are landscape (roughly 3:2) and our cards are portrait (2:3). We must avoid ugly stretching or breaking the grid.
+
+Implement a consistent “portrait-normalization” strategy at upload time using Cloudinary so ALL stored front_image_url images render nicely in the existing 2:3 card frame.
+
+Rules:
+A) Never stretch images.
+B) Prefer correct orientation + center crop to 2:3 (portrait).
+C) If EXIF orientation indicates rotation, respect it.
+D) If the source is landscape, rotate (when it’s clearly sideways) OR crop to portrait if it’s truly landscape.
+
+Implementation requirements:
+1) During import, detect image dimensions (width/height) BEFORE uploading:
+   - Use a lightweight HEAD/GET approach or Cloudinary “upload then inspect” approach.
+   - Determine orientation:
+     - portrait: height >= width
+     - landscape: width > height
+2) Decide transformation:
+   - Always produce a portrait 2:3 derivative for the URL we store/use.
+   - Use Cloudinary transformations:
+     - apply automatic format/quality: f_auto,q_auto
+     - enforce aspect ratio: ar_2:3
+     - crop mode: c_fill (or c_fill,g_auto) to avoid letterboxing and preserve a clean card look
+     - gravity: g_auto (or g_center) so art remains centered
+     - apply auto-orient: a_auto (or equivalent EXIF-based orientation handling)
+   - For “sideways scan” cases:
+     - If landscape AND it appears rotated (e.g., text is sideways is hard to detect automatically), do NOT guess beyond EXIF.
+     - Use a safe default:
+       - apply a_auto + c_fill,ar_2:3,g_auto
+       - DO NOT attempt manual 90-degree rotation unless EXIF orientation indicates it.
+3) OPTIONAL (recommended for future-proofing):
+   - Add columns/fields for:
+     - cards.front_image_original_url (optional)
+     - cards.front_image_orientation (portrait|landscape|unknown) OR store in a new card_images table
+   - But only do this if it doesn’t risk prod migrations. If you add schema, keep it isolated and low-risk.
+
+BOTTOM LINE: After import, every card thumbnail/detail view should still fit perfectly in the existing layout, with no weird aspect ratio issues.
+
+SAFETY REQUIREMENTS
+1) ADMIN ONLY
+- All routes behind admin auth (same guard used by existing admin tools).
+- UI only visible in admin tools.
+
+2) DRY RUN MODE FIRST (NO WRITES, NO CLOUDINARY)
+- Add a dry-run that:
+  - parses the CSV
+  - counts rows with image_url
+  - attempts to match each row to exactly 1 card using the defined matching key
+  - outputs:
+    - matched_count
+    - unmatched_count
+    - ambiguous_count (multiple matches)
+    - skipped_blank_image_url
+    - skipped_existing_front_image_url (in apply mode only)
+  - show first 25 unmatched + first 25 ambiguous with enough fields to diagnose
+  - generate a downloadable report CSV with per-row status + reason
+- Confirm in code: dry-run does NOT touch DB and does NOT call Cloudinary.
+
+3) APPLY MODE (BATCHED, RESUMABLE)
+- Only enabled after a successful dry-run.
+- Process in batches (50–200 rows per batch) with progress UI.
+- Use limited concurrency (3–5 parallel image jobs).
+- Retries on transient failures (2 retries).
+- If one row fails, log and continue; do not crash the whole run.
+- DB writes only update cards.front_image_url (and optional safe metadata fields if added).
+- Default behavior: skip if front_image_url already exists unless overwrite enabled.
+
+4) LOGGING / AUDIT
+Create a persistent log of import runs:
+- import_runs table (preferred) with:
+  - id, started_at, completed_at, filename, rows_total, rows_with_images,
+    matched, updated, skipped_existing, skipped_blank, unmatched, ambiguous,
+    failed_download, failed_cloudinary, failed_db,
+    overwrite_mode boolean
+- import_run_items table (or JSON field) for per-row outcomes:
+  - row_index, match_key_summary, card_id (if matched), set_id, status, error_message, source_image_url, cloudinary_url
+Must support:
+- “Resume run” (continue from last processed row)
+- “Download failures” CSV
+
+5) NO PROD UI CHANGES
+- Do not modify public browse logic, routing, card grid layout, etc.
+- This tool is admin-only.
+- Performance must remain fast: no new expensive queries on public pages.
+
+MATCHING (MOST IMPORTANT)
+We MUST match deterministically using the same logic as the big import.
+
+PRIMARY MATCH (required):
+- Identify the card_set using the same “set identity” fields used in the big import.
+  - If the big import used:
+    - year + main set + subset fields, and created/located card_sets by that combination
+    - OR a combined “full set name” column
+  - then reuse EXACTLY that method.
+- Once the destination card_set is identified (set_id), match the card by:
+  - set_id + card_number (exact)
+- Do NOT match by card title (titles vary, SN tags, formatting, etc).
+
+FALLBACK MATCH (only if primary fails):
+- normalized set identity: normalize whitespace/punctuation/case, but still must include year + main set + subset
+- If multiple card_sets match → AMBIGUOUS and skip.
+- If card_number is missing or doesn’t match → UNMATCHED and skip. No guessing.
+
+CLOUDINARY UPLOAD RULES
+- Store the final usable URL that renders as portrait 2:3.
+- Use Cloudinary folder structure:
+  marvel-card-vault/cards/{year}/{sanitized_main_set}/{sanitized_subset}/{card_number}
+- Use transformations:
+  - f_auto,q_auto
+  - ar_2:3,c_fill,g_auto
+  - a_auto (respect EXIF)
+- IMPORTANT: do not store a URL that causes layout jumps or wrong aspect ratio.
+
+ADMIN UI SPEC
+Create admin page:
+- /admin/image-import (or inside Admin Tools)
+Controls:
+- Upload CSV
+- Toggle: “Skip existing images” (default ON) / “Overwrite existing images” (default OFF)
+- Button: Run Dry Run
+- After dry run: Button: Apply Import
+- Progress section:
+  - total rows with images
+  - processed
+  - updated
+  - skipped existing
+  - unmatched / ambiguous
+  - failed download / failed cloudinary / failed db
+- “Download report CSV” button
+- “Download failures only CSV” button
+- “Resume last run” button (if incomplete)
+
+SERVER ROUTES (ADMIN ONLY)
+- POST /api/admin/import-images/dry-run (multipart CSV upload)
+- POST /api/admin/import-images/apply (takes run_id + overwrite flag)
+- POST /api/admin/import-images/resume (run_id)
+- GET  /api/admin/import-images/runs
+- GET  /api/admin/import-images/runs/:id
+- GET  /api/admin/import-images/runs/:id/report (download)
+- GET  /api/admin/import-images/runs/:id/failures (download)
+
+PERFORMANCE GUARANTEES
+- Import should not add heavy queries to public routes.
+- Any new indexes should only apply to import/log tables if created.
+- Import jobs should not block the web server event loop:
+  - use async and concurrency limits
+- Keep caching behavior for images as-is; Cloudinary URLs should improve load speed via optimized delivery.
+
+QA / REGRESSION CHECKLIST (MUST COMPLETE)
+1) Confirm non-admin cannot access routes or /admin/image-import.
+2) Dry-run does NOT write DB and does NOT upload images.
+3) Apply mode:
+   - updates only cards.front_image_url (and optional image metadata if added)
+   - does NOT modify card_id, set_id, user collections, or prices
+4) Verify 10 random cards after import show images in:
+   - card grid thumbnails
+   - card detail modal
+5) Verify at least 5 “known landscape” images render correctly in portrait frame (no stretch).
+6) Verify public browse pages remain same speed (no regressions).
+7) Rerun same CSV with “skip existing” → most rows skipped (idempotent).
+8) Failures are logged and downloadable; resume works.
+
+DELIVERABLES
+- Implement UI + backend routes + logging tables (if needed).
+- Provide simple usage steps:
+  - Upload CSV → Dry Run → Review → Apply → Verify → Download failures → Resume if needed
+- Ensure the tool is reusable for the next CSV batch.
