@@ -19,6 +19,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useLocation, useParams, Link } from "wouter";
 import type { CardSet, CardWithSet, CollectionItem, MainSet } from "@shared/schema";
 import { formatCardName, formatSetName } from "@/lib/formatTitle";
+import { isBaseSetName } from "@/lib/setDisplayName";
 
 interface CardFilters {
   setId?: number;
@@ -381,9 +382,17 @@ export default function BrowseCards() {
              set.description?.toLowerCase().includes(query);
     });
     
-    // Sort by year descending
-    return filtered.sort((a, b) => (b.year || 0) - (a.year || 0));
-  }, [currentViewSets, filters.year, setSearchQuery]);
+    // Sort: base sets first, then by year descending
+    return filtered.sort((a, b) => {
+      if (currentMainSet) {
+        const aIsBase = isBaseSetName(a.name, currentMainSet.name);
+        const bIsBase = isBaseSetName(b.name, currentMainSet.name);
+        if (aIsBase && !bIsBase) return -1;
+        if (!aIsBase && bIsBase) return 1;
+      }
+      return (b.year || 0) - (a.year || 0);
+    });
+  }, [currentViewSets, filters.year, setSearchQuery, currentMainSet]);
 
   // Show search results when user is searching
   const shouldShowSearchResults = setSearchQuery.length >= 2 && searchResults;
