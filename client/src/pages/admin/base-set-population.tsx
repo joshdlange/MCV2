@@ -196,7 +196,7 @@ export default function BaseSetPopulation() {
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">
-      <Card className="mb-6">
+      <Card className="mb-6 sticky top-0 z-10 shadow-md bg-white">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Copy className="h-6 w-6" />
