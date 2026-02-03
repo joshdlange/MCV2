@@ -93,6 +93,39 @@ export default function BaseSetPopulation() {
     }
   });
 
+  const assignBaseMutation = useMutation({
+    mutationFn: (items: { mainSetId: number; sourceSetId: number; currentBaseSetId: number }[]) =>
+      apiRequest('POST', '/api/admin/assign-base-set', { items }).then(res => res.json()),
+    onSuccess: (result) => {
+      toast({
+        title: "Base Set Assigned",
+        description: result.message || `${result.successCount} sets reassigned as base`,
+      });
+      setSelectedItems(new Map());
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/empty-base-sets'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to assign base set",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const assignSelectedAsBase = () => {
+    const items = Array.from(selectedItems.values()).map(item => {
+      const set = sets.find(s => s.baseSetId === item.baseSetId);
+      return {
+        mainSetId: set?.mainSetId || 0,
+        sourceSetId: item.sourceSetId,
+        currentBaseSetId: item.baseSetId
+      };
+    });
+    assignBaseMutation.mutate(items);
+  };
+
   const sets: EmptyBaseSet[] = data?.sets || [];
   
   const years = Array.from(new Set(sets.map(s => s.year))).sort((a, b) => b - a);
@@ -247,26 +280,45 @@ export default function BaseSetPopulation() {
               <div>
                 <span className="font-medium">{selectedItems.size} sets selected</span>
                 <span className="text-gray-600 ml-2">
-                  Ready to populate with card data from suggested sources
+                  Ready to populate or assign base set
                 </span>
               </div>
-              <Button 
-                onClick={executeSelected}
-                disabled={executeMutation.isPending}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                {executeMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Check className="h-4 w-4 mr-2" />
-                    Populate {selectedItems.size} Sets
-                  </>
-                )}
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={assignSelectedAsBase}
+                  disabled={assignBaseMutation.isPending || executeMutation.isPending}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  {assignBaseMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Assigning...
+                    </>
+                  ) : (
+                    <>
+                      <Layers className="h-4 w-4 mr-2" />
+                      Assign as Base
+                    </>
+                  )}
+                </Button>
+                <Button 
+                  onClick={executeSelected}
+                  disabled={executeMutation.isPending || assignBaseMutation.isPending}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {executeMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Populate {selectedItems.size} Sets
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           )}
 

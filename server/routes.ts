@@ -6875,6 +6875,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Assign a subset as the base set (rename it to the canonical base set name)
+  app.post("/api/admin/assign-base-set", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { items } = req.body; // Array of { mainSetId, sourceSetId, currentBaseSetId }
+
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: "items array is required" });
+      }
+
+      console.log(`[ASSIGN BASE SET] Processing ${items.length} sets`);
+
+      const results = [];
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const item of items) {
+        const { mainSetId, sourceSetId, currentBaseSetId } = item;
+        
+        try {
+          // Get main set name
+          const mainSetInfo = await db.execute(sql`
+            SELECT name FROM main_sets WHERE id = ${mainSetId}
+          `);
+
+          if (mainSetInfo.rows.length === 0) {
+            results.push({ mainSetId, success: false, error: 'Main set not found' });
+            errorCount++;
+            continue;
+          }
+
+          const mainSetName = (mainSetInfo.rows[0] as any).name;
+          const canonicalBaseName = `${mainSetName} - ${mainSetName}`;
+
+          // Use transaction
+          await db.execute(sql`BEGIN`);
+          
+          try {
+            // Archive the current empty base set
+            const now = new Date();
+            await db.execute(sql`
+              UPDATE card_sets 
+              SET is_active = false, archived_at = ${now}
+              WHERE id = ${currentBaseSetId}
+            `);
+
+            // Rename the source set to be the canonical base set
+            await db.execute(sql`
+              UPDATE card_sets 
+              SET name = ${canonicalBaseName}
+              WHERE id = ${sourceSetId}
+            `);
+
+            await db.execute(sql`COMMIT`);
+            
+            console.log(`[ASSIGN BASE SET] Assigned set ${sourceSetId} as base for "${mainSetName}"`);
+            results.push({ mainSetId, success: true, newBaseSetId: sourceSetId });
+            successCount++;
+          } catch (txError: any) {
+            await db.execute(sql`ROLLBACK`);
+            throw txError;
+          }
+        } catch (err: any) {
+          results.push({ mainSetId, success: false, error: err.message });
+          errorCount++;
+        }
+      }
+
+      console.log(`[ASSIGN BASE SET] Complete: ${successCount} success, ${errorCount} errors`);
+
+      res.json({
+        success: true,
+        message: `Assigned ${successCount} sets as base, ${errorCount} errors`,
+        successCount,
+        errorCount,
+        results
+      });
+    } catch (error: any) {
+      console.error('[ASSIGN BASE SET] Error:', error);
+      res.status(500).json({ message: `Assignment failed: ${error.message}` });
+    }
+  });
+
   // Archive a single main set and all its subsets
   app.post("/api/admin/archive-main-set/:mainSetId", authenticateUser, async (req: any, res) => {
     try {
