@@ -361,7 +361,7 @@ export default function BaseSetPopulation() {
                             className="cursor-pointer hover:bg-gray-300 transition-colors"
                           >
                             <Layers className="h-3 w-3 mr-1" />
-                            {set.siblingCount} subsets
+                            {set.siblingsWithCardsCount} usable subsets
                           </Badge>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 max-h-64 overflow-auto p-0" align="start">
