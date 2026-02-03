@@ -6545,6 +6545,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           suggestionReason = `Largest subset (insert) with ${suggestedSource.total_cards} cards`;
         }
 
+        // Count siblings that have cards (usable sources)
+        const siblingsWithCards = siblings.filter((s: any) => s.total_cards > 0);
+
         return {
           mainSetId: row.main_set_id,
           mainSetName: row.main_set_name,
@@ -6552,6 +6555,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           baseSetName: row.base_set_name,
           year: row.year,
           siblingCount: siblings.length,
+          siblingsWithCardsCount: siblingsWithCards.length,
           siblings: siblings.slice(0, 10), // Limit to top 10
           suggestedSourceId: suggestedSource?.id || null,
           suggestedSourceName: suggestedSource?.name || null,
@@ -6560,9 +6564,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
+      // Filter out sets with no usable subsets (no siblings with cards)
+      const filteredResults = resultsWithSuggestions.filter((set: any) => set.siblingsWithCardsCount > 0);
+
       res.json({
-        total: resultsWithSuggestions.length,
-        sets: resultsWithSuggestions
+        total: filteredResults.length,
+        sets: filteredResults
       });
     } catch (error: any) {
       console.error('[EMPTY BASE SETS] Error:', error);
