@@ -18,8 +18,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Page Header - STICKY */}
-      <div className="sticky top-0 z-10 bg-card shadow-sm border-b border-border px-6 py-4">
+      {/* Page Header - STICKY (top-16 on mobile for mobile header, top-0 on desktop) */}
+      <div className="sticky top-16 lg:top-0 z-10 bg-card shadow-sm border-b border-border px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bebas text-card-foreground tracking-wide">DASHBOARD</h2>
