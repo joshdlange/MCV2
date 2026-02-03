@@ -470,8 +470,13 @@ export default function BaseSetPopulation() {
 
                 {isExpanded && (
                   <div className="mt-4 pt-4 border-t">
-                    <div className="text-sm font-medium mb-2">Available subsets (select source):</div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                    <div className="text-sm font-medium mb-2 flex items-center justify-between">
+                      <span>Available subsets (select source):</span>
+                      <span className="text-gray-500 font-normal">
+                        {set.siblings.filter(s => s.total_cards > 0).length} of {set.siblingCount} subsets have cards
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-80 overflow-y-auto pr-2">
                       {set.siblings
                         .filter(s => s.total_cards > 0)
                         .map(sibling => {

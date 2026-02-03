@@ -6556,7 +6556,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           year: row.year,
           siblingCount: siblings.length,
           siblingsWithCardsCount: siblingsWithCards.length,
-          siblings: siblings.slice(0, 10), // Limit to top 10
+          siblings: siblings, // Show all subsets
           suggestedSourceId: suggestedSource?.id || null,
           suggestedSourceName: suggestedSource?.name || null,
           suggestedSourceCardCount: suggestedSource?.total_cards || 0,
