@@ -6875,6 +6875,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Archive a single main set and all its subsets
+  app.post("/api/admin/archive-main-set/:mainSetId", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const mainSetId = parseInt(req.params.mainSetId);
+      if (!mainSetId) {
+        return res.status(400).json({ message: "mainSetId is required" });
+      }
+
+      const now = new Date();
+
+      // Get main set info for logging
+      const mainSetInfo = await db.execute(sql`
+        SELECT name FROM main_sets WHERE id = ${mainSetId}
+      `);
+
+      if (mainSetInfo.rows.length === 0) {
+        return res.status(404).json({ message: "Main set not found" });
+      }
+
+      const mainSetName = (mainSetInfo.rows[0] as any).name;
+      console.log(`[ARCHIVE] Archiving main set: ${mainSetName} (ID: ${mainSetId})`);
+
+      // Use transaction
+      await db.execute(sql`BEGIN`);
+      
+      try {
+        // Archive all card_sets under this main set
+        const subsetResult = await db.execute(sql`
+          UPDATE card_sets 
+          SET is_active = false, archived_at = ${now}
+          WHERE main_set_id = ${mainSetId} AND is_active = true
+          RETURNING id
+        `);
+
+        // Archive the main set
+        await db.execute(sql`
+          UPDATE main_sets 
+          SET is_active = false, archived_at = ${now}
+          WHERE id = ${mainSetId}
+        `);
+
+        await db.execute(sql`COMMIT`);
+
+        console.log(`[ARCHIVE] Archived main set ${mainSetName} and ${subsetResult.rows.length} subsets`);
+
+        res.json({
+          success: true,
+          message: `Archived "${mainSetName}" and ${subsetResult.rows.length} subsets`,
+          mainSetId,
+          archivedSubsets: subsetResult.rows.length
+        });
+      } catch (txError: any) {
+        await db.execute(sql`ROLLBACK`);
+        throw txError;
+      }
+    } catch (error: any) {
+      console.error('[ARCHIVE] Error:', error);
+      res.status(500).json({ message: `Archive failed: ${error.message}` });
+    }
+  });
+
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);
 

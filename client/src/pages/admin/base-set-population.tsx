@@ -9,7 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Check, X, ChevronDown, ChevronUp, Search, Copy, AlertCircle, Layers } from "lucide-react";
+import { Loader2, Check, X, ChevronDown, ChevronUp, Search, Copy, AlertCircle, Layers, Archive, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface SiblingSet {
   id: number;
@@ -67,6 +68,26 @@ export default function BaseSetPopulation() {
       toast({
         title: "Error",
         description: error.message || "Failed to populate base sets",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: (mainSetId: number) =>
+      apiRequest('POST', `/api/admin/archive-main-set/${mainSetId}`).then(res => res.json()),
+    onSuccess: (result) => {
+      toast({
+        title: "Set Archived",
+        description: result.message || "Main set has been archived",
+      });
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/empty-base-sets'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to archive set",
         variant: "destructive",
       });
     }
@@ -280,7 +301,7 @@ export default function BaseSetPopulation() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-medium text-lg truncate">{set.mainSetName}</h3>
-                      <Badge variant="outline">{set.year}</Badge>
+                      <Badge className="bg-green-100 text-green-800 border-green-300">{set.year}</Badge>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Badge 
@@ -343,17 +364,56 @@ export default function BaseSetPopulation() {
                     )}
                   </div>
 
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleExpand(set.baseSetId)}
-                  >
-                    {isExpanded ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    )}
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          title="Archive this set"
+                        >
+                          <Archive className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Archive "{set.mainSetName}"?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will archive the main set and all its {set.siblingCount} subsets. 
+                            The set will no longer appear in Browse or this tool. 
+                            This action can be undone by an admin in the database.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => archiveMutation.mutate(set.mainSetId)}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            {archiveMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                              <Archive className="h-4 w-4 mr-2" />
+                            )}
+                            Archive Set
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleExpand(set.baseSetId)}
+                    >
+                      {isExpanded ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
 
                 {isExpanded && (
