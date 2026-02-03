@@ -327,6 +327,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin quick stats - real-time data
+  app.get("/api/admin/stats", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      // Get total users
+      const usersResult = await db.execute(sql`SELECT COUNT(*) as total FROM users`);
+      const totalUsers = parseInt((usersResult.rows[0] as any).total) || 0;
+
+      // Get monthly active users (last 30 days)
+      const mauResult = await db.execute(sql`
+        SELECT COUNT(*) as total FROM users 
+        WHERE last_login >= NOW() - INTERVAL '30 days'
+      `);
+      const monthlyActiveUsers = parseInt((mauResult.rows[0] as any).total) || 0;
+
+      // Get total card sets
+      const setsResult = await db.execute(sql`
+        SELECT COUNT(*) as total FROM card_sets WHERE is_active = true
+      `);
+      const totalSets = parseInt((setsResult.rows[0] as any).total) || 0;
+
+      // Get total cards
+      const cardsResult = await db.execute(sql`SELECT COUNT(*) as total FROM cards`);
+      const totalCards = parseInt((cardsResult.rows[0] as any).total) || 0;
+
+      // Calculate MAU percentage
+      const mauPercent = totalUsers > 0 ? Math.round((monthlyActiveUsers / totalUsers) * 100) : 0;
+
+      res.json({
+        totalUsers,
+        monthlyActiveUsers,
+        mauPercent,
+        totalSets,
+        totalCards
+      });
+    } catch (error) {
+      console.error('Admin stats error:', error);
+      res.status(500).json({ message: "Failed to fetch stats" });
+    }
+  });
+
   // Update user
   app.put("/api/users/:id", authenticateUser, async (req: any, res) => {
     try {

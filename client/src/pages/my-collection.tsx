@@ -433,7 +433,8 @@ export default function MyCollection() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 overflow-visible">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 overflow-visible">
         <div className="flex flex-col gap-3">
           {/* Row 1: Title + Right-side toggle buttons (always visible) */}
           <div className="flex items-center justify-between">

@@ -9,7 +9,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Beta Banner */}
+      {/* Beta Banner - NOT sticky */}
       <div className="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3">
         <div className="text-center">
           <p className="font-semibold text-sm md:text-base">
@@ -18,8 +18,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Page Header */}
-      <div className="bg-card shadow-sm border-b border-border px-6 py-4">
+      {/* Page Header - STICKY */}
+      <div className="sticky top-0 z-10 bg-card shadow-sm border-b border-border px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bebas text-card-foreground tracking-wide">DASHBOARD</h2>

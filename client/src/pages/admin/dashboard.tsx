@@ -1,10 +1,23 @@
 import React from "react";
 import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, FolderOpen, Edit, PlusCircle, Settings, Calendar, Image, ArrowLeftRight, Copy } from "lucide-react";
+import { Users, FolderOpen, Edit, PlusCircle, Settings, Calendar, Image, ArrowLeftRight, Copy, TrendingUp, Layers, CreditCard } from "lucide-react";
+
+interface AdminStats {
+  totalUsers: number;
+  monthlyActiveUsers: number;
+  mauPercent: number;
+  totalSets: number;
+  totalCards: number;
+}
 
 export default function AdminDashboard() {
+  const { data: stats, isLoading: statsLoading } = useQuery<AdminStats>({
+    queryKey: ['/api/admin/stats'],
+    refetchInterval: 60000, // Refresh every minute
+  });
   const adminTools = [
     {
       title: "Manage Users",
@@ -72,12 +85,66 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+    <div className="space-y-6">
+      {/* Sticky Stats Header */}
+      <div className="sticky top-0 z-10 bg-gradient-to-r from-gray-800 to-gray-900 text-white px-6 py-4 shadow-lg">
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+          <span className="text-xs text-gray-400">Live stats • Auto-refreshing</span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {/* User Stats First */}
+          <div className="flex items-center gap-3">
+            <Users className="h-8 w-8 text-blue-400" />
+            <div>
+              <div className="text-2xl font-bold">
+                {statsLoading ? '...' : stats?.totalUsers?.toLocaleString() || '0'}
+              </div>
+              <div className="text-xs text-gray-400">Total Users</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <TrendingUp className="h-8 w-8 text-green-400" />
+            <div>
+              <div className="text-2xl font-bold">
+                {statsLoading ? '...' : `${stats?.mauPercent || 0}%`}
+              </div>
+              <div className="text-xs text-gray-400">MAU (30 days)</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Users className="h-8 w-8 text-purple-400" />
+            <div>
+              <div className="text-2xl font-bold">
+                {statsLoading ? '...' : stats?.monthlyActiveUsers?.toLocaleString() || '0'}
+              </div>
+              <div className="text-xs text-gray-400">Active Users</div>
+            </div>
+          </div>
+          {/* Card Stats */}
+          <div className="flex items-center gap-3">
+            <Layers className="h-8 w-8 text-orange-400" />
+            <div>
+              <div className="text-2xl font-bold">
+                {statsLoading ? '...' : stats?.totalSets?.toLocaleString() || '0'}
+              </div>
+              <div className="text-xs text-gray-400">Total Sets</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <CreditCard className="h-8 w-8 text-red-400" />
+            <div>
+              <div className="text-2xl font-bold">
+                {statsLoading ? '...' : stats?.totalCards?.toLocaleString() || '0'}
+              </div>
+              <div className="text-xs text-gray-400">Total Cards</div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="px-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {adminTools.map((tool) => {
           const IconComponent = tool.icon;
           return (
@@ -104,23 +171,6 @@ export default function AdminDashboard() {
             </Link>
           );
         })}
-      </div>
-
-      <div className="mt-8 p-6 bg-gray-50 rounded-lg border border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Admin Quick Stats</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900">1,103</div>
-            <div className="text-sm text-gray-600">Total Sets</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900">60,000+</div>
-            <div className="text-sm text-gray-600">Total Cards</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900">Active</div>
-            <div className="text-sm text-gray-600">System Status</div>
-          </div>
         </div>
       </div>
     </div>

@@ -137,7 +137,8 @@ export default function Wishlist() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 bg-white shadow-sm border-b border-gray-200 px-6 py-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">MY WISHLIST</h2>
         </div>
