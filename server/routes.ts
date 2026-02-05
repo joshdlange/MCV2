@@ -355,6 +355,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cardsResult = await db.execute(sql`SELECT COUNT(*) as total FROM cards`);
       const totalCards = parseInt((cardsResult.rows[0] as any).total) || 0;
 
+      // Get paid users (users with active Stripe subscription)
+      const paidUsersResult = await db.execute(sql`
+        SELECT COUNT(*) as total FROM users 
+        WHERE stripe_subscription_id IS NOT NULL
+      `);
+      const paidUsers = parseInt((paidUsersResult.rows[0] as any).total) || 0;
+
+      // Get cards without images
+      const cardsWithoutImagesResult = await db.execute(sql`
+        SELECT COUNT(*) as total FROM cards 
+        WHERE front_image_url IS NULL 
+           OR front_image_url = '' 
+           OR front_image_url = 'https://res.cloudinary.com/dlwfuryyz/image/upload/v1748442577/card-placeholder_ysozlo.png'
+      `);
+      const cardsWithoutImages = parseInt((cardsWithoutImagesResult.rows[0] as any).total) || 0;
+
       // Calculate MAU percentage
       const mauPercent = totalUsers > 0 ? Math.round((monthlyActiveUsers / totalUsers) * 100) : 0;
 
@@ -362,8 +378,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalUsers,
         monthlyActiveUsers,
         mauPercent,
+        paidUsers,
         totalSets,
-        totalCards
+        totalCards,
+        cardsWithoutImages
       });
     } catch (error) {
       console.error('Admin stats error:', error);

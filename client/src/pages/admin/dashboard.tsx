@@ -3,14 +3,16 @@ import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, FolderOpen, Edit, PlusCircle, Settings, Calendar, Image, ArrowLeftRight, Copy, TrendingUp, Layers, CreditCard } from "lucide-react";
+import { Users, FolderOpen, Edit, PlusCircle, Settings, Calendar, Image, ArrowLeftRight, Copy, TrendingUp, Layers, CreditCard, ImageOff, DollarSign } from "lucide-react";
 
 interface AdminStats {
   totalUsers: number;
   monthlyActiveUsers: number;
   mauPercent: number;
+  paidUsers: number;
   totalSets: number;
   totalCards: number;
+  cardsWithoutImages: number;
 }
 
 export default function AdminDashboard() {
@@ -92,8 +94,8 @@ export default function AdminDashboard() {
           <h1 className="text-2xl font-bold">Admin Dashboard</h1>
           <span className="text-xs text-gray-400">Live stats • Auto-refreshing</span>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {/* User Stats First */}
+        {/* Row 1: User Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
           <div className="flex items-center gap-3">
             <Users className="h-8 w-8 text-blue-400" />
             <div>
@@ -101,6 +103,15 @@ export default function AdminDashboard() {
                 {statsLoading ? '...' : stats?.totalUsers?.toLocaleString() || '0'}
               </div>
               <div className="text-xs text-gray-400">Total Users</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Users className="h-8 w-8 text-purple-400" />
+            <div>
+              <div className="text-2xl font-bold">
+                {statsLoading ? '...' : stats?.monthlyActiveUsers?.toLocaleString() || '0'}
+              </div>
+              <div className="text-xs text-gray-400">Active Users</div>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -113,15 +124,18 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Users className="h-8 w-8 text-purple-400" />
+            <DollarSign className="h-8 w-8 text-yellow-400" />
             <div>
               <div className="text-2xl font-bold">
-                {statsLoading ? '...' : stats?.monthlyActiveUsers?.toLocaleString() || '0'}
+                {statsLoading ? '...' : stats?.paidUsers?.toLocaleString() || '0'}
               </div>
-              <div className="text-xs text-gray-400">Active Users</div>
+              <div className="text-xs text-gray-400">Paid Users</div>
             </div>
           </div>
-          {/* Card Stats */}
+        </div>
+        
+        {/* Row 2: Card Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <div className="flex items-center gap-3">
             <Layers className="h-8 w-8 text-orange-400" />
             <div>
@@ -138,6 +152,15 @@ export default function AdminDashboard() {
                 {statsLoading ? '...' : stats?.totalCards?.toLocaleString() || '0'}
               </div>
               <div className="text-xs text-gray-400">Total Cards</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <ImageOff className="h-8 w-8 text-gray-400" />
+            <div>
+              <div className="text-2xl font-bold">
+                {statsLoading ? '...' : stats?.cardsWithoutImages?.toLocaleString() || '0'}
+              </div>
+              <div className="text-xs text-gray-400">Missing Images</div>
             </div>
           </div>
         </div>
