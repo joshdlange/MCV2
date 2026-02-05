@@ -355,10 +355,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cardsResult = await db.execute(sql`SELECT COUNT(*) as total FROM cards`);
       const totalCards = parseInt((cardsResult.rows[0] as any).total) || 0;
 
-      // Get paid users (users with active Stripe subscription)
+      // Get paid users (users on SUPER_HERO plan)
       const paidUsersResult = await db.execute(sql`
         SELECT COUNT(*) as total FROM users 
-        WHERE stripe_subscription_id IS NOT NULL
+        WHERE plan = 'SUPER_HERO'
       `);
       const paidUsers = parseInt((paidUsersResult.rows[0] as any).total) || 0;
 
