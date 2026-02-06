@@ -12,6 +12,8 @@ import SimpleImage from "@/components/ui/simple-image";
 import { CardFilters } from "@/types";
 import { formatCardName, formatSetName } from "@/lib/formatTitle";
 import { getCardSetDisplayName } from "@/lib/setDisplayName";
+import { useAppStore } from "@/lib/store";
+import { UpgradeModal } from "@/components/subscription/upgrade-modal";
 
 // Helper to extract main set name from FULL COMBO format "MainSet - Subset"
 function extractMainSetName(fullComboName: string): string {
@@ -60,8 +62,12 @@ export function CardGrid({
 }: CardGridProps) {
   const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { currentUser } = useAppStore();
+  
+  const COLLECTION_LIMIT = 250;
   
   // Use dedicated set endpoint for complete card list when filtering by set
   const apiEndpoint = filters.setId ? `/api/sets/${filters.setId}/cards` : '/api/cards';
@@ -138,10 +144,14 @@ export function CardGrid({
       queryClient.invalidateQueries({ queryKey: ['/api/missing-cards'] });
       toast({ title: "Added to collection!" });
     },
-    onError: (err, cardId, context: any) => {
-      // Rollback on error
+    onError: (err: any, cardId, context: any) => {
       if (context?.previousCollection) {
         queryClient.setQueryData(['/api/collection'], context.previousCollection);
+      }
+      const errorMessage = err?.message || '';
+      if (errorMessage.includes('403') && errorMessage.includes('COLLECTION_LIMIT_REACHED')) {
+        setShowUpgradeModal(true);
+        return;
       }
       toast({ title: "Failed to add card", variant: "destructive" });
     }
@@ -234,6 +244,13 @@ export function CardGrid({
   };
 
   const handleAddToCollection = (cardId: number) => {
+    if (currentUser?.plan !== 'SUPER_HERO') {
+      const currentCount = collection?.length || 0;
+      if (currentCount >= COLLECTION_LIMIT) {
+        setShowUpgradeModal(true);
+        return;
+      }
+    }
     addToCollectionMutation.mutate(cardId);
   };
 
@@ -526,6 +543,11 @@ export function CardGrid({
         onAddToWishlist={selectedCard ? () => handleAddToWishlist(selectedCard.id) : undefined}
         onRemoveFromCollection={selectedCard ? () => handleRemoveFromCollection(selectedCard.id) : undefined}
         onRemoveFromWishlist={selectedCard ? () => handleRemoveFromWishlist(selectedCard.id) : undefined}
+      />
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentPlan={currentUser?.plan || 'SIDE_KICK'}
       />
     </>
   );

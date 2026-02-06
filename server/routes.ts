@@ -1954,6 +1954,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/collection", authenticateUser, async (req: any, res) => {
     try {
+      const COLLECTION_LIMIT = 250;
+      
+      const [userData] = await db.select({ plan: users.plan }).from(users).where(eq(users.id, req.user.id)).limit(1);
+      
+      if (userData?.plan !== 'SUPER_HERO') {
+        const [countResult] = await db.select({ count: sql<number>`count(*)::int` })
+          .from(userCollections)
+          .where(eq(userCollections.userId, req.user.id));
+        
+        if ((countResult?.count || 0) >= COLLECTION_LIMIT) {
+          return res.status(403).json({ 
+            message: `You've reached the ${COLLECTION_LIMIT} card limit for Side Kick plans. Upgrade to Super Hero for unlimited cards.`,
+            code: 'COLLECTION_LIMIT_REACHED',
+            currentCount: countResult?.count || 0,
+            limit: COLLECTION_LIMIT
+          });
+        }
+      }
+
       const validatedData = insertUserCollectionSchema.parse({
         ...req.body,
         userId: req.user.id

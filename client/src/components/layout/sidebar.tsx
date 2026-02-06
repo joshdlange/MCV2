@@ -173,13 +173,11 @@ export function Sidebar() {
               <Crown className="w-4 h-4 md:w-5 md:h-5 mr-2" />
               Upgrade to SUPER HERO
             </Button>
-            <div className="mt-1.5 md:mt-2 px-2">
-              <div className="flex items-center justify-between text-[10px] md:text-xs text-gray-500">
-                <span>Collection Limit</span>
-                <Badge variant="outline" className="text-[10px] md:text-xs">
-                  {collectionStats?.totalCards || 0} / 250
-                </Badge>
-              </div>
+            <div className="mt-2 flex flex-col items-center gap-0.5">
+              <span className="text-[10px] md:text-xs text-gray-500">Collection Limit</span>
+              <span className="text-[11px] md:text-xs font-medium text-gray-600">
+                {collectionStats?.totalCards || 0} / 250
+              </span>
             </div>
           </div>
         )}
@@ -187,18 +185,16 @@ export function Sidebar() {
         {/* Plan Badge for SUPER HERO users */}
         {currentUser && currentUser.plan === 'SUPER_HERO' && (
           <div className="pt-3 md:pt-4 border-t border-gray-200 mt-3 md:mt-4">
-            <div className="flex flex-col items-center space-y-1.5 md:space-y-2">
+            <div className="flex flex-col items-center gap-1">
               <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-yellow-900 px-2 md:px-3 py-0.5 md:py-1 text-xs">
                 <Crown className="w-3 h-3 md:w-4 md:h-4 mr-1" />
                 SUPER HERO
               </Badge>
-              <div className="px-2">
-                <div className="flex items-center justify-between text-[10px] md:text-xs text-gray-500">
-                  <span>Collection Limit</span>
-                  <Badge variant="outline" className="text-[10px] md:text-xs">
-                    {collectionStats?.totalCards || 0} / unlimited
-                  </Badge>
-                </div>
+              <div className="flex flex-col items-center gap-0.5">
+                <span className="text-[10px] md:text-xs text-gray-500">Collection</span>
+                <span className="text-[11px] md:text-xs font-medium text-gray-600">
+                  {collectionStats?.totalCards || 0} cards
+                </span>
               </div>
             </div>
           </div>
