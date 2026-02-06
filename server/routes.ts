@@ -320,7 +320,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const users = await storage.getAllUsers();
-      res.json(users);
+      
+      const cardCountsResult = await db.execute(sql`
+        SELECT user_id, COUNT(*) as card_count 
+        FROM user_collections 
+        GROUP BY user_id
+      `);
+      const cardCountMap = new Map<number, number>();
+      for (const row of cardCountsResult.rows as any[]) {
+        cardCountMap.set(row.user_id, parseInt(row.card_count));
+      }
+      
+      const usersWithCounts = users.map(user => ({
+        ...user,
+        cardsInCollection: cardCountMap.get(user.id) || 0
+      }));
+      
+      res.json(usersWithCounts);
     } catch (error) {
       console.error('Get admin users error:', error);
       res.status(500).json({ message: "Failed to fetch users" });

@@ -16,9 +16,11 @@ import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
 import type { CollectionItem, CardWithSet, CardSet } from "@shared/schema";
 import { formatCardName, formatSetName } from "@/lib/formatTitle";
+import { useAppStore } from "@/lib/store";
 
 export default function MyCollection() {
   const [, setLocation] = useLocation();
+  const { currentUser } = useAppStore();
   const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
@@ -30,12 +32,19 @@ export default function MyCollection() {
   const [binderViewMode, setBinderViewMode] = useState<"binder" | "grid">("binder");
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const favStorageKey = currentUser ? `favoriteSetIds_user_${currentUser.id}` : 'favoriteSetIds';
   const [favoriteSetIds, setFavoriteSetIds] = useState<number[]>(() => {
-    const saved = localStorage.getItem('favoriteSetIds');
+    const saved = localStorage.getItem(currentUser ? `favoriteSetIds_user_${currentUser.id}` : 'favoriteSetIds');
     return saved ? JSON.parse(saved) : [];
   });
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const key = currentUser ? `favoriteSetIds_user_${currentUser.id}` : 'favoriteSetIds';
+    const saved = localStorage.getItem(key);
+    setFavoriteSetIds(saved ? JSON.parse(saved) : []);
+  }, [currentUser?.id]);
 
   const { data: collection, isLoading } = useQuery<CollectionItem[]>({
     queryKey: ["/api/collection"],
@@ -87,7 +96,7 @@ export default function MyCollection() {
       const newIds = prev.includes(setId) 
         ? prev.filter(id => id !== setId)
         : [...prev, setId];
-      localStorage.setItem('favoriteSetIds', JSON.stringify(newIds));
+      localStorage.setItem(favStorageKey, JSON.stringify(newIds));
       return newIds;
     });
   };

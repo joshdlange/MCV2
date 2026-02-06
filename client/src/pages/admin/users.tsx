@@ -11,7 +11,7 @@ import { Edit, Trash2, UserPlus, Shield, User, ArrowUp, ArrowDown, ArrowUpDown }
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-type SortField = 'lastLogin' | 'plan' | 'createdAt' | null;
+type SortField = 'lastLogin' | 'plan' | 'createdAt' | 'cardsInCollection' | null;
 type SortDirection = 'asc' | 'desc';
 
 interface User {
@@ -23,6 +23,7 @@ interface User {
   onboardingComplete: boolean;
   createdAt: string;
   lastLogin?: string;
+  cardsInCollection?: number;
 }
 
 export default function AdminUsers() {
@@ -129,6 +130,9 @@ export default function AdminUsers() {
       } else if (sortField === 'createdAt') {
         aValue = new Date(a.createdAt).getTime();
         bValue = new Date(b.createdAt).getTime();
+      } else if (sortField === 'cardsInCollection') {
+        aValue = a.cardsInCollection || 0;
+        bValue = b.cardsInCollection || 0;
       }
       
       if (sortDirection === 'asc') {
@@ -191,6 +195,15 @@ export default function AdminUsers() {
                     {getSortIcon('plan')}
                   </div>
                 </th>
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('cardsInCollection')}
+                >
+                  <div className="flex items-center">
+                    Cards
+                    {getSortIcon('cardsInCollection')}
+                  </div>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Onboarding</th>
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
@@ -216,13 +229,13 @@ export default function AdminUsers() {
             <tbody className="bg-white divide-y divide-gray-200">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                     Loading users...
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                     No users found
                   </td>
                 </tr>
@@ -252,6 +265,11 @@ export default function AdminUsers() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Badge variant="secondary">{user.plan}</Badge>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span className={`font-medium ${(user.cardsInCollection || 0) > 0 ? 'text-green-700' : 'text-gray-400'}`}>
+                        {user.cardsInCollection || 0}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {user.onboardingComplete ? (
