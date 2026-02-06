@@ -167,7 +167,7 @@ export function Sidebar() {
         {currentUser && currentUser.plan === 'SIDE_KICK' && (
           <div className="pt-3 md:pt-4 border-t border-gray-200 mt-3 md:mt-4">
             <Button 
-              onClick={() => setShowUpgradeModal(true)}
+              onClick={(e) => { e.stopPropagation(); setShowUpgradeModal(true); }}
               className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-yellow-900 font-bold py-2 md:py-3 px-3 md:px-4 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-200 text-sm"
             >
               <Crown className="w-4 h-4 md:w-5 md:h-5 mr-2" />
@@ -198,7 +198,7 @@ export function Sidebar() {
               </div>
               {currentUser.isAdmin && (
                 <button
-                  onClick={() => setShowUpgradeModal(true)}
+                  onClick={(e) => { e.stopPropagation(); setShowUpgradeModal(true); }}
                   className="mt-1 text-[10px] text-gray-400 hover:text-red-500 underline transition-colors"
                 >
                   Preview Upgrade Modal
