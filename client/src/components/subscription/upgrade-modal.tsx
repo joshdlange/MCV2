@@ -39,7 +39,8 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
     }
   };
 
-  if (currentPlan === "SUPER_HERO") return null;
+  // Limit modal only blocks for SUPER_HERO in production card-adding flow
+  // but we always render the modal shell so previewing works
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

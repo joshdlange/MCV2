@@ -196,6 +196,14 @@ export function Sidebar() {
                   {collectionStats?.totalCards || 0} cards
                 </span>
               </div>
+              {currentUser.isAdmin && (
+                <button
+                  onClick={() => setShowUpgradeModal(true)}
+                  className="mt-1 text-[10px] text-gray-400 hover:text-red-500 underline transition-colors"
+                >
+                  Preview Upgrade Modal
+                </button>
+              )}
             </div>
           </div>
         )}
