@@ -1,10 +1,9 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, BookOpen, Grid3X3, Sparkles, ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { CollectionItem, CardWithSet } from "@shared/schema";
-import { formatCardName, formatSetName } from "@/lib/formatTitle";
+import { formatCardName } from "@/lib/formatTitle";
 
 interface BinderCard {
   cardNumber: number;
@@ -19,9 +18,6 @@ interface BinderViewProps {
   totalCardsInSet: number;
   setName: string;
   onCardClick: (item: CollectionItem | CardWithSet) => void;
-  onViewModeChange?: (mode: "binder" | "grid") => void;
-  viewMode?: "binder" | "grid";
-  onBack?: () => void;
 }
 
 interface BinderSlotProps {
@@ -109,9 +105,6 @@ export function BinderView({
   totalCardsInSet,
   setName,
   onCardClick,
-  onViewModeChange,
-  viewMode = "binder",
-  onBack
 }: BinderViewProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const [flipDirection, setFlipDirection] = useState<"left" | "right">("right");
@@ -190,9 +183,20 @@ export function BinderView({
     })
   };
 
+  const navButton = (direction: "prev" | "next") => (
+    <button
+      onClick={() => handlePageChange(direction)}
+      disabled={direction === "prev" ? currentPage === 0 : currentPage >= totalPages - 1}
+      className="bg-white/20 text-white disabled:opacity-30 disabled:cursor-not-allowed h-10 w-10 rounded-full flex items-center justify-center border border-white/40 hover:bg-white/30 transition-colors"
+      data-testid={`button-${direction}-page`}
+    >
+      {direction === "prev" ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+    </button>
+  );
+
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between mb-4 px-2">
+      <div className="flex items-center justify-between mb-3 px-2">
         <div className="flex items-center gap-2 flex-wrap">
           <h3 className="text-lg font-bold text-gray-900">{setName}</h3>
           <Badge className="bg-gray-100 text-gray-700 text-xs">
@@ -205,29 +209,6 @@ export function BinderView({
             </Badge>
           )}
         </div>
-        
-        {onViewModeChange && (
-          <div className="flex border border-gray-300 rounded-lg overflow-hidden">
-            <Button
-              variant={viewMode === "binder" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => onViewModeChange("binder")}
-              className={`rounded-none px-2 ${viewMode === "binder" ? "text-white" : "text-gray-900"}`}
-              data-testid="button-binder-view"
-            >
-              <BookOpen className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === "grid" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => onViewModeChange("grid")}
-              className={`rounded-none px-2 ${viewMode === "grid" ? "text-white" : "text-gray-900"}`}
-              data-testid="button-grid-view"
-            >
-              <Grid3X3 className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
       </div>
 
       <div 
@@ -244,16 +225,9 @@ export function BinderView({
           }}
         />
 
-        <div className="flex items-center justify-between mb-2 relative z-10">
-          <button
-            onClick={() => handlePageChange("prev")}
-            disabled={currentPage === 0}
-            className="bg-white/20 text-white disabled:opacity-30 disabled:cursor-not-allowed h-8 w-8 rounded-full flex items-center justify-center border border-white/40"
-            data-testid="button-prev-page"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          
+        {/* Mobile: page nav on top */}
+        <div className="flex lg:hidden items-center justify-between mb-2 relative z-10">
+          {navButton("prev")}
           <div className="flex items-center gap-2">
             <span className="text-white font-bold text-sm">
               {currentPage + 1} <span className="text-white/40">of</span> {totalPages}
@@ -265,58 +239,76 @@ export function BinderView({
               </span>
             )}
           </div>
-          
-          <button
-            onClick={() => handlePageChange("next")}
-            disabled={currentPage >= totalPages - 1}
-            className="bg-white/20 text-white disabled:opacity-30 disabled:cursor-not-allowed h-8 w-8 rounded-full flex items-center justify-center border border-white/40"
-            data-testid="button-next-page"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
+          {navButton("next")}
         </div>
 
-        <div style={{ perspective: '1000px' }} className="relative z-10">
-          <AnimatePresence mode="wait" custom={flipDirection}>
-            <motion.div
-              key={currentPage}
-              custom={flipDirection}
-              variants={pageVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ 
-                duration: 0.4, 
-                ease: [0.4, 0, 0.2, 1]
-              }}
-              className={`grid grid-cols-3 gap-2 mx-auto
-                ${isPageComplete ? 'ring-2 ring-yellow-400/30 rounded-xl p-1' : ''}
-              `}
-              style={{ 
-                maxWidth: '400px',
-              }}
-            >
-              {currentCards.map((card, index) => (
-                <BinderSlot
-                  key={`${currentPage}-${card.cardNumber}`}
-                  card={card}
-                  slotIndex={index}
-                  onClick={() => handleCardClick(card)}
-                  isPageComplete={isPageComplete}
-                />
-              ))}
-              
-              {currentCards.length < cardsPerPage && 
-                [...Array(cardsPerPage - currentCards.length)].map((_, i) => (
-                  <div 
-                    key={`empty-${i}`}
-                    className="rounded-lg bg-gray-800/30 border border-gray-700/20"
-                    style={{ aspectRatio: '2 / 3' }}
+        {/* Card grid with desktop side nav buttons */}
+        <div className="relative z-10">
+          {/* Desktop left nav - absolute positioned in the black space */}
+          <div className="hidden lg:flex absolute left-3 top-1/2 -translate-y-1/2 z-20">
+            {navButton("prev")}
+          </div>
+
+          <div style={{ perspective: '1000px' }}>
+            <AnimatePresence mode="wait" custom={flipDirection}>
+              <motion.div
+                key={currentPage}
+                custom={flipDirection}
+                variants={pageVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ 
+                  duration: 0.4, 
+                  ease: [0.4, 0, 0.2, 1]
+                }}
+                className={`grid grid-cols-3 gap-2 mx-auto
+                  ${isPageComplete ? 'ring-2 ring-yellow-400/30 rounded-xl p-1' : ''}
+                `}
+                style={{ 
+                  maxWidth: '400px',
+                }}
+              >
+                {currentCards.map((card, index) => (
+                  <BinderSlot
+                    key={`${currentPage}-${card.cardNumber}`}
+                    card={card}
+                    slotIndex={index}
+                    onClick={() => handleCardClick(card)}
+                    isPageComplete={isPageComplete}
                   />
-                ))
-              }
-            </motion.div>
-          </AnimatePresence>
+                ))}
+                
+                {currentCards.length < cardsPerPage && 
+                  [...Array(cardsPerPage - currentCards.length)].map((_, i) => (
+                    <div 
+                      key={`empty-${i}`}
+                      className="rounded-lg bg-gray-800/30 border border-gray-700/20"
+                      style={{ aspectRatio: '2 / 3' }}
+                    />
+                  ))
+                }
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Desktop right nav - absolute positioned in the black space */}
+          <div className="hidden lg:flex absolute right-3 top-1/2 -translate-y-1/2 z-20">
+            {navButton("next")}
+          </div>
+        </div>
+
+        {/* Desktop page info */}
+        <div className="hidden lg:flex items-center justify-center gap-2 mt-3 relative z-10">
+          <span className="text-white font-bold text-sm">
+            {currentPage + 1} <span className="text-white/40">of</span> {totalPages}
+          </span>
+          {isPageComplete && (
+            <span className="text-yellow-400 text-[10px] flex items-center gap-1">
+              <Sparkles className="w-3 h-3" />
+              Complete!
+            </span>
+          )}
         </div>
 
         <div className="mt-2 flex items-center justify-center gap-4 relative z-10">

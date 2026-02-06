@@ -434,44 +434,68 @@ export default function MyCollection() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sticky Header - flush with mobile header */}
-      <div className="sticky top-16 lg:top-0 z-10 bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 py-2 sm:py-3">
+      <div className="sticky top-16 lg:top-0 z-20 bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 py-2 sm:py-3">
         <div className="flex flex-col gap-2">
-          {/* Row 1: Title/Back + Layout toggle */}
+          {/* Row 1: Title/Back + toggles */}
           <div className="flex items-center justify-between">
             {collectionView === "cards" && selectedSet !== "all" ? (
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => {
                   setCollectionView("sets");
                   setSelectedSet("all");
                 }}
-                className="flex items-center gap-1 text-gray-600 hover:text-gray-900"
+                className="border-gray-300 text-gray-700 hover:text-gray-900 hover:bg-gray-50"
               >
-                <ArrowLeft className="h-4 w-4" />
-                <span className="text-sm font-medium">Back to Sets</span>
-              </button>
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Back to Sets
+              </Button>
             ) : (
               <h2 className="text-lg sm:text-xl md:text-2xl font-bebas text-gray-900 tracking-wide">MY COLLECTION</h2>
             )}
             
             <div className="flex items-center gap-2 flex-shrink-0">
-              <div className="flex border border-gray-300 rounded-lg overflow-hidden">
-                <Button
-                  variant={viewMode === "grid" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("grid")}
-                  className={`rounded-none px-2 ${viewMode === "grid" ? "text-white" : "text-gray-900"}`}
-                >
-                  <Grid3X3 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "list" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("list")}
-                  className={`rounded-none px-2 ${viewMode === "list" ? "text-white" : "text-gray-900"}`}
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
+              {collectionView === "cards" && selectedSet !== "all" && (
+                <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+                  <Button
+                    variant={binderViewMode === "binder" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setBinderViewMode("binder")}
+                    className={`rounded-none px-2 ${binderViewMode === "binder" ? "text-white" : "text-gray-900"}`}
+                  >
+                    <BookOpen className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={binderViewMode === "grid" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setBinderViewMode("grid")}
+                    className={`rounded-none px-2 ${binderViewMode === "grid" ? "text-white" : "text-gray-900"}`}
+                  >
+                    <Grid3X3 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              {!(collectionView === "cards" && selectedSet !== "all") && (
+                <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+                  <Button
+                    variant={viewMode === "grid" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("grid")}
+                    className={`rounded-none px-2 ${viewMode === "grid" ? "text-white" : "text-gray-900"}`}
+                  >
+                    <Grid3X3 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "list" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("list")}
+                    className={`rounded-none px-2 ${viewMode === "list" ? "text-white" : "text-gray-900"}`}
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
           
@@ -542,8 +566,6 @@ export default function MyCollection() {
                       setIsModalOpen(true);
                     }
                   }}
-                  onViewModeChange={setBinderViewMode}
-                  viewMode={binderViewMode}
                 />
               )
             ) : cardsViewMode === "missing" && missingCardsLoading ? (
