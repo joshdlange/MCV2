@@ -433,36 +433,27 @@ export default function MyCollection() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Sticky Header (top-16 on mobile for mobile header, top-0 on desktop) */}
-      <div className="sticky top-16 lg:top-0 z-10 bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 overflow-visible">
-        <div className="flex flex-col gap-3">
-          {/* Row 1: Title + Right-side toggle buttons (always visible) */}
+      {/* Sticky Header - flush with mobile header */}
+      <div className="sticky top-16 lg:top-0 z-10 bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 py-2 sm:py-3">
+        <div className="flex flex-col gap-2">
+          {/* Row 1: Title/Back + Layout toggle */}
           <div className="flex items-center justify-between">
-            <h2 className="text-lg sm:text-xl md:text-2xl font-bebas text-gray-900 tracking-wide">MY COLLECTION</h2>
+            {collectionView === "cards" && selectedSet !== "all" ? (
+              <button
+                onClick={() => {
+                  setCollectionView("sets");
+                  setSelectedSet("all");
+                }}
+                className="flex items-center gap-1 text-gray-600 hover:text-gray-900"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="text-sm font-medium">Back to Sets</span>
+              </button>
+            ) : (
+              <h2 className="text-lg sm:text-xl md:text-2xl font-bebas text-gray-900 tracking-wide">MY COLLECTION</h2>
+            )}
             
-            {/* Right-side toggle buttons - always visible on mobile */}
-            <div className="flex items-center gap-2 flex-shrink-0 z-10">
-              {/* View Mode Toggle */}
-              <div className="flex border border-gray-300 rounded-lg overflow-hidden">
-                <Button
-                  variant={collectionView === "cards" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setCollectionView("cards")}
-                  className={`rounded-none px-2 sm:px-3 ${collectionView === "cards" ? "text-white" : "text-[#f73f32]"}`}
-                >
-                  Cards
-                </Button>
-                <Button
-                  variant={collectionView === "sets" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setCollectionView("sets")}
-                  className={`rounded-none px-2 sm:px-3 ${collectionView === "sets" ? "text-white" : "text-[#f73f32]"}`}
-                >
-                  Sets
-                </Button>
-              </div>
-              
-              {/* Layout Toggle - Show for both cards and sets view */}
+            <div className="flex items-center gap-2 flex-shrink-0">
               <div className="flex border border-gray-300 rounded-lg overflow-hidden">
                 <Button
                   variant={viewMode === "grid" ? "default" : "ghost"}
@@ -484,8 +475,8 @@ export default function MyCollection() {
             </div>
           </div>
           
-          {/* Row 2: Search and other controls */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Row 2: Search + Favorites */}
+          <div className="flex items-center gap-2">
             <div className="relative flex-1 min-w-[140px] max-w-[280px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -496,67 +487,21 @@ export default function MyCollection() {
               />
             </div>
             
-            {/* Cards View Mode Toggle - Show only in cards view */}
-            {collectionView === "cards" && selectedSet !== "all" && (
-              <div className="flex border border-gray-300 rounded-lg overflow-hidden">
-                <Button
-                  variant={cardsViewMode === "owned" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setCardsViewMode("owned")}
-                  className={`rounded-none px-2 sm:px-3 ${cardsViewMode === "owned" ? "text-white" : "text-[#f73f32]"}`}
-                >
-                  Owned
-                </Button>
-                <Button
-                  variant={cardsViewMode === "missing" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setCardsViewMode("missing")}
-                  className={`rounded-none px-2 sm:px-3 ${cardsViewMode === "missing" ? "text-white" : "text-[#f73f32]"}`}
-                >
-                  Missing
-                </Button>
-              </div>
-            )}
-            
-            {/* Favorites Filter - Show in cards view for owned cards */}
-            {collectionView === "cards" && cardsViewMode === "owned" && (
-              <Button
-                variant={showFavoritesOnly ? "default" : "outline"}
-                size="sm"
-                onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-                className={showFavoritesOnly 
-                  ? "bg-yellow-500 text-white border-2 border-yellow-600" 
-                  : "bg-white text-gray-800 border-2 border-gray-400"}
-              >
-                <Star className={`h-4 w-4 mr-1 ${showFavoritesOnly ? 'fill-current' : ''}`} />
-                Favorites
-              </Button>
-            )}
-            
             <Button
-              variant="outline"
+              variant={showFavoritesOnly ? "default" : "outline"}
               size="sm"
-              onClick={handleToggleSelectionMode}
-              className={isSelectionMode ? "bg-red-600 text-white border-red-600" : "bg-gray-800 text-white border-gray-800"}
+              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              className={showFavoritesOnly 
+                ? "bg-yellow-500 text-white border-2 border-yellow-600" 
+                : "bg-white text-gray-800 border-2 border-gray-400"}
             >
-              {isSelectionMode ? (
-                <>
-                  <Check className="mr-1 sm:mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Exit Selection</span>
-                  <span className="sm:hidden">Exit</span>
-                </>
-              ) : (
-                <>
-                  <div className="mr-1 sm:mr-2 w-4 h-4 border border-gray-400 rounded" />
-                  <span className="hidden sm:inline">Select Items</span>
-                  <span className="sm:hidden">Select</span>
-                </>
-              )}
+              <Star className={`h-4 w-4 mr-1 ${showFavoritesOnly ? 'fill-current' : ''}`} />
+              Favorites
             </Button>
           </div>
         </div>
         
-        <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+        <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
           <span>{collection?.length || 0} cards in collection</span>
           {searchQuery && (
             <>
@@ -599,10 +544,6 @@ export default function MyCollection() {
                   }}
                   onViewModeChange={setBinderViewMode}
                   viewMode={binderViewMode}
-                  onBack={() => {
-                    setCollectionView("sets");
-                    setSelectedSet("all");
-                  }}
                 />
               )
             ) : cardsViewMode === "missing" && missingCardsLoading ? (
