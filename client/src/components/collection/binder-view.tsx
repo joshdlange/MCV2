@@ -6,9 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import type { CollectionItem, CardWithSet } from "@shared/schema";
 import { formatCardName, formatSetName } from "@/lib/formatTitle";
 
-// Fallback flag - set to false to revert to old layout if needed
-const USE_NEW_BINDER_LAYOUT = true;
-
 interface BinderCard {
   cardNumber: number;
   owned: boolean;
@@ -51,7 +48,7 @@ function BinderSlot({ card, slotIndex, onClick, isPageComplete }: BinderSlotProp
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: slotIndex * 0.05, duration: 0.2 }}
       onClick={onClick}
-      className={`relative rounded-lg overflow-hidden cursor-pointer
+      className={`relative rounded-lg overflow-hidden cursor-pointer w-full
         ${isOwned 
           ? 'ring-2 ring-green-500/50 shadow-lg shadow-green-500/20' 
           : 'ring-1 ring-gray-600/30'
@@ -59,11 +56,7 @@ function BinderSlot({ card, slotIndex, onClick, isPageComplete }: BinderSlotProp
         ${isPageComplete ? 'ring-2 ring-yellow-400/50' : ''}
       `}
       style={{
-        // Card tiles use aspect ratio and scale to fit grid cell
-        aspectRatio: '2.5 / 3.5',
-        height: '100%',
-        maxHeight: '100%',
-        width: 'auto',
+        aspectRatio: '2 / 3',
         background: isOwned 
           ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)' 
           : 'linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%)'
@@ -75,7 +68,7 @@ function BinderSlot({ card, slotIndex, onClick, isPageComplete }: BinderSlotProp
           <img
             src={imageUrl}
             alt={cardName}
-            className="w-full h-full object-contain"
+            className="w-full h-full object-cover"
             loading="lazy"
           />
           {isInsert && (
@@ -124,7 +117,6 @@ export function BinderView({
   const [flipDirection, setFlipDirection] = useState<"left" | "right">("right");
   const cardsPerPage = 9;
 
-  // Build a map of owned cards by their exact cardNumber string for accurate matching
   const ownedCardMap = useMemo(() => {
     const map = new Map<string, CollectionItem>();
     ownedCards.forEach(item => {
@@ -137,11 +129,9 @@ export function BinderView({
   }, [ownedCards]);
 
   const binderCards: BinderCard[] = useMemo(() => {
-    // Use allCardsInSet as the source of truth for card numbers and order
     const cards = allCardsInSet.map((card) => {
       const cardNum = card.cardNumber?.trim() || '';
       const ownedItem = ownedCardMap.get(cardNum);
-      // Parse the card number for display, fallback to 0 for non-numeric
       const numericCardNumber = parseInt(cardNum) || 0;
       
       return {
@@ -151,7 +141,6 @@ export function BinderView({
         card: card
       };
     });
-    // Sort by card number in chronological order
     return cards.sort((a, b) => a.cardNumber - b.cardNumber);
   }, [allCardsInSet, ownedCardMap]);
 
@@ -203,7 +192,6 @@ export function BinderView({
 
   return (
     <div className="w-full">
-      {/* Back button */}
       {onBack && (
         <Button
           variant="ghost"
@@ -256,16 +244,10 @@ export function BinderView({
       </div>
 
       <div 
-        className="relative rounded-2xl"
+        className="relative rounded-2xl p-3"
         style={{
           background: 'linear-gradient(135deg, #1e1e2f 0%, #141422 50%, #0d0d1a 100%)',
           boxShadow: 'inset 0 2px 20px rgba(0,0,0,0.5), 0 10px 40px rgba(0,0,0,0.3)',
-          // New layout: fill available viewport, accounting for header (~180px)
-          height: USE_NEW_BINDER_LAYOUT ? 'calc(100dvh - 180px)' : 'min(calc(100vh - 200px), 650px)',
-          padding: USE_NEW_BINDER_LAYOUT ? 'clamp(8px, 1.5vw, 16px)' : '12px',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden'
         }}
       >
         <div 
@@ -275,7 +257,7 @@ export function BinderView({
           }}
         />
 
-        <div className="flex items-center justify-between mb-2 flex-shrink-0 relative z-10">
+        <div className="flex items-center justify-between mb-2 relative z-10">
           <button
             onClick={() => handlePageChange("prev")}
             disabled={currentPage === 0}
@@ -307,7 +289,7 @@ export function BinderView({
           </button>
         </div>
 
-        <div style={{ perspective: '1000px' }} className="flex-1 min-h-0 relative z-10">
+        <div style={{ perspective: '1000px' }} className="relative z-10">
           <AnimatePresence mode="wait" custom={flipDirection}>
             <motion.div
               key={currentPage}
@@ -320,16 +302,11 @@ export function BinderView({
                 duration: 0.4, 
                 ease: [0.4, 0, 0.2, 1]
               }}
-              className={`grid grid-cols-3 place-items-center h-full mx-auto
+              className={`grid grid-cols-3 gap-2 mx-auto
                 ${isPageComplete ? 'ring-2 ring-yellow-400/30 rounded-xl p-1' : ''}
               `}
               style={{ 
-                gridTemplateRows: 'repeat(3, minmax(0, 1fr))',
-                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                gap: '6px',
-                // Constrain width based on height to keep cards packed like mobile
-                maxWidth: 'calc((100% - 12px) * 0.75)',
-                aspectRatio: '3 / 4.2'
+                maxWidth: '400px',
               }}
             >
               {currentCards.map((card, index) => (
@@ -347,6 +324,7 @@ export function BinderView({
                   <div 
                     key={`empty-${i}`}
                     className="rounded-lg bg-gray-800/30 border border-gray-700/20"
+                    style={{ aspectRatio: '2 / 3' }}
                   />
                 ))
               }
@@ -354,7 +332,7 @@ export function BinderView({
           </AnimatePresence>
         </div>
 
-        <div className="mt-2 flex items-center justify-center gap-4 flex-shrink-0 relative z-10">
+        <div className="mt-2 flex items-center justify-center gap-4 relative z-10">
           <div className="flex items-center gap-1">
             {[...Array(Math.min(totalPages, 10))].map((_, i) => {
               const pageIndex = totalPages <= 10 ? i : 
