@@ -7130,6 +7130,334 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== SN SERIAL NUMBER CLEANUP ====================
+  app.post("/api/admin/fix-serial-sn", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { mode, limit, batchSize } = req.body;
+      if (!mode || !["dry-run", "apply"].includes(mode)) {
+        return res.status(400).json({ message: "mode must be 'dry-run' or 'apply'" });
+      }
+
+      const rowLimit = limit || 100000;
+      const batch = batchSize || 1000;
+      const snRegex = /^(.*?)(?:\s*)SN(\d{1,6})$/i;
+
+      console.log(`[SN-FIX] Starting ${mode} mode, limit=${rowLimit}, batchSize=${batch}`);
+
+      const snCards = await db.execute(sql`
+        SELECT c.id, c.set_id, c.card_number, c.name, c.description,
+               c.front_image_url, c.created_at,
+               cs.name as set_name
+        FROM cards c
+        LEFT JOIN card_sets cs ON c.set_id = cs.id
+        WHERE c.name ~* 'SN[0-9]{1,6}$'
+        ORDER BY c.set_id, c.card_number
+        LIMIT ${rowLimit}
+      `);
+
+      console.log(`[SN-FIX] Found ${snCards.rows.length} cards with SN pattern`);
+
+      const snMatchesReport: any[] = [];
+
+      for (const row of snCards.rows as any[]) {
+        const match = row.name.match(snRegex);
+        if (!match) continue;
+
+        const baseName = match[1].trim();
+        const snValue = match[2];
+        const serialTag = `/${snValue}`;
+
+        let newDescription = row.description || '';
+        const descLower = newDescription.toLowerCase();
+        const alreadyHasTag = descLower.includes(serialTag.toLowerCase()) || 
+                              descLower.includes(`serial numbered: ${serialTag.toLowerCase()}`);
+        const hasSNFormat = new RegExp(`SN\\s*${snValue}`, 'i').test(newDescription);
+
+        if (alreadyHasTag) {
+          // no change needed
+        } else if (hasSNFormat) {
+          newDescription = newDescription.replace(new RegExp(`SN\\s*${snValue}`, 'gi'), serialTag);
+        } else if (!newDescription || newDescription.trim() === '') {
+          newDescription = `Serial Numbered: ${serialTag}`;
+        } else {
+          newDescription = newDescription + `\nSerial Numbered: ${serialTag}`;
+        }
+
+        snMatchesReport.push({
+          card_id: row.id,
+          set_id: row.set_id,
+          set_name: row.set_name || 'Unknown',
+          card_number: row.card_number,
+          old_name: row.name,
+          clean_name: baseName,
+          sn_value: snValue,
+          serial_tag: serialTag,
+          old_description: (row.description || '').substring(0, 200),
+          new_description: newDescription.substring(0, 200),
+          has_image: row.front_image_url ? 'y' : 'n',
+          created_at: row.created_at,
+        });
+      }
+
+      console.log(`[SN-FIX] ${snMatchesReport.length} cards matched SN regex after validation`);
+
+      // Duplicate detection: same set_id + card_number, one is SN variant
+      const duplicatesReport: any[] = [];
+      const snBySetCard = new Map<string, any>();
+      for (const item of snMatchesReport) {
+        const key = `${item.set_id}::${item.card_number}`;
+        snBySetCard.set(key, item);
+      }
+
+      if (snBySetCard.size > 0) {
+        // Only fetch cards that share (set_id, card_number) with SN cards - much more targeted
+        const snKeys = snMatchesReport.map(r => ({ set_id: r.set_id, card_number: r.card_number }));
+        const uniqueKeys = [...new Map(snKeys.map(k => [`${k.set_id}::${k.card_number}`, k])).values()];
+        
+        const chunkSize = 500;
+        const allRelatedCards: any[] = [];
+        for (let i = 0; i < uniqueKeys.length; i += chunkSize) {
+          const chunk = uniqueKeys.slice(i, i + chunkSize);
+          const setIdArr = chunk.map(k => k.set_id);
+          const cardNumArr = chunk.map(k => k.card_number);
+          const result = await db.execute(sql`
+            SELECT c.id, c.set_id, c.card_number, c.name, c.front_image_url, c.created_at,
+                   cs.name as set_name
+            FROM cards c
+            LEFT JOIN card_sets cs ON c.set_id = cs.id
+            WHERE (c.set_id, c.card_number) IN (
+              SELECT UNNEST(${setIdArr}::int[]), UNNEST(${cardNumArr}::text[])
+            )
+            ORDER BY c.set_id, c.card_number, c.id
+          `);
+          allRelatedCards.push(...(result.rows as any[]));
+        }
+
+        // Group by set_id + card_number
+        const groupedCards = new Map<string, any[]>();
+        for (const card of allRelatedCards) {
+          const key = `${card.set_id}::${card.card_number}`;
+          if (!groupedCards.has(key)) groupedCards.set(key, []);
+          groupedCards.get(key)!.push(card);
+        }
+
+        // Find duplicates where one is SN variant
+        for (const [key, group] of groupedCards) {
+          if (group.length < 2) continue;
+          if (!snBySetCard.has(key)) continue;
+
+          const snCard = snBySetCard.get(key)!;
+          const others = group.filter((c: any) => c.id !== snCard.card_id);
+
+          for (const other of others) {
+            const snHasImage = snCard.has_image === 'y';
+            const otherHasImage = !!other.front_image_url;
+            let recommendedKeep = 'needs_manual_decision';
+            if (otherHasImage && !snHasImage) recommendedKeep = `keep_${other.id}`;
+            else if (snHasImage && !otherHasImage) recommendedKeep = `keep_${snCard.card_id}`;
+            else if (other.id < snCard.card_id) recommendedKeep = `keep_${other.id}`;
+            else recommendedKeep = `keep_${snCard.card_id}`;
+
+            duplicatesReport.push({
+              set_id: other.set_id,
+              set_name: other.set_name || 'Unknown',
+              card_number: other.card_number,
+              card_id_a: other.id,
+              name_a: other.name,
+              has_image_a: otherHasImage ? 'y' : 'n',
+              created_at_a: other.created_at,
+              card_id_b: snCard.card_id,
+              name_b: snCard.old_name,
+              has_image_b: snCard.has_image,
+              created_at_b: snCard.created_at,
+              recommended_keep: recommendedKeep,
+            });
+          }
+        }
+
+        // Classify each SN card
+        for (const item of snMatchesReport) {
+          const key = `${item.set_id}::${item.card_number}`;
+          const group = groupedCards.get(key);
+          item.classification = (group && group.length > 1) ? 'DUPLICATE_FOUND' : 'SAFE_UPDATE';
+        }
+      }
+
+      console.log(`[SN-FIX] Found ${duplicatesReport.length} duplicate pairs`);
+
+      // Save CSV reports
+      const csvHeader = (obj: any) => Object.keys(obj).join(',');
+      const csvRow = (obj: any) => Object.values(obj).map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',');
+
+      if (snMatchesReport.length > 0) {
+        const csvLines = [csvHeader(snMatchesReport[0]), ...snMatchesReport.map(csvRow)];
+        fs.writeFileSync('/tmp/sn-fix-dryrun.csv', csvLines.join('\n'), 'utf-8');
+        console.log(`[SN-FIX] Saved /tmp/sn-fix-dryrun.csv (${snMatchesReport.length} rows)`);
+      }
+
+      if (duplicatesReport.length > 0) {
+        const csvLines = [csvHeader(duplicatesReport[0]), ...duplicatesReport.map(csvRow)];
+        fs.writeFileSync('/tmp/sn-fix-duplicates.csv', csvLines.join('\n'), 'utf-8');
+        console.log(`[SN-FIX] Saved /tmp/sn-fix-duplicates.csv (${duplicatesReport.length} rows)`);
+      }
+
+      if (mode === 'dry-run') {
+        const safeCount = snMatchesReport.filter(r => r.classification === 'SAFE_UPDATE').length;
+        const dupCount = snMatchesReport.filter(r => r.classification === 'DUPLICATE_FOUND').length;
+        return res.json({
+          mode: 'dry-run',
+          totalSnMatches: snMatchesReport.length,
+          safeUpdates: safeCount,
+          duplicateFound: dupCount,
+          totalDuplicatePairs: duplicatesReport.length,
+          snMatchesReport: snMatchesReport.slice(0, 100),
+          duplicatesReport: duplicatesReport.slice(0, 100),
+          csvFiles: ['/tmp/sn-fix-dryrun.csv', '/tmp/sn-fix-duplicates.csv'],
+          message: `Dry run complete. ${snMatchesReport.length} SN cards found (${safeCount} safe, ${dupCount} with duplicates). Review reports before running apply.`
+        });
+      }
+
+      // === APPLY MODE ===
+      console.log(`[SN-FIX APPLY] Starting apply for ${snMatchesReport.length} cards in batches of ${batch}`);
+      let totalUpdated = 0;
+      const applySummary: any[] = [];
+
+      // Pre-index original rows by id for O(1) lookup
+      const origRowsById = new Map<number, any>();
+      for (const r of snCards.rows as any[]) {
+        origRowsById.set(r.id, r);
+      }
+
+      for (let i = 0; i < snMatchesReport.length; i += batch) {
+        const batchItems = snMatchesReport.slice(i, i + batch);
+        
+        await db.execute(sql`BEGIN`);
+        try {
+          for (const item of batchItems) {
+            const origRow = origRowsById.get(item.card_id);
+            let fullNewDesc = origRow?.description || '';
+            const serialTag = item.serial_tag;
+            const snValue = item.sn_value;
+            const descLower = fullNewDesc.toLowerCase();
+            const alreadyHasTag = descLower.includes(serialTag.toLowerCase()) || 
+                                  descLower.includes(`serial numbered: ${serialTag.toLowerCase()}`);
+            const hasSNFormat = new RegExp(`SN\\s*${snValue}`, 'i').test(fullNewDesc);
+
+            if (alreadyHasTag) {
+              // no change
+            } else if (hasSNFormat) {
+              fullNewDesc = fullNewDesc.replace(new RegExp(`SN\\s*${snValue}`, 'gi'), serialTag);
+            } else if (!fullNewDesc || fullNewDesc.trim() === '') {
+              fullNewDesc = `Serial Numbered: ${serialTag}`;
+            } else {
+              fullNewDesc = fullNewDesc + `\nSerial Numbered: ${serialTag}`;
+            }
+
+            await db.execute(sql`
+              UPDATE cards
+              SET name = ${item.clean_name}, description = ${fullNewDesc}
+              WHERE id = ${item.card_id}
+            `);
+          }
+          await db.execute(sql`COMMIT`);
+
+          totalUpdated += batchItems.length;
+          const sample = batchItems.slice(0, 20).map(b => ({
+            card_id: b.card_id,
+            old_name: b.old_name,
+            new_name: b.clean_name,
+            serial_tag: b.serial_tag,
+          }));
+          applySummary.push({
+            batchNumber: Math.floor(i / batch) + 1,
+            rowsUpdated: batchItems.length,
+            sample,
+          });
+          console.log(`[SN-FIX APPLY] Batch ${Math.floor(i / batch) + 1}: updated ${batchItems.length} rows (total: ${totalUpdated})`);
+        } catch (batchErr) {
+          await db.execute(sql`ROLLBACK`);
+          console.error(`[SN-FIX APPLY] Batch ${Math.floor(i / batch) + 1} failed, rolled back:`, batchErr);
+          return res.status(500).json({
+            message: `Apply failed at batch ${Math.floor(i / batch) + 1}. Rolled back. ${totalUpdated} rows updated before failure.`,
+            totalUpdatedBeforeFailure: totalUpdated,
+            error: String(batchErr),
+          });
+        }
+      }
+
+      // Save apply summary CSV
+      const summaryRows = snMatchesReport.map(item => ({
+        card_id: item.card_id,
+        set_id: item.set_id,
+        card_number: item.card_number,
+        old_name: item.old_name,
+        new_name: item.clean_name,
+        serial_tag: item.serial_tag,
+        classification: item.classification,
+      }));
+      if (summaryRows.length > 0) {
+        const csvLines = [csvHeader(summaryRows[0]), ...summaryRows.map(csvRow)];
+        fs.writeFileSync('/tmp/sn-fix-apply-summary.csv', csvLines.join('\n'), 'utf-8');
+        console.log(`[SN-FIX APPLY] Saved /tmp/sn-fix-apply-summary.csv (${summaryRows.length} rows)`);
+      }
+
+      // Post-check: count remaining SN cards and re-check duplicates
+      const postCheckResult = await db.execute(sql`
+        SELECT COUNT(*) as remaining FROM cards WHERE name ~* 'SN[0-9]{1,6}$'
+      `);
+      const remainingCount = parseInt((postCheckResult.rows[0] as any).remaining) || 0;
+
+      // Post-check duplicate report: find cards that now share set_id + card_number + name
+      const postDupResult = await db.execute(sql`
+        SELECT c.set_id, cs.name as set_name, c.card_number, c.name,
+               COUNT(*) as dup_count,
+               ARRAY_AGG(c.id ORDER BY c.id) as card_ids,
+               ARRAY_AGG(CASE WHEN c.front_image_url IS NOT NULL THEN 'y' ELSE 'n' END ORDER BY c.id) as has_images
+        FROM cards c
+        LEFT JOIN card_sets cs ON c.set_id = cs.id
+        WHERE c.set_id IN (SELECT DISTINCT set_id FROM cards WHERE id = ANY(${snMatchesReport.map(r => r.card_id)}))
+        GROUP BY c.set_id, cs.name, c.card_number, c.name
+        HAVING COUNT(*) > 1
+        ORDER BY COUNT(*) DESC
+        LIMIT 200
+      `);
+
+      console.log(`[SN-FIX APPLY] Post-check: ${remainingCount} remaining SN cards, ${postDupResult.rows.length} duplicate groups`);
+
+      if (postDupResult.rows.length > 0) {
+        const postDupRows = (postDupResult.rows as any[]).map(r => ({
+          set_id: r.set_id,
+          set_name: r.set_name,
+          card_number: r.card_number,
+          name: r.name,
+          duplicate_count: r.dup_count,
+          card_ids: String(r.card_ids),
+          has_images: String(r.has_images),
+        }));
+        const csvLines2 = [csvHeader(postDupRows[0]), ...postDupRows.map(csvRow)];
+        fs.writeFileSync('/tmp/sn-fix-post-duplicates.csv', csvLines2.join('\n'), 'utf-8');
+        console.log(`[SN-FIX APPLY] Saved /tmp/sn-fix-post-duplicates.csv`);
+      }
+
+      return res.json({
+        mode: 'apply',
+        totalUpdated,
+        batchSummary: applySummary,
+        remainingSnCards: remainingCount,
+        postApplyDuplicateGroups: postDupResult.rows.length,
+        csvFiles: ['/tmp/sn-fix-dryrun.csv', '/tmp/sn-fix-duplicates.csv', '/tmp/sn-fix-apply-summary.csv', '/tmp/sn-fix-post-duplicates.csv'],
+        message: `Apply complete. Updated ${totalUpdated} cards. ${remainingCount} SN cards remaining. ${postDupResult.rows.length} duplicate groups found post-apply.`,
+      });
+    } catch (error) {
+      console.error('[SN-FIX] Error:', error);
+      res.status(500).json({ message: 'SN fix failed', error: String(error) });
+    }
+  });
+
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);
 

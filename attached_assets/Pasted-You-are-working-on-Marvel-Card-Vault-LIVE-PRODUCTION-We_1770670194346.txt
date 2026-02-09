@@ -1,0 +1,111 @@
+You are working on Marvel Card Vault (LIVE PRODUCTION). We must be EXTREMELY SAFE.
+Goal: Remove trailing “SN####” artifacts from card names AND store that serial info in the card’s details/description, WITHOUT deleting anything automatically.
+
+CONTEXT / THE BUG:
+Some imported cards have an incorrect name like:
+- "Ultimate Spider-ManSN1499"
+- "Tiger Shark SN99"
+Often there is NO SPACE before SN.
+This causes duplicates within the same subset (set_id): one correct card (often with image) and one bad SN-name (often missing image).
+
+NEW REQUIREMENT:
+When we remove SN#### from the name, we should store the serial info in the card’s details field so users can see it.
+We want it stored as "/####" (example: "/99", "/1499") and presented in the card details (cards.description).
+
+IMPORTANT: DO NOT change the “source of truth” matching keys we use for imports (FULL COMBO + set_id + card_number). We are only adjusting display fields: cards.name and cards.description.
+
+HARD RULES:
+1) DO NOT DELETE ANY cards automatically.
+2) DO NOT move cards between sets.
+3) DO NOT change card IDs (user collections depend on card_id).
+4) Must be reversible: produce before/after logs (CSV or JSON report) for every modified card_id.
+5) DRY RUN FIRST. Do NOT apply automatically.
+6) Only run when triggered by an admin-only endpoint; do not add background jobs.
+
+FIELDS:
+- Card name: cards.name
+- Card “details”: use cards.description (this is where we will store the serial info)
+
+SN DETECTION RULE:
+Only treat SN as valid if it appears at the END of the string:
+Regex example: /(.*?)(?:\s*)SN(\d{1,6})$/i
+Extract:
+- base_name = group 1 trimmed
+- sn_value = group 2 digits
+Display value we store: serial_tag = "/" + sn_value  (e.g. "/99")
+
+DESCRIPTION UPDATE RULES:
+We want to append the serial tag into cards.description safely.
+- If description is NULL/empty: set to "Serial Numbered: /99"
+- If description already contains "/99" OR "Serial Numbered: /99" (case-insensitive): do not duplicate.
+- If description already contains "SN99" or "SN 99": normalize it to "/99" (replace)
+- Otherwise append on a new line:
+"\nSerial Numbered: /99"
+We do NOT want to remove any existing description content.
+
+TWO-PHASE EXECUTION:
+
+PHASE 1 — DRY RUN (NO DB WRITES):
+A) Find all cards where cards.name ends with SN + digits (case-insensitive).
+For each match compute:
+- clean_name (base_name)
+- serial_tag ("/####")
+- new_description (apply rules above)
+Output report (CSV or console table):
+card_id, set_id, set_name, card_number, old_name, clean_name, sn_value, serial_tag,
+old_description (truncated ok), new_description (truncated ok),
+front_image_url present? y/n, created_at
+
+B) Duplicate detection inside the SAME set_id (subset):
+Identify duplicates where same set_id + same card_number AND one is SN-variant or names normalize to same base.
+Output a second report grouped by set_id + card_number:
+set_id, set_name, card_number,
+card_id_a, name_a, has_image_a,
+card_id_b, name_b, has_image_b,
+created_at_a, created_at_b
+Include a “recommended keep” suggestion BUT DO NOT DELETE:
+- prefer the record with front_image_url populated
+- if tie, prefer older created_at (or lower id) and mark “needs manual decision”
+
+Classify each SN card as:
+- SAFE_UPDATE (no matching duplicate exists by set_id + card_number)
+- DUPLICATE_FOUND (matching card exists; still OK to clean name + add serial to description, but must be flagged)
+
+PHASE 2 — APPLY (DB WRITES) — ONLY AFTER I APPROVE DRY RUN:
+For each SN-matched card:
+1) Update cards.name = clean_name
+2) Update cards.description = new_description
+Do NOT touch images, pricing, rarity, etc.
+Batch the updates (500–2000 rows) with explicit transaction per batch.
+After each batch, log:
+- number of rows updated
+- sample of 20 before/after changes
+
+POST-CHECK:
+Re-run duplicate detection report after apply and print/save it.
+
+IMPLEMENTATION (DO NOT BUILD A NEW UI TOOL):
+Create an admin-only server endpoint, e.g.:
+POST /api/admin/fix-serial-sn
+Body:
+{ mode: "dry-run" | "apply", limit?: number, batchSize?: number }
+Return JSON with:
+- snMatchesReport (array)
+- duplicatesReport (array)
+Also save CSV files in project root (or /tmp) for me to download:
+- sn-fix-dryrun.csv
+- sn-fix-duplicates.csv
+- sn-fix-apply-summary.csv (when apply runs)
+
+AUTH:
+Protect route using existing admin auth middleware/guard (same pattern as other admin routes).
+
+PERFORMANCE:
+This must NOT run automatically or on page load.
+Use efficient queries:
+- Filter where name ILIKE '%SN%' and ends with regex (or do it in code but limit rows per request).
+- Prefer selecting only needed columns for the dry run.
+Do not add new indexes unless proven necessary.
+
+DO NOT PROCEED TO APPLY automatically.
+Start with DRY RUN and show me the reports + counts.
