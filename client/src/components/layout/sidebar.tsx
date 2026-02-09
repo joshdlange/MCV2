@@ -6,7 +6,7 @@ import { UpgradeModal } from "@/components/subscription/upgrade-modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bolt, Settings, Crown, LogOut } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import vaultLogo from "@assets/noun-super-hero-380874-FFFFFF.png";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
@@ -73,9 +73,22 @@ export function Sidebar() {
 
   const { data: collectionStats } = useQuery({
     queryKey: ["/api/stats"],
-    staleTime: 30000, // Consider data fresh for 30 seconds to prevent refetch on menu open
-    placeholderData: { totalCards: 0 }, // Show immediately while loading
+    staleTime: 30000,
+    placeholderData: { totalCards: 0 },
   });
+
+  useEffect(() => {
+    if (
+      currentUser &&
+      currentUser.plan === 'SIDE_KICK' &&
+      collectionStats &&
+      (collectionStats as any).totalCards >= 250 &&
+      !sessionStorage.getItem('upgrade_prompt_shown')
+    ) {
+      sessionStorage.setItem('upgrade_prompt_shown', '1');
+      setShowUpgradeModal(true);
+    }
+  }, [currentUser, collectionStats]);
 
   const IconComponent = ({ iconName }: { iconName: string }) => {
     const Icon = iconMap[iconName as keyof typeof iconMap];
@@ -175,8 +188,9 @@ export function Sidebar() {
             </Button>
             <div className="mt-2 flex flex-col items-center gap-0.5">
               <span className="text-[10px] md:text-xs text-gray-500">Collection Limit</span>
-              <span className="text-[11px] md:text-xs font-medium text-gray-600">
+              <span className={`text-[11px] md:text-xs font-medium ${(collectionStats as any)?.totalCards >= 250 ? 'text-red-600 font-bold' : 'text-gray-600'}`}>
                 {collectionStats?.totalCards || 0} / 250
+                {(collectionStats as any)?.totalCards >= 250 && ' (Full!)'}
               </span>
             </div>
           </div>

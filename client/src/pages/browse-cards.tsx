@@ -33,7 +33,12 @@ export default function BrowseCards() {
   // All state hooks first
   const [selectedSet, setSelectedSet] = useState<CardSet | null>(null);
   const [filters, setFilters] = useState<CardFilters>({});
-  const [favoriteSetIds, setFavoriteSetIds] = useState<number[]>([]);
+  const { currentUser } = useAppStore();
+  const favStorageKey = currentUser ? `favoriteSetIds_user_${currentUser.id}` : 'favoriteSetIds';
+  const [favoriteSetIds, setFavoriteSetIds] = useState<number[]>(() => {
+    const saved = localStorage.getItem(currentUser ? `favoriteSetIds_user_${currentUser.id}` : 'favoriteSetIds');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [setSearchQuery, setSetSearchQuery] = useState("");
   const [editingSet, setEditingSet] = useState<CardSet | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -55,6 +60,12 @@ export default function BrowseCards() {
   const [location] = useLocation();
   const params = useParams<{ mainSetSlug?: string; setSlug?: string }>();
   
+  useEffect(() => {
+    const key = currentUser ? `favoriteSetIds_user_${currentUser.id}` : 'favoriteSetIds';
+    const saved = localStorage.getItem(key);
+    setFavoriteSetIds(saved ? JSON.parse(saved) : []);
+  }, [currentUser?.id]);
+
   // Route determination
   const isMainSetView = params.mainSetSlug !== undefined;
   const isSpecificSetView = params.setSlug !== undefined;
@@ -493,11 +504,13 @@ export default function BrowseCards() {
   };
 
   const handleFavoriteSet = (setId: number) => {
-    setFavoriteSetIds(prev => 
-      prev.includes(setId) 
+    setFavoriteSetIds(prev => {
+      const newIds = prev.includes(setId) 
         ? prev.filter(id => id !== setId)
-        : [...prev, setId]
-    );
+        : [...prev, setId];
+      localStorage.setItem(favStorageKey, JSON.stringify(newIds));
+      return newIds;
+    });
   };
 
   const convertGoogleDriveUrl = (url: string) => {
