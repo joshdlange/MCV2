@@ -34,16 +34,20 @@ export default function MyCollection() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const favStorageKey = currentUser ? `favoriteSetIds_user_${currentUser.id}` : 'favoriteSetIds';
   const [favoriteSetIds, setFavoriteSetIds] = useState<number[]>(() => {
-    const saved = localStorage.getItem(currentUser ? `favoriteSetIds_user_${currentUser.id}` : 'favoriteSetIds');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem(currentUser ? `favoriteSetIds_user_${currentUser.id}` : 'favoriteSetIds');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
   });
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   useEffect(() => {
-    const key = currentUser ? `favoriteSetIds_user_${currentUser.id}` : 'favoriteSetIds';
-    const saved = localStorage.getItem(key);
-    setFavoriteSetIds(saved ? JSON.parse(saved) : []);
+    try {
+      const key = currentUser ? `favoriteSetIds_user_${currentUser.id}` : 'favoriteSetIds';
+      const saved = localStorage.getItem(key);
+      setFavoriteSetIds(saved ? JSON.parse(saved) : []);
+    } catch { setFavoriteSetIds([]); }
   }, [currentUser?.id]);
 
   const { data: collection, isLoading } = useQuery<CollectionItem[]>({

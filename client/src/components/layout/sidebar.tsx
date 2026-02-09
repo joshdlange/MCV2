@@ -83,9 +83,9 @@ export function Sidebar() {
       currentUser.plan === 'SIDE_KICK' &&
       collectionStats &&
       (collectionStats as any).totalCards >= 250 &&
-      !sessionStorage.getItem('upgrade_prompt_shown')
+      !sessionStorage.getItem(`upgrade_prompt_shown_${currentUser.id}`)
     ) {
-      sessionStorage.setItem('upgrade_prompt_shown', '1');
+      sessionStorage.setItem(`upgrade_prompt_shown_${currentUser.id}`, '1');
       setShowUpgradeModal(true);
     }
   }, [currentUser, collectionStats]);

@@ -36,8 +36,10 @@ export default function BrowseCards() {
   const { currentUser } = useAppStore();
   const favStorageKey = currentUser ? `favoriteSetIds_user_${currentUser.id}` : 'favoriteSetIds';
   const [favoriteSetIds, setFavoriteSetIds] = useState<number[]>(() => {
-    const saved = localStorage.getItem(currentUser ? `favoriteSetIds_user_${currentUser.id}` : 'favoriteSetIds');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem(currentUser ? `favoriteSetIds_user_${currentUser.id}` : 'favoriteSetIds');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
   });
   const [setSearchQuery, setSetSearchQuery] = useState("");
   const [editingSet, setEditingSet] = useState<CardSet | null>(null);
@@ -61,9 +63,11 @@ export default function BrowseCards() {
   const params = useParams<{ mainSetSlug?: string; setSlug?: string }>();
   
   useEffect(() => {
-    const key = currentUser ? `favoriteSetIds_user_${currentUser.id}` : 'favoriteSetIds';
-    const saved = localStorage.getItem(key);
-    setFavoriteSetIds(saved ? JSON.parse(saved) : []);
+    try {
+      const key = currentUser ? `favoriteSetIds_user_${currentUser.id}` : 'favoriteSetIds';
+      const saved = localStorage.getItem(key);
+      setFavoriteSetIds(saved ? JSON.parse(saved) : []);
+    } catch { setFavoriteSetIds([]); }
   }, [currentUser?.id]);
 
   // Route determination
