@@ -289,21 +289,11 @@ export class OptimizedStorage {
     const startTime = Date.now();
     
     try {
-      // First get the basic stats without pricing
-      const basicStatsQuery = await db
-        .select({
-          totalCards: count(),
-          totalInserts: sql<number>`COUNT(*) FILTER (WHERE ${cards.isInsert} = true)`,
-          wishlistCount: sql<number>`(SELECT COUNT(*) FROM ${userWishlists} WHERE user_id = ${userId})`
-        })
-        .from(userCollections)
-        .innerJoin(cards, eq(userCollections.cardId, cards.id))
-        .where(eq(userCollections.userId, userId));
-
-      // Separate query for total value calculation to handle pricing properly
-      const valueQuery = await db
-        .select({
-          totalValue: sql<string>`COALESCE(SUM(
+      const result = await db.execute(sql`
+        SELECT 
+          COUNT(*) as total_cards,
+          COUNT(*) FILTER (WHERE c.is_insert = true) as total_inserts,
+          COALESCE(SUM(
             CASE 
               WHEN uc.personal_value IS NOT NULL AND uc.personal_value != '0' 
               THEN CAST(uc.personal_value AS DECIMAL)
@@ -313,23 +303,23 @@ export class OptimizedStorage {
               THEN c.estimated_value
               ELSE 0 
             END
-          ), 0)`
-        })
-        .from(sql`user_collections uc`)
-        .innerJoin(sql`cards c`, sql`uc.card_id = c.id`)
-        .leftJoin(sql`card_price_cache cpc`, sql`c.id = cpc.card_id`)
-        .where(sql`uc.user_id = ${userId}`);
+          ), 0) as total_value,
+          (SELECT COUNT(*) FROM user_wishlists WHERE user_id = ${userId}) as wishlist_count
+        FROM user_collections uc
+        INNER JOIN cards c ON c.id = uc.card_id
+        LEFT JOIN card_price_cache cpc ON cpc.card_id = c.id
+        WHERE uc.user_id = ${userId}
+      `);
 
-      const basicStats = basicStatsQuery[0] || { totalCards: 0, totalInserts: 0, wishlistCount: 0 };
-      const valueResult = valueQuery[0] || { totalValue: '0' };
+      const row = result.rows[0] || { total_cards: 0, total_inserts: 0, total_value: '0', wishlist_count: 0 };
 
       performanceTracker.logQuery(`getUserStatsOptimized(userId=${userId})`, startTime);
 
       return {
-        totalCards: basicStats.totalCards,
-        insertCards: basicStats.totalInserts,
-        totalValue: parseFloat(valueResult.totalValue || '0'),
-        wishlistCount: basicStats.wishlistCount
+        totalCards: Number(row.total_cards) || 0,
+        insertCards: Number(row.total_inserts) || 0,
+        totalValue: parseFloat(String(row.total_value || '0')),
+        wishlistCount: Number(row.wishlist_count) || 0
       };
     } catch (error) {
       console.error('Error in getUserStatsOptimized:', error);

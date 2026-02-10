@@ -167,9 +167,9 @@ export function StatsDashboard() {
                 Add Your First Cards
               </Button>
               <Button 
-                variant="ghost"
+                variant="outline"
                 onClick={() => setLocation("/browse")}
-                className="text-white hover:bg-white/10 text-sm"
+                className="border-white text-white bg-white/10 hover:bg-white/20 text-sm font-semibold"
                 data-testid="link-explore-sets"
               >
                 Explore sets first
