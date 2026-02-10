@@ -244,7 +244,7 @@ export function Login() {
           {/* Feature Highlights */}
           <div className="relative z-10 grid grid-cols-3 gap-4 mt-8 lg:mt-10 max-w-md">
             <div className="text-center">
-              <div className="text-2xl lg:text-3xl font-bold text-red-500">60K+</div>
+              <div className="text-2xl lg:text-3xl font-bold text-red-500">200K+</div>
               <div className="text-xs text-gray-400">Cards from every set</div>
             </div>
             <div className="text-center">
