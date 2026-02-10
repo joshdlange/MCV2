@@ -7130,331 +7130,533 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ==================== SN SERIAL NUMBER CLEANUP ====================
-  app.post("/api/admin/fix-serial-sn", authenticateUser, async (req: any, res) => {
+  // ==================== PHASE A: SN NORMALIZE ====================
+  app.post("/api/admin/sn-normalize", authenticateUser, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) {
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      const { mode, limit, batchSize } = req.body;
+      const { mode, batchSize } = req.body;
       if (!mode || !["dry-run", "apply"].includes(mode)) {
         return res.status(400).json({ message: "mode must be 'dry-run' or 'apply'" });
       }
 
-      const rowLimit = limit || 100000;
       const batch = batchSize || 1000;
-      const snRegex = /^(.*?)(?:\s*)SN(\d{1,6})$/i;
+      const snRegex = /^(.*?)(SN)(\d+)$/i;
 
-      console.log(`[SN-FIX] Starting ${mode} mode, limit=${rowLimit}, batchSize=${batch}`);
+      console.log(`[SN-NORMALIZE] Starting ${mode} mode, batchSize=${batch}`);
 
       const snCards = await db.execute(sql`
-        SELECT c.id, c.set_id, c.card_number, c.name, c.description,
-               c.front_image_url, c.created_at,
-               cs.name as set_name
+        SELECT c.id, c.set_id, c.card_number, c.name, c.description
         FROM cards c
-        LEFT JOIN card_sets cs ON c.set_id = cs.id
-        WHERE c.name ~* 'SN[0-9]{1,6}$'
+        WHERE c.name ~* 'SN[0-9]+$'
         ORDER BY c.set_id, c.card_number
-        LIMIT ${rowLimit}
       `);
 
-      console.log(`[SN-FIX] Found ${snCards.rows.length} cards with SN pattern`);
+      console.log(`[SN-NORMALIZE] Found ${snCards.rows.length} cards with SN pattern`);
 
-      const snMatchesReport: any[] = [];
+      const csvHeader = (obj: any) => Object.keys(obj).join(',');
+      const csvRow = (obj: any) => Object.values(obj).map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',');
+
+      const report: any[] = [];
+      let wouldUpdateName = 0;
+      let wouldUpdateDesc = 0;
 
       for (const row of snCards.rows as any[]) {
         const match = row.name.match(snRegex);
         if (!match) continue;
 
-        const baseName = match[1].trim();
-        const snValue = match[2];
-        const serialTag = `/${snValue}`;
+        const cleanName = match[1].trim();
+        const digits = match[3];
+        const serialTag = `/${digits}`;
 
-        let newDescription = row.description || '';
-        const descLower = newDescription.toLowerCase();
-        const alreadyHasTag = descLower.includes(serialTag.toLowerCase()) || 
-                              descLower.includes(`serial numbered: ${serialTag.toLowerCase()}`);
-        const hasSNFormat = new RegExp(`SN\\s*${snValue}`, 'i').test(newDescription);
+        const oldDesc = row.description || '';
+        let newDesc = oldDesc;
+        const nameChanged = cleanName !== row.name;
 
-        if (alreadyHasTag) {
-          // no change needed
-        } else if (hasSNFormat) {
-          newDescription = newDescription.replace(new RegExp(`SN\\s*${snValue}`, 'gi'), serialTag);
-        } else if (!newDescription || newDescription.trim() === '') {
-          newDescription = `Serial Numbered: ${serialTag}`;
+        if (!oldDesc || oldDesc.trim() === '') {
+          newDesc = serialTag;
+        } else if (oldDesc.includes(serialTag)) {
+          newDesc = oldDesc;
         } else {
-          newDescription = newDescription + `\nSerial Numbered: ${serialTag}`;
+          newDesc = oldDesc + ' ' + serialTag;
         }
 
-        snMatchesReport.push({
+        const descChanged = newDesc !== oldDesc;
+        if (nameChanged) wouldUpdateName++;
+        if (descChanged) wouldUpdateDesc++;
+
+        report.push({
           card_id: row.id,
           set_id: row.set_id,
-          set_name: row.set_name || 'Unknown',
           card_number: row.card_number,
           old_name: row.name,
-          clean_name: baseName,
-          sn_value: snValue,
-          serial_tag: serialTag,
-          old_description: (row.description || '').substring(0, 200),
-          new_description: newDescription.substring(0, 200),
-          has_image: row.front_image_url ? 'y' : 'n',
-          created_at: row.created_at,
+          new_name: cleanName,
+          old_description: oldDesc,
+          new_description: newDesc,
+          serialTag,
         });
       }
 
-      console.log(`[SN-FIX] ${snMatchesReport.length} cards matched SN regex after validation`);
-
-      // Duplicate detection: same set_id + card_number, one is SN variant
-      const duplicatesReport: any[] = [];
-      const snBySetCard = new Map<string, any>();
-      for (const item of snMatchesReport) {
-        const key = `${item.set_id}::${item.card_number}`;
-        snBySetCard.set(key, item);
-      }
-
-      if (snBySetCard.size > 0) {
-        // Only fetch cards that share (set_id, card_number) with SN cards - much more targeted
-        const snKeys = snMatchesReport.map(r => ({ set_id: r.set_id, card_number: r.card_number }));
-        const uniqueKeys = [...new Map(snKeys.map(k => [`${k.set_id}::${k.card_number}`, k])).values()];
-        
-        const chunkSize = 500;
-        const allRelatedCards: any[] = [];
-        for (let i = 0; i < uniqueKeys.length; i += chunkSize) {
-          const chunk = uniqueKeys.slice(i, i + chunkSize);
-          const setIdArr = chunk.map(k => k.set_id);
-          const cardNumArr = chunk.map(k => k.card_number);
-          const result = await db.execute(sql`
-            SELECT c.id, c.set_id, c.card_number, c.name, c.front_image_url, c.created_at,
-                   cs.name as set_name
-            FROM cards c
-            LEFT JOIN card_sets cs ON c.set_id = cs.id
-            WHERE (c.set_id, c.card_number) IN (
-              SELECT UNNEST(${setIdArr}::int[]), UNNEST(${cardNumArr}::text[])
-            )
-            ORDER BY c.set_id, c.card_number, c.id
-          `);
-          allRelatedCards.push(...(result.rows as any[]));
-        }
-
-        // Group by set_id + card_number
-        const groupedCards = new Map<string, any[]>();
-        for (const card of allRelatedCards) {
-          const key = `${card.set_id}::${card.card_number}`;
-          if (!groupedCards.has(key)) groupedCards.set(key, []);
-          groupedCards.get(key)!.push(card);
-        }
-
-        // Find duplicates where one is SN variant
-        for (const [key, group] of groupedCards) {
-          if (group.length < 2) continue;
-          if (!snBySetCard.has(key)) continue;
-
-          const snCard = snBySetCard.get(key)!;
-          const others = group.filter((c: any) => c.id !== snCard.card_id);
-
-          for (const other of others) {
-            const snHasImage = snCard.has_image === 'y';
-            const otherHasImage = !!other.front_image_url;
-            let recommendedKeep = 'needs_manual_decision';
-            if (otherHasImage && !snHasImage) recommendedKeep = `keep_${other.id}`;
-            else if (snHasImage && !otherHasImage) recommendedKeep = `keep_${snCard.card_id}`;
-            else if (other.id < snCard.card_id) recommendedKeep = `keep_${other.id}`;
-            else recommendedKeep = `keep_${snCard.card_id}`;
-
-            duplicatesReport.push({
-              set_id: other.set_id,
-              set_name: other.set_name || 'Unknown',
-              card_number: other.card_number,
-              card_id_a: other.id,
-              name_a: other.name,
-              has_image_a: otherHasImage ? 'y' : 'n',
-              created_at_a: other.created_at,
-              card_id_b: snCard.card_id,
-              name_b: snCard.old_name,
-              has_image_b: snCard.has_image,
-              created_at_b: snCard.created_at,
-              recommended_keep: recommendedKeep,
-            });
-          }
-        }
-
-        // Classify each SN card
-        for (const item of snMatchesReport) {
-          const key = `${item.set_id}::${item.card_number}`;
-          const group = groupedCards.get(key);
-          item.classification = (group && group.length > 1) ? 'DUPLICATE_FOUND' : 'SAFE_UPDATE';
-        }
-      }
-
-      console.log(`[SN-FIX] Found ${duplicatesReport.length} duplicate pairs`);
-
-      // Save CSV reports
-      const csvHeader = (obj: any) => Object.keys(obj).join(',');
-      const csvRow = (obj: any) => Object.values(obj).map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',');
-
-      if (snMatchesReport.length > 0) {
-        const csvLines = [csvHeader(snMatchesReport[0]), ...snMatchesReport.map(csvRow)];
-        fs.writeFileSync('/tmp/sn-fix-dryrun.csv', csvLines.join('\n'), 'utf-8');
-        console.log(`[SN-FIX] Saved /tmp/sn-fix-dryrun.csv (${snMatchesReport.length} rows)`);
-      }
-
-      if (duplicatesReport.length > 0) {
-        const csvLines = [csvHeader(duplicatesReport[0]), ...duplicatesReport.map(csvRow)];
-        fs.writeFileSync('/tmp/sn-fix-duplicates.csv', csvLines.join('\n'), 'utf-8');
-        console.log(`[SN-FIX] Saved /tmp/sn-fix-duplicates.csv (${duplicatesReport.length} rows)`);
-      }
+      console.log(`[SN-NORMALIZE] ${report.length} cards matched. would_update_name=${wouldUpdateName}, would_update_description=${wouldUpdateDesc}`);
 
       if (mode === 'dry-run') {
-        const safeCount = snMatchesReport.filter(r => r.classification === 'SAFE_UPDATE').length;
-        const dupCount = snMatchesReport.filter(r => r.classification === 'DUPLICATE_FOUND').length;
+        if (report.length > 0) {
+          const csvLines = [csvHeader(report[0]), ...report.map(csvRow)];
+          fs.writeFileSync('/tmp/sn-normalize-dryrun.csv', csvLines.join('\n'), 'utf-8');
+          console.log(`[SN-NORMALIZE] Saved /tmp/sn-normalize-dryrun.csv (${report.length} rows)`);
+        }
+
         return res.json({
           mode: 'dry-run',
-          totalSnMatches: snMatchesReport.length,
-          safeUpdates: safeCount,
-          duplicateFound: dupCount,
-          totalDuplicatePairs: duplicatesReport.length,
-          snMatchesReport: snMatchesReport.slice(0, 100),
-          duplicatesReport: duplicatesReport.slice(0, 100),
-          csvFiles: ['/tmp/sn-fix-dryrun.csv', '/tmp/sn-fix-duplicates.csv'],
-          message: `Dry run complete. ${snMatchesReport.length} SN cards found (${safeCount} safe, ${dupCount} with duplicates). Review reports before running apply.`
+          matched: report.length,
+          would_update_name: wouldUpdateName,
+          would_update_description: wouldUpdateDesc,
+          sample: report.slice(0, 20),
+          csvFile: '/tmp/sn-normalize-dryrun.csv',
+          message: `Dry run complete. ${report.length} cards matched SN pattern. ${wouldUpdateName} name updates, ${wouldUpdateDesc} description updates would be applied.`,
         });
       }
 
       // === APPLY MODE ===
-      console.log(`[SN-FIX APPLY] Starting apply for ${snMatchesReport.length} cards in batches of ${batch}`);
+      console.log(`[SN-NORMALIZE APPLY] Updating ${report.length} cards in batches of ${batch}`);
       let totalUpdated = 0;
-      const applySummary: any[] = [];
 
-      // Pre-index original rows by id for O(1) lookup
-      const origRowsById = new Map<number, any>();
-      for (const r of snCards.rows as any[]) {
-        origRowsById.set(r.id, r);
-      }
+      for (let i = 0; i < report.length; i += batch) {
+        const batchItems = report.slice(i, i + batch);
+        const batchNum = Math.floor(i / batch) + 1;
 
-      for (let i = 0; i < snMatchesReport.length; i += batch) {
-        const batchItems = snMatchesReport.slice(i, i + batch);
-        
         await db.execute(sql`BEGIN`);
         try {
           for (const item of batchItems) {
-            const origRow = origRowsById.get(item.card_id);
-            let fullNewDesc = origRow?.description || '';
-            const serialTag = item.serial_tag;
-            const snValue = item.sn_value;
-            const descLower = fullNewDesc.toLowerCase();
-            const alreadyHasTag = descLower.includes(serialTag.toLowerCase()) || 
-                                  descLower.includes(`serial numbered: ${serialTag.toLowerCase()}`);
-            const hasSNFormat = new RegExp(`SN\\s*${snValue}`, 'i').test(fullNewDesc);
-
-            if (alreadyHasTag) {
-              // no change
-            } else if (hasSNFormat) {
-              fullNewDesc = fullNewDesc.replace(new RegExp(`SN\\s*${snValue}`, 'gi'), serialTag);
-            } else if (!fullNewDesc || fullNewDesc.trim() === '') {
-              fullNewDesc = `Serial Numbered: ${serialTag}`;
-            } else {
-              fullNewDesc = fullNewDesc + `\nSerial Numbered: ${serialTag}`;
-            }
-
             await db.execute(sql`
               UPDATE cards
-              SET name = ${item.clean_name}, description = ${fullNewDesc}
+              SET name = ${item.new_name}, description = ${item.new_description}
               WHERE id = ${item.card_id}
             `);
           }
           await db.execute(sql`COMMIT`);
-
           totalUpdated += batchItems.length;
-          const sample = batchItems.slice(0, 20).map(b => ({
-            card_id: b.card_id,
-            old_name: b.old_name,
-            new_name: b.clean_name,
-            serial_tag: b.serial_tag,
-          }));
-          applySummary.push({
-            batchNumber: Math.floor(i / batch) + 1,
-            rowsUpdated: batchItems.length,
-            sample,
-          });
-          console.log(`[SN-FIX APPLY] Batch ${Math.floor(i / batch) + 1}: updated ${batchItems.length} rows (total: ${totalUpdated})`);
+          console.log(`[SN-NORMALIZE APPLY] Batch ${batchNum}: updated ${batchItems.length} rows (total: ${totalUpdated})`);
         } catch (batchErr) {
           await db.execute(sql`ROLLBACK`);
-          console.error(`[SN-FIX APPLY] Batch ${Math.floor(i / batch) + 1} failed, rolled back:`, batchErr);
+          console.error(`[SN-NORMALIZE APPLY] Batch ${batchNum} failed, rolled back:`, batchErr);
           return res.status(500).json({
-            message: `Apply failed at batch ${Math.floor(i / batch) + 1}. Rolled back. ${totalUpdated} rows updated before failure.`,
+            message: `Apply failed at batch ${batchNum}. Rolled back. ${totalUpdated} rows updated before failure.`,
             totalUpdatedBeforeFailure: totalUpdated,
             error: String(batchErr),
           });
         }
+        if (i + batch < report.length) await new Promise(r => setTimeout(r, 10));
       }
 
-      // Save apply summary CSV
-      const summaryRows = snMatchesReport.map(item => ({
-        card_id: item.card_id,
-        set_id: item.set_id,
-        card_number: item.card_number,
-        old_name: item.old_name,
-        new_name: item.clean_name,
-        serial_tag: item.serial_tag,
-        classification: item.classification,
-      }));
-      if (summaryRows.length > 0) {
-        const csvLines = [csvHeader(summaryRows[0]), ...summaryRows.map(csvRow)];
-        fs.writeFileSync('/tmp/sn-fix-apply-summary.csv', csvLines.join('\n'), 'utf-8');
-        console.log(`[SN-FIX APPLY] Saved /tmp/sn-fix-apply-summary.csv (${summaryRows.length} rows)`);
+      const applyRows = report.map(r => ({ ...r, status: 'updated' }));
+      if (applyRows.length > 0) {
+        const csvLines = [csvHeader(applyRows[0]), ...applyRows.map(csvRow)];
+        fs.writeFileSync('/tmp/sn-normalize-apply-summary.csv', csvLines.join('\n'), 'utf-8');
+        console.log(`[SN-NORMALIZE APPLY] Saved /tmp/sn-normalize-apply-summary.csv`);
       }
 
-      // Post-check: count remaining SN cards and re-check duplicates
-      const postCheckResult = await db.execute(sql`
-        SELECT COUNT(*) as remaining FROM cards WHERE name ~* 'SN[0-9]{1,6}$'
-      `);
-      const remainingCount = parseInt((postCheckResult.rows[0] as any).remaining) || 0;
-
-      // Post-check duplicate report: find cards that now share set_id + card_number + name
-      const postDupResult = await db.execute(sql`
-        SELECT c.set_id, cs.name as set_name, c.card_number, c.name,
-               COUNT(*) as dup_count,
-               ARRAY_AGG(c.id ORDER BY c.id) as card_ids,
-               ARRAY_AGG(CASE WHEN c.front_image_url IS NOT NULL THEN 'y' ELSE 'n' END ORDER BY c.id) as has_images
-        FROM cards c
-        LEFT JOIN card_sets cs ON c.set_id = cs.id
-        WHERE c.set_id IN (SELECT DISTINCT set_id FROM cards WHERE id = ANY(${snMatchesReport.map(r => r.card_id)}))
-        GROUP BY c.set_id, cs.name, c.card_number, c.name
-        HAVING COUNT(*) > 1
-        ORDER BY COUNT(*) DESC
-        LIMIT 200
-      `);
-
-      console.log(`[SN-FIX APPLY] Post-check: ${remainingCount} remaining SN cards, ${postDupResult.rows.length} duplicate groups`);
-
-      if (postDupResult.rows.length > 0) {
-        const postDupRows = (postDupResult.rows as any[]).map(r => ({
-          set_id: r.set_id,
-          set_name: r.set_name,
-          card_number: r.card_number,
-          name: r.name,
-          duplicate_count: r.dup_count,
-          card_ids: String(r.card_ids),
-          has_images: String(r.has_images),
-        }));
-        const csvLines2 = [csvHeader(postDupRows[0]), ...postDupRows.map(csvRow)];
-        fs.writeFileSync('/tmp/sn-fix-post-duplicates.csv', csvLines2.join('\n'), 'utf-8');
-        console.log(`[SN-FIX APPLY] Saved /tmp/sn-fix-post-duplicates.csv`);
-      }
+      const remainCheck = await db.execute(sql`SELECT COUNT(*) as cnt FROM cards WHERE name ~* 'SN[0-9]+$'`);
+      const remaining = parseInt((remainCheck.rows[0] as any).cnt) || 0;
 
       return res.json({
         mode: 'apply',
         totalUpdated,
-        batchSummary: applySummary,
-        remainingSnCards: remainingCount,
-        postApplyDuplicateGroups: postDupResult.rows.length,
-        csvFiles: ['/tmp/sn-fix-dryrun.csv', '/tmp/sn-fix-duplicates.csv', '/tmp/sn-fix-apply-summary.csv', '/tmp/sn-fix-post-duplicates.csv'],
-        message: `Apply complete. Updated ${totalUpdated} cards. ${remainingCount} SN cards remaining. ${postDupResult.rows.length} duplicate groups found post-apply.`,
+        remainingSN: remaining,
+        sample: report.slice(0, 10),
+        csvFile: '/tmp/sn-normalize-apply-summary.csv',
+        message: `Apply complete. Updated ${totalUpdated} cards. ${remaining} SN cards remaining.`,
       });
     } catch (error) {
-      console.error('[SN-FIX] Error:', error);
-      res.status(500).json({ message: 'SN fix failed', error: String(error) });
+      console.error('[SN-NORMALIZE] Error:', error);
+      res.status(500).json({ message: 'SN normalize failed', error: String(error) });
+    }
+  });
+
+  // ==================== PHASE B: DEDUPE CARDS ====================
+  app.post("/api/admin/dedupe-cards", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { mode, setId, batchSize } = req.body;
+      if (!mode || !["dry-run", "apply"].includes(mode)) {
+        return res.status(400).json({ message: "mode must be 'dry-run' or 'apply'" });
+      }
+
+      const batch = batchSize || 1000;
+      console.log(`[DEDUPE] Starting ${mode} mode, setId=${setId || 'ALL'}, batchSize=${batch}`);
+
+      const csvHeader = (obj: any) => Object.keys(obj).join(',');
+      const csvRow = (obj: any) => Object.values(obj).map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',');
+
+      const setFilter = setId ? sql`AND c.set_id = ${setId}` : sql``;
+      const dupeQuery = await db.execute(sql`
+        SELECT c.set_id, c.card_number, c.name, COALESCE(c.variation, '') as variation,
+               ARRAY_AGG(c.id ORDER BY c.id) as card_ids,
+               ARRAY_AGG(COALESCE(c.front_image_url, '') ORDER BY c.id) as front_images,
+               ARRAY_AGG(COALESCE(c.back_image_url, '') ORDER BY c.id) as back_images,
+               ARRAY_AGG(COALESCE(c.rarity, '') ORDER BY c.id) as rarities,
+               ARRAY_AGG(COALESCE(CAST(c.estimated_value AS text), '') ORDER BY c.id) as est_values,
+               ARRAY_AGG(COALESCE(c.description, '') ORDER BY c.id) as descriptions,
+               COUNT(*) as cnt
+        FROM cards c
+        WHERE 1=1 ${setFilter}
+        GROUP BY c.set_id, c.card_number, c.name, COALESCE(c.variation, '')
+        HAVING COUNT(*) > 1
+        ORDER BY c.set_id, c.card_number
+      `);
+
+      console.log(`[DEDUPE] Found ${dupeQuery.rows.length} duplicate groups`);
+
+      interface DupeGroup {
+        set_id: number;
+        card_number: string;
+        name: string;
+        variation: string;
+        survivor_id: number;
+        duplicate_ids: number[];
+        survivor_has_image: boolean;
+        dupe_has_image_count: number;
+      }
+
+      const groups: DupeGroup[] = [];
+
+      for (const row of dupeQuery.rows as any[]) {
+        const cardIds: number[] = row.card_ids;
+        const frontImages: string[] = row.front_images;
+        const backImages: string[] = row.back_images;
+        const rarities: string[] = row.rarities;
+        const estValues: string[] = row.est_values;
+        const descs: string[] = row.descriptions;
+
+        const scored = cardIds.map((id: number, idx: number) => {
+          let fieldCount = 0;
+          if (frontImages[idx] && frontImages[idx] !== '') fieldCount++;
+          if (backImages[idx] && backImages[idx] !== '') fieldCount++;
+          if (rarities[idx] && rarities[idx] !== '') fieldCount++;
+          if (estValues[idx] && estValues[idx] !== '') fieldCount++;
+          if (descs[idx] && descs[idx] !== '') fieldCount++;
+          const hasImage = frontImages[idx] && frontImages[idx] !== '';
+          return { id, hasImage, fieldCount, idx };
+        });
+
+        scored.sort((a, b) => {
+          if (a.hasImage && !b.hasImage) return -1;
+          if (!a.hasImage && b.hasImage) return 1;
+          if (b.fieldCount !== a.fieldCount) return b.fieldCount - a.fieldCount;
+          return a.id - b.id;
+        });
+
+        const survivorId = scored[0].id;
+        const dupeIds = scored.slice(1).map(s => s.id);
+
+        groups.push({
+          set_id: row.set_id,
+          card_number: row.card_number,
+          name: row.name,
+          variation: row.variation,
+          survivor_id: survivorId,
+          duplicate_ids: dupeIds,
+          survivor_has_image: !!scored[0].hasImage,
+          dupe_has_image_count: scored.slice(1).filter(s => s.hasImage).length,
+        });
+      }
+
+      const allDupeIds = groups.flatMap(g => g.duplicate_ids);
+      console.log(`[DEDUPE] ${groups.length} groups, ${allDupeIds.length} total duplicate cards to remove`);
+
+      let affectedCollections: any[] = [];
+      if (allDupeIds.length > 0) {
+        const chunkSize = 5000;
+        for (let i = 0; i < allDupeIds.length; i += chunkSize) {
+          const chunk = allDupeIds.slice(i, i + chunkSize);
+          const collResult = await db.execute(sql`
+            SELECT uc.id as collection_id, uc.user_id, uc.card_id as duplicate_card_id,
+                   uc.condition, uc.quantity, uc.notes, uc.is_favorite, uc.serial_number,
+                   uc.personal_value, uc.sale_price, uc.is_for_sale, uc.acquired_date, uc.acquired_via
+            FROM user_collections uc
+            WHERE uc.card_id = ANY(${chunk})
+          `);
+          affectedCollections.push(...(collResult.rows as any[]));
+        }
+      }
+
+      const dupeToSurvivor = new Map<number, number>();
+      for (const g of groups) {
+        for (const did of g.duplicate_ids) {
+          dupeToSurvivor.set(did, g.survivor_id);
+        }
+      }
+
+      const collectionMoves = affectedCollections.map((c: any) => ({
+        duplicate_card_id: c.duplicate_card_id,
+        user_id: c.user_id,
+        will_move_to_survivor_card_id: dupeToSurvivor.get(c.duplicate_card_id) || 0,
+        collection_id: c.collection_id,
+        condition: c.condition,
+        quantity: c.quantity,
+        notes: c.notes,
+      }));
+
+      console.log(`[DEDUPE] ${collectionMoves.length} collection rows reference duplicate cards`);
+
+      let affectedWishlists: any[] = [];
+      if (allDupeIds.length > 0) {
+        const chunkSize = 5000;
+        for (let i = 0; i < allDupeIds.length; i += chunkSize) {
+          const chunk = allDupeIds.slice(i, i + chunkSize);
+          const wlResult = await db.execute(sql`
+            SELECT id, user_id, card_id FROM user_wishlists WHERE card_id = ANY(${chunk})
+          `);
+          affectedWishlists.push(...(wlResult.rows as any[]));
+        }
+      }
+
+      if (mode === 'dry-run') {
+        const suffix = setId ? `-set${setId}` : '';
+
+        if (groups.length > 0) {
+          const dupeRows = groups.map(g => ({
+            set_id: g.set_id,
+            card_number: g.card_number,
+            name: g.name,
+            variation: g.variation,
+            survivor_card_id: g.survivor_id,
+            duplicate_card_ids: g.duplicate_ids.join(';'),
+            duplicate_count: g.duplicate_ids.length,
+            survivor_has_image: g.survivor_has_image ? 'y' : 'n',
+            dupe_has_image_count: g.dupe_has_image_count,
+          }));
+          const csvLines = [csvHeader(dupeRows[0]), ...dupeRows.map(csvRow)];
+          fs.writeFileSync(`/tmp/dedupe-dryrun${suffix}.csv`, csvLines.join('\n'), 'utf-8');
+          console.log(`[DEDUPE] Saved /tmp/dedupe-dryrun${suffix}.csv`);
+        }
+
+        if (collectionMoves.length > 0) {
+          const csvLines = [csvHeader(collectionMoves[0]), ...collectionMoves.map(csvRow)];
+          fs.writeFileSync(`/tmp/dedupe-affected-collections${suffix}.csv`, csvLines.join('\n'), 'utf-8');
+          console.log(`[DEDUPE] Saved /tmp/dedupe-affected-collections${suffix}.csv`);
+        }
+
+        if (affectedWishlists.length > 0) {
+          const wlRows = affectedWishlists.map((w: any) => ({
+            wishlist_id: w.id,
+            user_id: w.user_id,
+            duplicate_card_id: w.card_id,
+            will_move_to_survivor_card_id: dupeToSurvivor.get(w.card_id) || 0,
+          }));
+          const csvLines = [csvHeader(wlRows[0]), ...wlRows.map(csvRow)];
+          fs.writeFileSync(`/tmp/dedupe-affected-wishlists${suffix}.csv`, csvLines.join('\n'), 'utf-8');
+          console.log(`[DEDUPE] Saved /tmp/dedupe-affected-wishlists${suffix}.csv`);
+        }
+
+        return res.json({
+          mode: 'dry-run',
+          setId: setId || 'ALL',
+          duplicateGroups: groups.length,
+          totalDuplicateCards: allDupeIds.length,
+          affectedCollectionRows: collectionMoves.length,
+          affectedWishlistRows: affectedWishlists.length,
+          sampleGroups: groups.slice(0, 20),
+          sampleCollectionMoves: collectionMoves.slice(0, 20),
+          csvFiles: [
+            `/tmp/dedupe-dryrun${suffix}.csv`,
+            `/tmp/dedupe-affected-collections${suffix}.csv`,
+            `/tmp/dedupe-affected-wishlists${suffix}.csv`,
+          ],
+          message: `Dry run complete. ${groups.length} duplicate groups found with ${allDupeIds.length} cards to remove. ${collectionMoves.length} collection rows and ${affectedWishlists.length} wishlist rows would be migrated.`,
+        });
+      }
+
+      // === APPLY MODE ===
+      if (!setId && groups.length > 200) {
+        return res.status(400).json({
+          message: `Global apply blocked: ${groups.length} groups is too many without setId. Run per-set first, then explicitly confirm global apply.`,
+        });
+      }
+
+      console.log(`[DEDUPE APPLY] Processing ${groups.length} groups, ${allDupeIds.length} duplicates`);
+      let totalDeleted = 0;
+      let totalCollectionsMoved = 0;
+      let totalCollectionsMerged = 0;
+      let totalWishlistsMoved = 0;
+      let totalWishlistsMerged = 0;
+      const applySummary: any[] = [];
+
+      for (let i = 0; i < groups.length; i += batch) {
+        const batchGroups = groups.slice(i, i + batch);
+        const batchNum = Math.floor(i / batch) + 1;
+
+        await db.execute(sql`BEGIN`);
+        try {
+          for (const g of batchGroups) {
+            for (const dupeId of g.duplicate_ids) {
+              const survivorId = g.survivor_id;
+
+              // 1) Migrate user_collections
+              const ucRows = await db.execute(sql`
+                SELECT id, user_id, quantity, notes, is_favorite, serial_number,
+                       personal_value, sale_price, is_for_sale, condition, acquired_date, acquired_via
+                FROM user_collections WHERE card_id = ${dupeId}
+              `);
+
+              for (const uc of ucRows.rows as any[]) {
+                const existing = await db.execute(sql`
+                  SELECT id, quantity, notes, is_favorite, serial_number,
+                         personal_value, sale_price, is_for_sale
+                  FROM user_collections
+                  WHERE user_id = ${uc.user_id} AND card_id = ${survivorId}
+                `);
+
+                if (existing.rows.length > 0) {
+                  const surv = existing.rows[0] as any;
+                  const mergedQty = (surv.quantity || 1) + (uc.quantity || 1);
+                  const mergedNotes = surv.notes || uc.notes || null;
+                  const mergedFav = surv.is_favorite || uc.is_favorite;
+                  const mergedSerial = surv.serial_number || uc.serial_number || null;
+
+                  await db.execute(sql`
+                    UPDATE user_collections
+                    SET quantity = ${mergedQty},
+                        notes = ${mergedNotes},
+                        is_favorite = ${mergedFav},
+                        serial_number = ${mergedSerial}
+                    WHERE id = ${surv.id}
+                  `);
+                  await db.execute(sql`DELETE FROM user_collections WHERE id = ${uc.id}`);
+                  totalCollectionsMerged++;
+                } else {
+                  await db.execute(sql`
+                    UPDATE user_collections SET card_id = ${survivorId} WHERE id = ${uc.id}
+                  `);
+                  totalCollectionsMoved++;
+                }
+              }
+
+              // 2) Migrate user_wishlists
+              const wlRows = await db.execute(sql`
+                SELECT id, user_id FROM user_wishlists WHERE card_id = ${dupeId}
+              `);
+
+              for (const wl of wlRows.rows as any[]) {
+                const existingWl = await db.execute(sql`
+                  SELECT id FROM user_wishlists
+                  WHERE user_id = ${(wl as any).user_id} AND card_id = ${survivorId}
+                `);
+
+                if (existingWl.rows.length > 0) {
+                  await db.execute(sql`DELETE FROM user_wishlists WHERE id = ${(wl as any).id}`);
+                  totalWishlistsMerged++;
+                } else {
+                  await db.execute(sql`
+                    UPDATE user_wishlists SET card_id = ${survivorId} WHERE id = ${(wl as any).id}
+                  `);
+                  totalWishlistsMoved++;
+                }
+              }
+
+              // 3) Migrate card_price_cache (cascade delete handles this, but migrate if valuable)
+              await db.execute(sql`DELETE FROM card_price_cache WHERE card_id = ${dupeId}`);
+
+              // 4) Migrate pending_card_images
+              await db.execute(sql`
+                UPDATE pending_card_images SET card_id = ${survivorId} WHERE card_id = ${dupeId}
+              `);
+
+              // 5) Handle listings referencing duplicate card
+              const listingRows = await db.execute(sql`
+                SELECT id FROM listings WHERE card_id = ${dupeId}
+              `);
+              if (listingRows.rows.length > 0) {
+                await db.execute(sql`
+                  UPDATE listings SET card_id = ${survivorId} WHERE card_id = ${dupeId}
+                `);
+              }
+
+              // 6) Handle migration_log_cards
+              await db.execute(sql`
+                DELETE FROM migration_log_cards WHERE card_id = ${dupeId}
+              `);
+
+              // 7) Delete the duplicate card
+              await db.execute(sql`DELETE FROM cards WHERE id = ${dupeId}`);
+              totalDeleted++;
+
+              applySummary.push({
+                set_id: g.set_id,
+                card_number: g.card_number,
+                name: g.name,
+                survivor_card_id: survivorId,
+                deleted_duplicate_card_id: dupeId,
+                collections_moved: totalCollectionsMoved,
+                collections_merged: totalCollectionsMerged,
+                status: 'deleted',
+              });
+            }
+          }
+          await db.execute(sql`COMMIT`);
+          console.log(`[DEDUPE APPLY] Batch ${batchNum}: processed ${batchGroups.length} groups (total deleted: ${totalDeleted})`);
+        } catch (batchErr) {
+          await db.execute(sql`ROLLBACK`);
+          console.error(`[DEDUPE APPLY] Batch ${batchNum} failed, rolled back:`, batchErr);
+          return res.status(500).json({
+            message: `Dedupe apply failed at batch ${batchNum}. Rolled back. ${totalDeleted} cards deleted before failure.`,
+            totalDeletedBeforeFailure: totalDeleted,
+            error: String(batchErr),
+          });
+        }
+        if (i + batch < groups.length) await new Promise(r => setTimeout(r, 10));
+      }
+
+      const suffix = setId ? `-set${setId}` : '';
+      if (applySummary.length > 0) {
+        const csvLines = [csvHeader(applySummary[0]), ...applySummary.map(csvRow)];
+        fs.writeFileSync(`/tmp/dedupe-apply-summary${suffix}.csv`, csvLines.join('\n'), 'utf-8');
+        console.log(`[DEDUPE APPLY] Saved /tmp/dedupe-apply-summary${suffix}.csv`);
+      }
+
+      // Post-apply integrity checks
+      const orphanCheck = await db.execute(sql`
+        SELECT COUNT(*) as cnt FROM user_collections uc
+        LEFT JOIN cards c ON uc.card_id = c.id
+        WHERE c.id IS NULL
+      `);
+      const orphanCount = parseInt((orphanCheck.rows[0] as any).cnt) || 0;
+
+      const remainingDupes = await db.execute(sql`
+        SELECT COUNT(*) as cnt FROM (
+          SELECT c.set_id, c.card_number, c.name, COALESCE(c.variation, '')
+          FROM cards c
+          WHERE 1=1 ${setFilter}
+          GROUP BY c.set_id, c.card_number, c.name, COALESCE(c.variation, '')
+          HAVING COUNT(*) > 1
+        ) sub
+      `);
+      const remainingDupeCount = parseInt((remainingDupes.rows[0] as any).cnt) || 0;
+
+      console.log(`[DEDUPE APPLY] Integrity: ${orphanCount} orphaned collections, ${remainingDupeCount} remaining dupe groups`);
+
+      return res.json({
+        mode: 'apply',
+        setId: setId || 'ALL',
+        groups_processed: groups.length,
+        cards_deleted: totalDeleted,
+        collections_moved: totalCollectionsMoved,
+        collections_merged: totalCollectionsMerged,
+        wishlists_moved: totalWishlistsMoved,
+        wishlists_merged: totalWishlistsMerged,
+        orphaned_collections: orphanCount,
+        remaining_duplicate_groups: remainingDupeCount,
+        csvFile: `/tmp/dedupe-apply-summary${suffix}.csv`,
+        message: `Dedupe complete. ${totalDeleted} duplicates deleted across ${groups.length} groups. ${totalCollectionsMoved} collections moved, ${totalCollectionsMerged} merged. ${orphanCount} orphaned collection rows. ${remainingDupeCount} duplicate groups remaining.`,
+      });
+    } catch (error) {
+      console.error('[DEDUPE] Error:', error);
+      res.status(500).json({ message: 'Dedupe failed', error: String(error) });
     }
   });
 

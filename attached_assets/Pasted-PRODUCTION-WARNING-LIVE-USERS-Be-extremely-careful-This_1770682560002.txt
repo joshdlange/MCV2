@@ -1,0 +1,144 @@
+PRODUCTION WARNING (LIVE USERS):
+Be extremely careful. This is production data. No breaking changes, no UI refactors, no new admin pages.
+Implement as ADMIN-ONLY API endpoints + CSV reports. Batch + transactions. No surprises.
+
+GOAL:
+We imported many cards whose names end with SN### (no space) like "Spider-ManSN99" or "Ultimate Spider-ManSN1499".
+SN### ALWAYS means “serial numbered to ###”.
+We want to:
+1) Remove the SN### suffix from cards.name (so names match the “real” card name).
+2) Put the serial info into the existing card Description/Notes field (cards.description) as "/###" (example: SN99 -> "/99").
+3) Then resolve duplicates caused by old card rows (often with images) + newly imported SN rows:
+   - Identify duplicates deterministically
+   - Let me spot-check by specific set first
+   - Then delete duplicates in bulk safely
+   - Preserve user collections: if a deleted duplicate card_id is owned, migrate that ownership to the surviving card_id.
+
+IMPORTANT: The “details” field is the existing admin-editable Description textarea in the Edit Card modal.
+Use cards.description for the "/###" value.
+
+DO NOT:
+- Do not build another admin UI tool.
+- Do not rename sets.
+- Do not archive sets in this task.
+- Do not touch images except when choosing a survivor (prefer the one with an image).
+- Do not change browse behavior.
+- Do not delete anything until I approve after spot-checking reports.
+
+IMPLEMENTATION REQUIREMENTS:
+Create TWO admin-only endpoints (server/routes.ts), both with:
+- mode: "dry-run" | "apply"
+- batchSize (default 500 or 1000)
+- Writes CSV reports to /tmp
+- Returns JSON summary
+- Uses DB transactions per batch and rolls back on error
+- Logs what was changed
+
+----------------------------------------
+PHASE A: Normalize SN### -> description
+----------------------------------------
+Endpoint:
+POST /api/admin/sn-normalize
+
+Body:
+{ "mode": "dry-run" | "apply", "batchSize": 1000 }
+
+Match:
+cards.name matches /(SN)(\d+)$/  (SN + digits at END of name, no spaces)
+Examples:
+"Spider-ManSN99" => cleanName "Spider-Man", serial "/99"
+"Ultimate Spider-ManSN1499" => cleanName "Ultimate Spider-Man", serial "/1499"
+
+Rules:
+- cleanName = remove the trailing "SN###" and trim
+- serialTag = "/" + digits
+- Write serialTag into cards.description:
+  - If description is empty/null: set to serialTag
+  - If description already contains that exact serialTag: do nothing
+  - Else append " " + serialTag (preserve existing description text)
+- Update cards.name to cleanName
+- DRY-RUN:
+  - no DB writes
+  - output CSV: /tmp/sn-normalize-dryrun.csv with columns:
+    card_id,set_id,card_number,old_name,new_name,old_description,new_description,serialTag
+  - return counts: matched, would_update_name, would_update_description
+- APPLY:
+  - batched updates
+  - output CSV: /tmp/sn-normalize-apply-summary.csv with same columns + status
+
+After APPLY:
+- Return how many total cards were updated
+- Return a small sample (10 rows)
+
+----------------------------------------
+PHASE B: Dedupe cards + preserve collections
+----------------------------------------
+We only dedupe AFTER Phase A apply (names normalized).
+
+Endpoint:
+POST /api/admin/dedupe-cards
+
+Body:
+{ "mode": "dry-run" | "apply", "setId": number|null, "batchSize": 1000 }
+
+Duplicate Group Definition (STRICT):
+Treat as duplicates ONLY when all match:
+- same set_id
+- same card_number
+- same cards.name (after Phase A)
+- AND (variation matches OR both variations are null/empty)
+
+Survivor selection (deterministic):
+Pick 1 survivor per group:
+1) Prefer card with front_image_url NOT null/empty
+2) If tie, prefer card with more populated fields among:
+   front_image_url, back_image_url, rarity, estimated_value, description
+3) If tie, choose lowest cards.id
+
+Dry-run output:
+- /tmp/dedupe-dryrun.csv listing each duplicate group:
+  set_id,card_number,name,variation,survivor_card_id,duplicate_card_ids(count),survivor_has_image,dupe_has_image_count
+- /tmp/dedupe-affected-collections.csv listing:
+  duplicate_card_id,user_id,will_move_to_survivor_card_id
+- /tmp/dedupe-manual-review.csv for ANY groups that fail strict rules or ambiguous merges.
+
+Apply behavior (NO automatic global run):
+- If setId is provided: process ONLY that setId (for spot-checking)
+- If setId is null: process ALL sets (only after I approve)
+
+Collection preservation:
+Before deleting any duplicate cards:
+1) Update user_collections rows pointing at duplicate_card_id -> survivor_card_id
+2) If unique constraint collision occurs (same user already has survivor):
+   - merge rules:
+     - if a quantity/count field exists: sum
+     - else keep the survivor row and delete the duplicate collection row
+     - preserve newest updated_at if present
+     - keep any non-null notes fields (prefer survivor; if survivor null and duplicate has value, copy)
+3) Verify: no user_collections rows reference deleted card ids
+
+Then delete duplicate card rows (NOT survivors).
+
+Apply output:
+- /tmp/dedupe-apply-summary.csv with:
+  set_id,card_number,name,survivor_card_id,deleted_duplicate_card_id,collections_moved_count,collections_merged_count,status
+- Return counts:
+  groups_processed, cards_deleted, collections_moved, collections_merged
+
+Post-apply integrity checks:
+- confirm 0 orphaned user_collections references
+- confirm no duplicate groups remain for processed setId (or globally if setId null)
+
+----------------------------------------
+HOW I WANT TO USE THIS:
+1) Run sn-normalize DRY-RUN and show me counts.
+2) Run sn-normalize APPLY.
+3) For dedupe: Run dedupe DRY-RUN for 2–3 specific setIds I choose and show me the CSV outputs.
+4) After I approve, run dedupe APPLY for those same setIds.
+5) After I approve again, run dedupe APPLY globally.
+
+FINISH:
+After implementation, tell me EXACTLY how to run each endpoint (curl examples), and confirm the endpoints are admin-only.
+Also print WHERE the CSV files are written and how to download/view them from Replit.
+
+DO NOT PROCEED TO GLOBAL APPLY WITHOUT MY EXPLICIT CONFIRMATION.
