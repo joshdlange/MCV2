@@ -91,7 +91,48 @@ const authenticateUser = async (req: any, res: any, next: any) => {
   }
 };
 
+function validateCriticalDependencies() {
+  const missing: string[] = [];
+  
+  if (typeof users === 'undefined') missing.push('users (schema table)');
+  if (typeof userCollections === 'undefined') missing.push('userCollections (schema table)');
+  if (typeof cards === 'undefined') missing.push('cards (schema table)');
+  if (typeof cardSets === 'undefined') missing.push('cardSets (schema table)');
+  if (typeof mainSets === 'undefined') missing.push('mainSets (schema table)');
+  if (typeof db === 'undefined') missing.push('db (database connection)');
+  if (typeof eq === 'undefined') missing.push('eq (drizzle operator)');
+  if (typeof sql === 'undefined') missing.push('sql (drizzle operator)');
+  if (typeof storage === 'undefined') missing.push('storage (storage interface)');
+  if (typeof insertUserCollectionSchema === 'undefined') missing.push('insertUserCollectionSchema');
+  if (typeof insertUserWishlistSchema === 'undefined') missing.push('insertUserWishlistSchema');
+  if (typeof badgeService === 'undefined') missing.push('badgeService');
+  
+  if (!users?.plan) missing.push('users.plan (column reference)');
+  if (!users?.id) missing.push('users.id (column reference)');
+  if (!users?.shippingAddressJson) missing.push('users.shippingAddressJson (column reference)');
+  if (!userCollections?.userId) missing.push('userCollections.userId (column reference)');
+  if (!userCollections?.cardId) missing.push('userCollections.cardId (column reference)');
+  
+  if (typeof storage?.addToCollection !== 'function') missing.push('storage.addToCollection()');
+  if (typeof storage?.removeFromCollection !== 'function') missing.push('storage.removeFromCollection()');
+  if (typeof storage?.updateCollectionItem !== 'function') missing.push('storage.updateCollectionItem()');
+  if (typeof storage?.addToWishlist !== 'function') missing.push('storage.addToWishlist()');
+  if (typeof storage?.removeFromWishlist !== 'function') missing.push('storage.removeFromWishlist()');
+  if (typeof storage?.getUserCollection !== 'function') missing.push('storage.getUserCollection()');
+  if (typeof storage?.getUserWishlist !== 'function') missing.push('storage.getUserWishlist()');
+
+  if (missing.length > 0) {
+    const errorMsg = `CRITICAL STARTUP ERROR: Missing dependencies for core collection/wishlist functionality:\n  - ${missing.join('\n  - ')}`;
+    console.error(errorMsg);
+    throw new Error(errorMsg);
+  }
+  
+  console.log('Core dependency validation passed: collection & wishlist endpoints ready');
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  validateCriticalDependencies();
   
   // Health check endpoint for deployment
   app.get("/health", (req, res) => {
