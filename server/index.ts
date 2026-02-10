@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startImageProcessor } from "./image-processor";
 import { startBackgroundPricing } from "./background-pricing";
+import { warmPool } from "./db";
 import path from "path";
 
 const app = express();
@@ -52,7 +53,8 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Serve static files from uploads directory
+  await warmPool();
+  
   app.use('/uploads', express.static('uploads'));
   
   const server = await registerRoutes(app);

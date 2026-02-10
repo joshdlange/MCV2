@@ -461,8 +461,6 @@ export class DatabaseStorage implements IStorage {
 
   async getCardSets(): Promise<CardSet[]> {
     try {
-      // Optimized single query with JOIN and GROUP BY instead of N+1 queries
-      // Excludes archived sets (isActive = false)
       const setsWithCounts = await db
         .select({
           id: cardSets.id,
@@ -471,14 +469,12 @@ export class DatabaseStorage implements IStorage {
           year: cardSets.year,
           description: cardSets.description,
           imageUrl: cardSets.imageUrl,
-          totalCards: sql<number>`COALESCE(COUNT(${cards.id}), 0)`,
+          totalCards: cardSets.totalCards,
           mainSetId: cardSets.mainSetId,
           createdAt: cardSets.createdAt
         })
         .from(cardSets)
-        .leftJoin(cards, eq(cardSets.id, cards.setId))
         .where(eq(cardSets.isActive, true))
-        .groupBy(cardSets.id, cardSets.name, cardSets.slug, cardSets.year, cardSets.description, cardSets.imageUrl, cardSets.mainSetId, cardSets.createdAt)
         .orderBy(desc(cardSets.year), cardSets.name);
       
       return setsWithCounts;

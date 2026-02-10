@@ -21,10 +21,8 @@ export const pool = new Pool({
 
 export const db = drizzle(pool, { schema });
 
-// Add error handling for pool errors
 pool.on('error', (err) => {
   console.error('Unexpected database pool error:', err);
-  console.log('Pool will automatically attempt to reconnect...');
 });
 
 pool.on('connect', () => {
@@ -34,6 +32,20 @@ pool.on('connect', () => {
 pool.on('remove', () => {
   console.log('Database connection removed from pool');
 });
+
+export async function warmPool() {
+  const startTime = Date.now();
+  try {
+    const clients = await Promise.all(
+      Array.from({ length: 3 }, () => pool.connect())
+    );
+    await Promise.all(clients.map(c => c.query('SELECT 1')));
+    clients.forEach(c => c.release());
+    console.log(`Database pool warmed (3 connections) in ${Date.now() - startTime}ms`);
+  } catch (err) {
+    console.error('Pool warm-up failed (non-fatal):', err);
+  }
+}
 
 // Database connection retry utility
 export async function withDatabaseRetry<T>(
