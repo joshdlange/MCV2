@@ -7325,6 +7325,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const groups: DupeGroup[] = [];
 
+      // Pre-fetch which card IDs are in user collections for survivor preference
+      const allCardIds = (dupeQuery.rows as any[]).flatMap(r => r.card_ids as number[]);
+      const ownedCardIds = new Set<number>();
+      if (allCardIds.length > 0) {
+        const chunkSize = 5000;
+        for (let ci = 0; ci < allCardIds.length; ci += chunkSize) {
+          const chunk = allCardIds.slice(ci, ci + chunkSize);
+          const ownedResult = await db.execute(sql`
+            SELECT DISTINCT card_id FROM user_collections WHERE card_id = ANY(${chunk})
+          `);
+          for (const r of ownedResult.rows as any[]) ownedCardIds.add(r.card_id);
+        }
+      }
+      console.log(`[DEDUPE] ${ownedCardIds.size} unique card IDs are in user collections`);
+
       for (const row of dupeQuery.rows as any[]) {
         const cardIds: number[] = row.card_ids;
         const frontImages: string[] = row.front_images;
@@ -7341,10 +7356,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (estValues[idx] && estValues[idx] !== '') fieldCount++;
           if (descs[idx] && descs[idx] !== '') fieldCount++;
           const hasImage = frontImages[idx] && frontImages[idx] !== '';
-          return { id, hasImage, fieldCount, idx };
+          const inCollection = ownedCardIds.has(id);
+          return { id, hasImage, fieldCount, idx, inCollection };
         });
 
         scored.sort((a, b) => {
+          if (a.inCollection && !b.inCollection) return -1;
+          if (!a.inCollection && b.inCollection) return 1;
           if (a.hasImage && !b.hasImage) return -1;
           if (!a.hasImage && b.hasImage) return 1;
           if (b.fieldCount !== a.fieldCount) return b.fieldCount - a.fieldCount;
@@ -7496,6 +7514,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
           for (const g of batchGroups) {
             for (const dupeId of g.duplicate_ids) {
               const survivorId = g.survivor_id;
+
+              // 0) Merge description/details from duplicate into survivor
+              const dupeCard = await db.execute(sql`
+                SELECT description, back_image_url, rarity, estimated_value
+                FROM cards WHERE id = ${dupeId}
+              `);
+              const survCard = await db.execute(sql`
+                SELECT description, back_image_url, rarity, estimated_value
+                FROM cards WHERE id = ${survivorId}
+              `);
+              if (dupeCard.rows.length > 0 && survCard.rows.length > 0) {
+                const dc = dupeCard.rows[0] as any;
+                const sc = survCard.rows[0] as any;
+                const updates: string[] = [];
+                const updateVals: any = {};
+
+                // Merge description: append unique parts from duplicate
+                if (dc.description && dc.description.trim()) {
+                  const survDesc = sc.description || '';
+                  if (!survDesc.includes(dc.description.trim())) {
+                    const merged = survDesc ? survDesc + ' ' + dc.description.trim() : dc.description.trim();
+                    updateVals.description = merged;
+                  }
+                }
+                // Fill in missing fields from duplicate
+                if (!sc.back_image_url && dc.back_image_url) updateVals.backImage = dc.back_image_url;
+                if ((!sc.rarity || sc.rarity === 'Common') && dc.rarity && dc.rarity !== 'Common') updateVals.rarity = dc.rarity;
+                if (!sc.estimated_value && dc.estimated_value) updateVals.estValue = dc.estimated_value;
+
+                if (updateVals.description !== undefined) {
+                  await db.execute(sql`UPDATE cards SET description = ${updateVals.description} WHERE id = ${survivorId}`);
+                }
+                if (updateVals.backImage) {
+                  await db.execute(sql`UPDATE cards SET back_image_url = ${updateVals.backImage} WHERE id = ${survivorId}`);
+                }
+                if (updateVals.rarity) {
+                  await db.execute(sql`UPDATE cards SET rarity = ${updateVals.rarity} WHERE id = ${survivorId}`);
+                }
+                if (updateVals.estValue) {
+                  await db.execute(sql`UPDATE cards SET estimated_value = ${updateVals.estValue} WHERE id = ${survivorId}`);
+                }
+              }
 
               // 1) Migrate user_collections
               const ucRows = await db.execute(sql`

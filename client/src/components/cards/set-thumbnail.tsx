@@ -55,7 +55,7 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
 
   const fetchFirstCardImage = async () => {
     try {
-      const response = await fetch(`/api/cards?setId=${set.id}&limit=50`);
+      const response = await fetch(`/api/cards?setId=${set.id}&hasImage=true&pageSize=1`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -63,13 +63,7 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
       const cards = data.items ?? data.cards ?? data;
       
       if (Array.isArray(cards) && cards.length > 0) {
-        const sortedCards = cards.sort((a: any, b: any) => {
-          const numA = parseInt(a.cardNumber) || 999999;
-          const numB = parseInt(b.cardNumber) || 999999;
-          return numA - numB;
-        });
-        
-        const cardWithImage = sortedCards.find((card: any) => 
+        const cardWithImage = cards.find((card: any) => 
           card.frontImageUrl && 
           !isPlaceholderImage(card.frontImageUrl)
         );
