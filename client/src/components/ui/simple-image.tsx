@@ -26,9 +26,9 @@ function getOptimizedCloudinaryUrl(src: string, width: number): string {
   
   // Use Cloudinary fetch for external images (comc.com, etc.)
   // Cloudinary will fetch, cache, and optimize these on-demand
+  // Note: Cloudinary fetch expects the raw URL (not URL-encoded) after transformations
   if (src.includes('comc.com') || src.includes('i.ebayimg.com')) {
-    const encodedUrl = encodeURIComponent(src);
-    return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/fetch/w_${width},q_auto,f_auto/${encodedUrl}`;
+    return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/fetch/w_${width},q_auto,f_auto/${src}`;
   }
   
   return src;

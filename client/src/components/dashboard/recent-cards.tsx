@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import SimpleImage from "@/components/ui/simple-image";
-import { convertGoogleDriveUrl } from "@/lib/utils";
 import type { CollectionItem } from "@shared/schema";
 
 interface RecentCardItem {
@@ -122,7 +121,7 @@ export function RecentCards() {
               {/* Trading card with proper 2.5:3.5 aspect ratio */}
               <div className="aspect-[2.5/3.5] relative">
                 <SimpleImage
-                  src={item.frontImageUrl ? convertGoogleDriveUrl(item.frontImageUrl) : ""}
+                  src={item.frontImageUrl || ""}
                   alt={item.cardName}
                   className="w-full h-full"
                 />

@@ -517,9 +517,11 @@ export class OptimizedStorage {
         if (!cardMap.has(card.id)) {
           cardMap.set(card.id, card);
         } else {
-          // Merge collection counts
           const existing = cardMap.get(card.id);
           existing.collectionCount = Math.max(existing.collectionCount || 0, card.collectionCount || 0);
+          if ((card as any).avgPrice && !(existing as any).avgPrice) {
+            (existing as any).avgPrice = (card as any).avgPrice;
+          }
         }
       });
 
