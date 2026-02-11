@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { cn } from "@/lib/utils";
+import { cn, convertGoogleDriveUrl } from "@/lib/utils";
 
 interface SimpleImageProps {
   src: string;
@@ -86,7 +86,8 @@ export default function SimpleImage({
   }, [priority]);
 
   const needsFallback = !src || src.trim() === '' || src === 'No Image' || src === 'null' || src === 'undefined';
-  const optimizedSrc = needsFallback ? '' : getOptimizedCloudinaryUrl(src, width);
+  const convertedSrc = needsFallback ? '' : convertGoogleDriveUrl(src);
+  const optimizedSrc = needsFallback ? '' : getOptimizedCloudinaryUrl(convertedSrc, width);
   
   if (needsFallback || hasError) {
     return (

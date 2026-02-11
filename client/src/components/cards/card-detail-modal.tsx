@@ -329,7 +329,7 @@ export function CardDetailModal({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="h-10 w-10 p-0 rounded-full hover:bg-gray-700 text-white"
+            className="h-10 w-10 p-0 rounded-full bg-red-600 hover:bg-red-700 text-white"
             data-testid="button-close-modal"
           >
             <X className="h-6 w-6 text-white" />
@@ -349,7 +349,7 @@ export function CardDetailModal({
               variant="ghost"
               size="sm"
               onClick={() => setShowAdminTools(!showAdminTools)}
-              className="h-10 w-10 p-0 rounded-full hover:bg-gray-700 text-white"
+              className="h-10 w-10 p-0 rounded-full bg-gray-700 hover:bg-gray-600 text-white"
               data-testid="button-admin-menu"
             >
               <MoreVertical className="h-5 w-5 text-white" />
