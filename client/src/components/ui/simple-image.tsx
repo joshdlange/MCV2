@@ -11,7 +11,7 @@ interface SimpleImageProps {
   priority?: boolean;
 }
 
-const CLOUDINARY_CLOUD_NAME = 'marvelcardvault';
+const CLOUDINARY_CLOUD_NAME = 'dgu7hjfvn';
 
 function getOptimizedCloudinaryUrl(src: string, width: number): string {
   if (!src) return src;

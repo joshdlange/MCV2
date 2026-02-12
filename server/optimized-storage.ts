@@ -1,7 +1,7 @@
 import { db } from './db';
 import { cards, cardSets, userCollections, userWishlists, cardPriceCache } from '../shared/schema';
 import type { CardWithSet } from '../shared/schema';
-import { eq, and, or, isNull, isNotNull, desc, asc, sql, count, ilike, gte, lte } from 'drizzle-orm';
+import { eq, and, or, isNull, isNotNull, desc, asc, sql, count, ilike, gte, lte, inArray } from 'drizzle-orm';
 
 export interface PaginatedResult<T> {
   items: T[];
@@ -526,6 +526,28 @@ export class OptimizedStorage {
       });
 
       const candidates = Array.from(cardMap.values());
+
+      // Fetch pricing for ALL candidates that don't already have avgPrice
+      const candidateIdsWithoutPrice = candidates
+        .filter(c => !c.avgPrice)
+        .map(c => c.id);
+      
+      if (candidateIdsWithoutPrice.length > 0) {
+        const prices = await db
+          .select({
+            cardId: cardPriceCache.cardId,
+            avgPrice: cardPriceCache.avgPrice,
+          })
+          .from(cardPriceCache)
+          .where(inArray(cardPriceCache.cardId, candidateIdsWithoutPrice));
+        
+        const priceMap = new Map(prices.map(p => [p.cardId, p.avgPrice]));
+        candidates.forEach(c => {
+          if (!c.avgPrice && priceMap.has(c.id)) {
+            c.avgPrice = priceMap.get(c.id);
+          }
+        });
+      }
 
       // Score candidates
       const scoredCards = candidates.map(card => {
