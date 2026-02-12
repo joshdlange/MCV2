@@ -1,0 +1,58 @@
+We have a LIVE Android app and Google Play Console shows “Deep links not working” for:
+https://app.marvelcardvault.com/__/auth/handler
+
+This is blocking app links verification. I need you to FIX THIS SAFELY without breaking production.
+
+GOALS
+1) Ensure https://app.marvelcardvault.com/.well-known/assetlinks.json returns HTTP 200 (NO redirects), Content-Type: application/json, and the correct JSON for our Android app.
+2) Ensure Android App Links verification passes in Play Console for the domain.
+3) Confirm our AndroidManifest intent-filter is correct for https://app.marvelcardvault.com/__/auth/handler (and other intended deep links if we have them).
+4) Do NOT change auth flows or Firebase config unless required. Minimize risk.
+
+STEP A — Identify the correct Android identifiers
+- Read AndroidManifest.xml (and/or capacitor config / gradle if needed) to confirm the app package name (applicationId). Do NOT guess.
+- Ask me for the SHA-256 fingerprint ONLY if it is not already provided; otherwise use the Play Console “App signing key certificate” SHA-256 (NOT upload key, NOT debug).
+  - The SHA-256 must match Google Play App Signing.
+
+STEP B — Implement assetlinks.json serving on the web host (Replit/Express)
+- Add a dedicated route in the Express server to serve:
+  GET /.well-known/assetlinks.json
+- Response requirements:
+  - Status: 200
+  - Content-Type: application/json
+  - Body EXACTLY:
+    [
+      {
+        "relation": ["delegate_permission/common.handle_all_urls"],
+        "target": {
+          "namespace": "android_app",
+          "package_name": "<PACKAGE_NAME_FROM_STEP_A>",
+          "sha256_cert_fingerprints": ["<PLAY_SIGNING_SHA256_FROM_STEP_A>"]
+        }
+      }
+    ]
+  - Ensure NO redirects (especially from Cloudflare), no auth, no cookies, no HTML fallback.
+  - Add Cache-Control: no-store (or a very short TTL) to avoid Cloudflare caching bad responses during rollout.
+
+STEP C — Validate from code/logs
+- Add a small internal check (log once on startup) that prints the absolute URL and the response status/content-type for /.well-known/assetlinks.json (a self-fetch) in production mode ONLY if safe, or provide a curl command I can run.
+- Confirm the endpoint returns the JSON even when deployed behind Cloudflare.
+
+STEP D — Validate AndroidManifest intent filter
+- Verify we have an intent-filter with android:autoVerify="true" for:
+  scheme=https, host=app.marvelcardvault.com, pathPrefix="/__/auth/handler"
+- If missing, add it, but keep changes minimal and do NOT break other deep link behavior.
+
+STEP E — QA / Regression checklist (REQUIRED)
+- Verify the site still loads normally.
+- Verify Firebase auth sign-in/out still works on web.
+- Verify the /.well-known/assetlinks.json endpoint returns 200 in production.
+- Provide exact links/commands for me to test:
+  - Open the assetlinks URL in browser
+  - curl -I and curl response checks
+- If any changes require an Android rebuild/release, clearly state that. Otherwise state “No app update required.”
+
+IMPORTANT
+- This is production: do not touch unrelated routes or filters.
+- Do not create new admin tools.
+- Keep diffs small and explain exactly what files changed.

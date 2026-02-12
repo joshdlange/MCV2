@@ -144,8 +144,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  app.get("/.well-known/assetlinks.json", (req, res) => {
+    const assetLinks = [
+      {
+        relation: ["delegate_permission/common.handle_all_urls"],
+        target: {
+          namespace: "android_app",
+          package_name: "com.marvelcardvault.app",
+          sha256_cert_fingerprints: [process.env.ANDROID_SHA256_FINGERPRINT || ""]
+        }
+      }
+    ];
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Cache-Control", "no-store");
+    res.status(200).json(assetLinks);
+  });
 
-  
   // Create admin user endpoint (only for initial setup)
   app.post("/api/admin/create-user", async (req, res) => {
     try {
