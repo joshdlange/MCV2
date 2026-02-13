@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Check, Heart, Star, RotateCcw, Edit, Trash2, Save, X, RefreshCw, ExternalLink, Image, Upload, Camera, ChevronDown, ChevronUp, Settings, MoreVertical, ShoppingCart, TrendingUp } from "lucide-react";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
+import { buildInputFromCard, openEbaySearch } from "@/lib/ebayAffiliate";
 import { useAppStore } from "@/lib/store";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -719,55 +720,20 @@ export function CardDetailModal({
             )}
 
             {/* Buy on eBay Button */}
-            {!isEditing && (() => {
-              const buildEbaySearchUrl = () => {
-                const parts: string[] = [];
-                const setName = card.set?.name || (card as any).setName || '';
-                if (setName && setName.toLowerCase() !== 'base' && setName.trim() !== '') {
-                  parts.push(setName);
-                }
-                if (card.name) {
-                  parts.push(card.name);
-                }
-                if (card.cardNumber) {
-                  parts.push(`#${card.cardNumber}`);
-                }
-                let query = parts.join(' ').replace(/\s+/g, ' ').trim();
-                if (query.length > 120) {
-                  query = query.substring(0, 120).trim();
-                }
-                const encodedQuery = encodeURIComponent(query);
-                let url = `https://www.ebay.com/sch/i.html?_nkw=${encodedQuery}`;
-                const campaignId = import.meta.env.VITE_EBAY_CAMPAIGN_ID;
-                const customId = import.meta.env.VITE_EBAY_CUSTOM_ID;
-                if (campaignId) {
-                  url += `&mkcid=1&mkrid=711-53200-19255-0&campid=${campaignId}&toolid=10001`;
-                  if (customId) {
-                    url += `&customid=${customId}`;
-                  }
-                } else {
-                  console.warn('[Marvel Card Vault] VITE_EBAY_CAMPAIGN_ID not set - eBay link will not be affiliate-tracked');
-                }
-                return url;
-              };
-
-              const handleBuyOnEbay = () => {
-                const url = buildEbaySearchUrl();
-                window.open(url, '_blank', 'noopener,noreferrer');
-              };
-
-              return (
-                <Button
-                  onClick={handleBuyOnEbay}
-                  className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold text-sm shadow-lg"
-                  data-testid="button-buy-on-ebay"
-                >
-                  <ShoppingCart className="w-4 h-4 mr-2" />
+            {!isEditing && (
+              <button
+                onClick={() => openEbaySearch(buildInputFromCard(card))}
+                className="w-full h-auto py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold text-sm shadow-lg rounded-md flex flex-col items-center justify-center gap-0.5"
+                data-testid="button-buy-on-ebay"
+              >
+                <span className="flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4" />
                   Buy on eBay
-                  <ExternalLink className="w-3 h-3 ml-2 opacity-70" />
-                </Button>
-              );
-            })()}
+                  <ExternalLink className="w-3 h-3 opacity-70" />
+                </span>
+                <span className="text-[10px] font-normal opacity-70">Search results — opens eBay</span>
+              </button>
+            )}
 
             {/* Image Upload Section - Available for all users */}
             {!isEditing && (

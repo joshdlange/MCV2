@@ -1,0 +1,102 @@
+PROJECT: Marvel Card Vault (LIVE) — eBay Affiliate Link + Hide Marketplace (No DB breaking changes)
+
+CONTEXT / GOAL
+We are pausing the in-app Marketplace feature for now. We want to:
+1) Hide/remove all Marketplace UI entry points and sections from the live app (web + mobile).
+2) Replace the “eBay Market Price” section on the card details page with a “Market Price” section (neutral naming).
+3) Add a “Buy on eBay” (affiliate) button on the card details page that opens eBay search results for that card using our affiliate tracking parameters.
+4) Keep all existing non-marketplace functionality intact (collection, wishlist, admin, card edit, image upload, etc.).
+5) Do NOT add new admin pages/tools for this. This is normal app behavior change + one config addition.
+
+CRITICAL SAFETY RULES (LIVE APP)
+- No destructive DB migrations.
+- No changes that remove user data or collection links.
+- No changes that require re-imports.
+- Feature should be “off by default” only if we add env flags; otherwise implement the hide in UI and routes safely.
+- Add QA + regression checklist at the end and verify each item.
+
+PART A — HIDE / PAUSE MARKETPLACE (UI + ROUTING)
+1) Navigation:
+- Remove/hide the “Marketplace” item from the sidebar nav for all users (including admins).
+- Also remove/hide any Marketplace-related badges/links/shortcuts anywhere else (home, dashboard, menus).
+- If there are routes like /marketplace or marketplace tabs/components still accessible directly via URL, handle gracefully:
+  - Option A (preferred): redirect to /browse or /dashboard.
+  - Option B: show a friendly “Coming back soon” page, but do NOT expose listings or checkout.
+
+2) Card Details:
+- Remove/hide the “Marketplace Settings” accordion/section shown in the card detail modal/page (see screenshot).
+- Remove any “List for sale / Buy now / Checkout” controls if present anywhere.
+
+PART B — “MARKET PRICE” SECTION (rename)
+- On the card details view, rename “eBay Market Price” to “Market Price”.
+- Keep the refresh behavior if it already exists, but do NOT brand it as eBay.
+- If market price data currently comes from eBay APIs, that’s okay, just don’t label it “eBay” in UI.
+- Ensure this section still loads fast and doesn’t block the modal render.
+
+PART C — EBAY AFFILIATE “BUY ON EBAY” BUTTON (core deliverable)
+We will generate a URL like:
+https://www.ebay.com/sch/i.html?_nkw=<QUERY>&mkcid=1&mkrid=<MKRID>&siteid=<SITEID>&campid=<CAMPID>&customid=<CUSTOMID>&toolid=10001&mkevt=1
+
+1) Add configuration (do NOT hardcode in code):
+- Add env vars (Vite + server as appropriate):
+  - VITE_EBAY_MKRID=711-53200-19255-0   (example)
+  - VITE_EBAY_SITEID=0                  (example)
+  - VITE_EBAY_CAMPID=5339142318         (example)
+  - VITE_EBAY_TOOLID=10001              (fixed)
+  - VITE_EBAY_MKEVT=1                   (fixed)
+  - VITE_EBAY_MKCID=1                   (fixed)
+  - VITE_EBAY_CUSTOMID_PREFIX=MCV       (optional, e.g. MCV1, MCV-card-<id>)
+- Provide safe fallbacks if env vars missing:
+  - Still open a non-affiliate eBay search URL (no tracking params) so the feature never breaks.
+
+2) Query building rules (IMPORTANT — reuse existing logic style):
+- Build a prioritized keyword query string (for _nkw) similar to our image-search logic:
+  Priority A (most specific):
+    "<Main Set> <Subset> <Card Title> <Card Number>"
+  Priority B:
+    "<Main Set> <Card Title> <Card Number>"
+  Priority C:
+    "<Main Set> <Card Title>"
+  Priority D:
+    "<Card Title> <Card Number>"
+- Normalize: trim, collapse whitespace, remove duplicate repeated main set phrases if subset already includes it.
+- URL-encode the final query (spaces -> + is fine, encodeURIComponent is fine).
+
+3) Placement + UX:
+- On card details page/modal, add a primary button:
+  Label: “Buy on eBay”
+  Subtext (small): “Search results — opens eBay”
+- Place it near the Market Price section (either inside the accordion or right below it), but do not clutter.
+- On click:
+  - Open system browser on mobile (Capacitor Browser plugin if available; otherwise window.open).
+  - On web: open new tab.
+
+4) Custom ID:
+- Set customid to something useful for tracking:
+  e.g. `${PREFIX}-${card.id}` or `${PREFIX}-${mainSetId}-${setId}-${cardNumber}`
+- Must be URL-safe.
+
+PART D — PERFORMANCE / REGRESSION REQUIREMENTS
+- Do not introduce heavy queries on sidebar open or modal open.
+- Do not block rendering while fetching market price.
+- Keep bundle changes minimal.
+
+DELIVERABLES
+1) Implement the UI changes + feature flagging behavior.
+2) Update any routes/links to prevent marketplace pages from being accessed.
+3) Add the eBay affiliate link generator utility (single function), unit-test-ish via console logs or simple usage.
+4) Update documentation in replit.md explaining:
+  - how to set the affiliate env vars
+  - what URL format is produced
+  - how to change Custom ID prefix
+
+QA / REGRESSION CHECKLIST (MUST RUN)
+- Sidebar: Marketplace nav item is gone for all users.
+- Direct URL /marketplace (or equivalent) redirects or shows “paused” screen.
+- Card details: “Marketplace Settings” section no longer appears.
+- Card details: “Market Price” renders and refresh works.
+- “Buy on eBay” button appears and opens eBay with the correct query and affiliate params.
+- If env vars missing: button still opens a basic eBay search (no params) without crashing.
+- Collection add/remove, wishlist add/remove still works.
+- Admin edit card modal still works.
+- Mobile: eBay opens in system browser (not trapped in webview).
