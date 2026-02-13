@@ -723,15 +723,12 @@ export function CardDetailModal({
             {!isEditing && (
               <button
                 onClick={() => openEbaySearch(buildInputFromCard(card))}
-                className="w-full h-auto py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold text-sm shadow-lg rounded-md flex flex-col items-center justify-center gap-0.5"
+                className="w-full py-2 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold text-sm shadow-lg rounded-md flex items-center justify-center gap-2"
                 data-testid="button-buy-on-ebay"
               >
-                <span className="flex items-center gap-2">
-                  <ShoppingCart className="w-4 h-4" />
-                  Buy on eBay
-                  <ExternalLink className="w-3 h-3 opacity-70" />
-                </span>
-                <span className="text-[10px] font-normal opacity-70">Search results — opens eBay</span>
+                <ShoppingCart className="w-4 h-4" />
+                Buy on eBay
+                <ExternalLink className="w-3 h-3 opacity-70" />
               </button>
             )}
 

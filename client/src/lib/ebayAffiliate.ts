@@ -115,8 +115,8 @@ export function openEbaySearch(input: EbayQueryInput): void {
   }
 }
 
-export function buildInputFromCard(card: { id: number; name: string; cardNumber?: string | null; set?: { id: number; name?: string | null; mainSetId?: number | null } | null }): EbayQueryInput {
-  const setFullName = card.set?.name || '';
+export function buildInputFromCard(card: { id: number; name: string; cardNumber?: string | null; setId?: number | null; set?: { id: number; name?: string | null; mainSetId?: number | null } | null; [key: string]: any }): EbayQueryInput {
+  const setFullName = card.set?.name || card.setName || '';
   const { mainSetName, subsetName } = parseSetName(setFullName);
   return {
     cardName: card.name,
@@ -124,7 +124,7 @@ export function buildInputFromCard(card: { id: number; name: string; cardNumber?
     mainSetName,
     subsetName,
     cardId: card.id,
-    setId: card.set?.id || null,
-    mainSetId: card.set?.mainSetId || null,
+    setId: card.set?.id || card.setId || null,
+    mainSetId: card.set?.mainSetId || card.mainSetId || null,
   };
 }
