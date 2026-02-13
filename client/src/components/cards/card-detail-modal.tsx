@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Check, Heart, Star, RotateCcw, Edit, Trash2, Save, X, RefreshCw, ExternalLink, Image, Upload, Camera, ChevronDown, ChevronUp, Settings, MoreVertical } from "lucide-react";
+import { Check, Heart, Star, RotateCcw, Edit, Trash2, Save, X, RefreshCw, ExternalLink, Image, Upload, Camera, ChevronDown, ChevronUp, Settings, MoreVertical, ShoppingCart, TrendingUp } from "lucide-react";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { useAppStore } from "@/lib/store";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -639,18 +640,13 @@ export function CardDetailModal({
               </div>
             )}
 
-            {/* eBay Pricing - Collapsible */}
+            {/* Market Price - Collapsible */}
             {!isEditing && (
               <Collapsible open={showPricing} onOpenChange={setShowPricing}>
                 <CollapsibleTrigger asChild>
                   <button className="w-full flex items-center justify-between p-3 rounded-lg bg-gray-900 border border-gray-700 text-left">
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-0.5">
-                        <span className="text-red-500 font-bold text-sm">e</span>
-                        <span className="text-blue-500 font-bold text-sm">b</span>
-                        <span className="text-yellow-400 font-bold text-sm">a</span>
-                        <span className="text-green-400 font-bold text-sm">y</span>
-                      </div>
+                      <TrendingUp className="w-4 h-4 text-green-400" />
                       <span className="text-white text-sm font-medium">Market Price</span>
                       {pricing && pricing.avgPrice > 0 && (
                         <span className="text-green-400 font-bold">${pricing.avgPrice.toFixed(2)}</span>
@@ -667,16 +663,16 @@ export function CardDetailModal({
                         size="sm"
                         onClick={async () => {
                           if (!card) return;
-                          toast({ title: "Fetching eBay pricing...", description: "This may take a moment" });
+                          toast({ title: "Fetching pricing...", description: "This may take a moment" });
                           try {
                             const result = await refreshPricing(card.id);
                             await queryClient.invalidateQueries({ queryKey: ["/api/card-pricing", card.id] });
                             await queryClient.refetchQueries({ queryKey: ["/api/card-pricing", card.id] });
                             
                             if (result && result.avgPrice === -1) {
-                              toast({ title: "eBay API rate limit reached", description: "Try again later.", variant: "destructive" });
+                              toast({ title: "Pricing rate limit reached", description: "Try again later.", variant: "destructive" });
                             } else if (result && result.avgPrice === 0 && result.salesCount === 0) {
-                              toast({ title: "No eBay sales found", description: "This card may not have recent sales data." });
+                              toast({ title: "No recent sales found", description: "This card may not have recent sales data." });
                             } else {
                               toast({ title: "Pricing updated", description: result ? `$${result.avgPrice.toFixed(2)} (${result.salesCount} sales)` : "No data" });
                             }
@@ -700,7 +696,7 @@ export function CardDetailModal({
                       </div>
                     ) : pricing ? (
                       pricing.avgPrice === -1 ? (
-                        <div className="text-sm text-red-400">⚠️ Pricing unavailable (rate limit)</div>
+                        <div className="text-sm text-red-400">Pricing unavailable (rate limit)</div>
                       ) : (
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
@@ -721,6 +717,57 @@ export function CardDetailModal({
                 </CollapsibleContent>
               </Collapsible>
             )}
+
+            {/* Buy on eBay Button */}
+            {!isEditing && (() => {
+              const buildEbaySearchUrl = () => {
+                const parts: string[] = [];
+                const setName = card.set?.name || (card as any).setName || '';
+                if (setName && setName.toLowerCase() !== 'base' && setName.trim() !== '') {
+                  parts.push(setName);
+                }
+                if (card.name) {
+                  parts.push(card.name);
+                }
+                if (card.cardNumber) {
+                  parts.push(`#${card.cardNumber}`);
+                }
+                let query = parts.join(' ').replace(/\s+/g, ' ').trim();
+                if (query.length > 120) {
+                  query = query.substring(0, 120).trim();
+                }
+                const encodedQuery = encodeURIComponent(query);
+                let url = `https://www.ebay.com/sch/i.html?_nkw=${encodedQuery}`;
+                const campaignId = import.meta.env.VITE_EBAY_CAMPAIGN_ID;
+                const customId = import.meta.env.VITE_EBAY_CUSTOM_ID;
+                if (campaignId) {
+                  url += `&mkcid=1&mkrid=711-53200-19255-0&campid=${campaignId}&toolid=10001`;
+                  if (customId) {
+                    url += `&customid=${customId}`;
+                  }
+                } else {
+                  console.warn('[Marvel Card Vault] VITE_EBAY_CAMPAIGN_ID not set - eBay link will not be affiliate-tracked');
+                }
+                return url;
+              };
+
+              const handleBuyOnEbay = () => {
+                const url = buildEbaySearchUrl();
+                window.open(url, '_blank', 'noopener,noreferrer');
+              };
+
+              return (
+                <Button
+                  onClick={handleBuyOnEbay}
+                  className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold text-sm shadow-lg"
+                  data-testid="button-buy-on-ebay"
+                >
+                  <ShoppingCart className="w-4 h-4 mr-2" />
+                  Buy on eBay
+                  <ExternalLink className="w-3 h-3 ml-2 opacity-70" />
+                </Button>
+              );
+            })()}
 
             {/* Image Upload Section - Available for all users */}
             {!isEditing && (
@@ -812,8 +859,8 @@ export function CardDetailModal({
               </Collapsible>
             )}
 
-            {/* Marketplace Settings - Collapsible (only if in collection) */}
-            {isInCollection && !isEditing && (
+            {/* Marketplace Settings - Collapsible (only if in collection and marketplace enabled) */}
+            {FEATURE_FLAGS.MARKETPLACE_ENABLED && isInCollection && !isEditing && (
               <Collapsible open={showMarketplace} onOpenChange={setShowMarketplace}>
                 <CollapsibleTrigger asChild>
                   <button className="w-full flex items-center justify-between p-3 rounded-lg bg-gray-900 border border-gray-700 text-left">

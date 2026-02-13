@@ -126,7 +126,7 @@ export default function SubscriptionSuccess() {
               </div>
               <div className="flex items-center justify-center space-x-2 text-sm">
                 <Zap className="w-4 h-4 text-yellow-500" />
-                <span>Full marketplace access</span>
+                <span>Full community access</span>
               </div>
               <div className="flex items-center justify-center space-x-2 text-sm">
                 <Zap className="w-4 h-4 text-yellow-500" />

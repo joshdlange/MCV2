@@ -1,0 +1,88 @@
+PROJECT: Marvel Card Vault (Express + TS backend, React + Vite frontend, Capacitor mobile)
+GOAL: Pause/Hide Marketplace temporarily and replace marketplace-centric card-detail UI with eBay affiliate “Buy on eBay” experience, without breaking any existing collection/wishlist/admin functionality.
+
+CRITICAL CONSTRAINTS
+- This app is LIVE. Do NOT delete marketplace tables, routes, or data. Do NOT break existing screens.
+- We are “hiding” marketplace for now (feature-flag/off by default), not ripping it out.
+- Keep performance fast. No new heavy queries on card details page.
+- Keep card details page layout clean, smart, and consistent with current design.
+
+WHAT I WANT CHANGED (HIGH LEVEL)
+1) Hide/disable Marketplace feature in the user-facing app (nav + routes + entry points), but keep code/data intact for later re-enable.
+2) In Card Details page:
+   - Remove the “eBay Market Price” branding.
+   - Rename the section to “Market Price”.
+   - Add a prominent button: “Buy on eBay” (or “Find on eBay”) that opens eBay search results for THIS card.
+   - Keep all other card details functionality the same (collection, wishlist, upload image, etc).
+3) eBay Search URL must be affiliate-tracked (EPN). Use env variables for affiliate params.
+
+IMPLEMENTATION DETAILS
+
+A) Add a Feature Flag
+- Create a single feature flag (e.g., FEATURE_MARKETPLACE_ENABLED) defaulting to false in production.
+  - Frontend: read from a config endpoint OR from build-time env (whichever is used in this repo already).
+  - If you already have a settings/config pattern, reuse it. Do not invent a second config system.
+- When FEATURE_MARKETPLACE_ENABLED is false:
+  - Hide Marketplace from the left nav.
+  - Hide any “Marketplace Settings” accordion/module in card details.
+  - If users navigate directly to marketplace routes, show a friendly “Coming back soon” page (not a crash).
+
+B) Card Details: Replace “eBay Market Price” Module
+- Rename UI label: “eBay Market Price” → “Market Price”
+- If the module currently depends on eBay API calls:
+  - Keep the existing pricing functionality for now if it’s already working, BUT remove eBay branding.
+  - If it’s slow or optional, lazy-load it behind an expand/collapse (accordion closed by default) so the details page renders instantly.
+- Remove any explicit eBay logo in the header area. (Optional: small “data from eBay” tooltip is OK later, but not now.)
+
+C) Add “Buy on eBay” Affiliate Button
+- Add a new button in the card details panel near the price module (same section is fine):
+  Button text: “Buy on eBay”
+  Subtext (optional): “Search this card on eBay”
+- On click: open eBay search in the best way per platform:
+  - On web: window.open(url, "_blank", "noopener,noreferrer")
+  - On Capacitor/mobile: use Capacitor Browser plugin if available; otherwise fallback to window.open.
+- Build the search query using our proven image-search fallback logic:
+  1) Start with: Main Set name
+  2) If subset exists and is not “Base”/blank: add subset name
+  3) Add Card Title
+  4) Add Card Number (prefixed with #)
+  - Example query string: "{mainSet} {subset} {cardTitle} #{cardNumber}"
+  - Normalize whitespace and strip extra punctuation.
+- If card title is very long, keep it but trim to a sensible length (e.g., 120 chars) to avoid ugly URLs.
+
+D) Affiliate Tracking (EPN)
+- Implement affiliate parameters using environment variables (do NOT hardcode secrets):
+  - VITE_EBAY_CAMPAIGN_ID (or EBAY_CAMPAIGN_ID)
+  - VITE_EBAY_CUSTOM_ID (optional)
+  - VITE_EBAY_PARTNER (optional if needed)
+- Generate an eBay search URL like:
+  Base: https://www.ebay.com/sch/i.html?_nkw={ENCODED_QUERY}
+  Affiliate params appended from env vars if present.
+- Important: do not block the button if env vars are missing. If missing, still open a normal eBay search link (non-tracked) and log a console warning for admins.
+
+E) Remove Marketplace Messaging Site-wide
+- Anywhere user-facing that references selling/buying via our marketplace:
+  - Replace with “community” language or remove entirely.
+  - Keep internal/admin marketplace code untouched.
+- In navigation/marketing copy inside the app: hide marketplace entry points when flag is off.
+
+F) QA / Regression Checklist (Must be executed)
+1) Web app:
+   - Card details loads fast (no noticeable delay vs before).
+   - “Buy on eBay” opens a new tab with correct search.
+   - Marketplace nav item hidden.
+   - Direct marketplace URL shows “Coming back soon” page.
+2) Android build (Capacitor):
+   - “Buy on eBay” opens external browser successfully.
+   - No blank screens or crashes on card details.
+3) Ensure no changes to:
+   - User collections (adding/removing cards)
+   - Wishlist
+   - Admin tools
+   - Image upload feature
+4) Confirm no backend schema migrations required for this change.
+
+DELIVERABLE
+- Implement feature flag and UI changes.
+- Provide a short note listing files changed and where to set env vars for affiliate tracking.
+- Do NOT remove marketplace tables/routes; only hide and gate them.

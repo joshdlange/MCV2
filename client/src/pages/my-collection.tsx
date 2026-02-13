@@ -11,6 +11,7 @@ import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { CardValue } from "@/components/cards/card-value";
 import { BinderView } from "@/components/collection/binder-view";
 import { Star, Heart, Check, ShoppingCart, Trash2, Search, Grid3X3, List, Filter, X, Plus, BookOpen, ArrowLeft } from "lucide-react";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
@@ -547,7 +548,7 @@ export default function MyCollection() {
             </>
           )}
           <span>•</span>
-          <span>{collection?.filter(item => 'isForSale' in item ? item.isForSale : false).length || 0} listed for sale</span>
+          {FEATURE_FLAGS.MARKETPLACE_ENABLED && <span>{collection?.filter(item => 'isForSale' in item ? item.isForSale : false).length || 0} listed for sale</span>}
         </div>
       </div>
 
@@ -627,7 +628,7 @@ export default function MyCollection() {
                 {/* Sale Status and Favorite - Only for owned cards */}
                 {'card' in item && (
                   <div className="absolute top-2 right-2 z-10 flex gap-1">
-                    {item.isForSale && (
+                    {FEATURE_FLAGS.MARKETPLACE_ENABLED && item.isForSale && (
                       <Badge className="bg-green-100 text-green-800 text-xs px-2 py-1">
                         For Sale
                       </Badge>

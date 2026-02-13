@@ -58,6 +58,7 @@ The application incorporates comprehensive performance optimizations for handlin
   - Phase A: SN normalization - removed "SN###" suffixes from 96,069 card names, moved serial numbers to description field
   - Phase B: Deduplication - removed ~20,322 duplicate cards (matching on set_id, card_number, name, variation). Survivor selection prioritized collection-owned cards, then cards with images, then most populated fields, then lowest ID. User collections and wishlists safely migrated to survivor cards. Final card count: 194,806
   - Subset thumbnail fix: tiles now fetch cards with `hasImage=true` filter for reliable image display
+- **Marketplace Pause & eBay Affiliate**: ✅ NEW (Feb 13, 2026) - Marketplace temporarily hidden behind feature flag (`VITE_FEATURE_MARKETPLACE_ENABLED`, default false). All marketplace code/data/routes intact for re-enable. Card detail modal: "eBay Market Price" renamed to "Market Price" (branding removed), "Buy on eBay" affiliate button added with EPN tracking (`VITE_EBAY_CAMPAIGN_ID`, `VITE_EBAY_CUSTOM_ID` env vars). Marketplace nav link hidden, direct URL shows "Coming Back Soon" page. Activity page marketplace tabs conditionally hidden. Feature flag file: `client/src/lib/featureFlags.ts`.
 - **Marketplace Fulfillment System**: ✨ NEW (Jan 10, 2026) - Complete seller payout workflow including:
   - Earnings tracking with proper categorization: available, pending delivery, pending payout, paid out
   - Payout account management (PayPal/Venmo) stored in `payout_accounts` table

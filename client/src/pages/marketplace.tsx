@@ -13,7 +13,7 @@ import { UpgradeModal } from "@/components/subscription/upgrade-modal";
 import { useAppStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Star, Search, Filter, Crown, Lock, ShoppingCart, CreditCard, Package, Loader2, MapPin, Truck } from "lucide-react";
+import { Star, Search, Filter, Crown, Lock, ShoppingCart, CreditCard, Package, Loader2, MapPin, Truck, Store } from "lucide-react";
 import type { CollectionItem, CardWithSet, CardSet } from "@/types/schema";
 import { formatCardName, formatSetName } from "@/lib/formatTitle";
 
@@ -44,7 +44,46 @@ interface ShippingQuote {
   expiresAt: number;
 }
 
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
+
+function MarketplacePaused() {
+  const [, setLocation] = useLocation();
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+        <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">MARKETPLACE</h2>
+      </div>
+      <div className="flex items-center justify-center min-h-[60vh] p-6">
+        <div className="max-w-lg mx-auto text-center">
+          <div className="w-32 h-32 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-8">
+            <Store className="h-16 w-16 text-blue-600" />
+          </div>
+          <h3 className="text-3xl font-bold text-gray-900 mb-4">Coming Back Soon</h3>
+          <p className="text-gray-600 mb-8 leading-relaxed">
+            The Marketplace is temporarily paused while we make improvements.
+            We'll be back with an even better experience for collectors!
+          </p>
+          <Button 
+            onClick={() => setLocation('/browse')}
+            className="bg-marvel-red hover:bg-red-700 text-white font-semibold px-8 py-3"
+          >
+            Browse Cards
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Marketplace() {
+  if (!FEATURE_FLAGS.MARKETPLACE_ENABLED) {
+    return <MarketplacePaused />;
+  }
+
+  return <MarketplaceContent />;
+}
+
+function MarketplaceContent() {
   const { currentUser } = useAppStore();
   const { toast } = useToast();
   const [, setLocation] = useLocation();

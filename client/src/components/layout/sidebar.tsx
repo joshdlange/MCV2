@@ -26,28 +26,39 @@ import {
   Calendar,
   Activity
 } from "lucide-react";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
 
-const getNavigationItems = (userPlan: string): NavigationItem[] => [
-  { href: "/", label: "Dashboard", icon: "LayoutDashboard" },
-  { href: "/browse", label: "Browse Cards", icon: "Grid3X3" },
-  { href: "/my-collection", label: "My Collection", icon: "FolderOpen" },
-  { href: "/wishlist", label: "Wishlist", icon: "Heart" },
-  { 
-    href: "/marketplace", 
-    label: "Marketplace", 
-    icon: "Store",
-    badge: userPlan === 'SIDE_KICK' ? "👑" : undefined
-  },
-  { 
-    href: "/activity", 
-    label: "Activity", 
-    icon: "Activity",
-    badge: userPlan === 'SIDE_KICK' ? "👑" : undefined
-  },
-  { href: "/trends", label: "Market Trends", icon: "TrendingUp" },
-  { href: "/upcoming-sets", label: "Upcoming Sets", icon: "Calendar" },
-  { href: "/social", label: "Social Hub", icon: "Users" },
-];
+const getNavigationItems = (userPlan: string): NavigationItem[] => {
+  const items: NavigationItem[] = [
+    { href: "/", label: "Dashboard", icon: "LayoutDashboard" },
+    { href: "/browse", label: "Browse Cards", icon: "Grid3X3" },
+    { href: "/my-collection", label: "My Collection", icon: "FolderOpen" },
+    { href: "/wishlist", label: "Wishlist", icon: "Heart" },
+  ];
+
+  if (FEATURE_FLAGS.MARKETPLACE_ENABLED) {
+    items.push({ 
+      href: "/marketplace", 
+      label: "Marketplace", 
+      icon: "Store",
+      badge: userPlan === 'SIDE_KICK' ? "👑" : undefined
+    });
+  }
+
+  items.push(
+    { 
+      href: "/activity", 
+      label: "Activity", 
+      icon: "Activity",
+      badge: userPlan === 'SIDE_KICK' ? "👑" : undefined
+    },
+    { href: "/trends", label: "Market Trends", icon: "TrendingUp" },
+    { href: "/upcoming-sets", label: "Upcoming Sets", icon: "Calendar" },
+    { href: "/social", label: "Social Hub", icon: "Users" },
+  );
+
+  return items;
+};
 
 
 const iconMap = {

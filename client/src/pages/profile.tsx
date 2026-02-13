@@ -449,7 +449,7 @@ export default function Profile() {
                 <div className="space-y-4">
                   <Label className="text-base font-semibold">Shipping Address</Label>
                   <p className="text-xs text-muted-foreground">
-                    This address will be used for shipping when buying/selling cards through the marketplace
+                    This address will be used for shipping when trading cards
                   </p>
                   
                   <div>
@@ -667,7 +667,7 @@ export default function Profile() {
                       <h3 className="font-semibold text-yellow-800 mb-2">Upgrade to SUPER HERO</h3>
                       <ul className="text-sm text-yellow-700 space-y-1 mb-3">
                         <li>• Unlimited card collection</li>
-                        <li>• Access to marketplace</li>
+                        <li>• Access to community features</li>
                         <li>• Advanced analytics</li>
                         <li>• Priority support</li>
                       </ul>

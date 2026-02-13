@@ -17,8 +17,10 @@ import { apiRequest } from "@/lib/queryClient";
 import { 
   Package, ShoppingBag, TrendingUp, Star, MessageCircle, 
   Truck, CheckCircle, Clock, AlertCircle, ExternalLink,
-  ArrowRight, RefreshCcw, DollarSign, Wallet, CheckCircle2
+  ArrowRight, RefreshCcw, DollarSign, Wallet, CheckCircle2,
+  Store
 } from "lucide-react";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
 
 type OrderStatus = 'payment_pending' | 'paid' | 'needs_shipping' | 'label_created' | 'shipped' | 'in_transit' | 'delivered' | 'complete' | 'cancelled' | 'refunded';
 
@@ -256,7 +258,8 @@ export default function Activity() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const searchParams = new URLSearchParams(window.location.search);
-  const initialTab = searchParams.get('tab') || 'purchases';
+  const defaultTab = FEATURE_FLAGS.MARKETPLACE_ENABLED ? 'purchases' : 'trades';
+  const initialTab = searchParams.get('tab') || defaultTab;
   const [activeTab, setActiveTab] = useState(initialTab);
   const [shipModalOrder, setShipModalOrder] = useState<{ id: number; orderNumber: string } | null>(null);
   const [showPayoutModal, setShowPayoutModal] = useState(false);
@@ -268,26 +271,32 @@ export default function Activity() {
   
   const { data: purchases, isLoading: purchasesLoading } = useQuery<OrderData[]>({
     queryKey: ['/api/marketplace/purchases'],
+    enabled: FEATURE_FLAGS.MARKETPLACE_ENABLED,
   });
   
   const { data: sales, isLoading: salesLoading } = useQuery<OrderData[]>({
     queryKey: ['/api/marketplace/sales'],
+    enabled: FEATURE_FLAGS.MARKETPLACE_ENABLED,
   });
   
   const { data: earnings, isLoading: earningsLoading } = useQuery<EarningsData>({
     queryKey: ['/api/marketplace/earnings'],
+    enabled: FEATURE_FLAGS.MARKETPLACE_ENABLED,
   });
   
   const { data: payoutAccount } = useQuery<PayoutAccount>({
     queryKey: ['/api/marketplace/payout-account'],
+    enabled: FEATURE_FLAGS.MARKETPLACE_ENABLED,
   });
   
   const { data: payoutRequests } = useQuery<any[]>({
     queryKey: ['/api/marketplace/payout-requests'],
+    enabled: FEATURE_FLAGS.MARKETPLACE_ENABLED,
   });
   
   const { data: unreadNotifications } = useQuery<{ count: number }>({
     queryKey: ['/api/marketplace/notifications/unread-count'],
+    enabled: FEATURE_FLAGS.MARKETPLACE_ENABLED,
   });
   
   const markNotificationsReadMutation = useMutation({
@@ -425,41 +434,45 @@ export default function Activity() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Activity Center</h1>
-            <p className="text-gray-500">Track your purchases, sales, and reviews</p>
+            <p className="text-gray-500">{FEATURE_FLAGS.MARKETPLACE_ENABLED ? 'Track your purchases, sales, and reviews' : 'Track your collection activity'}</p>
           </div>
         </div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 bg-white dark:bg-gray-800 border">
-            <TabsTrigger 
-              value="purchases" 
-              className="data-[state=active]:bg-red-500 data-[state=active]:text-white"
-              data-testid="tab-purchases"
-            >
-              <ShoppingBag className="w-4 h-4 mr-2" />
-              Purchases
-            </TabsTrigger>
-            <TabsTrigger 
-              value="sales" 
-              className="data-[state=active]:bg-red-500 data-[state=active]:text-white relative"
-              data-testid="tab-sales"
-            >
-              <Package className="w-4 h-4 mr-2" />
-              Sales
-              {(needsShippingCount > 0 || saleNotificationCount > 0) && (
-                <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {needsShippingCount + saleNotificationCount}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger 
-              value="earnings" 
-              className="data-[state=active]:bg-red-500 data-[state=active]:text-white"
-              data-testid="tab-earnings"
-            >
-              <Wallet className="w-4 h-4 mr-2" />
-              Earnings
-            </TabsTrigger>
+          <TabsList className={`grid w-full ${FEATURE_FLAGS.MARKETPLACE_ENABLED ? 'grid-cols-5' : 'grid-cols-2'} bg-white dark:bg-gray-800 border`}>
+            {FEATURE_FLAGS.MARKETPLACE_ENABLED && (
+              <>
+                <TabsTrigger 
+                  value="purchases" 
+                  className="data-[state=active]:bg-red-500 data-[state=active]:text-white"
+                  data-testid="tab-purchases"
+                >
+                  <ShoppingBag className="w-4 h-4 mr-2" />
+                  Purchases
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="sales" 
+                  className="data-[state=active]:bg-red-500 data-[state=active]:text-white relative"
+                  data-testid="tab-sales"
+                >
+                  <Package className="w-4 h-4 mr-2" />
+                  Sales
+                  {(needsShippingCount > 0 || saleNotificationCount > 0) && (
+                    <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {needsShippingCount + saleNotificationCount}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="earnings" 
+                  className="data-[state=active]:bg-red-500 data-[state=active]:text-white"
+                  data-testid="tab-earnings"
+                >
+                  <Wallet className="w-4 h-4 mr-2" />
+                  Earnings
+                </TabsTrigger>
+              </>
+            )}
             <TabsTrigger 
               value="trades" 
               className="data-[state=active]:bg-red-500 data-[state=active]:text-white"
