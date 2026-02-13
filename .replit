@@ -43,6 +43,7 @@ integrations = ["javascript_stripe:1.0.0"]
 
 [userenv.shared]
 EMAIL_CRON_ENABLED = "true"
+ANDROID_SHA256_FINGERPRINT = "23:E0:BB:39:A3:CB:B2:BA:A0:A1:2B:D8:87:2C:35:E5:E7:81:3F:54:53:99:E7:AB:6C:16:44:32:48:A9:4C:D5"
 
 [userenv.production]
 MARKETPLACE_PUBLIC_URL = "https://app.marvelcardvault.com"
