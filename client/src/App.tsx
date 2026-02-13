@@ -41,6 +41,7 @@ import ApiDemo from "@/pages/api-demo";
 import SubscriptionSuccess from "@/pages/subscription-success";
 import SubscriptionCancelled from "@/pages/subscription-cancelled";
 import Activity from "@/pages/Activity";
+import SharedBinder from "@/pages/shared-binder";
 import NotFound from "@/pages/not-found";
 
 function DesktopHeader() {
@@ -193,6 +194,21 @@ function AuthenticatedApp() {
 }
 
 function App() {
+  const [location] = useLocation();
+
+  if (location.startsWith('/share/')) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Switch>
+            <Route path="/share/:token" component={SharedBinder} />
+          </Switch>
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

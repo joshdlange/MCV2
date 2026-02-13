@@ -1035,6 +1035,31 @@ export type CollectionStats = {
   wishlistGrowth: string;
 };
 
+// Share Links for sharing binder/subset views
+export const shareLinks = pgTable("share_links", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  cardSetId: integer("card_set_id").references(() => cardSets.id).notNull(),
+  token: text("token").notNull().unique(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  revokedAt: timestamp("revoked_at"),
+  lastAccessedAt: timestamp("last_accessed_at"),
+}, (table) => ({
+  tokenIdx: uniqueIndex("share_links_token_idx").on(table.token),
+  userSetIdx: index("share_links_user_set_idx").on(table.userId, table.cardSetId),
+}));
+
+export const insertShareLinkSchema = createInsertSchema(shareLinks).omit({
+  id: true,
+  createdAt: true,
+  revokedAt: true,
+  lastAccessedAt: true,
+});
+
+export type InsertShareLink = z.infer<typeof insertShareLinkSchema>;
+export type ShareLink = typeof shareLinks.$inferSelect;
+
 // Extended types for social features
 export type FriendWithUser = Friend & {
   requester: User;

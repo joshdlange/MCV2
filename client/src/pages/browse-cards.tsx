@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Star, ArrowLeft, Plus, Edit, Filter, Grid3X3, List, X, Save, Home, Image, DollarSign, Loader2 } from "lucide-react";
+import { Search, Star, ArrowLeft, Plus, Edit, Filter, Grid3X3, List, X, Save, Home, Image, DollarSign, Loader2, Share2 } from "lucide-react";
 import { CardGrid } from "@/components/cards/card-grid";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { SetThumbnail } from "@/components/cards/set-thumbnail";
@@ -20,6 +20,7 @@ import { useLocation, useParams, Link } from "wouter";
 import type { CardSet, CardWithSet, CollectionItem, MainSet } from "@shared/schema";
 import { formatCardName, formatSetName } from "@/lib/formatTitle";
 import { isBaseSetName } from "@/lib/setDisplayName";
+import { ShareBinderModal } from "@/components/collection/share-binder-modal";
 
 interface CardFilters {
   setId?: number;
@@ -53,6 +54,7 @@ export default function BrowseCards() {
   const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
   const [processingImages, setProcessingImages] = useState(false);
   const [processingPricing, setProcessingPricing] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // All hooks
   const { toast } = useToast();
@@ -699,6 +701,16 @@ export default function BrowseCards() {
                 <span className="sm:hidden">{favoriteSetIds.includes(selectedSet.id) ? 'Favorited' : 'Favorite'}</span>
               </Button>
               <Button
+                onClick={() => setShowShareModal(true)}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Share2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Share Binder</span>
+                <span className="sm:hidden">Share</span>
+              </Button>
+              <Button
                 onClick={() => handleAddAllToCollection(selectedSet.id)}
                 disabled={addAllMutation.isPending}
                 size="sm"
@@ -1184,6 +1196,15 @@ export default function BrowseCards() {
             </div>
           </DialogContent>
         </Dialog>
+      )}
+
+      {selectedSet && (
+        <ShareBinderModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          cardSetId={selectedSet.id}
+          setName={selectedSet.name}
+        />
       )}
     </div>
   );

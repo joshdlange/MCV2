@@ -1,0 +1,153 @@
+PROJECT: Marvel Card Vault (Express + TS backend, React + Vite frontend). LIVE production app. Be extremely careful: do NOT introduce any breaking changes, and keep performance fast.
+
+GOAL
+Add a “Share My Binder” feature for a USER’S SUBSET (card set) that creates a shareable, public page showing the full checklist for that subset with the user’s owned cards highlighted. Default privacy is “Anyone with the link.” The share link must be revocable and NOT static in the sense that the page always reflects the user’s latest collection (if they add cards later, the share page updates automatically). No prices/values shown.
+
+SCOPE (PHASE 1)
+- Share scope: Subset ONLY (card_set).
+- Privacy default: Anyone with link.
+- Visibility: Full checklist with owned highlighted.
+- Prices on share page: NO.
+- Link revocable: YES.
+- Link updates as collection changes: YES (share page always queries current user_collection, no snapshots).
+
+IMPORTANT CONSTRAINTS
+- Do NOT slow down the app.
+- Do NOT add lots of storage; avoid storing per-card snapshots.
+- Do NOT require login to view the share page (link-based access).
+- Keep it branded “Marvel Card Vault”.
+- Sharing options/buttons: Facebook, X/Twitter, Reddit, Instagram.
+  - Instagram sharing note: web can’t auto-post; use “Copy Link” + “Open Instagram” (or Web Share if on mobile).
+- Must be safe and admin/user permissions correct.
+- No marketplace references needed here.
+
+DATA MODEL (minimal new storage)
+We need a share token entity that maps to (user_id + card_set_id) and can be revoked.
+
+1) Add a new table in shared/schema.ts (Drizzle) called `share_links`:
+   - id (uuid or serial)
+   - user_id (uuid) NOT NULL (FK to users)
+   - card_set_id (int) NOT NULL (FK to card_sets)
+   - token (text) UNIQUE NOT NULL (random secure token, e.g. 32+ chars)
+   - is_active (boolean) default true
+   - created_at (timestamp)
+   - revoked_at (timestamp nullable)
+   - last_accessed_at (timestamp nullable) (optional but nice)
+   INDEXES:
+   - token unique index
+   - (user_id, card_set_id) unique constraint to enforce one active link per user per subset (or allow multiple but default to “single active” to keep it simple).
+
+2) Behavior rules:
+   - Creating a share link:
+     - If an active share link already exists for (user_id, card_set_id), return it (idempotent).
+     - If user hits “Regenerate link” -> revoke old and create new token.
+   - Revocation:
+     - Set is_active = false + revoked_at.
+   - Public access:
+     - /share/:token endpoint checks share_links token is_active = true.
+     - Returns 404 or a friendly “This link has been revoked” page if inactive.
+
+BACKEND API ROUTES (server/routes.ts)
+Add routes under /api (auth required for create/revoke; public for viewing):
+A) POST /api/share-links
+   Body: { cardSetId: number }
+   Auth: required
+   Returns: { token, url, cardSetId }
+   Idempotent: reuse existing active link.
+
+B) POST /api/share-links/:cardSetId/regenerate
+   Auth: required
+   Revokes existing active link for that (user_id, cardSetId), creates a new token.
+   Returns: { token, url }
+
+C) DELETE /api/share-links/:cardSetId
+   Auth: required
+   Revokes the active link (if exists).
+   Returns: { success: true }
+
+D) GET /api/share/:token  (PUBLIC)
+   Returns the data needed to render the share page:
+   - subset/card_set info (name, year, main_set name, subset display name, subset image if present)
+   - full card list for that set (cards: id, card_number, name, front_image_url thumbnail if exists)
+   - owned card IDs for the user (or a boolean per card)
+   IMPORTANT: do this efficiently.
+
+PERFORMANCE REQUIREMENTS (critical)
+- For GET /api/share/:token, do NOT do N+1 queries.
+- Use indexed lookups.
+- Query plan suggestion:
+  1) Find share_link by token (single row).
+  2) Get card_set + its main_set (join).
+  3) Get cards in that set ordered by card_number (single query).
+  4) Get owned card IDs for the share_link user for that set (single query joining user_collections -> cards filtered by cards.set_id = card_set_id).
+- Return owned as a Set of cardIds or a map {cardId:true} so client can highlight quickly.
+- Consider pagination only if needed; but binder pages already handle large sets. Keep payload reasonable:
+  - Include thumbnails only (front_image_url) and let existing image lazy-load logic handle actual loads.
+- Add basic server-side caching for the public share response:
+  - Cache by token for 60 seconds (in-memory LRU). This keeps it live but avoids heavy repeated loads when someone refreshes.
+  - Invalidate cache when regenerate/revoke is called for that token.
+  - Do NOT cache for hours; it needs to reflect new cards reasonably quickly.
+
+FRONTEND UI
+1) Add a “Share Binder” button in the subset view (where user sees the subset/binder).
+   - Location: top actions row near “Favorite Set” / existing actions.
+   - Visible to logged-in users.
+   - Clicking opens a modal with:
+     - Explanation: “Share your binder for this subset.”
+     - A primary button: “Create Link” (or shows existing link).
+     - If link exists: show the URL in an input with Copy button.
+     - Buttons:
+       - Copy Link
+       - Regenerate Link (warns that old link stops working)
+       - Revoke Link (turns off sharing)
+     - Social share buttons:
+       - Facebook Share (opens share dialog with URL)
+       - X/Twitter intent tweet (pre-filled message)
+       - Reddit submit (pre-filled title/url)
+       - Instagram: “Copy Link” + “Open Instagram” (or just copy)
+     - A “Preview” button that opens the share page in a new tab.
+
+2) Add a new public route in App.tsx:
+   - /share/:token
+   - This route does NOT require auth.
+   - Page design: Marvel Card Vault branded, clean, fast.
+   - Header area:
+     - “Marvel Card Vault” logo
+     - Title: Subset name (display subset name only, not full main+subset redundancy)
+     - Subtitle: Main set name + year
+   - Content:
+     - Grid/list like binder:
+       - Show all cards in the subset.
+       - Owned highlighted (e.g., green outline, “Owned” badge). Not owned are normal.
+       - If a card has no image, show the existing placeholder.
+     - No pricing.
+   - CTA Section (very important):
+     - Sticky or top: “Track your own collection” button -> /signup (or existing auth flow)
+     - Short copy: “Build your binder, track inserts, and find cards on eBay.”
+
+3) Ensure mobile performance:
+   - Reuse existing card grid component and lazy-loading.
+   - Avoid rendering heavy modals on load.
+   - For share page, keep JS minimal.
+
+SECURITY + PRIVACY
+- Share pages must not expose user email or username publicly.
+- Only show binder data: cards list + ownership state.
+- Rate limit the public endpoint lightly (per IP per minute) to avoid abuse.
+- Token must be unguessable (crypto random).
+- Token is the only access control.
+
+QA / REGRESSION CHECKLIST (must be completed)
+- Create link for subset; open in incognito -> works.
+- Add a card to collection; refresh share page -> new card shows as owned (within 60s cache window).
+- Revoke link -> share page shows revoked message (no data).
+- Regenerate -> old link revoked, new link works.
+- No impact on existing browsing performance.
+- No auth required for /share/:token.
+- No PII displayed.
+- Works on mobile and desktop.
+- Ensure social share links open correctly and don’t crash the app.
+- Confirm DB migrations applied cleanly and no existing tables are broken.
+
+DELIVERABLE
+Implement end-to-end: DB schema + migrations, backend routes, frontend modal + share page route, and keep performance solid with 60s cache and efficient queries. No new admin screens. Keep UI clean and consistent.

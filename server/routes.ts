@@ -16,7 +16,7 @@ import { ebayPricingService } from "./ebay-pricing";
 import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
 import { db } from "./db";
-import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users } from "../shared/schema";
+import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks } from "../shared/schema";
 import { sql, eq, ne, ilike, like, and, or, isNull, count, exists, desc } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
@@ -7772,6 +7772,305 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[DEDUPE] Error:', error);
       res.status(500).json({ message: 'Dedupe failed', error: String(error) });
+    }
+  });
+
+  // ==================== SHARE BINDER ROUTES ====================
+  const shareLinkCache = new Map<string, { data: any; timestamp: number }>();
+  const SHARE_CACHE_TTL = 60_000; // 60 seconds
+
+  function invalidateShareCache(token: string) {
+    shareLinkCache.delete(token);
+  }
+
+  // POST /api/share-links — create or return existing share link
+  app.post("/api/share-links", authenticateUser, async (req: any, res) => {
+    try {
+      const { cardSetId } = req.body;
+      if (!cardSetId) return res.status(400).json({ message: "cardSetId is required" });
+
+      const userId = req.user.id;
+
+      // Check if active link already exists
+      const existing = await db
+        .select()
+        .from(shareLinks)
+        .where(and(
+          eq(shareLinks.userId, userId),
+          eq(shareLinks.cardSetId, cardSetId),
+          eq(shareLinks.isActive, true)
+        ))
+        .limit(1);
+
+      if (existing.length > 0) {
+        const link = existing[0];
+        const baseUrl = req.headers['x-forwarded-host']
+          ? `https://${req.headers['x-forwarded-host']}`
+          : `${req.protocol}://${req.get('host')}`;
+        return res.json({
+          token: link.token,
+          url: `${baseUrl}/share/${link.token}`,
+          cardSetId: link.cardSetId,
+          id: link.id,
+        });
+      }
+
+      // Create new share link
+      const token = crypto.randomBytes(32).toString('hex');
+      const [newLink] = await db
+        .insert(shareLinks)
+        .values({ userId, cardSetId, token, isActive: true })
+        .returning();
+
+      const baseUrl = req.headers['x-forwarded-host']
+        ? `https://${req.headers['x-forwarded-host']}`
+        : `${req.protocol}://${req.get('host')}`;
+
+      res.json({
+        token: newLink.token,
+        url: `${baseUrl}/share/${newLink.token}`,
+        cardSetId: newLink.cardSetId,
+        id: newLink.id,
+      });
+    } catch (error) {
+      console.error("Error creating share link:", error);
+      res.status(500).json({ message: "Failed to create share link" });
+    }
+  });
+
+  // POST /api/share-links/:cardSetId/regenerate — revoke old + create new
+  app.post("/api/share-links/:cardSetId/regenerate", authenticateUser, async (req: any, res) => {
+    try {
+      const cardSetId = parseInt(req.params.cardSetId);
+      const userId = req.user.id;
+
+      // Revoke existing active links and get their tokens for cache invalidation
+      const oldLinks = await db
+        .select({ token: shareLinks.token })
+        .from(shareLinks)
+        .where(and(
+          eq(shareLinks.userId, userId),
+          eq(shareLinks.cardSetId, cardSetId),
+          eq(shareLinks.isActive, true)
+        ));
+
+      if (oldLinks.length > 0) {
+        for (const old of oldLinks) invalidateShareCache(old.token);
+        await db
+          .update(shareLinks)
+          .set({ isActive: false, revokedAt: new Date() })
+          .where(and(
+            eq(shareLinks.userId, userId),
+            eq(shareLinks.cardSetId, cardSetId),
+            eq(shareLinks.isActive, true)
+          ));
+      }
+
+      // Create new token
+      const token = crypto.randomBytes(32).toString('hex');
+      const [newLink] = await db
+        .insert(shareLinks)
+        .values({ userId, cardSetId, token, isActive: true })
+        .returning();
+
+      const baseUrl = req.headers['x-forwarded-host']
+        ? `https://${req.headers['x-forwarded-host']}`
+        : `${req.protocol}://${req.get('host')}`;
+
+      res.json({
+        token: newLink.token,
+        url: `${baseUrl}/share/${newLink.token}`,
+        cardSetId: newLink.cardSetId,
+        id: newLink.id,
+      });
+    } catch (error) {
+      console.error("Error regenerating share link:", error);
+      res.status(500).json({ message: "Failed to regenerate share link" });
+    }
+  });
+
+  // DELETE /api/share-links/:cardSetId — revoke active link
+  app.delete("/api/share-links/:cardSetId", authenticateUser, async (req: any, res) => {
+    try {
+      const cardSetId = parseInt(req.params.cardSetId);
+      const userId = req.user.id;
+
+      const oldLinks = await db
+        .select({ token: shareLinks.token })
+        .from(shareLinks)
+        .where(and(
+          eq(shareLinks.userId, userId),
+          eq(shareLinks.cardSetId, cardSetId),
+          eq(shareLinks.isActive, true)
+        ));
+
+      for (const old of oldLinks) invalidateShareCache(old.token);
+
+      await db
+        .update(shareLinks)
+        .set({ isActive: false, revokedAt: new Date() })
+        .where(and(
+          eq(shareLinks.userId, userId),
+          eq(shareLinks.cardSetId, cardSetId),
+          eq(shareLinks.isActive, true)
+        ));
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error revoking share link:", error);
+      res.status(500).json({ message: "Failed to revoke share link" });
+    }
+  });
+
+  // GET /api/share-links/:cardSetId — get current user's active share link for a set
+  app.get("/api/share-links/:cardSetId", authenticateUser, async (req: any, res) => {
+    try {
+      const cardSetId = parseInt(req.params.cardSetId);
+      const userId = req.user.id;
+
+      const existing = await db
+        .select()
+        .from(shareLinks)
+        .where(and(
+          eq(shareLinks.userId, userId),
+          eq(shareLinks.cardSetId, cardSetId),
+          eq(shareLinks.isActive, true)
+        ))
+        .limit(1);
+
+      if (existing.length === 0) {
+        return res.json({ shareLink: null });
+      }
+
+      const link = existing[0];
+      const baseUrl = req.headers['x-forwarded-host']
+        ? `https://${req.headers['x-forwarded-host']}`
+        : `${req.protocol}://${req.get('host')}`;
+
+      res.json({
+        shareLink: {
+          token: link.token,
+          url: `${baseUrl}/share/${link.token}`,
+          cardSetId: link.cardSetId,
+          id: link.id,
+          createdAt: link.createdAt,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching share link:", error);
+      res.status(500).json({ message: "Failed to fetch share link" });
+    }
+  });
+
+  // GET /api/share/:token — PUBLIC endpoint, returns binder data for share page
+  app.get("/api/share/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+
+      // Check cache first
+      const cached = shareLinkCache.get(token);
+      if (cached && Date.now() - cached.timestamp < SHARE_CACHE_TTL) {
+        return res.json(cached.data);
+      }
+
+      // 1) Find share link by token
+      const [link] = await db
+        .select()
+        .from(shareLinks)
+        .where(eq(shareLinks.token, token))
+        .limit(1);
+
+      if (!link) {
+        return res.status(404).json({ message: "Share link not found" });
+      }
+
+      if (!link.isActive) {
+        return res.status(410).json({ message: "This share link has been revoked" });
+      }
+
+      // Update last_accessed_at (fire and forget)
+      db.update(shareLinks)
+        .set({ lastAccessedAt: new Date() })
+        .where(eq(shareLinks.id, link.id))
+        .then(() => {})
+        .catch(() => {});
+
+      // 2) Get card_set + main_set info
+      const [setInfo] = await db
+        .select({
+          setId: cardSets.id,
+          setName: cardSets.name,
+          setSlug: cardSets.slug,
+          setYear: cardSets.year,
+          setImageUrl: cardSets.imageUrl,
+          setTotalCards: cardSets.totalCards,
+          mainSetId: mainSets.id,
+          mainSetName: mainSets.name,
+          mainSetSlug: mainSets.slug,
+        })
+        .from(cardSets)
+        .leftJoin(mainSets, eq(cardSets.mainSetId, mainSets.id))
+        .where(eq(cardSets.id, link.cardSetId))
+        .limit(1);
+
+      if (!setInfo) {
+        return res.status(404).json({ message: "Card set not found" });
+      }
+
+      // 3) Get all cards in the set (ordered by card_number)
+      const allCards = await db
+        .select({
+          id: cards.id,
+          cardNumber: cards.cardNumber,
+          name: cards.name,
+          frontImageUrl: cards.frontImageUrl,
+          isInsert: cards.isInsert,
+          rarity: cards.rarity,
+          variation: cards.variation,
+        })
+        .from(cards)
+        .where(eq(cards.setId, link.cardSetId))
+        .orderBy(cards.cardNumber);
+
+      // 4) Get owned card IDs for this user in this set
+      const ownedRows = await db
+        .select({ cardId: userCollections.cardId })
+        .from(userCollections)
+        .innerJoin(cards, eq(userCollections.cardId, cards.id))
+        .where(and(
+          eq(userCollections.userId, link.userId),
+          eq(cards.setId, link.cardSetId)
+        ));
+
+      const ownedCardIds = ownedRows.map(r => r.cardId);
+
+      const responseData = {
+        setInfo: {
+          id: setInfo.setId,
+          name: setInfo.setName,
+          slug: setInfo.setSlug,
+          year: setInfo.setYear,
+          imageUrl: setInfo.setImageUrl,
+          totalCards: setInfo.setTotalCards,
+          mainSetId: setInfo.mainSetId,
+          mainSetName: setInfo.mainSetName,
+          mainSetSlug: setInfo.mainSetSlug,
+        },
+        cards: allCards,
+        ownedCardIds,
+        stats: {
+          totalCards: allCards.length,
+          ownedCount: ownedCardIds.length,
+        },
+      };
+
+      // Cache the response
+      shareLinkCache.set(token, { data: responseData, timestamp: Date.now() });
+
+      res.json(responseData);
+    } catch (error) {
+      console.error("Error fetching share page data:", error);
+      res.status(500).json({ message: "Failed to load shared binder" });
     }
   });
 
