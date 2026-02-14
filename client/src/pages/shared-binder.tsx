@@ -362,10 +362,17 @@ export default function SharedBinder() {
               </span>
             </p>
           </div>
+
+          <a
+            href="https://app.marvelcardvault.com"
+            className="inline-flex items-center gap-2 mt-5 bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-colors shadow-lg shadow-red-600/20"
+          >
+            Track Your Collection
+          </a>
         </div>
       </div>
 
-      <div className="relative z-10 flex-1 max-w-lg mx-auto w-full px-4 py-4">
+      <div className="relative z-10 flex-1 max-w-2xl mx-auto w-full px-4 py-4">
         {ownedCards.length === 0 ? (
           <div className="text-center py-12">
             <BookOpen className="w-12 h-12 text-gray-600 mx-auto mb-4" />
@@ -373,104 +380,108 @@ export default function SharedBinder() {
             <p className="text-gray-600 text-sm mt-1">This binder is empty for now.</p>
           </div>
         ) : (
-          <div
-            className="relative rounded-2xl p-3"
-            style={{
-              background: 'linear-gradient(135deg, #1e1e2f 0%, #141422 50%, #0d0d1a 100%)',
-              boxShadow: '0 0 40px rgba(220, 38, 38, 0.08), inset 0 2px 20px rgba(0,0,0,0.5), 0 10px 40px rgba(0,0,0,0.3)',
-              border: '1px solid rgba(220, 38, 38, 0.15)',
-            }}
-          >
-            <div
-              className="absolute inset-0 rounded-2xl opacity-20 pointer-events-none"
-              style={{
-                background: 'repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,0.02) 2px, rgba(255,255,255,0.02) 4px)'
-              }}
-            />
-
-            <div className="flex lg:hidden items-center justify-between mb-2 relative z-10">
+          <div className="flex items-center justify-center gap-4">
+            <div className="hidden lg:flex flex-col items-center gap-2">
               {navButton("prev")}
-              <span className="text-white/70 font-bold text-sm">
-                {currentPage + 1} <span className="text-white/30">of</span> {totalPages}
-              </span>
-              {navButton("next")}
             </div>
 
-            <div className="relative z-10">
-              <div className="hidden lg:flex absolute left-3 top-1/2 -translate-y-1/2 z-20">
-                {navButton("prev")}
-              </div>
+            <div className="flex-1 max-w-lg">
+              <div
+                className="relative rounded-2xl p-3"
+                style={{
+                  background: 'linear-gradient(135deg, #1e1e2f 0%, #141422 50%, #0d0d1a 100%)',
+                  boxShadow: '0 0 40px rgba(220, 38, 38, 0.08), inset 0 2px 20px rgba(0,0,0,0.5), 0 10px 40px rgba(0,0,0,0.3)',
+                  border: '1px solid rgba(220, 38, 38, 0.15)',
+                }}
+              >
+                <div
+                  className="absolute inset-0 rounded-2xl opacity-20 pointer-events-none"
+                  style={{
+                    background: 'repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,0.02) 2px, rgba(255,255,255,0.02) 4px)'
+                  }}
+                />
 
-              <div style={{ perspective: '1000px' }}>
-                <AnimatePresence mode="wait" custom={flipDirection}>
-                  <motion.div
-                    key={currentPage}
-                    custom={flipDirection}
-                    variants={pageVariants}
-                    initial="enter"
-                    animate="center"
-                    exit="exit"
-                    transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-                    className="grid grid-cols-3 gap-2 mx-auto"
-                    style={{ maxWidth: '400px' }}
-                  >
-                    {currentCards.map((card, index) => (
-                      <SharedBinderSlot
-                        key={`${currentPage}-${card.id}`}
-                        card={card}
-                        owned={true}
-                        slotIndex={index}
-                      />
-                    ))}
-                    {currentCards.length < cardsPerPage &&
-                      [...Array(cardsPerPage - currentCards.length)].map((_, i) => (
-                        <div
-                          key={`empty-${i}`}
-                          className="rounded-lg bg-gray-900/40 border border-gray-800/30"
-                          style={{ aspectRatio: '2 / 3' }}
-                        />
-                      ))
-                    }
-                  </motion.div>
-                </AnimatePresence>
-              </div>
+                <div className="flex lg:hidden items-center justify-between mb-2 relative z-10">
+                  {navButton("prev")}
+                  <span className="text-white/70 font-bold text-sm">
+                    {currentPage + 1} <span className="text-white/30">of</span> {totalPages}
+                  </span>
+                  {navButton("next")}
+                </div>
 
-              <div className="hidden lg:flex absolute right-3 top-1/2 -translate-y-1/2 z-20">
-                {navButton("next")}
-              </div>
-            </div>
-
-            <div className="hidden lg:flex items-center justify-center gap-2 mt-3 relative z-10">
-              <span className="text-white/70 font-bold text-sm">
-                {currentPage + 1} <span className="text-white/30">of</span> {totalPages}
-              </span>
-            </div>
-
-            <div className="mt-2 flex items-center justify-center gap-4 relative z-10">
-              <div className="flex items-center gap-1">
-                {[...Array(Math.min(totalPages, 10))].map((_, i) => {
-                  const pageIndex = totalPages <= 10 ? i :
-                    currentPage < 5 ? i :
-                    currentPage > totalPages - 6 ? totalPages - 10 + i :
-                    currentPage - 5 + i;
-
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => {
-                        setFlipDirection(pageIndex > currentPage ? "right" : "left");
-                        setCurrentPage(pageIndex);
-                      }}
-                      className={`w-1.5 h-1.5 rounded-full transition-all duration-200
-                        ${pageIndex === currentPage
-                          ? 'bg-red-500 w-3'
-                          : 'bg-white/20 hover:bg-white/40'
+                <div className="relative z-10">
+                  <div style={{ perspective: '1000px' }}>
+                    <AnimatePresence mode="wait" custom={flipDirection}>
+                      <motion.div
+                        key={currentPage}
+                        custom={flipDirection}
+                        variants={pageVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+                        className="grid grid-cols-3 gap-2 mx-auto"
+                        style={{ maxWidth: '400px' }}
+                      >
+                        {currentCards.map((card, index) => (
+                          <SharedBinderSlot
+                            key={`${currentPage}-${card.id}`}
+                            card={card}
+                            owned={true}
+                            slotIndex={index}
+                          />
+                        ))}
+                        {currentCards.length < cardsPerPage &&
+                          [...Array(cardsPerPage - currentCards.length)].map((_, i) => (
+                            <div
+                              key={`empty-${i}`}
+                              className="rounded-lg bg-gray-900/40 border border-gray-800/30"
+                              style={{ aspectRatio: '2 / 3' }}
+                            />
+                          ))
                         }
-                      `}
-                    />
-                  );
-                })}
+                      </motion.div>
+                    </AnimatePresence>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-center gap-2 mt-3 relative z-10">
+                  <span className="text-white/70 font-bold text-sm">
+                    {currentPage + 1} <span className="text-white/30">of</span> {totalPages}
+                  </span>
+                </div>
+
+                <div className="mt-2 flex items-center justify-center gap-4 relative z-10">
+                  <div className="flex items-center gap-1">
+                    {[...Array(Math.min(totalPages, 10))].map((_, i) => {
+                      const pageIndex = totalPages <= 10 ? i :
+                        currentPage < 5 ? i :
+                        currentPage > totalPages - 6 ? totalPages - 10 + i :
+                        currentPage - 5 + i;
+
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            setFlipDirection(pageIndex > currentPage ? "right" : "left");
+                            setCurrentPage(pageIndex);
+                          }}
+                          className={`w-1.5 h-1.5 rounded-full transition-all duration-200
+                            ${pageIndex === currentPage
+                              ? 'bg-red-500 w-3'
+                              : 'bg-white/20 hover:bg-white/40'
+                            }
+                          `}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
+            </div>
+
+            <div className="hidden lg:flex flex-col items-center gap-2">
+              {navButton("next")}
             </div>
           </div>
         )}

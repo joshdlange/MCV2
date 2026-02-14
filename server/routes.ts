@@ -8081,7 +8081,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const ownedCardIds = ownedRows.map(r => r.cardId);
 
-      const sharerName = sharer?.displayName || sharer?.username || "A Collector";
+      const sharerName = sharer?.username || sharer?.displayName || "A Collector";
 
       const responseData = {
         sharerName,
