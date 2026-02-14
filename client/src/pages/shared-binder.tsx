@@ -2,7 +2,8 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Sparkles, BookOpen } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, BookOpen, Copy, Check } from "lucide-react";
+import { SiFacebook, SiX, SiReddit, SiInstagram } from "react-icons/si";
 import { Badge } from "@/components/ui/badge";
 import { formatCardName, formatSetName } from "@/lib/formatTitle";
 import heroLogoWhite from "@assets/noun-super-hero-380874-FFFFFF.png";
@@ -20,6 +21,7 @@ interface SharePageCard {
 }
 
 interface SharePageData {
+  sharerName: string;
   setInfo: {
     id: number;
     name: string;
@@ -98,6 +100,66 @@ function SharedBinderSlot({ card, owned, slotIndex }: { card: SharePageCard; own
         }}
       />
     </motion.div>
+  );
+}
+
+function SocialShareButtons({ shareUrl, setName, sharerName }: { shareUrl: string; setName: string; sharerName: string }) {
+  const [copied, setCopied] = useState(false);
+  const shareMessage = `Check out ${sharerName}'s ${setName} binder on Marvel Card Vault!`;
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* ignore */ }
+  };
+
+  return (
+    <div className="flex items-center justify-center gap-3">
+      <button
+        onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, "_blank", "noopener,noreferrer,width=600,height=400")}
+        className="w-9 h-9 rounded-full bg-[#1877F2] hover:bg-[#1565C0] text-white flex items-center justify-center transition-colors"
+        title="Share on Facebook"
+      >
+        <SiFacebook className="w-4 h-4" />
+      </button>
+      <button
+        onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}&url=${encodeURIComponent(shareUrl)}`, "_blank", "noopener,noreferrer,width=600,height=400")}
+        className="w-9 h-9 rounded-full bg-black hover:bg-gray-800 text-white flex items-center justify-center transition-colors"
+        title="Share on X"
+      >
+        <SiX className="w-3.5 h-3.5" />
+      </button>
+      <button
+        onClick={() => window.open(`https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareMessage)}`, "_blank", "noopener,noreferrer")}
+        className="w-9 h-9 rounded-full bg-[#FF4500] hover:bg-[#E03D00] text-white flex items-center justify-center transition-colors"
+        title="Share on Reddit"
+      >
+        <SiReddit className="w-4 h-4" />
+      </button>
+      <button
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(shareUrl);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+            window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
+          } catch { /* ignore */ }
+        }}
+        className="w-9 h-9 rounded-full bg-gradient-to-br from-[#833AB4] via-[#FD1D1D] to-[#F77737] hover:opacity-90 text-white flex items-center justify-center transition-colors"
+        title="Copy link & open Instagram"
+      >
+        <SiInstagram className="w-4 h-4" />
+      </button>
+      <button
+        onClick={handleCopyLink}
+        className="w-9 h-9 rounded-full bg-gray-600 hover:bg-gray-500 text-white flex items-center justify-center transition-colors"
+        title="Copy link"
+      >
+        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+      </button>
+    </div>
   );
 }
 
@@ -184,10 +246,10 @@ export default function SharedBinder() {
     const is410 = (error as any)?.message?.includes("revoked") || (error as any)?.status === 410;
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
-        <header className="bg-gradient-to-r from-red-700 to-red-600 text-white px-4 py-3">
+        <header className="bg-gradient-to-r from-red-700 to-red-600 text-white px-6 py-4 shadow-lg">
           <div className="max-w-4xl mx-auto flex items-center gap-3">
-            <img src={heroLogoWhite} alt="Marvel Card Vault" className="w-8 h-8" />
-            <span className="font-bebas text-xl tracking-wide">Marvel Card Vault</span>
+            <img src={heroLogoWhite} alt="Marvel Card Vault" className="w-10 h-10" />
+            <span className="font-bebas text-2xl tracking-wide">Marvel Card Vault</span>
           </div>
         </header>
         <div className="flex-1 flex items-center justify-center p-4">
@@ -213,34 +275,36 @@ export default function SharedBinder() {
     );
   }
 
-  const { setInfo, stats } = data;
+  const { setInfo, stats, sharerName } = data;
   const displaySetName = formatSetName(setInfo.name);
   const completionPct = stats.totalCards > 0
     ? Math.round((stats.ownedCount / stats.totalCards) * 100)
     : 0;
+  const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-gradient-to-r from-red-700 to-red-600 text-white px-4 py-3 shadow-lg">
+      <header className="bg-gradient-to-r from-red-700 to-red-600 text-white px-6 py-5 shadow-lg">
         <div className="max-w-4xl mx-auto flex items-center gap-3">
-          <img src={heroLogoWhite} alt="Marvel Card Vault" className="w-8 h-8" />
-          <span className="font-bebas text-xl tracking-wide">Marvel Card Vault</span>
+          <img src={heroLogoWhite} alt="Marvel Card Vault" className="w-10 h-10" />
+          <span className="font-bebas text-2xl tracking-wide">Marvel Card Vault</span>
         </div>
       </header>
 
-      <div className="bg-white border-b border-gray-200 px-4 py-4">
+      <div className="bg-white border-b border-gray-200 px-4 py-5">
         <div className="max-w-4xl mx-auto">
+          <p className="text-sm text-red-600 font-semibold mb-1">{sharerName}'s Binder</p>
           <h1 className="text-2xl font-bebas text-gray-900 tracking-wide">{displaySetName}</h1>
           {setInfo.mainSetName && (
             <p className="text-sm text-gray-500">{setInfo.mainSetName} &middot; {setInfo.year}</p>
           )}
-          <div className="flex items-center gap-3 mt-2">
+          <div className="flex items-center gap-3 mt-3">
             <Badge className="bg-green-100 text-green-700">
               {stats.ownedCount}/{stats.totalCards} owned
             </Badge>
-            <div className="flex-1 max-w-xs bg-gray-200 rounded-full h-2">
+            <div className="flex-1 max-w-xs bg-gray-200 rounded-full h-2.5">
               <div
-                className="bg-green-500 h-2 rounded-full transition-all"
+                className="bg-green-500 h-2.5 rounded-full transition-all"
                 style={{ width: `${completionPct}%` }}
               />
             </div>
@@ -351,20 +415,28 @@ export default function SharedBinder() {
             </div>
           </div>
         </div>
+
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-500 mb-3">Share this binder</p>
+          <SocialShareButtons shareUrl={shareUrl} setName={displaySetName} sharerName={sharerName} />
+        </div>
       </div>
 
-      <div className="bg-gradient-to-r from-red-700 to-red-600 px-4 py-6">
+      <div className="bg-gradient-to-r from-red-700 to-red-600 px-4 py-8">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-white font-bebas text-2xl tracking-wide mb-2">Track Your Own Collection</h2>
-          <p className="text-white/80 text-sm mb-4">
-            Build your binder, track inserts, and find cards on eBay.
+          <h2 className="text-white font-bebas text-3xl tracking-wide mb-2">Track Your Own Marvel Card Collection</h2>
+          <p className="text-white/80 text-sm mb-5">
+            Build your binder, track inserts, and manage your collection for free.
           </p>
           <a
             href="/"
-            className="inline-flex items-center gap-2 bg-white text-red-700 hover:bg-gray-100 px-6 py-2.5 rounded-lg font-semibold transition-colors"
+            className="inline-flex items-center gap-2 bg-white text-red-700 hover:bg-gray-100 px-8 py-3 rounded-lg font-bold text-lg transition-colors shadow-lg"
           >
-            Get Started Free
+            Create Your Free Account
           </a>
+          <p className="text-white/60 text-xs mt-4">
+            Looking to buy? View cards on eBay directly from Marvel Card Vault.
+          </p>
         </div>
       </div>
     </div>

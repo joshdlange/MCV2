@@ -7995,7 +7995,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .then(() => {})
         .catch(() => {});
 
-      // 2) Get card_set + main_set info
+      // 2) Get sharer's display name (safe: no email or sensitive data)
+      const [sharer] = await db
+        .select({ displayName: users.displayName, username: users.username })
+        .from(users)
+        .where(eq(users.id, link.userId))
+        .limit(1);
+
+      // 3) Get card_set + main_set info
       const [setInfo] = await db
         .select({
           setId: cardSets.id,
@@ -8044,7 +8051,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const ownedCardIds = ownedRows.map(r => r.cardId);
 
+      const sharerName = sharer?.displayName || sharer?.username || "A Collector";
+
       const responseData = {
+        sharerName,
         setInfo: {
           id: setInfo.setId,
           name: setInfo.setName,

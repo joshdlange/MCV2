@@ -1,0 +1,237 @@
+We are adding a "Share My Binder" feature to Marvel Card Vault.
+
+This is a marketing feature. It must be lightweight, performant, secure, and branded properly. It must NOT slow down the app or create heavy storage load.
+
+Read this carefully and implement exactly as described.
+
+=====================================================
+FEATURE: SHARE MY SUBSET BINDER (PHASE 1)
+=====================================================
+
+GOAL:
+Allow a user to generate a shareable link to a specific SUBSET binder page (not main set yet). This page will show the full checklist of that subset with owned cards highlighted.
+
+This is a marketing tool. The shared page must:
+
+• Be branded as Marvel Card Vault
+• Show our logo prominently
+• Include a clear CTA to create an account
+• Be optimized for social sharing
+• Not expose sensitive user data
+• Be dynamically updated if the user adds more cards later
+
+=====================================================
+SCOPE (PHASE 1 ONLY)
+=====================================================
+
+✔ Share Scope: SUBSET ONLY
+✔ Privacy Default: Anyone with link (not publicly indexed)
+✔ Show: Full checklist with owned cards highlighted
+✔ Do NOT show prices or market values
+✔ Share link must be revocable
+✔ Link must be dynamic (not static snapshot)
+
+We will add entire collection later. Do not build that yet.
+
+=====================================================
+HOW IT SHOULD WORK
+=====================================================
+
+1) USER ACTION
+
+Inside a subset binder page, add a button:
+
+[ Share This Binder ]
+
+When clicked:
+• Generate a secure share token
+• Store it in DB
+• Return a URL like:
+
+https://marvelcardvault.com/share/{token}
+
+=====================================================
+DATABASE REQUIREMENTS
+=====================================================
+
+Create new table:
+
+shared_binders
+- id (uuid or secure random token)
+- user_id
+- subset_id
+- is_active (boolean, default true)
+- created_at
+- revoked_at (nullable)
+
+Rules:
+• Token must be long + unguessable (crypto random)
+• Revoking sets is_active = false
+• Do NOT store card snapshot data
+• Shared page should dynamically read current collection
+
+=====================================================
+SHARED PAGE BEHAVIOR
+=====================================================
+
+Route: /share/:token
+
+Server must:
+• Validate token
+• Confirm is_active = true
+• Fetch subset
+• Fetch full checklist for subset
+• Fetch user’s owned cards for that subset
+
+Render:
+
+-----------------------------------------------------
+[ Marvel Card Vault Logo ]
+
+{User Name}'s Binder
+{Subset Name}
+{Main Set Name}
+-----------------------------------------------------
+
+Display grid of ALL cards in subset.
+
+Owned cards:
+• Full color
+• Possibly checkmark badge
+
+Missing cards:
+• Slightly faded / grayscale
+
+Do NOT show:
+• Prices
+• Market data
+• Trade
+• Edit controls
+• Admin controls
+
+-----------------------------------------------------
+FOOTER CTA SECTION
+-----------------------------------------------------
+
+Add marketing section at bottom:
+
+"Track your own Marvel card collection for free."
+
+[ Create Your Free Account ]
+
+This button links to signup page.
+
+Include subtle affiliate exposure:
+"Looking to buy? View cards on eBay directly from Marvel Card Vault."
+
+=====================================================
+PERFORMANCE REQUIREMENTS
+=====================================================
+
+CRITICAL:
+This must not slow the system.
+
+• No snapshot storage
+• No heavy queries
+• Use indexed lookups
+• Only fetch subset-specific data
+• No N+1 queries
+• No caching required initially
+
+Do not preload other sets.
+Do not include trending.
+Do not include stats queries.
+
+=====================================================
+SOCIAL SHARE BUTTONS
+=====================================================
+
+On the shared page include lightweight share buttons:
+
+• Facebook
+• X (Twitter)
+• Reddit
+• Instagram (copy link instruction)
+
+These should just share the page URL.
+
+No heavy SDKs.
+No tracking scripts.
+Keep lightweight.
+
+=====================================================
+REVOCATION
+=====================================================
+
+Inside user settings or subset page:
+
+Add:
+[ Manage Shared Links ]
+
+Allow:
+• View active links
+• Revoke link
+
+If revoked:
+Shared page must return 404.
+
+=====================================================
+SECURITY RULES
+=====================================================
+
+• No email exposure
+• No user ID exposure
+• No collection counts outside subset
+• Token must be validated server-side
+• Rate limit access if necessary
+
+=====================================================
+BRANDING
+=====================================================
+
+This is critical.
+
+Shared page must:
+• Use Marvel Card Vault colors
+• Include logo at top
+• Use Bangers font for headings
+• Look polished and intentional
+• Feel like a landing page
+
+This is marketing.
+
+=====================================================
+DO NOT
+=====================================================
+
+• Do NOT build main set sharing yet
+• Do NOT build full collection sharing yet
+• Do NOT store static HTML snapshots
+• Do NOT slow existing browse pages
+• Do NOT break production routes
+
+=====================================================
+IMPLEMENTATION PLAN
+=====================================================
+
+1) Add DB table
+2) Add secure token generator
+3) Add API endpoint to create share link
+4) Add API endpoint to revoke link
+5) Add public share route
+6) Add share button to subset page
+7) Add branding and CTA
+8) QA performance impact
+
+=====================================================
+DELIVERABLE
+=====================================================
+
+Return:
+• Files changed
+• DB migration SQL
+• Route definitions
+• How to test
+• Confirmation no existing routes impacted
+
+This must be production safe.
