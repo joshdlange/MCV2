@@ -31,9 +31,16 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName, mainSetN
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const displayName = mainSetName
-    ? `${mainSetName} - ${setName}`
-    : setName;
+  const displayName = (() => {
+    if (!mainSetName) return setName;
+    let subsetPart = setName;
+    if (setName.startsWith(mainSetName + " - ")) {
+      subsetPart = setName.slice(mainSetName.length + 3).trim();
+    } else if (setName === mainSetName) {
+      subsetPart = "Base";
+    }
+    return `${mainSetName} - ${subsetPart}`;
+  })();
 
   const { data: shareLinkData, isLoading } = useQuery<{ shareLink: { token: string; url: string; cardSetId: number; id: number; createdAt: string } | null }>({
     queryKey: ['/api/share-links', cardSetId],

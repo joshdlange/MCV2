@@ -109,7 +109,16 @@ function SharedBinderSlot({ card, owned, slotIndex }: { card: SharePageCard; own
 
 function SocialShareButtons({ shareUrl, setName, sharerName, mainSetName }: { shareUrl: string; setName: string; sharerName: string; mainSetName?: string | null }) {
   const [copied, setCopied] = useState(false);
-  const displayName = mainSetName ? `${mainSetName} - ${setName}` : setName;
+  const displayName = (() => {
+    if (!mainSetName) return setName;
+    let subsetPart = setName;
+    if (setName.startsWith(mainSetName + " - ")) {
+      subsetPart = setName.slice(mainSetName.length + 3).trim();
+    } else if (setName === mainSetName) {
+      subsetPart = "Base";
+    }
+    return `${mainSetName} - ${subsetPart}`;
+  })();
   const shareMessage = `BEHOLD ${sharerName}'s collection of ${displayName}! ${shareUrl}\n\nTrack your collection and its value at marvelcardvault.com`;
 
   const handleCopyLink = async () => {
@@ -290,9 +299,16 @@ export default function SharedBinder() {
 
   const { setInfo, stats, sharerName } = data;
   const displaySetName = formatSetName(setInfo.name);
-  const fullDisplayName = setInfo.mainSetName
-    ? `${setInfo.mainSetName} - ${displaySetName}`
-    : displaySetName;
+  const fullDisplayName = (() => {
+    if (!setInfo.mainSetName) return displaySetName;
+    let subsetPart = displaySetName;
+    if (displaySetName.startsWith(setInfo.mainSetName + " - ")) {
+      subsetPart = displaySetName.slice(setInfo.mainSetName.length + 3).trim();
+    } else if (displaySetName === setInfo.mainSetName) {
+      subsetPart = "Base";
+    }
+    return `${setInfo.mainSetName} - ${subsetPart}`;
+  })();
   const completionPct = stats.totalCards > 0
     ? Math.round((stats.ownedCount / stats.totalCards) * 100)
     : 0;
