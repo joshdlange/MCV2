@@ -467,6 +467,16 @@ export function weeklyDigestTemplate(
       ${setsHtml || '<p style="margin: 0; color: ${TEXT_SECONDARY};">No new sets this month</p>'}
     </div>
     ${ctaButton('See New Sets', 'https://www.marvelcardvault.com')}
+    <div style="background-color: ${DARK_BG}; padding: 25px; border-radius: 8px; margin: 30px 0 20px; border: 1px solid ${BRAND_RED}; text-align: center;">
+      <p style="margin: 0 0 5px; font-size: 12px; color: ${BRAND_RED}; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">New Feature</p>
+      <h3 style="margin: 0 0 10px; font-size: 20px; color: ${TEXT_PRIMARY};">Share Your Collection</h3>
+      <p style="margin: 0 0 15px; font-size: 14px; line-height: 1.5; color: ${TEXT_SECONDARY};">
+        You can now share your binder with anyone! Create a shareable link for any set in your collection and send it to friends, post it on social media, or show off your collection on Reddit. No account needed to view.
+      </p>
+      <p style="margin: 0; font-size: 13px; color: ${TEXT_SECONDARY};">
+        Open any set in your collection and tap the <strong style="color: ${TEXT_PRIMARY};">Share</strong> button to get started.
+      </p>
+    </div>
   `;
   return baseTemplate({ title: 'Monthly Update', bodyHtml });
 }
