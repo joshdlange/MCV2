@@ -32,6 +32,10 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName }: ShareB
 
   const { data: shareLinkData, isLoading } = useQuery<{ shareLink: { token: string; url: string; cardSetId: number; id: number; createdAt: string } | null }>({
     queryKey: ['/api/share-links', cardSetId],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/share-links/${cardSetId}`);
+      return res.json();
+    },
     enabled: isOpen,
   });
 
@@ -40,9 +44,21 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName }: ShareB
       const res = await apiRequest("POST", "/api/share-links", { cardSetId });
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/share-links', cardSetId] });
-      toast({ title: "Share link created" });
+      const url = data?.url;
+      if (url) {
+        try {
+          await navigator.clipboard.writeText(url);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+          toast({ title: "Share link created and copied to clipboard!" });
+        } catch {
+          toast({ title: "Share link created" });
+        }
+      } else {
+        toast({ title: "Share link created" });
+      }
     },
     onError: () => {
       toast({ title: "Failed to create share link", variant: "destructive" });
@@ -54,10 +70,20 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName }: ShareB
       const res = await apiRequest("POST", `/api/share-links/${cardSetId}/regenerate`);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/share-links', cardSetId] });
       setShowRegenerateConfirm(false);
-      toast({ title: "New share link generated. The old link no longer works." });
+      const url = data?.url;
+      if (url) {
+        try {
+          await navigator.clipboard.writeText(url);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+          toast({ title: "New link generated and copied to clipboard!" });
+        } catch {
+          toast({ title: "New share link generated. The old link no longer works." });
+        }
+      }
     },
     onError: () => {
       toast({ title: "Failed to regenerate link", variant: "destructive" });
