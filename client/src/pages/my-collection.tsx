@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { CardValue } from "@/components/cards/card-value";
 import { BinderView } from "@/components/collection/binder-view";
-import { Star, Heart, Check, ShoppingCart, Trash2, Search, Grid3X3, List, Filter, X, Plus, BookOpen, ArrowLeft } from "lucide-react";
+import { Star, Heart, Check, ShoppingCart, Trash2, Search, Grid3X3, List, Filter, X, Plus, BookOpen, ArrowLeft, Share2 } from "lucide-react";
+import { ShareBinderModal } from "@/components/collection/share-binder-modal";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +34,7 @@ export default function MyCollection() {
   const [binderViewMode, setBinderViewMode] = useState<"binder" | "grid">("binder");
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const favStorageKey = currentUser ? `favoriteSetIds_user_${currentUser.id}` : 'favoriteSetIds';
   const [favoriteSetIds, setFavoriteSetIds] = useState<number[]>(() => {
     try {
@@ -158,11 +160,19 @@ export default function MyCollection() {
         );
       }
       
-      // Sort by card number (convert to number for proper sorting)
       return filtered.sort((a, b) => {
-        const aNum = parseInt(a.cardNumber) || 0;
-        const bNum = parseInt(b.cardNumber) || 0;
-        return aNum - bNum;
+        const aStr = a.cardNumber?.trim() || '';
+        const bStr = b.cardNumber?.trim() || '';
+        const aParts = aStr.match(/^([A-Za-z-]*?)(\d+)(.*)$/);
+        const bParts = bStr.match(/^([A-Za-z-]*?)(\d+)(.*)$/);
+        if (aParts && bParts) {
+          const prefixCmp = aParts[1].localeCompare(bParts[1]);
+          if (prefixCmp !== 0) return prefixCmp;
+          const numCmp = parseInt(aParts[2]) - parseInt(bParts[2]);
+          if (numCmp !== 0) return numCmp;
+          return (aParts[3] || '').localeCompare(bParts[3] || '');
+        }
+        return aStr.localeCompare(bStr);
       });
     }
     
@@ -181,12 +191,20 @@ export default function MyCollection() {
       
       return matchesSearch && matchesSet && matchesFavorites;
     }).sort((a, b) => {
-      // Sort favorites first, then by card number
       if (a.isFavorite && !b.isFavorite) return -1;
       if (!a.isFavorite && b.isFavorite) return 1;
-      const numA = parseInt(a.card?.cardNumber || '0') || 0;
-      const numB = parseInt(b.card?.cardNumber || '0') || 0;
-      return numA - numB;
+      const aStr = a.card?.cardNumber?.trim() || '';
+      const bStr = b.card?.cardNumber?.trim() || '';
+      const aParts = aStr.match(/^([A-Za-z-]*?)(\d+)(.*)$/);
+      const bParts = bStr.match(/^([A-Za-z-]*?)(\d+)(.*)$/);
+      if (aParts && bParts) {
+        const prefixCmp = aParts[1].localeCompare(bParts[1]);
+        if (prefixCmp !== 0) return prefixCmp;
+        const numCmp = parseInt(aParts[2]) - parseInt(bParts[2]);
+        if (numCmp !== 0) return numCmp;
+        return (aParts[3] || '').localeCompare(bParts[3] || '');
+      }
+      return aStr.localeCompare(bStr);
     }) || [];
     
     return filteredCollection;
@@ -243,6 +261,33 @@ export default function MyCollection() {
       } else {
         toast({ title: errorMessage, variant: "destructive" });
       }
+    }
+  });
+
+  const addToCollectionMutation = useMutation({
+    mutationFn: async (cardId: number) => {
+      const response = await apiRequest('POST', '/api/collection', { cardId });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+      toast({ title: "Card added to collection" });
+    },
+    onError: (error: Error) => {
+      let errorMessage = "Failed to add card";
+      if (error.message) {
+        const match = error.message.match(/\d+: (.+)/);
+        if (match) {
+          try {
+            const parsed = JSON.parse(match[1]);
+            if (parsed.message) errorMessage = parsed.message;
+          } catch {
+            errorMessage = match[1];
+          }
+        }
+      }
+      toast({ title: errorMessage, variant: "destructive" });
     }
   });
 
@@ -536,19 +581,55 @@ export default function MyCollection() {
               <Star className={`h-4 w-4 mr-1 ${showFavoritesOnly ? 'fill-current' : ''}`} />
               Favorites
             </Button>
+
+            {selectedSet !== "all" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowShareModal(true)}
+                className="bg-white text-gray-800 border-2 border-gray-400"
+              >
+                <Share2 className="h-4 w-4 mr-1" />
+                <span className="hidden sm:inline">Share Binder</span>
+                <span className="sm:hidden">Share</span>
+              </Button>
+            )}
           </div>
         </div>
         
         <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
-          <span>{collection?.length || 0} cards in collection</span>
+          {selectedSet !== "all" && collectionView === "cards" ? (
+            <>
+              {(() => {
+                const ownedCount = collection?.filter(item => item.card?.set?.id?.toString() === selectedSet).length || 0;
+                const totalCount = allSetCards?.length || cardSets?.find(s => s.id.toString() === selectedSet)?.totalCards || 0;
+                const missingCount = Math.max(0, totalCount - ownedCount);
+                return (
+                  <>
+                    <span className="text-green-600 font-medium">Owned: {ownedCount}</span>
+                    <span>•</span>
+                    <span className="text-red-500 font-medium">Missing: {missingCount}</span>
+                    <span>•</span>
+                    <span>Total: {totalCount}</span>
+                  </>
+                );
+              })()}
+            </>
+          ) : (
+            <span>{collection?.length || 0} cards in collection</span>
+          )}
           {searchQuery && (
             <>
               <span>•</span>
               <span>{filteredCards.length} matching "{searchQuery}"</span>
             </>
           )}
-          <span>•</span>
-          {FEATURE_FLAGS.MARKETPLACE_ENABLED && <span>{collection?.filter(item => 'isForSale' in item ? item.isForSale : false).length || 0} listed for sale</span>}
+          {FEATURE_FLAGS.MARKETPLACE_ENABLED && (
+            <>
+              <span>•</span>
+              <span>{collection?.filter(item => 'isForSale' in item ? item.isForSale : false).length || 0} listed for sale</span>
+            </>
+          )}
         </div>
       </div>
 
@@ -707,7 +788,7 @@ export default function MyCollection() {
                         currentPrice={getCurrentPrice(item)}
                         showRefresh={true}
                       />
-                      {'card' in item && (
+                      {'card' in item ? (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -718,6 +799,19 @@ export default function MyCollection() {
                           className="h-6 w-6 p-0 hover:bg-red-100"
                         >
                           <Trash2 className="h-3 w-3 text-gray-400 hover:text-red-600" />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addToCollectionMutation.mutate(item.id);
+                          }}
+                          className="h-6 w-6 p-0 hover:bg-green-100"
+                          title="Add to Collection"
+                        >
+                          <Plus className="h-3 w-3 text-green-600" />
                         </Button>
                       )}
                     </div>
@@ -817,9 +911,11 @@ export default function MyCollection() {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    // Add to wishlist logic
+                                    const cardId = 'card' in item ? item.card.id : item.id;
+                                    addToCollectionMutation.mutate(cardId);
                                   }}
-                                  className="p-1 rounded-full bg-gray-200 text-gray-600 hover:bg-red-100 hover:text-red-600"
+                                  className="p-1 rounded-full bg-green-100 text-green-600 hover:bg-green-200 hover:text-green-700"
+                                  title="Add to Collection"
                                 >
                                   <Plus className="w-3 h-3" />
                                 </button>
@@ -1093,11 +1189,16 @@ export default function MyCollection() {
           setIsModalOpen(false);
           setSelectedCard(null);
         }}
-        isInCollection={true}
-        collectionItemId={selectedCard ? collection.find(item => item.card.id === selectedCard.id)?.id : undefined}
+        isInCollection={selectedCard ? !!collection?.find(item => item.card.id === selectedCard.id) : false}
+        collectionItemId={selectedCard ? collection?.find(item => item.card.id === selectedCard.id)?.id : undefined}
+        onAddToCollection={() => {
+          if (selectedCard) {
+            addToCollectionMutation.mutate(selectedCard.id);
+          }
+        }}
         onRemoveFromCollection={() => {
           if (selectedCard) {
-            const collectionItem = collection.find(item => item.card.id === selectedCard.id);
+            const collectionItem = collection?.find(item => item.card.id === selectedCard.id);
             if (collectionItem) {
               handleRemoveFromCollection(collectionItem.id);
               setIsModalOpen(false);
@@ -1107,6 +1208,15 @@ export default function MyCollection() {
         }}
         onCardUpdate={(updatedCard) => setSelectedCard(updatedCard)}
       />
+
+      {selectedSet !== "all" && (
+        <ShareBinderModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          cardSetId={parseInt(selectedSet)}
+          setName={cardSets?.find(s => s.id.toString() === selectedSet)?.name || ""}
+        />
+      )}
     </div>
   );
 }

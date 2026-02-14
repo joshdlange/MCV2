@@ -111,11 +111,10 @@ export function BinderView({
   const cardsPerPage = 9;
 
   const ownedCardMap = useMemo(() => {
-    const map = new Map<string, CollectionItem>();
+    const map = new Map<number, CollectionItem>();
     ownedCards.forEach(item => {
-      const cardNum = item.card?.cardNumber?.trim();
-      if (cardNum) {
-        map.set(cardNum, item);
+      if (item.card?.id) {
+        map.set(item.card.id, item);
       }
     });
     return map;
@@ -123,8 +122,8 @@ export function BinderView({
 
   const binderCards: BinderCard[] = useMemo(() => {
     const cards = allCardsInSet.map((card) => {
+      const ownedItem = ownedCardMap.get(card.id);
       const cardNum = card.cardNumber?.trim() || '';
-      const ownedItem = ownedCardMap.get(cardNum);
       const numericCardNumber = parseInt(cardNum) || 0;
       
       return {
@@ -134,7 +133,22 @@ export function BinderView({
         card: card
       };
     });
-    return cards.sort((a, b) => a.cardNumber - b.cardNumber);
+    return cards.sort((a, b) => {
+      const aNum = a.card?.cardNumber?.trim() || '';
+      const bNum = b.card?.cardNumber?.trim() || '';
+      const aParts = aNum.match(/^([A-Za-z-]*?)(\d+)(.*)$/);
+      const bParts = bNum.match(/^([A-Za-z-]*?)(\d+)(.*)$/);
+      if (aParts && bParts) {
+        const prefixCmp = aParts[1].localeCompare(bParts[1]);
+        if (prefixCmp !== 0) return prefixCmp;
+        const numCmp = parseInt(aParts[2]) - parseInt(bParts[2]);
+        if (numCmp !== 0) return numCmp;
+        return (aParts[3] || '').localeCompare(bParts[3] || '');
+      }
+      if (aParts && !bParts) return 1;
+      if (!aParts && bParts) return -1;
+      return aNum.localeCompare(bNum);
+    });
   }, [allCardsInSet, ownedCardMap]);
 
   const totalPages = Math.ceil(binderCards.length / cardsPerPage);
@@ -196,18 +210,25 @@ export function BinderView({
 
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between mb-3 px-2">
-        <div className="flex items-center gap-2 flex-wrap">
-          <h3 className="text-lg font-bold text-gray-900">{setName}</h3>
-          <Badge className="bg-gray-100 text-gray-700 text-xs">
-            {ownedCards.length}/{totalCardsInSet}
-          </Badge>
-          {isSetComplete && (
-            <Badge className="bg-green-100 text-green-700 text-xs animate-pulse">
-              <Sparkles className="w-3 h-3 mr-1" />
-              Complete!
+      <div className="mb-3 px-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-lg font-bold text-gray-900">{setName}</h3>
+            <Badge className="bg-gray-100 text-gray-700 text-xs">
+              {ownedCards.length}/{totalCardsInSet}
             </Badge>
-          )}
+            {isSetComplete && (
+              <Badge className="bg-green-100 text-green-700 text-xs animate-pulse">
+                <Sparkles className="w-3 h-3 mr-1" />
+                Complete!
+              </Badge>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-3 mt-1 text-sm">
+          <span className="text-green-600 font-medium">Owned: {ownedCards.length}</span>
+          <span className="text-gray-400">•</span>
+          <span className="text-red-500 font-medium">Missing: {Math.max(0, totalCardsInSet - ownedCards.length)}</span>
         </div>
       </div>
 
@@ -271,7 +292,7 @@ export function BinderView({
               >
                 {currentCards.map((card, index) => (
                   <BinderSlot
-                    key={`${currentPage}-${card.cardNumber}`}
+                    key={`${currentPage}-${card.card?.id || card.cardNumber}-${index}`}
                     card={card}
                     slotIndex={index}
                     onClick={() => handleCardClick(card)}

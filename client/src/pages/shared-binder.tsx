@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Sparkles, BookOpen, Copy, Check } from "lucide-react";
 import { SiFacebook, SiX, SiReddit, SiInstagram } from "react-icons/si";
 import { Badge } from "@/components/ui/badge";
-import { formatCardName, formatSetName } from "@/lib/formatTitle";
+import { formatSetName } from "@/lib/formatTitle";
 import heroLogoWhite from "@assets/noun-super-hero-380874-FFFFFF.png";
 
 const PLACEHOLDER_IMAGE = 'https://res.cloudinary.com/dlwfuryyz/image/upload/v1748442577/card-placeholder_ysozlo.png';
@@ -43,7 +43,6 @@ interface SharePageData {
 
 function SharedBinderSlot({ card, owned, slotIndex }: { card: SharePageCard; owned: boolean; slotIndex: number }) {
   const imageUrl = card.frontImageUrl && card.frontImageUrl !== PLACEHOLDER_IMAGE ? card.frontImageUrl : null;
-  const cardName = formatCardName(card.name);
 
   return (
     <motion.div
@@ -63,22 +62,24 @@ function SharedBinderSlot({ card, owned, slotIndex }: { card: SharePageCard; own
           : 'linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%)'
       }}
     >
-      {owned && imageUrl ? (
+      {imageUrl ? (
         <div className="relative w-full h-full">
           <img
             src={imageUrl}
-            alt={cardName}
-            className="w-full h-full object-cover"
+            alt={`Card #${card.cardNumber}`}
+            className={`w-full h-full object-cover ${!owned ? 'grayscale opacity-40' : ''}`}
             loading="lazy"
           />
-          {card.isInsert && (
+          {owned && card.isInsert && (
             <div className="absolute bottom-1 left-1 bg-purple-600/90 text-white rounded-full w-5 h-5 flex items-center justify-center shadow-lg">
               <Sparkles className="w-3 h-3" />
             </div>
           )}
-          <div className="absolute bottom-1 right-1 bg-green-600/90 text-white text-[8px] px-1 py-0.5 rounded font-bold shadow-lg">
-            #{card.cardNumber}
-          </div>
+          {owned && (
+            <div className="absolute bottom-1 right-1 bg-green-600/90 text-white text-[8px] px-1 py-0.5 rounded font-bold shadow-lg">
+              #{card.cardNumber}
+            </div>
+          )}
         </div>
       ) : (
         <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
@@ -87,9 +88,6 @@ function SharedBinderSlot({ card, owned, slotIndex }: { card: SharePageCard; own
           </div>
           <span className="text-gray-400 text-[10px] font-medium leading-tight">
             #{card.cardNumber}
-          </span>
-          <span className="text-gray-500 text-[8px] mt-0.5 line-clamp-2 leading-tight px-1">
-            {cardName}
           </span>
         </div>
       )}
@@ -183,12 +181,22 @@ export default function SharedBinder() {
 
   const sortedCards = useMemo(() => {
     if (!data) return [];
-    return [...data.cards].sort((a, b) => {
-      const numA = parseInt(a.cardNumber) || 0;
-      const numB = parseInt(b.cardNumber) || 0;
-      if (numA !== numB) return numA - numB;
-      return a.cardNumber.localeCompare(b.cardNumber);
-    });
+    return [...data.cards]
+      .filter(card => card.frontImageUrl && card.frontImageUrl !== PLACEHOLDER_IMAGE)
+      .sort((a, b) => {
+        const aStr = a.cardNumber?.trim() || '';
+        const bStr = b.cardNumber?.trim() || '';
+        const aParts = aStr.match(/^([A-Za-z-]*?)(\d+)(.*)$/);
+        const bParts = bStr.match(/^([A-Za-z-]*?)(\d+)(.*)$/);
+        if (aParts && bParts) {
+          const prefixCmp = aParts[1].localeCompare(bParts[1]);
+          if (prefixCmp !== 0) return prefixCmp;
+          const numCmp = parseInt(aParts[2]) - parseInt(bParts[2]);
+          if (numCmp !== 0) return numCmp;
+          return (aParts[3] || '').localeCompare(bParts[3] || '');
+        }
+        return aStr.localeCompare(bStr);
+      });
   }, [data]);
 
   const totalPages = Math.ceil(sortedCards.length / cardsPerPage);
