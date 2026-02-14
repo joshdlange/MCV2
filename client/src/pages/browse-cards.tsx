@@ -1204,6 +1204,7 @@ export default function BrowseCards() {
           onClose={() => setShowShareModal(false)}
           cardSetId={selectedSet.id}
           setName={selectedSet.name}
+          mainSetName={currentMainSet?.name}
         />
       )}
     </div>

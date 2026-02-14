@@ -7815,8 +7815,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Create new share link
-      const token = crypto.randomBytes(32).toString('hex');
+      // Create new share link with short 8-char token
+      const generateShortToken = (): string => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+        let result = '';
+        const bytes = crypto.randomBytes(8);
+        for (let i = 0; i < 8; i++) {
+          result += chars[bytes[i] % chars.length];
+        }
+        return result;
+      };
+
+      let token: string;
+      let attempts = 0;
+      do {
+        token = generateShortToken();
+        const [existing] = await db
+          .select({ id: shareLinks.id })
+          .from(shareLinks)
+          .where(eq(shareLinks.token, token))
+          .limit(1);
+        if (!existing) break;
+        attempts++;
+      } while (attempts < 5);
+
       const [newLink] = await db
         .insert(shareLinks)
         .values({ userId, cardSetId, token, isActive: true })
@@ -7866,8 +7888,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ));
       }
 
-      // Create new token
-      const token = crypto.randomBytes(32).toString('hex');
+      // Create new short token
+      const generateShortToken = (): string => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+        let result = '';
+        const bytes = crypto.randomBytes(8);
+        for (let i = 0; i < 8; i++) {
+          result += chars[bytes[i] % chars.length];
+        }
+        return result;
+      };
+
+      let token: string;
+      let attempts = 0;
+      do {
+        token = generateShortToken();
+        const [dup] = await db
+          .select({ id: shareLinks.id })
+          .from(shareLinks)
+          .where(eq(shareLinks.token, token))
+          .limit(1);
+        if (!dup) break;
+        attempts++;
+      } while (attempts < 5);
+
       const [newLink] = await db
         .insert(shareLinks)
         .values({ userId, cardSetId, token, isActive: true })

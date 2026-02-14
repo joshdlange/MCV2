@@ -21,14 +21,19 @@ interface ShareBinderModalProps {
   onClose: () => void;
   cardSetId: number;
   setName: string;
+  mainSetName?: string;
 }
 
-export function ShareBinderModal({ isOpen, onClose, cardSetId, setName }: ShareBinderModalProps) {
+export function ShareBinderModal({ isOpen, onClose, cardSetId, setName, mainSetName }: ShareBinderModalProps) {
   const [copied, setCopied] = useState(false);
   const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const displayName = mainSetName
+    ? `${mainSetName} - ${setName}`
+    : setName;
 
   const { data: shareLinkData, isLoading } = useQuery<{ shareLink: { token: string; url: string; cardSetId: number; id: number; createdAt: string } | null }>({
     queryKey: ['/api/share-links', cardSetId],
@@ -48,8 +53,9 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName }: ShareB
       queryClient.invalidateQueries({ queryKey: ['/api/share-links', cardSetId] });
       const url = data?.url;
       if (url) {
+        const fullMessage = buildShareMessage(url);
         try {
-          await navigator.clipboard.writeText(url);
+          await navigator.clipboard.writeText(fullMessage);
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
           toast({ title: "Share link created and copied to clipboard!" });
@@ -75,8 +81,9 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName }: ShareB
       setShowRegenerateConfirm(false);
       const url = data?.url;
       if (url) {
+        const fullMessage = buildShareMessage(url);
         try {
-          await navigator.clipboard.writeText(url);
+          await navigator.clipboard.writeText(fullMessage);
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
           toast({ title: "New link generated and copied to clipboard!" });
@@ -107,30 +114,36 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName }: ShareB
   const shareLink = shareLinkData?.shareLink;
   const shareUrl = shareLink?.url || "";
 
+  const buildShareMessage = (url?: string) => {
+    const link = url || shareUrl;
+    return `BEHOLD my collection of ${displayName}! ${link}\n\nTrack your collection and its value at marvelcardvault.com`;
+  };
+
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(buildShareMessage());
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast({ title: "Link copied to clipboard" });
+      toast({ title: "Share message copied to clipboard" });
     } catch {
       toast({ title: "Failed to copy", variant: "destructive" });
     }
   };
 
-  const shareMessage = `Check out my ${setName} binder on Marvel Card Vault!`;
+  const shareMessage = buildShareMessage();
 
   const handleFacebookShare = () => {
     window.open(
-      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(`BEHOLD my collection of ${displayName}!\n\nTrack your collection and its value at marvelcardvault.com`)}`,
       "_blank",
       "noopener,noreferrer,width=600,height=400"
     );
   };
 
   const handleTwitterShare = () => {
+    const tweetText = `BEHOLD my collection of ${displayName}!\n\nTrack your collection and its value at marvelcardvault.com`;
     window.open(
-      `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}&url=${encodeURIComponent(shareUrl)}`,
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}`,
       "_blank",
       "noopener,noreferrer,width=600,height=400"
     );
@@ -138,7 +151,7 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName }: ShareB
 
   const handleRedditShare = () => {
     window.open(
-      `https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareMessage)}`,
+      `https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(`BEHOLD my collection of ${displayName}!`)}`,
       "_blank",
       "noopener,noreferrer"
     );
@@ -146,10 +159,10 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName }: ShareB
 
   const handleInstagramShare = async () => {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(shareMessage);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast({ title: "Link copied! Paste it in your Instagram post or story." });
+      toast({ title: "Share message copied! Paste it in your Instagram post or story." });
       window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
     } catch {
       toast({ title: "Failed to copy link", variant: "destructive" });
@@ -172,7 +185,7 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName }: ShareB
 
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
-            Create a shareable link for your <span className="font-semibold">{setName}</span> binder. Anyone with the link can view your checklist and see which cards you own.
+            Create a shareable link for your <span className="font-semibold">{displayName}</span> binder. Anyone with the link can view your checklist and see which cards you own.
           </p>
 
           {isLoading ? (
@@ -194,6 +207,11 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName }: ShareB
             </Button>
           ) : (
             <>
+              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <p className="text-xs text-gray-500 mb-1.5 font-medium">Share message (copied to clipboard):</p>
+                <p className="text-sm text-gray-800 whitespace-pre-line">{shareMessage}</p>
+              </div>
+
               <div className="flex gap-2">
                 <Input
                   value={shareUrl}

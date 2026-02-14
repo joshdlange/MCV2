@@ -16,7 +16,7 @@ import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
-import type { CollectionItem, CardWithSet, CardSet } from "@shared/schema";
+import type { CollectionItem, CardWithSet, CardSet, MainSet } from "@shared/schema";
 import { formatCardName, formatSetName } from "@/lib/formatTitle";
 import { useAppStore } from "@/lib/store";
 
@@ -61,6 +61,10 @@ export default function MyCollection() {
 
   const { data: cardSets } = useQuery<CardSet[]>({
     queryKey: ["/api/card-sets"],
+  });
+
+  const { data: mainSetsData } = useQuery<MainSet[]>({
+    queryKey: ["/api/main-sets"],
   });
 
   // Helper to fetch all pages from a paginated endpoint
@@ -1215,6 +1219,11 @@ export default function MyCollection() {
           onClose={() => setShowShareModal(false)}
           cardSetId={parseInt(selectedSet)}
           setName={cardSets?.find(s => s.id.toString() === selectedSet)?.name || ""}
+          mainSetName={(() => {
+            const cs = cardSets?.find(s => s.id.toString() === selectedSet);
+            if (!cs?.mainSetId || !mainSetsData) return undefined;
+            return mainSetsData.find(ms => ms.id === cs.mainSetId)?.name;
+          })()}
         />
       )}
     </div>
