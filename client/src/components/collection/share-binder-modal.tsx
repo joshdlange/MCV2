@@ -53,12 +53,11 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName, mainSetN
       queryClient.invalidateQueries({ queryKey: ['/api/share-links', cardSetId] });
       const url = data?.url;
       if (url) {
-        const fullMessage = buildShareMessage(url);
         try {
-          await navigator.clipboard.writeText(fullMessage);
+          await navigator.clipboard.writeText(url);
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
-          toast({ title: "Share link created and copied to clipboard!" });
+          toast({ title: "Share link created and copied!" });
         } catch {
           toast({ title: "Share link created" });
         }
@@ -81,12 +80,11 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName, mainSetN
       setShowRegenerateConfirm(false);
       const url = data?.url;
       if (url) {
-        const fullMessage = buildShareMessage(url);
         try {
-          await navigator.clipboard.writeText(fullMessage);
+          await navigator.clipboard.writeText(url);
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
-          toast({ title: "New link generated and copied to clipboard!" });
+          toast({ title: "New link generated and copied!" });
         } catch {
           toast({ title: "New share link generated. The old link no longer works." });
         }
@@ -121,16 +119,14 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName, mainSetN
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(buildShareMessage());
+      await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast({ title: "Share message copied to clipboard" });
+      toast({ title: "Link copied to clipboard" });
     } catch {
       toast({ title: "Failed to copy", variant: "destructive" });
     }
   };
-
-  const shareMessage = buildShareMessage();
 
   const handleFacebookShare = () => {
     window.open(
@@ -159,7 +155,7 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName, mainSetN
 
   const handleInstagramShare = async () => {
     try {
-      await navigator.clipboard.writeText(shareMessage);
+      await navigator.clipboard.writeText(buildShareMessage());
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       toast({ title: "Share message copied! Paste it in your Instagram post or story." });
@@ -185,7 +181,7 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName, mainSetN
 
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
-            Create a shareable link for your <span className="font-semibold">{displayName}</span> binder. Anyone with the link can view your checklist and see which cards you own.
+            Create a shareable link for your <span className="font-semibold">{displayName}</span> binder. Anyone with the link can view your collection and see which cards you own.
           </p>
 
           {isLoading ? (
@@ -207,11 +203,6 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName, mainSetN
             </Button>
           ) : (
             <>
-              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <p className="text-xs text-gray-500 mb-1.5 font-medium">Share message (copied to clipboard):</p>
-                <p className="text-sm text-gray-800 whitespace-pre-line">{shareMessage}</p>
-              </div>
-
               <div className="flex gap-2">
                 <Input
                   value={shareUrl}
@@ -229,35 +220,38 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName, mainSetN
                 </Button>
               </div>
 
-              <div className="flex items-center justify-center gap-3">
-                <button
-                  onClick={handleFacebookShare}
-                  className="w-10 h-10 rounded-full bg-[#1877F2] hover:bg-[#1565C0] text-white flex items-center justify-center transition-colors"
-                  title="Share on Facebook"
-                >
-                  <SiFacebook className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={handleTwitterShare}
-                  className="w-10 h-10 rounded-full bg-black hover:bg-gray-800 text-white flex items-center justify-center transition-colors"
-                  title="Share on X"
-                >
-                  <SiX className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={handleRedditShare}
-                  className="w-10 h-10 rounded-full bg-[#FF4500] hover:bg-[#E03D00] text-white flex items-center justify-center transition-colors"
-                  title="Share on Reddit"
-                >
-                  <SiReddit className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={handleInstagramShare}
-                  className="w-10 h-10 rounded-full bg-gradient-to-br from-[#833AB4] via-[#FD1D1D] to-[#F77737] hover:opacity-90 text-white flex items-center justify-center transition-colors"
-                  title="Copy link & open Instagram"
-                >
-                  <SiInstagram className="w-5 h-5" />
-                </button>
+              <div>
+                <p className="text-xs text-gray-500 text-center mb-2">Share on social media</p>
+                <div className="flex items-center justify-center gap-3">
+                  <button
+                    onClick={handleFacebookShare}
+                    className="w-10 h-10 rounded-full bg-[#1877F2] hover:bg-[#1565C0] text-white flex items-center justify-center transition-colors"
+                    title="Share on Facebook"
+                  >
+                    <SiFacebook className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={handleTwitterShare}
+                    className="w-10 h-10 rounded-full bg-black hover:bg-gray-800 text-white flex items-center justify-center transition-colors"
+                    title="Share on X"
+                  >
+                    <SiX className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleRedditShare}
+                    className="w-10 h-10 rounded-full bg-[#FF4500] hover:bg-[#E03D00] text-white flex items-center justify-center transition-colors"
+                    title="Share on Reddit"
+                  >
+                    <SiReddit className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={handleInstagramShare}
+                    className="w-10 h-10 rounded-full bg-gradient-to-br from-[#833AB4] via-[#FD1D1D] to-[#F77737] hover:opacity-90 text-white flex items-center justify-center transition-colors"
+                    title="Copy link & open Instagram"
+                  >
+                    <SiInstagram className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               <div className="flex gap-2">

@@ -7804,12 +7804,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (existing.length > 0) {
         const link = existing[0];
-        const baseUrl = req.headers['x-forwarded-host']
-          ? `https://${req.headers['x-forwarded-host']}`
-          : `${req.protocol}://${req.get('host')}`;
         return res.json({
           token: link.token,
-          url: `${baseUrl}/share/${link.token}`,
+          url: `https://app.marvelcardvault.com/share/${link.token}`,
           cardSetId: link.cardSetId,
           id: link.id,
         });
@@ -7844,13 +7841,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .values({ userId, cardSetId, token, isActive: true })
         .returning();
 
-      const baseUrl = req.headers['x-forwarded-host']
-        ? `https://${req.headers['x-forwarded-host']}`
-        : `${req.protocol}://${req.get('host')}`;
-
       res.json({
         token: newLink.token,
-        url: `${baseUrl}/share/${newLink.token}`,
+        url: `https://app.marvelcardvault.com/share/${newLink.token}`,
         cardSetId: newLink.cardSetId,
         id: newLink.id,
       });
@@ -7917,13 +7910,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .values({ userId, cardSetId, token, isActive: true })
         .returning();
 
-      const baseUrl = req.headers['x-forwarded-host']
-        ? `https://${req.headers['x-forwarded-host']}`
-        : `${req.protocol}://${req.get('host')}`;
-
       res.json({
         token: newLink.token,
-        url: `${baseUrl}/share/${newLink.token}`,
+        url: `https://app.marvelcardvault.com/share/${newLink.token}`,
         cardSetId: newLink.cardSetId,
         id: newLink.id,
       });
@@ -7987,14 +7976,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const link = existing[0];
-      const baseUrl = req.headers['x-forwarded-host']
-        ? `https://${req.headers['x-forwarded-host']}`
-        : `${req.protocol}://${req.get('host')}`;
 
       res.json({
         shareLink: {
           token: link.token,
-          url: `${baseUrl}/share/${link.token}`,
+          url: `https://app.marvelcardvault.com/share/${link.token}`,
           cardSetId: link.cardSetId,
           id: link.id,
           createdAt: link.createdAt,
