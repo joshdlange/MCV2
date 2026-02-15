@@ -666,21 +666,22 @@ export default function BrowseCards() {
       <div className="min-h-screen bg-gray-50">
         {/* Sticky header container */}
         <div className="sticky top-16 lg:top-0 z-40 bg-gray-50">
-          <div className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-4">
-          <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-4">
+          <div className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-2 md:py-4">
+          <div className="flex flex-col space-y-2 md:space-y-0 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-3">
               <Button
                 variant="outline"
                 onClick={handleBackToSets}
-                className="flex items-center gap-2 text-sm"
+                size="sm"
+                className="flex items-center gap-1 text-sm shrink-0"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span className="hidden sm:inline">Back to Sets</span>
                 <span className="sm:hidden">Back</span>
               </Button>
               <div className="min-w-0 flex-1">
-                <h2 className="text-xl md:text-2xl font-bebas text-gray-900 tracking-wide truncate">{selectedSet.name}</h2>
-                <p className="text-sm text-gray-600 font-roboto">
+                <h2 className="text-lg md:text-2xl font-bebas text-gray-900 tracking-wide truncate">{selectedSet.name}</h2>
+                <p className="text-xs md:text-sm text-gray-600 font-roboto hidden sm:block">
                   Explore cards from this set
                 </p>
               </div>
@@ -699,16 +700,6 @@ export default function BrowseCards() {
                 <Star className={`w-4 h-4 ${favoriteSetIds.includes(selectedSet.id) ? 'fill-current' : ''}`} />
                 <span className="hidden sm:inline">{favoriteSetIds.includes(selectedSet.id) ? 'Favorited' : 'Favorite Set'}</span>
                 <span className="sm:hidden">{favoriteSetIds.includes(selectedSet.id) ? 'Favorited' : 'Favorite'}</span>
-              </Button>
-              <Button
-                onClick={() => setShowShareModal(true)}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                <Share2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Share Binder</span>
-                <span className="sm:hidden">Share</span>
               </Button>
               <Button
                 onClick={() => handleAddAllToCollection(selectedSet.id)}
@@ -737,16 +728,16 @@ export default function BrowseCards() {
           </div>
         </div>
 
-        <div className="bg-white border-b border-gray-200 px-4 md:px-6 py-4">
-          <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:flex-wrap md:items-center gap-4">
-            <div className="flex-1 min-w-64">
+        <div className="bg-white border-b border-gray-200 px-4 md:px-6 py-2 md:py-4">
+          <div className="flex flex-row flex-wrap items-center gap-2 md:gap-4">
+            <div className="flex-1 min-w-[180px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
                   placeholder="Search cards in this set..."
                   value={filters.search || ""}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  className="pl-10 bg-white border-gray-200 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  className="pl-10 h-9 bg-white border-gray-200 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-red-500 focus:border-red-500"
                 />
               </div>
             </div>
@@ -756,17 +747,17 @@ export default function BrowseCards() {
                 variant={viewMode === "grid" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setViewMode("grid")}
-                className="h-10 w-12 md:h-8 md:w-8 p-0"
+                className="h-9 w-10 md:h-8 md:w-8 p-0"
               >
-                <Grid3X3 className="h-5 w-5 md:h-4 md:w-4" />
+                <Grid3X3 className="h-4 w-4" />
               </Button>
               <Button
                 variant={viewMode === "list" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setViewMode("list")}
-                className="h-10 w-12 md:h-8 md:w-8 p-0"
+                className="h-9 w-10 md:h-8 md:w-8 p-0"
               >
-                <List className="h-5 w-5 md:h-4 md:w-4" />
+                <List className="h-4 w-4" />
               </Button>
             </div>
 
@@ -796,21 +787,22 @@ export default function BrowseCards() {
     <div className="min-h-screen bg-gray-50">
       {/* Sticky header for browse view */}
       <div className="sticky top-16 lg:top-0 z-40 bg-gray-50">
-        <div className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-4">
-        <div className="flex flex-col space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
+        <div className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-2 md:py-4">
+        <div className="flex flex-col space-y-2 md:space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">
               {isMainSetView && currentMainSet ? (
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <Link href="/browse">
-                    <Button variant="outline" size="sm">
-                      <ArrowLeft className="h-4 w-4 mr-2" />
-                      Back to Browse
+                    <Button variant="outline" size="sm" className="shrink-0">
+                      <ArrowLeft className="h-4 w-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Back to Browse</span>
+                      <span className="sm:hidden">Back</span>
                     </Button>
                   </Link>
-                  <div>
+                  <div className="min-w-0">
                     <h2 className="text-lg sm:text-xl md:text-2xl font-bebas text-gray-900 tracking-wide truncate">{currentMainSet.name}</h2>
-                    <p className="text-sm text-gray-600 font-roboto">
+                    <p className="text-xs sm:text-sm text-gray-600 font-roboto">
                       {currentViewSets.length} set{currentViewSets.length !== 1 ? 's' : ''} in this collection
                     </p>
                   </div>
@@ -818,23 +810,11 @@ export default function BrowseCards() {
               ) : (
                 <div>
                   <h2 className="text-lg sm:text-xl md:text-2xl font-bebas text-gray-900 tracking-wide">BROWSE CARD SETS</h2>
-                  <p className="text-sm text-gray-600 font-roboto">
+                  <p className="text-xs sm:text-sm text-gray-600 font-roboto hidden sm:block">
                     Choose a collection or set to explore individual cards
                   </p>
                 </div>
               )}
-            </div>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search sets by name or year..."
-                value={setSearchQuery}
-                onChange={(e) => setSetSearchQuery(e.target.value)}
-                className="pl-10 bg-white text-gray-900 placeholder:text-gray-500"
-              />
             </div>
             <Select 
               value={filters.year?.toString() || "all"} 
@@ -843,7 +823,7 @@ export default function BrowseCards() {
                 year: value === "all" ? undefined : parseInt(value)
               }))}
             >
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-28 sm:w-32 shrink-0">
                 <SelectValue placeholder="All Years" />
               </SelectTrigger>
               <SelectContent>
@@ -855,6 +835,18 @@ export default function BrowseCards() {
                   ))}
               </SelectContent>
             </Select>
+          </div>
+          
+          <div className="hidden sm:block">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Search sets by name or year..."
+                value={setSearchQuery}
+                onChange={(e) => setSetSearchQuery(e.target.value)}
+                className="pl-10 bg-white text-gray-900 placeholder:text-gray-500"
+              />
+            </div>
           </div>
         </div>
         </div>
@@ -1198,15 +1190,6 @@ export default function BrowseCards() {
         </Dialog>
       )}
 
-      {selectedSet && (
-        <ShareBinderModal
-          isOpen={showShareModal}
-          onClose={() => setShowShareModal(false)}
-          cardSetId={selectedSet.id}
-          setName={selectedSet.name}
-          mainSetName={currentMainSet?.name}
-        />
-      )}
     </div>
   );
 }
