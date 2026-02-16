@@ -1,0 +1,52 @@
+You are working inside the Marvel Card Vault codebase (Capacitor app). Your job is to REPORT the current structure and storage of authentication, users, and subscriptions exactly as implemented today. Do not propose changes yet. Do not guess. Only state what you can verify in the code.
+
+OUTPUT FORMAT (follow exactly)
+1) AUTH OVERVIEW
+- Auth provider(s):
+- Where auth is initialized (file paths):
+- How login state is tracked (Firebase onAuthStateChanged? Context? Redux?):
+- Where user object is stored client-side (state/store/localStorage):
+- Any tokens stored (idToken, refreshToken) and where:
+
+2) USER DATA MODEL + STORAGE
+- Where the primary “user table” lives (Firestore? Supabase? Postgres? Custom API?):
+- Table/collection name(s):
+- Fields (list the full schema you can infer from code):
+- Where user records are created/updated (file paths + function names):
+- Any server-side user tables or migrations (file paths):
+
+3) SUBSCRIPTION + ENTITLEMENTS (MOST IMPORTANT)
+- What is the “source of truth” for premium access today?
+  (e.g., users.isPremium boolean, subscription_status field, Stripe customer/subscription id, etc.)
+- Exactly how the app decides “premium vs free” (file path + code snippet references):
+- Where entitlement is stored (DB field names, Firestore doc, etc.)
+- Any caching in the client (localStorage, AsyncStorage, etc.)
+
+4) STRIPE INTEGRATION DETAILS
+- Is Stripe used for subscriptions, marketplace purchases, or both?
+- Where Stripe keys are stored (env vars, config files):
+- Where Stripe checkout is initiated (file paths):
+- Where webhooks are handled (file path, route name):
+- Which Stripe webhook events are listened to:
+- Where Stripe events update the user entitlement (file paths + logic):
+
+5) BACKEND ARCHITECTURE
+- Backend location (same repo vs separate):
+- Framework/runtime (Express, Next.js API routes, etc.):
+- Main API entry points (routes list):
+- Deployment targets (if referenced in code):
+
+6) DATABASES IN USE
+- List every database/storage used: (Firestore, Supabase/Postgres, Redis, etc.)
+- For each: connection config file path and environment variable names.
+
+REQUIREMENTS
+- Include file paths for every claim.
+- If you can’t find something, explicitly say: “NOT FOUND.”
+- Use repo search to locate keywords: isPremium, subscription, stripeCustomerId, webhook, entitlement, firebase, firestore, supabase, users, plans, premium.
+- Provide a short “Verified Facts” section at the end with bullet points only.
+
+QA / REGRESSION CHECKLIST (must include)
+- Confirm no duplicate/conflicting entitlement logic exists.
+- Confirm web vs mobile entitlement checks are consistent.
+- Confirm whether subscription is required to use marketplace or just collection features.
