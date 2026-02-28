@@ -5,6 +5,7 @@ import { Lock, Sparkles, Star } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import logoImage from "@assets/Marvel_Card_Vault_Logo_Small_1770411162419.png";
+import { Capacitor } from '@capacitor/core';
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -17,6 +18,11 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
   const { toast } = useToast();
 
   const handleUpgrade = async () => {
+    if (Capacitor.isNativePlatform()) {
+      window.open('https://app.marvelcardvault.com/subscribe', '_system');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const response = await apiRequest("POST", "/api/create-checkout-session");

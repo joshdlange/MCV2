@@ -50,7 +50,7 @@ interface TrendingCache {
   rotationSeed: number;
 }
 let trendingCache: TrendingCache | null = null;
-const TRENDING_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
+const TRENDING_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours (one daily rotation)
 
 export class OptimizedStorage {
   /**
@@ -429,7 +429,8 @@ export class OptimizedStorage {
    */
   async getTrendingCardsOptimized(limit: number = 10) {
     const startTime = Date.now();
-    const currentRotationSeed = Math.floor(Date.now() / TRENDING_CACHE_TTL);
+    const dayOfYear = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
+    const currentRotationSeed = dayOfYear;
     
     // Check cache first
     if (trendingCache && 
@@ -549,13 +550,14 @@ export class OptimizedStorage {
         });
       }
 
-      // Score candidates
+      // Score candidates with strong daily randomization
       const scoredCards = candidates.map(card => {
         let score = 0;
         score += (card.collectionCount || 0) * 2.0;
         if (card.isInsert) score += 15.0;
         if (card.avgPrice && parseFloat(card.avgPrice) > 0) score += 10.0;
-        score += ((card.id * currentRotationSeed) % 100) * 0.1;
+        const hash = ((card.id * 2654435761 + currentRotationSeed * 1597334677) >>> 0) % 1000;
+        score += hash * 0.05;
         return { ...card, score };
       });
 

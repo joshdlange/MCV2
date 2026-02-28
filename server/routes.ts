@@ -460,6 +460,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/admin/users/:id", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      const userId = parseInt(req.params.id);
+      const { username, email, isAdmin, plan } = req.body;
+
+      const updateData: any = {};
+      if (username !== undefined) updateData.username = username;
+      if (email !== undefined) updateData.email = email;
+      if (isAdmin !== undefined) updateData.isAdmin = isAdmin;
+
+      if (plan !== undefined) {
+        updateData.plan = plan;
+        updateData.subscriptionStatus = 'active';
+        if (plan === 'SUPER_HERO') {
+          updateData.stripeSubscriptionId = null;
+        }
+      }
+
+      const updatedUser = await storage.updateUser(userId, updateData);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      console.log(`Admin ${req.user.id} updated user ${userId}: plan=${plan}, isAdmin=${isAdmin}`);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('Admin update user error:', error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
   // Update user
   app.put("/api/users/:id", authenticateUser, async (req: any, res) => {
     try {

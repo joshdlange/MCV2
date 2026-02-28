@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { Capacitor } from '@capacitor/core';
 
 export interface SubscriptionStatus {
   plan: string;
@@ -18,11 +19,15 @@ export function useSubscription() {
 
   const createCheckoutSession = useMutation({
     mutationFn: async () => {
+      if (Capacitor.isNativePlatform()) {
+        window.open('https://app.marvelcardvault.com/subscribe', '_system');
+        return null;
+      }
       const response = await apiRequest("POST", "/api/create-checkout-session");
       return response.json();
     },
     onSuccess: (data) => {
-      if (data.url) {
+      if (data?.url) {
         window.location.href = data.url;
       }
     },

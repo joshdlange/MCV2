@@ -3,6 +3,8 @@ import { User } from 'firebase/auth';
 import { auth, onAuthStateChanged } from '@/lib/firebase';
 import { handleRedirect } from '@/lib/handleRedirect';
 import { useAppStore } from '@/lib/store';
+import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
 
 interface AuthContextType {
   user: User | null;
@@ -87,10 +89,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(firebaseUser);
         
         if (firebaseUser) {
-          // Always sync user data with backend to ensure admin status is current
           await syncUserWithBackend(firebaseUser);
+
+          if (Capacitor.isNativePlatform()) {
+            App.addListener('appStateChange', ({ isActive }) => {
+              if (isActive && firebaseUser) {
+                syncUserWithBackend(firebaseUser);
+              }
+            });
+          }
         } else {
-          // Clear user data when logged out
           setCurrentUser(null);
         }
         

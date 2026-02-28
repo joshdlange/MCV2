@@ -6,6 +6,7 @@ import { CheckCircle, Zap, ArrowRight, Loader2, AlertCircle } from "lucide-react
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/contexts/AuthContext";
+import { Capacitor } from '@capacitor/core';
 
 export default function SubscriptionSuccess() {
   const [, setLocation] = useLocation();
@@ -38,6 +39,10 @@ export default function SubscriptionSuccess() {
         queryClient.invalidateQueries({ queryKey: ['/api/auth/sync'] });
         queryClient.invalidateQueries({ queryKey: ['/api/subscription-status'] });
         queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+
+        if (Capacitor.isNativePlatform()) {
+          window.location.href = '/';
+        }
       } catch (err: any) {
         console.error('Checkout verification failed:', err);
         if (currentUser?.plan === 'SUPER_HERO') {
