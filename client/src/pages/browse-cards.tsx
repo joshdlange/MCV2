@@ -12,6 +12,7 @@ import { CardGrid } from "@/components/cards/card-grid";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { SetThumbnail } from "@/components/cards/set-thumbnail";
 import { MainSetTile } from "@/components/cards/main-set-tile";
+import { UpgradeModal } from "@/components/subscription/upgrade-modal";
 import { useToast } from "@/hooks/use-toast";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/contexts/AuthContext";
@@ -53,6 +54,8 @@ export default function BrowseCards() {
     imageUrl: ''
   });
   const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const COLLECTION_LIMIT = 250;
   const [processingImages, setProcessingImages] = useState(false);
   const [processingPricing, setProcessingPricing] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -155,10 +158,14 @@ export default function BrowseCards() {
       queryClient.invalidateQueries({ queryKey: ["/api/collection"] });
       toast({ title: "Added to collection!" });
     },
-    onError: (err, cardId, context) => {
-      // Rollback on error
+    onError: (err: any, cardId, context) => {
       if (context?.previousCollection) {
         queryClient.setQueryData(["/api/collection"], context.previousCollection);
+      }
+      const errorMessage = err?.message || '';
+      if (errorMessage.includes('403') || errorMessage.includes('COLLECTION_LIMIT_REACHED')) {
+        setShowUpgradeModal(true);
+        return;
       }
       toast({ title: "Failed to add card", variant: "destructive" });
     },
@@ -1021,7 +1028,13 @@ export default function BrowseCards() {
           isInCollection={isCardInCollection(selectedCard.id)}
           isInWishlist={isCardInWishlist(selectedCard.id)}
           collectionItemId={getCollectionItemId(selectedCard.id)}
-          onAddToCollection={user ? () => addToCollectionMutation.mutate(selectedCard.id) : undefined}
+          onAddToCollection={user ? () => {
+            if (currentUser?.plan !== 'SUPER_HERO' && (collection?.length || 0) >= COLLECTION_LIMIT) {
+              setShowUpgradeModal(true);
+              return;
+            }
+            addToCollectionMutation.mutate(selectedCard.id);
+          } : undefined}
           onRemoveFromCollection={user ? () => removeFromCollectionMutation.mutate(selectedCard.id) : undefined}
           onAddToWishlist={user ? () => addToWishlistMutation.mutate(selectedCard.id) : undefined}
           onRemoveFromWishlist={user ? () => removeFromWishlistMutation.mutate(selectedCard.id) : undefined}
@@ -1202,6 +1215,11 @@ export default function BrowseCards() {
         </Dialog>
       )}
 
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentPlan={currentUser?.plan || 'SIDE_KICK'}
+      />
     </div>
   );
 }

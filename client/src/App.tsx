@@ -40,6 +40,7 @@ import UpcomingSets from "@/pages/upcoming-sets";
 import ApiDemo from "@/pages/api-demo";
 import SubscriptionSuccess from "@/pages/subscription-success";
 import SubscriptionCancelled from "@/pages/subscription-cancelled";
+import Subscribe from "@/pages/subscribe";
 import Activity from "@/pages/Activity";
 import SharedBinder from "@/pages/shared-binder";
 import NotFound from "@/pages/not-found";
@@ -159,6 +160,7 @@ function Router() {
       <Route path="/admin/image-approvals" component={AdminImageApprovals} />
       <Route path="/admin/migration-console" component={AdminMigrationConsole} />
       <Route path="/admin/base-set-population" component={AdminBaseSetPopulation} />
+      <Route path="/subscribe" component={Subscribe} />
       <Route path="/subscription-success" component={SubscriptionSuccess} />
       <Route path="/subscription-cancelled" component={SubscriptionCancelled} />
       <Route component={NotFound} />

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { CardValue } from "@/components/cards/card-value";
 import { BinderView } from "@/components/collection/binder-view";
+import { UpgradeModal } from "@/components/subscription/upgrade-modal";
 import { Star, Heart, Check, ShoppingCart, Trash2, Search, Grid3X3, List, Filter, X, Plus, BookOpen, ArrowLeft, Share2 } from "lucide-react";
 import { ShareBinderModal } from "@/components/collection/share-binder-modal";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
@@ -35,6 +36,8 @@ export default function MyCollection() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const COLLECTION_LIMIT = 250;
   const favStorageKey = currentUser ? `favoriteSetIds_user_${currentUser.id}` : 'favoriteSetIds';
   const [favoriteSetIds, setFavoriteSetIds] = useState<number[]>(() => {
     try {
@@ -279,16 +282,19 @@ export default function MyCollection() {
       toast({ title: "Card added to collection" });
     },
     onError: (error: Error) => {
+      const msg = error.message || '';
+      if (msg.includes('403') || msg.includes('COLLECTION_LIMIT_REACHED')) {
+        setShowUpgradeModal(true);
+        return;
+      }
       let errorMessage = "Failed to add card";
-      if (error.message) {
-        const match = error.message.match(/\d+: (.+)/);
-        if (match) {
-          try {
-            const parsed = JSON.parse(match[1]);
-            if (parsed.message) errorMessage = parsed.message;
-          } catch {
-            errorMessage = match[1];
-          }
+      const match = msg.match(/\d+: (.+)/);
+      if (match) {
+        try {
+          const parsed = JSON.parse(match[1]);
+          if (parsed.message) errorMessage = parsed.message;
+        } catch {
+          errorMessage = match[1];
         }
       }
       toast({ title: errorMessage, variant: "destructive" });
@@ -1197,6 +1203,10 @@ export default function MyCollection() {
         collectionItemId={selectedCard ? collection?.find(item => item.card.id === selectedCard.id)?.id : undefined}
         onAddToCollection={() => {
           if (selectedCard) {
+            if (currentUser?.plan !== 'SUPER_HERO' && (collection?.length || 0) >= COLLECTION_LIMIT) {
+              setShowUpgradeModal(true);
+              return;
+            }
             addToCollectionMutation.mutate(selectedCard.id);
           }
         }}
@@ -1226,6 +1236,12 @@ export default function MyCollection() {
           })()}
         />
       )}
+
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentPlan={currentUser?.plan || 'SIDE_KICK'}
+      />
     </div>
   );
 }

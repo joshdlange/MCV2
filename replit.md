@@ -1,7 +1,7 @@
 # Marvel Card Vault - Replit Development Guide
 
 ## Overview
-Marvel Card Vault is a comprehensive web application for managing Marvel trading card collections. Its main purpose is to support large-scale card databases (194,800+ cards after deduplication) with optimized performance, user authentication, subscription management, and advanced collection tracking features. The project aims to provide a robust platform for collectors to organize, track, and manage their Marvel trading card assets, enhancing the collecting experience with powerful tools and integrations.
+Marvel Card Vault is a comprehensive web application for managing Marvel trading card collections. It supports large-scale card databases (194,800+ cards) with optimized performance, user authentication, subscription management, and advanced collection tracking features. The project aims to provide a robust platform for collectors to organize, track, and manage their Marvel trading card assets.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -20,106 +20,51 @@ Preferred communication style: Simple, everyday language.
 - **Data Fetching**: TanStack Query (React Query) for server state
 
 ### Performance Optimizations
-The application incorporates comprehensive performance optimizations for handling large datasets, including database indexing, paginated API endpoints, virtual scrolling for large card grids, intelligent caching with TTL management, and background jobs for heavy operations.
+The application incorporates comprehensive performance optimizations for handling large datasets, including database indexing, paginated API endpoints, virtual scrolling, intelligent caching with TTL management, and background jobs for heavy operations.
 
 ### Key Components
-- **Database Schema**: Structured for efficient management of users, card sets, individual cards, user collections, wishlists, cached pricing data, and upcoming set releases.
-- **Authentication & Authorization**: Leverages Firebase Authentication for user management, implements admin role-based access control, JWT token validation, and enforces subscription tier access.
-- **Upcoming Sets Tracker**: ✨ NEW (Nov 20, 2025) - Comprehensive system for managing and displaying upcoming Marvel card set releases with URL import, OpenGraph metadata scraping, image caching, countdown timers, and user interest tracking.
-- **Email Integration**: ✨ NEW (Nov 20, 2025) - Brevo SMTP integration for transactional emails with Nodemailer configuration (`server/email.ts`), Firebase to Brevo contact sync (`server/contactsSync.ts`), admin-only sync endpoint for CRM management, and comprehensive email automation system with 15 branded templates, event triggers, and scheduled cron jobs. ✅ UPDATED (Nov 21, 2025) - Inactivity reminders and weekly digest emails are limited to 1 email per month maximum to prevent email fatigue.
-- **Migration Console**: ✨ NEW (Jan 27, 2026) - Admin-only tool for safely migrating cards between sets. Features include source/destination set pickers with search/filter, preview with conflict detection, transaction-wrapped execute/rollback operations, archive instead of delete pattern, and full audit logging via `migration_logs` and `migration_log_cards` tables. Protects user collections by keeping card_ids stable.
-- **Canonical Taxonomy**: ✅ EXPANDED (Jan 31, 2026) - Successfully imported 58 new main sets and 564 new subsets from updated CSV. Total: 401 active canonical main sets, 5,049 active canonical subsets. Import was ADD-ONLY with no modifications to existing data.
-- **Legacy Set Archive System**: ✅ NEW (Jan 31, 2026) - Deterministic canonical definition implemented:
-  - Added `is_canonical` and `canonical_source` columns to `main_sets` table
-  - main_sets marked canonical if they have at least one canonical child card_set
-  - Public `/api/main-sets` now filters by `isActive=true AND isCanonical=true` - no legacy duplicates in browse
-  - Admin route `/api/admin/main-sets` returns all sets including archived for admin tools
-  - Legacy cleanup endpoints: `/api/admin/archive-legacy/dry-run` and `/api/admin/archive-legacy/apply`
-  - Archived 75 legacy main_sets and 133 legacy card_sets (soft delete, is_active=false)
-- **Performance Hardening for Large Imports**: ✅ NEW (Jan 31, 2026) - Prepared system for 200k+ card catalog imports:
-  - All card-listing endpoints (`/api/sets/:setId/cards`, `/api/missing-cards/:setId`) now paginated with LIMIT/OFFSET (default 36, max 100)
-  - New `idx_cards_set_id_id` index for optimized pagination queries
-  - New `/api/admin/bulk-card-import` endpoint with batch processing (2000 rows/batch), progress logging `[BULK IMPORT]`, event loop yielding, resumable via `startOffset` parameter
-  - Frontend binder/missing views fetch all pages automatically to display complete card lists
-- **Major Card Import Successful**: ✅ COMPLETED (Jan 31, 2026) - Imported 162,493 cards from 171,737-row CSV:
-  - Fixed PostgreSQL regexp normalization bug in Node.js by switching to JavaScript string normalization
-  - Used papaparse for proper CSV parsing with batch inserts and ON CONFLICT handling
-  - Final card count after import: 342,315 cards across 4,368 sets with cards
-  - Only 8,968 errors (mostly invalid FULL COMBO values like year-only entries)
-  - Card counts updated for 2,496 sets affected by import
-- **Still Populating Section**: ✨ NEW (Jan 28, 2026) - Browse → Master Sets now shows a "Still Populating" section below active sets for canonical master sets that have no cards yet. Features:
-  - Grayscale locked tile appearance with amber "Coming Soon" styling
-  - Click shows branded modal (no navigation) with hammer icon
-  - Sorted by year DESC, name ASC
-  - Only shows canonical sets (canonical_source='csv_master' OR is_canonical=true)
-  - Empty subsets inside active sets show "Coming Soon" badge
-  - Admins can upload thumbnails for Still Populating sets via edit button
-- **Card Data Cleanup**: ✅ COMPLETED (Mar 1, 2026) - Multi-phase data normalization:
-  - Phase A: SN normalization - removed "SN###" suffixes from 96,069 card names, moved serial numbers to description field
-  - Phase B: Deduplication - removed ~20,322 duplicate cards (matching on set_id, card_number, name, variation). Survivor selection prioritized collection-owned cards, then cards with images, then most populated fields, then lowest ID. User collections and wishlists safely migrated to survivor cards.
-  - Phase C: Additional dedup pass - removed 769 more duplicate pairs (same set_id, card_number, normalized name) across 145 active sets. No user collections affected. Final card count: 194,285
-  - Subset thumbnail fix: tiles now fetch cards with `hasImage=true` filter for reliable image display
-- **Search Fix**: ✅ FIXED (Mar 1, 2026) - `searchCardSets()` raised from hardcoded LIMIT 10 to 500 with batch `inArray` count query (single GROUP BY instead of N+1 queries). Frontend search results paginated with "Show More" (30 per page) to handle large result sets.
-- **Admin User Management Fix**: ✅ FIXED (Feb 28, 2026) - Added `PATCH /api/admin/users/:id` backend route that was missing (admin edit page was calling this endpoint but it didn't exist). Admin-set SUPER_HERO grants now set `stripeSubscriptionId = null`, making them immune to Stripe webhook downgrades (lifetime membership). Two users granted lifetime SUPER_HERO: josh+appletest@marvelcardvault.com (ID: 647) and keith@mentaltremors.com (ID: 578).
-- **Trending Cards Daily Rotation**: ✅ FIXED (Feb 28, 2026) - Changed trending cards from 6-hour cache with weak randomization to daily rotation with strong hash-based randomization (Knuth multiplicative hash). Cards now rotate once per day with genuine variety instead of getting stuck on the same cards for weeks.
-- **iOS App Store Compliance**: ✅ NEW (Feb 28, 2026) - Added Capacitor native platform checks to redirect iOS/Android users to external website (`https://app.marvelcardvault.com/subscribe`) for Stripe checkout instead of in-app payment (required by Apple). Changes in: `upgrade-modal.tsx`, `useSubscription.ts` (redirect to external browser), `subscription-success.tsx` (redirect home on native after verification), `AuthContext.tsx` (appStateChange listener to re-sync user plan when returning from Safari). Web flow unchanged. Installed `@capacitor/app` package.
-- **Marketplace Pause & eBay Affiliate**: ✅ UPDATED (Feb 13, 2026) - Marketplace temporarily hidden behind feature flag (`VITE_FEATURE_MARKETPLACE_ENABLED`, default false). All marketplace code/data/routes intact for re-enable. Card detail modal: "eBay Market Price" renamed to "Market Price" (branding removed). Marketplace nav link hidden, direct URL shows "Coming Back Soon" page. Activity page marketplace tabs conditionally hidden. Feature flag file: `client/src/lib/featureFlags.ts`.
-  - **eBay Affiliate Link**: Centralized utility at `client/src/lib/ebayAffiliate.ts`. "Buy on eBay" button on card detail modal opens eBay search with affiliate tracking.
-  - **URL format**: `https://www.ebay.com/sch/i.html?_nkw=<QUERY>&mkcid=1&mkrid=<MKRID>&siteid=<SITEID>&campid=<CAMPID>&toolid=<TOOLID>&mkevt=1&customid=<CUSTOMID>`
-  - **Query priority**: (A) Main Set + Subset + Card Name + #Number, (B) Main Set + Card Name + #Number, (C) Main Set + Card Name, (D) Card Name + #Number. Subset extracted from set name via " - " delimiter. Query capped at 120 chars.
-  - **Custom ID format**: `<PREFIX>-<mainSetId>-<setId>-<cardNumber>` or `<PREFIX>-<cardId>` fallback.
-  - **Env vars** (all `VITE_` prefixed for frontend): `VITE_EBAY_MKRID` (default 711-53200-19255-0), `VITE_EBAY_SITEID` (default 0), `VITE_EBAY_CAMPID` (required for affiliate tracking), `VITE_EBAY_TOOLID` (default 10001), `VITE_EBAY_MKEVT` (default 1), `VITE_EBAY_MKCID` (default 1), `VITE_EBAY_CUSTOMID_PREFIX` (default MCV).
-  - **Safe fallback**: If `VITE_EBAY_CAMPID` is missing, button still opens basic eBay search without affiliate params.
-- **Marketplace Fulfillment System**: ✨ NEW (Jan 10, 2026) - Complete seller payout workflow including:
-  - Earnings tracking with proper categorization: available, pending delivery, pending payout, paid out
-  - Payout account management (PayPal/Venmo) stored in `payout_accounts` table
-  - Payout request workflow with duplicate prevention (one pending request per seller)
-  - Admin payout approval interface at `/admin/payouts` with PayPal quick-pay links
-  - Notification badges for unread sales on Activity page Sales tab
-  - Buyer delivery confirmation for shipped orders
-  - Fee calculations: platform fee (10%), Stripe fee (2.9% + $0.30), shipping label costs deducted from seller earnings
+- **Database Schema**: Efficiently manages users, card sets, cards, user collections, wishlists, cached pricing, and upcoming set releases.
+- **Authentication & Authorization**: Firebase for user management, admin role-based access, JWT validation, and subscription tier access.
+- **Upcoming Sets Tracker**: Manages and displays upcoming Marvel card set releases with URL import, OpenGraph scraping, image caching, and countdown timers.
+- **Email Integration**: Brevo SMTP for transactional emails, Firebase to Brevo contact sync, and an email automation system with branded templates.
+- **Migration Console**: Admin-only tool for safely migrating cards between sets with preview, conflict detection, transaction-wrapped operations, and audit logging.
+- **Canonical Taxonomy & Legacy Archive**: System for defining canonical sets, archiving legacy sets (soft delete), and filtering public API results.
+- **Large Import Handling**: Pagination for card listing endpoints, optimized database indexes, and a bulk card import endpoint with batch processing and resumable imports.
+- **"Still Populating" Section**: Displays canonical master sets without cards yet in the browse section, showing "Coming Soon" badges.
+- **Card Data Cleanup**: Multi-phase normalization for card names, serial numbers, and deduplication of cards, with safe migration of user collections.
+- **Search Functionality**: Enhanced `searchCardSets()` with increased limits and frontend pagination for large result sets.
+- **Admin User Management**: Backend route for updating user details, including lifetime SUPER_HERO grants.
+- **Trending Cards**: Daily rotation of trending cards using a strong hash-based randomization.
+- **Upgrade Flow**: Comprehensive audit and fixes for the subscription upgrade process, including client-side checks, 403 error handling, and a dedicated `/subscribe` page.
+- **iOS App Store Compliance**: Implemented Capacitor native platform checks to redirect iOS/Android users to an external website for Stripe checkout.
+- **Marketplace & eBay Affiliate**: Marketplace functionality is feature-flagged. Integrated eBay affiliate links for "Buy on eBay" buttons, with dynamic query generation and customizable affiliate parameters.
+- **Marketplace Fulfillment System**: Seller payout workflow including earnings tracking, payout account management, payout requests, admin approval, and fee calculations.
 
 ### Data Flow
-- **Card Management**: Involves admin CSV uploads, background processing, eBay API integration for image finding, Cloudinary optimization, and periodic price data refreshes.
-- **User Collection**: Users can browse, add cards to collections or wishlists, with cached collection statistics and background market pricing updates.
-- **Performance Monitoring**: Includes API response time tracking, slow query detection, database query optimization metrics, and memory usage monitoring.
+- **Card Management**: Admin CSV uploads, background processing, eBay API for images, Cloudinary optimization, and price data refreshes.
+- **User Collection**: Users add cards to collections/wishlists, with cached statistics and background market pricing updates.
+- **Performance Monitoring**: API response time, slow query detection, database optimization metrics, and memory usage monitoring.
 
 ### Deployment Strategy
-- **Replit Deployment**: Configured for `npm run build` and `npm run start` commands, with internal port 5000 and external port 80. Uses Node.js 20 with PostgreSQL 16.
-- **Database Management**: Utilizes Drizzle Kit for migrations and pre-configured performance indexes for large datasets.
-- **Production Considerations**: Emphasizes environment variables for API keys, rate limiting, cached data strategies, and background job management.
+- **Replit Deployment**: Configured for `npm run build` and `npm run start` commands, internal port 5000, external port 80. Node.js 20 with PostgreSQL 16.
+- **Database Management**: Drizzle Kit for migrations and pre-configured performance indexes.
+- **Production Considerations**: Environment variables for API keys, rate limiting, caching, and background job management.
 
 ### UI/UX Decisions
-The application features a modern, clean interface with careful attention to visual consistency and user experience. Color schemes, particularly the use of Marvel red themes (red-500/red-600), are applied consistently for branding and visual hierarchy. Messaging interfaces are designed to mimic native mobile experiences (e.g., iPhone/Android messaging) with avatar-focused layouts, proper message bubbles, and integrated social features. The profile section serves as a social dashboard, displaying friends and achievements (referred to as "super powers") with visual badge icons and clear navigation.
+Modern, clean interface with visual consistency. Uses Marvel red themes (red-500/red-600) for branding. Messaging interfaces mimic native mobile experiences with avatars and message bubbles. Profile section acts as a social dashboard with friends and "super powers" (achievements).
 
 ## External Dependencies
 
 ### Production APIs
 - **eBay Finding API**: For card image search and pricing.
 - **eBay OAuth**: For API authentication.
-- **Stripe API**: For subscription payment processing. ✅ RESTORED (Jan 19, 2025)
+- **Stripe API**: For subscription payment processing.
 - **Firebase Auth**: For user authentication and management.
 - **Cloudinary**: For image processing and CDN hosting.
-- **Brevo SMTP**: For transactional email delivery and contact management. ✅ INTEGRATED (Nov 20, 2025)
-
-### Payment System Status (Updated Jan 19, 2025)
-- **RESOLVED**: Critical payment outage caused by accidental removal of Stripe endpoints
-- **RESTORED**: All Stripe payment endpoints (`/api/create-checkout-session`, `/api/stripe-webhook`, `/api/subscription-status`, `/api/create-portal-session`)
-- **CONFIGURED**: Complete Stripe key setup (Secret, Publishable, Webhook Secret)
-- **AUTOMATED**: User upgrades now automatic via webhook processing
-- **CUSTOMER IMPACT**: 10+ users affected during outage, compensation tools ready
+- **Brevo SMTP**: For transactional email delivery and contact management.
 
 ### Development Tools
-- **Drizzle Kit**: For database migrations and schema management.
-- **Vite**: Frontend build tool with Hot Module Replacement (HMR).
+- **Drizzle Kit**: For database migrations.
+- **Vite**: Frontend build tool.
 - **ESBuild**: For backend TypeScript compilation.
-- **Replit**: As the primary development and deployment platform.
-
-### Key NPM Packages
-- **Database**: `@neondatabase/serverless`, `drizzle-orm`
-- **UI Components**: `@radix-ui/*` component library
-- **Forms**: `react-hook-form`, `@hookform/resolvers`
-- **Authentication**: `firebase`, `firebase-admin`
-- **Payments**: `@stripe/stripe-js`, `@stripe/react-stripe-js`
-- **Image Processing**: `cloudinary`, `multer`
-- **Email & CRM**: `nodemailer`, `@getbrevo/brevo`
+- **Replit**: Development and deployment platform.
