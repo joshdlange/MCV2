@@ -43,6 +43,7 @@ export default function BrowseCards() {
     } catch { return []; }
   });
   const [setSearchQuery, setSetSearchQuery] = useState("");
+  const [searchSetsVisible, setSearchSetsVisible] = useState(30);
   const [editingSet, setEditingSet] = useState<CardSet | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [editFormData, setEditFormData] = useState({
@@ -84,6 +85,7 @@ export default function BrowseCards() {
     setSelectedCard(null);
     setEditingSet(null);
     setSetSearchQuery("");
+    setSearchSetsVisible(30);
     // Don't reset filters.year to preserve the year filter selection
     setFilters(prev => ({ year: prev.year }));
   }, [location]);
@@ -843,7 +845,7 @@ export default function BrowseCards() {
               <Input
                 placeholder="Search sets by name or year..."
                 value={setSearchQuery}
-                onChange={(e) => setSetSearchQuery(e.target.value)}
+                onChange={(e) => { setSetSearchQuery(e.target.value); setSearchSetsVisible(30); }}
                 className="pl-10 bg-white text-gray-900 placeholder:text-gray-500"
               />
             </div>
@@ -882,7 +884,7 @@ export default function BrowseCards() {
               <div>
                 <h4 className="text-md font-semibold text-gray-900 mb-4">Card Sets</h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-                  {searchResults.sets.map((set) => {
+                  {searchResults.sets.slice(0, searchSetsVisible).map((set) => {
                     const parentMainSet = set.mainSetId ? mainSets?.find(ms => ms.id === set.mainSetId) : null;
                     return (
                       <SetThumbnail
@@ -898,6 +900,16 @@ export default function BrowseCards() {
                     );
                   })}
                 </div>
+                {searchResults.sets.length > searchSetsVisible && (
+                  <div className="flex justify-center mt-4">
+                    <button
+                      onClick={() => setSearchSetsVisible(prev => prev + 30)}
+                      className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors text-sm font-medium"
+                    >
+                      Show More ({searchResults.sets.length - searchSetsVisible} remaining)
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 

@@ -53,7 +53,7 @@ import {
   upcomingSets
 } from "../shared/schema";
 import { db, withDatabaseRetry } from "./db";
-import { eq, ilike, and, count, sum, desc, sql, isNull, isNotNull, or, lt, gte, gt, ne } from "drizzle-orm";
+import { eq, ilike, and, count, sum, desc, sql, isNull, isNotNull, or, lt, gte, gt, ne, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 // Utility function to generate slugs
@@ -1670,7 +1670,6 @@ export class DatabaseStorage implements IStorage {
         return [];
       }
       
-      // Simple pattern matching for card sets (excludes archived sets)
       const sets = await db.select()
         .from(cardSets)
         .where(
@@ -1682,21 +1681,24 @@ export class DatabaseStorage implements IStorage {
             )
           )
         )
-        .limit(10);
+        .orderBy(cardSets.name)
+        .limit(500);
       
-      // Calculate actual total cards for each set
-      const setsWithCounts = await Promise.all(sets.map(async (set) => {
-        const [{ count }] = await db.select({ count: sql<number>`count(*)` })
-          .from(cards)
-          .where(eq(cards.setId, set.id));
-        
-        return {
-          ...set,
-          totalCards: count || 0
-        };
+      if (sets.length === 0) return [];
+
+      const setIds = sets.map(s => s.id);
+      const countRows = await db
+        .select({ setId: cards.setId, count: sql<number>`count(*)` })
+        .from(cards)
+        .where(inArray(cards.setId, setIds))
+        .groupBy(cards.setId);
+      
+      const countMap = new Map(countRows.map(r => [r.setId, r.count]));
+      
+      return sets.map(set => ({
+        ...set,
+        totalCards: countMap.get(set.id) || 0
       }));
-      
-      return setsWithCounts;
     } catch (error) {
       console.error('Error searching card sets:', error);
       return [];
