@@ -76,3 +76,6 @@ Modern, clean interface with visual consistency. Uses Marvel red themes (red-500
 - **Vite**: Frontend build tool.
 - **ESBuild**: For backend TypeScript compilation.
 - **Replit**: Development and deployment platform.
+
+### Charting
+- **Recharts** is the only charting library. Chart.js was removed to save ~300KB bundle size. All charts use Recharts components (AreaChart, LineChart, BarChart, etc.).

@@ -3,18 +3,15 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrendingUp, TrendingDown, DollarSign, BarChart3, ExternalLink, ShoppingCart, AlertCircle } from "lucide-react";
-import { Line } from "react-chartjs-2";
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-} from "chart.js";
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  Area,
+  AreaChart,
+} from "recharts";
 import {
   MarketTrendsData,
   Mover,
@@ -28,16 +25,6 @@ import {
   hasEnoughData,
 } from "@/lib/marketSentiment";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
 
 interface RawMarketData {
   marketMovement: {
@@ -367,73 +354,10 @@ export default function MarketTrends() {
   const kpis = calculateDailyKPIs(filteredTrendData, timeRange);
 
   const chartLabels = formatChartLabels(filteredTrendData);
-  const chartPrices = filteredTrendData.map(d => d.averagePrice);
-
-  const chartData = {
-    labels: chartLabels,
-    datasets: [
-      {
-        label: 'Avg Sale Price',
-        data: chartPrices,
-        borderColor: '#dc2626',
-        backgroundColor: (context: any) => {
-          const ctx = context.chart.ctx;
-          const gradient = ctx.createLinearGradient(0, 0, 0, 250);
-          gradient.addColorStop(0, 'rgba(220, 38, 38, 0.15)');
-          gradient.addColorStop(1, 'rgba(220, 38, 38, 0.01)');
-          return gradient;
-        },
-        borderWidth: 2.5,
-        fill: true,
-        tension: 0.4,
-        pointBackgroundColor: '#dc2626',
-        pointBorderColor: '#ffffff',
-        pointBorderWidth: 2,
-        pointRadius: 3,
-        pointHoverRadius: 5,
-      },
-    ],
-  };
-
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      title: { display: false },
-      tooltip: {
-        backgroundColor: 'rgba(0, 0, 0, 0.85)',
-        titleColor: '#fff',
-        bodyColor: '#fff',
-        borderColor: '#dc2626',
-        borderWidth: 1,
-        cornerRadius: 8,
-        padding: 12,
-        displayColors: false,
-        callbacks: {
-          label: (context: any) => `Avg: $${context.parsed.y.toFixed(2)}`,
-        },
-      },
-    },
-    scales: {
-      x: {
-        grid: { display: false },
-        ticks: { 
-          color: '#6b7280',
-          font: { size: 10 },
-          maxTicksLimit: 10,
-        },
-      },
-      y: {
-        grid: { color: 'rgba(0, 0, 0, 0.05)' },
-        ticks: {
-          color: '#6b7280',
-          font: { size: 11 },
-          callback: (value: any) => `$${Number(value).toFixed(2)}`,
-        },
-      },
-    },
-  };
+  const rechartsData = filteredTrendData.map((d, i) => ({
+    label: chartLabels[i],
+    averagePrice: d.averagePrice,
+  }));
 
   const timeRangeLabel = timeRange === '30d' ? 'Last 30 Days' : timeRange === '60d' ? 'Last 60 Days' : 'Last 90 Days';
 
@@ -501,7 +425,52 @@ export default function MarketTrends() {
               <CardContent className="p-4">
                 <h3 className="font-semibold text-gray-900 mb-4">Price Trend - {timeRangeLabel}</h3>
                 <div className="h-64">
-                  <Line data={chartData} options={chartOptions} />
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={rechartsData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                      <defs>
+                        <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#dc2626" stopOpacity={0.15} />
+                          <stop offset="100%" stopColor="#dc2626" stopOpacity={0.01} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
+                      <XAxis
+                        dataKey="label"
+                        tick={{ fill: '#6b7280', fontSize: 10 }}
+                        tickLine={false}
+                        axisLine={false}
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis
+                        tick={{ fill: '#6b7280', fontSize: 11 }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v: number) => `$${v.toFixed(2)}`}
+                        width={60}
+                      />
+                      <RechartsTooltip
+                        contentStyle={{
+                          backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                          border: '1px solid #dc2626',
+                          borderRadius: 8,
+                          padding: '8px 12px',
+                          color: '#fff',
+                          fontSize: 13,
+                        }}
+                        labelStyle={{ color: '#fff' }}
+                        formatter={(value: number) => [`$${value.toFixed(2)}`, 'Avg Price']}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="averagePrice"
+                        stroke="#dc2626"
+                        strokeWidth={2.5}
+                        fill="url(#priceGradient)"
+                        dot={{ fill: '#dc2626', stroke: '#fff', strokeWidth: 2, r: 3 }}
+                        activeDot={{ fill: '#dc2626', stroke: '#fff', strokeWidth: 2, r: 5 }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
