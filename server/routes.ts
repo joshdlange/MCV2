@@ -8146,6 +8146,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/user/account", authenticateUser, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const firebaseUid = req.user.firebaseUid;
+
+      const schema = await import("../shared/schema");
+
+      await db.transaction(async (tx) => {
+        const userOrders = await tx.select({ id: schema.orders.id })
+          .from(schema.orders)
+          .where(or(eq(schema.orders.buyerId, userId), eq(schema.orders.sellerId, userId)));
+        const orderIds = userOrders.map(o => o.id);
+
+        await tx.delete(schema.reviews).where(
+          or(eq(schema.reviews.reviewerId, userId), eq(schema.reviews.revieweeId, userId))
+        );
+
+        if (orderIds.length > 0) {
+          for (const orderId of orderIds) {
+            await tx.delete(schema.shipments).where(eq(schema.shipments.orderId, orderId));
+          }
+          for (const orderId of orderIds) {
+            await tx.delete(schema.orders).where(eq(schema.orders.id, orderId));
+          }
+        }
+
+        await tx.delete(schema.offers).where(eq(schema.offers.buyerId, userId));
+
+        const userListings = await tx.select({ id: schema.listings.id })
+          .from(schema.listings)
+          .where(eq(schema.listings.sellerId, userId));
+        if (userListings.length > 0) {
+          for (const listing of userListings) {
+            await tx.delete(schema.offers).where(eq(schema.offers.listingId, listing.id));
+          }
+        }
+        await tx.delete(schema.listings).where(eq(schema.listings.sellerId, userId));
+
+        await tx.delete(schema.payoutRequests).where(eq(schema.payoutRequests.sellerId, userId));
+        await tx.delete(schema.payoutAccounts).where(eq(schema.payoutAccounts.userId, userId));
+        await tx.delete(schema.userCollections).where(eq(schema.userCollections.userId, userId));
+        await tx.delete(schema.userWishlists).where(eq(schema.userWishlists.userId, userId));
+        await tx.delete(schema.userBadges).where(eq(schema.userBadges.userId, userId));
+        await tx.delete(schema.notifications).where(eq(schema.notifications.userId, userId));
+        await tx.delete(schema.friends).where(
+          or(eq(schema.friends.requesterId, userId), eq(schema.friends.recipientId, userId))
+        );
+        await tx.delete(schema.messages).where(
+          or(eq(schema.messages.senderId, userId), eq(schema.messages.recipientId, userId))
+        );
+        await tx.delete(schema.shareLinks).where(eq(schema.shareLinks.userId, userId));
+        await tx.delete(schema.blocks).where(
+          or(eq(schema.blocks.userId, userId), eq(schema.blocks.blockedUserId, userId))
+        );
+        await tx.delete(schema.reports).where(
+          or(eq(schema.reports.reporterId, userId), eq(schema.reports.targetUserId, userId))
+        );
+        await tx.delete(schema.pendingCardImages).where(eq(schema.pendingCardImages.userId, userId));
+        await tx.update(schema.pendingCardImages)
+          .set({ reviewedBy: null })
+          .where(eq(schema.pendingCardImages.reviewedBy, userId));
+        await tx.delete(schema.emailLogs).where(eq(schema.emailLogs.userId, userId));
+        await tx.delete(schema.users).where(eq(schema.users.id, userId));
+      });
+
+      try {
+        await admin.auth().deleteUser(firebaseUid);
+      } catch (firebaseErr) {
+        console.error("Failed to delete Firebase user (DB records already removed):", firebaseErr);
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Account deletion failed:", error);
+      res.status(500).json({ message: "Failed to delete account" });
+    }
+  });
+
   // Register performance routes (includes background jobs and optimized endpoints)
   registerPerformanceRoutes(app);
 

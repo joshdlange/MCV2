@@ -28,7 +28,9 @@ import {
   TrendingUp,
   Award,
   MessageCircle,
-  UserPlus
+  UserPlus,
+  AlertTriangle,
+  Trash2
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +39,7 @@ import type { User as UserType } from "@/types/schema";
 import { useLocation } from "wouter";
 import { useAppStore } from "@/lib/store";
 import { UpgradeModal } from "@/components/subscription/upgrade-modal";
+import { signOutUser } from "@/lib/firebase";
 
 // Social Components
 function SocialFriendsSection() {
@@ -200,6 +203,8 @@ export default function Profile() {
   const [, setLocation] = useLocation();
   const [isEditing, setIsEditing] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [profileData, setProfileData] = useState({
     displayName: user?.displayName || '',
     bio: '',
@@ -273,6 +278,24 @@ export default function Profile() {
 
   const handleSaveProfile = () => {
     updateProfileMutation.mutate(profileData);
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      await apiRequest("DELETE", "/api/user/account");
+      await signOutUser();
+      window.location.href = "/";
+    } catch (err: any) {
+      console.error("Account deletion failed:", err);
+      toast({
+        title: "Error",
+        description: "Failed to delete account. Please try again.",
+        variant: "destructive",
+      });
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+    }
   };
 
   const getPlanBadge = (plan: string) => {
@@ -804,6 +827,28 @@ export default function Profile() {
                 </div>
               </CardContent>
             </Card>
+
+            <Card className="border-red-200 mt-6">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-red-700 mb-1">Delete Account</h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Permanently delete your account and all associated data including your collection, wishlist, and profile.
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+                      onClick={() => setShowDeleteModal(true)}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Account
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
@@ -814,6 +859,40 @@ export default function Profile() {
         onClose={() => setShowUpgradeModal(false)} 
         currentPlan={userProfile?.plan || 'SIDE_KICK'}
       />
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/50" onClick={() => !isDeleting && setShowDeleteModal(false)} />
+          <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <AlertTriangle className="w-7 h-7 text-red-600" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Delete Your Account?</h2>
+              <p className="text-gray-500 text-sm mb-6">
+                This will permanently delete your account and all your collection data. This cannot be undone.
+              </p>
+              <div className="flex gap-3 w-full">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  onClick={handleDeleteAccount}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? "Deleting..." : "Delete My Account"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

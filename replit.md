@@ -36,7 +36,7 @@ The application incorporates comprehensive performance optimizations for handlin
 - **Admin User Management**: Backend route for updating user details, including lifetime SUPER_HERO grants.
 - **Trending Cards**: Insert cards only, no repeats for 30+ days. Deterministic seeded shuffle of 34k+ insert cards; each day picks a unique slice of 10. Master set diversity enforced via round-robin.
 - **Upgrade Flow**: Comprehensive audit and fixes for the subscription upgrade process, including client-side checks, 403 error handling, and a dedicated `/subscribe` page.
-- **iOS App Store Compliance**: Implemented Capacitor native platform checks to redirect iOS/Android users to an external website for Stripe checkout. Sign in with Apple added for Guideline 4.8 compliance (iOS native only, uses Firebase OAuthProvider).
+- **iOS App Store Compliance**: Implemented Capacitor native platform checks to redirect iOS/Android users to an external website for Stripe checkout. Sign in with Apple added for Guideline 4.8 compliance (iOS native only, uses Firebase OAuthProvider). Account deletion added for Guideline 5.1.1(v) compliance (DELETE /api/user/account, transactional cleanup of all user data).
 - **Marketplace & eBay Affiliate**: Marketplace functionality is feature-flagged. Integrated eBay affiliate links for "Buy on eBay" buttons, with dynamic query generation and customizable affiliate parameters.
 - **Marketplace Fulfillment System**: Seller payout workflow including earnings tracking, payout account management, payout requests, admin approval, and fee calculations.
 
