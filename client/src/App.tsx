@@ -15,6 +15,12 @@ import { useBackButton } from "@/hooks/useBackButton";
 import heroLogoWhite from "@assets/noun-super-hero-380874-FFFFFF.png";
 import { Login } from "@/components/auth/Login";
 import { Onboarding } from "@/components/auth/Onboarding";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+
+function RouteErrorBoundary({ children }: { children: React.ReactNode }) {
+  const [location] = useLocation();
+  return <ErrorBoundary key={location}>{children}</ErrorBoundary>;
+}
 
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const BrowseCards = lazy(() => import("@/pages/browse-cards"));
@@ -135,40 +141,42 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
 function Router() {
   return (
-    <Suspense fallback={<PageSpinner />}>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/browse" component={BrowseCards} />
-        <Route path="/browse/:mainSetSlug" component={BrowseCards} />
-        <Route path="/browse/:mainSetSlug/:setSlug" component={BrowseCards} />
-        <Route path="/card-search" component={CardSearch} />
-        <Route path="/my-collection" component={MyCollection} />
-        <Route path="/wishlist" component={Wishlist} />
-        <Route path="/marketplace" component={Marketplace} />
-        <Route path="/activity" component={Activity} />
-        <Route path="/trends" component={MarketTrends} />
-        <Route path="/upcoming-sets" component={UpcomingSets} />
-        <Route path="/api-demo" component={ApiDemo} />
-        <Route path="/profile" component={Profile} />
-        <Route path="/social" component={Social} />
-        <Route path="/friend-profile/:friendId" component={FriendProfile} />
-        <Route path="/admin" component={AdminDashboard} />
-        <Route path="/admin/automation" component={AdminAutomation} />
-        <Route path="/admin/cards" component={AdminCardManagement} />
-        <Route path="/admin/users" component={AdminUsers} />
-        <Route path="/admin/payouts" component={AdminPayouts} />
-        <Route path="/admin/main-sets" component={AdminMainSets} />
-        <Route path="/admin/unassigned-sets" component={AdminUnassignedSets} />
-        <Route path="/admin/upcoming-sets" component={AdminUpcomingSets} />
-        <Route path="/admin/image-approvals" component={AdminImageApprovals} />
-        <Route path="/admin/migration-console" component={AdminMigrationConsole} />
-        <Route path="/admin/base-set-population" component={AdminBaseSetPopulation} />
-        <Route path="/subscribe" component={Subscribe} />
-        <Route path="/subscription-success" component={SubscriptionSuccess} />
-        <Route path="/subscription-cancelled" component={SubscriptionCancelled} />
-        <Route component={NotFound} />
-      </Switch>
-    </Suspense>
+    <RouteErrorBoundary>
+      <Suspense fallback={<PageSpinner />}>
+        <Switch>
+          <Route path="/" component={Dashboard} />
+          <Route path="/browse" component={BrowseCards} />
+          <Route path="/browse/:mainSetSlug" component={BrowseCards} />
+          <Route path="/browse/:mainSetSlug/:setSlug" component={BrowseCards} />
+          <Route path="/card-search" component={CardSearch} />
+          <Route path="/my-collection" component={MyCollection} />
+          <Route path="/wishlist" component={Wishlist} />
+          <Route path="/marketplace" component={Marketplace} />
+          <Route path="/activity" component={Activity} />
+          <Route path="/trends" component={MarketTrends} />
+          <Route path="/upcoming-sets" component={UpcomingSets} />
+          <Route path="/api-demo" component={ApiDemo} />
+          <Route path="/profile" component={Profile} />
+          <Route path="/social" component={Social} />
+          <Route path="/friend-profile/:friendId" component={FriendProfile} />
+          <Route path="/admin" component={AdminDashboard} />
+          <Route path="/admin/automation" component={AdminAutomation} />
+          <Route path="/admin/cards" component={AdminCardManagement} />
+          <Route path="/admin/users" component={AdminUsers} />
+          <Route path="/admin/payouts" component={AdminPayouts} />
+          <Route path="/admin/main-sets" component={AdminMainSets} />
+          <Route path="/admin/unassigned-sets" component={AdminUnassignedSets} />
+          <Route path="/admin/upcoming-sets" component={AdminUpcomingSets} />
+          <Route path="/admin/image-approvals" component={AdminImageApprovals} />
+          <Route path="/admin/migration-console" component={AdminMigrationConsole} />
+          <Route path="/admin/base-set-population" component={AdminBaseSetPopulation} />
+          <Route path="/subscribe" component={Subscribe} />
+          <Route path="/subscription-success" component={SubscriptionSuccess} />
+          <Route path="/subscription-cancelled" component={SubscriptionCancelled} />
+          <Route component={NotFound} />
+        </Switch>
+      </Suspense>
+    </RouteErrorBoundary>
   );
 }
 
@@ -203,11 +211,13 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />
-          <Suspense fallback={<PageSpinner />}>
-            <Switch>
-              <Route path="/share/:token" component={SharedBinder} />
-            </Switch>
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<PageSpinner />}>
+              <Switch>
+                <Route path="/share/:token" component={SharedBinder} />
+              </Switch>
+            </Suspense>
+          </ErrorBoundary>
         </TooltipProvider>
       </QueryClientProvider>
     );
