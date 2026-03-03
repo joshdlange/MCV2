@@ -440,15 +440,15 @@ export class OptimizedStorage {
   }
 
   /**
-   * Get trending cards with enhanced algorithm - OPTIMIZED with caching
-   * Uses efficient database sampling instead of loading all cards
+   * Get trending cards - INSERT cards only, no repeats for 30 days
+   * Uses deterministic seeded shuffle so each day gets a unique set of 10 inserts
+   * With 34k+ insert cards with images, we can go 3400+ days without repeating
    */
   async getTrendingCardsOptimized(limit: number = 10) {
     const startTime = Date.now();
     const dayOfYear = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
     const currentRotationSeed = dayOfYear;
     
-    // Check cache first
     if (trendingCache && 
         trendingCache.rotationSeed === currentRotationSeed && 
         Date.now() - trendingCache.lastUpdated < TRENDING_CACHE_TTL) {
@@ -457,135 +457,63 @@ export class OptimizedStorage {
     }
     
     try {
-      // Strategy: Get a smart sample of high-quality cards from database
-      // 1. Popular cards (most collected) - top 50
-      // 2. Insert cards with images - random 50
-      // 3. Recently priced cards - top 50
-      // Then score and diversify in memory (only ~150 cards instead of 68k)
-
-      // Query 1: Most collected cards with images (using JOIN instead of correlated subquery)
-      const popularCards = await db
-        .select({
-          id: cards.id,
-          name: cards.name,
-          cardNumber: cards.cardNumber,
-          frontImageUrl: cards.frontImageUrl,
-          setName: cardSets.name,
-          setYear: cardSets.year,
-          isInsert: cards.isInsert,
-          rarity: cards.rarity,
-          mainSetId: cardSets.mainSetId,
-          collectionCount: sql<number>`COALESCE(uc_counts.cnt, 0)`
-        })
+      // Get all insert card IDs with images (lightweight query - just IDs)
+      const insertCardIds = await db
+        .select({ id: cards.id })
         .from(cards)
-        .innerJoin(cardSets, eq(cards.setId, cardSets.id))
-        .innerJoin(
-          sql`(SELECT card_id, COUNT(*) as cnt FROM user_collections GROUP BY card_id ORDER BY cnt DESC LIMIT 200) uc_counts`,
-          sql`uc_counts.card_id = ${cards.id}`
-        )
-        .where(isNotNull(cards.frontImageUrl))
-        .orderBy(sql`uc_counts.cnt DESC`)
-        .limit(50);
-
-      // Query 2: Insert cards with images (seeded random for variety)
-      const insertCards = await db
-        .select({
-          id: cards.id,
-          name: cards.name,
-          cardNumber: cards.cardNumber,
-          frontImageUrl: cards.frontImageUrl,
-          setName: cardSets.name,
-          setYear: cardSets.year,
-          isInsert: cards.isInsert,
-          rarity: cards.rarity,
-          mainSetId: cardSets.mainSetId,
-          collectionCount: sql<number>`0`
-        })
-        .from(cards)
-        .innerJoin(cardSets, eq(cards.setId, cardSets.id))
         .where(and(
-          isNotNull(cards.frontImageUrl),
-          eq(cards.isInsert, true)
+          eq(cards.isInsert, true),
+          isNotNull(cards.frontImageUrl)
         ))
-        .orderBy(sql`(${cards.id} % 1000 + ${currentRotationSeed % 1000}) % 1000`)
-        .limit(50);
-
-      // Query 3: Recent high-value cards
-      const pricedCards = await db
-        .select({
-          id: cards.id,
-          name: cards.name,
-          cardNumber: cards.cardNumber,
-          frontImageUrl: cards.frontImageUrl,
-          setName: cardSets.name,
-          setYear: cardSets.year,
-          isInsert: cards.isInsert,
-          rarity: cards.rarity,
-          mainSetId: cardSets.mainSetId,
-          collectionCount: sql<number>`0`,
-          avgPrice: cardPriceCache.avgPrice
-        })
-        .from(cards)
-        .innerJoin(cardSets, eq(cards.setId, cardSets.id))
-        .innerJoin(cardPriceCache, eq(cards.id, cardPriceCache.cardId))
-        .where(isNotNull(cards.frontImageUrl))
-        .orderBy(desc(cardPriceCache.createdAt))
-        .limit(50);
-
-      // Merge and deduplicate candidates
-      const cardMap = new Map<number, any>();
-      [...popularCards, ...insertCards, ...pricedCards].forEach(card => {
-        if (!cardMap.has(card.id)) {
-          cardMap.set(card.id, card);
-        } else {
-          const existing = cardMap.get(card.id);
-          existing.collectionCount = Math.max(existing.collectionCount || 0, card.collectionCount || 0);
-          if ((card as any).avgPrice && !(existing as any).avgPrice) {
-            (existing as any).avgPrice = (card as any).avgPrice;
-          }
-        }
-      });
-
-      const candidates = Array.from(cardMap.values());
-
-      // Fetch pricing for ALL candidates that don't already have avgPrice
-      const candidateIdsWithoutPrice = candidates
-        .filter(c => !c.avgPrice)
-        .map(c => c.id);
+        .orderBy(cards.id);
       
-      if (candidateIdsWithoutPrice.length > 0) {
-        const prices = await db
-          .select({
-            cardId: cardPriceCache.cardId,
-            avgPrice: cardPriceCache.avgPrice,
-          })
-          .from(cardPriceCache)
-          .where(inArray(cardPriceCache.cardId, candidateIdsWithoutPrice));
-        
-        const priceMap = new Map(prices.map(p => [p.cardId, p.avgPrice]));
-        candidates.forEach(c => {
-          if (!c.avgPrice && priceMap.has(c.id)) {
-            c.avgPrice = priceMap.get(c.id);
-          }
-        });
+      const totalInserts = insertCardIds.length;
+      if (totalInserts === 0) {
+        return this.getTrendingCardsFallback(limit);
       }
 
-      // Score candidates with strong daily randomization
-      const scoredCards = candidates.map(card => {
-        let score = 0;
-        score += (card.collectionCount || 0) * 2.0;
-        if (card.isInsert) score += 15.0;
-        if (card.avgPrice && parseFloat(card.avgPrice) > 0) score += 10.0;
-        const hash = ((card.id * 2654435761 + currentRotationSeed * 1597334677) >>> 0) % 1000;
-        score += hash * 0.05;
-        return { ...card, score };
-      });
+      // Deterministic shuffle using Knuth multiplicative hash
+      // Each day gets a unique offset into the shuffled list
+      // With 34k cards and 10/day, no repeat for ~3400 days
+      const monthSlot = dayOfYear % Math.floor(totalInserts / limit);
+      const startIdx = monthSlot * limit;
+      
+      // Create a seeded permutation using a hash function
+      // This ensures the same day always picks the same cards
+      // but different days pick completely different cards
+      const shuffled = insertCardIds.map((card, idx) => ({
+        id: card.id,
+        hash: ((card.id * 2654435761 + Math.floor(dayOfYear / Math.floor(totalInserts / limit)) * 1597334677) >>> 0)
+      }));
+      shuffled.sort((a, b) => a.hash - b.hash);
+      
+      // Pick today's slice
+      const todaysIds = shuffled.slice(startIdx, startIdx + limit).map(c => c.id);
+      
+      if (todaysIds.length === 0) {
+        return this.getTrendingCardsFallback(limit);
+      }
 
-      // Sort and diversify
-      scoredCards.sort((a, b) => b.score - a.score);
-      const diverseResults = this.ensureMasterSetDiversity(scoredCards, Math.max(limit, 20));
+      // Fetch full card data for today's picks
+      const todaysCards = await db
+        .select({
+          id: cards.id,
+          name: cards.name,
+          cardNumber: cards.cardNumber,
+          frontImageUrl: cards.frontImageUrl,
+          setName: cardSets.name,
+          setYear: cardSets.year,
+          isInsert: cards.isInsert,
+          rarity: cards.rarity,
+          mainSetId: cardSets.mainSetId,
+        })
+        .from(cards)
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+        .where(inArray(cards.id, todaysIds));
 
-      // Cache results
+      // Ensure master set diversity in final ordering
+      const diverseResults = this.ensureMasterSetDiversity(todaysCards, limit);
+
       trendingCache = {
         cards: diverseResults,
         lastUpdated: Date.now(),

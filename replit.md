@@ -34,7 +34,7 @@ The application incorporates comprehensive performance optimizations for handlin
 - **Card Data Cleanup**: Multi-phase normalization for card names, serial numbers, and deduplication of cards, with safe migration of user collections.
 - **Search Functionality**: Enhanced `searchCardSets()` with increased limits and frontend pagination for large result sets.
 - **Admin User Management**: Backend route for updating user details, including lifetime SUPER_HERO grants.
-- **Trending Cards**: Daily rotation of trending cards using a strong hash-based randomization.
+- **Trending Cards**: Insert cards only, no repeats for 30+ days. Deterministic seeded shuffle of 34k+ insert cards; each day picks a unique slice of 10. Master set diversity enforced via round-robin.
 - **Upgrade Flow**: Comprehensive audit and fixes for the subscription upgrade process, including client-side checks, 403 error handling, and a dedicated `/subscribe` page.
 - **iOS App Store Compliance**: Implemented Capacitor native platform checks to redirect iOS/Android users to an external website for Stripe checkout.
 - **Marketplace & eBay Affiliate**: Marketplace functionality is feature-flagged. Integrated eBay affiliate links for "Buy on eBay" buttons, with dynamic query generation and customizable affiliate parameters.
