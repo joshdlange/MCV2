@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -14,36 +15,42 @@ import { useBackButton } from "@/hooks/useBackButton";
 import heroLogoWhite from "@assets/noun-super-hero-380874-FFFFFF.png";
 import { Login } from "@/components/auth/Login";
 import { Onboarding } from "@/components/auth/Onboarding";
-import Dashboard from "@/pages/dashboard";
-import BrowseCards from "@/pages/browse-cards";
-import MyCollection from "@/pages/my-collection";
-import Wishlist from "@/pages/wishlist";
-import Marketplace from "@/pages/marketplace";
-import Profile from "@/pages/profile";
-import Social from "@/pages/Social";
-import FriendProfile from "@/pages/FriendProfile";
-import AdminCardManagement from "@/pages/admin/card-management";
-import AdminUsers from "@/pages/admin/users";
-import AdminPayouts from "@/pages/admin/payouts";
-import AdminMainSets from "@/pages/admin/main-sets";
-import AdminUnassignedSets from "@/pages/admin/unassigned-sets";
-import AdminDashboard from "@/pages/admin/dashboard";
-import AdminPage from "@/pages/admin";
-import AdminAutomation from "@/pages/admin/automation";
-import AdminUpcomingSets from "@/pages/admin/upcoming-sets";
-import AdminImageApprovals from "@/pages/admin/image-approvals";
-import AdminMigrationConsole from "@/pages/admin/migration-console";
-import AdminBaseSetPopulation from "@/pages/admin/base-set-population";
-import CardSearch from "@/pages/card-search";
-import MarketTrends from "@/pages/market-trends";
-import UpcomingSets from "@/pages/upcoming-sets";
-import ApiDemo from "@/pages/api-demo";
-import SubscriptionSuccess from "@/pages/subscription-success";
-import SubscriptionCancelled from "@/pages/subscription-cancelled";
-import Subscribe from "@/pages/subscribe";
-import Activity from "@/pages/Activity";
-import SharedBinder from "@/pages/shared-binder";
-import NotFound from "@/pages/not-found";
+
+const Dashboard = lazy(() => import("@/pages/dashboard"));
+const BrowseCards = lazy(() => import("@/pages/browse-cards"));
+const MyCollection = lazy(() => import("@/pages/my-collection"));
+const Wishlist = lazy(() => import("@/pages/wishlist"));
+const Marketplace = lazy(() => import("@/pages/marketplace"));
+const Profile = lazy(() => import("@/pages/profile"));
+const Social = lazy(() => import("@/pages/Social"));
+const FriendProfile = lazy(() => import("@/pages/FriendProfile"));
+const AdminCardManagement = lazy(() => import("@/pages/admin/card-management"));
+const AdminUsers = lazy(() => import("@/pages/admin/users"));
+const AdminPayouts = lazy(() => import("@/pages/admin/payouts"));
+const AdminMainSets = lazy(() => import("@/pages/admin/main-sets"));
+const AdminUnassignedSets = lazy(() => import("@/pages/admin/unassigned-sets"));
+const AdminDashboard = lazy(() => import("@/pages/admin/dashboard"));
+const AdminAutomation = lazy(() => import("@/pages/admin/automation"));
+const AdminUpcomingSets = lazy(() => import("@/pages/admin/upcoming-sets"));
+const AdminImageApprovals = lazy(() => import("@/pages/admin/image-approvals"));
+const AdminMigrationConsole = lazy(() => import("@/pages/admin/migration-console"));
+const AdminBaseSetPopulation = lazy(() => import("@/pages/admin/base-set-population"));
+const CardSearch = lazy(() => import("@/pages/card-search"));
+const MarketTrends = lazy(() => import("@/pages/market-trends"));
+const UpcomingSets = lazy(() => import("@/pages/upcoming-sets"));
+const ApiDemo = lazy(() => import("@/pages/api-demo"));
+const SubscriptionSuccess = lazy(() => import("@/pages/subscription-success"));
+const SubscriptionCancelled = lazy(() => import("@/pages/subscription-cancelled"));
+const Subscribe = lazy(() => import("@/pages/subscribe"));
+const Activity = lazy(() => import("@/pages/Activity"));
+const SharedBinder = lazy(() => import("@/pages/shared-binder"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+
+const PageSpinner = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="animate-spin w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full" />
+  </div>
+);
 
 function DesktopHeader() {
   const [, setLocation] = useLocation();
@@ -105,25 +112,20 @@ function MobileMenu() {
 function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Desktop Sidebar - hidden on mobile */}
       <div className="hidden lg:block fixed inset-y-0 left-0 z-40">
         <Sidebar />
       </div>
       
-      {/* Mobile Header - shown on mobile only, fixed at top */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50">
         <MobileHeader />
       </div>
       
-      {/* Desktop Header - shown on desktop only */}
       <div className="hidden lg:block lg:ml-80">
         <DesktopHeader />
       </div>
       
-      {/* Mobile Menu Overlay */}
       <MobileMenu />
       
-      {/* Main Content */}
       <div className="lg:ml-80 pt-16 lg:pt-0">
         {children}
       </div>
@@ -133,38 +135,40 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/browse" component={BrowseCards} />
-      <Route path="/browse/:mainSetSlug" component={BrowseCards} />
-      <Route path="/browse/:mainSetSlug/:setSlug" component={BrowseCards} />
-      <Route path="/card-search" component={CardSearch} />
-      <Route path="/my-collection" component={MyCollection} />
-      <Route path="/wishlist" component={Wishlist} />
-      <Route path="/marketplace" component={Marketplace} />
-      <Route path="/activity" component={Activity} />
-      <Route path="/trends" component={MarketTrends} />
-      <Route path="/upcoming-sets" component={UpcomingSets} />
-      <Route path="/api-demo" component={ApiDemo} />
-      <Route path="/profile" component={Profile} />
-      <Route path="/social" component={Social} />
-      <Route path="/friend-profile/:friendId" component={FriendProfile} />
-      <Route path="/admin" component={AdminDashboard} />
-      <Route path="/admin/automation" component={AdminAutomation} />
-      <Route path="/admin/cards" component={AdminCardManagement} />
-      <Route path="/admin/users" component={AdminUsers} />
-      <Route path="/admin/payouts" component={AdminPayouts} />
-      <Route path="/admin/main-sets" component={AdminMainSets} />
-      <Route path="/admin/unassigned-sets" component={AdminUnassignedSets} />
-      <Route path="/admin/upcoming-sets" component={AdminUpcomingSets} />
-      <Route path="/admin/image-approvals" component={AdminImageApprovals} />
-      <Route path="/admin/migration-console" component={AdminMigrationConsole} />
-      <Route path="/admin/base-set-population" component={AdminBaseSetPopulation} />
-      <Route path="/subscribe" component={Subscribe} />
-      <Route path="/subscription-success" component={SubscriptionSuccess} />
-      <Route path="/subscription-cancelled" component={SubscriptionCancelled} />
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<PageSpinner />}>
+      <Switch>
+        <Route path="/" component={Dashboard} />
+        <Route path="/browse" component={BrowseCards} />
+        <Route path="/browse/:mainSetSlug" component={BrowseCards} />
+        <Route path="/browse/:mainSetSlug/:setSlug" component={BrowseCards} />
+        <Route path="/card-search" component={CardSearch} />
+        <Route path="/my-collection" component={MyCollection} />
+        <Route path="/wishlist" component={Wishlist} />
+        <Route path="/marketplace" component={Marketplace} />
+        <Route path="/activity" component={Activity} />
+        <Route path="/trends" component={MarketTrends} />
+        <Route path="/upcoming-sets" component={UpcomingSets} />
+        <Route path="/api-demo" component={ApiDemo} />
+        <Route path="/profile" component={Profile} />
+        <Route path="/social" component={Social} />
+        <Route path="/friend-profile/:friendId" component={FriendProfile} />
+        <Route path="/admin" component={AdminDashboard} />
+        <Route path="/admin/automation" component={AdminAutomation} />
+        <Route path="/admin/cards" component={AdminCardManagement} />
+        <Route path="/admin/users" component={AdminUsers} />
+        <Route path="/admin/payouts" component={AdminPayouts} />
+        <Route path="/admin/main-sets" component={AdminMainSets} />
+        <Route path="/admin/unassigned-sets" component={AdminUnassignedSets} />
+        <Route path="/admin/upcoming-sets" component={AdminUpcomingSets} />
+        <Route path="/admin/image-approvals" component={AdminImageApprovals} />
+        <Route path="/admin/migration-console" component={AdminMigrationConsole} />
+        <Route path="/admin/base-set-population" component={AdminBaseSetPopulation} />
+        <Route path="/subscribe" component={Subscribe} />
+        <Route path="/subscription-success" component={SubscriptionSuccess} />
+        <Route path="/subscription-cancelled" component={SubscriptionCancelled} />
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 
@@ -174,11 +178,7 @@ function AuthenticatedApp() {
   useBackButton();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full" />
-      </div>
-    );
+    return <PageSpinner />;
   }
 
   if (!user) {
@@ -203,9 +203,11 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />
-          <Switch>
-            <Route path="/share/:token" component={SharedBinder} />
-          </Switch>
+          <Suspense fallback={<PageSpinner />}>
+            <Switch>
+              <Route path="/share/:token" component={SharedBinder} />
+            </Switch>
+          </Suspense>
         </TooltipProvider>
       </QueryClientProvider>
     );
