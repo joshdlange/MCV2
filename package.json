@@ -11,6 +11,7 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@capacitor-community/apple-sign-in": "^7.1.0",
     "@capacitor/android": "^8.0.0",
     "@capacitor/app": "^8.0.1",
     "@capacitor/cli": "^7.4.4",

@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { signInWithGoogleUnified } from "../../auth/googleSignIn";
+import { signInWithAppleUnified, isAppleSignInAvailable } from "../../auth/appleSignIn";
 import { signUpWithEmail, signInWithEmail, resetPassword } from "@/lib/firebase";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
@@ -49,6 +50,8 @@ export function Login() {
     }
   }, [allCards]);
 
+  const showAppleSignIn = isAppleSignInAvailable();
+
   const handleGoogleSignIn = async () => {
     setError(null);
     setIsLoading(true);
@@ -59,6 +62,24 @@ export function Login() {
     } catch (err: any) {
       console.error("Google login failed:", err);
       setError(err.message || "Google sign-in failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    setError(null);
+    setIsLoading(true);
+    try {
+      const cred = await signInWithAppleUnified();
+      console.log("Logged in via Apple as:", cred.user.uid);
+      window.location.href = "/";
+    } catch (err: any) {
+      console.error("Apple login failed:", err);
+      if (err.message?.includes("canceled") || err.message?.includes("cancelled")) {
+        return;
+      }
+      setError(err.message || "Apple sign-in failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -552,6 +573,22 @@ export function Login() {
                     </svg>
                     Continue with Google
                   </Button>
+
+                  {/* Apple Sign In - iOS only */}
+                  {showAppleSignIn && (
+                    <Button 
+                      onClick={handleAppleSignIn}
+                      disabled={isLoading}
+                      variant="outline"
+                      className="w-full bg-black hover:bg-gray-900 text-white border-gray-700 py-3 font-semibold mt-3"
+                      data-testid="button-apple-signin"
+                    >
+                      <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                      </svg>
+                      Continue with Apple
+                    </Button>
+                  )}
                   
                   {/* Terms */}
                   <p className="text-center text-xs text-gray-500 mt-4">
