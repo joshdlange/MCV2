@@ -96,7 +96,6 @@ async function downloadAndUploadToCloudinary(url: string, folder: string = 'marv
 // Function to process images for cards and card sets
 export async function processImages() {
   try {
-    console.log("Image processing disabled - use admin interface to process images manually");
     return;
     
     // Get all cards with Google Drive URLs

@@ -53,40 +53,26 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Middleware to authenticate Firebase users
 const authenticateUser = async (req: any, res: any, next: any) => {
-  console.log("AUTH MIDDLEWARE HIT");
-  console.log("Authorization Header:", req.headers.authorization);
-  
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.log("No auth header or doesn't start with Bearer");
     return res.status(401).json({ message: 'No authorization token provided' });
   }
 
   const token = authHeader.substring(7);
-  console.log("Token extracted:", token);
   
   try {
     const decodedToken = await admin.auth().verifyIdToken(token);
-    console.log("Token verified successfully for:", decodedToken.uid);
     
-    // Find user by Firebase UID
     const user = await storage.getUserByFirebaseUid(decodedToken.uid);
-    console.log("User found in DB:", user ? `ID: ${user.id}` : 'Not found');
     
     if (!user) {
-      console.log("User not found in database");
       return res.status(404).json({ message: 'User not found in database' });
     }
-
-    // Track user login (async, don't wait for it)
-    storage.recordUserLogin(decodedToken.uid).catch(error => {
-      console.error('Failed to track login for user:', decodedToken.uid, error);
-    });
     
     req.user = user;
     next();
   } catch (error) {
-    console.error('Token verification failed:', error);
+    console.error('Token verification failed');
     res.status(401).json({ message: 'Invalid authorization token' });
   }
 };
@@ -256,8 +242,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Check badges on login/sync
+      // Track login and check badges on sync
       if (user) {
+        storage.recordUserLogin(firebaseUid).catch(error => {
+          console.error('Failed to track login:', error);
+        });
         await badgeService.checkBadgesOnLogin(user.id);
         
         // Run retroactive badge checks for new users
@@ -2070,7 +2059,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const collectionItem = await storage.addToCollection(validatedData);
       
-      // Check badges when collection changes (fire-and-forget for instant response)
+      // Invalidate stats cache and check badges (fire-and-forget)
+      const { optimizedStorage } = await import('./optimized-storage');
+      optimizedStorage.invalidateUserStatsCache(req.user.id);
       badgeService.checkBadgesOnCollectionChange(req.user.id).catch(err => 
         console.error('Background badge check failed:', err)
       );
@@ -2166,7 +2157,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       await storage.removeFromCollection(id);
       
-      // Check badges when collection changes (fire-and-forget for instant response)
+      // Invalidate stats cache and check badges (fire-and-forget)
+      const { optimizedStorage } = await import('./optimized-storage');
+      optimizedStorage.invalidateUserStatsCache(req.user.id);
       badgeService.checkBadgesOnCollectionChange(req.user.id).catch(err => 
         console.error('Background badge check failed:', err)
       );
@@ -2272,6 +2265,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const wishlistItem = await storage.addToWishlist(validatedData);
+      const { optimizedStorage } = await import('./optimized-storage');
+      optimizedStorage.invalidateUserStatsCache(req.user.id);
       res.status(201).json(wishlistItem);
     } catch (error) {
       console.error('Add to wishlist error:', error);
@@ -2286,6 +2281,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       await storage.removeFromWishlist(id);
+      const { optimizedStorage } = await import('./optimized-storage');
+      optimizedStorage.invalidateUserStatsCache(req.user.id);
       res.json({ message: "Card removed from wishlist" });
     } catch (error) {
       console.error('Remove from wishlist error:', error);

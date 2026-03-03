@@ -272,7 +272,9 @@ class UltraOptimizedStorage {
       }
     }
     
-    console.log(`🧹 Cleaned ${cleaned} expired cache entries`);
+    if (cleaned > 0) {
+      console.log(`🧹 Cleaned ${cleaned} expired cache entries`);
+    }
     return cleaned;
   }
 }

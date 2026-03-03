@@ -63,6 +63,14 @@ Modern, clean interface with visual consistency. Uses Marvel red themes (red-500
 - **Cloudinary**: For image processing and CDN hosting.
 - **Brevo SMTP**: For transactional email delivery and contact management.
 
+### Performance Optimizations (Mar 3, 2026)
+- Removed verbose auth middleware logging (JWT tokens were logged on every request — security + perf issue)
+- Moved `recordUserLogin` from auth middleware (every request) to auth/sync endpoint (once per login)
+- Optimized trending cards query: replaced correlated subqueries with JOIN approach (2046ms → 327ms)
+- Added 30s user stats cache with invalidation on collection/wishlist changes (1513ms → 198ms, cached: <1ms)
+- Silenced cache cleanup and image processing spam logs
+- Raised slow query warning threshold from 100ms to 500ms (appropriate for 194k card dataset)
+
 ### Development Tools
 - **Drizzle Kit**: For database migrations.
 - **Vite**: Frontend build tool.

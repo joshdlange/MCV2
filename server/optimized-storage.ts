@@ -24,6 +24,9 @@ export interface LightweightCard {
   rarity: string;
 }
 
+const userStatsCache = new Map<number, { data: any; timestamp: number }>();
+const USER_STATS_CACHE_TTL = 30_000;
+
 interface CardFilters {
   setId?: number;
   rarity?: string;
@@ -37,7 +40,7 @@ const performanceTracker = {
   startTime: 0,
   logQuery: (operation: string, startTime: number) => {
     const duration = Date.now() - startTime;
-    if (duration > 100) {
+    if (duration > 500) {
       console.log(`⚠️ Slow query: ${operation} took ${duration}ms`);
     }
   }
@@ -53,6 +56,10 @@ let trendingCache: TrendingCache | null = null;
 const TRENDING_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours (one daily rotation)
 
 export class OptimizedStorage {
+  invalidateUserStatsCache(userId: number) {
+    userStatsCache.delete(userId);
+  }
+  
   /**
    * Get paginated cards with lightweight payload - OPTIMIZED
    */
@@ -288,6 +295,12 @@ export class OptimizedStorage {
   async getUserStatsOptimized(userId: number) {
     const startTime = Date.now();
     
+    const cached = userStatsCache.get(userId);
+    if (cached && Date.now() - cached.timestamp < USER_STATS_CACHE_TTL) {
+      performanceTracker.logQuery(`getUserStatsOptimized(userId=${userId}) [CACHED]`, startTime);
+      return cached.data;
+    }
+    
     try {
       const result = await db.execute(sql`
         SELECT 
@@ -315,12 +328,15 @@ export class OptimizedStorage {
 
       performanceTracker.logQuery(`getUserStatsOptimized(userId=${userId})`, startTime);
 
-      return {
+      const stats = {
         totalCards: Number(row.total_cards) || 0,
         insertCards: Number(row.total_inserts) || 0,
         totalValue: parseFloat(String(row.total_value || '0')),
         wishlistCount: Number(row.wishlist_count) || 0
       };
+      
+      userStatsCache.set(userId, { data: stats, timestamp: Date.now() });
+      return stats;
     } catch (error) {
       console.error('Error in getUserStatsOptimized:', error);
       return {
@@ -447,7 +463,7 @@ export class OptimizedStorage {
       // 3. Recently priced cards - top 50
       // Then score and diversify in memory (only ~150 cards instead of 68k)
 
-      // Query 1: Most collected cards with images
+      // Query 1: Most collected cards with images (using JOIN instead of correlated subquery)
       const popularCards = await db
         .select({
           id: cards.id,
@@ -459,12 +475,16 @@ export class OptimizedStorage {
           isInsert: cards.isInsert,
           rarity: cards.rarity,
           mainSetId: cardSets.mainSetId,
-          collectionCount: sql<number>`(SELECT COUNT(*) FROM user_collections WHERE card_id = ${cards.id})`
+          collectionCount: sql<number>`COALESCE(uc_counts.cnt, 0)`
         })
         .from(cards)
         .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+        .innerJoin(
+          sql`(SELECT card_id, COUNT(*) as cnt FROM user_collections GROUP BY card_id ORDER BY cnt DESC LIMIT 200) uc_counts`,
+          sql`uc_counts.card_id = ${cards.id}`
+        )
         .where(isNotNull(cards.frontImageUrl))
-        .orderBy(sql`(SELECT COUNT(*) FROM user_collections WHERE card_id = ${cards.id}) DESC`)
+        .orderBy(sql`uc_counts.cnt DESC`)
         .limit(50);
 
       // Query 2: Insert cards with images (seeded random for variety)
