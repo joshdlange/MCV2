@@ -44,7 +44,6 @@ const AdminBaseSetPopulation = lazy(() => import("@/pages/admin/base-set-populat
 const CardSearch = lazy(() => import("@/pages/card-search"));
 const MarketTrends = lazy(() => import("@/pages/market-trends"));
 const UpcomingSets = lazy(() => import("@/pages/upcoming-sets"));
-const ApiDemo = lazy(() => import("@/pages/api-demo"));
 const SubscriptionSuccess = lazy(() => import("@/pages/subscription-success"));
 const SubscriptionCancelled = lazy(() => import("@/pages/subscription-cancelled"));
 const Subscribe = lazy(() => import("@/pages/subscribe"));
@@ -155,7 +154,6 @@ function Router() {
           <Route path="/activity" component={Activity} />
           <Route path="/trends" component={MarketTrends} />
           <Route path="/upcoming-sets" component={UpcomingSets} />
-          <Route path="/api-demo" component={ApiDemo} />
           <Route path="/profile" component={Profile} />
           <Route path="/social" component={Social} />
           <Route path="/friend-profile/:friendId" component={FriendProfile} />

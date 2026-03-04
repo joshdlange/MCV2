@@ -704,17 +704,14 @@ export default function Profile() {
                     </div>
                   )}
 
-                  {userProfile?.plan === 'SUPER_HERO' && (
+                  {userProfile?.plan === 'SUPER_HERO' && userProfile?.stripeCustomerId && (
                     <div className="space-y-4">
                       <Separator />
                       <div>
-                        <h3 className="font-semibold mb-2">Payment Method</h3>
+                        <h3 className="font-semibold mb-2">Subscription</h3>
                         <p className="text-sm text-muted-foreground mb-4">
-                          Payment and subscription management will be integrated with Stripe.
+                          Your Super Hero subscription is active. To manage your subscription, visit your Stripe customer portal.
                         </p>
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                          Stripe Integration Coming Soon
-                        </Badge>
                       </div>
                     </div>
                   )}

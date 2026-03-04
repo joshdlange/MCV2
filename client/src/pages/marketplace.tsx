@@ -58,10 +58,9 @@ function MarketplacePaused() {
           <div className="w-32 h-32 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-8">
             <Store className="h-16 w-16 text-blue-600" />
           </div>
-          <h3 className="text-3xl font-bold text-gray-900 mb-4">Coming Back Soon</h3>
+          <h3 className="text-3xl font-bold text-gray-900 mb-4">Marketplace</h3>
           <p className="text-gray-600 mb-8 leading-relaxed">
-            The Marketplace is temporarily paused while we make improvements.
-            We'll be back with an even better experience for collectors!
+            The Marketplace is not available right now. In the meantime, browse and manage your card collection!
           </p>
           <Button 
             onClick={() => setLocation('/browse')}

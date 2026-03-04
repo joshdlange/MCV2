@@ -45,13 +45,16 @@ const getNavigationItems = (userPlan: string): NavigationItem[] => {
     });
   }
 
-  items.push(
-    { 
+  if (FEATURE_FLAGS.MARKETPLACE_ENABLED) {
+    items.push({ 
       href: "/activity", 
       label: "Activity", 
       icon: "Activity",
       badge: userPlan === 'SIDE_KICK' ? "👑" : undefined
-    },
+    });
+  }
+
+  items.push(
     { href: "/trends", label: "Market Trends", icon: "TrendingUp" },
     { href: "/upcoming-sets", label: "Upcoming Sets", icon: "Calendar" },
     { href: "/social", label: "Social Hub", icon: "Users" },

@@ -260,6 +260,7 @@ export default function Activity() {
   const searchParams = new URLSearchParams(window.location.search);
   const defaultTab = FEATURE_FLAGS.MARKETPLACE_ENABLED ? 'purchases' : 'trades';
   const initialTab = searchParams.get('tab') || defaultTab;
+
   const [activeTab, setActiveTab] = useState(initialTab);
   const [shipModalOrder, setShipModalOrder] = useState<{ id: number; orderNumber: string } | null>(null);
   const [showPayoutModal, setShowPayoutModal] = useState(false);
@@ -428,13 +429,38 @@ export default function Activity() {
     });
   };
   
+  if (!FEATURE_FLAGS.MARKETPLACE_ENABLED) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-4xl mx-auto p-6">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Activity Center</h1>
+            <p className="text-gray-500">Track your collection activity</p>
+          </div>
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Clock className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-600">No Activity Yet</h3>
+              <p className="text-gray-500 mb-4">
+                Your collection activity will appear here as you build your collection.
+              </p>
+              <Button onClick={() => setLocation('/browse')} className="bg-red-600 hover:bg-red-700 text-white">
+                Browse Cards
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Activity Center</h1>
-            <p className="text-gray-500">{FEATURE_FLAGS.MARKETPLACE_ENABLED ? 'Track your purchases, sales, and reviews' : 'Track your collection activity'}</p>
+            <p className="text-gray-500">Track your purchases, sales, and reviews</p>
           </div>
         </div>
         
@@ -692,9 +718,9 @@ export default function Activity() {
             <Card>
               <CardContent className="py-12 text-center">
                 <TrendingUp className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-600">Trade Block Coming Soon</h3>
+                <h3 className="text-lg font-semibold text-gray-600">No Trades Yet</h3>
                 <p className="text-gray-500">
-                  Soon you'll be able to create trade listings and swap cards with other collectors!
+                  Your trade activity will appear here.
                 </p>
               </CardContent>
             </Card>
@@ -702,15 +728,11 @@ export default function Activity() {
           
           <TabsContent value="reviews" className="space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Star className="w-5 h-5 text-yellow-500" />
-                  Your Reviews
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-500 text-center py-8">
-                  Reviews you've given and received will appear here after completed transactions.
+              <CardContent className="py-12 text-center">
+                <Star className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-600">No Reviews Yet</h3>
+                <p className="text-gray-500">
+                  Reviews you've given and received will appear here.
                 </p>
               </CardContent>
             </Card>
