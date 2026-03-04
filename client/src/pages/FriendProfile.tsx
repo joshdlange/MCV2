@@ -8,10 +8,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Users, Award, Star, Eye, EyeOff, MapPin, Globe, Calendar, TrendingUp, Search, Grid, List, BookOpen } from "lucide-react";
+import { ArrowLeft, Users, Award, Star, Eye, EyeOff, MapPin, Globe, Calendar, TrendingUp, Search, Grid, List, BookOpen, Flag, MoreVertical } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import type { CardWithSet } from "@/types/database";
 
 interface FriendProfileData {
@@ -64,7 +67,11 @@ export default function FriendProfile() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
   const [showCardDetail, setShowCardDetail] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState<string | null>(null);
+  const [isReporting, setIsReporting] = useState(false);
   const { user } = useAuth();
+  const { toast } = useToast();
 
   // Helper function to get auth headers
   const getAuthHeaders = async () => {
@@ -190,6 +197,32 @@ export default function FriendProfile() {
     setShowCardDetail(true);
   };
 
+  const handleSubmitReport = async () => {
+    if (!reportReason || !friend) return;
+    setIsReporting(true);
+    try {
+      await apiRequest("POST", "/api/report", {
+        contentType: "user",
+        contentId: friend.id,
+        reason: reportReason,
+      });
+      toast({
+        title: "Report submitted",
+        description: "We review all reports within 24 hours.",
+      });
+      setShowReportModal(false);
+      setReportReason(null);
+    } catch (err: any) {
+      toast({
+        title: "Failed to submit report",
+        description: err.message || "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsReporting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-6xl mx-auto">
@@ -213,8 +246,21 @@ export default function FriendProfile() {
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <h2 className="text-2xl font-bold text-gray-900">{friend.displayName || friend.username}</h2>
-                <p className="text-gray-600 mb-2">@{friend.username}</p>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">{friend.displayName || friend.username}</h2>
+                    <p className="text-gray-600 mb-2">@{friend.username}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowReportModal(true)}
+                    className="text-gray-400 hover:text-red-500"
+                    title="Report user"
+                  >
+                    <Flag className="w-4 h-4" />
+                  </Button>
+                </div>
                 {friend.bio && (
                   <p className="text-gray-700 mb-3">{friend.bio}</p>
                 )}
@@ -572,6 +618,44 @@ export default function FriendProfile() {
         isInCollection={false}
         isInWishlist={false}
       />
+
+      <Dialog open={showReportModal} onOpenChange={(open) => { setShowReportModal(open); if (!open) setReportReason(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Why are you reporting this user?</DialogTitle>
+            <DialogDescription>
+              Select a reason for your report. We review all reports within 24 hours.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            {["Spam", "Inappropriate", "Fake account", "Other"].map((reason) => (
+              <button
+                key={reason}
+                onClick={() => setReportReason(reason.toLowerCase())}
+                className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
+                  reportReason === reason.toLowerCase()
+                    ? "border-red-500 bg-red-50 text-red-700"
+                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700"
+                }`}
+              >
+                {reason}
+              </button>
+            ))}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => { setShowReportModal(false); setReportReason(null); }}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleSubmitReport}
+              disabled={!reportReason || isReporting}
+            >
+              {isReporting ? "Submitting..." : "Submit Report"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

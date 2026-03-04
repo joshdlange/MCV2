@@ -8081,6 +8081,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/report", authenticateUser, async (req: any, res) => {
+    try {
+      const { contentType, contentId, reason } = req.body;
+      const reporterId = req.user.id;
+
+      if (!contentType || !contentId || !reason) {
+        return res.status(400).json({ message: "contentType, contentId, and reason are required" });
+      }
+
+      const { reports } = await import("../shared/schema");
+
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const [recentReportsCount] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(reports)
+        .where(and(
+          eq(reports.reporterId, reporterId),
+          sql`${reports.createdAt} >= ${oneDayAgo}`
+        ));
+
+      if (Number(recentReportsCount?.count || 0) >= 5) {
+        return res.status(429).json({
+          message: "You've reached the daily report limit. Please try again tomorrow."
+        });
+      }
+
+      const reportData: any = {
+        reporterId,
+        reason,
+        status: 'open',
+      };
+
+      if (contentType === 'user') {
+        reportData.targetUserId = parseInt(contentId);
+      } else if (contentType === 'listing') {
+        reportData.listingId = parseInt(contentId);
+      } else if (contentType === 'order') {
+        reportData.orderId = parseInt(contentId);
+      }
+
+      await db.insert(reports).values(reportData);
+
+      res.json({ success: true, message: "Report submitted successfully" });
+    } catch (error) {
+      console.error("Report submission error:", error);
+      res.status(500).json({ message: "Failed to submit report" });
+    }
+  });
+
   app.delete("/api/user/account", authenticateUser, async (req: any, res) => {
     try {
       const userId = req.user.id;
