@@ -31,6 +31,7 @@ import * as emailTriggers from "./services/emailTriggers";
 import { startEmailCronJobs } from "./jobs/emailCron";
 import { uploadUserCardImage, uploadMainSetThumbnail, downloadAndUploadToCloudinary, isCloudinaryUrl } from "./cloudinary";
 import { registerMarketplaceRoutes } from "./marketplace-routes";
+import { optimizedStorage } from "./optimized-storage";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1212,7 +1213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/cards", async (req, res) => {
     const startTime = Date.now();
     try {
-      const { optimizedStorage } = await import('./optimized-storage');
+      
       const page = parseInt(req.query.page as string) || 1;
       const pageSize = Math.min(parseInt(req.query.pageSize as string) || 50, 100);
       
@@ -2012,7 +2013,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const collectionItem = await storage.addToCollection(validatedData);
       
       // Invalidate stats cache and check badges (fire-and-forget)
-      const { optimizedStorage } = await import('./optimized-storage');
+      
       optimizedStorage.invalidateUserStatsCache(req.user.id);
       badgeService.checkBadgesOnCollectionChange(req.user.id).catch(err => 
         console.error('Background badge check failed:', err)
@@ -2110,7 +2111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.removeFromCollection(id);
       
       // Invalidate stats cache and check badges (fire-and-forget)
-      const { optimizedStorage } = await import('./optimized-storage');
+      
       optimizedStorage.invalidateUserStatsCache(req.user.id);
       badgeService.checkBadgesOnCollectionChange(req.user.id).catch(err => 
         console.error('Background badge check failed:', err)
@@ -2217,7 +2218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const wishlistItem = await storage.addToWishlist(validatedData);
-      const { optimizedStorage } = await import('./optimized-storage');
+      
       optimizedStorage.invalidateUserStatsCache(req.user.id);
       res.status(201).json(wishlistItem);
     } catch (error) {
@@ -2233,7 +2234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       await storage.removeFromWishlist(id);
-      const { optimizedStorage } = await import('./optimized-storage');
+      
       optimizedStorage.invalidateUserStatsCache(req.user.id);
       res.json({ message: "Card removed from wishlist" });
     } catch (error) {
@@ -2247,7 +2248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const performanceStart = Date.now();
     
     try {
-      const { optimizedStorage } = await import('./optimized-storage');
+      
       const stats = await optimizedStorage.getUserStatsOptimized(req.user.id);
       
       const performanceDuration = Date.now() - performanceStart;
@@ -2263,7 +2264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = parseInt(req.query.limit as string) || 24;
       
-      const { optimizedStorage } = await import('./optimized-storage');
+      
       const recentCards = await optimizedStorage.getRecentCardsOptimized(req.user.id, limit);
       
       res.json(recentCards);
@@ -2280,7 +2281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Use optimized storage with pricing data
       try {
-        const { optimizedStorage } = await import('./optimized-storage');
+        
         const trendingCards = await optimizedStorage.getTrendingCardsOptimized(limit);
         res.json(trendingCards);
       } catch (dbError) {
@@ -2601,7 +2602,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasImage = req.query.hasImage ? req.query.hasImage === 'true' : undefined;
       const search = req.query.search as string;
 
-      const { optimizedStorage } = await import('./optimized-storage');
+      
       
       const result = await optimizedStorage.getCardsPaginated(page, pageSize, {
         setId,
@@ -2629,7 +2630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const page = parseInt(req.query.page as string) || 1;
       const pageSize = Math.min(parseInt(req.query.pageSize as string) || 50, 100);
 
-      const { optimizedStorage } = await import('./optimized-storage');
+      
       
       const result = await optimizedStorage.getUserCollectionPaginated(
         req.user.id,
@@ -2652,7 +2653,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const performanceStart = Date.now();
     
     try {
-      const { optimizedStorage } = await import('./optimized-storage');
+      
       
       const stats = await optimizedStorage.getUserStatsOptimized(req.user.id);
 
@@ -2725,7 +2726,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
 
-      const { optimizedStorage } = await import('./optimized-storage');
+      
       
       const results = await optimizedStorage.searchCardsOptimized(query, limit, {
         setId,
@@ -2749,7 +2750,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = Math.min(parseInt(req.query.limit as string) || 10, 20);
 
-      const { optimizedStorage } = await import('./optimized-storage');
+      
       
       const results = await optimizedStorage.getTrendingCardsOptimized(limit);
 
@@ -2770,7 +2771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = Math.min(parseInt(req.query.limit as string) || 10, 20);
 
-      const { optimizedStorage } = await import('./optimized-storage');
+      
       
       const results = await optimizedStorage.getRecentCardsOptimized(req.user.id, limit);
 
@@ -4215,7 +4216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Admin access required' });
       }
       
-      const { optimizedStorage } = await import('./optimized-storage');
+      
       
       const results = [];
       
