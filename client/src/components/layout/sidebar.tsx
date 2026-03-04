@@ -114,12 +114,12 @@ export function Sidebar() {
           <div className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center">
             <img 
               src={vaultLogo} 
-              alt="Marvel Card Vault" 
+              alt="Marvelous Card Vault" 
               className="w-8 h-8 md:w-10 md:h-10 object-contain"
             />
           </div>
           <div>
-            <h1 className="text-white font-bebas text-xl md:text-2xl tracking-wide">MARVEL</h1>
+            <h1 className="text-white font-bebas text-xl md:text-2xl tracking-wide">MARVELOUS</h1>
             <p className="text-white/80 text-xs md:text-sm font-roboto">Card Vault</p>
           </div>
         </div>

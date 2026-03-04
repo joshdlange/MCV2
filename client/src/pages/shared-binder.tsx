@@ -84,7 +84,7 @@ function SharedBinderSlot({ card, owned, slotIndex }: { card: SharePageCard; own
         <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
           <img
             src={marvelCardVaultLogo}
-            alt="Marvel Card Vault"
+            alt="Marvelous Card Vault"
             className={`w-10 h-10 mb-1 ${!owned ? 'grayscale opacity-30' : 'opacity-60'}`}
           />
           <span className={`text-[10px] font-medium leading-tight ${owned ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -260,7 +260,7 @@ export default function SharedBinder() {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          <img src={marvelCardVaultLogo} alt="Marvel Card Vault" className="w-24 h-24 mx-auto mb-6 animate-pulse" />
+          <img src={marvelCardVaultLogo} alt="Marvelous Card Vault" className="w-24 h-24 mx-auto mb-6 animate-pulse" />
           <div className="animate-spin w-8 h-8 border-3 border-red-600 border-t-transparent rounded-full mx-auto mb-4" />
           <p className="text-gray-400 text-sm">Loading binder...</p>
         </div>
@@ -275,7 +275,7 @@ export default function SharedBinder() {
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-red-500 to-transparent" />
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="text-center max-w-md">
-            <img src={marvelCardVaultLogo} alt="Marvel Card Vault" className="w-32 h-32 mx-auto mb-6" />
+            <img src={marvelCardVaultLogo} alt="Marvelous Card Vault" className="w-32 h-32 mx-auto mb-6" />
             <BookOpen className="w-12 h-12 text-gray-600 mx-auto mb-4" />
             <h1 className="text-2xl font-bold text-white mb-2">
               {is410 ? "Link No Longer Active" : "Binder Not Found"}
@@ -323,7 +323,7 @@ export default function SharedBinder() {
         <div className="max-w-lg mx-auto text-center">
           <img
             src={marvelCardVaultLogo}
-            alt="Marvel Card Vault"
+            alt="Marvelous Card Vault"
             className="w-28 h-28 lg:w-36 lg:h-36 mx-auto mb-4"
           />
 

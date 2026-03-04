@@ -22,12 +22,12 @@ export function MobileHeader() {
           <div className="w-8 h-8 bg-marvel-red rounded-lg flex items-center justify-center">
             <img 
               src={heroLogoWhite} 
-              alt="Marvel Card Vault" 
+              alt="Marvelous Card Vault" 
               className="w-5 h-5 object-contain"
             />
           </div>
           <h1 className="text-gray-900 font-bebas text-xl tracking-wide font-bold">
-            MARVEL CARD VAULT
+            MARVELOUS CARD VAULT
           </h1>
         </div>
       </div>

@@ -98,7 +98,7 @@ export default function SimpleImage({
       >
         <img
           src="/uploads/marvel-card-vault-logo.png"
-          alt="Marvel Card Vault"
+          alt="Marvelous Card Vault"
           className="w-3/4 h-3/4 object-contain"
           width={width}
           height={height}

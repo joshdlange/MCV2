@@ -1,7 +1,7 @@
-# Marvel Card Vault - Replit Development Guide
+# Marvelous Card Vault - Replit Development Guide
 
 ## Overview
-Marvel Card Vault is a comprehensive web application for managing Marvel trading card collections. It supports large-scale card databases (194,800+ cards) with optimized performance, user authentication, subscription management, and advanced collection tracking features. The project aims to provide a robust platform for collectors to organize, track, and manage their Marvel trading card assets.
+Marvelous Card Vault (formerly Marvel Card Vault) is a comprehensive web application for managing Marvel trading card collections. It supports large-scale card databases (194,800+ cards) with optimized performance, user authentication, subscription management, and advanced collection tracking features. The project aims to provide a robust platform for collectors to organize, track, and manage their Marvel trading card assets.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.

@@ -52,7 +52,7 @@ export default function Subscribe() {
       <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-950 flex items-center justify-center p-4">
         <Card className="max-w-md w-full text-center bg-gray-900 border-gray-800">
           <CardContent className="py-12 space-y-4">
-            <img src={logoImage} alt="Marvel Card Vault" className="w-16 h-16 mx-auto rounded-xl" />
+            <img src={logoImage} alt="Marvelous Card Vault" className="w-16 h-16 mx-auto rounded-xl" />
             <AlertCircle className="w-10 h-10 mx-auto text-red-500" />
             <p className="text-gray-300">{error}</p>
             <Button
@@ -78,7 +78,7 @@ export default function Subscribe() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-950 flex items-center justify-center p-4">
       <Card className="max-w-md w-full text-center bg-gray-900 border-gray-800">
         <CardContent className="py-12 space-y-4">
-          <img src={logoImage} alt="Marvel Card Vault" className="w-16 h-16 mx-auto rounded-xl" />
+          <img src={logoImage} alt="Marvelous Card Vault" className="w-16 h-16 mx-auto rounded-xl" />
           <Loader2 className="w-10 h-10 animate-spin mx-auto text-red-500" />
           <p className="text-gray-300">
             {authLoading ? "Signing you in..." : "Redirecting to checkout..."}

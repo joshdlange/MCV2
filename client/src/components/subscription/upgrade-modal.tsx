@@ -52,7 +52,7 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
         <div className="bg-gradient-to-b from-gray-900 to-gray-950 px-5 sm:px-6 pt-5 sm:pt-6 pb-3 sm:pb-4 flex flex-col items-center">
           <img 
             src={logoImage} 
-            alt="Marvel Card Vault" 
+            alt="Marvelous Card Vault" 
             className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl mb-3"
           />
           <h2 className="text-lg sm:text-xl font-bold text-white text-center">

@@ -200,7 +200,7 @@ export function Login() {
             <div className="flex items-center justify-center mb-4">
               <img 
                 src={marvelCardVaultLogo} 
-                alt="Marvel Card Vault" 
+                alt="Marvelous Card Vault" 
                 className="w-48 h-48 lg:w-56 lg:h-56 object-contain"
               />
             </div>

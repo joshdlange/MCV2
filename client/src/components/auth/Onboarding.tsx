@@ -156,7 +156,7 @@ export function Onboarding() {
     <Dialog open={true}>
       <DialogContent className="sm:max-w-[500px]" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bebas tracking-wide">Welcome to Marvel Card Vault</DialogTitle>
+          <DialogTitle className="text-2xl font-bebas tracking-wide">Welcome to Marvelous Card Vault</DialogTitle>
           <DialogDescription>
             Let's get you set up! Step {step} of 4
           </DialogDescription>
