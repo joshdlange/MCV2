@@ -5150,6 +5150,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         backImageUrl,
       });
       
+      // Auto-approve for admin users (skip the approval queue)
+      if (req.user.isAdmin) {
+        const card = await storage.getCard(cardId);
+        if (card) {
+          const cardUpdates: any = {};
+          if (frontImageUrl) cardUpdates.frontImageUrl = frontImageUrl;
+          if (backImageUrl) cardUpdates.backImageUrl = backImageUrl;
+          if (Object.keys(cardUpdates).length > 0) {
+            await storage.updateCard(cardId, cardUpdates);
+          }
+          await storage.updatePendingCardImage(pendingImage.id, {
+            status: 'approved',
+            reviewedBy: req.user.id,
+            reviewedAt: new Date(),
+          });
+        }
+      }
+
       // Auto-add card to user's collection if they don't own it
       const existingCollection = await storage.getUserCollectionItem(req.user.id, cardId);
       if (!existingCollection) {
@@ -5162,8 +5180,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.json({
-        message: "Thanks! Your image is pending approval.",
-        pendingImage
+        message: req.user.isAdmin ? "Image uploaded and approved automatically." : "Thanks! Your image is pending approval.",
+        pendingImage,
+        autoApproved: req.user.isAdmin,
       });
     } catch (error) {
       console.error('Upload card image error:', error);
