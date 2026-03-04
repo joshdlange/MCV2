@@ -30,7 +30,7 @@ function baseTemplate({ title, bodyHtml }: { title: string; bodyHtml: string }):
           <!-- Header with Logo -->
           <tr>
             <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, ${DARK_BG} 0%, ${CARD_BG} 100%);">
-              <img src="${LOGO_URL}" alt="Marvel Card Vault" style="width: 150px; height: auto; display: block; margin: 0 auto;">
+              <img src="${LOGO_URL}" alt="Marvelous Card Vault" style="width: 150px; height: auto; display: block; margin: 0 auto;">
             </td>
           </tr>
           
@@ -45,7 +45,7 @@ function baseTemplate({ title, bodyHtml }: { title: string; bodyHtml: string }):
           <tr>
             <td style="padding: 30px 40px; background-color: ${DARK_BG}; border-top: 1px solid #334155; text-align: center;">
               <p style="margin: 0 0 10px; font-size: 14px; color: ${TEXT_SECONDARY};">
-                <strong style="color: ${BRAND_RED};">Marvel Card Vault</strong><br>
+                <strong style="color: ${BRAND_RED};">Marvelous Card Vault</strong><br>
                 Your Ultimate Marvel Trading Card Collection Manager
               </p>
               <p style="margin: 0; font-size: 12px; color: ${TEXT_SECONDARY};">
@@ -90,7 +90,7 @@ function ctaButton(text: string, url: string): string {
 export function welcomeTemplate(user: { displayName: string; username: string }): string {
   const bodyHtml = `
     <h1 style="margin: 0 0 20px; font-size: 32px; font-weight: 700; color: ${TEXT_PRIMARY}; line-height: 1.2;">
-      Welcome to Marvel Card Vault, ${user.displayName}!
+      Welcome to Marvelous Card Vault, ${user.displayName}!
     </h1>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
       You're all set. Track your cards, monitor values, and showcase your collection—all in one place.
@@ -101,7 +101,7 @@ export function welcomeTemplate(user: { displayName: string; username: string })
     </div>
     ${ctaButton('Track Your Collection', 'https://www.marvelcardvault.com')}
   `;
-  return baseTemplate({ title: 'Welcome to Marvel Card Vault', bodyHtml });
+  return baseTemplate({ title: 'Welcome to Marvelous Card Vault', bodyHtml });
 }
 
 /**
@@ -370,7 +370,7 @@ export function finishSetupTemplate(user: { displayName: string }): string {
       ${user.displayName},
     </p>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      Complete your profile to get the most out of Marvel Card Vault:
+      Complete your profile to get the most out of Marvelous Card Vault:
     </p>
     <ul style="margin: 0 0 20px; padding-left: 20px; color: ${TEXT_SECONDARY};">
       <li style="margin-bottom: 10px;">Track your favorite sets</li>
@@ -487,13 +487,13 @@ export function weeklyDigestTemplate(
 export function googlePlayLaunchTemplate(user: { displayName: string }): string {
   const bodyHtml = `
     <h1 style="margin: 0 0 20px; font-size: 28px; font-weight: 700; color: ${TEXT_PRIMARY}; text-align: center;">
-      Marvel Card Vault is Now on Google Play!
+      Marvelous Card Vault is Now on Google Play!
     </h1>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
       Hey ${user.displayName},
     </p>
     <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
-      We're thrilled to announce that <strong style="color: ${TEXT_PRIMARY};">Marvel Card Vault is officially available on the Google Play Store!</strong> Now you can manage your Marvel trading card collection on the go with our brand new Android app.
+      We're thrilled to announce that <strong style="color: ${TEXT_PRIMARY};">Marvelous Card Vault is officially available on the Google Play Store!</strong> Now you can manage your Marvel trading card collection on the go with our brand new Android app.
     </p>
     <div style="background-color: ${DARK_BG}; padding: 25px; border-radius: 8px; text-align: center; margin: 25px 0; border: 2px solid ${BRAND_RED};">
       <p style="margin: 0 0 10px; font-size: 14px; color: ${TEXT_SECONDARY}; text-transform: uppercase; letter-spacing: 1px;">Beta User Exclusive</p>
@@ -508,7 +508,7 @@ export function googlePlayLaunchTemplate(user: { displayName: string }): string 
     </p>
     ${ctaButton('Download on Google Play', 'https://play.google.com/store/apps/details?id=com.marvelcardvault.app&utm_source=na_Med')}
     <p style="margin: 20px 0 0; font-size: 14px; text-align: center; color: ${TEXT_SECONDARY};">
-      Thank you for being part of the Marvel Card Vault community!
+      Thank you for being part of the Marvelous Card Vault community!
     </p>
   `;
   return baseTemplate({ title: 'MCV now available on Google Play', bodyHtml });

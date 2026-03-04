@@ -64,7 +64,7 @@ export async function sendEmail(
 
     // Send email via Brevo
     const info = await transporter.sendMail({
-      from: 'Marvel Card Vault <no-reply@marvelcardvault.com>',
+      from: 'Marvelous Card Vault <no-reply@marvelcardvault.com>',
       to,
       subject,
       html,

@@ -18,7 +18,7 @@ export async function sendEmail(
 ): Promise<void> {
   try {
     await transporter.sendMail({
-      from: 'Marvel Card Vault <no-reply@marvelcardvault.com>',
+      from: 'Marvelous Card Vault <no-reply@marvelcardvault.com>',
       to,
       subject,
       html,

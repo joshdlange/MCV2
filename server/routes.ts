@@ -124,7 +124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/health", (req, res) => {
     res.json({ 
       status: "healthy",
-      message: "Marvel Card Vault API is running",
+      message: "Marvelous Card Vault API is running",
       timestamp: new Date().toISOString(),
       version: "1.0.0"
     });

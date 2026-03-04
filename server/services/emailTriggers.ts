@@ -56,7 +56,7 @@ export async function onUserSignup(user: User): Promise<void> {
       displayName: user.displayName,
       username: user.username || 'collector'
     });
-    await sendEmail(user.email, 'Welcome to Marvel Card Vault', html, 'welcome');
+    await sendEmail(user.email, 'Welcome to Marvelous Card Vault', html, 'welcome');
   } catch (error) {
     console.error('Failed to send welcome email:', error);
   }
@@ -230,7 +230,7 @@ export async function onFinishSetupNudge(user: User): Promise<void> {
 export async function onInactivityReminder(user: User): Promise<void> {
   try {
     const html = templates.inactiveUserTemplate({ displayName: user.displayName });
-    await sendEmail(user.email, "What's New at Marvel Card Vault", html, 'inactive-user');
+    await sendEmail(user.email, "What's New at Marvelous Card Vault", html, 'inactive-user');
   } catch (error) {
     console.error('Failed to send inactivity reminder email:', error);
   }
@@ -260,7 +260,7 @@ export async function onWeeklyDigest(user: User, sets: NewSet[]): Promise<void> 
       { displayName: user.displayName },
       sets
     );
-    await sendEmail(user.email, 'Monthly Update - Marvel Card Vault', html, 'weekly-digest');
+    await sendEmail(user.email, 'Monthly Update - Marvelous Card Vault', html, 'weekly-digest');
   } catch (error) {
     console.error('Failed to send weekly digest email:', error);
   }

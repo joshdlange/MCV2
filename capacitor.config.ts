@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.marvelcardvault.app',
-  appName: 'Marvel Card Vault',
+  appName: 'Marvelous Card Vault',
   webDir: 'dist/public',
   server: {
     url: 'https://app.marvelcardvault.com',
