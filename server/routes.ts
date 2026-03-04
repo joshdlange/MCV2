@@ -1212,10 +1212,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/cards", async (req, res) => {
     const startTime = Date.now();
     try {
-      const { ultraOptimizedStorage } = await import('./ultra-optimized-storage');
+      const { optimizedStorage } = await import('./optimized-storage');
       const page = parseInt(req.query.page as string) || 1;
       const pageSize = Math.min(parseInt(req.query.pageSize as string) || 50, 100);
-      const lightweight = req.query.lightweight === 'true';
       
       const filters: any = {};
       if (req.query.setId) filters.setId = parseInt(req.query.setId as string);
@@ -1224,9 +1223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.query.hasImage !== undefined) filters.hasImage = req.query.hasImage === 'true';
       if (req.query.search) filters.search = req.query.search as string;
       
-      const result = lightweight 
-        ? await ultraOptimizedStorage.getLightweightCardsPaginated(page, pageSize, filters)
-        : await ultraOptimizedStorage.getCardsPaginated(page, pageSize, filters);
+      const result = await optimizedStorage.getCardsPaginated(page, pageSize, filters);
       
       // Add performance header
       const duration = Date.now() - startTime;
@@ -1334,14 +1331,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = insertCardSchema.parse(req.body);
       const card = await storage.createCard(validatedData);
-      
-      // Clear cache when cards are created
-      try {
-        const { ultraOptimizedStorage } = await import('./ultra-optimized-storage');
-        ultraOptimizedStorage.clearCache();
-      } catch (e) {
-        console.log('Cache clear skipped:', e);
-      }
       
       res.status(201).json(card);
     } catch (error) {
@@ -1488,14 +1477,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Updated set ${setId} card count to ${cardCount[0]?.count}`);
       } catch (e) {
         console.log('Card count update skipped:', e);
-      }
-
-      // Clear cache after bulk insert
-      try {
-        const { ultraOptimizedStorage } = await import('./ultra-optimized-storage');
-        ultraOptimizedStorage.clearCache();
-      } catch (e) {
-        console.log('Cache clear skipped:', e);
       }
 
       res.json({
@@ -1730,11 +1711,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Clear cache
-      try {
-        const { ultraOptimizedStorage } = await import('./ultra-optimized-storage');
-        ultraOptimizedStorage.clearCache();
-      } catch (e) {}
 
       console.log(`[BULK IMPORT] Complete. Success: ${successCount}, Errors: ${errorCount}`);
 
@@ -1944,14 +1920,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Card not found" });
       }
       
-      // Clear cache when cards are updated
-      try {
-        const { ultraOptimizedStorage } = await import('./ultra-optimized-storage');
-        ultraOptimizedStorage.clearCache();
-      } catch (e) {
-        console.log('Cache clear skipped:', e);
-      }
-      
       res.json(updatedCard);
     } catch (error) {
       console.error('Update card error:', error);
@@ -1980,14 +1948,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Card not found" });
       }
       
-      // Clear cache when cards are updated
-      try {
-        const { ultraOptimizedStorage } = await import('./ultra-optimized-storage');
-        ultraOptimizedStorage.clearCache();
-      } catch (e) {
-        console.log('Cache clear skipped:', e);
-      }
-      
       res.json(updatedCard);
     } catch (error) {
       console.error('Patch card error:', error);
@@ -2004,14 +1964,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const id = parseInt(req.params.id);
       await storage.deleteCard(id);
-      
-      // Clear cache when cards are deleted
-      try {
-        const { ultraOptimizedStorage } = await import('./ultra-optimized-storage');
-        ultraOptimizedStorage.clearCache();
-      } catch (e) {
-        console.log('Cache clear skipped:', e);
-      }
       
       res.json({ message: "Card deleted successfully" });
     } catch (error) {
@@ -2649,9 +2601,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasImage = req.query.hasImage ? req.query.hasImage === 'true' : undefined;
       const search = req.query.search as string;
 
-      const { ultraOptimizedStorage } = await import('./ultra-optimized-storage');
+      const { optimizedStorage } = await import('./optimized-storage');
       
-      const result = await ultraOptimizedStorage.getCardsPaginated(page, pageSize, {
+      const result = await optimizedStorage.getCardsPaginated(page, pageSize, {
         setId,
         rarity,
         isInsert,
@@ -4249,9 +4201,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Admin access required' });
       }
       
-      const { ultraOptimizedStorage } = await import('./ultra-optimized-storage');
-      ultraOptimizedStorage.clearCache();
-      
       res.json({ message: "Cache cleared successfully" });
     } catch (error) {
       console.error('Cache clear error:', error);
@@ -4266,34 +4215,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Admin access required' });
       }
       
-      const { ultraOptimizedStorage } = await import('./ultra-optimized-storage');
-      
-      // Clear cache to get cold performance
-      ultraOptimizedStorage.clearCache();
+      const { optimizedStorage } = await import('./optimized-storage');
       
       const results = [];
       
-      // Test 1: Cold cache performance
+      // Test 1: Cold performance
       const coldStart = Date.now();
-      await ultraOptimizedStorage.getCardsPaginated(1, 50, {});
+      await optimizedStorage.getCardsPaginated(1, 50, {});
       const coldTime = Date.now() - coldStart;
-      results.push({ test: "Cold cache (page 1)", time: coldTime });
+      results.push({ test: "Cold query (page 1)", time: coldTime });
       
-      // Test 2: Warm cache performance
+      // Test 2: Warm performance
       const warmStart = Date.now();
-      await ultraOptimizedStorage.getCardsPaginated(1, 50, {});
+      await optimizedStorage.getCardsPaginated(1, 50, {});
       const warmTime = Date.now() - warmStart;
-      results.push({ test: "Warm cache (page 1)", time: warmTime });
+      results.push({ test: "Warm query (page 1)", time: warmTime });
       
-      // Test 3: Lightweight query
-      const lightStart = Date.now();
-      await ultraOptimizedStorage.getLightweightCardsPaginated(1, 50, {});
-      const lightTime = Date.now() - lightStart;
-      results.push({ test: "Lightweight query", time: lightTime });
-      
-      // Test 4: Filtered query
+      // Test 3: Filtered query
       const filterStart = Date.now();
-      await ultraOptimizedStorage.getCardsPaginated(1, 50, { hasImage: true });
+      await optimizedStorage.getCardsPaginated(1, 50, { hasImage: true });
       const filterTime = Date.now() - filterStart;
       results.push({ test: "Filtered query (has image)", time: filterTime });
       
@@ -6633,11 +6573,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log the archive action
       console.log(`[ARCHIVE APPLY] Archived ${mainSetResult.rows.length} main sets, ${cardSetResult.rows.length} card sets`);
 
-      // Clear caches
-      try {
-        const { ultraOptimizedStorage } = await import('./ultra-optimized-storage');
-        ultraOptimizedStorage.clearCache();
-      } catch (e) {}
 
       res.json({
         success: true,

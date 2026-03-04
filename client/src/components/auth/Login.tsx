@@ -18,6 +18,7 @@ export function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [tosAccepted, setTosAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -535,10 +536,41 @@ export function Login() {
                           </div>
                         </div>
                         
+                        <div className="flex items-start space-x-2">
+                          <input
+                            type="checkbox"
+                            id="tos-checkbox"
+                            checked={tosAccepted}
+                            onChange={(e) => setTosAccepted(e.target.checked)}
+                            className="mt-1 h-4 w-4 rounded border-gray-600 bg-gray-800 text-red-600 focus:ring-red-500 accent-red-600"
+                            data-testid="checkbox-tos"
+                          />
+                          <label htmlFor="tos-checkbox" className="text-sm text-gray-400">
+                            I agree to the{' '}
+                            <a
+                              href="https://marvelcardvault.com/terms"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-red-400 hover:text-red-300 underline"
+                            >
+                              Terms of Service
+                            </a>
+                            {' '}and{' '}
+                            <a
+                              href="https://marvelcardvault.com/terms"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-red-400 hover:text-red-300 underline"
+                            >
+                              Community Guidelines
+                            </a>
+                          </label>
+                        </div>
+                        
                         <Button 
                           type="submit"
-                          disabled={isLoading}
-                          className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white py-3 font-semibold"
+                          disabled={isLoading || !tosAccepted}
+                          className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white py-3 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                           data-testid="button-signup"
                         >
                           {isLoading ? "Creating Account..." : "Create Account"}
