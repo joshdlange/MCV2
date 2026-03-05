@@ -400,7 +400,9 @@ export class DatabaseStorage implements IStorage {
   async createMainSet(insertMainSet: InsertMainSet): Promise<MainSet> {
     const dataWithSlug = {
       ...insertMainSet,
-      slug: generateSlug(insertMainSet.name)
+      slug: generateSlug(insertMainSet.name),
+      isCanonical: insertMainSet.isCanonical ?? true,
+      isActive: insertMainSet.isActive ?? true,
     };
     const [mainSet] = await db.insert(mainSets).values(dataWithSlug).returning();
     return mainSet;
