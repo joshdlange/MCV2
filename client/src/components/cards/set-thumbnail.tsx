@@ -217,8 +217,8 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
           <div className="bg-amber-100 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
             <Hammer className="w-8 h-8 text-amber-600" />
           </div>
-          <h3 className="font-semibold text-gray-900 mb-2">{displayName}</h3>
-          <p className="text-gray-600 text-sm">
+          <h3 className="font-semibold text-foreground mb-2">{displayName}</h3>
+          <p className="text-foreground/80 text-sm">
             We're still adding cards to this set. Check back soon!
           </p>
         </div>
