@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Sparkles, BookOpen, Copy, Check } from "lucide-react";
 import { SiFacebook, SiX, SiReddit, SiInstagram } from "react-icons/si";
 import { formatSetName } from "@/lib/formatTitle";
-import marvelCardVaultLogo from "@assets/Marvel_Card_Vault_Logo_Small_1771104300526.png";
+import marvelCardVaultLogo from "@assets/Marvelous_Card_Valut3_1772678671637.png";
 
 interface SharePageCard {
   id: number;

@@ -1,5 +1,5 @@
 /**
- * Advanced performance caching system for Marvel Card Vault
+ * Advanced performance caching system for Marvelous Card Vault
  * Implements intelligent cache management with TTL and memory optimization
  */
 

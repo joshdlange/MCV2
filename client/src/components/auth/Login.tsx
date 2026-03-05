@@ -9,7 +9,7 @@ import { signUpWithEmail, signInWithEmail, resetPassword } from "@/lib/firebase"
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { ArrowRight, Sparkles, Eye, EyeOff, Mail, Lock, User, AlertCircle, CheckCircle } from "lucide-react";
-import marvelCardVaultLogo from "@assets/Marvel_Card_Vault_Logo_1765487074024.png";
+import marvelCardVaultLogo from "@assets/Marvelous_Card_Valut3_1772678671637.png";
 import { useAppStore } from "@/lib/store";
 
 export function Login() {
@@ -205,7 +205,7 @@ export function Login() {
               />
             </div>
             <p className="text-lg lg:text-xl text-gray-300 max-w-md mx-auto font-light">
-              Your ultimate destination for collecting, trading, and tracking Marvel cards
+              Your ultimate destination for collecting, trading, and tracking Marvel trading cards
             </p>
           </div>
 
@@ -355,7 +355,7 @@ export function Login() {
                 <CardHeader className="text-center pb-4">
                   <CardTitle className="text-2xl font-bold text-white">Welcome to the Vault</CardTitle>
                   <CardDescription className="text-gray-400">
-                    Start building your Marvel collection today
+                    Start building your Marvelous collection today
                   </CardDescription>
                 </CardHeader>
                 

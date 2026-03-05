@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/contexts/AuthContext";
-import logoImage from "@assets/Marvel_Card_Vault_Logo_Small_1770411162419.png";
+import logoImage from "@assets/Marvelous_Card_Valut3_1772678671637.png";
 
 export default function Subscribe() {
   const [, setLocation] = useLocation();

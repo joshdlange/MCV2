@@ -99,7 +99,7 @@ export function buildEbayAffiliateUrl(input: EbayQueryInput): string {
     url += `&mkevt=${mkevt}`;
     url += `&customid=${encodeURIComponent(buildCustomId(input))}`;
   } else {
-    console.warn('[Marvel Card Vault] eBay affiliate env vars not fully configured — link will not be affiliate-tracked');
+    console.warn('[Marvelous Card Vault] eBay affiliate env vars not fully configured — link will not be affiliate-tracked');
   }
 
   return url;
