@@ -196,15 +196,15 @@ export function Login() {
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-red-500 to-transparent"></div>
           
           {/* Logo & Branding */}
-          <div className="relative z-10 text-center mb-8 lg:mb-10">
-            <div className="flex items-center justify-center mb-4">
+          <div className="relative z-10 text-center mb-4 lg:mb-6">
+            <div className="flex items-center justify-center mb-2">
               <img 
                 src={marvelCardVaultLogo} 
                 alt="Marvelous Card Vault" 
-                className="w-64 h-64 lg:w-72 lg:h-72 object-contain"
+                className="w-80 h-80 lg:w-96 lg:h-96 object-contain"
               />
             </div>
-            <p className="text-lg lg:text-xl text-gray-300 max-w-md mx-auto font-light">
+            <p className="text-lg lg:text-xl text-gray-300 max-w-md mx-auto font-light -mt-4">
               Your ultimate destination for collecting, trading, and tracking Marvel trading cards
             </p>
           </div>
