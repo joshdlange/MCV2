@@ -1,0 +1,50 @@
+I'm going to give you a CSV file to import into the production database. This is the 2025 Panini Marvel Anthology set. The main set already exists in the database with ID: 521.
+
+Here is exactly how this should be structured:
+
+MAIN SET: "2025 Panini Marvel Anthology" (ID: 521) — already exists, do not create it.
+
+CARD SETS (subsets): Each unique value in the "subset" column of the CSV becomes its own card_set record, linked to main_set_id = 521. So you will create these card sets:
+- "Base"
+- "Metal Holo"
+- "Stardust Holo"
+- "Glitch Holo"
+- "Sparkle Holo"
+- "Crossed Holo"
+- "Drop Holo"
+- "Carnival Holo"
+- "Mirror Holo"
+- "Marble Holo"
+- "Cosmo Holo"
+- "Shattered Holo"
+- "Fireworks Holo"
+- "Canvas"
+- "Legacy"
+- "Glow in the Dark"
+- "Lenticular"
+- "Badge"
+- "Infinity"
+- "Sketch"
+- "Medallion"
+
+Each card_set record should have: name = the subset name, year = 2025, main_set_id = 521, is_active = true.
+
+CARDS: Each row in the CSV becomes one card record linked to the correct card_set by matching the subset column. Fields to map:
+- name → card name
+- cardNumber → card_number
+- isInsert → is_insert (true/false)
+- rarity → rarity (leave blank/null — column exists but is empty)
+- frontImageUrl → front_image_url (empty for now)
+- backImageUrl → back_image_url (empty for now)
+- description → description (empty for now)
+- price → price (empty for now)
+
+IMPORTANT:
+- Do NOT create the main set — it already exists at ID 521
+- Create ALL 21 card sets as separate subsets under main_set_id = 521
+- Each card goes under its matching card_set only
+- The 12 holo parallels (Metal Holo, Glitch Holo, etc.) are each their own subset — each contains all 100 base cards numbered 1-100
+- The Sketch subset also contains 100 cards numbered 1-100
+- Do this in a transaction so if anything fails it rolls back cleanly
+- After inserting, report: how many card_sets were created, how many cards were inserted per subset, and the total card count
+- Confirm the set appears correctly linked to main_set_id = 521
