@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Lock, Sparkles, Star } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import logoImage from "@assets/Marvelous_Card_Valut3_1772678671637.png";
+import logoImage from "@assets/Marvelous_Card_Valut_-_Trans_1772678671637.png";
 import { Capacitor } from '@capacitor/core';
 
 interface UpgradeModalProps {

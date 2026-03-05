@@ -9,7 +9,7 @@ import { signUpWithEmail, signInWithEmail, resetPassword } from "@/lib/firebase"
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { ArrowRight, Sparkles, Eye, EyeOff, Mail, Lock, User, AlertCircle, CheckCircle } from "lucide-react";
-import marvelCardVaultLogo from "@assets/Marvelous_Card_Valut3_1772678671637.png";
+import marvelCardVaultLogo from "@assets/Marvelous_Card_Valut_-_Trans_1772678671637.png";
 import { useAppStore } from "@/lib/store";
 
 export function Login() {
