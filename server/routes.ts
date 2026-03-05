@@ -5166,6 +5166,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             reviewedBy: req.user.id,
             reviewedAt: new Date(),
           });
+          if (frontImageUrl && card.setId) {
+            const cardSet = await storage.getCardSet(card.setId);
+            if (cardSet && (!cardSet.imageUrl || cardSet.imageUrl === '')) {
+              await storage.updateCardSet(card.setId, { imageUrl: frontImageUrl });
+            }
+          }
         }
       }
 

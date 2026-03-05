@@ -92,9 +92,9 @@ export class OptimizedStorage {
 
       if (filters.hasImage !== undefined) {
         if (filters.hasImage) {
-          conditions.push(sql`${cards.frontImageUrl} IS NOT NULL`);
+          conditions.push(sql`${cards.frontImageUrl} IS NOT NULL AND ${cards.frontImageUrl} != ''`);
         } else {
-          conditions.push(sql`${cards.frontImageUrl} IS NULL`);
+          conditions.push(sql`(${cards.frontImageUrl} IS NULL OR ${cards.frontImageUrl} = '')`);
         }
       }
 
