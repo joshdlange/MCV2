@@ -201,7 +201,7 @@ export function Login() {
               <img 
                 src={marvelCardVaultLogo} 
                 alt="Marvelous Card Vault" 
-                className="w-48 h-48 lg:w-56 lg:h-56 object-contain"
+                className="w-64 h-64 lg:w-72 lg:h-72 object-contain"
               />
             </div>
             <p className="text-lg lg:text-xl text-gray-300 max-w-md mx-auto font-light">
