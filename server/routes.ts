@@ -2283,6 +2283,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         
         const trendingCards = await optimizedStorage.getTrendingCardsOptimized(limit);
+        
+        // Attach cached prices to trending cards
+        const cardIds = trendingCards.map((c: any) => c.id);
+        if (cardIds.length > 0) {
+          const priceRows = await db.execute(sql`
+            SELECT card_id, avg_price FROM card_price_cache 
+            WHERE card_id = ANY(${sql.raw(`ARRAY[${cardIds.join(',')}]::int[]`)})
+          `);
+          const priceMap = new Map<number, string>();
+          for (const row of priceRows.rows as any[]) {
+            priceMap.set(row.card_id, row.avg_price);
+          }
+          for (const card of trendingCards as any[]) {
+            card.avgPrice = priceMap.get(card.id) || null;
+          }
+        }
+        
         res.json(trendingCards);
       } catch (dbError) {
         console.error('Database connection failed for trending cards:', dbError);

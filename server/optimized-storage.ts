@@ -53,7 +53,7 @@ interface TrendingCache {
   rotationSeed: number;
 }
 let trendingCache: TrendingCache | null = null;
-const TRENDING_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours (one daily rotation)
+const TRENDING_CACHE_TTL = 12 * 60 * 60 * 1000; // 12 hours (twice-daily rotation)
 
 export class OptimizedStorage {
   invalidateUserStatsCache(userId: number) {
@@ -446,8 +446,8 @@ export class OptimizedStorage {
    */
   async getTrendingCardsOptimized(limit: number = 10) {
     const startTime = Date.now();
-    const dayOfYear = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
-    const currentRotationSeed = dayOfYear;
+    const halfDaySlot = Math.floor(Date.now() / (12 * 60 * 60 * 1000));
+    const currentRotationSeed = halfDaySlot;
     
     if (trendingCache && 
         trendingCache.rotationSeed === currentRotationSeed && 
@@ -475,15 +475,16 @@ export class OptimizedStorage {
       // Deterministic shuffle using Knuth multiplicative hash
       // Each day gets a unique offset into the shuffled list
       // With 34k cards and 10/day, no repeat for ~3400 days
-      const monthSlot = dayOfYear % Math.floor(totalInserts / limit);
+      const slotCount = Math.floor(totalInserts / limit);
+      const monthSlot = halfDaySlot % slotCount;
       const startIdx = monthSlot * limit;
       
       // Create a seeded permutation using a hash function
-      // This ensures the same day always picks the same cards
-      // but different days pick completely different cards
+      // This ensures the same half-day always picks the same cards
+      // but each rotation picks completely different cards
       const shuffled = insertCardIds.map((card, idx) => ({
         id: card.id,
-        hash: ((card.id * 2654435761 + Math.floor(dayOfYear / Math.floor(totalInserts / limit)) * 1597334677) >>> 0)
+        hash: ((card.id * 2654435761 + Math.floor(halfDaySlot / slotCount) * 1597334677) >>> 0)
       }));
       shuffled.sort((a, b) => a.hash - b.hash);
       
@@ -519,6 +520,16 @@ export class OptimizedStorage {
         lastUpdated: Date.now(),
         rotationSeed: currentRotationSeed
       };
+
+      // Queue trending cards for eBay price lookup
+      try {
+        const { pricingQueue } = await import('./pricing-queue');
+        for (const card of diverseResults) {
+          pricingQueue.addToQueue(card.id, 2);
+        }
+      } catch (e) {
+        // pricing queue is best-effort
+      }
 
       performanceTracker.logQuery(`getTrendingCardsOptimized(${limit})`, startTime);
       return diverseResults.slice(0, limit);
