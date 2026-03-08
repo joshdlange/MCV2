@@ -30,7 +30,8 @@ import {
   MessageCircle,
   UserPlus,
   AlertTriangle,
-  Trash2
+  Trash2,
+  UserX
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -189,6 +190,81 @@ function SocialBadgesSection() {
           <span className="text-sm text-gray-500">
             +{userBadges.length - 8} more super powers
           </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BlockedUsersSection() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: blockedUsers, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/social/blocked-users"],
+    enabled: !!user
+  });
+
+  const unblockMutation = useMutation({
+    mutationFn: async (blockedUserId: number) => {
+      return apiRequest("DELETE", `/api/social/block/${blockedUserId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/social/blocked-users"] });
+      toast({
+        title: "User Unblocked",
+        description: "The user has been unblocked successfully."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Unblock Failed",
+        description: error.message || "Failed to unblock user.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  return (
+    <div>
+      <h3 className="font-semibold mb-3">Blocked Users</h3>
+      {isLoading ? (
+        <p className="text-sm text-gray-500">Loading...</p>
+      ) : !blockedUsers || blockedUsers.length === 0 ? (
+        <div className="text-center py-6">
+          <UserX className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+          <p className="text-gray-500 text-sm">You haven't blocked anyone</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {blockedUsers.map((blockedUser: any) => (
+            <div key={blockedUser.id} className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Avatar className="w-8 h-8">
+                  <AvatarImage src={blockedUser.photoURL} />
+                  <AvatarFallback className="bg-gray-400 text-white text-xs">
+                    {(blockedUser.displayName || blockedUser.username || "U").charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium">{blockedUser.displayName || blockedUser.username}</p>
+                  {blockedUser.username && blockedUser.displayName && (
+                    <p className="text-xs text-gray-500">@{blockedUser.username}</p>
+                  )}
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-white text-black border-gray-300 hover:bg-gray-100"
+                onClick={() => unblockMutation.mutate(blockedUser.blockedUserId)}
+                disabled={unblockMutation.isPending}
+              >
+                Unblock
+              </Button>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -822,6 +898,10 @@ export default function Profile() {
                     </div>
                   </div>
                 </div>
+
+                <Separator className="my-6" />
+
+                <BlockedUsersSection />
               </CardContent>
             </Card>
 

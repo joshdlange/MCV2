@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Users, Award, Star, Eye, EyeOff, MapPin, Globe, Calendar, TrendingUp, Search, Grid, List, BookOpen, Flag, MoreVertical } from "lucide-react";
+import { ArrowLeft, Users, Award, Star, Eye, EyeOff, MapPin, Globe, Calendar, TrendingUp, Search, Grid, List, BookOpen, Flag, MoreVertical, ShieldOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
@@ -70,8 +70,12 @@ export default function FriendProfile() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState<string | null>(null);
   const [isReporting, setIsReporting] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [isBlocking, setIsBlocking] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Helper function to get auth headers
   const getAuthHeaders = async () => {
@@ -118,6 +122,63 @@ export default function FriendProfile() {
     enabled: !!user && !!friendId && friendProfile?.canViewWishlist,
   });
 
+  const { data: blockStatus } = useQuery<{ iBlockedThem: boolean; theyBlockedMe: boolean }>({
+    queryKey: ["social/block-status", friendId],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/social/block-status/${friendId}`, { headers });
+      if (!response.ok) throw new Error("Failed to fetch block status");
+      const data = await response.json();
+      setIsBlocked(data.iBlockedThem);
+      return data;
+    },
+    enabled: !!user && !!friendId,
+  });
+
+  const handleBlock = async () => {
+    if (!friend) return;
+    setIsBlocking(true);
+    try {
+      await apiRequest("POST", "/api/social/block", { blockedUserId: friend.id });
+      toast({
+        title: "User blocked",
+        description: `${friend.displayName || friend.username} has been blocked.`,
+      });
+      setShowBlockModal(false);
+      setLocation("/social");
+    } catch (err: any) {
+      toast({
+        title: "Failed to block user",
+        description: err.message || "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBlocking(false);
+    }
+  };
+
+  const handleUnblock = async () => {
+    if (!friend) return;
+    setIsBlocking(true);
+    try {
+      await apiRequest("DELETE", `/api/social/block/${friend.id}`);
+      setIsBlocked(false);
+      queryClient.invalidateQueries({ queryKey: ["social/block-status", friendId] });
+      toast({
+        title: "User unblocked",
+        description: `${friend.displayName || friend.username} has been unblocked.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Failed to unblock user",
+        description: err.message || "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBlocking(false);
+    }
+  };
+
   if (profileLoading) {
     return (
       <div className="min-h-screen bg-gray-100 p-6">
@@ -140,6 +201,22 @@ export default function FriendProfile() {
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Friend Not Found</h1>
           <p className="text-gray-600 mb-6">Unable to load friend profile.</p>
+          <Button onClick={() => setLocation("/social")}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Social Hub
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (blockStatus?.theyBlockedMe) {
+    return (
+      <div className="min-h-screen bg-gray-100 p-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <ShieldOff className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">This profile is not available</h1>
+          <p className="text-gray-600 mb-6">You cannot view this user's profile.</p>
           <Button onClick={() => setLocation("/social")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Social Hub
@@ -251,15 +328,40 @@ export default function FriendProfile() {
                     <h2 className="text-2xl font-bold text-gray-900">{friend.displayName || friend.username}</h2>
                     <p className="text-gray-600 mb-2">@{friend.username}</p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowReportModal(true)}
-                    className="text-gray-400 hover:text-red-500"
-                    title="Report user"
-                  >
-                    <Flag className="w-4 h-4" />
-                  </Button>
+                  <div className="flex items-center space-x-1">
+                    {isBlocked ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleUnblock}
+                        disabled={isBlocking}
+                        className="text-orange-500 hover:text-orange-600"
+                        title="Unblock user"
+                      >
+                        <ShieldOff className="w-4 h-4 mr-1" />
+                        {isBlocking ? "..." : "Unblock"}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowBlockModal(true)}
+                        className="text-gray-400 hover:text-orange-500"
+                        title="Block user"
+                      >
+                        <ShieldOff className="w-4 h-4" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowReportModal(true)}
+                      className="text-gray-400 hover:text-red-500"
+                      title="Report user"
+                    >
+                      <Flag className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
                 {friend.bio && (
                   <p className="text-gray-700 mb-3">{friend.bio}</p>
@@ -618,6 +720,29 @@ export default function FriendProfile() {
         isInCollection={false}
         isInWishlist={false}
       />
+
+      <Dialog open={showBlockModal} onOpenChange={setShowBlockModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Block {friend.displayName || friend.username}?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to block {friend.displayName || friend.username}? They won't be able to see your profile, send you messages, or add you as a friend.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowBlockModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBlock}
+              disabled={isBlocking}
+            >
+              {isBlocking ? "Blocking..." : "Block User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showReportModal} onOpenChange={(open) => { setShowReportModal(open); if (!open) setReportReason(null); }}>
         <DialogContent className="sm:max-w-md">

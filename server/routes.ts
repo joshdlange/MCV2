@@ -16,7 +16,7 @@ import { ebayPricingService } from "./ebay-pricing";
 import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
 import { db } from "./db";
-import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks } from "../shared/schema";
+import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks, blocks, friends } from "../shared/schema";
 import { sql, eq, ne, ilike, like, and, or, isNull, count, exists, desc } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
@@ -3761,6 +3761,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid recipient ID" });
       }
 
+      const [blockExists] = await db
+        .select({ id: blocks.id })
+        .from(blocks)
+        .where(or(
+          and(eq(blocks.blockerId, req.user.id), eq(blocks.blockedUserId, recipientId)),
+          and(eq(blocks.blockerId, recipientId), eq(blocks.blockedUserId, req.user.id))
+        ))
+        .limit(1);
+
+      if (blockExists) {
+        return res.status(403).json({ message: "Unable to send friend request to this user" });
+      }
+
       // Check if friendship already exists
       const existingFriendship = await storage.getFriendshipStatus(req.user.id, recipientId);
       if (existingFriendship) {
@@ -3836,6 +3849,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Recipient ID and content are required" });
       }
 
+      const [msgBlockExists] = await db
+        .select({ id: blocks.id })
+        .from(blocks)
+        .where(or(
+          and(eq(blocks.blockerId, req.user.id), eq(blocks.blockedUserId, recipientId)),
+          and(eq(blocks.blockerId, recipientId), eq(blocks.blockedUserId, req.user.id))
+        ))
+        .limit(1);
+
+      if (msgBlockExists) {
+        return res.status(403).json({ message: "Unable to send messages to this user" });
+      }
+
       const message = await storage.sendMessage(req.user.id, recipientId, content.trim());
       
       // Check badge unlocks when user sends a message
@@ -3858,6 +3884,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const recipientId = parseInt(req.body.recipientId);
       if (!recipientId) {
         return res.status(400).json({ message: "Recipient ID is required" });
+      }
+
+      const [imgMsgBlockExists] = await db
+        .select({ id: blocks.id })
+        .from(blocks)
+        .where(or(
+          and(eq(blocks.blockerId, req.user.id), eq(blocks.blockedUserId, recipientId)),
+          and(eq(blocks.blockerId, recipientId), eq(blocks.blockedUserId, req.user.id))
+        ))
+        .limit(1);
+
+      if (imgMsgBlockExists) {
+        return res.status(403).json({ message: "Unable to send messages to this user" });
       }
 
       // For now, save to uploads directory
@@ -3965,7 +4004,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/social/profile/:userId", authenticateUser, async (req: any, res) => {
     try {
       const targetUserId = parseInt(req.params.userId);
-      
+
+      const [profileBlockExists] = await db
+        .select({ id: blocks.id })
+        .from(blocks)
+        .where(or(
+          and(eq(blocks.blockerId, req.user.id), eq(blocks.blockedUserId, targetUserId)),
+          and(eq(blocks.blockerId, targetUserId), eq(blocks.blockedUserId, req.user.id))
+        ))
+        .limit(1);
+
+      if (profileBlockExists) {
+        return res.status(403).json({ message: "This profile is not available" });
+      }
+
       // Check if user can view this profile
       const canView = await storage.canViewProfile(req.user.id, targetUserId);
       if (!canView) {
@@ -4000,6 +4052,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/social/friends/:friendId/profile", authenticateUser, async (req: any, res) => {
     try {
       const friendId = parseInt(req.params.friendId);
+
+      const [fpBlockExists] = await db
+        .select({ id: blocks.id })
+        .from(blocks)
+        .where(or(
+          and(eq(blocks.blockerId, req.user.id), eq(blocks.blockedUserId, friendId)),
+          and(eq(blocks.blockerId, friendId), eq(blocks.blockedUserId, req.user.id))
+        ))
+        .limit(1);
+
+      if (fpBlockExists) {
+        return res.status(403).json({ message: "This profile is not available" });
+      }
+
       const profile = await storage.getFriendProfile(req.user.id, friendId);
       res.json(profile);
     } catch (error) {
@@ -4011,6 +4077,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/social/friends/:friendId/collection", authenticateUser, async (req: any, res) => {
     try {
       const friendId = parseInt(req.params.friendId);
+
+      const [colBlockExists] = await db
+        .select({ id: blocks.id })
+        .from(blocks)
+        .where(or(
+          and(eq(blocks.blockerId, req.user.id), eq(blocks.blockedUserId, friendId)),
+          and(eq(blocks.blockerId, friendId), eq(blocks.blockedUserId, req.user.id))
+        ))
+        .limit(1);
+
+      if (colBlockExists) {
+        return res.status(403).json({ message: "This content is not available" });
+      }
+
       const collection = await storage.getFriendCollection(req.user.id, friendId);
       res.json(collection);
     } catch (error) {
@@ -4022,6 +4102,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/social/friends/:friendId/wishlist", authenticateUser, async (req: any, res) => {
     try {
       const friendId = parseInt(req.params.friendId);
+
+      const [wlBlockExists] = await db
+        .select({ id: blocks.id })
+        .from(blocks)
+        .where(or(
+          and(eq(blocks.blockerId, req.user.id), eq(blocks.blockedUserId, friendId)),
+          and(eq(blocks.blockerId, friendId), eq(blocks.blockedUserId, req.user.id))
+        ))
+        .limit(1);
+
+      if (wlBlockExists) {
+        return res.status(403).json({ message: "This content is not available" });
+      }
+
       const wishlist = await storage.getFriendWishlist(req.user.id, friendId);
       res.json(wishlist);
     } catch (error) {
@@ -4033,6 +4127,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/social/friends/:friendId/badges", authenticateUser, async (req: any, res) => {
     try {
       const friendId = parseInt(req.params.friendId);
+
+      const [bdgBlockExists] = await db
+        .select({ id: blocks.id })
+        .from(blocks)
+        .where(or(
+          and(eq(blocks.blockerId, req.user.id), eq(blocks.blockedUserId, friendId)),
+          and(eq(blocks.blockerId, friendId), eq(blocks.blockedUserId, req.user.id))
+        ))
+        .limit(1);
+
+      if (bdgBlockExists) {
+        return res.status(403).json({ message: "This content is not available" });
+      }
       
       // Check if user can view this friend's badges
       const canView = await storage.canViewProfile(req.user.id, friendId);
@@ -4100,11 +4207,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Search query must be at least 2 characters long" });
       }
 
-      const users = await storage.searchUsers(q.trim(), req.user.id);
-      res.json(users);
+      const searchResults = await storage.searchUsers(q.trim(), req.user.id);
+
+      const blockedByMe = await db
+        .select({ blockedUserId: blocks.blockedUserId })
+        .from(blocks)
+        .where(eq(blocks.blockerId, req.user.id));
+
+      const blockedMe = await db
+        .select({ blockerId: blocks.blockerId })
+        .from(blocks)
+        .where(eq(blocks.blockedUserId, req.user.id));
+
+      const blockedIds = new Set([
+        ...blockedByMe.map(b => b.blockedUserId),
+        ...blockedMe.map(b => b.blockerId),
+      ]);
+
+      const filteredUsers = searchResults.filter((u: any) => !blockedIds.has(u.id));
+      res.json(filteredUsers);
     } catch (error) {
       console.error('Search users error:', error);
       res.status(500).json({ message: "Failed to search users" });
+    }
+  });
+
+  // ========== BLOCK / UNBLOCK API ROUTES ==========
+
+  app.post("/api/social/block", authenticateUser, async (req: any, res) => {
+    try {
+      const { blockedUserId, reason } = req.body;
+
+      if (!blockedUserId) {
+        return res.status(400).json({ message: "User to block is required" });
+      }
+
+      if (blockedUserId === req.user.id) {
+        return res.status(400).json({ message: "You cannot block yourself" });
+      }
+
+      const [targetUser] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.id, blockedUserId))
+        .limit(1);
+
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const existing = await db
+        .select()
+        .from(blocks)
+        .where(and(
+          eq(blocks.blockerId, req.user.id),
+          eq(blocks.blockedUserId, blockedUserId)
+        ))
+        .limit(1);
+
+      if (existing.length) {
+        return res.status(400).json({ message: "User already blocked" });
+      }
+
+      const [newBlock] = await db.insert(blocks).values({
+        blockerId: req.user.id,
+        blockedUserId,
+        reason: reason || null,
+      }).returning();
+
+      await db
+        .delete(friends)
+        .where(
+          or(
+            and(eq(friends.userId, req.user.id), eq(friends.friendId, blockedUserId)),
+            and(eq(friends.userId, blockedUserId), eq(friends.friendId, req.user.id))
+          )
+        );
+
+      res.status(201).json(newBlock);
+    } catch (error) {
+      console.error('Block user error:', error);
+      res.status(500).json({ message: "Failed to block user" });
+    }
+  });
+
+  app.delete("/api/social/block/:userId", authenticateUser, async (req: any, res) => {
+    try {
+      const blockedUserId = parseInt(req.params.userId);
+
+      await db
+        .delete(blocks)
+        .where(and(
+          eq(blocks.blockerId, req.user.id),
+          eq(blocks.blockedUserId, blockedUserId)
+        ));
+
+      res.json({ message: "User unblocked" });
+    } catch (error) {
+      console.error('Unblock user error:', error);
+      res.status(500).json({ message: "Failed to unblock user" });
+    }
+  });
+
+  app.get("/api/social/blocked-users", authenticateUser, async (req: any, res) => {
+    try {
+      const blockedList = await db
+        .select({
+          id: blocks.id,
+          blockedUserId: blocks.blockedUserId,
+          reason: blocks.reason,
+          createdAt: blocks.createdAt,
+          username: users.username,
+          displayName: users.displayName,
+          photoURL: users.photoURL,
+        })
+        .from(blocks)
+        .innerJoin(users, eq(blocks.blockedUserId, users.id))
+        .where(eq(blocks.blockerId, req.user.id));
+
+      res.json(blockedList);
+    } catch (error) {
+      console.error('Get blocked users error:', error);
+      res.status(500).json({ message: "Failed to fetch blocked users" });
+    }
+  });
+
+  app.get("/api/social/block-status/:userId", authenticateUser, async (req: any, res) => {
+    try {
+      const targetUserId = parseInt(req.params.userId);
+
+      const [iBlockedThem] = await db
+        .select({ id: blocks.id })
+        .from(blocks)
+        .where(and(
+          eq(blocks.blockerId, req.user.id),
+          eq(blocks.blockedUserId, targetUserId)
+        ))
+        .limit(1);
+
+      const [theyBlockedMe] = await db
+        .select({ id: blocks.id })
+        .from(blocks)
+        .where(and(
+          eq(blocks.blockerId, targetUserId),
+          eq(blocks.blockedUserId, req.user.id)
+        ))
+        .limit(1);
+
+      res.json({
+        iBlockedThem: !!iBlockedThem,
+        theyBlockedMe: !!theyBlockedMe,
+      });
+    } catch (error) {
+      console.error('Check block status error:', error);
+      res.status(500).json({ message: "Failed to check block status" });
     }
   });
 

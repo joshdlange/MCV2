@@ -39,6 +39,7 @@ The application incorporates comprehensive performance optimizations for handlin
 - **iOS App Store Compliance**: Implemented Capacitor native platform checks to redirect iOS/Android users to an external website for Stripe checkout. Sign in with Apple added for Guideline 4.8 compliance (iOS native only, uses Firebase OAuthProvider). Account deletion added for Guideline 5.1.1(v) compliance (DELETE /api/user/account, transactional cleanup of all user data).
 - **Marketplace & eBay Affiliate**: Marketplace functionality is feature-flagged. Integrated eBay affiliate links for "Buy on eBay" buttons, with dynamic query generation and customizable affiliate parameters.
 - **Marketplace Fulfillment System**: Seller payout workflow including earnings tracking, payout account management, payout requests, admin approval, and fee calculations.
+- **User Blocking System**: Full block/unblock functionality with enforcement across all social features (friend requests, messaging, profile viewing, collection/wishlist access, user search). Block button on user profiles with confirmation dialog. Blocked users list in profile Privacy tab for management. Blocking auto-removes friendships.
 
 ### Data Flow
 - **Card Management**: Admin CSV uploads, background processing, eBay API for images, Cloudinary optimization, and price data refreshes.
