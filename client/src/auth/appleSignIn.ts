@@ -3,6 +3,7 @@ import {
   getAuth,
   OAuthProvider,
   signInWithCredential,
+  signInWithPopup,
   UserCredential,
 } from "firebase/auth";
 
@@ -21,7 +22,7 @@ function isIOSNativeApp(): boolean {
 }
 
 export function isAppleSignInAvailable(): boolean {
-  return isIOSNativeApp();
+  return true;
 }
 
 function generateNonce(length: number = 32): string {
@@ -40,27 +41,34 @@ async function sha256Hash(plain: string): Promise<string> {
 }
 
 export async function signInWithAppleUnified(): Promise<UserCredential> {
-  const rawNonce = generateNonce();
-  const hashedNonce = await sha256Hash(rawNonce);
+  if (isIOSNativeApp()) {
+    const rawNonce = generateNonce();
+    const hashedNonce = await sha256Hash(rawNonce);
 
-  const result: SignInWithAppleResponse = await SignInWithApple.authorize({
-    clientId: "com.marvelcardvault.app",
-    redirectURI: "https://app.marvelcardvault.com",
-    scopes: "email name",
-    nonce: hashedNonce,
-  });
+    const result: SignInWithAppleResponse = await SignInWithApple.authorize({
+      clientId: "com.marvelcardvault.app",
+      redirectURI: "https://app.marvelcardvault.com",
+      scopes: "email name",
+      nonce: hashedNonce,
+    });
 
-  const identityToken = result.response.identityToken;
+    const identityToken = result.response.identityToken;
 
-  if (!identityToken) {
-    throw new Error("No identity token returned from Apple Sign-In");
+    if (!identityToken) {
+      throw new Error("No identity token returned from Apple Sign-In");
+    }
+
+    const provider = new OAuthProvider("apple.com");
+    const credential = provider.credential({
+      idToken: identityToken,
+      rawNonce: rawNonce,
+    });
+
+    return await signInWithCredential(auth, credential);
   }
 
   const provider = new OAuthProvider("apple.com");
-  const credential = provider.credential({
-    idToken: identityToken,
-    rawNonce: rawNonce,
-  });
-
-  return await signInWithCredential(auth, credential);
+  provider.addScope("email");
+  provider.addScope("name");
+  return await signInWithPopup(auth, provider);
 }
