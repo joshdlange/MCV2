@@ -30,7 +30,6 @@ let socialLoginInitialized = false;
 async function initSocialLoginIfNeeded() {
   if (socialLoginInitialized) return;
 
-  // Your actual Firebase Web Client ID
   const WEB_CLIENT_ID = "946426423073-rjhk84sgojd77gvkq2uf5ehrcd1l3ja9.apps.googleusercontent.com";
 
   await SocialLogin.initialize({
@@ -52,23 +51,23 @@ export async function signInWithGoogleUnified(): Promise<UserCredential> {
 
   const res: any = await SocialLogin.login({
     provider: "google",
-    options: {},
+    options: {
+      scopes: ["email", "profile"],
+    },
   });
 
-  console.log('SocialLogin response:', res);
+  console.log('SocialLogin response:', JSON.stringify(res).substring(0, 500));
 
-  // Try multiple possible locations for the idToken
-  let idToken = 
+  let idToken =
     res?.idToken ||
     res?.authentication?.idToken ||
     res?.credential?.idToken ||
     res?.result?.idToken ||
     res?.result?.credential?.idToken;
 
-  // If still no idToken, try parsing the credential field
   if (!idToken && res?.result?.credential) {
     try {
-      const credential = typeof res.result.credential === 'string' 
+      const credential = typeof res.result.credential === 'string'
         ? JSON.parse(res.result.credential)
         : res.result.credential;
       idToken = credential?.token || credential?.idToken;
@@ -77,7 +76,6 @@ export async function signInWithGoogleUnified(): Promise<UserCredential> {
     }
   }
 
-  // Android Credential Manager specific format
   if (!idToken && res?.result?.data) {
     try {
       const data = typeof res.result.data === 'string'
@@ -90,11 +88,11 @@ export async function signInWithGoogleUnified(): Promise<UserCredential> {
   }
 
   if (!idToken) {
-    console.error("SocialLogin response:", JSON.stringify(res, null, 2));
-    throw new Error("No idToken returned from SocialLogin Google login");
+    console.error("Full SocialLogin response:", JSON.stringify(res, null, 2));
+    throw new Error("No idToken returned from native Google login. Please try again.");
   }
 
-  console.log('Successfully extracted idToken');
+  console.log('Successfully extracted Google idToken');
   const credential = GoogleAuthProvider.credential(idToken);
   return await signInWithCredential(auth, credential);
 }

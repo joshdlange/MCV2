@@ -1,0 +1,186 @@
+PROJECT: Marvelous Card Vault
+
+TASK: Fix the iOS authentication flow so the app passes App Store review while preserving user choice in login methods.
+
+BACKGROUND
+
+The current iOS build was rejected during App Store review.
+
+The reviewer encountered a CAPTCHA loop during Google sign-in. This happens because the app launches a browser/WebView-based Google login inside the iOS container.
+
+Google detects this as suspicious and forces CAPTCHA/device verification.
+
+Additionally, the login screen currently offers Google sign-in but does NOT show Sign in with Apple. Apple requires that if third-party login providers are offered (Google, Facebook, etc.), then Sign in with Apple must also be available.
+
+GOAL
+
+Users should be able to sign in using:
+
+• Sign in with Apple  
+• Sign in with Google  
+• Email / password  
+
+However, on iOS the Google and Apple flows should use native authentication experiences instead of browser/WebView authentication.
+
+This avoids CAPTCHA loops and aligns with Apple's review expectations.
+
+Firebase should remain the authentication backend.
+
+Users must not see:
+
+• Firebase hosted auth pages  
+• accounts.google.com inside an in-app browser  
+• CAPTCHA loops  
+• embedded WebView login pages  
+
+Instead they should see native authentication sheets.
+
+PLATFORM EXPECTATIONS
+
+iOS
+- Apple Sign-In should use the native Apple authentication sheet
+- Google Sign-In should use the native Google account picker
+- No browser or WebView auth flows
+
+Android
+- Preserve the current login experience unless changes are needed for compatibility
+- Avoid breaking working authentication flows
+
+Web
+- Preserve existing behavior if present
+
+PHASE 1 — AUTH FLOW AUDIT
+
+Before making changes:
+
+1. Identify the current login architecture
+2. Locate all authentication-related code including:
+   - Login screen
+   - Auth context / providers
+   - Firebase auth setup
+   - Google login code
+   - Apple login code (if any exists but is unused)
+
+3. Determine:
+   - Where Google login currently launches a WebView/browser
+   - Why the CAPTCHA loop occurs
+   - Which files must change
+
+Output a short diagnosis explaining the problem before implementing fixes.
+
+PHASE 2 — IMPLEMENT NATIVE GOOGLE SIGN-IN FOR IOS
+
+Replace the browser/WebView Google login flow on iOS with a native Google authentication flow.
+
+Requirements:
+
+• Native Google account picker should appear
+• No browser or Firebase hosted login pages
+• After Google authentication succeeds, exchange the returned token for a Firebase credential
+• Sign the user into Firebase Auth using that credential
+• Preserve existing session handling, auth persistence, and routing
+
+Ensure Android and web login are not broken by this change.
+
+PHASE 3 — ADD SIGN IN WITH APPLE
+
+Add Sign in with Apple to the login screen.
+
+Requirements:
+
+• A visible "Continue with Apple" or "Sign in with Apple" button
+• Native Apple authentication sheet
+• Exchange Apple identity token with Firebase using OAuthProvider('apple.com')
+• Handle nonce generation and validation correctly
+• Handle repeat Apple logins where Apple may not return name/email
+
+Ensure this integrates cleanly with the existing Firebase auth system.
+
+PHASE 4 — PRESERVE EMAIL/PASSWORD LOGIN
+
+The current email/password login must continue working exactly as before.
+
+Do not break:
+
+• login
+• create account
+• password reset
+• session persistence
+• user routing
+
+PHASE 5 — IOS CONFIGURATION
+
+Provide exact native configuration steps required for iOS including:
+
+• enabling Sign in with Apple capability
+• adding Google URL scheme / reversed client ID
+• updating Info.plist if required
+• capacitor sync steps
+• pod install steps
+• verifying Firebase iOS configuration
+
+List any manual Xcode steps clearly.
+
+PHASE 6 — LOGIN SCREEN UI
+
+Final login screen must show:
+
+• Continue with Apple  
+• Continue with Google  
+• Email / Password  
+
+Requirements:
+
+• Maintain current Marvelous Card Vault design style
+• Buttons should be visually balanced and mobile-friendly
+• Apple button should follow Apple UI conventions closely enough for review
+• No cluttered layout
+• Responsive mobile layout
+
+PHASE 7 — QA CHECKLIST
+
+Provide a QA checklist verifying:
+
+iOS
+• Apple login works
+• Google login works
+• No browser-based login pages
+• No CAPTCHA loops
+• Email/password login works
+• Logout + re-login works
+• Fresh install works
+
+Android
+• Google login still works
+• Email login still works
+
+General
+• Session persistence works
+• Routing after login works
+• Error handling works
+
+PHASE 8 — DELIVERABLE FORMAT
+
+Return results structured as:
+
+1. Diagnosis of the current problem
+2. Packages to install
+3. Files to change
+4. Full ready-to-paste code
+5. iOS/Xcode manual configuration steps
+6. Build/sync commands
+7. QA checklist
+8. Regression checklist
+
+IMPORTANT
+
+Do not stop after analysis.
+
+Complete the implementation and provide ready-to-use code.
+
+The final result must allow an App Store reviewer to:
+
+• open the app
+• choose Apple, Google, or Email login
+• complete authentication with no CAPTCHA and no browser login
+• enter the app successfully.

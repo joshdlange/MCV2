@@ -12,7 +12,12 @@ const config: CapacitorConfig = {
   plugins: {
     FirebaseAuthentication: {
       skipNativeAuth: false,
-      providers: ['google.com']
+      providers: ['google.com', 'apple.com']
+    },
+    SocialLogin: {
+      google: {
+        webClientId: '946426423073-rjhk84sgojd77gvkq2uf5ehrcd1l3ja9.apps.googleusercontent.com'
+      }
     }
   }
 };
