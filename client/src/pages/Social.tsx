@@ -87,7 +87,7 @@ export default function Social() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [activeTab, setActiveTab] = useState("friends");
+  const [activeTab, setActiveTab] = useState("badges");
   const [selectedFriendProfile, setSelectedFriendProfile] = useState<any>(null);
   const [viewingProfile, setViewingProfile] = useState(false);
   
@@ -1476,6 +1476,7 @@ export default function Social() {
                               src={userBadge.badge.iconUrl} 
                               alt={userBadge.badge.name}
                               className="w-10 h-10 object-cover rounded-full"
+                              loading="lazy"
                             />
                           ) : (
                             <span className="text-xl">{getRarityEmoji(userBadge.badge.rarity || 'common')}</span>
@@ -1524,6 +1525,7 @@ export default function Social() {
                                 src={badge.iconUrl} 
                                 alt={badge.name}
                                 className="w-6 h-6 object-cover rounded-full opacity-50"
+                                loading="lazy"
                               />
                             ) : (
                               <Lock className="w-4 h-4 text-gray-400" />
@@ -1654,6 +1656,7 @@ export default function Social() {
                                 src={userBadge.badge.iconUrl} 
                                 alt={userBadge.badge.name}
                                 className="w-8 h-8 object-contain"
+                                loading="lazy"
                               />
                             ) : (
                               <span className="text-lg">{getRarityEmoji(userBadge.badge.rarity || 'common')}</span>
