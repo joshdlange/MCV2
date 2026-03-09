@@ -569,9 +569,6 @@ export default function UpcomingSets() {
     set.isActive && (set.status === 'upcoming' || set.status === 'delayed')
   );
 
-  const featuredSets = activeSets.filter((set: UpcomingSet) => set.thumbnailUrl);
-  const regularSets = activeSets.filter((set: UpcomingSet) => !set.thumbnailUrl);
-
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -592,93 +589,99 @@ export default function UpcomingSets() {
             <p className="text-gray-600">New sets dropping soon. Check back shortly.</p>
           </div>
         ) : (
-          <>
-            {featuredSets.length > 0 && (
-              <UpcomingSetCarousel sets={featuredSets} />
-            )}
-
-            {regularSets.length > 0 && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bebas tracking-wide text-gray-900">More Upcoming Releases</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {regularSets.map((set: UpcomingSet) => (
-                    <Card 
-                      key={set.id} 
-                      className="overflow-hidden hover:shadow-xl transition-shadow border-gray-200 bg-white"
-                      data-testid={`card-upcoming-set-${set.id}`}
-                    >
-                      <div className="aspect-video bg-gray-100 overflow-hidden relative">
-                        <AdminEditButton set={set} />
-                        <SetPlaceholder set={set} />
-                      </div>
-                      <CardContent className="p-6 space-y-4">
-                        <div>
-                          <h3 className="text-xl font-bold text-gray-900 mb-2" data-testid={`text-setname-${set.id}`}>
-                            {formatSetName(getSetDisplayName(set))}
-                          </h3>
-                          <div className="flex flex-wrap gap-2">
-                            <ManufacturerBadge manufacturer={set.manufacturer} />
-                            {set.productLine && (
-                              <Badge variant="outline" className="text-xs">
-                                {set.productLine}
-                              </Badge>
-                            )}
-                            <DateConfidenceBadge confidence={set.dateConfidence} />
-                          </div>
-                        </div>
-
-                        {set.releaseDateEstimated && (
-                          <div className="flex items-center text-sm text-gray-700 bg-white border border-gray-200 rounded-lg p-3">
-                            <Calendar className="w-4 h-4 mr-2 text-red-600" />
-                            <span className="font-medium">
-                              {new Date(set.releaseDateEstimated).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
-                              })}
-                            </span>
-                          </div>
-                        )}
-
-                        {set.msrp && (
-                          <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                            <span className="text-sm font-medium text-gray-700">MSRP:</span>
-                            <span className="text-lg font-bold text-green-700">${set.msrp}</span>
-                          </div>
-                        )}
-
-                        {set.keyHighlights && (
-                          <KeyHighlights text={set.keyHighlights} />
-                        )}
-
-                        {set.interestCount > 0 && (
-                          <div className="text-sm text-gray-600 flex items-center gap-1">
-                            <Bell className="w-4 h-4 text-marvel-red" />
-                            <span className="font-medium text-marvel-red">{set.interestCount}</span>
-                            <span>{set.interestCount === 1 ? 'collector' : 'collectors'} interested</span>
-                          </div>
-                        )}
-
-                        {user && (
-                          <Button
-                            onClick={() => expressInterestMutation.mutate(set.id)}
-                            disabled={expressInterestMutation.isPending}
-                            variant="outline"
-                            className="w-full border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700"
-                            size="sm"
-                            data-testid={`button-notify-${set.id}`}
-                          >
-                            <Bell className="w-4 h-4 mr-2" />
-                            Notify Me
-                          </Button>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {activeSets.map((set: UpcomingSet) => (
+              <Card 
+                key={set.id} 
+                className="overflow-hidden hover:shadow-xl transition-shadow border-gray-200 bg-white"
+                data-testid={`card-upcoming-set-${set.id}`}
+              >
+                <div className="aspect-video bg-gray-100 overflow-hidden relative">
+                  <AdminEditButton set={set} />
+                  {set.thumbnailUrl ? (
+                    <SetImage set={set} className="w-full h-full object-cover" />
+                  ) : (
+                    <SetPlaceholder set={set} />
+                  )}
+                  {set.dateConfidence === 'confirmed' && (
+                    <Badge className="absolute top-3 right-3 bg-green-600 text-white border-none">
+                      Confirmed
+                    </Badge>
+                  )}
                 </div>
-              </div>
-            )}
-          </>
+                <CardContent className="p-6 space-y-4">
+                  <div>
+                    <h3 className="text-xl font-bebas tracking-wide text-gray-900 mb-2" data-testid={`text-setname-${set.id}`}>
+                      {formatSetName(getSetDisplayName(set))}
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      <ManufacturerBadge manufacturer={set.manufacturer} />
+                      {set.productLine && (
+                        <Badge variant="outline" className="text-xs">
+                          {set.productLine}
+                        </Badge>
+                      )}
+                      <DateConfidenceBadge confidence={set.dateConfidence} />
+                      {set.status === 'delayed' && (
+                        <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 text-xs">
+                          Delayed
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {set.releaseDateEstimated && (
+                    <div className="space-y-2">
+                      <div className="flex items-center text-sm text-gray-700 bg-white border border-gray-200 rounded-lg p-3">
+                        <Calendar className="w-4 h-4 mr-2 text-red-600" />
+                        <span className="font-medium">
+                          {new Date(set.releaseDateEstimated).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                      <CountdownTimer releaseDate={set.releaseDateEstimated} />
+                    </div>
+                  )}
+
+                  {set.msrp && (
+                    <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                      <span className="text-sm font-medium text-gray-700">MSRP:</span>
+                      <span className="text-lg font-bold text-green-700">${set.msrp}</span>
+                    </div>
+                  )}
+
+                  {set.keyHighlights && (
+                    <KeyHighlights text={set.keyHighlights} />
+                  )}
+
+                  {set.interestCount > 0 && (
+                    <div className="text-sm text-gray-600 flex items-center gap-1">
+                      <Bell className="w-4 h-4 text-marvel-red" />
+                      <span className="font-medium text-marvel-red">{set.interestCount}</span>
+                      <span>{set.interestCount === 1 ? 'collector' : 'collectors'} interested</span>
+                    </div>
+                  )}
+
+                  {user && (
+                    <Button
+                      onClick={() => expressInterestMutation.mutate(set.id)}
+                      disabled={expressInterestMutation.isPending}
+                      variant="outline"
+                      className="w-full border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700"
+                      size="sm"
+                      data-testid={`button-notify-${set.id}`}
+                    >
+                      <Bell className="w-4 h-4 mr-2" />
+                      Notify Me
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
 
         {activeSets.length > 0 && (
