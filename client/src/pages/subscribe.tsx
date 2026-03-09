@@ -39,6 +39,11 @@ export default function Subscribe() {
         }
       } catch (err: any) {
         console.error("Error creating checkout session:", err);
+        const errMsg = err?.message || '';
+        if (errMsg.includes('400') && errMsg.includes('already')) {
+          setLocation("/");
+          return;
+        }
         setError("Something went wrong. Please try again.");
         setRedirecting(false);
       }

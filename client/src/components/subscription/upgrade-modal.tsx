@@ -2,10 +2,10 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Lock, Sparkles, Star } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import logoImage from "@assets/Marvelous_Card_Valut_-_Trans_1772678671637.png";
 import { Capacitor } from '@capacitor/core';
+import { useAuth } from "@/contexts/AuthContext";
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -16,8 +16,18 @@ interface UpgradeModalProps {
 export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleUpgrade = async () => {
+    if (currentPlan === 'SUPER_HERO') {
+      toast({
+        title: "You're already a Super Hero!",
+        description: "You have unlimited access to all features.",
+      });
+      onClose();
+      return;
+    }
+
     if (Capacitor.isNativePlatform()) {
       window.open('https://app.marvelcardvault.com/subscribe', '_system');
       return;
@@ -25,13 +35,28 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
 
     setIsLoading(true);
     try {
-      const response = await apiRequest("POST", "/api/create-checkout-session");
+      const token = await user?.getIdToken();
+      const response = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        },
+        credentials: "include",
+      });
+      
       const data = await response.json();
       
-      if (data.url) {
+      if (response.ok && data.url) {
         window.location.href = data.url;
+      } else if (response.status === 400 && data.message?.includes("already")) {
+        toast({
+          title: "You're already subscribed!",
+          description: "You have an active Super Hero subscription.",
+        });
+        onClose();
       } else {
-        throw new Error("No checkout URL received");
+        throw new Error(data.message || "No checkout URL received");
       }
     } catch (error: any) {
       console.error("Error creating checkout session:", error);
