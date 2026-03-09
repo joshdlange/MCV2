@@ -70,6 +70,62 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
     }
   };
 
+  if (currentPlan === 'SUPER_HERO') {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md w-[calc(100vw-2rem)] p-0 overflow-hidden border-0 rounded-2xl bg-gray-950 fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] z-[100] [&>button]:text-white [&>button]:hover:text-gray-300" aria-describedby={undefined}>
+          <DialogTitle className="sr-only">Already a Super Hero</DialogTitle>
+          <div className="bg-gradient-to-b from-gray-900 to-gray-950 px-5 sm:px-6 pt-5 sm:pt-6 pb-3 sm:pb-4 flex flex-col items-center">
+            <img 
+              src={logoImage} 
+              alt="Marvelous Card Vault" 
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl mb-3"
+            />
+            <h2 className="text-lg sm:text-xl font-bold text-white text-center">
+              You're Already a Super Hero!
+            </h2>
+          </div>
+
+          <div className="px-5 sm:px-6 pt-3 sm:pt-4 pb-5 sm:pb-6 space-y-4 sm:space-y-5">
+            <p className="text-gray-300 text-sm text-center leading-relaxed">
+              No need to upgrade — you already have unlimited access to all features.
+            </p>
+
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-white">
+                Your Super Hero powers include:
+              </p>
+              <div className="space-y-2.5">
+                {[
+                  "Unlimited cards in your collection",
+                  "Show off your full binder to friends",
+                  "Track every set, subset, and variant",
+                ].map((feature, index) => (
+                  <div key={index} className="flex items-center gap-2.5">
+                    <Star className="w-4 h-4 text-yellow-500 fill-yellow-500 flex-shrink-0" />
+                    <span className="text-sm text-white">{feature}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Button
+              onClick={onClose}
+              className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-yellow-900 font-bold py-5 sm:py-6 rounded-xl text-sm sm:text-base shadow-lg transition-all duration-200"
+            >
+              <Sparkles className="w-5 h-5 mr-2" />
+              Got it!
+            </Button>
+
+            <p className="text-center text-[11px] text-gray-500 italic pt-1 border-t border-gray-800">
+              This is a preview of what Sidekick users see when they hit the 250-card limit.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md w-[calc(100vw-2rem)] p-0 overflow-hidden border-0 rounded-2xl bg-gray-950 fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] z-[100] [&>button]:text-white [&>button]:hover:text-gray-300" aria-describedby={undefined}>
