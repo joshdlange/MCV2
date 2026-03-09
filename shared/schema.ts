@@ -455,6 +455,13 @@ export const insertUpcomingSetSchema = createInsertSchema(upcomingSets).omit({
   interestCount: true,
 });
 
+export const upcomingSetInterests = pgTable("upcoming_set_interests", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  upcomingSetId: integer("upcoming_set_id").references(() => upcomingSets.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // ============================================
 // MARKETPLACE TABLES
 // ============================================

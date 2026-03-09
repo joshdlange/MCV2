@@ -187,9 +187,42 @@ export async function syncRSSFeed(): Promise<SyncResult> {
 }
 
 export async function expireReleasedSets(): Promise<number> {
-  const expired = await storage.expireReleasedSets();
-  console.log(`[Auto-Expire] Marked ${expired} sets as released`);
-  return expired;
+  const allSets = await storage.getAllUpcomingSets();
+  const now = new Date();
+  let expiredCount = 0;
+
+  for (const set of allSets) {
+    if (set.status === 'released') continue;
+    if (!set.releaseDateEstimated) continue;
+    if (new Date(set.releaseDateEstimated) > now) continue;
+
+    await storage.updateUpcomingSet(set.id, { status: 'released', isActive: false });
+    expiredCount++;
+
+    try {
+      const interestedUserIds = await storage.getInterestedUserIds(set.id);
+      if (interestedUserIds.length > 0) {
+        const systemUser = await storage.getOrCreateSystemUser();
+        const setName = set.setName;
+        const message = `Today is the launch of "${setName}"! Head to your favorite retailer to grab your packs. Happy collecting!`;
+
+        for (const userId of interestedUserIds) {
+          if (userId === systemUser.id) continue;
+          try {
+            await storage.sendMessage(systemUser.id, userId, message);
+          } catch (msgError) {
+            console.error(`[Auto-Expire] Failed to message user ${userId}:`, msgError);
+          }
+        }
+        console.log(`[Auto-Expire] Sent launch alerts to ${interestedUserIds.length} users for "${setName}"`);
+      }
+    } catch (notifyError) {
+      console.error(`[Auto-Expire] Error sending notifications for set ${set.id}:`, notifyError);
+    }
+  }
+
+  console.log(`[Auto-Expire] Marked ${expiredCount} sets as released`);
+  return expiredCount;
 }
 
 const SEED_SETS: Array<InsertUpcomingSet> = [

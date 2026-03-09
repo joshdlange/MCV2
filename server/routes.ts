@@ -4785,15 +4785,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const setId = parseInt(req.params.id);
       const userId = req.user.id;
 
-      const updatedSet = await storage.incrementSetInterest(setId, userId);
-
-      if (!updatedSet) {
+      const existingSet = await storage.getUpcomingSetById(setId);
+      if (!existingSet) {
         return res.status(404).json({ message: "Upcoming set not found" });
       }
 
+      const isNew = await storage.trackSetInterest(userId, setId);
+
+      if (!isNew) {
+        return res.json({ message: "Already tracking this set", alreadyTracking: true });
+      }
+
+      const updatedSet = await storage.incrementSetInterest(setId, userId);
+
       res.json({ 
         message: "Interest recorded successfully",
-        interestCount: updatedSet.interestCount 
+        interestCount: updatedSet?.interestCount ?? existingSet.interestCount + 1
       });
     } catch (error) {
       console.error('Record interest error:', error);

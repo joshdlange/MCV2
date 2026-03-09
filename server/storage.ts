@@ -50,7 +50,8 @@ import {
   type InsertMarketTrendItem,
   type UpcomingSet,
   type InsertUpcomingSet,
-  upcomingSets
+  upcomingSets,
+  upcomingSetInterests
 } from "../shared/schema";
 import { db, withDatabaseRetry } from "./db";
 import { eq, ilike, and, count, sum, desc, sql, isNull, isNotNull, or, lt, gte, gt, ne, inArray } from "drizzle-orm";
@@ -2581,6 +2582,41 @@ export class DatabaseStorage implements IStorage {
       .where(eq(upcomingSets.id, id))
       .returning();
     return updatedSet;
+  }
+
+  async trackSetInterest(userId: number, upcomingSetId: number): Promise<boolean> {
+    const result = await db.insert(upcomingSetInterests)
+      .values({ userId, upcomingSetId })
+      .onConflictDoNothing()
+      .returning();
+    return result.length > 0;
+  }
+
+  async getInterestedUserIds(upcomingSetId: number): Promise<number[]> {
+    const rows = await db.select({ userId: upcomingSetInterests.userId })
+      .from(upcomingSetInterests)
+      .where(eq(upcomingSetInterests.upcomingSetId, upcomingSetId));
+    return rows.map(r => r.userId);
+  }
+
+  async getOrCreateSystemUser(): Promise<User> {
+    const systemEmail = 'system@marvelcardvault.com';
+    let [systemUser] = await db.select().from(users)
+      .where(eq(users.email, systemEmail));
+    if (!systemUser) {
+      [systemUser] = await db.insert(users).values({
+        firebaseUid: 'SYSTEM_USER_MCV',
+        username: 'marvelous-card-vault',
+        email: systemEmail,
+        displayName: 'Marvelous Card Vault',
+        plan: 'SUPER_HERO',
+        subscriptionStatus: 'active',
+        isAdmin: false,
+        onboardingComplete: true,
+      }).returning();
+      console.log('[System] Created system user for automated messages, id:', systemUser.id);
+    }
+    return systemUser;
   }
 
   async getUpcomingSetBySourceUrl(sourceUrl: string): Promise<UpcomingSet | undefined> {

@@ -3,7 +3,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Info, Bell, ChevronLeft, ChevronRight, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { Calendar, Info, Bell, ChevronLeft, ChevronRight, Clock, ChevronDown, ChevronUp, Pencil, X, Save } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -148,6 +153,120 @@ function KeyHighlights({ text }: { text: string }) {
   );
 }
 
+function AdminEditDialog({ set, onClose }: { set: UpcomingSet; onClose: () => void }) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    setName: getSetDisplayName(set),
+    manufacturer: set.manufacturer || '',
+    thumbnailUrl: set.thumbnailUrl || '',
+    releaseDateEstimated: set.releaseDateEstimated ? new Date(set.releaseDateEstimated).toISOString().split('T')[0] : '',
+    dateConfidence: set.dateConfidence || 'estimated',
+    keyHighlights: set.keyHighlights || '',
+    msrp: set.msrp || '',
+  });
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const updates: Record<string, any> = {};
+      if (form.setName) updates.setName = form.setName;
+      if (form.manufacturer) updates.manufacturer = form.manufacturer;
+      updates.thumbnailUrl = form.thumbnailUrl || null;
+      if (form.releaseDateEstimated) updates.releaseDateEstimated = form.releaseDateEstimated;
+      updates.dateConfidence = form.dateConfidence;
+      if (form.keyHighlights) updates.keyHighlights = form.keyHighlights;
+      updates.msrp = form.msrp || null;
+
+      await apiRequest('PATCH', `/api/admin/upcoming-sets/${set.id}`, updates);
+      qc.invalidateQueries({ queryKey: ['/api/upcoming-sets'] });
+      toast({ title: "Set updated successfully" });
+      onClose();
+    } catch {
+      toast({ title: "Failed to update set", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label>Set Name</Label>
+        <Input value={form.setName} onChange={e => setForm({ ...form, setName: e.target.value })} className="bg-white" />
+      </div>
+      <div>
+        <Label>Thumbnail URL</Label>
+        <Input value={form.thumbnailUrl} onChange={e => setForm({ ...form, thumbnailUrl: e.target.value })} placeholder="https://..." className="bg-white" />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label>Manufacturer</Label>
+          <Input value={form.manufacturer} onChange={e => setForm({ ...form, manufacturer: e.target.value })} className="bg-white" />
+        </div>
+        <div>
+          <Label>MSRP</Label>
+          <Input value={form.msrp} onChange={e => setForm({ ...form, msrp: e.target.value })} placeholder="29.99" className="bg-white" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label>Release Date</Label>
+          <Input type="date" value={form.releaseDateEstimated} onChange={e => setForm({ ...form, releaseDateEstimated: e.target.value })} className="bg-white" />
+        </div>
+        <div>
+          <Label>Date Confidence</Label>
+          <Select value={form.dateConfidence} onValueChange={v => setForm({ ...form, dateConfidence: v as any })}>
+            <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="estimated">Estimated</SelectItem>
+              <SelectItem value="confirmed">Confirmed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div>
+        <Label>Key Highlights</Label>
+        <Textarea value={form.keyHighlights} onChange={e => setForm({ ...form, keyHighlights: e.target.value })} rows={3} className="bg-white" />
+      </div>
+      <div className="flex justify-end gap-2 pt-2">
+        <Button variant="outline" onClick={onClose}>Cancel</Button>
+        <Button onClick={handleSave} disabled={saving} className="bg-marvel-red hover:bg-red-700">
+          {saving ? 'Saving...' : 'Save Changes'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function AdminEditButton({ set }: { set: UpcomingSet }) {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+
+  if (!user?.isAdmin) return null;
+
+  return (
+    <>
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
+        className="absolute top-2 left-2 z-10 bg-white/90 hover:bg-white rounded-full p-1.5 shadow-md transition-all"
+        title="Edit set"
+      >
+        <Pencil className="w-4 h-4 text-gray-700" />
+      </button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Upcoming Set</DialogTitle>
+          </DialogHeader>
+          <AdminEditDialog set={set} onClose={() => setOpen(false)} />
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 function CountdownTimer({ releaseDate }: { releaseDate: string }) {
   const [timeRemaining, setTimeRemaining] = useState<{
     days: number;
@@ -220,14 +339,19 @@ function UpcomingSetCarousel({ sets }: { sets: UpcomingSet[] }) {
 
   const expressInterestMutation = useMutation({
     mutationFn: async (setId: number) => {
-      return apiRequest('POST', `/api/upcoming-sets/${setId}/interest`);
+      const res = await apiRequest('POST', `/api/upcoming-sets/${setId}/interest`);
+      return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/upcoming-sets'] });
-      toast({ 
-        title: "Interest recorded!", 
-        description: "We'll notify you when this set is available." 
-      });
+      if (data.alreadyTracking) {
+        toast({ title: "You're already tracking this set!" });
+      } else {
+        toast({ 
+          title: "Interest recorded!", 
+          description: "We'll message you when this set launches." 
+        });
+      }
     },
     onError: () => {
       toast({ 
@@ -275,6 +399,7 @@ function UpcomingSetCarousel({ sets }: { sets: UpcomingSet[] }) {
               >
                 <Card className="h-full overflow-hidden bg-white border-2 border-gray-200 hover:border-red-500 transition-all">
                   <div className="aspect-video bg-gray-100 overflow-hidden relative">
+                    <AdminEditButton set={set} />
                     <SetImage set={set} className="w-full h-full object-cover" />
                     {set.dateConfidence === 'confirmed' && (
                       <Badge className="absolute top-3 right-3 bg-green-600 text-white border-none">
@@ -416,14 +541,19 @@ export default function UpcomingSets() {
 
   const expressInterestMutation = useMutation({
     mutationFn: async (setId: number) => {
-      return apiRequest('POST', `/api/upcoming-sets/${setId}/interest`);
+      const res = await apiRequest('POST', `/api/upcoming-sets/${setId}/interest`);
+      return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['/api/upcoming-sets'] });
-      toast({
-        title: "Interest recorded!",
-        description: "We'll notify you when this set is available."
-      });
+      if (data.alreadyTracking) {
+        toast({ title: "You're already tracking this set!" });
+      } else {
+        toast({
+          title: "Interest recorded!",
+          description: "We'll message you when this set launches."
+        });
+      }
     },
     onError: () => {
       toast({
@@ -475,7 +605,8 @@ export default function UpcomingSets() {
                       className="overflow-hidden hover:shadow-xl transition-shadow border-gray-200 bg-white"
                       data-testid={`card-upcoming-set-${set.id}`}
                     >
-                      <div className="aspect-video bg-gray-100 overflow-hidden">
+                      <div className="aspect-video bg-gray-100 overflow-hidden relative">
+                        <AdminEditButton set={set} />
                         <SetPlaceholder set={set} />
                       </div>
                       <CardContent className="p-6 space-y-4">
