@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Info, Bell, BellOff, ExternalLink, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { Calendar, Info, Bell, ChevronLeft, ChevronRight, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,7 +12,8 @@ import { formatSetName } from "@/lib/formatTitle";
 
 interface UpcomingSet {
   id: number;
-  name: string;
+  setName: string;
+  name?: string;
   manufacturer: string | null;
   productLine: string | null;
   publisher: string | null;
@@ -30,6 +31,121 @@ interface UpcomingSet {
   interestCount: number;
   isActive: boolean;
   lastVerifiedAt: string | null;
+}
+
+function getSetDisplayName(set: UpcomingSet): string {
+  return set.setName || set.name || 'Unknown Set';
+}
+
+function getManufacturerColor(manufacturer: string | null): string {
+  switch (manufacturer?.toLowerCase()) {
+    case 'topps': return '#dc2626';
+    case 'panini': return '#2563eb';
+    case 'upper deck': return '#1e3a5f';
+    case 'wizards of the coast': return '#7c3aed';
+    case 'card fun': return '#059669';
+    default: return '#6b7280';
+  }
+}
+
+function extractYear(set: UpcomingSet): string {
+  if (set.releaseDateEstimated) {
+    return new Date(set.releaseDateEstimated).getFullYear().toString();
+  }
+  const name = getSetDisplayName(set);
+  const match = name.match(/20\d{2}/);
+  return match ? match[0] : '';
+}
+
+function SetPlaceholder({ set }: { set: UpcomingSet }) {
+  const name = getSetDisplayName(set);
+  const year = extractYear(set);
+  return (
+    <div
+      className="w-full h-full flex flex-col items-center justify-center p-6 text-center"
+      style={{ background: 'linear-gradient(135deg, #1a1a2e, #16213e, #0f3460)' }}
+    >
+      <div className="border-l-4 border-red-500 pl-4 text-left w-full">
+        <div className="text-white/90 text-lg font-bold">
+          {set.manufacturer || 'Unknown'} {year && `· ${year}`}
+        </div>
+        <div className="text-white/60 text-sm mt-1 line-clamp-2">
+          {name}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SetImage({ set, className }: { set: UpcomingSet; className?: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (!set.thumbnailUrl || failed) {
+    return <SetPlaceholder set={set} />;
+  }
+
+  return (
+    <img
+      src={set.thumbnailUrl}
+      alt={getSetDisplayName(set)}
+      className={className || "w-full h-full object-cover"}
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
+function ManufacturerBadge({ manufacturer }: { manufacturer: string | null }) {
+  if (!manufacturer) return null;
+  const color = getManufacturerColor(manufacturer);
+  return (
+    <Badge
+      className="text-xs text-white border-none"
+      style={{ backgroundColor: color }}
+    >
+      {manufacturer}
+    </Badge>
+  );
+}
+
+function DateConfidenceBadge({ confidence }: { confidence: 'estimated' | 'confirmed' | null }) {
+  if (!confidence) return null;
+  if (confidence === 'confirmed') {
+    return (
+      <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">
+        Confirmed Date
+      </Badge>
+    );
+  }
+  return (
+    <Badge className="bg-amber-100 text-amber-800 border-amber-300 text-xs">
+      Est. Release
+    </Badge>
+  );
+}
+
+function KeyHighlights({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = text.length > 120;
+
+  return (
+    <div>
+      <p className={`text-sm text-gray-700 leading-relaxed ${!expanded ? 'line-clamp-2' : ''}`}>
+        {text}
+      </p>
+      {isLong && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-xs text-red-600 hover:text-red-700 font-medium mt-1 flex items-center gap-1"
+        >
+          {expanded ? (
+            <>Show less <ChevronUp className="w-3 h-3" /></>
+          ) : (
+            <>Read more <ChevronDown className="w-3 h-3" /></>
+          )}
+        </button>
+      )}
+    </div>
+  );
 }
 
 function CountdownTimer({ releaseDate }: { releaseDate: string }) {
@@ -149,7 +265,6 @@ function UpcomingSetCarousel({ sets }: { sets: UpcomingSet[] }) {
       </div>
 
       <div className="relative">
-        {/* Carousel */}
         <div className="overflow-hidden" ref={emblaRef}>
           <div className="flex gap-6">
             {sets.map((set) => (
@@ -159,37 +274,28 @@ function UpcomingSetCarousel({ sets }: { sets: UpcomingSet[] }) {
                 data-testid={`carousel-set-${set.id}`}
               >
                 <Card className="h-full overflow-hidden bg-white border-2 border-gray-200 hover:border-red-500 transition-all">
-                  {set.thumbnailUrl && (
-                    <div className="aspect-video bg-gray-100 overflow-hidden relative">
-                      <img 
-                        src={set.thumbnailUrl} 
-                        alt={formatSetName(set.name)} 
-                        className="w-full h-full object-cover"
-                      />
-                      {set.dateConfidence === 'confirmed' && (
-                        <Badge className="absolute top-3 right-3 bg-green-600 text-white border-none">
-                          Confirmed
-                        </Badge>
-                      )}
-                    </div>
-                  )}
+                  <div className="aspect-video bg-gray-100 overflow-hidden relative">
+                    <SetImage set={set} className="w-full h-full object-cover" />
+                    {set.dateConfidence === 'confirmed' && (
+                      <Badge className="absolute top-3 right-3 bg-green-600 text-white border-none">
+                        Confirmed
+                      </Badge>
+                    )}
+                  </div>
                   <CardContent className="p-5 space-y-4">
                     <div>
                       <h3 className="text-xl font-bebas tracking-wide text-gray-900 mb-2" data-testid={`text-carousel-setname-${set.id}`}>
-                        {formatSetName(set.name)}
+                        {formatSetName(getSetDisplayName(set))}
                       </h3>
                       
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {set.manufacturer && (
-                          <Badge variant="secondary" className="text-xs">
-                            {set.manufacturer}
-                          </Badge>
-                        )}
+                        <ManufacturerBadge manufacturer={set.manufacturer} />
                         {set.productLine && (
                           <Badge variant="outline" className="text-xs">
                             {set.productLine}
                           </Badge>
                         )}
+                        <DateConfidenceBadge confidence={set.dateConfidence} />
                         {set.status === 'delayed' && (
                           <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 text-xs">
                             Delayed
@@ -221,10 +327,8 @@ function UpcomingSetCarousel({ sets }: { sets: UpcomingSet[] }) {
                       </div>
                     )}
 
-                    {set.description && (
-                      <p className="text-sm text-gray-700 line-clamp-3 leading-relaxed">
-                        {set.description}
-                      </p>
+                    {set.keyHighlights && (
+                      <KeyHighlights text={set.keyHighlights} />
                     )}
 
                     {set.interestCount > 0 && (
@@ -248,18 +352,6 @@ function UpcomingSetCarousel({ sets }: { sets: UpcomingSet[] }) {
                           Notify Me
                         </Button>
                       )}
-                      {set.sourceUrl && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => window.open(set.sourceUrl!, '_blank')}
-                          data-testid={`button-source-${set.id}`}
-                        >
-                          <ExternalLink className="w-4 h-4 mr-2" />
-                          Learn More
-                        </Button>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -268,7 +360,6 @@ function UpcomingSetCarousel({ sets }: { sets: UpcomingSet[] }) {
           </div>
         </div>
 
-        {/* Navigation Buttons */}
         {sets.length > 1 && (
           <>
             <Button
@@ -293,7 +384,6 @@ function UpcomingSetCarousel({ sets }: { sets: UpcomingSet[] }) {
         )}
       </div>
 
-      {/* Dots Indicator */}
       {sets.length > 1 && (
         <div className="flex justify-center gap-2 mt-6">
           {sets.map((_, index) => (
@@ -314,21 +404,45 @@ function UpcomingSetCarousel({ sets }: { sets: UpcomingSet[] }) {
 
 export default function UpcomingSets() {
   const { user } = useAuth();
+  const qc = useQueryClient();
+  const { toast } = useToast();
+
   const { data: upcomingSets = [], isLoading } = useQuery({
     queryKey: ['/api/upcoming-sets'],
     queryFn: async () => {
-      return apiRequest('GET', '/api/upcoming-sets?limit=10').then(res => res.json());
+      return apiRequest('GET', '/api/upcoming-sets').then(res => res.json());
     }
   });
 
-  // Separate featured (with images) from regular sets
-  const featuredSets = upcomingSets.filter((set: UpcomingSet) => set.thumbnailUrl);
-  const regularSets = upcomingSets.filter((set: UpcomingSet) => !set.thumbnailUrl);
+  const expressInterestMutation = useMutation({
+    mutationFn: async (setId: number) => {
+      return apiRequest('POST', `/api/upcoming-sets/${setId}/interest`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['/api/upcoming-sets'] });
+      toast({
+        title: "Interest recorded!",
+        description: "We'll notify you when this set is available."
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to record interest",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const activeSets = upcomingSets.filter((set: UpcomingSet) =>
+    set.isActive && (set.status === 'upcoming' || set.status === 'delayed')
+  );
+
+  const featuredSets = activeSets.filter((set: UpcomingSet) => set.thumbnailUrl);
+  const regularSets = activeSets.filter((set: UpcomingSet) => !set.thumbnailUrl);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bebas tracking-wide text-gray-900">Upcoming Sets</h1>
           <p className="text-gray-600">Stay up to date with upcoming Marvel card set releases</p>
@@ -339,20 +453,18 @@ export default function UpcomingSets() {
             <div className="animate-spin w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full mx-auto mb-4" />
             <p className="text-gray-600">Loading upcoming sets...</p>
           </div>
-        ) : upcomingSets.length === 0 ? (
+        ) : activeSets.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
             <Info className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Upcoming Sets</h3>
-            <p className="text-gray-600">Check back soon for announcements about upcoming Marvel card sets!</p>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Coming Soon</h3>
+            <p className="text-gray-600">New sets dropping soon. Check back shortly.</p>
           </div>
         ) : (
           <>
-            {/* Featured Carousel */}
             {featuredSets.length > 0 && (
               <UpcomingSetCarousel sets={featuredSets} />
             )}
 
-            {/* Regular Sets Grid */}
             {regularSets.length > 0 && (
               <div className="space-y-4">
                 <h2 className="text-2xl font-bebas tracking-wide text-gray-900">More Upcoming Releases</h2>
@@ -363,22 +475,22 @@ export default function UpcomingSets() {
                       className="overflow-hidden hover:shadow-xl transition-shadow border-gray-200 bg-white"
                       data-testid={`card-upcoming-set-${set.id}`}
                     >
+                      <div className="aspect-video bg-gray-100 overflow-hidden">
+                        <SetPlaceholder set={set} />
+                      </div>
                       <CardContent className="p-6 space-y-4">
                         <div>
                           <h3 className="text-xl font-bold text-gray-900 mb-2" data-testid={`text-setname-${set.id}`}>
-                            {formatSetName(set.name)}
+                            {formatSetName(getSetDisplayName(set))}
                           </h3>
                           <div className="flex flex-wrap gap-2">
-                            {set.manufacturer && (
-                              <Badge variant="secondary">
-                                {set.manufacturer}
-                              </Badge>
-                            )}
+                            <ManufacturerBadge manufacturer={set.manufacturer} />
                             {set.productLine && (
-                              <Badge variant="outline">
+                              <Badge variant="outline" className="text-xs">
                                 {set.productLine}
                               </Badge>
                             )}
+                            <DateConfidenceBadge confidence={set.dateConfidence} />
                           </div>
                         </div>
 
@@ -392,11 +504,6 @@ export default function UpcomingSets() {
                                 day: 'numeric'
                               })}
                             </span>
-                            {set.dateConfidence === 'confirmed' && (
-                              <Badge className="ml-auto bg-green-600 text-white text-xs">
-                                Confirmed
-                              </Badge>
-                            )}
                           </div>
                         )}
 
@@ -407,10 +514,8 @@ export default function UpcomingSets() {
                           </div>
                         )}
 
-                        {set.description && (
-                          <p className="text-gray-700 text-sm leading-relaxed line-clamp-3">
-                            {set.description}
-                          </p>
+                        {set.keyHighlights && (
+                          <KeyHighlights text={set.keyHighlights} />
                         )}
 
                         {set.interestCount > 0 && (
@@ -423,17 +528,8 @@ export default function UpcomingSets() {
 
                         {user && (
                           <Button
-                            onClick={() => {
-                              const mutation = useMutation({
-                                mutationFn: async () => {
-                                  return apiRequest('POST', `/api/upcoming-sets/${set.id}/interest`);
-                                },
-                                onSuccess: () => {
-                                  queryClient.invalidateQueries({ queryKey: ['/api/upcoming-sets'] });
-                                }
-                              });
-                              mutation.mutate();
-                            }}
+                            onClick={() => expressInterestMutation.mutate(set.id)}
+                            disabled={expressInterestMutation.isPending}
                             className="w-full bg-marvel-red hover:bg-red-700"
                             size="sm"
                             data-testid={`button-notify-${set.id}`}
@@ -451,8 +547,7 @@ export default function UpcomingSets() {
           </>
         )}
 
-        {/* Coming Soon Message */}
-        {upcomingSets.length > 0 && (
+        {activeSets.length > 0 && (
           <div className="mt-8 text-center p-6 bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg">
             <p className="text-gray-700">
               <span className="font-semibold text-red-600">Stay tuned!</span> More exciting Marvel card sets coming soon.

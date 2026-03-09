@@ -1,0 +1,406 @@
+PROJECT: Marvelous Card Vault
+
+FEATURE: Upcoming Sets RSS Sync + Auto-Expire + Admin Triggers
+
+GOAL
+Enhance the existing Upcoming Sets feature by automatically importing relevant upcoming Marvel-related sets from the Cardboard Connection RSS feed, marking expired sets inactive after release, and giving admins manual trigger controls.
+
+This should be a light lift and MUST preserve the existing Upcoming Sets page behavior and UI structure.
+
+IMPORTANT
+Do NOT rebuild this feature from scratch.
+Do NOT change the DB schema.
+Do NOT break the current countdown timers, interest/notify flow, carousel behavior, or admin tools that already exist.
+Inspect the current implementation first, then layer this in cleanly.
+
+==================================================
+PHASE 1 — AUDIT FIRST
+==================================================
+
+Before coding, inspect and report back briefly on:
+
+1. Current upcoming sets database model / schema
+2. Existing server routes/services for upcoming sets
+3. Existing frontend page:
+   - client/src/pages/upcoming-sets.tsx
+4. Existing admin page:
+   - client/src/pages/admin/upcoming-sets.tsx
+5. Whether there is already a startup seed pattern or cron/scheduled job pattern in the app
+6. Whether image placeholders, badges, or toast patterns already exist and should be reused
+
+Then proceed with implementation using the existing patterns in the app.
+
+==================================================
+PHASE 2 — RSS SYNC SERVICE
+==================================================
+
+Create a server service:
+
+server/services/upcomingSetsSync.ts
+
+SOURCE
+Use ONLY the Cardboard Connection RSS feed:
+https://www.cardboardconnection.com/feed
+
+HARD RULES
+- RSS feed only
+- No HTML page scraping
+- Do not surface source URLs anywhere in the user UI
+- sourceUrl is internal storage only
+- Do not modify DB schema
+
+PACKAGE INSTALLS
+If needed, install:
+- fast-xml-parser
+- node-cron
+
+Use existing package manager conventions in the repo.
+
+FUNCTIONAL REQUIREMENTS
+
+Fetch and parse the RSS 2.0 XML feed.
+
+Filter feed items using the following inclusion rules:
+Match if title OR description contains ANY of the following, case-insensitive:
+- marvel
+- captain america cards
+- avengers cards
+- x-men cards
+- spider-man cards
+- topps marvel
+- panini marvel
+- upper deck marvel
+
+Exclude if title OR description contains ANY of the following, case-insensitive:
+- batman
+- star wars
+- pokemon
+- baseball
+- football
+- basketball
+- soccer
+- hockey
+
+For each matching item, extract:
+
+1. setName
+- from item title
+
+2. sourceUrl
+- from item link
+- stored internally only
+- NEVER rendered in UI
+
+3. keyHighlights
+- from item description
+- strip all HTML tags
+- decode HTML entities if needed
+- normalize whitespace
+- truncate to 500 chars max
+
+4. releaseDateEstimated
+- first try to parse a date from description using this regex:
+  /(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}/i
+- if found, use that parsed date
+- if not found, use pubDate + 60 days
+
+5. dateConfidence
+- "confirmed" if date found in description
+- "estimated" if using pubDate fallback
+
+6. manufacturer
+Infer from title, case-insensitive:
+- "Topps"
+- "Panini"
+- "Upper Deck"
+- "Card Fun"
+- "Wizards of the Coast"
+Else use:
+- "Unknown"
+
+7. thumbnailUrl
+Try in this order:
+- media:content url
+- enclosure url
+- else null
+
+8. default status fields
+- status = "upcoming"
+- isActive = true
+
+DEDUPLICATION
+Deduplicate by sourceUrl.
+If sourceUrl already exists in DB, skip it.
+
+Also, if the app already has a better existing uniqueness pattern, preserve it and add sourceUrl dedupe on top if possible without schema changes.
+
+LOGGING
+Log a single summary line like:
+[RSS Sync] Added: X | Skipped (duplicate): Y | Skipped (not Marvel): Z | Errors: N
+
+Return structured results from the service so admin endpoints can use them:
+{
+  added: number,
+  skippedDuplicate: number,
+  skippedNotMarvel: number,
+  errors: number
+}
+
+SCHEDULING
+Run this sync every 6 hours via node-cron.
+
+Do not create duplicate cron registration if the server hot reloads or re-initializes.
+Follow the app’s existing startup/service initialization pattern.
+
+==================================================
+PHASE 3 — AUTO-EXPIRE RELEASED SETS
+==================================================
+
+Create a scheduled job that runs daily at 6:00 AM Central Time.
+
+Behavior:
+- Query upcoming_sets where:
+  - releaseDateEstimated <= now
+  - status != "released"
+- Update matching records:
+  - status = "released"
+  - isActive = false
+
+Log:
+[Auto-Expire] Marked X sets as released
+
+Also expose this logic as a callable service function so the admin endpoint can trigger it immediately.
+
+IMPORTANT
+Use the app’s existing date handling conventions.
+Be careful with timezone handling.
+The target schedule is 6:00 AM Central Time.
+
+==================================================
+PHASE 4 — ADMIN ENDPOINTS
+==================================================
+
+Add two admin endpoints:
+
+1. POST /api/admin/upcoming-sets/sync
+- trigger RSS sync immediately
+- return structured results:
+  {
+    added,
+    skippedDuplicate,
+    skippedNotMarvel,
+    errors
+  }
+
+2. POST /api/admin/upcoming-sets/expire
+- trigger expire check immediately
+- return:
+  {
+    expired
+  }
+
+IMPORTANT
+Reuse the app’s existing admin auth / middleware / route patterns.
+Do not create insecure public admin endpoints.
+
+==================================================
+PHASE 5 — SEED CONFIRMED SETS ON SERVER STARTUP
+==================================================
+
+On server startup, seed the following sets if they do not already exist.
+
+Skip if setName already exists.
+
+Seed records:
+
+1.
+setName: "2026 Topps Finest Fantastic Four 65th Anniversary"
+manufacturer: "Topps"
+releaseDateEstimated: "2026-04-15"
+dateConfidence: "confirmed"
+keyHighlights: "Premium chromium product celebrating the Fantastic Four's 65th anniversary. Features chrome card technology, autographs, and refractors."
+sourceUrl: "internal://seed-ff"
+
+2.
+setName: "Magic: The Gathering Marvel Super Heroes"
+manufacturer: "Wizards of the Coast"
+releaseDateEstimated: "2026-06-26"
+dateConfidence: "confirmed"
+keyHighlights: "Historic crossover bringing Marvel characters into the MTG universe. Full card game mechanics with Marvel character abilities and artwork."
+sourceUrl: "internal://seed-mtg"
+
+3.
+setName: "2026 Topps Chrome Marvel Studios"
+manufacturer: "Topps"
+releaseDateEstimated: "2026-12-01"
+dateConfidence: "estimated"
+keyHighlights: "Chrome technology meets the MCU. Features current and upcoming Marvel Studios releases with on-card autographs and refractor parallels."
+sourceUrl: "internal://seed-chrome"
+
+Seed these in the safest existing startup pattern.
+Do not duplicate records on every server restart.
+
+==================================================
+PHASE 6 — FRONTEND ENHANCEMENTS
+==================================================
+
+File:
+client/src/pages/upcoming-sets.tsx
+
+IMPORTANT
+Enhance only.
+Do not rebuild this page.
+Preserve:
+- countdown timers
+- interest/notify functionality
+- carousel behavior
+- existing layout patterns unless minor changes are necessary
+
+DISPLAY FILTER
+Only show sets where:
+- isActive = true
+- status = "upcoming"
+
+BADGES
+
+Manufacturer badge colors:
+- Topps = red (#dc2626)
+- Panini = blue (#2563eb)
+- Upper Deck = navy (#1e3a5f)
+- Wizards of the Coast = purple (#7c3aed)
+- default = gray (#6b7280)
+
+Date confidence badge:
+- confirmed => "Confirmed Date" in green styling
+- estimated => "Est. Release" in amber styling
+
+KEY HIGHLIGHTS
+- Show as 2-line truncated preview
+- Allow expand/collapse on click
+- Keep interaction clean and mobile friendly
+
+THUMBNAIL / PLACEHOLDER BEHAVIOR
+If thumbnailUrl is null, missing, or image load fails:
+- Never show broken image icon
+- Show a generated placeholder block instead
+
+Placeholder design requirements:
+- background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460)
+- Marvel-red left border accent
+- large text: manufacturer name + year if available
+- smaller text: set name
+- should look intentional, not like an error state
+
+Use an onError handler on the image tag to swap to the placeholder.
+Do not let broken external images create ugly UI.
+
+EMPTY STATE
+If no active upcoming sets exist, show:
+"New sets dropping soon. Check back shortly."
+
+Must render cleanly with no broken layout.
+
+SOURCE URL SAFETY
+Do not render sourceUrl anywhere on this page.
+Do not expose RSS source attribution links unless already required elsewhere by the product.
+Keep sourceUrl internal.
+
+==================================================
+PHASE 7 — ADMIN PAGE ENHANCEMENT
+==================================================
+
+File:
+client/src/pages/admin/upcoming-sets.tsx
+
+Add two admin buttons:
+
+1. "Sync RSS Now"
+- POST /api/admin/upcoming-sets/sync
+- show toast with results
+
+2. "Run Expire Check"
+- POST /api/admin/upcoming-sets/expire
+- show toast with results
+
+Requirements:
+- Reuse existing button and toast styles/patterns
+- Respect loading state while request is in flight
+- Prevent accidental double-submits
+- Show clear success/failure feedback
+
+==================================================
+PHASE 8 — IMPLEMENTATION CONSTRAINTS
+==================================================
+
+Hard constraints:
+- No HTML scraping
+- RSS only
+- sourceUrl stored internally only
+- Do not modify DB schema
+- Do not break existing functionality
+- Do not rebuild the Upcoming Sets page
+- Reuse existing code patterns whenever possible
+
+If any part of the requested implementation is incompatible with the existing schema, explain exactly why and adapt in the least invasive way possible.
+
+==================================================
+PHASE 9 — DELIVERABLE FORMAT
+==================================================
+
+Return your work in this structure:
+
+1. AUDIT SUMMARY
+- relevant existing architecture
+- any important constraints discovered
+
+2. PACKAGES INSTALLED
+- exact commands
+
+3. FILES CHANGED
+- exact list
+
+4. BACKEND IMPLEMENTATION
+- services
+- cron setup
+- admin endpoints
+- startup seed logic
+
+5. FRONTEND IMPLEMENTATION
+- upcoming sets page enhancements
+- admin page enhancements
+
+6. READY-TO-PASTE CODE
+- full code for each changed file
+- or precise patches if files are very large
+
+7. QA CHECKLIST
+Must include:
+- RSS sync imports valid Marvel-related items
+- Non-Marvel items are skipped
+- Duplicate items are skipped
+- Seed records do not duplicate
+- Expire job works
+- Admin buttons work
+- Existing countdown/notify/carousel still works
+- Missing thumbnails show placeholders
+- No broken image icons
+- Empty state works
+- sourceUrl is not exposed in UI
+
+8. REGRESSION CHECKLIST
+Must include:
+- existing upcoming sets functionality still works
+- admin page still works
+- no schema changes introduced
+- no auth regression on admin endpoints
+- no duplicate cron jobs
+- no accidental exposure of internal source URLs
+
+FINAL SUCCESS CRITERIA
+This is successful if:
+- upcoming Marvel-related sets can be imported automatically from RSS
+- released sets are automatically deactivated
+- admins can trigger sync/expire manually
+- current frontend remains intact but improved
+- no DB schema changes are introduced
+- no existing upcoming sets functionality breaks

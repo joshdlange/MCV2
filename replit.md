@@ -25,7 +25,7 @@ The application incorporates comprehensive performance optimizations for handlin
 ### Key Components
 - **Database Schema**: Efficiently manages users, card sets, cards, user collections, wishlists, cached pricing, and upcoming set releases.
 - **Authentication & Authorization**: Firebase for user management, admin role-based access, JWT validation, and subscription tier access.
-- **Upcoming Sets Tracker**: Manages and displays upcoming Marvel card set releases with URL import, OpenGraph scraping, image caching, and countdown timers.
+- **Upcoming Sets Tracker**: Manages and displays upcoming Marvel card set releases with URL import, OpenGraph scraping, image caching, countdown timers, RSS auto-sync from Cardboard Connection (every 6h), auto-expire of released sets (daily 6 AM CT), seed data on startup, and admin manual trigger buttons. Uses `fast-xml-parser` for RSS parsing. Service: `server/services/upcomingSetsSync.ts`. sourceUrl is internal-only (stripped from public API).
 - **Email Integration**: Brevo SMTP for transactional emails, Firebase to Brevo contact sync, and an email automation system with branded templates.
 - **Migration Console**: Admin-only tool for safely migrating cards between sets with preview, conflict detection, transaction-wrapped operations, and audit logging.
 - **Canonical Taxonomy & Legacy Archive**: System for defining canonical sets, archiving legacy sets (soft delete), and filtering public API results.

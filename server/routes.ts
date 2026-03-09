@@ -29,6 +29,7 @@ import { syncFirebaseUsersToBrevo } from "./contactsSync";
 import { emailService } from "./services/emailService";
 import * as emailTriggers from "./services/emailTriggers";
 import { startEmailCronJobs } from "./jobs/emailCron";
+import { initializeUpcomingSets, syncRSSFeed, expireReleasedSets } from "./services/upcomingSetsSync";
 import { uploadUserCardImage, uploadMainSetThumbnail, downloadAndUploadToCloudinary, isCloudinaryUrl } from "./cloudinary";
 import { registerMarketplaceRoutes } from "./marketplace-routes";
 import { optimizedStorage } from "./optimized-storage";
@@ -4770,7 +4771,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sets = sets.slice(0, limit);
       }
       
-      res.json(sets);
+      const sanitized = sets.map(({ sourceUrl, ...rest }) => rest);
+      res.json(sanitized);
     } catch (error) {
       console.error('Get upcoming sets error:', error);
       res.status(500).json({ message: "Failed to fetch upcoming sets" });
@@ -4847,6 +4849,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Update upcoming set error:', error);
       res.status(500).json({ message: "Failed to update upcoming set" });
+    }
+  });
+
+  // Admin: Trigger RSS sync manually
+  app.post("/api/admin/upcoming-sets/sync", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      const result = await syncRSSFeed();
+      res.json(result);
+    } catch (error) {
+      console.error('RSS sync error:', error);
+      res.status(500).json({ message: "Failed to run RSS sync" });
+    }
+  });
+
+  // Admin: Trigger expire check manually
+  app.post("/api/admin/upcoming-sets/expire", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      const expired = await expireReleasedSets();
+      res.json({ expired });
+    } catch (error) {
+      console.error('Expire check error:', error);
+      res.status(500).json({ message: "Failed to run expire check" });
     }
   });
 
@@ -8516,6 +8546,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize email automation cron jobs
   startEmailCronJobs();
   console.log('Email automation jobs initialized');
+
+  // Initialize upcoming sets: seed data + cron jobs (RSS sync + auto-expire)
+  initializeUpcomingSets().catch(err => {
+    console.error('[Upcoming Sets] Initialization error:', err);
+  });
 
   const httpServer = createServer(app);
   return httpServer;

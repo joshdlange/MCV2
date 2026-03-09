@@ -2582,6 +2582,36 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return updatedSet;
   }
+
+  async getUpcomingSetBySourceUrl(sourceUrl: string): Promise<UpcomingSet | undefined> {
+    const [set] = await db.select().from(upcomingSets)
+      .where(eq(upcomingSets.sourceUrl, sourceUrl));
+    return set;
+  }
+
+  async getUpcomingSetByName(setName: string): Promise<UpcomingSet | undefined> {
+    const [set] = await db.select().from(upcomingSets)
+      .where(eq(upcomingSets.setName, setName));
+    return set;
+  }
+
+  async expireReleasedSets(): Promise<number> {
+    const now = new Date();
+    const result = await db.update(upcomingSets)
+      .set({ 
+        status: 'released',
+        isActive: false,
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          sql`${upcomingSets.releaseDateEstimated} <= ${now}`,
+          sql`${upcomingSets.status} != 'released'`
+        )
+      )
+      .returning();
+    return result.length;
+  }
 }
 
 export const storage = new DatabaseStorage();

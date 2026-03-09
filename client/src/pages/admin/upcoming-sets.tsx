@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Trash2, Plus, Calendar, Eye, EyeOff, Link as LinkIcon, CheckCircle, Loader2 } from "lucide-react";
+import { Edit, Trash2, Plus, Calendar, Eye, EyeOff, Link as LinkIcon, CheckCircle, Loader2, RefreshCw, Clock } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -35,6 +35,78 @@ interface UpcomingSet {
   lastVerifiedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+function RssSyncButton() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSync = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
+    try {
+      const res = await apiRequest('POST', '/api/admin/upcoming-sets/sync');
+      const data = await res.json();
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/upcoming-sets'] });
+      toast({
+        title: "RSS Sync Complete",
+        description: `Added: ${data.added} | Duplicates: ${data.skippedDuplicate} | Not Marvel: ${data.skippedNotMarvel} | Errors: ${data.errors}`,
+      });
+    } catch (error) {
+      toast({ title: "RSS sync failed", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Button
+      variant="outline"
+      onClick={handleSync}
+      disabled={isLoading}
+      className="border-blue-500 text-blue-600 hover:bg-blue-50"
+    >
+      {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+      Sync RSS Now
+    </Button>
+  );
+}
+
+function ExpireCheckButton() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleExpire = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
+    try {
+      const res = await apiRequest('POST', '/api/admin/upcoming-sets/expire');
+      const data = await res.json();
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/upcoming-sets'] });
+      toast({
+        title: "Expire Check Complete",
+        description: `Marked ${data.expired} set${data.expired === 1 ? '' : 's'} as released`,
+      });
+    } catch (error) {
+      toast({ title: "Expire check failed", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Button
+      variant="outline"
+      onClick={handleExpire}
+      disabled={isLoading}
+      className="border-amber-500 text-amber-600 hover:bg-amber-50"
+    >
+      {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Clock className="w-4 h-4 mr-2" />}
+      Run Expire Check
+    </Button>
+  );
 }
 
 export default function AdminUpcomingSets() {
@@ -128,7 +200,10 @@ export default function AdminUpcomingSets() {
           <p className="text-gray-600">Manage upcoming Marvel card set releases</p>
         </div>
         
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
+          <RssSyncButton />
+          <ExpireCheckButton />
+
           <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" className="border-marvel-red text-marvel-red hover:bg-red-50" data-testid="button-import-url">
