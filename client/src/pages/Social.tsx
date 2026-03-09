@@ -1542,7 +1542,16 @@ export default function Social() {
         </TabsContent>
 
         <TabsContent value="profile" className="space-y-6">
-          {selectedFriendProfile && (
+          {selectedFriendProfile && blockStatus?.theyBlockedMe ? (
+            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 text-center">
+              <ShieldOff className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">This profile is not available</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">You cannot view this user's profile.</p>
+              <Button variant="outline" onClick={() => { setSelectedFriendProfile(null); setViewingProfile(false); setActiveTab('friends'); }}>
+                Back to Friends
+              </Button>
+            </div>
+          ) : selectedFriendProfile && (
             <div className="space-y-6">
               {/* Profile Header - Minimal Style */}
               <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
