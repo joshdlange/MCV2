@@ -4845,7 +4845,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const setId = parseInt(req.params.id);
-      const updates = req.body;
+      const updates = { ...req.body };
+      if (updates.releaseDateEstimated && typeof updates.releaseDateEstimated === 'string') {
+        updates.releaseDateEstimated = new Date(updates.releaseDateEstimated);
+      }
       const updatedSet = await storage.updateUpcomingSet(setId, updates);
       
       if (!updatedSet) {
