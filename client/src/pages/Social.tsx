@@ -9,7 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Users, MessageCircle, Award, User, Lock, Clock, Check, X, Search, UserPlus, Plus, Grid, List, Trophy, Star, Calendar, Info } from "lucide-react";
+import { Users, MessageCircle, Award, User, Lock, Clock, Check, X, Search, UserPlus, Plus, Grid, List, Trophy, Star, Calendar, Info, ShieldOff, ShieldAlert } from "lucide-react";
+import { DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { apiRequest } from "@/lib/queryClient";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { useAuth } from "@/contexts/AuthContext";
@@ -96,12 +98,35 @@ export default function Social() {
   const [showCardDetail, setShowCardDetail] = useState(false);
   const [selectedCard, setSelectedCard] = useState<any>(null);
   
+  // Block state
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [isBlocking, setIsBlocking] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+
   // Badge detail modal state
   const [selectedBadge, setSelectedBadge] = useState<{ badge: any; earnedAt?: string; isLocked?: boolean } | null>(null);
   
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { currentUser } = useAppStore();
+
+  const formatMessageDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return '';
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today.getTime() - 86400000);
+    const messageDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    if (messageDay.getTime() === today.getTime()) {
+      return `Today ${time}`;
+    } else if (messageDay.getTime() === yesterday.getTime()) {
+      return `Yesterday ${time}`;
+    } else {
+      return `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })} ${time}`;
+    }
+  };
 
   // Read URL parameters to set initial tab
   useEffect(() => {
@@ -263,6 +288,73 @@ export default function Social() {
     },
     enabled: !!user && !!selectedFriendProfile,
   });
+
+  // Fetch block status for selected friend profile
+  const { data: blockStatus } = useQuery<{ iBlockedThem: boolean; theyBlockedMe: boolean }>({
+    queryKey: ["social/block-status", selectedFriendProfile?.id],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/social/block-status/${selectedFriendProfile.id}`, { headers });
+      if (!response.ok) throw new Error("Failed to fetch block status");
+      const data = await response.json();
+      setIsBlocked(data.iBlockedThem);
+      return data;
+    },
+    enabled: !!user && !!selectedFriendProfile,
+  });
+
+  const handleBlockUser = async () => {
+    if (!selectedFriendProfile) return;
+    setIsBlocking(true);
+    try {
+      await apiRequest("POST", "/api/social/block", { blockedUserId: selectedFriendProfile.id });
+      toast({
+        title: "User blocked",
+        description: `${selectedFriendProfile.displayName || selectedFriendProfile.username} has been blocked.`,
+      });
+      setShowBlockModal(false);
+      setIsBlocked(true);
+      queryClient.invalidateQueries({ queryKey: ["social/block-status", selectedFriendProfile.id] });
+      queryClient.invalidateQueries({ queryKey: ["social/friends"] });
+      queryClient.invalidateQueries({ queryKey: ["social/friend-profile", selectedFriendProfile.id] });
+      queryClient.invalidateQueries({ queryKey: ["social/friend-collection", selectedFriendProfile.id] });
+      queryClient.invalidateQueries({ queryKey: ["social/friend-badges", selectedFriendProfile.id] });
+      setSelectedFriendProfile(null);
+      setViewingProfile(false);
+      setActiveTab('friends');
+    } catch (err: any) {
+      toast({
+        title: "Failed to block user",
+        description: err.message || "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBlocking(false);
+    }
+  };
+
+  const handleUnblockUser = async () => {
+    if (!selectedFriendProfile) return;
+    setIsBlocking(true);
+    try {
+      await apiRequest("DELETE", `/api/social/block/${selectedFriendProfile.id}`);
+      setIsBlocked(false);
+      queryClient.invalidateQueries({ queryKey: ["social/block-status", selectedFriendProfile.id] });
+      queryClient.invalidateQueries({ queryKey: ["social/friends"] });
+      toast({
+        title: "User unblocked",
+        description: `${selectedFriendProfile.displayName || selectedFriendProfile.username} has been unblocked.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Failed to unblock user",
+        description: err.message || "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBlocking(false);
+    }
+  };
 
   // Fetch all badges to show locked ones
   const { data: allBadges = [] } = useQuery({
@@ -713,6 +805,7 @@ export default function Social() {
                                 variant="ghost"
                                 onClick={() => {
                                   setSelectedFriendProfile(friendUser);
+                                  setIsBlocked(false);
                                   setViewingProfile(true);
                                   setActiveTab('profile');
                                 }}
@@ -898,10 +991,7 @@ export default function Social() {
                                     {friendUser.displayName || friendUser.username}
                                   </p>
                                   <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 ml-2">
-                                    {new Date(lastMessage.createdAt).toLocaleTimeString([], {
-                                      hour: '2-digit',
-                                      minute: '2-digit'
-                                    })}
+                                    {formatMessageDate(lastMessage.createdAt)}
                                   </span>
                                 </div>
                                 <p className={`text-sm truncate ${unreadCount > 0 ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
@@ -991,7 +1081,7 @@ export default function Social() {
                               <p className={`text-xs mt-1 ${
                                 message.senderId === currentUser?.id ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
                               }`}>
-                                {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {formatMessageDate(message.createdAt)}
                               </p>
                             </div>
                           </div>
@@ -1154,7 +1244,7 @@ export default function Social() {
                                   {friendUser.displayName || friendUser.username}
                                 </p>
                                 <span className="text-xs text-gray-400 flex-shrink-0">
-                                  {new Date(lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  {formatMessageDate(lastMessage.createdAt)}
                                 </span>
                               </div>
                               <p className={`text-sm truncate ${unreadCount > 0 ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
@@ -1240,7 +1330,7 @@ export default function Social() {
                                 <p className={`text-xs mt-1 ${
                                   message.senderId === currentUser?.id ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
                                 }`}>
-                                  {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  {formatMessageDate(message.createdAt)}
                                 </p>
                               </div>
                             </div>
@@ -1467,10 +1557,38 @@ export default function Social() {
                     </Avatar>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
-                      {selectedFriendProfile.displayName || selectedFriendProfile.username}
-                    </h3>
-                    <p className="text-gray-500 dark:text-gray-400 mb-4">@{selectedFriendProfile.username}</p>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+                          {selectedFriendProfile.displayName || selectedFriendProfile.username}
+                        </h3>
+                        <p className="text-gray-500 dark:text-gray-400 mb-4">@{selectedFriendProfile.username}</p>
+                      </div>
+                      {isBlocked ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleUnblockUser}
+                          disabled={isBlocking}
+                          className="text-green-600 border-green-300 hover:bg-green-50"
+                          title="Unblock user"
+                        >
+                          <ShieldOff className="w-4 h-4 mr-1" />
+                          Unblock
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowBlockModal(true)}
+                          className="text-red-500 border-red-200 hover:bg-red-50"
+                          title="Block user"
+                        >
+                          <ShieldAlert className="w-4 h-4 mr-1" />
+                          Block
+                        </Button>
+                      )}
+                    </div>
                     {selectedFriendProfile.bio && (
                       <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">{selectedFriendProfile.bio}</p>
                     )}
@@ -1872,6 +1990,28 @@ export default function Social() {
               </Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showBlockModal} onOpenChange={setShowBlockModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Block {selectedFriendProfile?.displayName || selectedFriendProfile?.username}?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to block {selectedFriendProfile?.displayName || selectedFriendProfile?.username}? They won't be able to see your profile, send you messages, or add you as a friend.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowBlockModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBlockUser}
+              disabled={isBlocking}
+            >
+              {isBlocking ? "Blocking..." : "Block User"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

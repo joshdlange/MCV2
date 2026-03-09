@@ -91,6 +91,12 @@ export function Sidebar() {
     placeholderData: { totalCards: 0 },
   });
 
+  const { data: unreadMessages } = useQuery<{ count: number }>({
+    queryKey: ["/api/social/unread-count"],
+    refetchInterval: 30000,
+    enabled: !!user,
+  });
+
   useEffect(() => {
     if (
       currentUser &&
@@ -177,6 +183,11 @@ export function Sidebar() {
             >
               <IconComponent iconName={item.icon} />
               <span className="font-medium">{item.label}</span>
+              {item.href === '/social' && (unreadMessages?.count || 0) > 0 && (
+                <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-red-500 text-white font-bold min-w-[20px] text-center">
+                  {unreadMessages!.count}
+                </span>
+              )}
               {item.badge && (
                 <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${
                   location === item.href
