@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAppStore } from "@/lib/store";
 import useEmblaCarousel from 'embla-carousel-react';
 import { formatSetName } from "@/lib/formatTitle";
 
@@ -241,10 +242,10 @@ function AdminEditDialog({ set, onClose }: { set: UpcomingSet; onClose: () => vo
 }
 
 function AdminEditButton({ set }: { set: UpcomingSet }) {
-  const { user } = useAuth();
+  const { currentUser } = useAppStore();
   const [open, setOpen] = useState(false);
 
-  if (!user?.isAdmin) return null;
+  if (!currentUser?.isAdmin) return null;
 
   return (
     <>
@@ -469,7 +470,8 @@ function UpcomingSetCarousel({ sets }: { sets: UpcomingSet[] }) {
                         <Button
                           onClick={() => expressInterestMutation.mutate(set.id)}
                           disabled={expressInterestMutation.isPending}
-                          className="flex-1 bg-marvel-red hover:bg-red-700"
+                          variant="outline"
+                          className="flex-1 border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700"
                           size="sm"
                           data-testid={`button-notify-${set.id}`}
                         >
@@ -626,7 +628,7 @@ export default function UpcomingSets() {
                         </div>
 
                         {set.releaseDateEstimated && (
-                          <div className="flex items-center text-sm text-gray-700 bg-red-50 border border-red-200 rounded-lg p-3">
+                          <div className="flex items-center text-sm text-gray-700 bg-white border border-gray-200 rounded-lg p-3">
                             <Calendar className="w-4 h-4 mr-2 text-red-600" />
                             <span className="font-medium">
                               {new Date(set.releaseDateEstimated).toLocaleDateString('en-US', {
@@ -661,7 +663,8 @@ export default function UpcomingSets() {
                           <Button
                             onClick={() => expressInterestMutation.mutate(set.id)}
                             disabled={expressInterestMutation.isPending}
-                            className="w-full bg-marvel-red hover:bg-red-700"
+                            variant="outline"
+                            className="w-full border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700"
                             size="sm"
                             data-testid={`button-notify-${set.id}`}
                           >
@@ -679,7 +682,7 @@ export default function UpcomingSets() {
         )}
 
         {activeSets.length > 0 && (
-          <div className="mt-8 text-center p-6 bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg">
+          <div className="mt-8 text-center p-6 bg-white border border-gray-200 rounded-lg">
             <p className="text-gray-700">
               <span className="font-semibold text-red-600">Stay tuned!</span> More exciting Marvel card sets coming soon.
               We'll keep this page updated with the latest announcements.
