@@ -1,0 +1,65 @@
+I have two card set checklists to upload into Marvel Card Vault. Both are CSV files in the same format used previously. Please import each one as a new card set.
+
+---
+
+FILE 1: 2026-topps-brooklyn-captain-america-85th.csv
+Set Name: 2026 Topps Brooklyn Collection - Captain America 85th Anniversary
+Year: 2026
+Manufacturer: Topps
+Total Cards: 322
+
+Subsets:
+- Base (50 cards) — isInsert: false
+- New York's Heroes (25 cards) — isInsert: true
+- Welcome to Brooklyn Postcard (25 cards) — isInsert: true
+- Team Cap (25 cards) — isInsert: true
+- Living Legend (25 cards) — isInsert: true
+- Topps Distinguished Service (25 cards) — isInsert: true
+- You Are Worthy (10 cards) — isInsert: true
+- Born on the 4th of July (10 cards) — isInsert: true
+- Brooklyn Statue (5 cards) — isInsert: true
+- Sketch Card Artists (55 cards) — isInsert: true
+- MCU Autographs (42 cards) — isInsert: true
+- MCU Dual Autographs (9 cards) — isInsert: true
+- MCU Triple Autographs (6 cards) — isInsert: true
+- Comic Creator Autographs (10 cards) — isInsert: true
+
+---
+
+FILE 2: 2025-topps-chrome-deadpool.csv
+Set Name: 2025 Topps Chrome Deadpool
+Year: 2025
+Manufacturer: Topps
+Total Cards: 278
+
+Subsets:
+- Base - Comic Accurate (20 cards) — isInsert: false
+- Base - Characters (26 cards) — isInsert: false
+- Base - Multiverse and More (54 cards) — isInsert: false
+- Comic Book Gold (30 cards) — isInsert: true
+- Cover Stars (30 cards) — isInsert: true
+- Well You Got Nothing to Say Mouth (10 cards) — isInsert: true
+- Future Stars (10 cards) — isInsert: true
+- Topps Originals (10 cards) — isInsert: true
+- 10005 Fire (9 cards) — isInsert: true
+- Best Bubs (9 cards) — isInsert: true
+- Looking for Logan (5 cards) — isInsert: true
+- Indestructible (5 cards) — isInsert: true
+- Deadpool Reflections (5 cards) — isInsert: true
+- Hidden Gems (5 cards) — isInsert: true
+- The Void (10 cards) — isInsert: true
+- Deadpool Icons (10 cards) — isInsert: true
+- Topps Chrome Autographs (26 cards) — isInsert: true
+- Best Bubs Autographs (4 cards) — isInsert: true
+
+Note: Cards FO-8 and NC-7 do not exist in the official checklist — those numbers were skipped by Topps.
+
+---
+
+CSV column format: subset, name, cardNumber, isInsert, rarity, frontImageUrl, backImageUrl, description, price
+
+Please import both sets using the existing CSV import flow. Do not modify the CSV format.
+```Saved. Your MCV Uploads folder now has all three files:
+- `2026-topps-brooklyn-captain-america-85th.csv`
+- `2025-topps-chrome-deadpool.csv`
+- `replit-upload-prompt.txt` ← copy/paste this into Replit
