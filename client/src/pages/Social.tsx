@@ -376,7 +376,10 @@ export default function Social() {
       const headers = await getAuthHeaders();
       const response = await fetch(`/api/social/messages/${selectedFriendId}`, { headers });
       if (!response.ok) throw new Error("Failed to fetch messages");
-      return response.json();
+      const data = await response.json();
+      queryClient.invalidateQueries({ queryKey: ["/api/social/unread-count"] });
+      queryClient.invalidateQueries({ queryKey: ["social/message-threads"] });
+      return data;
     },
     enabled: !!selectedFriendId && !!user,
   });
@@ -978,9 +981,7 @@ export default function Social() {
                                 </Avatar>
                                 <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></div>
                                 {unreadCount > 0 && (
-                                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center font-bold px-1">
-                                    {unreadCount}
-                                  </div>
+                                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-gray-900" />
                                 )}
                               </div>
                               
@@ -1233,9 +1234,7 @@ export default function Social() {
                               </Avatar>
                               <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></div>
                               {unreadCount > 0 && (
-                                <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold px-1">
-                                  {unreadCount}
-                                </div>
+                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-gray-900" />
                               )}
                             </div>
                             <div className="flex-1 min-w-0">

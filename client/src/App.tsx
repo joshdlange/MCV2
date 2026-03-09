@@ -1,7 +1,7 @@
 import { Suspense, lazy } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -59,6 +59,12 @@ const PageSpinner = () => (
 
 function DesktopHeader() {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  const { data: unreadMessages } = useQuery<{ count: number }>({
+    queryKey: ["/api/social/unread-count"],
+    refetchInterval: 30000,
+    enabled: !!user,
+  });
   
   return (
     <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-2 flex items-center justify-between">
@@ -77,11 +83,14 @@ function DesktopHeader() {
       <div className="flex items-center space-x-4">
         <NotificationBell />
         <button 
-          className="text-gray-600 hover:text-gray-900 p-2"
+          className="relative text-gray-600 hover:text-gray-900 p-2"
           onClick={() => setLocation('/social?tab=messages')}
           title="Messages"
         >
           <MessageCircle className="w-5 h-5" />
+          {(unreadMessages?.count || 0) > 0 && (
+            <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-red-500" />
+          )}
         </button>
         <button 
           className="text-gray-600 hover:text-gray-900 p-2"

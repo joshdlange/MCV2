@@ -139,12 +139,19 @@ export function Sidebar() {
         <div className="border-b border-border p-3 md:p-4 flex-shrink-0">
           <div className="flex items-center space-x-2 md:space-x-3">
             <Link href="/profile">
-              <img 
-                src={user.photoURL || '/default-avatar.png'} 
-                alt="User avatar" 
-                className="w-7 h-7 md:w-8 md:h-8 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all" 
-                title="View Profile"
-              />
+              <div className="w-7 h-7 md:w-8 md:h-8 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all overflow-hidden bg-marvel-red flex items-center justify-center" title="View Profile">
+                {user.photoURL ? (
+                  <img 
+                    src={user.photoURL} 
+                    alt="User avatar" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }}
+                  />
+                ) : null}
+                <span className={`text-white font-bold text-xs md:text-sm ${user.photoURL ? 'hidden' : ''}`}>
+                  {(user.displayName || user.email || 'U').charAt(0).toUpperCase()}
+                </span>
+              </div>
             </Link>
             <div className="flex-1 min-w-0">
               <Link href="/profile" className="block">
@@ -184,9 +191,7 @@ export function Sidebar() {
               <IconComponent iconName={item.icon} />
               <span className="font-medium">{item.label}</span>
               {item.href === '/social' && (unreadMessages?.count || 0) > 0 && (
-                <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-red-500 text-white font-bold min-w-[20px] text-center">
-                  {unreadMessages!.count}
-                </span>
+                <span className="ml-auto w-2.5 h-2.5 rounded-full bg-red-500 flex-shrink-0" />
               )}
               {item.badge && (
                 <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${

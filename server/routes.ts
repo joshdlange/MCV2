@@ -3835,6 +3835,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const otherUserId = parseInt(req.params.userId);
       const messages = await storage.getMessages(req.user.id, otherUserId);
+      const unreadFromOther = messages.filter((m: any) => m.senderId === otherUserId && !m.isRead);
+      if (unreadFromOther.length > 0) {
+        await Promise.all(unreadFromOther.map((m: any) => storage.markMessageAsRead(m.id)));
+      }
       res.json(messages);
     } catch (error) {
       console.error('Get messages error:', error);
@@ -4581,6 +4585,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Firebase users fetch error:', error);
       res.status(500).json({ message: "Failed to fetch Firebase users" });
+    }
+  });
+
+  app.post("/api/admin/update-firebase-password", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      const { email, newPassword } = req.body;
+      if (!email || !newPassword) {
+        return res.status(400).json({ message: "email and newPassword required" });
+      }
+      const userRecord = await admin.auth().getUserByEmail(email);
+      await admin.auth().updateUser(userRecord.uid, { password: newPassword });
+      res.json({ message: `Password updated for ${email}` });
+    } catch (error: any) {
+      console.error('Update Firebase password error:', error);
+      res.status(500).json({ message: error.message || "Failed to update password" });
     }
   });
 
