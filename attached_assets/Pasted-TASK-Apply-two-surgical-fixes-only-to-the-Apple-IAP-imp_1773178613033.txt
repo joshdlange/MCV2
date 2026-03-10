@@ -1,0 +1,77 @@
+TASK: Apply two surgical fixes only to the Apple IAP implementation. Do not touch anything else.
+
+IMPORTANT CONSTRAINTS
+- Do not touch upgrade-modal.tsx
+- Do not touch the Stripe flow
+- Do not touch schema
+- Do not touch appleIAP.ts
+- Do not refactor unrelated code
+- These are the only two changes needed
+- Reuse existing imports if already present
+- Only add missing imports if required for the DB query
+- Output exactly which lines changed in which files
+
+--------------------------------------------------
+
+FIX 1 — Update .env.example
+
+Open `.env.example`.
+
+Add this line IF it does not already exist:
+
+APPLE_SHARED_SECRET=your_apple_shared_secret_here
+
+IMPORTANT:
+Do NOT place the real shared secret in `.env.example`.
+This file should only document the variable name.
+
+--------------------------------------------------
+
+FIX 2 — Replace getAllUsers() lookup with direct DB query
+
+File:
+server/routes.ts
+
+Inside the POST `/api/apple-iap/verify` endpoint, locate this code:
+
+const allUsers = await storage.getAllUsers();
+const existingOwner = allUsers.find(
+  u => u.appleOriginalTransactionId === originalTransactionId && u.id !== user.id
+);
+
+Replace it with this Drizzle query:
+
+const [existingOwner] = await db.select()
+  .from(users)
+  .where(and(
+    eq(users.appleOriginalTransactionId, originalTransactionId),
+    ne(users.id, user.id)
+  ))
+  .limit(1);
+
+--------------------------------------------------
+
+PURPOSE OF FIX 2
+
+This prevents loading every user in the database into memory during Apple IAP receipt verification.
+
+--------------------------------------------------
+
+IMPLEMENTATION NOTES
+
+- Use the existing Drizzle DB pattern already used elsewhere in `server/routes.ts`
+- If `and`, `eq`, or `ne` are not already imported, add only the minimal imports required
+- Do NOT change surrounding receipt verification logic
+- Do NOT change response behavior
+- Do NOT change ownership-transfer logic
+- Do NOT modify any other endpoint
+
+--------------------------------------------------
+
+OUTPUT FORMAT
+
+Return:
+
+1. Files changed
+2. Exact line-level summary of what changed in each file
+3. Full code snippet only for the modified sections

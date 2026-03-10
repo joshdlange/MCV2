@@ -5370,10 +5370,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const originalTransactionId = activeSubscription.original_transaction_id;
 
-      const allUsers = await storage.getAllUsers();
-      const existingOwner = allUsers.find(
-        (u: any) => u.appleOriginalTransactionId === originalTransactionId && u.id !== user.id
-      );
+      const [existingOwner] = await db.select()
+        .from(users)
+        .where(and(
+          eq(users.appleOriginalTransactionId, originalTransactionId),
+          ne(users.id, user.id)
+        ))
+        .limit(1);
       if (existingOwner) {
         console.error(`Apple transaction ${originalTransactionId} already belongs to user ${existingOwner.id}, rejecting for user ${user.id}`);
         return res.status(400).json({ success: false, message: "This subscription is already linked to another account" });
