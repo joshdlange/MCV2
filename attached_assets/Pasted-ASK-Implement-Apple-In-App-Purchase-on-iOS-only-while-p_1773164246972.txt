@@ -1,0 +1,135 @@
+ASK: Implement Apple In-App Purchase on iOS only, while preserving the existing Stripe flow for web and Android.
+
+CONTEXT
+Right now, in client/src/components/subscription/upgrade-modal.tsx, the iOS native app opens https://app.marvelcardvault.com/subscribe in an external browser when the user taps upgrade. Apple rejected this because digital subscriptions on iOS must use Apple In-App Purchase.
+
+We need to replace that iOS-only external checkout flow with native Apple IAP.
+
+IMPORTANT RULES
+
+Do NOT break or change the existing Stripe flow for web.
+Do NOT break or change the existing Stripe flow for Android.
+Do NOT redesign the UI.
+Do NOT refactor unrelated systems.
+Keep this as surgical as possible.
+Audit first, then implement.
+STEP 1 — AUDIT FIRST
+Before changing anything, inspect and report:
+
+How upgrade-modal.tsx currently handles platform detection and upgrade flow.
+How the app currently updates a user's premium plan after a successful Stripe purchase.
+Which backend endpoints or services currently activate a user's plan.
+What fields already exist on the user/subscription schema.
+Whether there is already any Apple purchase code or placeholder logic in the repo.
+Then proceed with the implementation.
+
+STEP 2 — INSTALL THE IOS IAP PLUGIN
+Install:
+npm install @capgo/capacitor-purchases
+
+If additional iOS sync/setup is needed, include it in the final instructions.
+
+STEP 3 — UPDATE THE IOS PURCHASE FLOW
+File:
+client/src/components/subscription/upgrade-modal.tsx
+
+Current behavior:
+
+On iOS native, tapping upgrade opens an external browser to the subscribe page.
+Required behavior:
+
+On iOS native only, replace that external browser flow with a StoreKit purchase flow using @capgo/capacitor-purchases.
+Product ID is:
+super_hero_monthly
+Required implementation:
+
+Import the purchases plugin.
+In the iOS-native branch only, trigger purchase for super_hero_monthly.
+On successful purchase, send the receipt / purchase payload to a new backend endpoint:
+POST /api/apple-iap/verify
+On successful verification, refresh the user's plan in the UI using the same or closest existing logic used after Stripe success.
+On user cancellation, fail gracefully without an ugly error toast.
+On real errors, show a toast with a useful message.
+Do not change web or Android purchase behavior.
+
+STEP 4 — ADD BACKEND RECEIPT VERIFICATION
+Add a new endpoint:
+POST /api/apple-iap/verify
+
+Expected request body:
+{
+receiptData: string,
+userId: number
+}
+
+Server behavior:
+
+Verify the receipt with Apple production:
+https://buy.itunes.apple.com/verifyReceipt
+Use:
+{
+"receipt-data": receiptData,
+"password": process.env.APPLE_SHARED_SECRET
+}
+If Apple returns status 21007, retry against:
+https://sandbox.itunes.apple.com/verifyReceipt
+Confirm the receipt includes an active subscription for:
+super_hero_monthly
+If valid, update the user record to:
+plan = 'SUPER_HERO'
+subscriptionStatus = 'active'
+appleOriginalTransactionId = <stable Apple transaction id>
+Return:
+{ success: true, plan: 'SUPER_HERO' }
+If invalid, do not activate premium and return an appropriate error.
+Keep verification logic production-safe. The server must be the source of truth.
+
+STEP 5 — SCHEMA UPDATE
+Inspect the existing user schema.
+
+If needed, add:
+appleOriginalTransactionId
+as a nullable string field.
+
+Use the repo's existing schema/migration conventions.
+Keep schema changes minimal.
+
+STEP 6 — ENV DOCUMENTATION
+Update .env.example and add:
+APPLE_SHARED_SECRET=your_apple_shared_secret_here
+
+Do not hardcode secrets.
+
+Note: The Shared Secret is found in App Store Connect → your app → In-App Purchases → App-Specific Shared Secret. Generate one if it doesn't exist yet. Add the value to Replit Secrets before testing or deploying — without it, every receipt verification call to Apple will fail.
+
+STEP 7 — FINAL OUTPUT FORMAT
+Return your work in this exact format:
+
+Audit summary
+Packages installed
+Files changed
+Schema changes
+Backend implementation
+Frontend implementation
+iOS manual setup steps
+Full ready-to-paste code
+QA checklist
+Regression checklist
+QA CHECKLIST MUST INCLUDE
+
+iOS upgrade no longer opens external browser
+iOS purchase flow opens native Apple purchase flow
+successful Apple purchase activates SUPER_HERO
+cancellation is handled cleanly
+failed verification does not grant premium
+web Stripe flow still works
+Android Stripe flow still works
+iPhone works
+iPad works
+SUCCESS CRITERIA
+This is successful if:
+
+iOS users can buy premium through native Apple IAP
+web and Android continue using Stripe unchanged
+no external subscribe browser opens on iOS native
+successful Apple purchase upgrades the user correctly
