@@ -5207,17 +5207,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         case 'customer.subscription.deleted':
           const subscription = event.data.object as Stripe.Subscription;
-          // Find user by subscription ID and downgrade to free plan
           const users = await storage.getAllUsers();
           const subscribedUser = users.find(u => u.stripeSubscriptionId === subscription.id);
           
           if (subscribedUser) {
-            await storage.updateUser(subscribedUser.id, {
-              plan: 'SIDE_KICK',
-              subscriptionStatus: 'cancelled',
-              stripeSubscriptionId: null
-            });
-            console.log(`User ${subscribedUser.id} downgraded to Side Kick plan`);
+            if (subscribedUser.appleOriginalTransactionId) {
+              console.log(`User ${subscribedUser.id} has Apple IAP subscription, skipping Stripe downgrade`);
+            } else {
+              await storage.updateUser(subscribedUser.id, {
+                plan: 'SIDE_KICK',
+                subscriptionStatus: 'cancelled',
+                stripeSubscriptionId: null
+              });
+              console.log(`User ${subscribedUser.id} downgraded to Side Kick plan`);
+            }
           }
           break;
 
@@ -5302,6 +5305,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error verifying checkout session:', error);
       res.status(500).json({ message: 'Failed to verify checkout session', error: error.message });
+    }
+  });
+
+  app.post("/api/apple-iap/verify", authenticateUser, async (req: any, res) => {
+    try {
+      const { receiptData, userId } = req.body;
+      const user = req.user;
+
+      if (!receiptData) {
+        return res.status(400).json({ success: false, message: "Receipt data is required" });
+      }
+
+      if (userId && userId !== user.id) {
+        return res.status(403).json({ success: false, message: "User ID mismatch" });
+      }
+
+      const sharedSecret = process.env.APPLE_SHARED_SECRET;
+      if (!sharedSecret) {
+        console.error('APPLE_SHARED_SECRET not configured');
+        return res.status(500).json({ success: false, message: "Server configuration error" });
+      }
+
+      const verifyPayload = {
+        "receipt-data": receiptData,
+        "password": sharedSecret,
+        "exclude-old-transactions": true
+      };
+
+      let appleResponse = await fetch("https://buy.itunes.apple.com/verifyReceipt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(verifyPayload),
+      });
+      let appleData = await appleResponse.json();
+
+      if (appleData.status === 21007) {
+        appleResponse = await fetch("https://sandbox.itunes.apple.com/verifyReceipt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(verifyPayload),
+        });
+        appleData = await appleResponse.json();
+      }
+
+      if (appleData.status !== 0) {
+        console.error(`Apple receipt verification failed with status: ${appleData.status}`);
+        return res.status(400).json({ success: false, message: "Receipt verification failed" });
+      }
+
+      const latestReceiptInfo = appleData.latest_receipt_info;
+      if (!latestReceiptInfo || latestReceiptInfo.length === 0) {
+        return res.status(400).json({ success: false, message: "No subscription found in receipt" });
+      }
+
+      const activeSubscription = latestReceiptInfo.find((receipt: any) => {
+        const expiresDate = new Date(parseInt(receipt.expires_date_ms));
+        return receipt.product_id === 'MCV_Apple_Superhero' && expiresDate > new Date();
+      });
+
+      if (!activeSubscription) {
+        return res.status(400).json({ success: false, message: "No active subscription found" });
+      }
+
+      const originalTransactionId = activeSubscription.original_transaction_id;
+
+      const allUsers = await storage.getAllUsers();
+      const existingOwner = allUsers.find(
+        (u: any) => u.appleOriginalTransactionId === originalTransactionId && u.id !== user.id
+      );
+      if (existingOwner) {
+        console.error(`Apple transaction ${originalTransactionId} already belongs to user ${existingOwner.id}, rejecting for user ${user.id}`);
+        return res.status(400).json({ success: false, message: "This subscription is already linked to another account" });
+      }
+
+      await storage.updateUser(user.id, {
+        plan: 'SUPER_HERO',
+        subscriptionStatus: 'active',
+        appleOriginalTransactionId: originalTransactionId,
+      });
+
+      console.log(`User ${user.id} upgraded to Super Hero via Apple IAP (txn: ${originalTransactionId})`);
+
+      res.json({
+        success: true,
+        plan: 'SUPER_HERO',
+        message: "Subscription activated successfully",
+      });
+    } catch (error: any) {
+      console.error('Apple IAP verification error:', error);
+      res.status(500).json({ success: false, message: "Failed to verify purchase" });
     }
   });
 

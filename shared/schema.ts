@@ -22,6 +22,7 @@ export const users = pgTable("users", {
   subscriptionStatus: text("subscription_status").default("active").notNull(), // active, cancelled, expired
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
+  appleOriginalTransactionId: text("apple_original_transaction_id"),
   showEmail: boolean("show_email").default(false).notNull(),
   showCollection: boolean("show_collection").default(true).notNull(),
   showWishlist: boolean("show_wishlist").default(true).notNull(),

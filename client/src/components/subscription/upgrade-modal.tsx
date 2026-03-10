@@ -6,6 +6,9 @@ import { useToast } from "@/hooks/use-toast";
 import logoImage from "@assets/Marvelous_Card_Valut_-_Trans_1772678671637.png";
 import { Capacitor } from '@capacitor/core';
 import { useAuth } from "@/contexts/AuthContext";
+import { isAppleIAP, purchaseAppleSubscription } from "@/services/appleIAP";
+import { useAppStore } from "@/lib/store";
+import { queryClient } from "@/lib/queryClient";
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -28,7 +31,52 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
       return;
     }
 
-    if (Capacitor.isNativePlatform()) {
+    if (isAppleIAP()) {
+      setIsLoading(true);
+      try {
+        const { currentUser } = useAppStore.getState();
+        if (!currentUser?.id || !user) {
+          throw new Error('Not logged in');
+        }
+        const result = await purchaseAppleSubscription(
+          currentUser.id,
+          () => user.getIdToken()
+        );
+        if (result.success) {
+          toast({
+            title: "Welcome, Super Hero!",
+            description: "Your subscription is now active. Enjoy unlimited access!",
+          });
+          queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/subscription/status'] });
+          const store = useAppStore.getState();
+          if (store.currentUser) {
+            store.setCurrentUser({ ...store.currentUser, plan: 'SUPER_HERO', subscriptionStatus: 'active' });
+          }
+          onClose();
+        } else if (result.cancelled) {
+          // User cancelled - do nothing, no error toast
+        } else {
+          toast({
+            title: "Purchase Issue",
+            description: result.error || "Something went wrong. Please try again.",
+            variant: "destructive",
+          });
+        }
+      } catch (error: any) {
+        console.error("Apple IAP error:", error);
+        toast({
+          title: "Error",
+          description: "Failed to start purchase. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
       window.open('https://app.marvelcardvault.com/subscribe', '_system');
       return;
     }
