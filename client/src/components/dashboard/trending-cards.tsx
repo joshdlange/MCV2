@@ -15,9 +15,10 @@ interface TrendingCardProps {
   card: CardWithSet;
   isInCollection?: boolean;
   onClick?: () => void;
+  onImageError?: (cardId: number) => void;
 }
 
-function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
+function TrendingCard({ card, isInCollection, onClick, onImageError }: TrendingCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
 
   // Use pricing data directly from the card object (now included in backend response)
@@ -48,12 +49,8 @@ function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
               src={convertGoogleDriveUrl(card.frontImageUrl)} 
               alt={card.name}
               className="w-full h-full object-contain"
-              onError={(e) => {
-                const target = e.currentTarget;
-                if (!target.dataset.fallback) {
-                  target.dataset.fallback = '1';
-                  target.src = 'https://res.cloudinary.com/dgu7hjfvn/image/upload/v1748442577/card-placeholder_ysozlo.png';
-                }
+              onError={() => {
+                onImageError?.(card.id);
               }}
             />
           ) : (
@@ -147,11 +144,16 @@ function TrendingCard({ card, isInCollection, onClick }: TrendingCardProps) {
 export function TrendingCards() {
   const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [failedImageIds, setFailedImageIds] = useState<Set<number>>(new Set());
   const { toast } = useToast();
 
   const { data: trendingCards, isLoading } = useQuery<CardWithSet[]>({
     queryKey: ["/api/trending-cards"],
   });
+
+  const handleImageError = (cardId: number) => {
+    setFailedImageIds(prev => new Set(prev).add(cardId));
+  };
 
   const { data: collection } = useQuery<CollectionItem[]>({
     queryKey: ["/api/collection"],
@@ -264,14 +266,18 @@ export function TrendingCards() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {trendingCards.slice(0, 8).map((card) => (
-              <TrendingCard
-                key={card.id}
-                card={card}
-                isInCollection={isCardInCollection(card.id)}
-                onClick={() => handleCardClick(card)}
-              />
-            ))}
+            {trendingCards
+              .filter((card) => !failedImageIds.has(card.id))
+              .slice(0, 8)
+              .map((card) => (
+                <TrendingCard
+                  key={card.id}
+                  card={card}
+                  isInCollection={isCardInCollection(card.id)}
+                  onClick={() => handleCardClick(card)}
+                  onImageError={handleImageError}
+                />
+              ))}
           </div>
         </CardContent>
       </Card>

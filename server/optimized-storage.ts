@@ -457,13 +457,14 @@ export class OptimizedStorage {
     }
     
     try {
-      // Get all insert card IDs with images (lightweight query - just IDs)
+      // Get all insert card IDs with reliable Cloudinary images (lightweight query - just IDs)
       const insertCardIds = await db
         .select({ id: cards.id })
         .from(cards)
         .where(and(
           eq(cards.isInsert, true),
-          isNotNull(cards.frontImageUrl)
+          isNotNull(cards.frontImageUrl),
+          ilike(cards.frontImageUrl, '%cloudinary%')
         ))
         .orderBy(cards.id);
       
@@ -603,7 +604,7 @@ export class OptimizedStorage {
         .innerJoin(cardSets, eq(cards.setId, cardSets.id))
         .leftJoin(userCollections, eq(cards.id, userCollections.cardId))
         .leftJoin(cardPriceCache, eq(cards.id, cardPriceCache.cardId))
-        .where(isNotNull(cards.frontImageUrl))
+        .where(and(isNotNull(cards.frontImageUrl), ilike(cards.frontImageUrl, '%cloudinary%')))
         .groupBy(cards.id, cardSets.id, cardSets.name, cardSets.year, cards.name, cards.cardNumber, cards.frontImageUrl, cards.isInsert, cards.rarity, cardPriceCache.avgPrice, cardPriceCache.createdAt)
         .orderBy(sql`COUNT(${userCollections.id}) DESC`)
         .limit(Math.min(limit, 20));
