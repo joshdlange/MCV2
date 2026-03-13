@@ -1,5 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { Layers, DollarSign, Heart, Zap, ChevronRight, Plus, Sparkles, TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Info, Layers, DollarSign, Heart, Plus, ArrowRight, Zap } from "lucide-react";
 import type { CollectionStats } from "@shared/schema";
 import { useLocation } from "wouter";
 
@@ -10,7 +16,7 @@ export function StatsDashboard() {
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
-
+  
   const { data: userBadges } = useQuery<any[]>({
     queryKey: ["/api/social/user-badges"],
     staleTime: 60000,
@@ -18,173 +24,192 @@ export function StatsDashboard() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="rounded-2xl bg-gray-100 animate-pulse h-28" />
-        ))}
+      <div className="space-y-4">
+        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 animate-pulse">
+                <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+                <div className="flex-1">
+                  <div className="h-3 bg-gray-200 rounded w-16 mb-2"></div>
+                  <div className="h-5 bg-gray-200 rounded w-12"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
-  if (!stats) return null;
+  if (!stats) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">Failed to load statistics</p>
+      </div>
+    );
+  }
 
   const totalCards = stats.totalCards || 0;
   const totalValue = stats.totalValue ? parseFloat(stats.totalValue.toString()) : 0;
   const wishlistItems = (stats as any).wishlistItems || (stats as any).wishlistCount || 0;
   const superpowersCount = userBadges?.length || 0;
 
-  const valueDisplay = totalValue >= 10000
-    ? `$${(totalValue / 1000).toFixed(1)}K`
-    : `$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-
-  const statCards = [
+  const statItems = [
     {
-      label: "Cards",
+      label: "CARDS",
       value: totalCards.toLocaleString(),
       icon: Layers,
-      gradient: "from-red-500 via-red-600 to-red-700",
-      shadowColor: "shadow-red-200",
-      hint: totalCards === 0 ? "Add your first card →" : totalCards < 50 ? "Keep building →" : "View collection →",
-      onClick: () => setLocation("/my-collection"),
+      gradient: "from-red-500 to-red-700",
+      bgColor: "bg-red-50",
+      iconColor: "text-white",
+      tooltip: "Total cards in your collection. Add more from the Browse Cards page.",
+      onClick: () => setLocation("/my-collection")
     },
     {
-      label: "Value",
-      value: valueDisplay,
-      icon: TrendingUp,
-      gradient: "from-emerald-400 via-green-500 to-emerald-600",
-      shadowColor: "shadow-emerald-200",
-      hint: "See market trends →",
-      onClick: () => setLocation("/trends"),
+      label: "VALUE",
+      value: totalValue >= 10000 
+        ? `$${(totalValue / 1000).toFixed(1)}K` 
+        : `$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
+      icon: DollarSign,
+      gradient: "from-emerald-500 to-green-600",
+      bgColor: "bg-emerald-50",
+      iconColor: "text-white",
+      tooltip: "Estimated value based on recent eBay sales data.",
+      onClick: () => setLocation("/trends")
     },
     {
-      label: "Wishlist",
+      label: "WISHLIST",
       value: wishlistItems.toLocaleString(),
       icon: Heart,
-      gradient: "from-pink-400 via-rose-500 to-pink-600",
-      shadowColor: "shadow-pink-200",
-      hint: wishlistItems === 0 ? "Start your wishlist →" : "Manage wishlist →",
-      onClick: () => setLocation("/wishlist"),
+      gradient: "from-pink-500 to-rose-600",
+      bgColor: "bg-pink-50",
+      iconColor: "text-white",
+      tooltip: "Cards you're chasing. Add cards to track what you want.",
+      onClick: () => setLocation("/wishlist")
     },
     {
-      label: "Powers",
+      label: "POWERS",
       value: superpowersCount.toLocaleString(),
       icon: Zap,
-      gradient: "from-violet-500 via-purple-500 to-indigo-600",
-      shadowColor: "shadow-purple-200",
-      hint: "Earn more powers →",
-      onClick: () => setLocation("/social?tab=superpowers"),
+      gradient: "from-purple-500 to-indigo-600",
+      bgColor: "bg-purple-50",
+      iconColor: "text-white",
+      tooltip: "Superpowers - Badges and achievements you've earned. Collect them all!",
+      onClick: () => setLocation("/social?tab=superpowers")
     },
   ];
 
-  const showEmptyBanner = totalCards === 0;
-  const showGrowthBanner = totalCards > 0 && totalCards < 50;
-  const showWishlistNudge = totalCards >= 50 && wishlistItems < 5;
-  const showPowersNudge = totalCards >= 50 && wishlistItems >= 5 && superpowersCount < 5;
-
   return (
     <div className="space-y-4">
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {statCards.map((stat) => (
-          <button
-            key={stat.label}
-            onClick={stat.onClick}
-            className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br ${stat.gradient} p-4 text-white text-center shadow-lg ${stat.shadowColor} hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 cursor-pointer`}
-          >
-            {/* Decorative glow blob */}
-            <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full bg-white/10 blur-xl pointer-events-none" />
-
-            {/* Icon */}
-            <div className="flex justify-center mb-2">
-              <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
-                <stat.icon
-                  className="w-5 h-5 text-white"
-                  strokeWidth={2.5}
-                  fill={stat.icon === Heart || stat.icon === Zap ? "currentColor" : "none"}
-                />
+      {/* Compact Stats Bar */}
+      <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {statItems.map((stat, index) => (
+            <div
+              key={index}
+              onClick={stat.onClick}
+              className="group relative flex items-center gap-3 p-3 rounded-xl bg-gray-50/80 hover:bg-gray-100 cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+              data-testid={`stat-${stat.label.toLowerCase().replace(' ', '-')}`}
+            >
+              {/* Icon with gradient background */}
+              <div className={`relative w-10 h-10 rounded-full bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}>
+                <stat.icon className={`w-5 h-5 ${stat.iconColor}`} strokeWidth={2.5} fill={stat.icon === Heart || stat.icon === Zap ? "currentColor" : "none"} />
+                <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              </div>
+              
+              {/* Label & Value */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide truncate">
+                    {stat.label}
+                  </span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button 
+                        className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Info className="w-3 h-3 text-gray-400" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="max-w-xs p-3 text-sm">
+                      {stat.tooltip}
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <span className="text-lg font-bold text-gray-900 tracking-tight block truncate">
+                  {stat.value}
+                </span>
               </div>
             </div>
-
-            {/* Value */}
-            <div className="text-2xl font-black tracking-tight leading-none mb-1">{stat.value}</div>
-
-            {/* Label */}
-            <div className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-2">
-              {stat.label}
-            </div>
-
-            {/* CTA hint */}
-            <div className="flex items-center justify-center gap-0.5 text-[11px] font-medium text-white/80 group-hover:text-white transition-colors">
-              <span>{stat.hint}</span>
-            </div>
-          </button>
-        ))}
+          ))}
+        </div>
       </div>
 
-      {/* Contextual action banner */}
-      {showEmptyBanner && (
-        <div
-          onClick={() => setLocation("/browse")}
-          className="cursor-pointer flex items-center justify-between bg-gradient-to-r from-red-600 to-red-700 rounded-2xl px-5 py-4 text-white shadow-lg hover:from-red-700 hover:to-red-800 transition-all"
-        >
-          <div>
-            <p className="font-bold text-base">Build your first Marvel vault</p>
-            <p className="text-red-100 text-sm mt-0.5">Browse 190k+ cards and start tracking your collection.</p>
-          </div>
-          <div className="flex items-center gap-1 bg-white/20 hover:bg-white/30 rounded-xl px-3 py-2 ml-4 flex-shrink-0 transition-colors">
-            <Plus className="w-4 h-4" />
-            <span className="text-sm font-semibold">Start</span>
-          </div>
-        </div>
-      )}
-
-      {showGrowthBanner && (
-        <div
-          onClick={() => setLocation("/browse")}
-          className="cursor-pointer flex items-center justify-between bg-gradient-to-r from-gray-800 to-gray-900 rounded-2xl px-5 py-4 text-white shadow-lg hover:from-gray-700 hover:to-gray-800 transition-all"
-        >
-          <div>
-            <p className="font-bold text-base">Nice start — keep building!</p>
-            <p className="text-gray-300 text-sm mt-0.5">You have <span className="text-white font-semibold">{totalCards} cards</span>. Hit 50 to unlock richer insights.</p>
-          </div>
-          <div className="flex items-center gap-1 bg-red-600 hover:bg-red-700 rounded-xl px-3 py-2 ml-4 flex-shrink-0 transition-colors">
-            <Plus className="w-4 h-4" />
-            <span className="text-sm font-semibold">Browse</span>
-          </div>
-        </div>
-      )}
-
-      {showWishlistNudge && (
-        <div
-          onClick={() => setLocation("/wishlist")}
-          className="cursor-pointer flex items-center justify-between bg-gradient-to-r from-pink-500 to-rose-600 rounded-2xl px-5 py-4 text-white shadow-lg hover:from-pink-600 hover:to-rose-700 transition-all"
-        >
-          <div>
-            <p className="font-bold text-base">Start tracking cards you want</p>
-            <p className="text-pink-100 text-sm mt-0.5">Add cards to your wishlist and get price alerts when they drop.</p>
-          </div>
-          <div className="flex items-center gap-1 bg-white/20 hover:bg-white/30 rounded-xl px-3 py-2 ml-4 flex-shrink-0 transition-colors">
-            <Heart className="w-4 h-4 fill-current" />
-            <span className="text-sm font-semibold">Wishlist</span>
+      {/* Onboarding / Next Steps Card */}
+      {totalCards === 0 ? (
+        <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-xl p-5 text-white shadow-lg">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex-1">
+              <h3 className="text-xl font-bold mb-1">Let's build your first Marvel vault.</h3>
+              <p className="text-red-100 text-sm">
+                Add a few cards to unlock stats, total value, and set progress tracking.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button 
+                onClick={() => setLocation("/browse")}
+                className="bg-white text-red-600 hover:bg-red-50 font-semibold shadow-md"
+                data-testid="button-add-first-cards"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Your First Cards
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => setLocation("/browse")}
+                className="border-white text-white bg-white/10 hover:bg-white/20 text-sm font-semibold"
+                data-testid="link-explore-sets"
+              >
+                Explore sets first
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
           </div>
         </div>
-      )}
-
-      {showPowersNudge && (
-        <div
-          onClick={() => setLocation("/social?tab=superpowers")}
-          className="cursor-pointer flex items-center justify-between bg-gradient-to-r from-violet-500 to-indigo-600 rounded-2xl px-5 py-4 text-white shadow-lg hover:from-violet-600 hover:to-indigo-700 transition-all"
-        >
-          <div>
-            <p className="font-bold text-base">Unlock your superpowers</p>
-            <p className="text-violet-100 text-sm mt-0.5">Complete challenges and earn badges that showcase your collection mastery.</p>
-          </div>
-          <div className="flex items-center gap-1 bg-white/20 hover:bg-white/30 rounded-xl px-3 py-2 ml-4 flex-shrink-0 transition-colors">
-            <Sparkles className="w-4 h-4" />
-            <span className="text-sm font-semibold">Explore</span>
+      ) : totalCards < 50 ? (
+        <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-5 text-white shadow-lg">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex-1">
+              <h3 className="text-lg font-bold mb-1">Nice start! Keep building your collection.</h3>
+              <p className="text-gray-300 text-sm">
+                You've added <span className="text-white font-semibold">{totalCards} cards</span> so far. 
+                Add more to unlock richer value insights and set completion tracking.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button 
+                onClick={() => setLocation("/browse")}
+                className="bg-red-600 hover:bg-red-700 text-white font-semibold shadow-md"
+                data-testid="button-add-more-cards"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add More Cards
+              </Button>
+              <Button 
+                variant="ghost"
+                onClick={() => setLocation("/browse")}
+                className="text-gray-300 hover:bg-white/10 text-sm"
+                data-testid="link-view-sets"
+              >
+                View All Sets
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
