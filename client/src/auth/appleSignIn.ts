@@ -2,8 +2,8 @@ import { SignInWithApple, SignInWithAppleResponse } from "@capacitor-community/a
 import {
   getAuth,
   OAuthProvider,
-  signInWithCredential,
   signInWithPopup,
+  signInWithCustomToken,
   UserCredential,
 } from "firebase/auth";
 
@@ -58,13 +58,19 @@ export async function signInWithAppleUnified(): Promise<UserCredential> {
       throw new Error("No identity token returned from Apple Sign-In");
     }
 
-    const provider = new OAuthProvider("apple.com");
-    const credential = provider.credential({
-      idToken: identityToken,
-      rawNonce: rawNonce,
+    const response = await fetch("/api/auth/apple-sign-in", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identityToken, rawNonce }),
     });
 
-    return await signInWithCredential(auth, credential);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || "Apple Sign-In server verification failed");
+    }
+
+    const { customToken } = await response.json();
+    return await signInWithCustomToken(auth, customToken);
   }
 
   const provider = new OAuthProvider("apple.com");

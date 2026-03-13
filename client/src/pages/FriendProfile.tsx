@@ -356,10 +356,11 @@ export default function FriendProfile() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowReportModal(true)}
-                      className="text-gray-400 hover:text-red-500"
+                      className="text-gray-400 hover:text-red-500 flex items-center gap-1"
                       title="Report user"
                     >
                       <Flag className="w-4 h-4" />
+                      <span className="text-xs">Report</span>
                     </Button>
                   </div>
                 </div>

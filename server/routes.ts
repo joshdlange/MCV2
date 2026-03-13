@@ -264,6 +264,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/auth/apple-sign-in", async (req, res) => {
+    try {
+      const { identityToken, rawNonce } = req.body;
+      if (!identityToken || !rawNonce) {
+        return res.status(400).json({ error: "identityToken and rawNonce are required" });
+      }
+
+      const parts = identityToken.split(".");
+      if (parts.length !== 3) {
+        return res.status(400).json({ error: "Invalid identity token format" });
+      }
+
+      const payloadJson = Buffer.from(parts[1], "base64url").toString("utf8");
+      const payload = JSON.parse(payloadJson);
+
+      if (payload.iss !== "https://appleid.apple.com") {
+        return res.status(401).json({ error: "Invalid token issuer" });
+      }
+
+      if (payload.nonce) {
+        const crypto = await import("crypto");
+        const expectedNonce = crypto.createHash("sha256").update(rawNonce).digest("hex");
+        if (payload.nonce !== expectedNonce) {
+          return res.status(401).json({ error: "Invalid nonce" });
+        }
+      }
+
+      const appleSub = payload.sub;
+      if (!appleSub) {
+        return res.status(401).json({ error: "No Apple user ID in token" });
+      }
+
+      const firebaseUid = `apple_${appleSub}`;
+
+      let existingFirebaseUser;
+      try {
+        existingFirebaseUser = await admin.auth().getUser(firebaseUid);
+      } catch (_e) {
+        existingFirebaseUser = null;
+      }
+
+      if (!existingFirebaseUser) {
+        const createParams: admin.auth.CreateRequest = { uid: firebaseUid };
+        if (payload.email) createParams.email = payload.email;
+        await admin.auth().createUser(createParams);
+      }
+
+      const customToken = await admin.auth().createCustomToken(firebaseUid, {
+        provider: "apple.com",
+        appleUserId: appleSub,
+      });
+
+      return res.json({ customToken, firebaseUid, email: payload.email || null });
+    } catch (error: any) {
+      console.error("Apple sign-in error:", error);
+      return res.status(500).json({ error: "Failed to process Apple sign-in" });
+    }
+  });
+
   // Get current user
   app.get("/api/auth/me", authenticateUser, (req: any, res) => {
     res.json({ user: req.user });

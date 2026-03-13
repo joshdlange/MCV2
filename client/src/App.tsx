@@ -1,4 +1,5 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
+import { preloadAppleIAP, isAppleIAP } from "@/services/appleIAP";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
@@ -191,6 +192,12 @@ function AuthenticatedApp() {
   const { user, loading } = useAuth();
   
   useBackButton();
+
+  useEffect(() => {
+    if (isAppleIAP()) {
+      preloadAppleIAP();
+    }
+  }, []);
 
   if (loading) {
     return <PageSpinner />;

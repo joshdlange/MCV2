@@ -19,6 +19,35 @@ export function isAppleIAP(): boolean {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
 }
 
+async function waitForProduct(store: any, platform: any, timeoutMs = 8000): Promise<any> {
+  const existing = store.get(APPLE_PRODUCT_ID, platform);
+  if (existing && existing.offers && existing.offers.length > 0) return existing;
+
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error('Product load timeout'));
+    }, timeoutMs);
+
+    const checkProduct = () => {
+      const p = store.get(APPLE_PRODUCT_ID, platform);
+      if (p && p.offers && p.offers.length > 0) {
+        clearTimeout(timeoutId);
+        resolve(p);
+      }
+    };
+
+    store.when().productUpdated((p: any) => {
+      if (p.id === APPLE_PRODUCT_ID) {
+        checkProduct();
+      }
+    });
+
+    store.when().ready(() => {
+      checkProduct();
+    });
+  });
+}
+
 async function initializeStore(): Promise<void> {
   if (storeInitialized) return;
   if (initPromise) return initPromise;
@@ -54,6 +83,15 @@ async function initializeStore(): Promise<void> {
   return initPromise;
 }
 
+export async function preloadAppleIAP(): Promise<void> {
+  if (!isAppleIAP()) return;
+  try {
+    await initializeStore();
+  } catch (err) {
+    console.warn('Apple IAP preload failed (non-fatal):', err);
+  }
+}
+
 export async function purchaseAppleSubscription(
   userId: number,
   getIdToken: () => Promise<string>
@@ -64,14 +102,20 @@ export async function purchaseAppleSubscription(
     const store = getStore();
     const { Platform } = window.CdvPurchase;
 
-    const product = store.get(APPLE_PRODUCT_ID, Platform.APPLE_APPSTORE);
-    if (!product) {
-      return { success: false, error: 'Subscription product not found. Please try again later.' };
+    let product: any;
+    try {
+      product = await waitForProduct(store, Platform.APPLE_APPSTORE, 10000);
+    } catch (_e) {
+      product = store.get(APPLE_PRODUCT_ID, Platform.APPLE_APPSTORE);
     }
 
-    const offer = product.getOffer();
+    if (!product) {
+      return { success: false, error: 'Subscription product is not available right now. Please check your App Store account and try again.' };
+    }
+
+    const offer = product.getOffer ? product.getOffer() : (product.offers?.[0] ?? null);
     if (!offer) {
-      return { success: false, error: 'Subscription offer not available. Please try again later.' };
+      return { success: false, error: 'No subscription offer available. Please try again later.' };
     }
 
     return new Promise((resolve) => {
@@ -103,10 +147,7 @@ export async function purchaseAppleSubscription(
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`,
             },
-            body: JSON.stringify({
-              receiptData,
-              userId,
-            }),
+            body: JSON.stringify({ receiptData, userId }),
           });
 
           const data = await response.json();

@@ -1,0 +1,147 @@
+PRIORITY: Apple Review Remediation Sprint
+GOAL: Fix the exact remaining rejection issues from Apple. Do not work on anything unrelated.
+
+LATEST APPLE REJECTION (MARCH 12, 2026)
+Device: iPad Air 11-inch (M3), iPadOS 26.3.1
+Version: 1.0 (Build 7)
+
+Apple says the following are still broken:
+1. Sign in with Apple does not work
+2. Tapping "Upgrade to SUPER HERO" shows a purchase error
+3. The app has user-generated content with no mechanism to flag/report objectionable content
+
+THIS IS A SURGICAL FIX TASK. DO NOT TOUCH ANYTHING UNRELATED.
+
+================================================
+KNOWN ROOT CAUSES (audit should confirm these)
+==================================================
+
+BUG 1 — SIGN IN WITH APPLE
+Error seen by Apple reviewer: "Firebase: The audience in ID Token [com.marvelcardvault.app] does not match the expected audience com.marvelcardvault.web."
+Root cause: Firebase is configured with a Web Client ID but the Apple Sign-In token issued for the iOS bundle ID (com.marvelcardvault.app). The nonce or audience parameter being passed to Firebase does not match the iOS client configuration.
+
+BUG 2 — IAP PURCHASE ERROR
+Error seen: "Purchase Issue: Subscription product not found. Please try again later."
+Known product ID in App Store Connect: MCV_Apple_Superhero
+The product must be loaded and confirmed available before the purchase button is enabled. The error fires on dashboard load — meaning product initialization is failing silently before the user even taps purchase.
+
+BUG 3 — UGC REPORT MECHANISM
+A "Report" option must be visible on all user-generated content surfaces the Apple reviewer can access (marketplace listings, listing detail pages, user profiles tied to listings). Previous implementation may exist — audit before rebuilding.
+
+================================================
+PHASE 1 — AUDIT FIRST (do not change code yet)
+==================================================
+
+Inspect and report:
+
+1. Sign in with Apple
+- Exact files handling Apple auth
+- How the Firebase credential is being constructed (specifically: what audience/clientId is passed)
+- Whether nonce is being generated and passed correctly
+- Whether the iOS presentation anchor is set (iPad requires explicit anchor)
+- Any iPad-specific failure paths
+
+2. IAP / Upgrade flow
+- Exact files triggered when tapping Upgrade to Super Hero
+- Whether product ID "MCV_Apple_Superhero" is hardcoded or configurable
+- Whether products are fetched before the purchase button is shown
+- Whether store initialization happens before user interaction
+- Whether the error is thrown before or after the purchase sheet appears
+
+3. UGC surfaces
+- Whether a Report button/option already exists anywhere in the codebase
+- All screens where user-generated marketplace content is visible to a reviewer
+
+Then proceed with implementation.
+
+================================================
+PHASE 2 — FIX SIGN IN WITH APPLE
+==================================================
+
+The Firebase credential must use the iOS client ID, not the web client ID.
+Fix the audience mismatch. Ensure:
+- Nonce is generated before the Apple auth request
+- SHA256 hash of nonce is passed to Apple
+- Raw nonce is passed to Firebase OAuthProvider credential
+- Firebase signInWithCredential receives the correct credential with matching audience
+- On iPad: presentation anchor must be set (window or specific UIViewController)
+- On failure: show a visible error message — no silent failures
+
+Do NOT break Google Sign-In or email/password auth.
+
+==================================================
+PHASE 3 — FIX UPGRADE TO SUPER HERO PURCHASE ERROR
+==================================================
+
+Product ID: MCV_Apple_Superhero
+
+Requirements:
+- Products must be fetched from Apple at app startup (or at latest when upgrade screen loads)
+- The purchase button must be DISABLED or show a loading state until the product is confirmed available
+- If product is unavailable after fetch: show a meaningful message, not a generic error
+- If user cancels: handle gracefully, no error shown
+- If purchase succeds: update user plan in database, unlock Super Hero features
+- Do NOT break Stripe for web or Android — iOS must use Apple IAP only
+- Do NOT show any Stripe UI on iOS
+
+==================================================
+PHASE 4 — ADD REPORT / FLAG MECHANISM FOR UGC
+==================================================
+
+If a Report mechanism already exists: verify it is visible on all reviewer-accessible surfaces and works end to end.
+
+If it does not exist or is incomplete, add:
+- "Report" option (button, icon, or overflow menu item) on:
+  - Marketplace listing cards
+  - Listing detail pages
+  - User profile pages
+- Tapping Report shows modal with reasons: Spam / Offensive Content / Fake Listing / Harassment / Other
+- On submit: POST to backend, store report with: reporting user ID, target listing/user ID, reason, timestamp, status
+- Show success: "Thanks. We'll review this shortly."
+- Integrate with existing moderation queue if one exists
+
+==================================================
+PHASE 5 — QA CHECKLIST
+==================================================
+
+AUTH
+- Sign in with Apple works on fresh install on iPad (no Firebase audience error)
+- Sign in with Apple works on iPhone
+- Auth failure shows visible error
+- Google Sign-In still works
+- Email/password still works
+
+PURCHASES
+- Upgrade to Super Hero no longer throws purchase error on iOS
+- Product loads before user can tap purchase
+- Successful purchase upgrades account to Super Hero
+- Cancellation handled gracefully
+- No Stripe UI appears on iOS
+- Web Stripe flow still works
+- Android Stripe flow still works
+
+UGC
+- Report option visible on marketplace listings
+- Report option visible on user profiles
+- Report submission works and shows success state
+
+==================================================
+OUTPUT FORMAT
+==================================================
+
+1. AUDIT SUMMARY — exact findings for all 3 issues
+2. ROOT CAUSES CONFIRMED — what you found vs what was expected
+3. FILES CHANGED — exact list
+4. IMPLEMENTATION — complete code, ready to deploy
+5. XCODE / APP STORE CONNECT STEPS REQUIRED — numbered, explicit (anything neding native config)
+6. QA CHECKLIST RESULTS — confirm each item above passes
+7. APP REVIEW NOTES DRAFT — concise, ready to paste into App Store Connect
+
+==================================================
+SUCCESS CRITERIA
+==================================================
+
+- Sign in with Apple works on iPad with no Firebase error
+- Upgrade to Super Hero no longer throws a purchase error on iOS
+- Report mechanism exists and is visible on all UGC surfaces
+- Build is ready to archive in Xcode and resubmit to Apple
