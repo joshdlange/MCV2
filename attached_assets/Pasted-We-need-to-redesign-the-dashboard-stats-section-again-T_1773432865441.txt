@@ -1,0 +1,66 @@
+We need to redesign the dashboard stats section again.
+
+The previous redesign is too large, too glowy, and feels like oversized promo cards. I want to go back toward the older layout structure: a compact horizontal top stats bar that is quick to scan and does NOT take up much vertical space.
+
+Keep it as a top bar, not a giant box section.
+
+DESIGN GOAL
+Make it feel more premium, energetic, and visually exciting without increasing its height much.
+
+STYLE DIRECTION
+Think:
+- sleek superhero-tech dashboard
+- subtle energy
+- premium comic-inspired UI
+- alive, but not flashy or cheesy
+
+DO NOT:
+- make the cards oversized
+- add huge glow halos
+- turn this into a hero/banner section
+- add lots of extra text
+- make it taller than necessary
+
+DO:
+- preserve a compact horizontal layout
+- keep the 4 stat tiles in one row
+- improve typography hierarchy
+- add subtle animated accents
+- use refined motion, not loud motion
+
+VISUAL IMPROVEMENTS TO ADD
+1. Add a premium outer container around the whole stats row
+   - dark charcoal or black-toned container
+   - rounded corners
+   - subtle border or inner shadow
+   - clean spacing
+
+2. Keep each stat tile compact
+   - similar general height to the old design
+   - stronger icon circle treatment
+   - slightly richer surface styling
+   - maintain readability
+
+3. Add subtle per-tile animated energy effects
+   - CARDS: faint red ember or glow sweep
+   - VALUE: subtle green shimmer or upward motion
+   - WISHLIST: soft pink pulse
+   - POWERS: faint electric purple flicker
+
+4. Add tasteful hover states
+   - slight lift
+   - stronger glow
+   - animated bottom energy line
+   - icon motion
+
+5. Keep animation subtle and premium
+   - use Framer Motion if helpful
+   - animations should feel polished and lightweight
+   - no giant pulsing neon blocks
+
+6. Make sure mobile and tablet still look clean
+
+IMPORTANT
+Do not redesign the rest of the page.
+Focus only on improving this top stats section.
+Return a version that keeps the old compact layout but makes it cooler, more premium, and more alive.
