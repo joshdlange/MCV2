@@ -3,6 +3,10 @@ import { badges, userBadges, users, messages, friends, cardSets, userCollections
 import { eq, and, count, gte, lte, gt, sql } from "drizzle-orm";
 import { notificationService } from "./notification-service";
 
+const MAX_CONCURRENT_BADGE_CHECKS = 2;
+let activeBadgeChecks = 0;
+const pendingBadgeChecks = new Map<number, ReturnType<typeof setTimeout>>();
+
 export class BadgeService {
   // List of curse words for Potty Mouth badge
   private readonly curseWords = [
@@ -147,6 +151,15 @@ export class BadgeService {
   async checkCompletionist(userId: number): Promise<void> {
     const badge = await this.getBadgeByName('Completionist');
     if (!badge) return;
+
+    // Early exit: skip expensive N+1 loop if user has fewer than 50 cards
+    const userTotal = await db.select({ count: count() })
+      .from(userCollections)
+      .where(eq(userCollections.userId, userId));
+    if (Number(userTotal[0].count) < 50) return;
+
+    // Also skip if already earned
+    if (await this.hasUserEarnedBadge(userId, badge.id)) return;
 
     // Get all years that have card sets with valid totalCards > 0
     const years = await db.select({ year: cardSets.year })
@@ -316,11 +329,35 @@ export class BadgeService {
   }
 
   async checkBadgesOnCollectionChange(userId: number): Promise<void> {
-    await this.checkRookieCollector(userId);
-    await this.checkHundredClub(userId);
-    await this.checkVaultGuardian(userId);
-    await this.checkCompletionist(userId);
-    await this.checkHallOfFame(userId);
+    // Debounce: cancel any pending check for this user and schedule a new one
+    const existing = pendingBadgeChecks.get(userId);
+    if (existing) clearTimeout(existing);
+
+    return new Promise((resolve) => {
+      const timer = setTimeout(async () => {
+        pendingBadgeChecks.delete(userId);
+
+        // Concurrency guard: drop if too many checks already running
+        if (activeBadgeChecks >= MAX_CONCURRENT_BADGE_CHECKS) {
+          resolve();
+          return;
+        }
+
+        activeBadgeChecks++;
+        try {
+          await this.checkRookieCollector(userId);
+          await this.checkHundredClub(userId);
+          await this.checkVaultGuardian(userId);
+          await this.checkCompletionist(userId);
+          await this.checkHallOfFame(userId);
+        } finally {
+          activeBadgeChecks--;
+          resolve();
+        }
+      }, 5000); // 5-second debounce window
+
+      pendingBadgeChecks.set(userId, timer);
+    });
   }
 
   // Rookie Collector - First card added to collection

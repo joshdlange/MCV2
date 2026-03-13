@@ -93,7 +93,9 @@ export function Sidebar() {
 
   const { data: unreadMessages } = useQuery<{ count: number }>({
     queryKey: ["/api/social/unread-count"],
-    refetchInterval: 30000,
+    refetchInterval: 120000,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
     enabled: !!user,
   });
 

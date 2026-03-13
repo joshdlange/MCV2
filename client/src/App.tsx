@@ -107,15 +107,16 @@ function DesktopHeader() {
 function MobileMenu() {
   const { isMobileMenuOpen, setMobileMenuOpen } = useAppStore();
 
-  if (!isMobileMenuOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 lg:hidden">
-      <div 
-        className="fixed inset-0 bg-black bg-opacity-50" 
+    <div
+      className={`fixed inset-0 z-50 lg:hidden transition-opacity duration-200 ${isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+      aria-hidden={!isMobileMenuOpen}
+    >
+      <div
+        className="fixed inset-0 bg-black bg-opacity-50"
         onClick={() => setMobileMenuOpen(false)}
       />
-      <div className="fixed inset-y-0 left-0 w-80 bg-white shadow-lg">
+      <div className={`fixed inset-y-0 left-0 w-80 bg-white shadow-lg transition-transform duration-200 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div onClick={() => setMobileMenuOpen(false)}>
           <Sidebar />
         </div>
