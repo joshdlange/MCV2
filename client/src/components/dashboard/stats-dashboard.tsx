@@ -9,37 +9,176 @@ import { Info, Layers, DollarSign, Heart, Plus, ArrowRight, Zap } from "lucide-r
 import type { CollectionStats } from "@shared/schema";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 
-const TILE_STYLES = [
+const TILES = [
   {
     key: "cards",
-    accent: "#ef4444",
-    animClass: "stat-ember",
-    iconGrad: "from-red-600 to-red-800",
-    ringColor: "rgba(239,68,68,0.35)",
+    label: "CARDS",
+    icon: Layers,
+    color: "#ef4444",
+    colorMuted: "rgba(239,68,68,0.15)",
+    gradient: "from-red-700 to-red-500",
+    tooltip: "Total cards in your collection.",
+    fill: false,
   },
   {
     key: "value",
-    accent: "#10b981",
-    animClass: "stat-shimmer",
-    iconGrad: "from-emerald-500 to-green-700",
-    ringColor: "rgba(16,185,129,0.35)",
+    label: "VALUE",
+    icon: DollarSign,
+    color: "#10b981",
+    colorMuted: "rgba(16,185,129,0.15)",
+    gradient: "from-emerald-700 to-emerald-500",
+    tooltip: "Estimated value based on recent eBay sales.",
+    fill: false,
   },
   {
     key: "wishlist",
-    accent: "#ec4899",
-    animClass: "stat-pulse",
-    iconGrad: "from-pink-500 to-rose-700",
-    ringColor: "rgba(236,72,153,0.35)",
+    label: "WISHLIST",
+    icon: Heart,
+    color: "#ec4899",
+    colorMuted: "rgba(236,72,153,0.15)",
+    gradient: "from-pink-700 to-pink-500",
+    tooltip: "Cards you're chasing.",
+    fill: true,
   },
   {
     key: "powers",
-    accent: "#a855f7",
-    animClass: "stat-flicker",
-    iconGrad: "from-purple-500 to-indigo-700",
-    ringColor: "rgba(168,85,247,0.35)",
+    label: "POWERS",
+    icon: Zap,
+    color: "#a855f7",
+    colorMuted: "rgba(168,85,247,0.15)",
+    gradient: "from-purple-700 to-purple-500",
+    tooltip: "Badges and achievements you've earned.",
+    fill: true,
   },
-];
+] as const;
+
+function useCountUp(target: number, duration = 900) {
+  const [display, setDisplay] = useState(0);
+  const raf = useRef<number | null>(null);
+  const start = useRef<number | null>(null);
+  const prev = useRef(0);
+
+  useEffect(() => {
+    if (target === prev.current) return;
+    const from = prev.current;
+    prev.current = target;
+    start.current = null;
+
+    const step = (ts: number) => {
+      if (start.current === null) start.current = ts;
+      const progress = Math.min((ts - start.current) / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.round(from + (target - from) * ease));
+      if (progress < 1) raf.current = requestAnimationFrame(step);
+    };
+    raf.current = requestAnimationFrame(step);
+    return () => { if (raf.current) cancelAnimationFrame(raf.current); };
+  }, [target, duration]);
+
+  return display;
+}
+
+function PowerTile({
+  tile,
+  rawValue,
+  displayValue,
+  onClick,
+}: {
+  tile: typeof TILES[number];
+  rawValue: number;
+  displayValue: string;
+  onClick: () => void;
+}) {
+  const animated = useCountUp(rawValue);
+  const formattedCount =
+    rawValue >= 10000
+      ? `${(animated / 1000).toFixed(1)}K`
+      : animated.toLocaleString();
+
+  const shown = tile.key === "value" ? displayValue : formattedCount;
+
+  return (
+    <motion.div
+      onClick={onClick}
+      className="relative flex flex-col items-center justify-center gap-2 px-4 py-4 rounded-xl cursor-pointer overflow-hidden"
+      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+      whileHover={{ y: -3, scale: 1.02 }}
+      transition={{ type: "spring", stiffness: 320, damping: 22 }}
+    >
+      {/* Shimmer sweep */}
+      <motion.div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: "linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.07) 50%, transparent 65%)",
+          backgroundSize: "200% 100%",
+        }}
+        animate={{ backgroundPosition: ["200% 0", "-200% 0"] }}
+        transition={{ duration: 3.5, repeat: Infinity, repeatDelay: 1.8, ease: "linear" }}
+      />
+
+      {/* Hover bottom accent line */}
+      <motion.div
+        className="absolute bottom-0 left-0 right-0 h-[2px]"
+        style={{ background: `linear-gradient(90deg, transparent, ${tile.color}, transparent)` }}
+        initial={{ opacity: 0 }}
+        whileHover={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
+      />
+
+      {/* Icon badge */}
+      <div className="relative flex items-center justify-center">
+        {/* Outer pulse ring */}
+        <motion.div
+          className="absolute rounded-full"
+          style={{ width: 52, height: 52, border: `1px solid ${tile.color}`, opacity: 0.3 }}
+          animate={{ scale: [1, 1.18, 1], opacity: [0.3, 0.08, 0.3] }}
+          transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+        />
+        {/* Icon circle */}
+        <div
+          className={`relative w-11 h-11 rounded-full flex items-center justify-center bg-gradient-to-br ${tile.gradient} shadow-lg`}
+          style={{ boxShadow: `0 0 16px 2px ${tile.color}44` }}
+        >
+          <tile.icon
+            className="w-5 h-5 text-white"
+            strokeWidth={2.5}
+            fill={tile.fill ? "currentColor" : "none"}
+          />
+        </div>
+      </div>
+
+      {/* Number */}
+      <span
+        className="text-2xl font-black text-white leading-none tracking-tight"
+        style={{ textShadow: `0 0 20px ${tile.color}66` }}
+      >
+        {shown}
+      </span>
+
+      {/* Label row */}
+      <div className="flex items-center gap-1">
+        <span className="text-[9px] font-bold tracking-[0.2em] uppercase" style={{ color: tile.color, opacity: 0.8 }}>
+          {tile.label}
+        </span>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Info className="w-2.5 h-2.5" style={{ color: tile.color, opacity: 0.5 }} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="max-w-xs p-3 text-sm">
+            {tile.tooltip}
+          </PopoverContent>
+        </Popover>
+      </div>
+    </motion.div>
+  );
+}
 
 export function StatsDashboard() {
   const [, setLocation] = useLocation();
@@ -56,15 +195,13 @@ export function StatsDashboard() {
 
   if (isLoading) {
     return (
-      <div className="bg-[#111] rounded-xl p-3 border border-white/10 shadow-xl">
+      <div className="bg-[#111] rounded-xl p-3 border border-white/[0.07] shadow-xl">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-white/5 animate-pulse">
-              <div className="w-9 h-9 bg-white/10 rounded-full flex-shrink-0" />
-              <div className="flex-1">
-                <div className="h-2.5 bg-white/10 rounded w-12 mb-2" />
-                <div className="h-5 bg-white/10 rounded w-10" />
-              </div>
+          {TILES.map((t) => (
+            <div key={t.key} className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white/[0.04] animate-pulse">
+              <div className="w-11 h-11 rounded-full bg-white/10" />
+              <div className="h-6 w-12 bg-white/10 rounded" />
+              <div className="h-2.5 w-10 bg-white/10 rounded" />
             </div>
           ))}
         </div>
@@ -85,214 +222,100 @@ export function StatsDashboard() {
   const wishlistItems = (stats as any).wishlistItems || (stats as any).wishlistCount || 0;
   const superpowersCount = userBadges?.length || 0;
 
-  const statItems = [
-    {
-      label: "CARDS",
-      value: totalCards.toLocaleString(),
-      icon: Layers,
-      tooltip: "Total cards in your collection.",
-      onClick: () => setLocation("/my-collection"),
-      style: TILE_STYLES[0],
-      fillIcon: false,
-    },
-    {
-      label: "VALUE",
-      value: totalValue >= 10000
-        ? `$${(totalValue / 1000).toFixed(1)}K`
-        : `$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
-      icon: DollarSign,
-      tooltip: "Estimated value based on recent eBay sales data.",
-      onClick: () => setLocation("/trends"),
-      style: TILE_STYLES[1],
-      fillIcon: false,
-    },
-    {
-      label: "WISHLIST",
-      value: wishlistItems.toLocaleString(),
-      icon: Heart,
-      tooltip: "Cards you're chasing.",
-      onClick: () => setLocation("/wishlist"),
-      style: TILE_STYLES[2],
-      fillIcon: true,
-    },
-    {
-      label: "POWERS",
-      value: superpowersCount.toLocaleString(),
-      icon: Zap,
-      tooltip: "Badges and achievements you've earned.",
-      onClick: () => setLocation("/social?tab=superpowers"),
-      style: TILE_STYLES[3],
-      fillIcon: true,
-    },
+  const valueDisplay =
+    totalValue >= 10000
+      ? `$${(totalValue / 1000).toFixed(1)}K`
+      : `$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
+  const tileData = [
+    { tile: TILES[0], rawValue: totalCards, displayValue: totalCards.toLocaleString(), onClick: () => setLocation("/my-collection") },
+    { tile: TILES[1], rawValue: Math.round(totalValue), displayValue: valueDisplay, onClick: () => setLocation("/trends") },
+    { tile: TILES[2], rawValue: wishlistItems, displayValue: wishlistItems.toLocaleString(), onClick: () => setLocation("/wishlist") },
+    { tile: TILES[3], rawValue: superpowersCount, displayValue: superpowersCount.toLocaleString(), onClick: () => setLocation("/social?tab=superpowers") },
   ];
 
   return (
-    <>
-      <style>{`
-        @keyframes ember-sweep {
-          0%   { opacity: 0.15; transform: translateX(-100%); }
-          50%  { opacity: 0.4; }
-          100% { opacity: 0.15; transform: translateX(100%); }
-        }
-        @keyframes shimmer-up {
-          0%   { opacity: 0; transform: translateY(6px); }
-          50%  { opacity: 0.5; }
-          100% { opacity: 0; transform: translateY(-6px); }
-        }
-        @keyframes pulse-pink {
-          0%, 100% { opacity: 0.2; transform: scale(0.9); }
-          50%       { opacity: 0.45; transform: scale(1.05); }
-        }
-        @keyframes flicker-purple {
-          0%, 100% { opacity: 0.15; }
-          25%      { opacity: 0.45; }
-          50%      { opacity: 0.2; }
-          75%      { opacity: 0.5; }
-        }
-        .stat-ember .stat-anim  { animation: ember-sweep 3s ease-in-out infinite; }
-        .stat-shimmer .stat-anim { animation: shimmer-up 2.5s ease-in-out infinite; }
-        .stat-pulse .stat-anim   { animation: pulse-pink 2s ease-in-out infinite; }
-        .stat-flicker .stat-anim { animation: flicker-purple 1.8s ease-in-out infinite; }
-      `}</style>
+    <div className="space-y-4">
+      {/* ── Power Badge Bar ── */}
+      <div
+        className="rounded-xl p-2.5 border shadow-2xl"
+        style={{
+          background: "linear-gradient(180deg, #181818 0%, #111 100%)",
+          borderColor: "rgba(255,255,255,0.07)",
+        }}
+      >
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+          {tileData.map(({ tile, rawValue, displayValue, onClick }) => (
+            <div key={tile.key} className="group">
+              <PowerTile tile={tile} rawValue={rawValue} displayValue={displayValue} onClick={onClick} />
+            </div>
+          ))}
+        </div>
+      </div>
 
-      <div className="space-y-4">
-        {/* ── Dark outer container ── */}
-        <div className="bg-[#111] rounded-xl p-3 border border-white/[0.08] shadow-xl">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-            {statItems.map((stat, index) => (
-              <motion.div
-                key={index}
-                onClick={stat.onClick}
-                className={`stat-${stat.style.key} group relative flex items-center gap-3 p-3 rounded-lg bg-white/[0.04] border border-white/[0.06] cursor-pointer overflow-hidden`}
-                whileHover={{ y: -2, boxShadow: `0 8px 24px -4px ${stat.style.ringColor}` }}
-                transition={{ duration: 0.18, ease: "easeOut" }}
+      {/* Onboarding / Next Steps */}
+      {totalCards === 0 ? (
+        <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-xl p-5 text-white shadow-lg">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex-1">
+              <h3 className="text-xl font-bold mb-1">Let's build your first Marvel vault.</h3>
+              <p className="text-red-100 text-sm">
+                Add a few cards to unlock stats, total value, and set progress tracking.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button
+                onClick={() => setLocation("/browse")}
+                className="bg-white text-red-600 hover:bg-red-50 font-semibold shadow-md"
+                data-testid="button-add-first-cards"
               >
-                {/* Per-tile ambient energy effect */}
-                <div
-                  className="stat-anim absolute inset-0 rounded-lg pointer-events-none"
-                  style={{ background: `radial-gradient(ellipse at 50% 50%, ${stat.style.accent}55 0%, transparent 70%)` }}
-                />
-
-                {/* Hover bottom energy line */}
-                <motion.div
-                  className="absolute bottom-0 left-0 right-0 h-[2px] rounded-b-lg"
-                  style={{ background: `linear-gradient(90deg, transparent, ${stat.style.accent}, transparent)` }}
-                  initial={{ opacity: 0, scaleX: 0.3 }}
-                  whileHover={{ opacity: 1, scaleX: 1 }}
-                  transition={{ duration: 0.2 }}
-                />
-
-                {/* Icon */}
-                <motion.div
-                  className={`relative flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br ${stat.style.iconGrad} flex items-center justify-center shadow-md`}
-                  whileHover={{ scale: 1.1, rotate: index === 3 ? 15 : 0 }}
-                  transition={{ duration: 0.18 }}
-                >
-                  <stat.icon
-                    className="w-4 h-4 text-white"
-                    strokeWidth={2.5}
-                    fill={stat.fillIcon ? "currentColor" : "none"}
-                  />
-                  {/* Icon glow ring on hover */}
-                  <div
-                    className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                    style={{ boxShadow: `0 0 12px 3px ${stat.style.accent}88` }}
-                  />
-                </motion.div>
-
-                {/* Text */}
-                <div className="relative flex-1 min-w-0">
-                  <div className="flex items-center gap-1">
-                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">
-                      {stat.label}
-                    </span>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <button
-                          className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Info className="w-2.5 h-2.5 text-white/40" />
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent className="max-w-xs p-3 text-sm">
-                        {stat.tooltip}
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <span className="text-xl font-black text-white tracking-tight block truncate leading-none mt-0.5">
-                    {stat.value}
-                  </span>
-                </div>
-              </motion.div>
-            ))}
+                <Plus className="w-4 h-4 mr-2" />
+                Add Your First Cards
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setLocation("/browse")}
+                className="border-white text-white bg-white/10 hover:bg-white/20 text-sm font-semibold"
+                data-testid="link-explore-sets"
+              >
+                Explore sets first
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
           </div>
         </div>
-
-        {/* Onboarding / Next Steps Card */}
-        {totalCards === 0 ? (
-          <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-xl p-5 text-white shadow-lg">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div className="flex-1">
-                <h3 className="text-xl font-bold mb-1">Let's build your first Marvel vault.</h3>
-                <p className="text-red-100 text-sm">
-                  Add a few cards to unlock stats, total value, and set progress tracking.
-                </p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button
-                  onClick={() => setLocation("/browse")}
-                  className="bg-white text-red-600 hover:bg-red-50 font-semibold shadow-md"
-                  data-testid="button-add-first-cards"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Your First Cards
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setLocation("/browse")}
-                  className="border-white text-white bg-white/10 hover:bg-white/20 text-sm font-semibold"
-                  data-testid="link-explore-sets"
-                >
-                  Explore sets first
-                  <ArrowRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
+      ) : totalCards < 50 ? (
+        <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-5 text-white shadow-lg">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex-1">
+              <h3 className="text-lg font-bold mb-1">Nice start! Keep building your collection.</h3>
+              <p className="text-gray-300 text-sm">
+                You've added <span className="text-white font-semibold">{totalCards} cards</span> so far.
+                Add more to unlock richer value insights and set completion tracking.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button
+                onClick={() => setLocation("/browse")}
+                className="bg-red-600 hover:bg-red-700 text-white font-semibold shadow-md"
+                data-testid="button-add-more-cards"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add More Cards
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setLocation("/browse")}
+                className="text-gray-300 hover:bg-white/10 text-sm"
+                data-testid="link-view-sets"
+              >
+                View All Sets
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
             </div>
           </div>
-        ) : totalCards < 50 ? (
-          <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-5 text-white shadow-lg">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div className="flex-1">
-                <h3 className="text-lg font-bold mb-1">Nice start! Keep building your collection.</h3>
-                <p className="text-gray-300 text-sm">
-                  You've added <span className="text-white font-semibold">{totalCards} cards</span> so far.
-                  Add more to unlock richer value insights and set completion tracking.
-                </p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button
-                  onClick={() => setLocation("/browse")}
-                  className="bg-red-600 hover:bg-red-700 text-white font-semibold shadow-md"
-                  data-testid="button-add-more-cards"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add More Cards
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setLocation("/browse")}
-                  className="text-gray-300 hover:bg-white/10 text-sm"
-                  data-testid="link-view-sets"
-                >
-                  View All Sets
-                  <ArrowRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : null}
-      </div>
-    </>
+        </div>
+      ) : null}
+    </div>
   );
 }

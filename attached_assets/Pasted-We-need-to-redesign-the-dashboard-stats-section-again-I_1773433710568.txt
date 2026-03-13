@@ -1,0 +1,121 @@
+We need to redesign the dashboard stats section again.
+
+IMPORTANT CONTEXT
+The current redesign is not working. It is technically responsive, but visually it is not appealing. The colored blur behind each tile looks muddy and accidental, not premium or exciting.
+
+The goal of this section is NOT just to display stats.
+It should make users feel proud of their collection and motivated to grow these numbers.
+
+These stat tiles should feel more like collectible achievement badges or power indicators than generic dashboard cards.
+
+WHAT WE WANT
+- visually exciting
+- premium
+- sleek
+- compact
+- center-aligned
+- motivational
+- subtle animation
+- superhero-tech / energy / metallic vibe
+- something that makes users WANT to increase these numbers
+
+WHAT WE DO NOT WANT
+- muddy blurred background glows
+- oversized cards
+- giant promo-box styling
+- too much vertical space
+- a generic SaaS analytics look
+- left-aligned stat layouts
+
+LAYOUT REQUIREMENTS
+- Keep the stats section compact
+- Desktop can remain a single horizontal row
+- Tablet/mobile can wrap responsively as needed
+- All individual stat tiles should be CENTER ALIGNED
+- Keep the section as a top dashboard stats bar, not a hero banner
+
+DESIGN DIRECTION
+Think of these as “hero stat modules” or “power badges.”
+
+Each stat tile should feel like a mini collectible panel:
+- icon centered at the top
+- number centered and visually emphasized
+- label centered beneath
+- optional subtle subtext only if it truly helps
+
+STYLE DIRECTION
+Use a mix of:
+- dark premium surfaces
+- subtle metallic / glass / energy accents
+- refined superhero-tech feel
+- polished micro-animation
+
+Animation ideas that ARE good:
+- a soft shimmer sweep across the tile every few seconds
+- a subtle animated energy ring or glow behind the icon
+- a gentle pulse or glow on the icon
+- a faint animated underline or progress spark
+- light hover motion (slight lift / tilt / glow)
+
+Animation ideas that are NOT good:
+- blurry background smudges
+- heavy neon blobs
+- giant glowing halos
+- anything that hurts readability
+
+TYPOGRAPHY + HIERARCHY
+- The number should be the star
+- The label should feel crisp and secondary
+- The icon should feel powerful and branded
+- Strong visual hierarchy
+- Stats should feel rewarding to look at
+
+MOTIVATION GOAL
+This section should psychologically encourage users to:
+- want more cards
+- want higher value
+- want a bigger wishlist
+- want more powers
+
+It should feel like progress and status, not just information.
+
+COLOR SYSTEM
+Use the existing color identities:
+- Cards = red
+- Value = green
+- Wishlist = pink
+- Powers = purple
+
+But apply them in a more tasteful way:
+- subtle energy glow
+- icon treatment
+- fine accent lines
+- small highlight effects
+Not full-card muddy gradients.
+
+SPECIFIC VISUAL DIRECTION TO TRY
+Please redesign these tiles as centered premium stat badges with:
+- dark or slightly elevated tile surface
+- centered icon in a circular or hex-style badge
+- centered number below icon
+- centered label below number
+- optional subtle animated shimmer or energy accent
+- clean spacing and compact proportions
+
+OPTIONAL ENHANCEMENTS IF THEY LOOK GOOD
+- count-up animation on first load
+- hover glow
+- icon pulse
+- subtle “charged” border highlight
+- very faint particle sparkle or scanning effect
+
+IMPORTANT
+Do not redesign the full dashboard.
+Focus only on the stat tiles section.
+Keep the footprint compact.
+Make it visually exciting, polished, and motivating.
+
+The end result should feel like:
+“collector power stats”
+not
+“basic analytics widgets.”
