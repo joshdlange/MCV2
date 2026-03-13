@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Users, MessageCircle, Award, User, Lock, Clock, Check, X, Search, UserPlus, Plus, Grid, List, Trophy, Star, Calendar, Info, ShieldOff, ShieldAlert } from "lucide-react";
+import { Users, MessageCircle, Award, User, Lock, Clock, Check, X, Search, UserPlus, Plus, Grid, List, Trophy, Star, Calendar, Info, ShieldOff, ShieldAlert, Flag } from "lucide-react";
 import { DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -102,6 +102,11 @@ export default function Social() {
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [isBlocking, setIsBlocking] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+
+  // Report state
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [isReporting, setIsReporting] = useState(false);
+  const [reportReason, setReportReason] = useState("");
 
   // Badge detail modal state
   const [selectedBadge, setSelectedBadge] = useState<{ badge: any; earnedAt?: string; isLocked?: boolean } | null>(null);
@@ -353,6 +358,25 @@ export default function Social() {
       });
     } finally {
       setIsBlocking(false);
+    }
+  };
+
+  const handleReportUser = async () => {
+    if (!selectedFriendProfile || !reportReason) return;
+    setIsReporting(true);
+    try {
+      await apiRequest("POST", "/api/report", {
+        contentType: "user",
+        contentId: selectedFriendProfile.id,
+        reason: reportReason,
+      });
+      setShowReportModal(false);
+      setReportReason("");
+      toast({ title: "Thanks, we'll review this shortly." });
+    } catch (err: any) {
+      toast({ title: "Failed to submit report", description: err.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setIsReporting(false);
     }
   };
 
@@ -1598,6 +1622,16 @@ export default function Social() {
                           Block
                         </Button>
                       )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { setReportReason(""); setShowReportModal(true); }}
+                        className="text-orange-500 border-orange-200 hover:bg-orange-50"
+                        title="Report user"
+                      >
+                        <Flag className="w-4 h-4 mr-1" />
+                        Report
+                      </Button>
                     </div>
                     {selectedFriendProfile.bio && (
                       <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">{selectedFriendProfile.bio}</p>
@@ -2021,6 +2055,42 @@ export default function Social() {
               disabled={isBlocking}
             >
               {isBlocking ? "Blocking..." : "Block User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showReportModal} onOpenChange={setShowReportModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Report {selectedFriendProfile?.displayName || selectedFriendProfile?.username}?</DialogTitle>
+            <DialogDescription>
+              Select a reason and we'll review this report promptly.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Select value={reportReason} onValueChange={setReportReason}>
+              <SelectTrigger className="bg-white">
+                <SelectValue placeholder="Select a reason…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Spam">Spam</SelectItem>
+                <SelectItem value="Offensive Content">Offensive Content</SelectItem>
+                <SelectItem value="Harassment">Harassment</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowReportModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleReportUser}
+              disabled={isReporting || !reportReason}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+            >
+              {isReporting ? "Submitting…" : "Submit Report"}
             </Button>
           </DialogFooter>
         </DialogContent>
