@@ -42,8 +42,18 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {
+  const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  if (!serviceAccountKey) {
+    throw new Error("Missing required secret: FIREBASE_SERVICE_ACCOUNT_KEY");
+  }
+  let serviceAccount: object;
+  try {
+    serviceAccount = JSON.parse(serviceAccountKey);
+  } catch (e) {
+    throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON");
+  }
   admin.initializeApp({
-    projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+    credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
   });
 }
 
