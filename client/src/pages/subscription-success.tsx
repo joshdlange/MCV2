@@ -16,6 +16,27 @@ export default function SubscriptionSuccess() {
   const [verifying, setVerifying] = useState(true);
   const [verified, setVerified] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showReturnButton, setShowReturnButton] = useState(false);
+
+  // iOS deep link return: after web subscribe, fire the custom URL scheme to re-open the app
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    if (params.get('from_ios') !== 'true') return;
+
+    // Give Stripe webhook ~1.5 s to process, then attempt deep link
+    const deepLinkTimer = setTimeout(() => {
+      window.location.href = 'marvelcardvault://subscription-success';
+
+      // Fallback: if the deep link didn't fire the app within 2 s, show manual button
+      const fallbackTimer = setTimeout(() => {
+        setShowReturnButton(true);
+      }, 2000);
+
+      return () => clearTimeout(fallbackTimer);
+    }, 1500);
+
+    return () => clearTimeout(deepLinkTimer);
+  }, [search]);
 
   useEffect(() => {
     const verifyCheckout = async () => {
@@ -151,6 +172,16 @@ export default function SubscriptionSuccess() {
             Go to Dashboard
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
+
+          {showReturnButton && (
+            <Button
+              variant="outline"
+              onClick={() => { window.location.href = 'marvelcardvault://subscription-success'; }}
+              className="w-full"
+            >
+              Tap here to return to Marvel Card Vault
+            </Button>
+          )}
         </CardContent>
       </Card>
     </div>

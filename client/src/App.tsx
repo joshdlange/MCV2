@@ -1,5 +1,7 @@
 import { Suspense, lazy, useEffect } from "react";
-import { preloadAppleIAP, isAppleIAP } from "@/services/appleIAP";
+import { preloadAppleIAP, isAppleIAP, APPLE_IAP_ENABLED } from "@/services/appleIAP";
+import { Capacitor } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
@@ -215,11 +217,41 @@ function AuthenticatedApp() {
 function App() {
   const [location] = useLocation();
 
-  // Start Apple IAP store warm-up immediately on app open — before auth, before any user tap
+  // Start Apple IAP store warm-up — only when native IAP is enabled
   useEffect(() => {
-    if (isAppleIAP()) {
+    if (isAppleIAP() && APPLE_IAP_ENABLED) {
       preloadAppleIAP();
     }
+  }, []);
+
+  // Deep link handler: user returns from Safari after subscribing on the web
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const listenerPromise = CapApp.addListener('appUrlOpen', (data) => {
+      if (data.url.includes('subscription-success')) {
+        console.log('[DeepLink] subscription-success received — refreshing subscription');
+        queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/subscription-status'] });
+        window.location.hash = '/';
+      }
+    });
+
+    return () => { listenerPromise.then(l => l.remove()); };
+  }, []);
+
+  // Foreground resume: refresh subscription status whenever user returns to the app
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const listenerPromise = CapApp.addListener('appStateChange', (state) => {
+      if (state.isActive) {
+        queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/subscription-status'] });
+      }
+    });
+
+    return () => { listenerPromise.then(l => l.remove()); };
   }, []);
 
   if (location.startsWith('/share/')) {

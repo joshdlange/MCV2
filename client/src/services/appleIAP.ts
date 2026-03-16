@@ -1,5 +1,11 @@
 import { Capacitor } from '@capacitor/core';
 
+// ── FEATURE FLAG ─────────────────────────────────────────────────────────────
+// Set to true  → native Apple IAP (StoreKit) flow
+// Set to false → web subscription flow (Spotify/Netflix model)
+//                iOS users tap Upgrade → Safari → Stripe → deep link back
+export const APPLE_IAP_ENABLED = false;
+
 const APPLE_PRODUCT_ID = 'MCV_Apple_Superhero';
 const LOG = '[AppleIAP]';
 

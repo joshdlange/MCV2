@@ -13,6 +13,7 @@ import {
   preloadAppleIAP,
   getAppleIAPReadiness,
   subscribeToAppleIAPReadiness,
+  APPLE_IAP_ENABLED,
   type AppleIAPReadiness,
 } from "@/services/appleIAP";
 import { useAppStore } from "@/lib/store";
@@ -62,6 +63,14 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
     }
 
     if (isAppleIAP()) {
+      // Web-subscription (Spotify model) — flag off: open marvelcardvault.com in Safari
+      if (!APPLE_IAP_ENABLED) {
+        console.log('[AppleIAP] flag disabled — opening web subscribe in Safari');
+        window.open('https://marvelcardvault.com/subscribe', '_system');
+        return;
+      }
+
+      // Native StoreKit flow — flag on (future re-enablement)
       // Hard gate: readiness MUST be 'ready' (all four conditions: plugin, store, product, offer)
       // The button is already disabled when not ready, but this is an explicit second check.
       if (!isAppleIAPReady()) {
@@ -158,9 +167,10 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
 
   // Determine Apple IAP button state when on iOS
   const onIOS = isAppleIAP();
+  // When APPLE_IAP_ENABLED is false, the button is always enabled (opens web)
   const iapButtonDisabled =
     isLoading ||
-    (onIOS && (iapReadiness === 'loading' || iapReadiness === 'unavailable' || iapReadiness === 'failed'));
+    (onIOS && APPLE_IAP_ENABLED && (iapReadiness === 'loading' || iapReadiness === 'unavailable' || iapReadiness === 'failed'));
 
   const handleIAPRetry = () => {
     if (isRetrying) {
@@ -317,12 +327,19 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
               ) : (
                 <>
                   <Sparkles className="w-5 h-5 mr-2" />
-                  Upgrade to Super Hero
+                  {onIOS && !APPLE_IAP_ENABLED ? 'Subscribe to Super Hero' : 'Upgrade to Super Hero'}
                 </>
               )}
             </Button>
 
-            <IAPStatusMessage />
+            {onIOS && !APPLE_IAP_ENABLED ? (
+              <p className="text-center text-xs text-gray-400 mt-1 leading-relaxed">
+                You'll be taken to our website to complete your subscription.
+                The app will update automatically when you return.
+              </p>
+            ) : (
+              <IAPStatusMessage />
+            )}
 
             <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400 mt-1">
               <Lock className="w-3 h-3" />

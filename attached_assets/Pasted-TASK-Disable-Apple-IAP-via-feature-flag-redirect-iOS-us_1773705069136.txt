@@ -1,0 +1,212 @@
+TASK: Disable Apple IAP via feature flag, redirect iOS users to web subscription, 
+and implement deep link return flow. Goal: get app live on App Store this week.
+Do NOT delete any IAP code — everything must be reversible by flipping one constant.
+
+CONTEXT
+After 11 App Store rejections, we are switching to the Spotify/Netflix model for iOS.
+iOS users tap Upgrade → Safari opens → they subscribe via Stripe on the web → 
+deep link brings them back to the app → subscription status refreshes automatically.
+All existing StoreKit/IAP code stays in place behind a feature flag for future re-enablement.
+
+IMPORTANT CONSTRAINTS
+- Do NOT delete appleIAP.ts or any IAP logic
+- Do NOT touch Android purchase logic
+- Do NOT touch Stripe checkout (web stays identical)
+- Do NOT touch server/routes.ts receipt verification
+- Everything must be reversible by changing APPLE_IAP_ENABLED from false to true
+- Deep link must work with Capacitor's existing App plugin
+
+==================================================
+PHASE 1 — FEATURE FLAG (appleIAP.ts)
+==================================================
+
+At the very top of client/src/services/appleIAP.ts add:
+
+// ── FEATURE FLAG ─────────────────────────────────────────────────
+// Set to true to re-enable native Apple IAP (StoreKit) flow
+// Set to false to use web subscription flow (Spotify model)
+export const APPLE_IAP_ENABLED = false;
+
+==================================================
+PHASE 2 — UPGRADE MODAL (upgrade-modal.tsx)
+==================================================
+
+Import APPLE_IAP_ENABLED from @/services/appleIAP.
+
+In handleUpgrade, where isAppleIAP() is true, add this check 
+BEFORE all existing IAP logic:
+
+if (isAppleIAP()) {
+  if (!APPLE_IAP_ENABLED) {
+    window.open('https://marvelcardvault.com/subscribe', '_system');
+    return;
+  }
+  // existing Apple IAP code continues unchanged below...
+}
+
+The button UI when on iOS with flag disabled:
+- Button text: "Subscribe to Super Hero"
+- Button is always enabled (no loading/disabled state needed)
+- Below button, small muted text: 
+  "You'll be taken to our website to complete your subscription. 
+   The app will update automatically when you return."
+- Remove IAPStatusMessage render when flag is false (keep the component, just don't render it)
+- Keep all existing IAP state (isRetrying, iapReadiness, etc) — just unreachable
+
+Do NOT remove any existing IAP code. It stays in place.
+
+==================================================
+PHASE 3 — APP.TSX (disable preload when flag off)
+==================================================
+
+Import APPLE_IAP_ENABLED from @/services/appleIAP.
+
+Change the preload useEffect to:
+
+useEffect(() => {
+  if (isAppleIAP() && APPLE_IAP_ENABLED) {
+    preloadAppleIAP();
+  }
+}, []);
+
+==================================================
+PHASE 4 — DEEP LINK RETURN FLOW
+==================================================
+
+When a user subscribes on the web, they land on the 
+subscription success page. We want to automatically 
+return them to the app and refresh their subscription status.
+
+STEP A — Backend: update the Stripe success redirect URL
+In server/routes.ts, find where the Stripe checkout session 
+is created (POST /api/create-checkout-session).
+
+Change the success_url to include a flag:
+success_url: `${process.env.CLIENT_URL}/subscription-success?from_ios=true`
+
+Or if CLIENT_URL isn't set, use:
+success_url: `https://marvelcardvault.com/subscription-success?from_ios=true`
+
+STEP B — Frontend: subscription-success page
+In client/src/pages/subscription-success.tsx (or wherever 
+the success page lives), add this logic on mount:
+
+import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
+
+useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const fromIos = params.get('from_ios');
+  
+  if (fromIos === 'true') {
+    // Short delay so Stripe webhook has time to process
+    setTimeout(() => {
+      // Try deep link back to app
+      window.location.href = 'marvelcardvault://subscription-success';
+      
+      // Fallback: if deep link doesn't fire within 2s, show manual prompt
+      setTimeout(() => {
+        // Show "Tap here to return to the app" button
+        setShowReturnButton(true);
+      }, 2000);
+    }, 1500);
+  }
+}, []);
+
+Add state: const [showReturnButton, setShowReturnButton] = useState(false);
+
+Add UI below the success message:
+{showReturnButton && (
+  <button onClick={() => window.location.href = 'marvelcardvault://subscription-success'}>
+    Tap here to return to Marvel Card Vault
+  </button>
+)}
+
+STEP C — Capacitor deep link handler (App.tsx)
+Import App from @capacitor/app (already likely installed).
+
+Add this useEffect to the App() component:
+
+useEffect(() => {
+  if (!Capacitor.isNativePlatform()) return;
+  
+  const handleDeepLink = App.addListener('appUrlOpen', (data) => {
+    if (data.url.includes('subscription-success')) {
+      // Invalidate subscription queries to force a refresh
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/subscription/status'] });
+      // Navigate to dashboard
+      window.location.hash = '/';
+    }
+  });
+  
+  return () => {
+    handleDeepLink.then(l => l.remove());
+  };
+}, []);
+
+STEP D — capacitor.config.json (if not already set)
+Verify or add deep link scheme. In capacitor.config.json add:
+
+{
+  "appId": "com.marvelcardvault.app",
+  "appName": "Marvel Card Vault",
+  "plugins": {
+    "App": {
+      "launchUrl": "marvelcardvault://"
+    }
+  }
+}
+
+NOTE: The deep link scheme "marvelcardvault://" must also be 
+registered in the iOS project. After this Replit deploy, 
+Josh will need to run: npx cap sync ios
+Then in Xcode → Info tab → URL Types → add:
+  Identifier: com.marvelcardvault.app
+  URL Schemes: marvelcardvault
+
+==================================================
+PHASE 5 — SUBSCRIPTION STATUS AUTO-REFRESH
+==================================================
+
+When the user returns to the app (via deep link OR manually), 
+their subscription status needs to refresh.
+
+In client/src/App.tsx, add this to the App() component:
+
+import { App as CapApp } from '@capacitor/app';
+
+useEffect(() => {
+  if (!Capacitor.isNativePlatform()) return;
+  
+  // When app comes back to foreground, refresh subscription status
+  const handleResume = CapApp.addListener('appStateChange', (state) => {
+    if (state.isActive) {
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/subscription/status'] });
+    }
+  });
+  
+  return () => {
+    handleResume.then(l => l.remove());
+  };
+}, []);
+
+This means: even if the deep link doesn't fire perfectly, 
+the moment the user comes back to the app from Safari, 
+their subscription status refreshes automatically.
+
+==================================================
+PHASE 6 — OUTPUT
+==================================================
+
+Return:
+1. Every file changed with exact diffs
+2. Confirmation APPLE_IAP_ENABLED = true fully restores StoreKit flow
+3. Confirmation Android, Stripe web, and server/routes.ts untouched
+4. Full description of the iOS upgrade user journey:
+   - User taps Upgrade → Safari opens → subscribes → 
+     deep link fires → app opens → status refreshes → Super Hero unlocked
+5. Any manual steps needed after deploy 
+   (npx cap sync ios, Xcode URL scheme, etc.)
+6. Test checklist for Josh to verify before archiving
