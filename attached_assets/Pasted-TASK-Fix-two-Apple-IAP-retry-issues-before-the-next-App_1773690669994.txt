@@ -1,0 +1,95 @@
+TASK: Fix two Apple IAP retry issues before the next App Store submission. Keep this surgical and do not touch unrelated billing logic.
+
+CONTEXT
+We recently added Apple IAP retry behavior for iOS. A follow-up review found two real risks:
+
+1. Listener accumulation on retry
+2. Double-tap retry race
+
+Current files involved:
+- client/src/services/appleIAP.ts
+- client/src/components/subscription/upgrade-modal.tsx
+
+IMPORTANT
+Do NOT touch:
+- Stripe checkout logic
+- Android purchase logic
+- server/routes.ts receipt verification
+- unrelated subscription logic
+- unrelated UI styling
+
+==================================================
+FIX 1 — PREVENT LISTENER ACCUMULATION
+==================================================
+
+Problem:
+Each retry may re-register store.when().productUpdated() and store.when().ready() listeners without cleaning up the previous ones.
+
+Risk:
+After retries, multiple listeners can stack and fire duplicate callbacks, causing race conditions and corrupted readiness behavior.
+
+Requirements:
+- Audit exactly how listeners are currently attached in appleIAP.ts
+- Determine what the plugin actually returns from:
+  - store.when().productUpdated(...)
+  - store.when().ready(...)
+- Do NOT assume unsubscribe() exists unless confirmed by the actual API behavior already in use
+- Implement proper cleanup before re-registering listeners on retry
+- If the API does not provide removable listener handles, refactor to a safe one-time listener strategy that avoids stacking
+- Preserve existing readiness behavior:
+  - loading
+  - ready
+  - failed
+
+Goal:
+A retry must not accumulate duplicate event handlers.
+
+==================================================
+FIX 2 — PREVENT DOUBLE-TAP RETRY
+==================================================
+
+Problem:
+If the user taps the retry action twice quickly while readiness is still 'failed', preloadAppleIAP() may be triggered twice before the UI flips to 'loading'.
+
+Requirements:
+- In upgrade-modal.tsx, add a local retry lock such as isRetrying
+- On retry tap:
+  - if already retrying, do nothing
+  - otherwise set retrying immediately and call preloadAppleIAP()
+- Reset retry lock when readiness changes away from 'failed' or when loading begins
+- Keep the retry UI lightweight and user-friendly
+
+Goal:
+User cannot trigger overlapping retry attempts by double tapping.
+
+==================================================
+OPTIONAL CLEANUP — UNAVAILABLE STATE
+==================================================
+
+Audit whether the 'unavailable' state is actually reachable on iOS native.
+
+If it is effectively dead code:
+- either remove the dead branch
+- or leave it alone if removing it creates unnecessary churn
+
+Do not overwork this part.
+This is optional cleanup only.
+
+==================================================
+OUTPUT FORMAT
+==================================================
+
+Return:
+1. Audit findings for listener cleanup
+2. Exact files changed
+3. Exact changed sections
+4. Confirmation that Stripe/Android/backend IAP verification were untouched
+5. Brief explanation of:
+   - how listener cleanup now works
+   - how double-tap retry is prevented
+
+SUCCESS CRITERIA
+- Retry does not stack listeners
+- Retry cannot be double-triggered
+- Existing Apple IAP readiness gating still works
+- No unrelated billing logic changes

@@ -27,6 +27,10 @@ interface UpgradeModalProps {
 export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [iapReadiness, setIapReadiness] = useState<AppleIAPReadiness>(getAppleIAPReadiness());
+  // Guards against double-tap on the retry link while preloadAppleIAP() is still
+  // picking up. preloadAppleIAP() guards against parallel calls once readiness
+  // flips to 'loading', but there is a brief window before that flip happens.
+  const [isRetrying, setIsRetrying] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -38,6 +42,14 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
     setIapReadiness(getAppleIAPReadiness());
     return unsubscribe;
   }, []);
+
+  // Reset retry lock whenever readiness moves away from 'failed'
+  // (i.e. once loading begins or on success/unavailable)
+  useEffect(() => {
+    if (iapReadiness !== 'failed') {
+      setIsRetrying(false);
+    }
+  }, [iapReadiness]);
 
   const handleUpgrade = async () => {
     if (currentPlan === 'SUPER_HERO') {
@@ -151,7 +163,12 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
     (onIOS && (iapReadiness === 'loading' || iapReadiness === 'unavailable' || iapReadiness === 'failed'));
 
   const handleIAPRetry = () => {
+    if (isRetrying) {
+      console.log('[AppleIAP] retry tap ignored — already retrying');
+      return;
+    }
     console.log('[AppleIAP] User tapped retry — calling preloadAppleIAP()');
+    setIsRetrying(true);
     preloadAppleIAP();
   };
 

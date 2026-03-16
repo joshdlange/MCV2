@@ -59,6 +59,8 @@ export function isAppleIAP(): boolean {
 }
 
 // ── Wait for product + offer ──────────────────────────────────────────────────
+// Listeners are captured by name so store.off() can remove them in every exit
+// path (resolve, reject, timeout). This prevents accumulation across retries.
 async function waitForProduct(store: any, platform: any, timeoutMs = 12000): Promise<any> {
   // Check synchronously first — product may already be present after store.initialize()
   const existing = store.get(APPLE_PRODUCT_ID, platform);
@@ -71,8 +73,17 @@ async function waitForProduct(store: any, platform: any, timeoutMs = 12000): Pro
   console.log(`${LOG} waiting for product ${APPLE_PRODUCT_ID} (timeout ${timeoutMs}ms)…`);
 
   return new Promise((resolve, reject) => {
+    // Cleanup removes BOTH when-listeners using store.off() so retries don't
+    // accumulate stale handlers. store.off(fn) is the same API already used in
+    // the purchase flow for approvedHandler / cancelledHandler / errorHandler.
+    const cleanupWhenListeners = () => {
+      try { store.off(onProductUpdated); } catch (_e) {}
+      try { store.off(onReady); } catch (_e) {}
+    };
+
     const timeoutId = setTimeout(() => {
       console.warn(`${LOG} waitForProduct timed out after ${timeoutMs}ms`);
+      cleanupWhenListeners();
       reject(new Error('Product load timeout'));
     }, timeoutMs);
 
@@ -82,22 +93,27 @@ async function waitForProduct(store: any, platform: any, timeoutMs = 12000): Pro
         console.log(`${LOG} product updated — offers: ${p.offers?.length ?? 0}`, p);
         if (p.offers && p.offers.length > 0) {
           clearTimeout(timeoutId);
+          cleanupWhenListeners();
           resolve(p);
         }
       }
     };
 
-    store.when().productUpdated((p: any) => {
+    // Named handlers — references kept so store.off() can remove them
+    const onProductUpdated = (p: any) => {
       if (p.id === APPLE_PRODUCT_ID) {
         console.log(`${LOG} productUpdated event — id: ${p.id}, offers: ${p.offers?.length ?? 0}`);
         checkProduct();
       }
-    });
+    };
 
-    store.when().ready(() => {
+    const onReady = () => {
       console.log(`${LOG} store.ready event fired — checking product…`);
       checkProduct();
-    });
+    };
+
+    store.when().productUpdated(onProductUpdated);
+    store.when().ready(onReady);
   });
 }
 
