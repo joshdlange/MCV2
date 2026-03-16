@@ -49,11 +49,13 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
     }
 
     if (isAppleIAP()) {
-      // Guard: should never reach here when not ready (button is disabled), but belt-and-suspenders
+      // Hard gate: readiness MUST be 'ready' (all four conditions: plugin, store, product, offer)
+      // The button is already disabled when not ready, but this is an explicit second check.
       if (!isAppleIAPReady()) {
-        console.warn('Apple IAP: purchase attempted before readiness — ignoring');
+        console.warn('[AppleIAP] handleUpgrade blocked — readiness is "' + getAppleIAPReadiness() + '", must be "ready"');
         return;
       }
+      console.log('[AppleIAP] handleUpgrade: readiness=ready — proceeding to purchaseAppleSubscription');
 
       setIsLoading(true);
       try {

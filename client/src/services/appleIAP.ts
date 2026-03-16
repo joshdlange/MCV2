@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 
 const APPLE_PRODUCT_ID = 'MCV_Apple_Superhero';
+const LOG = '[AppleIAP]';
 
 declare global {
   interface Window {
@@ -9,12 +10,19 @@ declare global {
 }
 
 // ── Readiness state ──────────────────────────────────────────────────────────
+// 'unavailable' — not an iOS native build, or preload not yet started
+// 'loading'     — preload in progress (plugin found, store initializing, or waiting for product)
+// 'ready'       — ALL four conditions met: plugin exists, store initialized,
+//                 product MCV_Apple_Superhero loaded, offer present
+// 'failed'      — any condition failed; purchase must not be attempted
 export type AppleIAPReadiness = 'unavailable' | 'loading' | 'ready' | 'failed';
 
 let readiness: AppleIAPReadiness = 'unavailable';
 const readinessListeners: Array<(r: AppleIAPReadiness) => void> = [];
 
 function setReadiness(r: AppleIAPReadiness) {
+  if (readiness === r) return;
+  console.log(`${LOG} readiness: ${readiness} → ${r}`);
   readiness = r;
   readinessListeners.forEach((fn) => fn(r));
 }
@@ -33,6 +41,7 @@ export function subscribeToAppleIAPReadiness(
   };
 }
 
+// Returns true ONLY when all four conditions are met
 export function isAppleIAPReady(): boolean {
   return readiness === 'ready';
 }
@@ -49,29 +58,44 @@ export function isAppleIAP(): boolean {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
 }
 
-// ── Wait for product with offers ─────────────────────────────────────────────
-async function waitForProduct(store: any, platform: any, timeoutMs = 8000): Promise<any> {
+// ── Wait for product + offer ──────────────────────────────────────────────────
+async function waitForProduct(store: any, platform: any, timeoutMs = 12000): Promise<any> {
+  // Check synchronously first — product may already be present after store.initialize()
   const existing = store.get(APPLE_PRODUCT_ID, platform);
-  if (existing && existing.offers && existing.offers.length > 0) return existing;
+  if (existing) {
+    console.log(`${LOG} product already cached:`, APPLE_PRODUCT_ID,
+      '| offers:', existing.offers?.length ?? 0);
+    if (existing.offers && existing.offers.length > 0) return existing;
+  }
+
+  console.log(`${LOG} waiting for product ${APPLE_PRODUCT_ID} (timeout ${timeoutMs}ms)…`);
 
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(() => {
+      console.warn(`${LOG} waitForProduct timed out after ${timeoutMs}ms`);
       reject(new Error('Product load timeout'));
     }, timeoutMs);
 
     const checkProduct = () => {
       const p = store.get(APPLE_PRODUCT_ID, platform);
-      if (p && p.offers && p.offers.length > 0) {
-        clearTimeout(timeoutId);
-        resolve(p);
+      if (p) {
+        console.log(`${LOG} product updated — offers: ${p.offers?.length ?? 0}`, p);
+        if (p.offers && p.offers.length > 0) {
+          clearTimeout(timeoutId);
+          resolve(p);
+        }
       }
     };
 
     store.when().productUpdated((p: any) => {
-      if (p.id === APPLE_PRODUCT_ID) checkProduct();
+      if (p.id === APPLE_PRODUCT_ID) {
+        console.log(`${LOG} productUpdated event — id: ${p.id}, offers: ${p.offers?.length ?? 0}`);
+        checkProduct();
+      }
     });
 
     store.when().ready(() => {
+      console.log(`${LOG} store.ready event fired — checking product…`);
       checkProduct();
     });
   });
@@ -79,33 +103,54 @@ async function waitForProduct(store: any, platform: any, timeoutMs = 8000): Prom
 
 // ── Store initialization ─────────────────────────────────────────────────────
 async function initializeStore(): Promise<void> {
-  if (storeInitialized) return;
-  if (initPromise) return initPromise;
+  if (storeInitialized) {
+    console.log(`${LOG} initializeStore: already initialized, skipping`);
+    return;
+  }
+  if (initPromise) {
+    console.log(`${LOG} initializeStore: init already in progress, reusing promise`);
+    return initPromise;
+  }
 
   initPromise = new Promise<void>((resolve, reject) => {
+    // CHECK 1: plugin availability
+    const pluginAvailable = typeof window.CdvPurchase !== 'undefined';
+    console.log(`${LOG} CHECK 1 — window.CdvPurchase available: ${pluginAvailable}`);
+
     const store = getStore();
+    const storeAvailable = typeof store !== 'undefined' && store !== null;
+    console.log(`${LOG} CHECK 1 — window.CdvPurchase.store available: ${storeAvailable}`);
+
     if (!store) {
+      const msg = 'In-app purchase plugin not available (window.CdvPurchase.store is null/undefined)';
+      console.error(`${LOG} ${msg}`);
       storeInitialized = false;
       initPromise = null;
-      reject(new Error('In-app purchase plugin not available'));
+      reject(new Error(msg));
       return;
     }
 
     const { ProductType, Platform } = window.CdvPurchase;
 
+    // CHECK 2: product registration
+    console.log(`${LOG} CHECK 2 — registering product: ${APPLE_PRODUCT_ID}`);
     store.register([{
       id: APPLE_PRODUCT_ID,
       type: ProductType.PAID_SUBSCRIPTION,
       platform: Platform.APPLE_APPSTORE,
     }]);
+    console.log(`${LOG} product registered`);
 
+    // CHECK 3: store initialization
+    console.log(`${LOG} CHECK 3 — calling store.initialize([APPLE_APPSTORE])…`);
     store.initialize([Platform.APPLE_APPSTORE])
       .then(() => {
+        console.log(`${LOG} CHECK 3 — store.initialize() resolved ✓ storeInitialized = true`);
         storeInitialized = true;
         resolve();
       })
       .catch((err: any) => {
-        console.error('Store initialization failed:', err);
+        console.error(`${LOG} CHECK 3 — store.initialize() FAILED:`, err);
         storeInitialized = false;
         initPromise = null;
         reject(err);
@@ -115,39 +160,66 @@ async function initializeStore(): Promise<void> {
   return initPromise;
 }
 
-// ── Preload (called at app start, not on tap) ─────────────────────────────────
+// ── Preload — called at app open in App(), before auth, before any user tap ──
 export async function preloadAppleIAP(): Promise<void> {
-  if (!isAppleIAP()) return;
+  if (!isAppleIAP()) {
+    console.log(`${LOG} preloadAppleIAP: not iOS native — skipping`);
+    return;
+  }
 
-  // Already loaded — nothing to do
-  if (readiness === 'ready') return;
+  // Idempotent: if already ready, nothing to do
+  if (readiness === 'ready') {
+    console.log(`${LOG} preloadAppleIAP: already ready — skipping`);
+    return;
+  }
 
+  console.log(`${LOG} preloadAppleIAP: starting…`);
   setReadiness('loading');
 
   try {
+    // Step 1–3: plugin + registration + store init
     await initializeStore();
+    console.log(`${LOG} preloadAppleIAP: store init complete`);
 
-    // Wait for the product to appear with a valid offer
+    // Step 4–5: product load + offer check
     const store = getStore();
     const { Platform } = window.CdvPurchase;
+    let product: any = null;
+
     try {
-      const product = await waitForProduct(store, Platform.APPLE_APPSTORE, 12000);
-      if (product && product.offers && product.offers.length > 0) {
-        setReadiness('ready');
-      } else {
-        setReadiness('failed');
-      }
+      product = await waitForProduct(store, Platform.APPLE_APPSTORE, 12000);
     } catch (_e) {
-      // waitForProduct timed out — check one more time synchronously
-      const product = store.get(APPLE_PRODUCT_ID, Platform.APPLE_APPSTORE);
-      if (product && product.offers && product.offers.length > 0) {
-        setReadiness('ready');
-      } else {
-        setReadiness('failed');
-      }
+      // Timeout — do a final synchronous check before giving up
+      console.warn(`${LOG} preloadAppleIAP: waitForProduct timed out — doing final sync check`);
+      product = store.get(APPLE_PRODUCT_ID, Platform.APPLE_APPSTORE);
+      console.log(`${LOG} preloadAppleIAP: final sync product:`, product,
+        '| offers:', product?.offers?.length ?? 0);
+    }
+
+    // Strict ready gate — ALL four conditions must be true
+    const pluginOk = typeof window.CdvPurchase !== 'undefined' && !!getStore();
+    const storeOk = storeInitialized;
+    const productOk = !!product;
+    const offerOk = !!(product?.offers && product.offers.length > 0);
+
+    console.log(`${LOG} readiness check:`,
+      `plugin=${pluginOk}`,
+      `storeInit=${storeOk}`,
+      `product=${productOk}`,
+      `offer=${offerOk}`,
+      '| offers:', product?.offers?.length ?? 0
+    );
+
+    if (pluginOk && storeOk && productOk && offerOk) {
+      const offer = product.getOffer ? product.getOffer() : product.offers[0];
+      console.log(`${LOG} CHECK 4 — product loaded ✓  |  CHECK 5 — offer detected ✓`, offer);
+      setReadiness('ready');
+    } else {
+      console.warn(`${LOG} preloadAppleIAP: readiness conditions NOT met — setting failed`);
+      setReadiness('failed');
     }
   } catch (err) {
-    console.warn('Apple IAP preload failed:', err);
+    console.error(`${LOG} preloadAppleIAP: fatal error — setting failed:`, err);
     setReadiness('failed');
   }
 }
@@ -157,11 +229,16 @@ export async function purchaseAppleSubscription(
   userId: number,
   getIdToken: () => Promise<string>
 ): Promise<{ success: boolean; plan?: string; error?: string; cancelled?: boolean }> {
-  // Belt-and-suspenders: if not ready, return silently (UI should prevent this)
+  // Hard gate — readiness MUST be 'ready' (all four conditions confirmed during preload)
   if (!isAppleIAPReady()) {
-    console.warn('Apple IAP: purchaseAppleSubscription called before IAP is ready');
-    return { success: false, error: 'In-app purchases are not ready yet. Please wait a moment and try again.' };
+    console.warn(`${LOG} purchaseAppleSubscription called with readiness="${readiness}" — aborting`);
+    return {
+      success: false,
+      error: 'In-app purchases are not ready yet. Please wait a moment and try again.',
+    };
   }
+
+  console.log(`${LOG} purchaseAppleSubscription: starting (readiness=${readiness})`);
 
   try {
     const store = getStore();
@@ -175,13 +252,20 @@ export async function purchaseAppleSubscription(
     }
 
     if (!product) {
-      return { success: false, error: 'Subscription product is not available right now. Please check your App Store account and try again.' };
+      console.error(`${LOG} purchaseAppleSubscription: product not found after store ready`);
+      return {
+        success: false,
+        error: 'Subscription product is not available right now. Please check your App Store account and try again.',
+      };
     }
 
     const offer = product.getOffer ? product.getOffer() : (product.offers?.[0] ?? null);
     if (!offer) {
+      console.error(`${LOG} purchaseAppleSubscription: product found but no offer available`, product);
       return { success: false, error: 'No subscription offer available. Please try again later.' };
     }
+
+    console.log(`${LOG} purchaseAppleSubscription: ordering offer…`, offer);
 
     return new Promise((resolve) => {
       let resolved = false;
@@ -195,16 +279,19 @@ export async function purchaseAppleSubscription(
       };
 
       const approvedHandler = async (transaction: any) => {
+        console.log(`${LOG} transaction approved:`, transaction);
         try {
           const receipt = transaction.parentReceipt;
           const receiptData = receipt?.nativeData?.appStoreReceipt;
 
           if (!receiptData) {
+            console.error(`${LOG} approved handler: no receiptData in transaction`);
             safeResolve({ success: false, error: 'Could not retrieve purchase receipt.' });
             transaction.finish();
             return;
           }
 
+          console.log(`${LOG} verifying receipt with backend…`);
           const token = await getIdToken();
           const response = await fetch('/api/apple-iap/verify', {
             method: 'POST',
@@ -216,6 +303,7 @@ export async function purchaseAppleSubscription(
           });
 
           const data = await response.json();
+          console.log(`${LOG} receipt verification response:`, response.status, data);
 
           if (response.ok && data.success) {
             transaction.finish();
@@ -225,21 +313,23 @@ export async function purchaseAppleSubscription(
             transaction.finish();
           }
         } catch (err: any) {
-          console.error('Receipt verification error:', err);
+          console.error(`${LOG} receipt verification error:`, err);
           safeResolve({ success: false, error: 'Failed to verify purchase. Please contact support.' });
           transaction.finish();
         }
       };
 
       const cancelledHandler = () => {
+        console.log(`${LOG} purchase cancelled by user`);
         safeResolve({ success: false, cancelled: true });
       };
 
       const errorHandler = (err: any) => {
         if (err?.code === 'E_USER_CANCELLED' || err?.message?.includes('cancel')) {
+          console.log(`${LOG} purchase cancelled (error handler):`, err);
           safeResolve({ success: false, cancelled: true });
         } else {
-          console.error('Store error:', err);
+          console.error(`${LOG} store error:`, err);
           safeResolve({ success: false, error: 'Purchase could not be completed. Please try again.' });
         }
       };
@@ -260,19 +350,24 @@ export async function purchaseAppleSubscription(
 
       store.order(offer).catch((err: any) => {
         if (err?.code === 'E_USER_CANCELLED' || err?.message?.includes('cancel')) {
+          console.log(`${LOG} order cancelled:`, err);
           safeResolve({ success: false, cancelled: true });
         } else {
-          console.error('Purchase order error:', err);
+          console.error(`${LOG} store.order() error:`, err);
           safeResolve({ success: false, error: 'Purchase could not be completed. Please try again.' });
         }
       });
 
       const timeoutId = setTimeout(() => {
-        safeResolve({ success: false, error: 'Purchase timed out. If you were charged, please contact support.' });
+        console.warn(`${LOG} purchase timed out after 120s`);
+        safeResolve({
+          success: false,
+          error: 'Purchase timed out. If you were charged, please contact support.',
+        });
       }, 120000);
     });
   } catch (err: any) {
-    console.error('Apple IAP error:', err);
+    console.error(`${LOG} purchaseAppleSubscription unexpected error:`, err);
     if (err?.message?.includes('not available')) {
       return { success: false, error: 'In-app purchases are not available on this device.' };
     }
