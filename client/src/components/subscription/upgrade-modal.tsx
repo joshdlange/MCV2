@@ -10,6 +10,7 @@ import {
   isAppleIAP,
   isAppleIAPReady,
   purchaseAppleSubscription,
+  preloadAppleIAP,
   getAppleIAPReadiness,
   subscribeToAppleIAPReadiness,
   type AppleIAPReadiness,
@@ -149,8 +150,14 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
     isLoading ||
     (onIOS && (iapReadiness === 'loading' || iapReadiness === 'unavailable' || iapReadiness === 'failed'));
 
+  const handleIAPRetry = () => {
+    console.log('[AppleIAP] User tapped retry — calling preloadAppleIAP()');
+    preloadAppleIAP();
+  };
+
   function IAPStatusMessage() {
     if (!onIOS) return null;
+
     if (iapReadiness === 'loading') {
       return (
         <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400 mt-1">
@@ -159,14 +166,28 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
         </div>
       );
     }
-    if (iapReadiness === 'unavailable' || iapReadiness === 'failed') {
+
+    if (iapReadiness === 'failed') {
+      return (
+        <button
+          onClick={handleIAPRetry}
+          className="w-full flex items-center justify-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 transition-colors mt-1 py-1"
+        >
+          <AlertCircle className="w-3 h-3 flex-shrink-0" />
+          <span>In-app purchases are unavailable right now. Tap to retry.</span>
+        </button>
+      );
+    }
+
+    if (iapReadiness === 'unavailable') {
       return (
         <div className="flex items-start gap-1.5 text-xs text-amber-400 mt-1">
           <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
-          <span>In-app purchases are unavailable. Please restart the app or check your App Store account.</span>
+          <span>In-app purchases are not available on this device. Check your App Store account.</span>
         </div>
       );
     }
+
     return null;
   }
 

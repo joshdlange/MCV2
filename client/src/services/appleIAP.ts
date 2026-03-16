@@ -161,19 +161,35 @@ async function initializeStore(): Promise<void> {
 }
 
 // ── Preload — called at app open in App(), before auth, before any user tap ──
+// Safe to call multiple times: idempotent when ready, no-op when already loading,
+// and explicitly resets internal state when retrying from a failed attempt.
 export async function preloadAppleIAP(): Promise<void> {
   if (!isAppleIAP()) {
     console.log(`${LOG} preloadAppleIAP: not iOS native — skipping`);
     return;
   }
 
-  // Idempotent: if already ready, nothing to do
+  // Already fully ready — nothing to do
   if (readiness === 'ready') {
     console.log(`${LOG} preloadAppleIAP: already ready — skipping`);
     return;
   }
 
-  console.log(`${LOG} preloadAppleIAP: starting…`);
+  // Already in progress — don't start a parallel attempt
+  if (readiness === 'loading') {
+    console.log(`${LOG} preloadAppleIAP: already loading — skipping duplicate call`);
+    return;
+  }
+
+  // Retrying after a failure — reset internal store state so initializeStore()
+  // runs a fresh attempt rather than re-using stale state from the failed pass.
+  if (readiness === 'failed') {
+    console.log(`${LOG} preloadAppleIAP: retrying from failed state — resetting init state`);
+    storeInitialized = false;
+    initPromise = null;
+  }
+
+  console.log(`${LOG} preloadAppleIAP: starting… (previous readiness: ${readiness})`);
   setReadiness('loading');
 
   try {
