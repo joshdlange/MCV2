@@ -1,0 +1,115 @@
+TASK: Fix the iOS Apple IAP purchase error — make purchase readiness-based, not tap-to-initialize.
+
+CONTEXT
+Apple is rejecting the app (Guideline 2.1(a)) because tapping "Upgrade to SUPER HERO" still shows a 
+purchase error on iPad Air 11-inch (M3), iPadOS 26.3.1.
+
+Current files:
+- client/src/services/appleIAP.ts
+- client/src/components/subscription/upgrade-modal.tsx
+- client/src/App.tsx
+
+Apple IAP stack: cordova-plugin-purchase via window.CdvPurchase
+
+ROOT CAUSE (confirmed by code audit)
+preloadAppleIAP() is currently called inside AuthenticatedApp's useEffect (App.tsx L197).
+This means:
+1. Store init doesn't start until AFTER the user is logged in
+2. The Upgrade button can be tapped before window.CdvPurchase is ready, before the 
+   store is initialized, and before the product MCV_Apple_Superhero is loaded
+3. If any of those aren't ready, initializeStore() throws "In-app purchase plugin not available"
+   and the modal shows an error toast — exactly what Apple is seeing
+
+GOAL
+Do not allow a purchase attempt until ALL of the following are true:
+- window.CdvPurchase exists
+- store is initialized
+- product MCV_Apple_Superhero is loaded
+- offer is available
+
+IMPORTANT CONSTRAINTS
+- Do NOT change Stripe checkout logic
+- Do NOT change Android purchase logic
+- Do NOT change server/routes.ts receipt verification
+- Do NOT refactor unrelated code
+
+---
+
+PHASE 1 — AUDIT (do this first, do not change code yet)
+Run a project-wide search for all usages of:
+- preloadAppleIAP(
+- purchaseAppleSubscription(
+- window.CdvPurchase
+- isAppleIAP(
+
+Confirm:
+1. Whether preloadAppleIAP() is called anywhere outside AuthenticatedApp
+2. Whether the Upgrade button can currently be tapped before product readiness is confirmed
+3. Whether initializeStore() failure resets state correctly for retry (check initPromise reset)
+
+---
+
+PHASE 2 — FIX appleIAP.ts
+1. Add explicit readiness state exported from the module:
+   type AppleIAPReadiness = 'unavailable' | 'loading' | 'ready' | 'failed'
+   Export a reactive value or hook (e.g. a zustand slice or a simple exported ref + 
+   subscribe function) so upgrade-modal.tsx can read current readiness without polling.
+
+2. Update preloadAppleIAP() to:
+   - Set state to 'loading' at start
+   - Set state to 'ready' when product is loaded and has an offer
+   - Set state to 'failed' if initializeStore() throws or product never loads
+   - Never throw — always catch and set state
+
+3. Fix initializeStore() failure recovery:
+   - On failure, reset BOTH storeInitialized = false AND initPromise = null
+   - This allows a clean retry on next attempt
+
+4. Add a helper: isAppleIAPReady(): boolean
+   Returns true only if readiness === 'ready' AND product has a valid offer
+
+---
+
+PHASE 3 — MOVE PRELOAD EARLIER IN App.tsx
+Move preloadAppleIAP() from AuthenticatedApp (L197) to the top-level App() component.
+Store initialization does not require a logged-in user — there is no reason to wait for auth.
+
+In App() (around L221), add:
+  useEffect(() => {
+    if (isAppleIAP()) {
+      preloadAppleIAP();
+    }
+  }, []);
+
+Remove the existing useEffect block from AuthenticatedApp (L197-L201).
+
+---
+
+PHASE 4 — FIX upgrade-modal.tsx
+1. Import the readiness state or hook from appleIAP.ts
+
+2. When isAppleIAP() is true:
+   - If readiness === 'loading': disable the Upgrade button, show text 
+     "Setting up in-app purchases..." below the button (no error toast)
+   - If readiness === 'unavailable' or 'failed': disable the Upgrade button, 
+     show friendly text: "In-app purchases are unavailable. Please restart the app 
+     or check your App Store account." (no error toast)
+   - If readiness === 'ready': enable the button normally
+
+3. Only call purchaseAppleSubscription() when isAppleIAPReady() returns true.
+   If somehow called when not ready, return early with no error toast — just log a warning.
+
+---
+
+PHASE 5 — OUTPUT
+Return:
+1. Audit findings (exact call sites found, current readiness gap confirmed)
+2. Exact files changed (appleIAP.ts, upgrade-modal.tsx, App.tsx)
+3. Exact code diffs or full file replacements
+4. Explicit confirmation that Stripe checkout, Android purchase logic, and 
+   server/routes.ts were NOT touched
+5. Manual test checklist for iPad:
+   - Fresh app open → upgrade modal visible → button shows loading state → 
+     button becomes active → tap → StoreKit sheet appears (no error)
+   - App open with slow network → button stays disabled until product loads
+   - Store init failure → button shows unavailable message, not an error toast

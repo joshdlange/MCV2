@@ -8,6 +8,36 @@ declare global {
   }
 }
 
+// ── Readiness state ──────────────────────────────────────────────────────────
+export type AppleIAPReadiness = 'unavailable' | 'loading' | 'ready' | 'failed';
+
+let readiness: AppleIAPReadiness = 'unavailable';
+const readinessListeners: Array<(r: AppleIAPReadiness) => void> = [];
+
+function setReadiness(r: AppleIAPReadiness) {
+  readiness = r;
+  readinessListeners.forEach((fn) => fn(r));
+}
+
+export function getAppleIAPReadiness(): AppleIAPReadiness {
+  return readiness;
+}
+
+export function subscribeToAppleIAPReadiness(
+  fn: (r: AppleIAPReadiness) => void
+): () => void {
+  readinessListeners.push(fn);
+  return () => {
+    const idx = readinessListeners.indexOf(fn);
+    if (idx >= 0) readinessListeners.splice(idx, 1);
+  };
+}
+
+export function isAppleIAPReady(): boolean {
+  return readiness === 'ready';
+}
+
+// ── Internal store state ─────────────────────────────────────────────────────
 let storeInitialized = false;
 let initPromise: Promise<void> | null = null;
 
@@ -19,6 +49,7 @@ export function isAppleIAP(): boolean {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
 }
 
+// ── Wait for product with offers ─────────────────────────────────────────────
 async function waitForProduct(store: any, platform: any, timeoutMs = 8000): Promise<any> {
   const existing = store.get(APPLE_PRODUCT_ID, platform);
   if (existing && existing.offers && existing.offers.length > 0) return existing;
@@ -37,9 +68,7 @@ async function waitForProduct(store: any, platform: any, timeoutMs = 8000): Prom
     };
 
     store.when().productUpdated((p: any) => {
-      if (p.id === APPLE_PRODUCT_ID) {
-        checkProduct();
-      }
+      if (p.id === APPLE_PRODUCT_ID) checkProduct();
     });
 
     store.when().ready(() => {
@@ -48,6 +77,7 @@ async function waitForProduct(store: any, platform: any, timeoutMs = 8000): Prom
   });
 }
 
+// ── Store initialization ─────────────────────────────────────────────────────
 async function initializeStore(): Promise<void> {
   if (storeInitialized) return;
   if (initPromise) return initPromise;
@@ -55,6 +85,7 @@ async function initializeStore(): Promise<void> {
   initPromise = new Promise<void>((resolve, reject) => {
     const store = getStore();
     if (!store) {
+      storeInitialized = false;
       initPromise = null;
       reject(new Error('In-app purchase plugin not available'));
       return;
@@ -75,6 +106,7 @@ async function initializeStore(): Promise<void> {
       })
       .catch((err: any) => {
         console.error('Store initialization failed:', err);
+        storeInitialized = false;
         initPromise = null;
         reject(err);
       });
@@ -83,22 +115,55 @@ async function initializeStore(): Promise<void> {
   return initPromise;
 }
 
+// ── Preload (called at app start, not on tap) ─────────────────────────────────
 export async function preloadAppleIAP(): Promise<void> {
   if (!isAppleIAP()) return;
+
+  // Already loaded — nothing to do
+  if (readiness === 'ready') return;
+
+  setReadiness('loading');
+
   try {
     await initializeStore();
+
+    // Wait for the product to appear with a valid offer
+    const store = getStore();
+    const { Platform } = window.CdvPurchase;
+    try {
+      const product = await waitForProduct(store, Platform.APPLE_APPSTORE, 12000);
+      if (product && product.offers && product.offers.length > 0) {
+        setReadiness('ready');
+      } else {
+        setReadiness('failed');
+      }
+    } catch (_e) {
+      // waitForProduct timed out — check one more time synchronously
+      const product = store.get(APPLE_PRODUCT_ID, Platform.APPLE_APPSTORE);
+      if (product && product.offers && product.offers.length > 0) {
+        setReadiness('ready');
+      } else {
+        setReadiness('failed');
+      }
+    }
   } catch (err) {
-    console.warn('Apple IAP preload failed (non-fatal):', err);
+    console.warn('Apple IAP preload failed:', err);
+    setReadiness('failed');
   }
 }
 
+// ── Purchase ─────────────────────────────────────────────────────────────────
 export async function purchaseAppleSubscription(
   userId: number,
   getIdToken: () => Promise<string>
 ): Promise<{ success: boolean; plan?: string; error?: string; cancelled?: boolean }> {
-  try {
-    await initializeStore();
+  // Belt-and-suspenders: if not ready, return silently (UI should prevent this)
+  if (!isAppleIAPReady()) {
+    console.warn('Apple IAP: purchaseAppleSubscription called before IAP is ready');
+    return { success: false, error: 'In-app purchases are not ready yet. Please wait a moment and try again.' };
+  }
 
+  try {
     const store = getStore();
     const { Platform } = window.CdvPurchase;
 

@@ -194,12 +194,6 @@ function AuthenticatedApp() {
   
   useBackButton();
 
-  useEffect(() => {
-    if (isAppleIAP()) {
-      preloadAppleIAP();
-    }
-  }, []);
-
   if (loading) {
     return <PageSpinner />;
   }
@@ -220,6 +214,13 @@ function AuthenticatedApp() {
 
 function App() {
   const [location] = useLocation();
+
+  // Start Apple IAP store warm-up immediately on app open — before auth, before any user tap
+  useEffect(() => {
+    if (isAppleIAP()) {
+      preloadAppleIAP();
+    }
+  }, []);
 
   if (location.startsWith('/share/')) {
     return (

@@ -1,12 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Lock, Sparkles, Star } from "lucide-react";
+import { Lock, Sparkles, Star, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import logoImage from "@assets/Marvelous_Card_Valut_-_Trans_1772678671637.png";
 import { Capacitor } from '@capacitor/core';
 import { useAuth } from "@/contexts/AuthContext";
-import { isAppleIAP, purchaseAppleSubscription } from "@/services/appleIAP";
+import {
+  isAppleIAP,
+  isAppleIAPReady,
+  purchaseAppleSubscription,
+  getAppleIAPReadiness,
+  subscribeToAppleIAPReadiness,
+  type AppleIAPReadiness,
+} from "@/services/appleIAP";
 import { useAppStore } from "@/lib/store";
 import { queryClient } from "@/lib/queryClient";
 
@@ -18,8 +25,18 @@ interface UpgradeModalProps {
 
 export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [iapReadiness, setIapReadiness] = useState<AppleIAPReadiness>(getAppleIAPReadiness());
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Subscribe to IAP readiness changes so the button reacts without polling
+  useEffect(() => {
+    if (!isAppleIAP()) return;
+    const unsubscribe = subscribeToAppleIAPReadiness(setIapReadiness);
+    // Sync in case readiness changed between renders
+    setIapReadiness(getAppleIAPReadiness());
+    return unsubscribe;
+  }, []);
 
   const handleUpgrade = async () => {
     if (currentPlan === 'SUPER_HERO') {
@@ -32,6 +49,12 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
     }
 
     if (isAppleIAP()) {
+      // Guard: should never reach here when not ready (button is disabled), but belt-and-suspenders
+      if (!isAppleIAPReady()) {
+        console.warn('Apple IAP: purchase attempted before readiness — ignoring');
+        return;
+      }
+
       setIsLoading(true);
       try {
         const { currentUser } = useAppStore.getState();
@@ -55,7 +78,7 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
           }
           onClose();
         } else if (result.cancelled) {
-          // User cancelled - do nothing, no error toast
+          // User cancelled — silent, no toast
         } else {
           toast({
             title: "Purchase Issue",
@@ -117,6 +140,33 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
       setIsLoading(false);
     }
   };
+
+  // Determine Apple IAP button state when on iOS
+  const onIOS = isAppleIAP();
+  const iapButtonDisabled =
+    isLoading ||
+    (onIOS && (iapReadiness === 'loading' || iapReadiness === 'unavailable' || iapReadiness === 'failed'));
+
+  function IAPStatusMessage() {
+    if (!onIOS) return null;
+    if (iapReadiness === 'loading') {
+      return (
+        <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400 mt-1">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          <span>Setting up in-app purchases…</span>
+        </div>
+      );
+    }
+    if (iapReadiness === 'unavailable' || iapReadiness === 'failed') {
+      return (
+        <div className="flex items-start gap-1.5 text-xs text-amber-400 mt-1">
+          <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+          <span>In-app purchases are unavailable. Please restart the app or check your App Store account.</span>
+        </div>
+      );
+    }
+    return null;
+  }
 
   if (currentPlan === 'SUPER_HERO') {
     return (
@@ -213,16 +263,16 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
             </div>
           </div>
 
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             <Button
               onClick={handleUpgrade}
-              disabled={isLoading}
-              className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-5 sm:py-6 rounded-xl text-sm sm:text-base shadow-lg shadow-red-500/25 transition-all duration-200 hover:shadow-xl hover:shadow-red-500/30"
+              disabled={iapButtonDisabled}
+              className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-5 sm:py-6 rounded-xl text-sm sm:text-base shadow-lg shadow-red-500/25 transition-all duration-200 hover:shadow-xl hover:shadow-red-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <>
                   <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-2" />
-                  Processing...
+                  Processing…
                 </>
               ) : (
                 <>
@@ -232,7 +282,9 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
               )}
             </Button>
 
-            <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
+            <IAPStatusMessage />
+
+            <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400 mt-1">
               <Lock className="w-3 h-3" />
               <span>Your existing cards are safe. Upgrade anytime to keep adding.</span>
             </div>
