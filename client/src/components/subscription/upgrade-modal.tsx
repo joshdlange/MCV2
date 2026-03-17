@@ -347,6 +347,36 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
             </div>
           </div>
 
+          {onIOS && !APPLE_IAP_ENABLED && (
+            <div className="border-t border-gray-800 pt-3 space-y-1.5">
+              <p className="text-center text-[11px] font-semibold text-gray-300">
+                Super Hero Subscription
+              </p>
+              <p className="text-center text-[11px] text-gray-400">
+                $5.99/month · 1 month, auto-renewing
+              </p>
+              <p className="text-center text-[11px] text-gray-400 leading-relaxed">
+                Includes unlimited card tracking, tradeblock access, and premium collection tools.
+                Cancel anytime in your account settings.
+              </p>
+              <div className="flex items-center justify-center gap-3 pt-0.5">
+                <button
+                  onClick={() => window.open('https://marvelcardvault.com/terms', '_system')}
+                  className="text-[11px] text-red-400 hover:text-red-300 underline"
+                >
+                  Terms of Use
+                </button>
+                <span className="text-gray-600 text-[11px]">·</span>
+                <button
+                  onClick={() => window.open('https://marvelcardvault.com/privacy', '_system')}
+                  className="text-[11px] text-red-400 hover:text-red-300 underline"
+                >
+                  Privacy Policy
+                </button>
+              </div>
+            </div>
+          )}
+
           <button
             onClick={onClose}
             className="w-full text-center text-sm text-gray-300 hover:text-white transition-colors py-2.5 border border-gray-600 hover:border-gray-400 rounded-xl"
