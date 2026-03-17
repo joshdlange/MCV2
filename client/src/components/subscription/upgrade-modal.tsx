@@ -66,7 +66,7 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
       // Web-subscription (Spotify model) — flag off: open marvelcardvault.com in Safari
       if (!APPLE_IAP_ENABLED) {
         console.log('[AppleIAP] flag disabled — opening web subscribe in Safari');
-        window.open('https://marvelcardvault.com/subscribe', '_system');
+        window.open('https://app.marvelcardvault.com/subscribe', '_system');
         return;
       }
 

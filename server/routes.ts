@@ -5083,7 +5083,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ],
         mode: 'subscription',
         allow_promotion_codes: true, // Enable promo codes at checkout
-        success_url: `https://marvelcardvault.com/subscription-success?from_ios=true&session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `https://app.marvelcardvault.com/subscription-success?from_ios=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${req.headers.origin}/subscription-cancelled`,
         metadata: {
           userId: user.id.toString(),
