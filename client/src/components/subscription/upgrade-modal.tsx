@@ -353,7 +353,7 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
                 Super Hero Subscription
               </p>
               <p className="text-center text-[11px] text-gray-400">
-                $5.99/month · 1 month, auto-renewing
+                $5.00/month · 1 month, auto-renewing
               </p>
               <p className="text-center text-[11px] text-gray-400 leading-relaxed">
                 Includes unlimited card tracking, tradeblock access, and premium collection tools.
