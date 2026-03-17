@@ -1,0 +1,112 @@
+Smart call. Let me write a full audit prompt first.I have everything now. Full picture of all 6 files. Here's the audit prompt:
+
+---
+
+```
+TASK: Full subscription flow audit across all three platforms (iOS, Android, Web).
+Do not change anything yet. Audit only. Report findings.
+
+CONTEXT
+MCV has three distinct upgrade paths that must each work correctly:
+1. iOS native app — opens app.marvelcardvault.com/subscribe in Safari (external web checkout)
+2. Android native app — opens app.marvelcardvault.com/subscribe in system browser  
+3. Web browser — triggers Stripe checkout inline via /api/create-checkout-session
+
+Recent changes introduced APPLE_IAP_ENABLED feature flag and deep link return flow.
+We need to verify nothing is broken or contradictory across all paths.
+
+FILES TO AUDIT (read all of these in full):
+- client/src/components/subscription/upgrade-modal.tsx
+- client/src/components/subscription/card-limit-warning.tsx
+- client/src/hooks/useSubscription.ts
+- client/src/pages/subscribe.tsx
+- client/src/pages/subscription-success.tsx
+- client/src/pages/subscription-cancelled.tsx
+- client/src/services/apleIAP.ts
+- client/src/App.tsx
+- server/routes.ts (focus on /api/create-checkout-session and /api/verify-checkout-session)
+
+AUDIT CHECKLIST
+
+For each of the three upgrade paths, trace the complete flow end-to-end:
+
+== PATH 1: iOS NATIVE (APPLE_IAP_ENABLED = false) ===
+1. What triggers the upgrade modal to open?
+2. What does the user see in the modal? (exact button text, exact subtext)
+3. What happens when they tap the button? (exact URL opened, exact method)
+4. What page do they land on?
+5. What happens after they complete Stripe checkout? (success_url value)
+6. What does the success page do for iOS? (from_ios param, deep link, fallback)
+7. How does the app know they subscribed when they return?
+8. Are there any other places in the codebase that show upgrade UI on iOS 
+   that might bypass the modal? (search all files for 'subscribe', 'upgrade', 
+   'SUPER_HERO', 'createCheckoutSession')
+
+=== PATH 2: ANDROID NATIVE ===
+1-8. Same questions as iOS path above.
+Note: Android does NOT use APPLE_IAP_ENABLED flag — confirm its path is independent.
+
+=== PATH 3: WEB BROWSER ===
+1-8. Same questions as iOS path above.
+Note: Web uses inline Stripe checkout via fetch — confirm this is untouched.
+
+== COPY AUDIT ===
+List every piece of user-facing text related to upgrading/subscribing across all files:
+- Button text
+- Modal headings
+- Subtext / helper text
+- Toast messages
+- Success page copy
+- Cancelled page copy
+- Error messages
+
+Flag any copy that:
+- Implies purchase is happening inside the app (bad for Apple review)
+- Is contradictory between platforms
+- Is confusing to a normal user
+- References "in-app purchase" or "StoreKit" in user-visible text
+
+== LOGIC AUDIT ===
+Check for these specific issues:
+1. useSubscription.ts createCheckoutSession — does it handle iOS correctly 
+   now that iOS goes external? Or does it conflict with upgrade-modal.tsx?
+2. subscribe.tsx — this page auto-redirects to Stripe checkout. 
+   If an iOS user somehow lands here directly, what happens? 
+   Does it open Stripe in-app (bad) or externally (ok)?
+3. App.tsx deep link handler — does appUrlOpen correctly catch 
+   'marvelcardvault://subscription-success' and invalidate queries?
+4. App.tsx appStateChange handler — does this fire on every foreground 
+   resume and refresh subscription status?
+5. subscription-success.tsx — the from_ios flow fires the deep link after 1.5s.
+   But the verify-checkout-session call also runs. Do these conflict?
+   Could the app reopen before verification completes?
+6. Are there any hardcoded URLs pointing to the wrong domain 
+   (marvelcardvault.com vs app.marvelcardvault.com)?
+
+=== OUTPUT FORMAT ===
+Structure your response as:
+
+## PATH 1: iOS — End-to-End Flow
+[step by step trace]
+
+## PATH 2: Android — End-to-End Flow  
+[step by step trace]
+
+## PATH 3: Web — End-to-End Flow
+[step by step trace]
+
+## Copy Audit
+[table of all user-facing copy with PASS/FLAG status]
+
+## Logic Issues Found
+[numbered list — CRITICAL / WARNING / INFO]
+
+## Recommended Fixes
+[only after full audit — list what actually needs changing]
+
+Be precise. Reference exact line numbers. Do not guess.
+```
+
+---
+
+Paste that into Replit. It reads everything, audits all three paths, flags any copy or logic problems, and tells you exactly what to fix — before you touch another line of code.
