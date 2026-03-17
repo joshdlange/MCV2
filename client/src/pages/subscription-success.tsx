@@ -21,7 +21,7 @@ export default function SubscriptionSuccess() {
   // iOS deep link return: after web subscribe, fire the custom URL scheme to re-open the app
   useEffect(() => {
     const params = new URLSearchParams(search);
-    if (params.get('from_ios') !== 'true') return;
+    if (params.get('from_ios') !== 'true' || !/iPhone|iPad|iPod/.test(navigator.userAgent)) return;
 
     // Give Stripe webhook ~1.5 s to process, then attempt deep link
     const deepLinkTimer = setTimeout(() => {
