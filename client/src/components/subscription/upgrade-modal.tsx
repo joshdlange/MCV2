@@ -327,15 +327,15 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
               ) : (
                 <>
                   <Sparkles className="w-5 h-5 mr-2" />
-                  {onIOS && !APPLE_IAP_ENABLED ? 'Go Super Hero' : 'Upgrade to Super Hero'}
+                  {onIOS && !APPLE_IAP_ENABLED ? 'Continue on Web' : 'Upgrade to Super Hero'}
                 </>
               )}
             </Button>
 
             {onIOS && !APPLE_IAP_ENABLED ? (
               <p className="text-center text-xs text-gray-400 mt-1 leading-relaxed">
-                Super Hero plans are managed at marvelcardvault.com.
-                Your access updates automatically once active.
+                Subscriptions can be completed securely on our website.
+                Your access will update automatically when you return to the app.
               </p>
             ) : (
               <IAPStatusMessage />

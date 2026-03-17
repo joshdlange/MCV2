@@ -174,13 +174,18 @@ export default function SubscriptionSuccess() {
           </Button>
 
           {showReturnButton && (
-            <Button
-              variant="outline"
-              onClick={() => { window.location.href = 'marvelcardvault://subscription-success'; }}
-              className="w-full"
-            >
-              Tap here to return to Marvel Card Vault
-            </Button>
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                onClick={() => { window.location.href = 'marvelcardvault://subscription-success'; }}
+                className="w-full"
+              >
+                Tap here to return to Marvel Card Vault
+              </Button>
+              <p className="text-center text-xs text-muted-foreground">
+                If the app doesn't reopen automatically, switch back to Marvel Card Vault manually.
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>

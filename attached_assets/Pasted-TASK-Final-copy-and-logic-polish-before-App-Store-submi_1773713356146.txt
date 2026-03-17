@@ -1,0 +1,77 @@
+TASK: Final copy and logic polish before App Store submission. 
+Surgical changes only — read each file before touching anything.
+
+FILES TO CHANGE:
+- client/src/components/subscription/upgrade-modal.tsx
+- client/src/pages/subscription-success.tsx
+
+================================================
+FIX 1 — upgrade-modal.tsx: iOS button text (line ~330)
+==================================================
+Find:
+  {onIOS && !APPLE_IAP_ENABLED ? 'Subscribe to Super Hero' : 'Upgrade to Super Hero'}
+
+Replace with:
+  {onIOS && !APPLE_IAP_ENABLED ? 'Continue on Web' : 'Upgrade to Super Hero'}
+
+==================================================
+FIX 2 — upgrade-modal.tsx: iOS helper text (lines ~336-339)
+==================================================
+Find:
+  <p className="text-center text-xs text-gray-400 mt-1 leading-relaxed">
+    You'll be taken to our website to complete your subscription.
+    The app will update automatically when you return.
+  </p>
+
+Replace with:
+  <p className="text-center text-xs text-gray-400 mt-1 leading-relaxed">
+    Subscriptions can be completed securely on our website.
+    Your access will update automatically when you return to the app.
+  </p>
+
+==================================================
+FIX 3 — subscription-success.tsx: userAgent guard (line ~24)
+==================================================
+Find:
+  if (params.get('from_ios') !== 'true') return;
+
+Replace with:
+  if (params.get('from_ios') !== 'true' || !/iPhone|iPad|iPod/.test(navigator.userAgent)) return;
+
+==================================================
+FIX 4 — subscription-success.tsx: add fallback instruction text
+==================================================
+Find the "Tap here to return to Marvel Card Vault" button block:
+  {showReturnButton && (
+    <Button
+      variant="outline"
+      onClick={() => { window.location.href = 'marvelcardvault://subscription-success'; }}
+      className="w-full"
+    >
+      Tap here to return to Marvel Card Vault
+    </Button>
+  )}
+
+Replace with:
+  {showReturnButton && (
+    <div className="space-y-2">
+      <Button
+        variant="outline"
+        onClick={() => { window.location.href = 'marvelcardvault://subscription-success'; }}
+        className="w-full"
+      >
+        Tap here to return to Marvel Card Vault
+      </Button>
+      <p className="text-center text-xs text-muted-foreground">
+        If the app doesn't reopen automatically, switch back to Marvel Card Vault manually.
+      </p>
+    </div>
+  )}
+
+==================================================
+OUTPUT
+================================================
+Return:
+1. Exact before/after for each of the 4 changes
+2. Confirm no other lines were modified
+3. Confirm both files compile cleanly
