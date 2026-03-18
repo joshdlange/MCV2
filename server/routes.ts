@@ -5470,9 +5470,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // RevenueCat: activate SUPER_HERO after a successful iOS in-app purchase
-  // The client has already verified the entitlement via the RevenueCat SDK;
-  // this endpoint records the plan change in our own database.
+  // RevenueCat: activate SUPER_HERO after a successful iOS in-app purchase.
+  // Server verifies the "super_hero" entitlement directly with RevenueCat's
+  // REST API before writing to the database — the client is never trusted alone.
   app.post("/api/revenuecat/activate", authenticateUser, async (req: any, res) => {
     try {
       const user = req.user;
@@ -5481,12 +5481,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ success: true, plan: 'SUPER_HERO', message: 'Already active' });
       }
 
+      // ── Server-side entitlement check ─────────────────────────────────────
+      const rcSecretKey = process.env.REVENUECAT_SECRET_KEY;
+      if (!rcSecretKey) {
+        console.error('[RevenueCat] REVENUECAT_SECRET_KEY env var is not set');
+        return res.status(500).json({ success: false, message: 'Server configuration error' });
+      }
+
+      // The RC app user ID is the Firebase UID passed to Purchases.logIn() on the client
+      const appUserId = user.firebaseUid;
+      if (!appUserId) {
+        return res.status(400).json({ success: false, message: 'Missing user identifier' });
+      }
+
+      const rcRes = await fetch(
+        `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(appUserId)}`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${rcSecretKey}`,
+            'Content-Type': 'application/json',
+            'X-Platform': 'ios',
+          },
+        }
+      );
+
+      if (!rcRes.ok) {
+        console.error(`[RevenueCat] subscriber lookup failed for user ${user.id}: HTTP ${rcRes.status}`);
+        return res.status(402).json({ success: false, message: 'Could not verify purchase with RevenueCat' });
+      }
+
+      const rcData = await rcRes.json();
+      const entitlement = rcData?.subscriber?.entitlements?.super_hero;
+
+      if (!entitlement) {
+        console.warn(`[RevenueCat] No super_hero entitlement for user ${user.id} (RC id: ${appUserId})`);
+        return res.status(402).json({ success: false, message: 'No active Super Hero subscription found. Please complete the purchase first.' });
+      }
+
+      // expires_date is null for lifetime entitlements; otherwise must be in the future
+      const isActive = !entitlement.expires_date || new Date(entitlement.expires_date) > new Date();
+      if (!isActive) {
+        console.warn(`[RevenueCat] Entitlement expired for user ${user.id}: ${entitlement.expires_date}`);
+        return res.status(402).json({ success: false, message: 'Super Hero subscription has expired' });
+      }
+
+      // ── Entitlement confirmed — write to database ─────────────────────────
       await storage.updateUser(user.id, {
         plan: 'SUPER_HERO',
         subscriptionStatus: 'active',
       });
 
-      console.log(`[RevenueCat] User ${user.id} activated SUPER_HERO via RevenueCat`);
+      console.log(`[RevenueCat] Verified and activated SUPER_HERO for user ${user.id} (RC id: ${appUserId}, product: ${entitlement.product_identifier})`);
       return res.json({ success: true, plan: 'SUPER_HERO' });
     } catch (error: any) {
       console.error('[RevenueCat] activate error:', error);
