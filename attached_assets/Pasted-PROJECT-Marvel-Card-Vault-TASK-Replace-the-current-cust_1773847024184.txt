@@ -1,0 +1,240 @@
+PROJECT: Marvel Card Vault
+
+TASK: Replace the current custom iOS Apple IAP implementation with RevenueCat for iOS only, while preserving all existing Stripe/web/Android billing flows.
+
+CONTEXT
+We have already spent too much time fighting the current custom Apple IAP implementation.
+
+Current state:
+- The app already has Apple subscription product created in App Store Connect:
+  MCV_Apple_Superhero
+- Existing Apple IAP code still exists in the codebase
+- We do NOT want to delete the old Apple IAP code yet
+- We want to implement RevenueCat as the new iOS purchase layer because it is simpler and more reliable
+- Web and Android must continue using Stripe exactly as they do now
+- We are NOT refactoring the whole billing system
+- This is a surgical iOS-only change
+
+GOAL
+On iOS:
+- Subscription purchase should use RevenueCat
+- Restore purchases should work
+- Premium entitlement should update the user to SUPER_HERO
+
+On web and Android:
+- Existing Stripe flow stays unchanged
+
+IMPORTANT CONSTRAINTS
+- Do NOT break existing Stripe checkout logic
+- Do NOT break Android purchase logic
+- Do NOT delete the existing appleIAP.ts or old Apple IAP code yet
+- Do NOT refactor unrelated systems
+- Do NOT redesign the modal beyond what is needed for RevenueCat status/loading
+- Keep changes as contained as possible
+- Audit first, then implement
+
+==================================================
+PHASE 1 — AUDIT FIRST
+==================================================
+
+Before changing code, inspect and report:
+
+1. Current upgrade flow in:
+- client/src/components/subscription/upgrade-modal.tsx
+
+2. Current Apple IAP implementation:
+- client/src/services/appleIAP.ts
+- any related Apple IAP readiness logic
+- where APPLE_IAP_ENABLED is used
+- any app startup preload logic
+
+3. Current subscription activation logic:
+- how a successful Stripe purchase updates the user plan
+- where SUPER_HERO is stored
+- what query invalidation / user refresh currently happens after upgrade
+
+4. Current backend subscription fields:
+- user.plan
+- user.subscriptionStatus
+- any Apple transaction fields already added
+
+Then proceed using the smallest safe implementation.
+
+==================================================
+PHASE 2 — INSTALL REVENUECAT
+==================================================
+
+Install the RevenueCat Capacitor SDK and any required dependencies.
+
+Use the official RevenueCat Capacitor package.
+
+Requirements:
+- integrate RevenueCat only for iOS native flow
+- preserve web and Android billing behavior
+
+If any app startup configuration is required, include it.
+
+==================================================
+PHASE 3 — CREATE A NEW IOS BILLING SERVICE
+==================================================
+
+Create a new service file for RevenueCat, for example:
+
+client/src/services/revenueCat.ts
+
+This service should provide clean wrappers such as:
+
+- isRevenueCatAvailable()
+- initializeRevenueCat()
+- getRevenueCatOfferings()
+- purchaseSuperHeroSubscription()
+- restoreRevenueCatPurchases()
+- getRevenueCatCustomerInfo()
+
+Behavior:
+- initialize only on iOS native
+- fetch offerings for the App Store product
+- purchase the Super Hero monthly subscription
+- detect entitlement status after purchase
+- expose useful loading / ready / failed states for the UI
+
+Do NOT remove the old appleIAP.ts file.
+We are replacing usage, not deleting the old implementation yet.
+
+==================================================
+PHASE 4 — CONNECT REVENUECAT TO THE UPGRADE MODAL
+==================================================
+
+Update:
+client/src/components/subscription/upgrade-modal.tsx
+
+Requirements:
+- On iOS native, stop using the old custom Apple IAP flow
+- Use RevenueCat instead
+- The iOS upgrade CTA should purchase via RevenueCat
+- Keep web and Android behavior unchanged
+
+UI behavior on iOS:
+- if RevenueCat is still loading offerings, disable button and show a clean loading state
+- if offerings are ready, enable purchase button
+- if RevenueCat fails to initialize, show a clear but calm error state
+- optionally include a restore purchases action if easy to place cleanly
+
+Do not redesign the entire modal.
+Only change what is necessary.
+
+==================================================
+PHASE 5 — ENTITLEMENT / PLAN SYNC
+==================================================
+
+After a successful RevenueCat purchase:
+
+- determine whether the user has the correct premium entitlement
+- update app state so the user becomes SUPER_HERO immediately
+- reuse existing query invalidation and user refresh logic where possible
+- if backend sync is required, add the minimum necessary endpoint or update call
+
+IMPORTANT
+Do not invent a giant new billing backend.
+Use the smallest integration that works with the existing user/subscription model.
+
+If a backend sync endpoint is required, implement it minimally and safely.
+
+==================================================
+PHASE 6 — RESTORE PURCHASES
+==================================================
+
+Add a restore purchases path for iOS.
+
+Requirements:
+- user can restore existing Apple purchases
+- restored entitlement should update the UI/user state to SUPER_HERO
+- keep this lightweight and compliant
+
+If the best location is inside the upgrade modal, add a small “Restore Purchases” action.
+
+==================================================
+PHASE 7 — KEEP REQUIRED SUBSCRIPTION DISCLOSURE
+==================================================
+
+Do NOT remove the existing Apple-required subscription disclosure block.
+
+The iOS upgrade UI must still clearly show:
+- subscription title
+- subscription length
+- subscription price
+- terms link
+- privacy link
+
+If price is currently hardcoded incorrectly, replace it with the correct configured price or a safer display strategy.
+
+==================================================
+PHASE 8 — LEAVE OLD CODE IN PLACE BUT UNUSED
+==================================================
+
+We do NOT want to delete old Apple IAP code yet.
+
+Requirements:
+- leave old appleIAP.ts in the repo
+- stop using it for iOS purchase flow
+- if needed, gate the old path behind a flag or simply stop importing/calling it
+- do not break compilation
+
+==================================================
+PHASE 9 — OUTPUT FORMAT
+==================================================
+
+Return your work in this exact structure:
+
+1. AUDIT SUMMARY
+- current billing architecture
+- current iOS Apple IAP flow
+- integration plan
+
+2. PACKAGES INSTALLED
+- exact commands
+
+3. FILES CHANGED
+- exact list
+
+4. NEW REVENUECAT FLOW
+- explain how iOS billing now works
+- explain what remains unchanged for web/Android
+
+5. FULL IMPLEMENTATION
+- full ready-to-paste code
+- new service file(s)
+- modified modal
+- any backend changes if needed
+
+6. REQUIRED MANUAL SETUP
+- RevenueCat dashboard steps
+- App Store Connect mapping steps
+- API key / entitlement / offering setup
+- any capacitor sync / Xcode steps
+
+7. QA CHECKLIST
+Must include:
+- iOS purchase works
+- iOS restore works
+- SUPER_HERO unlocks after purchase
+- web Stripe still works
+- Android billing still works
+- no old Apple IAP path is accidentally triggered
+- subscription disclosure still visible
+
+8. REGRESSION CHECKLIST
+Must include:
+- no auth breakage
+- no subscription modal breakage
+- no plan refresh breakage
+- no web checkout breakage
+- no Android regression
+
+SUCCESS CRITERIA
+This task is successful only if:
+- iOS purchase flow uses RevenueCat instead of the custom Apple IAP code
+- web and Android Stripe flows remain unchanged
+- successful iOS purchase unlocks SUPER_HERO
+- restore purchases works
+- old Apple IAP code remains in the repo but is no longer the active iOS purchase path

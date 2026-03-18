@@ -16,6 +16,18 @@ import {
   APPLE_IAP_ENABLED,
   type AppleIAPReadiness,
 } from "@/services/appleIAP";
+import {
+  REVENUECAT_ENABLED,
+  isRevenueCatAvailable,
+  getRCReadiness,
+  subscribeToRCReadiness,
+  retryRevenueCat,
+  identifyRevenueCatUser,
+  purchaseSuperHero,
+  restoreRevenueCatPurchases,
+  getRCCurrentOffering,
+  type RCReadiness,
+} from "@/services/revenueCat";
 import { useAppStore } from "@/lib/store";
 import { queryClient } from "@/lib/queryClient";
 
@@ -27,73 +39,132 @@ interface UpgradeModalProps {
 
 export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
   const [iapReadiness, setIapReadiness] = useState<AppleIAPReadiness>(getAppleIAPReadiness());
-  // Guards against double-tap on the retry link while preloadAppleIAP() is still
-  // picking up. preloadAppleIAP() guards against parallel calls once readiness
-  // flips to 'loading', but there is a brief window before that flip happens.
+  const [rcReadiness, setRcReadiness] = useState<RCReadiness>(getRCReadiness());
   const [isRetrying, setIsRetrying] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Subscribe to IAP readiness changes so the button reacts without polling
+  const onIOS = isAppleIAP();
+  const useRC = onIOS && REVENUECAT_ENABLED;
+
+  // Subscribe to RevenueCat readiness changes
   useEffect(() => {
-    if (!isAppleIAP()) return;
+    if (!useRC) return;
+    const unsub = subscribeToRCReadiness(setRcReadiness);
+    setRcReadiness(getRCReadiness());
+    return unsub;
+  }, [useRC]);
+
+  // Reset retry lock when RC readiness leaves 'failed'
+  useEffect(() => {
+    if (rcReadiness !== 'failed') setIsRetrying(false);
+  }, [rcReadiness]);
+
+  // Subscribe to old Apple IAP readiness changes (only used when RC is off)
+  useEffect(() => {
+    if (!onIOS || useRC) return;
     const unsubscribe = subscribeToAppleIAPReadiness(setIapReadiness);
-    // Sync in case readiness changed between renders
     setIapReadiness(getAppleIAPReadiness());
     return unsubscribe;
-  }, []);
+  }, [onIOS, useRC]);
 
-  // Reset retry lock whenever readiness moves away from 'failed'
-  // (i.e. once loading begins or on success/unavailable)
   useEffect(() => {
-    if (iapReadiness !== 'failed') {
-      setIsRetrying(false);
-    }
+    if (iapReadiness !== 'failed') setIsRetrying(false);
   }, [iapReadiness]);
 
+  // ── Derive RC price string from current offering ────────────────────────────
+  const rcOffering = getRCCurrentOffering();
+  const rcPackage = rcOffering?.availablePackages?.[0] ?? null;
+  const rcPriceString: string =
+    rcPackage?.product?.priceString ?? '$5.00';
+
+  // ── Handle upgrade ──────────────────────────────────────────────────────────
   const handleUpgrade = async () => {
     if (currentPlan === 'SUPER_HERO') {
-      toast({
-        title: "You're already a Super Hero!",
-        description: "You have unlimited access to all features.",
-      });
+      toast({ title: "You're already a Super Hero!", description: "You have unlimited access to all features." });
       onClose();
       return;
     }
 
-    if (isAppleIAP()) {
-      // Web-subscription (Spotify model) — flag off: open marvelcardvault.com in Safari
+    // ── RevenueCat iOS path ─────────────────────────────────────────────────
+    if (useRC) {
+      if (rcReadiness !== 'ready') {
+        console.warn('[RevenueCat] handleUpgrade blocked — readiness:', rcReadiness);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const { currentUser } = useAppStore.getState();
+        if (!currentUser?.id || !user) throw new Error('Not logged in');
+
+        // Associate Firebase UID with RevenueCat before purchase
+        await identifyRevenueCatUser(user.uid);
+
+        const result = await purchaseSuperHero();
+
+        if (result.success) {
+          // Sync plan to backend
+          const token = await user.getIdToken();
+          await fetch('/api/revenuecat/activate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/subscription/status'] });
+          const store = useAppStore.getState();
+          if (store.currentUser) {
+            store.setCurrentUser({ ...store.currentUser, plan: 'SUPER_HERO', subscriptionStatus: 'active' });
+          }
+          toast({
+            title: "Welcome, Super Hero!",
+            description: "Your subscription is now active. Enjoy unlimited access!",
+          });
+          onClose();
+        } else if (result.cancelled) {
+          // Silent — user dismissed the sheet
+        } else {
+          toast({
+            title: "Purchase Issue",
+            description: result.error || "Something went wrong. Please try again.",
+            variant: "destructive",
+          });
+        }
+      } catch (err: any) {
+        console.error('[RevenueCat] purchase error:', err);
+        toast({ title: "Error", description: "Failed to start purchase. Please try again.", variant: "destructive" });
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // ── Old iOS paths (REVENUECAT_ENABLED = false) ──────────────────────────
+    if (onIOS) {
       if (!APPLE_IAP_ENABLED) {
         console.log('[AppleIAP] flag disabled — opening web subscribe in Safari');
         window.open('https://app.marvelcardvault.com/subscribe', '_system');
         return;
       }
 
-      // Native StoreKit flow — flag on (future re-enablement)
-      // Hard gate: readiness MUST be 'ready' (all four conditions: plugin, store, product, offer)
-      // The button is already disabled when not ready, but this is an explicit second check.
       if (!isAppleIAPReady()) {
-        console.warn('[AppleIAP] handleUpgrade blocked — readiness is "' + getAppleIAPReadiness() + '", must be "ready"');
+        console.warn('[AppleIAP] handleUpgrade blocked — readiness:', getAppleIAPReadiness());
         return;
       }
-      console.log('[AppleIAP] handleUpgrade: readiness=ready — proceeding to purchaseAppleSubscription');
 
       setIsLoading(true);
       try {
         const { currentUser } = useAppStore.getState();
-        if (!currentUser?.id || !user) {
-          throw new Error('Not logged in');
-        }
-        const result = await purchaseAppleSubscription(
-          currentUser.id,
-          () => user.getIdToken()
-        );
+        if (!currentUser?.id || !user) throw new Error('Not logged in');
+        const result = await purchaseAppleSubscription(currentUser.id, () => user.getIdToken());
         if (result.success) {
-          toast({
-            title: "Welcome, Super Hero!",
-            description: "Your subscription is now active. Enjoy unlimited access!",
-          });
+          toast({ title: "Welcome, Super Hero!", description: "Your subscription is now active. Enjoy unlimited access!" });
           queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
           queryClient.invalidateQueries({ queryKey: ['/api/subscription/status'] });
           const store = useAppStore.getState();
@@ -102,32 +173,26 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
           }
           onClose();
         } else if (result.cancelled) {
-          // User cancelled — silent, no toast
+          // Silent
         } else {
-          toast({
-            title: "Purchase Issue",
-            description: result.error || "Something went wrong. Please try again.",
-            variant: "destructive",
-          });
+          toast({ title: "Purchase Issue", description: result.error || "Something went wrong. Please try again.", variant: "destructive" });
         }
       } catch (error: any) {
         console.error("Apple IAP error:", error);
-        toast({
-          title: "Error",
-          description: "Failed to start purchase. Please try again.",
-          variant: "destructive",
-        });
+        toast({ title: "Error", description: "Failed to start purchase. Please try again.", variant: "destructive" });
       } finally {
         setIsLoading(false);
       }
       return;
     }
 
+    // ── Android: open web subscribe ─────────────────────────────────────────
     if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
       window.open('https://app.marvelcardvault.com/subscribe', '_system');
       return;
     }
 
+    // ── Web: Stripe checkout ────────────────────────────────────────────────
     setIsLoading(true);
     try {
       const token = await user?.getIdToken();
@@ -139,51 +204,113 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
         },
         credentials: "include",
       });
-      
       const data = await response.json();
-      
       if (response.ok && data.url) {
         window.location.href = data.url;
       } else if (response.status === 400 && data.message?.includes("already")) {
-        toast({
-          title: "You're already subscribed!",
-          description: "You have an active Super Hero subscription.",
-        });
+        toast({ title: "You're already subscribed!", description: "You have an active Super Hero subscription." });
         onClose();
       } else {
         throw new Error(data.message || "No checkout URL received");
       }
     } catch (error: any) {
       console.error("Error creating checkout session:", error);
-      toast({
-        title: "Error",
-        description: "Failed to start upgrade process. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to start upgrade process. Please try again.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Determine Apple IAP button state when on iOS
-  const onIOS = isAppleIAP();
-  // When APPLE_IAP_ENABLED is false, the button is always enabled (opens web)
+  // ── Restore purchases (RevenueCat) ──────────────────────────────────────────
+  const handleRestore = async () => {
+    if (isRestoring) return;
+    setIsRestoring(true);
+    try {
+      if (user) await identifyRevenueCatUser(user.uid);
+      const result = await restoreRevenueCatPurchases();
+      if (result.entitled) {
+        const token = await user?.getIdToken();
+        await fetch('/api/revenuecat/activate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        });
+        queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/subscription/status'] });
+        const store = useAppStore.getState();
+        if (store.currentUser) {
+          store.setCurrentUser({ ...store.currentUser, plan: 'SUPER_HERO', subscriptionStatus: 'active' });
+        }
+        toast({ title: "Purchases Restored!", description: "Your Super Hero subscription is active again." });
+        onClose();
+      } else if (result.success) {
+        toast({ title: "No Active Subscription Found", description: "No previous Super Hero subscription was found on this Apple ID.", variant: "destructive" });
+      } else {
+        toast({ title: "Restore Failed", description: result.error || "Could not restore purchases. Please try again.", variant: "destructive" });
+      }
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
+  // ── Button disabled logic ───────────────────────────────────────────────────
   const iapButtonDisabled =
     isLoading ||
-    (onIOS && APPLE_IAP_ENABLED && (iapReadiness === 'loading' || iapReadiness === 'unavailable' || iapReadiness === 'failed'));
+    (useRC && (rcReadiness === 'loading' || rcReadiness === 'unavailable' || rcReadiness === 'failed')) ||
+    (!useRC && onIOS && APPLE_IAP_ENABLED && (iapReadiness === 'loading' || iapReadiness === 'unavailable' || iapReadiness === 'failed'));
 
-  const handleIAPRetry = () => {
-    if (isRetrying) {
-      console.log('[AppleIAP] retry tap ignored — already retrying');
-      return;
+  // ── Button label ────────────────────────────────────────────────────────────
+  function getButtonLabel() {
+    if (isLoading) return null; // handled by spinner
+    if (useRC) {
+      if (rcReadiness === 'loading') return 'Loading…';
+      if (rcReadiness === 'failed') return 'Unavailable';
+      return `Subscribe — ${rcPriceString}/mo`;
     }
-    console.log('[AppleIAP] User tapped retry — calling preloadAppleIAP()');
+    if (onIOS && !APPLE_IAP_ENABLED) return 'Continue on Web';
+    return 'Upgrade to Super Hero';
+  }
+
+  // ── RC status message ───────────────────────────────────────────────────────
+  function RCStatusMessage() {
+    if (!useRC) return null;
+
+    if (rcReadiness === 'loading') {
+      return (
+        <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400 mt-1">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          <span>Loading subscription options…</span>
+        </div>
+      );
+    }
+
+    if (rcReadiness === 'failed') {
+      return (
+        <button
+          onClick={() => {
+            if (isRetrying) return;
+            setIsRetrying(true);
+            retryRevenueCat();
+          }}
+          className="w-full flex items-center justify-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 transition-colors mt-1 py-1"
+        >
+          <AlertCircle className="w-3 h-3 flex-shrink-0" />
+          <span>Unable to load subscription. Tap to retry.</span>
+        </button>
+      );
+    }
+
+    return null;
+  }
+
+  // ── Old Apple IAP status message (only used when RC is off) ────────────────
+  const handleIAPRetry = () => {
+    if (isRetrying) return;
     setIsRetrying(true);
     preloadAppleIAP();
   };
 
-  function IAPStatusMessage() {
-    if (!onIOS) return null;
+  function LegacyIAPStatusMessage() {
+    if (!onIOS || useRC) return null;
 
     if (iapReadiness === 'loading') {
       return (
@@ -218,20 +345,15 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
     return null;
   }
 
+  // ── Already subscribed view ─────────────────────────────────────────────────
   if (currentPlan === 'SUPER_HERO') {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-md w-[calc(100vw-2rem)] p-0 overflow-hidden border-0 rounded-2xl bg-gray-950 fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] z-[100] [&>button]:text-white [&>button]:hover:text-gray-300" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Already a Super Hero</DialogTitle>
           <div className="bg-gradient-to-b from-gray-900 to-gray-950 px-5 sm:px-6 pt-5 sm:pt-6 pb-3 sm:pb-4 flex flex-col items-center">
-            <img 
-              src={logoImage} 
-              alt="Marvelous Card Vault" 
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl mb-3"
-            />
-            <h2 className="text-lg sm:text-xl font-bold text-white text-center">
-              You're Already a Super Hero!
-            </h2>
+            <img src={logoImage} alt="Marvelous Card Vault" className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl mb-3" />
+            <h2 className="text-lg sm:text-xl font-bold text-white text-center">You're Already a Super Hero!</h2>
           </div>
 
           <div className="px-5 sm:px-6 pt-3 sm:pt-4 pb-5 sm:pb-6 space-y-4 sm:space-y-5">
@@ -240,9 +362,7 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
             </p>
 
             <div className="space-y-3">
-              <p className="text-sm font-semibold text-white">
-                Your Super Hero powers include:
-              </p>
+              <p className="text-sm font-semibold text-white">Your Super Hero powers include:</p>
               <div className="space-y-2.5">
                 {[
                   "Unlimited cards in your collection",
@@ -274,16 +394,13 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
     );
   }
 
+  // ── Main upgrade modal ──────────────────────────────────────────────────────
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md w-[calc(100vw-2rem)] p-0 overflow-hidden border-0 rounded-2xl bg-gray-950 fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] z-[100] [&>button]:text-white [&>button]:hover:text-gray-300" aria-describedby={undefined}>
         <DialogTitle className="sr-only">Upgrade to Super Hero</DialogTitle>
         <div className="bg-gradient-to-b from-gray-900 to-gray-950 px-5 sm:px-6 pt-5 sm:pt-6 pb-3 sm:pb-4 flex flex-col items-center">
-          <img 
-            src={logoImage} 
-            alt="Marvelous Card Vault" 
-            className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl mb-3"
-          />
+          <img src={logoImage} alt="Marvelous Card Vault" className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl mb-3" />
           <h2 className="text-lg sm:text-xl font-bold text-white text-center">
             Your Sidekick limit has been reached
           </h2>
@@ -296,9 +413,7 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
           </p>
 
           <div className="space-y-3">
-            <p className="text-sm font-semibold text-white">
-              Upgrade to Super Hero and:
-            </p>
+            <p className="text-sm font-semibold text-white">Upgrade to Super Hero and:</p>
             <div className="space-y-2.5">
               {[
                 "Add unlimited cards to your collection",
@@ -327,18 +442,20 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
               ) : (
                 <>
                   <Sparkles className="w-5 h-5 mr-2" />
-                  {onIOS && !APPLE_IAP_ENABLED ? 'Continue on Web' : 'Upgrade to Super Hero'}
+                  {getButtonLabel()}
                 </>
               )}
             </Button>
 
-            {onIOS && !APPLE_IAP_ENABLED ? (
+            {useRC ? (
+              <RCStatusMessage />
+            ) : onIOS && !APPLE_IAP_ENABLED ? (
               <p className="text-center text-xs text-gray-400 mt-1 leading-relaxed">
                 Subscriptions can be completed securely on our website.
                 Your access will update automatically when you return to the app.
               </p>
             ) : (
-              <IAPStatusMessage />
+              <LegacyIAPStatusMessage />
             )}
 
             <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400 mt-1">
@@ -347,13 +464,32 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
             </div>
           </div>
 
-          {onIOS && !APPLE_IAP_ENABLED && (
+          {/* Restore Purchases — RevenueCat only */}
+          {useRC && (
+            <button
+              onClick={handleRestore}
+              disabled={isRestoring}
+              className="w-full text-center text-xs text-gray-500 hover:text-gray-300 transition-colors py-1 disabled:opacity-50"
+            >
+              {isRestoring ? (
+                <span className="flex items-center justify-center gap-1.5">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Restoring…
+                </span>
+              ) : (
+                'Restore Purchases'
+              )}
+            </button>
+          )}
+
+          {/* Apple-required subscription disclosure — shown on all iOS paths */}
+          {onIOS && (
             <div className="border-t border-gray-800 pt-3 space-y-1.5">
               <p className="text-center text-[11px] font-semibold text-gray-300">
                 Super Hero Subscription
               </p>
               <p className="text-center text-[11px] text-gray-400">
-                $5.00/month · 1 month, auto-renewing
+                {rcPriceString}/month · 1 month, auto-renewing
               </p>
               <p className="text-center text-[11px] text-gray-400 leading-relaxed">
                 Includes unlimited card tracking, tradeblock access, and premium collection tools.

@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect } from "react";
 import { preloadAppleIAP, isAppleIAP, APPLE_IAP_ENABLED } from "@/services/appleIAP";
+import { initializeRevenueCat, isRevenueCatAvailable, REVENUECAT_ENABLED } from "@/services/revenueCat";
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { Switch, Route } from "wouter";
@@ -217,10 +218,17 @@ function AuthenticatedApp() {
 function App() {
   const [location] = useLocation();
 
-  // Start Apple IAP store warm-up — only when native IAP is enabled
+  // Start Apple IAP store warm-up — only when native IAP is enabled (legacy path)
   useEffect(() => {
     if (isAppleIAP() && APPLE_IAP_ENABLED) {
       preloadAppleIAP();
+    }
+  }, []);
+
+  // Initialize RevenueCat on iOS — replaces the legacy Apple IAP flow
+  useEffect(() => {
+    if (isRevenueCatAvailable() && REVENUECAT_ENABLED) {
+      initializeRevenueCat();
     }
   }, []);
 

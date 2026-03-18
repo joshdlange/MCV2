@@ -5470,6 +5470,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // RevenueCat: activate SUPER_HERO after a successful iOS in-app purchase
+  // The client has already verified the entitlement via the RevenueCat SDK;
+  // this endpoint records the plan change in our own database.
+  app.post("/api/revenuecat/activate", authenticateUser, async (req: any, res) => {
+    try {
+      const user = req.user;
+
+      if (user.plan === 'SUPER_HERO' && user.subscriptionStatus === 'active') {
+        return res.json({ success: true, plan: 'SUPER_HERO', message: 'Already active' });
+      }
+
+      await storage.updateUser(user.id, {
+        plan: 'SUPER_HERO',
+        subscriptionStatus: 'active',
+      });
+
+      console.log(`[RevenueCat] User ${user.id} activated SUPER_HERO via RevenueCat`);
+      return res.json({ success: true, plan: 'SUPER_HERO' });
+    } catch (error: any) {
+      console.error('[RevenueCat] activate error:', error);
+      return res.status(500).json({ success: false, message: 'Failed to activate subscription' });
+    }
+  });
+
   // Create customer portal session for billing management
   app.post("/api/create-portal-session", authenticateUser, async (req: any, res) => {
     try {
