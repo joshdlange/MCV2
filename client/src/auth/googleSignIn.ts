@@ -51,9 +51,7 @@ export async function signInWithGoogleUnified(): Promise<UserCredential> {
 
   const res: any = await SocialLogin.login({
     provider: "google",
-    options: {
-      scopes: ["email", "profile"],
-    },
+    options: {},
   });
 
   console.log('SocialLogin response:', JSON.stringify(res).substring(0, 500));
