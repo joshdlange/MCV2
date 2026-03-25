@@ -1,0 +1,54 @@
+We are at the final Apple IAP verification step for Marvel Card Vault.
+
+Context:
+- Old Apple subscription product ID: MCV_Apple_Superhero
+- New Apple subscription product ID: MCV_Apple_Superhero_v2
+- RevenueCat is now correctly pointing the active monthly package to MCV_Apple_Superhero_v2
+- Active offering in RevenueCat: default Monthly
+- Package identifier: $rc_monthly
+- Entitlement: super_hero
+
+I need a focused audit only. Do not refactor unrelated code.
+
+Task:
+Search the entire codebase for any direct or indirect references to the OLD Apple product ID:
+MCV_Apple_Superhero
+
+I want you to check all of the following:
+1. Frontend code
+2. Backend/server code
+3. Env variable usage
+4. RevenueCat initialization/config code
+5. Upgrade/paywall modal code
+6. Any fallback pricing / fallback product logic
+7. Any iOS-specific branching
+8. Any test/mock/storekit configuration files
+9. Any constants/config files
+10. Any legacy appleIAP / cordova purchase code still present
+
+Important:
+- Do not confuse MCV_Apple_Superhero with MCV_Apple_Superhero_v2
+- If the old product ID appears anywhere in the active iOS purchase path, replace it with MCV_Apple_Superhero_v2
+- If the old product ID only appears in dead code, legacy code, comments, or unused files, do not blindly edit it. Instead, clearly report it.
+
+Output format I want:
+A. “Active purchase path references found”
+- list every file and exact line/function where the active iOS flow still references the old product ID
+
+B. “Legacy/inactive references found”
+- list every old reference that is not part of the current live purchase path
+
+C. “Changes made”
+- exact files changed
+- exact before/after values changed
+
+D. “Final expected identifiers in live iOS purchase flow”
+- offering id
+- package id
+- entitlement id
+- Apple product id
+
+E. “Confidence check”
+- tell me whether the current live iOS purchase flow is now fully aligned to MCV_Apple_Superhero_v2 or not
+
+Do not make any speculative changes. Audit first, patch only if the old product ID is definitely in the live iOS purchase path, then report back.
