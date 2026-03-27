@@ -76,9 +76,55 @@ export async function initializeRevenueCat(): Promise<void> {
     _configured = true;
     console.log(`${LOG} configured ✓`);
 
-    const offerings = await Purchases.getOfferings();
+    // ── DIAGNOSTIC: full offerings dump ──────────────────────────────────────
+    let offerings: any;
+    try {
+      offerings = await Purchases.getOfferings();
+    } catch (offeringsErr: any) {
+      console.error(`${LOG} [DIAG] getOfferings() threw an error:`);
+      console.error(`${LOG} [DIAG]   message  : ${offeringsErr?.message}`);
+      console.error(`${LOG} [DIAG]   code     : ${offeringsErr?.code}`);
+      console.error(`${LOG} [DIAG]   underlyingErrorMessage: ${offeringsErr?.underlyingErrorMessage}`);
+      console.error(`${LOG} [DIAG]   raw      : ${JSON.stringify(offeringsErr)}`);
+      setReadiness('failed');
+      return;
+    }
+
+    // Log every offering returned, not just current
+    const allOfferingIds = Object.keys(offerings?.all ?? {});
+    console.log(`${LOG} [DIAG] Total offerings returned: ${allOfferingIds.length}`);
+    if (allOfferingIds.length === 0) {
+      console.warn(`${LOG} [DIAG] offerings.all is empty — RC returned zero offerings. Check RC dashboard: is an offering marked as Current? Are products approved in App Store Connect?`);
+    } else {
+      allOfferingIds.forEach((id) => {
+        const o = offerings.all[id];
+        console.log(`${LOG} [DIAG] Offering: "${id}" | packages: ${o?.availablePackages?.length ?? 0}`);
+        (o?.availablePackages ?? []).forEach((pkg: any) => {
+          const appleProductId = pkg?.storeProduct?.productIdentifier ?? pkg?.product?.productIdentifier ?? '(unknown)';
+          const price = pkg?.storeProduct?.priceString ?? pkg?.product?.priceString ?? '(unknown)';
+          console.log(`${LOG} [DIAG]   → package: "${pkg.identifier}" | appleProduct: "${appleProductId}" | price: ${price} | type: ${pkg.packageType}`);
+        });
+      });
+    }
+
+    // Log which offering RC considers current/default
     _currentOffering = offerings.current ?? null;
-    console.log(`${LOG} offerings fetched — current: ${_currentOffering?.identifier ?? 'none'}, packages: ${_currentOffering?.availablePackages?.length ?? 0}`);
+    if (_currentOffering) {
+      console.log(`${LOG} [DIAG] Current offering: "${_currentOffering.identifier}"`);
+      const pkgs = _currentOffering.availablePackages ?? [];
+      if (pkgs.length === 0) {
+        console.warn(`${LOG} [DIAG] Current offering "${_currentOffering.identifier}" has 0 packages. Check RC dashboard: does the current offering have a package attached with an approved product?`);
+      } else {
+        pkgs.forEach((pkg: any) => {
+          const appleProductId = pkg?.storeProduct?.productIdentifier ?? pkg?.product?.productIdentifier ?? '(unknown)';
+          const price = pkg?.storeProduct?.priceString ?? pkg?.product?.priceString ?? '(unknown)';
+          console.log(`${LOG} [DIAG] Current offering package: "${pkg.identifier}" | appleProduct: "${appleProductId}" | price: ${price}`);
+        });
+      }
+    } else {
+      console.warn(`${LOG} [DIAG] offerings.current is null — no offering is marked as Current in the RC dashboard`);
+    }
+    // ── END DIAGNOSTIC ────────────────────────────────────────────────────────
 
     if (_currentOffering && (_currentOffering.availablePackages?.length ?? 0) > 0) {
       setReadiness('ready');
@@ -86,8 +132,8 @@ export async function initializeRevenueCat(): Promise<void> {
       console.warn(`${LOG} no packages in current offering`);
       setReadiness('failed');
     }
-  } catch (err) {
-    console.error(`${LOG} initialization error:`, err);
+  } catch (err: any) {
+    console.error(`${LOG} initialization error — message: ${err?.message} | code: ${err?.code} | raw: ${JSON.stringify(err)}`);
     setReadiness('failed');
   }
 }
