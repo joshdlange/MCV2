@@ -1,0 +1,41 @@
+diff --git a/node_modules/@capacitor-community/apple-sign-in/ios/Sources/SignInWithApple/Plugin.swift b/node_modules/@capacitor-community/apple-sign-in/ios/Sources/SignInWithApple/Plugin.swift
+index f53087c..c0263dc 100755
+--- a/node_modules/@capacitor-community/apple-sign-in/ios/Sources/SignInWithApple/Plugin.swift
++++ b/node_modules/@capacitor-community/apple-sign-in/ios/Sources/SignInWithApple/Plugin.swift
+@@ -1,6 +1,7 @@
+ import Foundation
+ import Capacitor
+ import AuthenticationServices
++import UIKit
+ 
+ @objc(SignInWithApple)
+ public class SignInWithApple: CAPPlugin, CAPBridgedPlugin {
+@@ -22,9 +23,12 @@ public class SignInWithApple: CAPPlugin, CAPBridgedPlugin {
+ 
+         self.bridge?.saveCall(call)
+ 
+-        let authorizationController = ASAuthorizationController(authorizationRequests: [request])
+-        authorizationController.delegate = self
+-        authorizationController.performRequests()
++        DispatchQueue.main.async {
++            let authorizationController = ASAuthorizationController(authorizationRequests: [request])
++            authorizationController.delegate = self
++            authorizationController.presentationContextProvider = self
++            authorizationController.performRequests()
++        }
+     }
+ 
+     func getRequestedScopes(from call: CAPPluginCall) -> [ASAuthorization.Scope]? {
+@@ -83,3 +87,12 @@ extension SignInWithApple: ASAuthorizationControllerDelegate {
+         self.bridge?.releaseCall(call)
+     }
+ }
++
++extension SignInWithApple: ASAuthorizationControllerPresentationContextProviding {
++    public func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
++        guard let window = self.bridge?.viewController?.view.window else {
++            return UIApplication.shared.windows.first ?? UIWindow()
++        }
++        return window
++    }
++}
