@@ -1,0 +1,111 @@
+`UIScene` lifecycle will soon be required. Failure to adopt will result in an assert in the future.
+Could not create a sandbox extension for '/var/containers/Bundle/Application/568155E6-0BA5-4F49-9C29-3F3FAC1C0B28/App.app'
+[CdvPurchase.AppleAppStore.objc] Initialized.
+⚡️  Loading app at https://app.marvelcardvault.com...
+WebContent process (0x10f0d40c0) took 1.094897 seconds to launch
+WebContent[8655] Unable to hide query parameters from script (missing data)
+⚡️  [log] - onscript loading complete
+⚡️  [log] - Create CdvPurchase...
+⚡️  [log] - Firebase initialized successfully
+⚡️  [log] - Native app detected, skipping redirect handling
+⚡️  [log] - [RevenueCat] readiness: unavailable → loading
+⚡️  [log] - [RevenueCat] initializing…
+⚡️  To Native ->  App addListener 42527143
+⚡️  To Native ->  Purchases setLogLevel -1
+⚡️  To Native ->  App addListener 42527144
+⚡️  To Native ->  App addListener 42527145
+⚡️  To Native ->  Purchases configure -1
+⚡️  To Native ->  Purchases getOfferings 42527146
+⚡️  TO JS undefined
+DEBUG: ℹ️ Configuring SDK using RevenueCat's UserDefaults suite.
+⚡️  WebView loaded
+DEBUG: 👤 Identifying App User ID
+DEBUG: ℹ️ Observing StoreKit.Transaction.updates
+DEBUG: ℹ️ Debug logging enabled
+DEBUG: ℹ️ SDK Version - 5.63.0
+DEBUG: ℹ️ Bundle ID - com.marvelcardvault.app
+DEBUG: ℹ️ System Version - Version 26.3.1 (a) (Build 23D771330a)
+DEBUG: ℹ️ Not using a simulator.
+DEBUG: 👤 No initial App User ID
+DEBUG: ℹ️ Purchases is configured with informational response verification
+DEBUG: ℹ️ Purchases is configured with StoreKit version 2
+DEBUG: ℹ️ Delegate set
+DEBUG: ℹ️ Observing StoreKit.PurchaseIntent.intents
+DEBUG: ℹ️ Offerings cache is stale, updating from network in foreground
+⚡️  TO JS undefined
+⚡️  [log] - [RevenueCat] configured ✓
+DEBUG: ℹ️ No cached Offerings, fetching from network
+DEBUG: ℹ️ GetOfferingsOperation: Started
+DEBUG: ℹ️ Network operation 'GetOfferingsOperation' found with the same cache key 'GetOfferingsOpe…'. Skipping request.
+DEBUG: ℹ️ There are no requests currently running, starting request GET /v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/offerings
+DEBUG: ℹ️ API request started: GET '/v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/offerings'
+DEBUG: ℹ️ API request completed: GET '/v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/offerings' (304)
+DEBUG: ℹ️ No existing products cached, starting store products request for: ["MCV_Apple_Superhero_v2"]
+DEBUG: ℹ️ Found an existing request for products: ["MCV_Apple_Superhero_v2"], appending to completion
+DEBUG: ℹ️ GetOfferingsOperation: Finished
+DEBUG: ℹ️ Serial request done: GET /v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/offerings, 0 requests left in the queue
+DEBUG: ℹ️ HealthReportAvailabilityOperation: Started
+DEBUG: ℹ️ There are no requests currently running, starting request GET /v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/health_report_availability
+DEBUG: ℹ️ API request started: GET '/v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/health_report_availability'
+DEBUG: ℹ️ API request completed: GET '/v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/health_report_availability' (200)
+DEBUG: ℹ️ HealthReportAvailabilityOperation: Finished
+DEBUG: ℹ️ Serial request done: GET /v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/health_report_availability, 0 requests left in the queue
+DEBUG: ℹ️ GetCustomerInfoOperation: Started
+DEBUG: ℹ️ There are no requests currently running, starting request GET /v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12
+DEBUG: ℹ️ API request started: GET '/v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12'
+DEBUG: ℹ️ API request completed: GET '/v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12' (304)
+DEBUG: 😻 CustomerInfo updated from network.
+DEBUG: ℹ️ GetCustomerInfoOperation: Finished
+DEBUG: ℹ️ Serial request done: GET /v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12, 0 requests left in the queue
+DEBUG: ℹ️ HealthReportOperation: Started
+DEBUG: ℹ️ There are no requests currently running, starting request GET /v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/health_report
+DEBUG: ℹ️ API request started: GET '/v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/health_report'
+DEBUG: 😻 Store products request received response
+DEBUG: ℹ️ Store products request finished
+DEBUG: 😻 Offerings updated from network.
+DEBUG: 😻 Offerings updated from network.
+⚡️  TO JS {"current":{"availablePackages":[{"presentedOfferingContext":{"targetingContext":null,"placementIdentifier":null,"offeringIdentifier":"default Monthly"},"product":{"identifier":"MCV_Apple_Superhero_v2","pricePerYear":59.88,"pricePerWeekString":"$1.14","pri
+⚡️  [log] - [RevenueCat] [DIAG] Total offerings returned: 1
+⚡️  [log] - [RevenueCat] [DIAG] Offering: "default Monthly" | packages: 1
+⚡️  [log] - [RevenueCat] [DIAG]   → package: "$rc_monthly" | appleProduct: "(unknown)" | price: $4.99 | type: MONTHLY
+⚡️  [log] - [RevenueCat] [DIAG] Current offering: "default Monthly"
+⚡️  [log] - [RevenueCat] [DIAG] Current offering package: "$rc_monthly" | appleProduct: "(unknown)" | price: $4.99
+⚡️  [log] - [RevenueCat] readiness: loading → ready
+DEBUG: ℹ️ Finished syncing all cached transaction metadata
+DEBUG: ℹ️ API request completed: GET '/v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/health_report' (304)
+DEBUG: ℹ️ HealthReportOperation: Finished
+DEBUG: ℹ️ Serial request done: GET /v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/health_report, 0 requests left in the queue
+WARN: ⚠️ RevenueCat SDK is configured correctly, but contains some issues you might want to address
+
+Warnings:
+  • Your products are configured in RevenueCat but aren't approved in App Store Connect yet. This prevents users from making purchases in production. Please ensure all products are approved and available for sale in App Store Connect.
+
+Product Issues:
+  ❌ MCV_Apple_Superhero (Super Hero Monthly): Product not found in App Store Connect. You need to create a product with identifier: 'MCV_Apple_Superhero' in App Store Connect to use it for production purchases.
+⚡️  [log] - [Auth][Apple] Starting Apple sign-in
+⚡️  To Native ->  SignInWithApple authorize 42527147
+⚡️  [log] - [AppleSignIn] Calling native authorize (no clientId/redirectURI — native app flow)
+⚡️  TO JS {"isActive":false}
+DEBUG: ℹ️ Background task started: com.revenuecat.flushAllEvents
+Authorization failed: Error Domain=AKAuthenticationError Code=-7003 "(null)" UserInfo={AKClientBundleID=com.marvelcardvault.app}
+LaunchServices: store (null) or url (null) was nil: Error Domain=NSOSStatusErrorDomain Code=-54 "process may not map database" UserInfo={_LSLine=74, _LSFunction=_LSServer_GetServerStoreForConnectionWithCompletionHandler, _LSFile=LSDReadService.mm, NSDebugDescription=process may not map database}
+Attempt to map database failed: permission was denied. This attempt will not be retried.
+Failed to initialize client context with error Error Domain=NSOSStatusErrorDomain Code=-54 "process may not map database" UserInfo={_LSLine=74, _LSFunction=_LSServer_GetServerStoreForConnectionWithCompletionHandler, _LSFile=LSDReadService.mm, NSDebugDescription=process may not map database}
+Failed to get application extension record: Error Domain=NSOSStatusErrorDomain Code=-54 "(null)"
+ASAuthorizationController credential request failed with error: Error Domain=com.apple.AuthenticationServices.AuthorizationError Code=1001 "(null)"
+ERROR MESSAGE:  {"message":"The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1001.)","errorMessage":"The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1001.)"}
+⚡️  [error] - {"message":"The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1001.)","errorMessage":"The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1001.)"}
+⚡️  [error] - [Auth][Apple] Failed — code: undefined | message: The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1001.) | full: {"errorMessage":"The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1001.)"}
+⚡️  [log] - [Auth][Apple] Cancelled by user — suppressing error UI
+⚡️  TO JS {"isActive":true}
+⚡️  [log] - [Auth][Apple] Starting Apple sign-in
+⚡️  To Native ->  SignInWithApple authorize 42527148
+⚡️  [log] - [AppleSignIn] Calling native authorize (no clientId/redirectURI — native app flow)
+⚡️  TO JS {"isActive":false}
+DEBUG: ℹ️ Background task started: com.revenuecat.flushAllEvents
+⚡️  TO JS {"response":{"givenName":null,"authorizationCode":"c8ff934502431416291ef71e9c04cc28b.0.sxxr.sBxCVWEM0iRduY8RV38QpQ","email":null,"familyName":null,"identityToken":"eyJraWQiOiI1aXEzM2xKQllqIiwiYWxnIjoiUlMyNTYifQ.eyJpc3MiOiJodHRwczovL2FwcGxlaWQuYXBwbGUuY29tI
+⚡️  [log] - [AppleSignIn] authorize returned, checking identityToken
+⚡️  [log] - [AppleSignIn] identityToken present, sending to server
+⚡️  [error] - [AppleSignIn] Server verification failed: 500 {"error":"Failed to process Apple sign-in"}
+⚡️  [error] - [Auth][Apple] Failed — code: undefined | message: Failed to process Apple sign-in | full: {}
+⚡️  TO JS {"isActive":true}

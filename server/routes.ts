@@ -318,7 +318,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!existingFirebaseUser) {
         const createParams: admin.auth.CreateRequest = { uid: firebaseUid };
         if (payload.email) createParams.email = payload.email;
-        await admin.auth().createUser(createParams);
+        try {
+          await admin.auth().createUser(createParams);
+        } catch (createError: any) {
+          if (createError.code === "auth/email-already-exists") {
+            await admin.auth().createUser({ uid: firebaseUid });
+          } else {
+            throw createError;
+          }
+        }
       }
 
       const customToken = await admin.auth().createCustomToken(firebaseUid, {

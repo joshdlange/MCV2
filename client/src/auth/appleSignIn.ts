@@ -43,12 +43,11 @@ async function sha256Hash(plain: string): Promise<string> {
 export async function signInWithAppleUnified(): Promise<UserCredential> {
   if (isIOSNativeApp()) {
     const rawNonce = generateNonce();
-    const hashedNonce = await sha256Hash(rawNonce);
 
     console.log("[AppleSignIn] Calling native authorize (no clientId/redirectURI — native app flow)");
     const result: SignInWithAppleResponse = await SignInWithApple.authorize({
       scopes: "email name",
-      nonce: hashedNonce,
+      nonce: rawNonce,
     });
 
     console.log("[AppleSignIn] authorize returned, checking identityToken");
