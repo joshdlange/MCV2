@@ -23,6 +23,7 @@ export const users = pgTable("users", {
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
   appleOriginalTransactionId: text("apple_original_transaction_id"),
+  appleUserId: text("apple_user_id").unique(),
   showEmail: boolean("show_email").default(false).notNull(),
   showCollection: boolean("show_collection").default(true).notNull(),
   showWishlist: boolean("show_wishlist").default(true).notNull(),

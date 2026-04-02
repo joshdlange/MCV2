@@ -189,8 +189,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { firebaseUid, email, displayName } = req.body;
       
-      if (!firebaseUid || !email) {
-        return res.status(400).json({ message: 'Firebase UID and email are required' });
+      if (!firebaseUid) {
+        return res.status(400).json({ message: 'Firebase UID is required' });
+      }
+
+      // Apple sign-in users may have no email — look them up by UID first
+      const isAppleUser = firebaseUid.startsWith('apple_');
+      if (!email && !isAppleUser) {
+        return res.status(400).json({ message: 'Email is required for non-Apple sign-in' });
       }
 
       console.log('Auth sync request for:', firebaseUid, email);
@@ -201,11 +207,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         // Create new user - check if this should be an admin user
         const isAdminEmail = email === 'joshdlange045@gmail.com';
+        const fallbackEmail = email || `${firebaseUid}@apple.local`;
         const userData = {
           firebaseUid,
-          username: email.split('@')[0],
-          email,
-          displayName: displayName || email.split('@')[0],
+          username: fallbackEmail.split('@')[0],
+          email: fallbackEmail,
+          displayName: displayName || fallbackEmail.split('@')[0],
           isAdmin: isAdminEmail,
           plan: 'SIDE_KICK',
           subscriptionStatus: 'active'
@@ -306,35 +313,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "No Apple user ID in token" });
       }
 
-      const firebaseUid = `apple_${appleSub}`;
+      const appleEmail = payload.email || null;
 
+      // Resolve the account this Apple sub should sign into
+      // Priority: 1) already mapped by appleUserId, 2) email match with existing account, 3) new Apple account
+      let linkedUser = await storage.getUserByAppleUserId(appleSub);
+
+      if (!linkedUser && appleEmail) {
+        linkedUser = await storage.getUserByEmail(appleEmail);
+        if (linkedUser) {
+          console.log(`Apple sign-in: linking apple sub ${appleSub} to existing account ${linkedUser.id} (${appleEmail})`);
+        }
+      }
+
+      // Persist the apple sub on the user record so subsequent sign-ins (no email) still work
+      if (linkedUser && !linkedUser.appleUserId) {
+        await storage.updateUser(linkedUser.id, { appleUserId: appleSub } as any);
+      }
+
+      const linkedFirebaseUid = linkedUser ? linkedUser.firebaseUid : `apple_${appleSub}`;
+
+      // Ensure Firebase Auth user exists for the resolved UID
       let existingFirebaseUser;
       try {
-        existingFirebaseUser = await admin.auth().getUser(firebaseUid);
+        existingFirebaseUser = await admin.auth().getUser(linkedFirebaseUid);
       } catch (_e) {
         existingFirebaseUser = null;
       }
 
       if (!existingFirebaseUser) {
-        const createParams: admin.auth.CreateRequest = { uid: firebaseUid };
-        if (payload.email) createParams.email = payload.email;
+        const createParams: admin.auth.CreateRequest = { uid: linkedFirebaseUid };
+        if (appleEmail) createParams.email = appleEmail;
         try {
           await admin.auth().createUser(createParams);
         } catch (createError: any) {
           if (createError.code === "auth/email-already-exists") {
-            await admin.auth().createUser({ uid: firebaseUid });
+            await admin.auth().createUser({ uid: linkedFirebaseUid });
           } else {
             throw createError;
           }
         }
       }
 
-      const customToken = await admin.auth().createCustomToken(firebaseUid, {
+      const customToken = await admin.auth().createCustomToken(linkedFirebaseUid, {
         provider: "apple.com",
         appleUserId: appleSub,
       });
 
-      return res.json({ customToken, firebaseUid, email: payload.email || null });
+      return res.json({ customToken, firebaseUid: linkedFirebaseUid, email: appleEmail });
     } catch (error: any) {
       console.error("Apple sign-in error:", error);
       return res.status(500).json({ error: "Failed to process Apple sign-in" });
