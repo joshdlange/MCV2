@@ -31,6 +31,7 @@ async function initSocialLoginIfNeeded() {
   if (socialLoginInitialized) return;
 
   const WEB_CLIENT_ID = "946426423073-rjhk84sgojd77gvkq2uf5ehrcd1l3ja9.apps.googleusercontent.com";
+  console.log("[GoogleSignIn] Initializing SocialLogin with webClientId");
 
   await SocialLogin.initialize({
     google: {
@@ -39,22 +40,32 @@ async function initSocialLoginIfNeeded() {
   });
 
   socialLoginInitialized = true;
+  console.log("[GoogleSignIn] SocialLogin initialized");
 }
 
 export async function signInWithGoogleUnified(): Promise<UserCredential> {
   if (!isNativeApp()) {
+    console.log("[GoogleSignIn] Web path — using signInWithPopup");
     const provider = new GoogleAuthProvider();
     return await signInWithPopup(auth, provider);
   }
 
+  console.log("[GoogleSignIn] Native path — initializing SocialLogin");
   await initSocialLoginIfNeeded();
 
-  const res: any = await SocialLogin.login({
-    provider: "google",
-    options: {},
-  });
+  console.log("[GoogleSignIn] Calling SocialLogin.login()");
+  let res: any;
+  try {
+    res = await SocialLogin.login({
+      provider: "google",
+      options: {},
+    });
+  } catch (loginErr: any) {
+    console.error("[GoogleSignIn] SocialLogin.login() threw:", loginErr?.code, loginErr?.message, JSON.stringify(loginErr));
+    throw loginErr;
+  }
 
-  console.log('SocialLogin response:', JSON.stringify(res).substring(0, 500));
+  console.log('[GoogleSignIn] SocialLogin.login() response:', JSON.stringify(res).substring(0, 500));
 
   let idToken =
     res?.idToken ||

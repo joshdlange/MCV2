@@ -1,0 +1,69 @@
+We are live on the iOS App Store and have a production blocker:
+
+ISSUE
+- Users cannot log in on the live iOS app using either Sign in with Apple or Sign in with Google.
+- Android app login works.
+- Other environments / sessions appear fine.
+- On iOS production:
+  - Apple Sign In shows:
+    - “The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1001.)”
+    - then “Failed to process Apple sign-in”
+  - Google SSO also fails in the live iOS app.
+
+This strongly suggests an iOS production auth configuration / callback / Capacitor shell issue, not a general auth logic problem.
+
+I need a focused production hotfix audit and patch. Do not refactor unrelated code.
+
+Please investigate and report findings for ALL of the following:
+
+1. iOS production auth configuration
+- Confirm the live App Store build bundle id matches all expected auth config values.
+- Confirm the Capacitor iOS app uses the correct bundle identifier everywhere.
+- Confirm any production-only config differs from dev/TestFlight/local.
+
+2. Apple Sign In on iOS
+- Audit the full Apple login flow in the production iOS shell.
+- Check native Apple Sign In capability, callback handling, nonce/state handling, token parsing, and Firebase credential exchange.
+- Explain what could trigger AuthorizationError 1001 in this exact flow.
+- Verify the app is correctly handling cancel vs failure vs callback return.
+- Confirm associated config in Firebase / Apple provider / iOS target is correct for production bundle id.
+
+3. Google Sign In on iOS
+- Audit Google iOS sign-in config for the production App Store build.
+- Confirm required URL schemes are present and correct.
+- Confirm reversed client ID / plist / callback handling are correct.
+- Confirm the production bundle id is registered correctly in Firebase/Google config.
+- Check whether the live build is missing or using stale GoogleService-Info.plist values.
+
+4. Capacitor / callback handling
+- Audit deep link and callback return handling in the iOS shell.
+- Confirm auth redirects correctly return control to the app in production.
+- Check Info.plist URL types, app schemes, universal links / custom schemes, and any appUrlOpen listeners.
+- Confirm no Safari/webview callback mismatch exists only on iOS production.
+
+5. Production vs local mismatch
+- Identify anything that would work in local/dev/TestFlight but fail in App Store production.
+- Check if any iOS native config was not committed, not synced, or stale in the released binary.
+
+6. Logging / diagnostics
+- Add targeted production-safe logging around Apple and Google login start/failure/success paths so we can identify exactly where the iOS live flow breaks.
+- Add precise user-facing error messages where helpful, but keep UX clean.
+- Do not expose secrets.
+
+DELIVERABLE FORMAT
+A. Root cause hypothesis ranked from most likely to least likely
+B. Exact files / configs inspected
+C. Exact files that need changes
+D. Full ready-to-ship code/config changes
+E. QA checklist for:
+   - live iOS app
+   - TestFlight / production build
+   - Apple Sign In
+   - Google Sign In
+   - existing email/password login regression
+
+IMPORTANT
+- This is a production blocker.
+- I do not want theory only — I want exact fixes.
+- Provide full ready-to-paste code/config updates if changes are needed.
+- Include any Xcode / Capacitor / Firebase / Apple Developer / Google console settings that must be changed outside the codebase.

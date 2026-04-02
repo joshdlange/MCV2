@@ -45,19 +45,21 @@ export async function signInWithAppleUnified(): Promise<UserCredential> {
     const rawNonce = generateNonce();
     const hashedNonce = await sha256Hash(rawNonce);
 
+    console.log("[AppleSignIn] Calling native authorize (no clientId/redirectURI — native app flow)");
     const result: SignInWithAppleResponse = await SignInWithApple.authorize({
-      clientId: "com.marvelcardvault.app",
-      redirectURI: "https://app.marvelcardvault.com",
       scopes: "email name",
       nonce: hashedNonce,
     });
 
+    console.log("[AppleSignIn] authorize returned, checking identityToken");
     const identityToken = result.response.identityToken;
 
     if (!identityToken) {
+      console.error("[AppleSignIn] No identityToken in response:", JSON.stringify(result.response));
       throw new Error("No identity token returned from Apple Sign-In");
     }
 
+    console.log("[AppleSignIn] identityToken present, sending to server");
     const response = await fetch("/api/auth/apple-sign-in", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -66,10 +68,12 @@ export async function signInWithAppleUnified(): Promise<UserCredential> {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      console.error("[AppleSignIn] Server verification failed:", response.status, errorData);
       throw new Error(errorData.error || "Apple Sign-In server verification failed");
     }
 
     const { customToken } = await response.json();
+    console.log("[AppleSignIn] Custom token received, signing in with Firebase");
     return await signInWithCustomToken(auth, customToken);
   }
 

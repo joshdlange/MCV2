@@ -54,12 +54,13 @@ export function Login() {
   const handleGoogleSignIn = async () => {
     setError(null);
     setIsLoading(true);
+    console.log("[Auth][Google] Starting Google sign-in");
     try {
       const cred = await signInWithGoogleUnified();
-      console.log("Logged in as:", cred.user.uid);
+      console.log("[Auth][Google] Success — uid:", cred.user.uid);
       window.location.href = "/";
     } catch (err: any) {
-      console.error("Google login failed:", err);
+      console.error("[Auth][Google] Failed — code:", err?.code, "| message:", err?.message, "| full:", JSON.stringify(err));
       setError(err.message || "Google sign-in failed. Please try again.");
     } finally {
       setIsLoading(false);
@@ -69,16 +70,25 @@ export function Login() {
   const handleAppleSignIn = async () => {
     setError(null);
     setIsLoading(true);
+    console.log("[Auth][Apple] Starting Apple sign-in");
     try {
       const cred = await signInWithAppleUnified();
-      console.log("Logged in via Apple as:", cred.user.uid);
+      console.log("[Auth][Apple] Success — uid:", cred.user.uid);
       window.location.href = "/";
     } catch (err: any) {
-      console.error("Apple login failed:", err);
-      if (err.message?.includes("canceled") || err.message?.includes("cancelled")) {
+      console.error("[Auth][Apple] Failed — code:", err?.code, "| message:", err?.message, "| full:", JSON.stringify(err));
+      const code = err?.code;
+      const msg: string = err?.message ?? '';
+      // Apple error 1001 = ASAuthorizationErrorCanceled (user dismissed the sheet)
+      const isCancelled =
+        code === 1001 ||
+        msg.includes('error 1001') ||
+        msg.toLowerCase().includes('cancel');
+      if (isCancelled) {
+        console.log("[Auth][Apple] Cancelled by user — suppressing error UI");
         return;
       }
-      setError(err.message || "Apple sign-in failed. Please try again.");
+      setError(msg || "Failed to process Apple sign-in. Please try again.");
     } finally {
       setIsLoading(false);
     }
