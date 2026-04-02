@@ -1,0 +1,62 @@
+We still get the same runtime error on iOS after:
+- deploying Replit
+- adding the Firebase iOS app
+- adding GoogleService-Info.plist
+- adding the REVERSED_CLIENT_ID URL scheme
+- rebuilding clean in Xcode
+
+Current runtime error:
+"No Provider was initialized."
+
+This means the issue is now clearly provider initialization in the iOS social login plugin path.
+
+I need a focused hotfix for provider initialization only. Do not refactor unrelated code.
+
+Please do all of the following:
+
+1. Find the exact initialization path for @capgo/capacitor-social-login
+- Where is SocialLogin.initialize() called?
+- Does it run on iOS before the login buttons are tapped?
+- Does it run only on web/Android/dev by mistake?
+- Is it skipped in production iOS for any reason?
+
+2. Identify the exact missing provider
+- Is Google provider not initialized?
+- Is Apple provider not initialized?
+- Are both missing?
+- Show exactly how you know.
+
+3. Audit the config passed into initialize()
+- Show the full current init object.
+- Confirm whether Google is initialized with only webClientId.
+- Confirm whether iOS client ID should also be present or inferred from native config.
+- Confirm whether Apple provider initialization is required separately or not for this plugin.
+
+4. Patch the code
+- Add a guaranteed iOS-safe provider initialization path that runs before any login attempt.
+- Add logging:
+  - "[AuthInit] initialize start"
+  - "[AuthInit] initialize success"
+  - "[AuthInit] initialize failure"
+  - which providers were initialized
+- Add a guard so login cannot run before provider init completes.
+
+5. Native/Xcode checks
+- Tell me exactly what to verify in the local iOS project if the plugin still says no provider initialized:
+  - plugin registration
+  - AppDelegate integration if needed
+  - plist requirements
+  - target membership
+  - anything in Capacitor plugin sync that could be stale
+
+6. Output format
+A. Root cause
+B. Exact files changed
+C. Full ready-to-paste code changes
+D. Exact Xcode/native checks
+E. Exact retest steps
+
+Important:
+- This is a production blocker.
+- I need the exact fix, not theory.
+- Assume the current iOS runtime error is authoritative: "No Provider was initialized."

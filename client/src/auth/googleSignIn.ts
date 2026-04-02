@@ -9,6 +9,12 @@ import {
 
 const auth = getAuth();
 
+// iOS OAuth client ID — value of CLIENT_ID in GoogleService-Info.plist.
+// REQUIRED on iOS: the @capgo/capacitor-social-login Swift plugin only calls
+// GIDSignIn.configure() when iOSClientId is present. Without it, the native
+// Google provider is never initialized and login throws "No provider was initialized."
+const IOS_CLIENT_ID = import.meta.env.VITE_GOOGLE_IOS_CLIENT_ID as string | undefined;
+
 function isNativeApp(): boolean {
   const w = window as any;
   if (w.Capacitor) {
@@ -25,22 +31,52 @@ function isNativeApp(): boolean {
   return false;
 }
 
+function isIOSNative(): boolean {
+  const w = window as any;
+  try {
+    return w.Capacitor?.getPlatform?.() === "ios";
+  } catch {
+    return false;
+  }
+}
+
 let socialLoginInitialized = false;
 
 async function initSocialLoginIfNeeded() {
   if (socialLoginInitialized) return;
 
   const WEB_CLIENT_ID = "946426423073-rjhk84sgojd77gvkq2uf5ehrcd1l3ja9.apps.googleusercontent.com";
-  console.log("[GoogleSignIn] Initializing SocialLogin with webClientId");
 
-  await SocialLogin.initialize({
-    google: {
-      webClientId: WEB_CLIENT_ID,
-    },
-  });
+  const googleConfig: Record<string, unknown> = {
+    webClientId: WEB_CLIENT_ID,
+  };
 
-  socialLoginInitialized = true;
-  console.log("[GoogleSignIn] SocialLogin initialized");
+  // iOSClientId is mandatory on iOS native — the Swift plugin skips GIDSignIn
+  // initialization entirely if this key is absent, causing "No provider was initialized".
+  if (IOS_CLIENT_ID) {
+    googleConfig.iOSClientId = IOS_CLIENT_ID;
+  }
+
+  console.log(
+    "[AuthInit] initialize start — platform:", (window as any).Capacitor?.getPlatform?.() ?? "web",
+    "| iOSClientId present:", !!IOS_CLIENT_ID,
+    "| webClientId:", WEB_CLIENT_ID.substring(0, 20) + "…"
+  );
+
+  if (isIOSNative() && !IOS_CLIENT_ID) {
+    const msg = "[AuthInit] VITE_GOOGLE_IOS_CLIENT_ID is not set — Google Sign-In will fail on iOS. Add CLIENT_ID from GoogleService-Info.plist as VITE_GOOGLE_IOS_CLIENT_ID in Replit secrets.";
+    console.error(msg);
+    throw new Error("Google Sign-In is not configured for iOS. Please contact support.");
+  }
+
+  try {
+    await SocialLogin.initialize({ google: googleConfig });
+    socialLoginInitialized = true;
+    console.log("[AuthInit] initialize success — providers: google");
+  } catch (err: any) {
+    console.error("[AuthInit] initialize failure — code:", err?.code, "| message:", err?.message, "| full:", JSON.stringify(err));
+    throw err;
+  }
 }
 
 export async function signInWithGoogleUnified(): Promise<UserCredential> {
@@ -81,7 +117,7 @@ export async function signInWithGoogleUnified(): Promise<UserCredential> {
         : res.result.credential;
       idToken = credential?.token || credential?.idToken;
     } catch (e) {
-      console.error('Failed to parse credential:', e);
+      console.error('[GoogleSignIn] Failed to parse credential:', e);
     }
   }
 
@@ -92,16 +128,16 @@ export async function signInWithGoogleUnified(): Promise<UserCredential> {
         : res.result.data;
       idToken = data?.token || data?.idToken;
     } catch (e) {
-      console.error('Failed to parse data:', e);
+      console.error('[GoogleSignIn] Failed to parse data:', e);
     }
   }
 
   if (!idToken) {
-    console.error("Full SocialLogin response:", JSON.stringify(res, null, 2));
+    console.error("[GoogleSignIn] No idToken found. Full response:", JSON.stringify(res, null, 2));
     throw new Error("No idToken returned from native Google login. Please try again.");
   }
 
-  console.log('Successfully extracted Google idToken');
+  console.log('[GoogleSignIn] idToken extracted successfully');
   const credential = GoogleAuthProvider.credential(idToken);
   return await signInWithCredential(auth, credential);
 }
