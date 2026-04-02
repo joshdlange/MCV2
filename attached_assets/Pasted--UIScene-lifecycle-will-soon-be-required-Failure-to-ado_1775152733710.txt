@@ -1,0 +1,111 @@
+`UIScene` lifecycle will soon be required. Failure to adopt will result in an assert in the future.
+Could not create a sandbox extension for '/var/containers/Bundle/Application/02B2A255-BBA2-4D8A-8439-646BBCC478C7/App.app'
+[CdvPurchase.AppleAppStore.objc] Initialized.
+⚡️  Loading app at https://app.marvelcardvault.com...
+WebContent[8455] Unable to hide query parameters from script (missing data)
+⚡️  [log] - onscript loading complete
+⚡️  [log] - Create CdvPurchase...
+⚡️  [log] - Firebase initialized successfully
+⚡️  [log] - Native app detected, skipping redirect handling
+⚡️  [log] - [RevenueCat] readiness: unavailable → loading
+⚡️  [log] - [RevenueCat] initializing…
+⚡️  To Native ->  App addListener 130561928
+⚡️  To Native ->  Purchases setLogLevel -1
+⚡️  To Native ->  App addListener 130561929
+⚡️  To Native ->  App addListener 130561930
+⚡️  To Native ->  Purchases configure -1
+⚡️  To Native ->  Purchases getOfferings 130561931
+⚡️  TO JS undefined
+DEBUG: ℹ️ Configuring SDK using RevenueCat's UserDefaults suite.
+⚡️  WebView loaded
+DEBUG: 👤 Identifying App User ID
+DEBUG: ℹ️ Observing StoreKit.Transaction.updates
+DEBUG: ℹ️ Debug logging enabled
+DEBUG: ℹ️ SDK Version - 5.63.0
+DEBUG: ℹ️ Bundle ID - com.marvelcardvault.app
+DEBUG: ℹ️ System Version - Version 26.3.1 (a) (Build 23D771330a)
+DEBUG: ℹ️ Not using a simulator.
+DEBUG: 👤 No initial App User ID
+DEBUG: ℹ️ Purchases is configured with informational response verification
+DEBUG: ℹ️ Purchases is configured with StoreKit version 2
+DEBUG: ℹ️ Delegate set
+⚡️  TO JS undefined
+⚡️  [log] - [RevenueCat] configured ✓
+DEBUG: ℹ️ Offerings cache is stale, updating from network in foreground
+DEBUG: ℹ️ No cached Offerings, fetching from network
+DEBUG: ℹ️ Network operation 'GetOfferingsOperation' found with the same cache key 'GetOfferingsOpe…'. Skipping request.
+DEBUG: ℹ️ GetOfferingsOperation: Started
+DEBUG: ℹ️ Observing StoreKit.PurchaseIntent.intents
+DEBUG: ℹ️ There are no requests currently running, starting request GET /v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/offerings
+DEBUG: ℹ️ API request started: GET '/v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/offerings'
+DEBUG: ℹ️ API request completed: GET '/v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/offerings' (304)
+DEBUG: ℹ️ No existing products cached, starting store products request for: ["MCV_Apple_Superhero_v2"]
+DEBUG: ℹ️ Found an existing request for products: ["MCV_Apple_Superhero_v2"], appending to completion
+DEBUG: ℹ️ GetOfferingsOperation: Finished
+DEBUG: ℹ️ Serial request done: GET /v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/offerings, 0 requests left in the queue
+DEBUG: ℹ️ HealthReportAvailabilityOperation: Started
+DEBUG: ℹ️ There are no requests currently running, starting request GET /v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/health_report_availability
+DEBUG: ℹ️ API request started: GET '/v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/health_report_availability'
+DEBUG: ℹ️ API request completed: GET '/v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/health_report_availability' (200)
+DEBUG: ℹ️ HealthReportAvailabilityOperation: Finished
+DEBUG: ℹ️ Serial request done: GET /v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/health_report_availability, 0 requests left in the queue
+DEBUG: ℹ️ GetCustomerInfoOperation: Started
+DEBUG: ℹ️ There are no requests currently running, starting request GET /v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12
+DEBUG: ℹ️ API request started: GET '/v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12'
+DEBUG: ℹ️ API request completed: GET '/v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12' (304)
+DEBUG: 😻 CustomerInfo updated from network.
+DEBUG: ℹ️ GetCustomerInfoOperation: Finished
+DEBUG: ℹ️ Serial request done: GET /v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12, 0 requests left in the queue
+DEBUG: ℹ️ HealthReportOperation: Started
+DEBUG: ℹ️ There are no requests currently running, starting request GET /v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/health_report
+DEBUG: ℹ️ API request started: GET '/v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/health_report'
+DEBUG: 😻 Store products request received response
+DEBUG: ℹ️ Store products request finished
+DEBUG: 😻 Offerings updated from network.
+DEBUG: 😻 Offerings updated from network.
+⚡️  TO JS {"all":{"default Monthly":{"availablePackages":[{"packageType":"MONTHLY","identifier":"$rc_monthly","product":{"productCategory":"SUBSCRIPTION","priceString":"$4.99","pricePerMonth":4.99,"pricePerYear":59.88,"description":"Full access: Marvel Card Vault-Tr
+⚡️  [log] - [RevenueCat] [DIAG] Total offerings returned: 1
+⚡️  [log] - [RevenueCat] [DIAG] Offering: "default Monthly" | packages: 1
+⚡️  [log] - [RevenueCat] [DIAG]   → package: "$rc_monthly" | appleProduct: "(unknown)" | price: $4.99 | type: MONTHLY
+⚡️  [log] - [RevenueCat] [DIAG] Current offering: "default Monthly"
+⚡️  [log] - [RevenueCat] [DIAG] Current offering package: "$rc_monthly" | appleProduct: "(unknown)" | price: $4.99
+⚡️  [log] - [RevenueCat] readiness: loading → ready
+DEBUG: ℹ️ API request completed: GET '/v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/health_report' (304)
+DEBUG: ℹ️ HealthReportOperation: Finished
+DEBUG: ℹ️ Serial request done: GET /v1/subscribers/fzlXbFRMhqW2AOGBLXXO4aKa4s12/health_report, 0 requests left in the queue
+WARN: ⚠️ RevenueCat SDK is configured correctly, but contains some issues you might want to address
+
+Warnings:
+  • Your products are configured in RevenueCat but aren't approved in App Store Connect yet. This prevents users from making purchases in production. Please ensure all products are approved and available for sale in App Store Connect.
+
+Product Issues:
+  ❌ MCV_Apple_Superhero (Super Hero Monthly): Product not found in App Store Connect. You need to create a product with identifier: 'MCV_Apple_Superhero' in App Store Connect to use it for production purchases.
+⚡️  [log] - User synced with backend: {"id":337,"firebaseUid":"W5VDTItovKhMk0i9BK5jahX0tPX2","username":"sabretooth","email":"joshdlange045@gmail.com","displayName":"Joshua Lange","photoURL":"https://lh3.googleusercontent.com/a/ACg8ocL3G_JetoeaxXIUfrB8M690m15l1xCZZTTTSzNx6EzMF4HVOTB1zw=s96-c","bio":"","location":"","website":"www.marvelcardvault.com","instagramUrl":null,"whatnotUrl":null,"ebayUrl":null,"address":null,"isAdmin":true,"plan":"SUPER_HERO","subscriptionStatus":"active","stripeCustomerId":null,"stripeSubscriptionId":null,"appleOriginalTransactionId":null,"showEmail":false,"showCollection":true,"showWishlist":true,"emailUpdates":true,"priceAlerts":true,"friendActivity":true,"profileVisibility":"public","onboardingComplete":true,"heardAbout":"YouTube/Streamer","favoriteSets":["Marvel Masterpieces"],"marketingOptIn":true,"lastLogin":"2026-04-01T21:17:39.723Z","loginStreak":2,"totalLogins":112,"lastInactivityEmailSent":null,"lastWeeklyDigestSent":null,"marketplaceSuspended":false,"marketplaceSuspendedAt":null,"shippingAddressJson":"{\"name\":\"Joshua Lange\",\"street1\":\"2920 wedgescale pass\",\"street2\":\"\",\"city\":\"Leander\",\"state\":\"TX\",\"zip\":\"78641-1426\",\"country\":\"USA\",\"phone\":\"\"}","sellerRating":null,"sellerReviewCount":0,"createdAt":"2025-06-01T01:55:49.861Z"}
+⚡️  To Native ->  App addListener 130561932
+DEBUG: ℹ️ Finished syncing all cached transaction metadata
+⚡️  To Native ->  App addListener 130561933
+⚡️  To Native ->  App removeListener 130561934
+⚡️  [log] - [Auth][Apple] Starting Apple sign-in
+⚡️  To Native ->  SignInWithApple authorize 130561935
+⚡️  [log] - [AppleSignIn] Calling native authorize (no clientId/redirectURI — native app flow)
+Authorization failed: Error Domain=AKAuthenticationError Code=-7026 "(null)" UserInfo={AKClientBundleID=com.marvelcardvault.app}
+LaunchServices: store (null) or url (null) was nil: Error Domain=NSOSStatusErrorDomain Code=-54 "process may not map database" UserInfo={_LSLine=74, _LSFunction=_LSServer_GetServerStoreForConnectionWithCompletionHandler, _LSFile=LSDReadService.mm, NSDebugDescription=process may not map database}
+Attempt to map database failed: permission was denied. This attempt will not be retried.
+Failed to initialize client context with error Error Domain=NSOSStatusErrorDomain Code=-54 "process may not map database" UserInfo={_LSLine=74, _LSFunction=_LSServer_GetServerStoreForConnectionWithCompletionHandler, _LSFile=LSDReadService.mm, NSDebugDescription=process may not map database}
+Failed to get application extension record: Error Domain=NSOSStatusErrorDomain Code=-54 "(null)"
+ASAuthorizationController credential request failed with error: Error Domain=com.apple.AuthenticationServices.AuthorizationError Code=1000 "(null)"
+ERROR MESSAGE:  {"message":"The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1000.)","errorMessage":"The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1000.)"}
+⚡️  [error] - {"message":"The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1000.)","errorMessage":"The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1000.)"}
+⚡️  [error] - [Auth][Apple] Failed — code: undefined | message: The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1000.) | full: {"errorMessage":"The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1000.)"}
+⚡️  [log] - [Auth][Apple] Starting Apple sign-in
+⚡️  To Native ->  SignInWithApple authorize 130561936
+⚡️  [log] - [AppleSignIn] Calling native authorize (no clientId/redirectURI — native app flow)
+Authorization failed: Error Domain=AKAuthenticationError Code=-7026 "(null)" UserInfo={AKClientBundleID=com.marvelcardvault.app}
+LaunchServices: store (null) or url (null) was nil: Error Domain=NSOSStatusErrorDomain Code=-54 "process may not map database" UserInfo={_LSLine=74, _LSFunction=_LSServer_GetServerStoreForConnectionWithCompletionHandler, _LSFile=LSDReadService.mm, NSDebugDescription=process may not map database}
+Attempt to map database failed: permission was denied. This attempt will not be retried.
+Failed to initialize client context with error Error Domain=NSOSStatusErrorDomain Code=-54 "process may not map database" UserInfo={_LSLine=74, _LSFunction=_LSServer_GetServerStoreForConnectionWithCompletionHandler, _LSFile=LSDReadService.mm, NSDebugDescription=process may not map database}
+Failed to get application extension record: Error Domain=NSOSStatusErrorDomain Code=-54 "(null)"
+ASAuthorizationController credential request failed with error: Error Domain=com.apple.AuthenticationServices.AuthorizationError Code=1000 "(null)"
+ERROR MESSAGE:  {"errorMessage":"The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1000.)","message":"The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1000.)"}
+⚡️  [error] - {"errorMessage":"The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1000.)","message":"The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1000.)"}
+⚡️  [error] - [Auth][Apple] Failed — code: undefined | message: The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1000.) | full: {"errorMessage":"The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1000.)"}
