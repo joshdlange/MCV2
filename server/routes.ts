@@ -5257,6 +5257,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
               stripeSubscriptionId: session.subscription as string
             });
             console.log(`User ${userId} upgraded to Super Hero plan`);
+            try {
+              const upgradedUser = await storage.getUser(userId);
+              await sendEmail(
+                'josh@marvelcardvault.com',
+                '🎉 New Super Hero Subscriber!',
+                `<p>A user just upgraded to Super Hero via <strong>Stripe (web/Android)</strong>.</p>
+                 <ul>
+                   <li><strong>User ID:</strong> ${userId}</li>
+                   <li><strong>Name:</strong> ${upgradedUser?.displayName || upgradedUser?.username || 'Unknown'}</li>
+                   <li><strong>Email:</strong> ${upgradedUser?.email || 'Unknown'}</li>
+                   <li><strong>Stripe Customer:</strong> ${session.customer}</li>
+                 </ul>`
+              );
+            } catch (notifyErr) {
+              console.error('Failed to send upgrade notification email:', notifyErr);
+            }
           }
           break;
 
@@ -5567,6 +5583,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       console.log(`[RevenueCat] Verified and activated SUPER_HERO for user ${user.id} (RC id: ${appUserId}, product: ${entitlement.product_identifier})`);
+
+      try {
+        await sendEmail(
+          'josh@marvelcardvault.com',
+          '🎉 New Super Hero Subscriber!',
+          `<p>A user just upgraded to Super Hero via <strong>iOS App Store (RevenueCat)</strong>.</p>
+           <ul>
+             <li><strong>User ID:</strong> ${user.id}</li>
+             <li><strong>Name:</strong> ${user.displayName || user.username || 'Unknown'}</li>
+             <li><strong>Email:</strong> ${user.email || 'Unknown'}</li>
+             <li><strong>Product:</strong> ${entitlement.product_identifier}</li>
+           </ul>`
+        );
+      } catch (notifyErr) {
+        console.error('[RevenueCat] Failed to send upgrade notification email:', notifyErr);
+      }
+
       return res.json({ success: true, plan: 'SUPER_HERO' });
     } catch (error: any) {
       console.error('[RevenueCat] activate error:', error);
