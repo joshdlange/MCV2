@@ -17,10 +17,10 @@ app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Serve uploaded images statically
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
-// Serve badge images statically
-app.use('/badge_images', express.static(path.join(process.cwd(), 'badge_images')));
+// Serve uploaded images statically with long-term caching
+const staticOpts = { maxAge: '1y', immutable: true };
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), staticOpts));
+app.use('/badge_images', express.static(path.join(process.cwd(), 'badge_images'), staticOpts));
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -54,8 +54,6 @@ app.use((req, res, next) => {
 
 (async () => {
   await warmPool();
-  
-  app.use('/uploads', express.static('uploads'));
   
   const server = await registerRoutes(app);
 

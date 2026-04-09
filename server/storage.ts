@@ -2047,7 +2047,10 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
-    return Object.values(threads);
+    return Object.values(threads).sort((a, b) =>
+      new Date(b.lastMessage.createdAt as string).getTime() -
+      new Date(a.lastMessage.createdAt as string).getTime()
+    );
   }
 
   // Social Features - Badges
