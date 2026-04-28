@@ -935,6 +935,7 @@ export default function Profile() {
         isOpen={showUpgradeModal} 
         onClose={() => setShowUpgradeModal(false)} 
         currentPlan={userProfile?.plan || 'SIDE_KICK'}
+        trigger="profile"
       />
 
       {showDeleteModal && (

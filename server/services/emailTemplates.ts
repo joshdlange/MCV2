@@ -467,14 +467,22 @@ export function weeklyDigestTemplate(
       ${setsHtml || '<p style="margin: 0; color: ${TEXT_SECONDARY};">No new sets this month</p>'}
     </div>
     ${ctaButton('See New Sets', 'https://www.marvelcardvault.com')}
-    <div style="background-color: ${DARK_BG}; padding: 25px; border-radius: 8px; margin: 30px 0 20px; border: 1px solid ${BRAND_RED}; text-align: center;">
-      <p style="margin: 0 0 5px; font-size: 12px; color: ${BRAND_RED}; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">New Feature</p>
+    <div style="background-color: ${DARK_BG}; padding: 25px; border-radius: 8px; margin: 30px 0 20px; border: 2px solid ${BRAND_RED}; text-align: center;">
+      <p style="margin: 0 0 5px; font-size: 12px; color: ${BRAND_RED}; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">Now on iOS</p>
+      <h3 style="margin: 0 0 10px; font-size: 20px; color: ${TEXT_PRIMARY};">Marvelous Card Vault is on the App Store!</h3>
+      <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.5; color: ${TEXT_SECONDARY};">
+        Manage your Marvel card collection on the go with our free iOS app. Track your binder, hunt inserts, and browse the full database — right from your iPhone.
+      </p>
+      <a href="https://apps.apple.com/us/app/marvelous-card-vault/id6759801987"
+         style="display: inline-block; background-color: ${BRAND_RED}; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-size: 15px; font-weight: 700; letter-spacing: 0.5px;">
+        Download on the App Store
+      </a>
+    </div>
+    <div style="background-color: ${DARK_BG}; padding: 25px; border-radius: 8px; margin: 20px 0; border: 1px solid #2d3748; text-align: center;">
+      <p style="margin: 0 0 5px; font-size: 12px; color: ${BRAND_RED}; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">Feature Spotlight</p>
       <h3 style="margin: 0 0 10px; font-size: 20px; color: ${TEXT_PRIMARY};">Share Your Collection</h3>
       <p style="margin: 0 0 15px; font-size: 14px; line-height: 1.5; color: ${TEXT_SECONDARY};">
-        You can now share your binder with anyone! Create a shareable link for any set in your collection and send it to friends, post it on social media, or show off your collection on Reddit. No account needed to view.
-      </p>
-      <p style="margin: 0; font-size: 13px; color: ${TEXT_SECONDARY};">
-        Open any set in your collection and tap the <strong style="color: ${TEXT_PRIMARY};">Share</strong> button to get started.
+        Share your binder with anyone — no account needed to view. Open any set in your collection and tap the <strong style="color: ${TEXT_PRIMARY};">Share</strong> button to get a shareable link.
       </p>
     </div>
   `;

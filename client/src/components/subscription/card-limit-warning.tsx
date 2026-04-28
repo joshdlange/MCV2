@@ -47,6 +47,7 @@ export function CardLimitWarning({ currentCards, userPlan, variant = "warning" }
           isOpen={showUpgradeModal} 
           onClose={() => setShowUpgradeModal(false)} 
           currentPlan={userPlan}
+          trigger="card_limit_warning"
         />
       </>
     );
@@ -82,6 +83,7 @@ export function CardLimitWarning({ currentCards, userPlan, variant = "warning" }
           isOpen={showUpgradeModal} 
           onClose={() => setShowUpgradeModal(false)} 
           currentPlan={userPlan}
+          trigger="card_limit_warning"
         />
       </>
     );

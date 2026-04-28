@@ -35,9 +35,10 @@ interface UpgradeModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentPlan: string;
+  trigger?: string;
 }
 
-export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps) {
+export function UpgradeModal({ isOpen, onClose, currentPlan, trigger }: UpgradeModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [iapReadiness, setIapReadiness] = useState<AppleIAPReadiness>(getAppleIAPReadiness());
@@ -48,6 +49,31 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
 
   const onIOS = isAppleIAP();
   const useRC = onIOS && REVENUECAT_ENABLED;
+
+  const getPlatform = () => {
+    if (onIOS) return 'ios';
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') return 'android';
+    return 'web';
+  };
+
+  const trackEvent = async (eventType: string) => {
+    try {
+      const token = await user?.getIdToken();
+      if (!token) return;
+      fetch('/api/analytics/event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ eventType, platform: getPlatform(), trigger: trigger ?? 'unknown' }),
+      }).catch(() => {});
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (isOpen && currentPlan !== 'SUPER_HERO') {
+      trackEvent('upgrade_modal_shown');
+    }
+  }, [isOpen]);
+
 
   // Subscribe to RevenueCat readiness changes
   useEffect(() => {
@@ -87,6 +113,8 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
       onClose();
       return;
     }
+
+    trackEvent('upgrade_clicked');
 
     // ── RevenueCat iOS path ─────────────────────────────────────────────────
     if (useRC) {
@@ -514,7 +542,7 @@ export function UpgradeModal({ isOpen, onClose, currentPlan }: UpgradeModalProps
           )}
 
           <button
-            onClick={onClose}
+            onClick={() => { trackEvent('upgrade_dismissed'); onClose(); }}
             className="w-full text-center text-sm text-gray-300 hover:text-white transition-colors py-2.5 border border-gray-600 hover:border-gray-400 rounded-xl"
           >
             Not now — I'll upgrade later

@@ -261,6 +261,7 @@ export function Sidebar() {
         isOpen={showUpgradeModal} 
         onClose={() => setShowUpgradeModal(false)} 
         currentPlan={currentUser?.plan || 'SIDE_KICK'}
+        trigger="sidebar"
       />
     </div>
   );

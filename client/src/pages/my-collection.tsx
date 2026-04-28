@@ -1241,6 +1241,7 @@ export default function MyCollection() {
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
         currentPlan={currentUser?.plan || 'SIDE_KICK'}
+        trigger="limit_reached"
       />
     </div>
   );

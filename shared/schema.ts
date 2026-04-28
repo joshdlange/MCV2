@@ -1093,3 +1093,16 @@ export type ProfileStats = {
   completedSets: number;
   loginStreak: number;
 };
+
+// ── Analytics Events ─────────────────────────────────────────────────────────
+export const analyticsEvents = pgTable("analytics_events", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  eventType: text("event_type").notNull(), // upgrade_modal_shown, upgrade_clicked, upgrade_dismissed, upgrade_completed
+  platform: text("platform"), // ios, android, web
+  trigger: text("trigger"), // limit_reached, sidebar, profile, marketplace, card_limit_warning, manual
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
+export type InsertAnalyticsEvent = typeof analyticsEvents.$inferInsert;

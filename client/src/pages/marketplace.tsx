@@ -383,6 +383,7 @@ function MarketplaceContent() {
           isOpen={showUpgradeModal} 
           onClose={() => setShowUpgradeModal(false)} 
           currentPlan={currentUser?.plan || 'SIDE_KICK'}
+          trigger="marketplace"
         />
       </div>
     );
@@ -568,6 +569,7 @@ function MarketplaceContent() {
         isOpen={showUpgradeModal} 
         onClose={() => setShowUpgradeModal(false)} 
         currentPlan={currentUser?.plan || "SIDE_KICK"}
+        trigger="marketplace"
       />
 
       {/* Shipping Address Modal */}
@@ -900,6 +902,7 @@ function MarketplaceContent() {
         isOpen={showUpgradeModal} 
         onClose={() => setShowUpgradeModal(false)} 
         currentPlan={currentUser?.plan || 'SIDE_KICK'}
+        trigger="marketplace"
       />
     </div>
   );

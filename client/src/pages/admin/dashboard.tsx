@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, FolderOpen, Edit, PlusCircle, Settings, Calendar, Image, ArrowLeftRight, Copy, TrendingUp, Layers, CreditCard, ImageOff, DollarSign } from "lucide-react";
+import { Users, FolderOpen, Edit, PlusCircle, Settings, Calendar, Image, ArrowLeftRight, Copy, TrendingUp, Layers, CreditCard, ImageOff, DollarSign, BarChart2 } from "lucide-react";
 
 interface AdminStats {
   totalUsers: number;
@@ -83,6 +83,13 @@ export default function AdminDashboard() {
       href: "/admin/base-set-population",
       icon: Copy,
       color: "bg-teal-500"
+    },
+    {
+      title: "Conversion Funnel",
+      description: "Track signups → card adds → logins → upgrades → churn",
+      href: "/admin/analytics",
+      icon: BarChart2,
+      color: "bg-yellow-500"
     }
   ];
 

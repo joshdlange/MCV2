@@ -40,6 +40,8 @@ The application incorporates comprehensive performance optimizations for handlin
 - **Marketplace & eBay Affiliate**: Marketplace functionality is feature-flagged. Integrated eBay affiliate links for "Buy on eBay" buttons, with dynamic query generation and customizable affiliate parameters.
 - **Marketplace Fulfillment System**: Seller payout workflow including earnings tracking, payout account management, payout requests, admin approval, and fee calculations.
 - **User Blocking System**: Full block/unblock functionality with enforcement across all social features (friend requests, messaging, profile viewing, collection/wishlist access, user search). Block button on user profiles with confirmation dialog. Blocked users list in profile Privacy tab for management. Blocking auto-removes friendships.
+- **Conversion Funnel Analytics**: Admin page at `/admin/analytics` shows 5-stage funnel (Signup → Added Card → Returning User → Upgraded → Cancelled) with bar chart, conversion rates, and churn rate. `analyticsEvents` table tracks upgrade modal impressions, clicks, and dismissals with platform and trigger breakdown. Upgrade modal fires `upgrade_modal_shown`, `upgrade_clicked`, `upgrade_dismissed` events via `POST /api/analytics/event`. All UpgradeModal callers pass `trigger` prop (sidebar, profile, marketplace, limit_reached, card_limit_warning).
+- **Monthly Email**: Updated `weeklyDigestTemplate` to include iOS App Store section (https://apps.apple.com/us/app/marvelous-card-vault/id6759801987) with download CTA button.
 
 ### Data Flow
 - **Card Management**: Admin CSV uploads, background processing, eBay API for images, Cloudinary optimization, and price data refreshes.

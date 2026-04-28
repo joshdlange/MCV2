@@ -45,6 +45,7 @@ const AdminUpcomingSets = lazy(() => import("@/pages/admin/upcoming-sets"));
 const AdminImageApprovals = lazy(() => import("@/pages/admin/image-approvals"));
 const AdminMigrationConsole = lazy(() => import("@/pages/admin/migration-console"));
 const AdminBaseSetPopulation = lazy(() => import("@/pages/admin/base-set-population"));
+const AdminAnalytics = lazy(() => import("@/pages/admin/analytics"));
 const CardSearch = lazy(() => import("@/pages/card-search"));
 const MarketTrends = lazy(() => import("@/pages/market-trends"));
 const UpcomingSets = lazy(() => import("@/pages/upcoming-sets"));
@@ -182,6 +183,7 @@ function Router() {
           <Route path="/admin/image-approvals" component={AdminImageApprovals} />
           <Route path="/admin/migration-console" component={AdminMigrationConsole} />
           <Route path="/admin/base-set-population" component={AdminBaseSetPopulation} />
+          <Route path="/admin/analytics" component={AdminAnalytics} />
           <Route path="/subscribe" component={Subscribe} />
           <Route path="/subscription-success" component={SubscriptionSuccess} />
           <Route path="/subscription-cancelled" component={SubscriptionCancelled} />

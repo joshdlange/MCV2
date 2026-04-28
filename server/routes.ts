@@ -493,6 +493,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin quick stats - real-time data
+  // ── Analytics event ingestion (authenticated users) ─────────────────────────
+  app.post("/api/analytics/event", authenticateUser, async (req: any, res) => {
+    try {
+      const { eventType, platform, trigger } = req.body;
+      if (!eventType) return res.status(400).json({ message: 'eventType required' });
+      await storage.logAnalyticsEvent({
+        userId: req.user?.id,
+        eventType,
+        platform,
+        trigger,
+      });
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('[Analytics] event error:', err);
+      res.status(500).json({ message: 'Failed to log event' });
+    }
+  });
+
+  // ── Admin: Funnel stats ───────────────────────────────────────────────────────
+  app.get("/api/admin/funnel-stats", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const stats = await storage.getAdminFunnelStats();
+      res.json(stats);
+    } catch (err) {
+      console.error('[Admin] funnel-stats error:', err);
+      res.status(500).json({ message: 'Failed to fetch funnel stats' });
+    }
+  });
+
+  // ── Admin: Upgrade modal stats ────────────────────────────────────────────────
+  app.get("/api/admin/upgrade-modal-stats", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const stats = await storage.getUpgradeModalStats();
+      res.json(stats);
+    } catch (err) {
+      console.error('[Admin] upgrade-modal-stats error:', err);
+      res.status(500).json({ message: 'Failed to fetch modal stats' });
+    }
+  });
+
   app.get("/api/admin/stats", authenticateUser, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) {

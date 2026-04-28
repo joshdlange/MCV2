@@ -14,6 +14,7 @@ import {
   notifications,
   marketTrends,
   marketTrendItems,
+  analyticsEvents,
   type User, 
   type InsertUser,
   type MainSet,
@@ -208,6 +209,11 @@ interface IStorage {
   deleteUpcomingSet(id: number): Promise<void>;
   incrementSetInterest(id: number, userId: number): Promise<UpcomingSet | undefined>;
   markSetAsReleased(id: number): Promise<UpcomingSet | undefined>;
+
+  // Analytics
+  logAnalyticsEvent(data: { userId?: number; eventType: string; platform?: string; trigger?: string }): Promise<void>;
+  getAdminFunnelStats(): Promise<any>;
+  getUpgradeModalStats(): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2672,6 +2678,69 @@ export class DatabaseStorage implements IStorage {
       )
       .returning();
     return result.length;
+  }
+
+  // ── Analytics ────────────────────────────────────────────────────────────────
+  async logAnalyticsEvent(data: { userId?: number; eventType: string; platform?: string; trigger?: string }): Promise<void> {
+    try {
+      await db.insert(analyticsEvents).values({
+        userId: data.userId ?? null,
+        eventType: data.eventType,
+        platform: data.platform ?? null,
+        trigger: data.trigger ?? null,
+      });
+    } catch (err) {
+      console.error('[Analytics] Failed to log event:', err);
+    }
+  }
+
+  async getAdminFunnelStats(): Promise<any> {
+    const r1 = await db.execute(sql`SELECT COUNT(*) AS count FROM users`);
+    const r2 = await db.execute(sql`SELECT COUNT(DISTINCT user_id) AS count FROM user_collections`);
+    const r3 = await db.execute(sql`SELECT COUNT(*) AS count FROM users WHERE total_logins >= 3`);
+    const r4 = await db.execute(sql`SELECT COUNT(*) AS count FROM users WHERE plan = 'SUPER_HERO'`);
+    const r5 = await db.execute(sql`
+      SELECT COUNT(*) AS count FROM users WHERE plan = 'SIDE_KICK' AND subscription_status = 'cancelled'
+    `);
+
+    return {
+      signups: parseInt((r1.rows[0] as any).count) || 0,
+      addedCard: parseInt((r2.rows[0] as any).count) || 0,
+      returningUsers: parseInt((r3.rows[0] as any).count) || 0,
+      upgraded: parseInt((r4.rows[0] as any).count) || 0,
+      cancelled: parseInt((r5.rows[0] as any).count) || 0,
+    };
+  }
+
+  async getUpgradeModalStats(): Promise<any> {
+    const r1 = await db.execute(sql`SELECT COUNT(*) AS count FROM analytics_events WHERE event_type = 'upgrade_modal_shown'`);
+    const r2 = await db.execute(sql`SELECT COUNT(*) AS count FROM analytics_events WHERE event_type = 'upgrade_clicked'`);
+    const r3 = await db.execute(sql`SELECT COUNT(*) AS count FROM analytics_events WHERE event_type = 'upgrade_dismissed'`);
+    const byPlatform = await db.execute(sql`
+      SELECT platform, event_type, COUNT(*) AS count
+      FROM analytics_events
+      WHERE event_type IN ('upgrade_modal_shown', 'upgrade_clicked')
+      GROUP BY platform, event_type
+    `);
+    const byTrigger = await db.execute(sql`
+      SELECT trigger, COUNT(*) AS count
+      FROM analytics_events
+      WHERE event_type = 'upgrade_modal_shown' AND trigger IS NOT NULL
+      GROUP BY trigger
+      ORDER BY count DESC
+    `);
+
+    const shownCount = parseInt((r1.rows[0] as any).count) || 0;
+    const clickedCount = parseInt((r2.rows[0] as any).count) || 0;
+
+    return {
+      shown: shownCount,
+      clicked: clickedCount,
+      dismissed: parseInt((r3.rows[0] as any).count) || 0,
+      conversionRate: shownCount > 0 ? Math.round((clickedCount / shownCount) * 100) : 0,
+      byPlatform: byPlatform.rows,
+      byTrigger: byTrigger.rows,
+    };
   }
 }
 
