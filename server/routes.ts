@@ -523,6 +523,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── Admin: Daily signup stats ─────────────────────────────────────────────────
+  app.get("/api/admin/signup-stats", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const year = parseInt(req.query.year as string) || new Date().getFullYear();
+      const month = parseInt(req.query.month as string) || new Date().getMonth() + 1;
+      const data = await storage.getSignupsByDay(year, month);
+      res.json(data);
+    } catch (err) {
+      console.error('[Admin] signup-stats error:', err);
+      res.status(500).json({ message: 'Failed to fetch signup stats' });
+    }
+  });
+
   // ── Admin: Upgrade modal stats ────────────────────────────────────────────────
   app.get("/api/admin/upgrade-modal-stats", authenticateUser, async (req: any, res) => {
     try {

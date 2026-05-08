@@ -214,6 +214,7 @@ interface IStorage {
   logAnalyticsEvent(data: { userId?: number; eventType: string; platform?: string; trigger?: string }): Promise<void>;
   getAdminFunnelStats(): Promise<any>;
   getUpgradeModalStats(): Promise<any>;
+  getSignupsByDay(year: number, month: number): Promise<Array<{ date: string; count: number }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2710,6 +2711,18 @@ export class DatabaseStorage implements IStorage {
       upgraded: parseInt((r4.rows[0] as any).count) || 0,
       cancelled: parseInt((r5.rows[0] as any).count) || 0,
     };
+  }
+
+  async getSignupsByDay(year: number, month: number): Promise<Array<{ date: string; count: number }>> {
+    const result = await db.execute(sql`
+      SELECT TO_CHAR(created_at, 'YYYY-MM-DD') AS date, COUNT(*) AS count
+      FROM users
+      WHERE EXTRACT(YEAR FROM created_at) = ${year}
+        AND EXTRACT(MONTH FROM created_at) = ${month}
+      GROUP BY date
+      ORDER BY date ASC
+    `);
+    return result.rows.map((r: any) => ({ date: r.date as string, count: parseInt(r.count) || 0 }));
   }
 
   async getUpgradeModalStats(): Promise<any> {
