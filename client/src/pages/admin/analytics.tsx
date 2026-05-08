@@ -64,13 +64,7 @@ export default function AdminAnalytics() {
   });
 
   const { data: signups = [], isLoading: signupsLoading } = useQuery<SignupDay[]>({
-    queryKey: ["/api/admin/signup-stats", selectedYear, selectedMonth],
-    queryFn: async () => {
-      const res = await fetch(`/api/admin/signup-stats?year=${selectedYear}&month=${selectedMonth}`, {
-        credentials: "include",
-      });
-      return res.json();
-    },
+    queryKey: [`/api/admin/signup-stats?year=${selectedYear}&month=${selectedMonth}`],
   });
 
   const totalSignupsThisMonth = signups.reduce((s, d) => s + d.count, 0);
