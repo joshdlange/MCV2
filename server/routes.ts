@@ -3880,6 +3880,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── Admin: THANKS2U blast status ──────────────────────────────────────────────
+  app.get("/api/admin/thanks2u-status", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const { getThanks2uStatus } = await import('./jobs/emailCron');
+      const status = getThanks2uStatus();
+      // Count eligible recipients
+      const result = await db.select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(and(sql`plan != 'SUPER_HERO'`, eq(users.emailUpdates, true)));
+      const recipientCount = Number(result[0]?.count || 0);
+      res.json({ ...status, recipientCount });
+    } catch (err) {
+      console.error('[Admin] thanks2u-status error:', err);
+      res.status(500).json({ message: 'Failed to get status' });
+    }
+  });
+
+  // ── Admin: THANKS2U manual trigger ────────────────────────────────────────────
+  app.post("/api/admin/thanks2u-send-now", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const { runThanks2uBlastNow } = await import('./jobs/emailCron');
+      console.log('[Admin] Manual THANKS2U blast triggered by admin', req.user.id);
+      const result = await runThanks2uBlastNow();
+      res.json({ success: true, ...result });
+    } catch (err) {
+      console.error('[Admin] thanks2u-send-now error:', err);
+      res.status(500).json({ message: 'Failed to send blast' });
+    }
+  });
+
+  // ── Admin: THANKS2U email preview ─────────────────────────────────────────────
+  app.get("/api/admin/thanks2u-preview", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const { thanks2uCouponTemplate } = await import('./services/emailTemplates');
+      const html = thanks2uCouponTemplate({ displayName: req.user.displayName || 'Collector' });
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (err) {
+      res.status(500).json({ message: 'Preview failed' });
+    }
+  });
+
   // ========== SOCIAL FEATURES API ROUTES ==========
   
   // Friends API

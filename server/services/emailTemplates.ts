@@ -492,6 +492,70 @@ export function weeklyDigestTemplate(
 /**
  * 16. Google Play Store Launch Announcement
  */
+/**
+ * THANKS2U Coupon Blast — Non-upgraded users
+ * Promotes app store availability with 2 months free (code: THANKS2U, first 100 users)
+ */
+export function thanks2uCouponTemplate(user: { displayName: string }): string {
+  const bodyHtml = `
+    <h1 style="margin: 0 0 16px; font-size: 30px; font-weight: 700; color: ${TEXT_PRIMARY}; line-height: 1.2;">
+      🎉 A Gift From Us to You!
+    </h1>
+    <p style="margin: 0 0 16px; font-size: 16px; line-height: 1.7; color: ${TEXT_SECONDARY};">
+      Hey ${user.displayName}! 👋
+    </p>
+    <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.7; color: ${TEXT_SECONDARY};">
+      We just want to say — <strong style="color: ${TEXT_PRIMARY};">thank you</strong> for being a part of Marvelous Card Vault. Your support means the world to us, and we've got some exciting news to share!
+    </p>
+
+    <div style="background: linear-gradient(135deg, #1e3a5f 0%, #1E293B 100%); border-radius: 12px; padding: 28px; margin: 24px 0; border: 1px solid #334155; text-align: center;">
+      <p style="margin: 0 0 6px; font-size: 13px; color: ${TEXT_SECONDARY}; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">📱 Now Available on Both App Stores!</p>
+      <p style="margin: 0 0 20px; font-size: 20px; font-weight: 700; color: ${TEXT_PRIMARY};">Marvelous Card Vault is on iOS & Android</p>
+
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr>
+          <td style="text-align: center; padding: 6px 8px;">
+            <a href="https://apps.apple.com/us/app/marvelous-card-vault/id6759801987" style="display: inline-block; padding: 12px 22px; background-color: #000000; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">
+              🍎 Download on the App Store
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td style="text-align: center; padding: 6px 8px;">
+            <a href="https://play.google.com/store/apps/details?id=com.marvelcardvault.app&hl=en_US" style="display: inline-block; padding: 12px 22px; background-color: #01875f; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">
+              🤖 Get it on Google Play
+            </a>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.7; color: ${TEXT_SECONDARY};">
+      And because you're awesome, we're giving you something special — <strong style="color: ${TEXT_PRIMARY};">2 months of Super Hero for completely free</strong>. That means unlimited cards, advanced stats, and all the premium features with no strings attached. 🦸
+    </p>
+
+    <div style="background-color: ${DARK_BG}; padding: 28px; border-radius: 12px; text-align: center; margin: 24px 0; border: 2px dashed ${BRAND_RED};">
+      <p style="margin: 0 0 8px; font-size: 13px; color: ${TEXT_SECONDARY}; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">Your Exclusive Promo Code</p>
+      <div style="margin: 12px 0;">
+        <span style="font-size: 36px; font-weight: 800; color: ${BRAND_RED}; letter-spacing: 5px; font-family: monospace;">THANKS2U</span>
+      </div>
+      <p style="margin: 8px 0 0; font-size: 14px; color: ${TEXT_SECONDARY};">2 months free · First 100 users only · Don't wait!</p>
+    </div>
+
+    <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.7; color: ${TEXT_SECONDARY};">
+      This code is only available to the <strong style="color: ${TEXT_PRIMARY};">first 100 people</strong> who redeem it, so don't sit on this one! Head to the app and upgrade to Super Hero using code <strong style="color: ${BRAND_RED};">THANKS2U</strong> to claim your free months.
+    </p>
+
+    ${ctaButton('Claim Your 2 Free Months →', 'https://app.marvelcardvault.com/subscribe')}
+
+    <p style="margin: 24px 0 0; font-size: 14px; line-height: 1.7; color: ${TEXT_SECONDARY}; text-align: center;">
+      Thank you for being part of our community. You make this whole thing worth it. 💙<br>
+      <em>— The Marvelous Card Vault Team</em>
+    </p>
+  `;
+  return baseTemplate({ title: '🎉 2 Months Free — Thank You!', bodyHtml });
+}
+
 export function googlePlayLaunchTemplate(user: { displayName: string }): string {
   const bodyHtml = `
     <h1 style="margin: 0 0 20px; font-size: 28px; font-weight: 700; color: ${TEXT_PRIMARY}; text-align: center;">

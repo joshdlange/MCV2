@@ -267,6 +267,18 @@ export async function onWeeklyDigest(user: User, sets: NewSet[]): Promise<void> 
 }
 
 /**
+ * Trigger: THANKS2U coupon blast to non-upgraded users
+ */
+export async function onThanks2uCoupon(user: User): Promise<void> {
+  try {
+    const html = templates.thanks2uCouponTemplate({ displayName: user.displayName });
+    await sendEmail(user.email, '🎉 A Gift From Us — 2 Months Free!', html, 'thanks2u-coupon', 'thanks2uBlastJob');
+  } catch (error) {
+    console.error('Failed to send THANKS2U coupon email:', error);
+  }
+}
+
+/**
  * Trigger: Google Play Store Launch Announcement
  */
 export async function onGooglePlayLaunch(user: User): Promise<void> {

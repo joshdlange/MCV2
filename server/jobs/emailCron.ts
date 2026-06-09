@@ -6,7 +6,7 @@
 import cron from 'cron';
 import { db } from '../db';
 import { users, userCollections, cardSets } from '../../shared/schema';
-import { sql, lt, eq, and } from 'drizzle-orm';
+import { sql, lt, eq, and, ne } from 'drizzle-orm';
 import * as emailTriggers from '../services/emailTriggers';
 
 const { CronJob } = cron;
@@ -250,6 +250,107 @@ export const googlePlayLaunchJob = new CronJob(
 );
 
 /**
+ * THANKS2U Coupon Blast
+ * One-time job: June 10, 2026 at 9:00 AM Central Time
+ * Sends to all non-upgraded (SIDE_KICK) users with a 2-month free coupon code
+ */
+export const thanks2uBlastJob = new CronJob(
+  '0 9 10 6 *', // 9:00 AM on June 10
+  async () => {
+    console.log('🎉 Running THANKS2U coupon blast email campaign...');
+
+    try {
+      const nonUpgradedUsers = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          displayName: users.displayName,
+        })
+        .from(users)
+        .where(
+          and(
+            ne(users.plan, 'SUPER_HERO'),
+            eq(users.emailUpdates, true)
+          )
+        );
+
+      console.log(`📧 Sending THANKS2U coupon to ${nonUpgradedUsers.length} non-upgraded users`);
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const user of nonUpgradedUsers) {
+        try {
+          await emailTriggers.onThanks2uCoupon({
+            email: user.email,
+            displayName: user.displayName || 'Collector',
+          });
+          successCount++;
+          // Small delay to avoid overwhelming the email service
+          await new Promise(resolve => setTimeout(resolve, 150));
+        } catch (error) {
+          console.error(`Failed to send THANKS2U to ${user.email}:`, error);
+          errorCount++;
+        }
+      }
+
+      console.log(`✅ THANKS2U blast completed: ${successCount} sent, ${errorCount} failed`);
+
+      // Stop after running once (one-time campaign)
+      thanks2uBlastJob.stop();
+      console.log('🛑 THANKS2U blast job stopped (one-time campaign complete)');
+    } catch (error) {
+      console.error('❌ Error in THANKS2U blast campaign:', error);
+    }
+  },
+  null,
+  false,
+  'America/Chicago' // Central Time
+);
+
+// Track manual send state
+let thanks2uManualSentAt: Date | null = null;
+
+/**
+ * Run the THANKS2U blast immediately (admin-triggered manual send)
+ */
+export async function runThanks2uBlastNow(): Promise<{ sent: number; failed: number }> {
+  const nonUpgradedUsers = await db
+    .select({ id: users.id, email: users.email, displayName: users.displayName })
+    .from(users)
+    .where(and(ne(users.plan, 'SUPER_HERO'), eq(users.emailUpdates, true)));
+
+  let successCount = 0;
+  let errorCount = 0;
+
+  for (const user of nonUpgradedUsers) {
+    try {
+      await emailTriggers.onThanks2uCoupon({
+        email: user.email,
+        displayName: user.displayName || 'Collector',
+      });
+      successCount++;
+      await new Promise(resolve => setTimeout(resolve, 150));
+    } catch (error) {
+      console.error(`Failed to send THANKS2U to ${user.email}:`, error);
+      errorCount++;
+    }
+  }
+
+  thanks2uManualSentAt = new Date();
+  thanks2uBlastJob.stop(); // cancel the scheduled send too
+  return { sent: successCount, failed: errorCount };
+}
+
+export function getThanks2uStatus() {
+  return {
+    scheduled: '2026-06-10T09:00:00-05:00',
+    jobRunning: thanks2uBlastJob.running || false,
+    manualSentAt: thanks2uManualSentAt,
+  };
+}
+
+/**
  * Initialize and start all cron jobs
  * Can be disabled via EMAIL_CRON_ENABLED environment variable
  */
@@ -263,10 +364,12 @@ export function startEmailCronJobs() {
   monthlyNudgesJob.start();
   monthlyDigestJob.start();
   googlePlayLaunchJob.start();
+  thanks2uBlastJob.start();
   console.log('✅ Email cron jobs started:');
   console.log('  - Monthly nudges: 9:00 AM on the 1st of each month');
   console.log('  - Monthly digest: 9:00 AM on the 1st of each month');
   console.log('  - Google Play Launch: 10:00 AM Central on Jan 10, 2026 (one-time)');
+  console.log('  - THANKS2U Coupon Blast: 9:00 AM Central on Jun 10, 2026 (one-time)');
 }
 
 /**
@@ -277,6 +380,7 @@ export function stopEmailCronJobs() {
   monthlyNudgesJob.stop();
   monthlyDigestJob.stop();
   googlePlayLaunchJob.stop();
+  thanks2uBlastJob.stop();
 }
 
 /**
@@ -303,6 +407,12 @@ export function getEmailCronStatus() {
         schedule: '0 10 10 1 *',
         running: googlePlayLaunchJob.running || false,
         description: 'Google Play launch announcement - Jan 10, 2026 10 AM Central (one-time)'
+      },
+      {
+        name: 'thanks2uBlastJob',
+        schedule: '0 9 10 6 *',
+        running: thanks2uBlastJob.running || false,
+        description: 'THANKS2U coupon blast to non-upgraded users - Jun 10, 2026 9 AM Central (one-time)'
       }
     ]
   };
