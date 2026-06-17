@@ -3912,6 +3912,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── Admin: THANKS2U follow-up manual trigger ──────────────────────────────────
+  app.post("/api/admin/thanks2u-followup-send-now", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const { runThanks2uFollowUpNow } = await import('./jobs/emailCron');
+      console.log('[Admin] Manual THANKS2U follow-up triggered by admin', req.user.id);
+      const result = await runThanks2uFollowUpNow();
+      res.json({ success: true, ...result });
+    } catch (err) {
+      console.error('[Admin] thanks2u-followup-send-now error:', err);
+      res.status(500).json({ message: 'Failed to send follow-up' });
+    }
+  });
+
   // ── Admin: THANKS2U email preview ─────────────────────────────────────────────
   app.get("/api/admin/thanks2u-preview", authenticateUser, async (req: any, res) => {
     try {

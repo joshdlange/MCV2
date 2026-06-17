@@ -342,11 +342,106 @@ export async function runThanks2uBlastNow(): Promise<{ sent: number; failed: num
   return { sent: successCount, failed: errorCount };
 }
 
+/**
+ * THANKS2U Follow-Up Blast
+ * One-time job: June 24, 2026 at 9:00 AM Central Time
+ * Sends to all non-upgraded users who have NOT yet received the original blast
+ * (catches the 43 missed from June 10 + any new signups between then and now)
+ */
+export const thanks2uFollowUpJob = new CronJob(
+  '0 9 24 6 *', // 9:00 AM on June 24
+  async () => {
+    console.log('🎉 Running THANKS2U follow-up email campaign...');
+
+    try {
+      const notYetReceived = await db
+        .select({ id: users.id, email: users.email, displayName: users.displayName })
+        .from(users)
+        .where(
+          and(
+            ne(users.plan, 'SUPER_HERO'),
+            eq(users.emailUpdates, true),
+            sql`${users.email} NOT IN (SELECT email FROM email_logs WHERE template = 'thanks2u-coupon')`
+          )
+        );
+
+      console.log(`📧 Sending THANKS2U follow-up to ${notYetReceived.length} users who haven't received it yet`);
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const user of notYetReceived) {
+        try {
+          await emailTriggers.onThanks2uCoupon({
+            email: user.email,
+            displayName: user.displayName || 'Collector',
+          });
+          successCount++;
+          await new Promise(resolve => setTimeout(resolve, 150));
+        } catch (error) {
+          console.error(`Failed to send THANKS2U follow-up to ${user.email}:`, error);
+          errorCount++;
+        }
+      }
+
+      console.log(`✅ THANKS2U follow-up completed: ${successCount} sent, ${errorCount} failed`);
+      thanks2uFollowUpJob.stop();
+      console.log('🛑 THANKS2U follow-up job stopped (one-time campaign complete)');
+    } catch (error) {
+      console.error('❌ Error in THANKS2U follow-up campaign:', error);
+    }
+  },
+  null,
+  false,
+  'America/Chicago'
+);
+
+let thanks2uFollowUpManualSentAt: Date | null = null;
+
+export async function runThanks2uFollowUpNow(): Promise<{ sent: number; failed: number }> {
+  const notYetReceived = await db
+    .select({ id: users.id, email: users.email, displayName: users.displayName })
+    .from(users)
+    .where(
+      and(
+        ne(users.plan, 'SUPER_HERO'),
+        eq(users.emailUpdates, true),
+        sql`${users.email} NOT IN (SELECT email FROM email_logs WHERE template = 'thanks2u-coupon')`
+      )
+    );
+
+  let successCount = 0;
+  let errorCount = 0;
+
+  for (const user of notYetReceived) {
+    try {
+      await emailTriggers.onThanks2uCoupon({
+        email: user.email,
+        displayName: user.displayName || 'Collector',
+      });
+      successCount++;
+      await new Promise(resolve => setTimeout(resolve, 150));
+    } catch (error) {
+      console.error(`Failed to send THANKS2U follow-up to ${user.email}:`, error);
+      errorCount++;
+    }
+  }
+
+  thanks2uFollowUpManualSentAt = new Date();
+  thanks2uFollowUpJob.stop();
+  return { sent: successCount, failed: errorCount };
+}
+
 export function getThanks2uStatus() {
   return {
     scheduled: '2026-06-10T09:00:00-05:00',
     jobRunning: thanks2uBlastJob.running || false,
     manualSentAt: thanks2uManualSentAt,
+    followUp: {
+      scheduled: '2026-06-24T09:00:00-05:00',
+      jobRunning: thanks2uFollowUpJob.running || false,
+      manualSentAt: thanks2uFollowUpManualSentAt,
+    },
   };
 }
 
@@ -365,11 +460,13 @@ export function startEmailCronJobs() {
   monthlyDigestJob.start();
   googlePlayLaunchJob.start();
   thanks2uBlastJob.start();
+  thanks2uFollowUpJob.start();
   console.log('✅ Email cron jobs started:');
   console.log('  - Monthly nudges: 9:00 AM on the 1st of each month');
   console.log('  - Monthly digest: 9:00 AM on the 1st of each month');
   console.log('  - Google Play Launch: 10:00 AM Central on Jan 10, 2026 (one-time)');
   console.log('  - THANKS2U Coupon Blast: 9:00 AM Central on Jun 10, 2026 (one-time)');
+  console.log('  - THANKS2U Follow-Up: 9:00 AM Central on Jun 24, 2026 (one-time)');
 }
 
 /**
@@ -381,6 +478,7 @@ export function stopEmailCronJobs() {
   monthlyDigestJob.stop();
   googlePlayLaunchJob.stop();
   thanks2uBlastJob.stop();
+  thanks2uFollowUpJob.stop();
 }
 
 /**
@@ -413,6 +511,12 @@ export function getEmailCronStatus() {
         schedule: '0 9 10 6 *',
         running: thanks2uBlastJob.running || false,
         description: 'THANKS2U coupon blast to non-upgraded users - Jun 10, 2026 9 AM Central (one-time)'
+      },
+      {
+        name: 'thanks2uFollowUpJob',
+        schedule: '0 9 24 6 *',
+        running: thanks2uFollowUpJob.running || false,
+        description: 'THANKS2U follow-up to users who missed the June 10 blast - Jun 24, 2026 9 AM Central (one-time)'
       }
     ]
   };
