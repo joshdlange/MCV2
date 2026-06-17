@@ -54,6 +54,7 @@ const SubscriptionCancelled = lazy(() => import("@/pages/subscription-cancelled"
 const Subscribe = lazy(() => import("@/pages/subscribe"));
 const Activity = lazy(() => import("@/pages/Activity"));
 const SharedBinder = lazy(() => import("@/pages/shared-binder"));
+const ScanToAdd = lazy(() => import("@/pages/scan"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 const PageSpinner = () => (
@@ -184,6 +185,7 @@ function Router() {
           <Route path="/admin/migration-console" component={AdminMigrationConsole} />
           <Route path="/admin/base-set-population" component={AdminBaseSetPopulation} />
           <Route path="/admin/analytics" component={AdminAnalytics} />
+          <Route path="/scan" component={ScanToAdd} />
           <Route path="/subscribe" component={Subscribe} />
           <Route path="/subscription-success" component={SubscriptionSuccess} />
           <Route path="/subscription-cancelled" component={SubscriptionCancelled} />

@@ -157,6 +157,7 @@ export const pendingCardImages = pgTable("pending_card_images", {
   frontImageUrl: text("front_image_url"),
   backImageUrl: text("back_image_url"),
   status: text("status").default("pending").notNull(), // pending, approved, rejected
+  source: text("source").default("manual_upload").notNull(), // manual_upload, scan_to_add
   rejectionReason: text("rejection_reason"),
   reviewedBy: integer("reviewed_by").references(() => users.id),
   reviewedAt: timestamp("reviewed_at"),

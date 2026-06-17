@@ -24,7 +24,8 @@ import {
   Store,
   User,
   Calendar,
-  Activity
+  Activity,
+  ScanLine,
 } from "lucide-react";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 
@@ -55,6 +56,7 @@ const getNavigationItems = (userPlan: string): NavigationItem[] => {
   }
 
   items.push(
+    { href: "/scan", label: "Scan to Add", icon: "ScanLine" },
     { href: "/trends", label: "Market Trends", icon: "TrendingUp" },
     { href: "/upcoming-sets", label: "Upcoming Sets", icon: "Calendar" },
     { href: "/social", label: "Social Hub", icon: "Users" },
@@ -68,6 +70,7 @@ const iconMap = {
   LayoutDashboard,
   Grid3X3,
   FolderOpen,
+  ScanLine,
   Heart,
   PlusCircle,
   Edit,

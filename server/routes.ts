@@ -5949,6 +5949,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // ===== SCAN TO ADD ROUTES =====
+
+  // POST /api/cards/scan — upload card image, run OCR, return match candidates
+  app.post("/api/cards/scan", authenticateUser, upload.single('image'), async (req: any, res) => {
+    try {
+      const file = req.file;
+      if (!file) return res.status(400).json({ message: "Image file is required" });
+
+      const MAX_SIZE = 10 * 1024 * 1024;
+      if (file.size > MAX_SIZE) return res.status(400).json({ message: "Image too large (max 10MB)" });
+
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.mimetype)) {
+        return res.status(400).json({ message: "Invalid file type. Use JPEG, PNG, or WebP." });
+      }
+
+      let imageUrl: string | null = null;
+      try {
+        imageUrl = await uploadImage(file.buffer, 'scan_uploads');
+      } catch (uploadErr) {
+        console.warn('[Scan] Cloudinary upload failed, continuing without image URL:', uploadErr);
+      }
+
+      const { scanCard } = await import('./services/scanService');
+      const scanResult = await scanCard(file.buffer);
+
+      res.json({ imageUrl, ...scanResult });
+    } catch (error) {
+      console.error('[Scan] Error:', error);
+      res.status(500).json({ message: "Scan failed. Please try again." });
+    }
+  });
+
+  // POST /api/cards/:cardId/submit-scan-image — submit an already-uploaded scan image for review
+  app.post("/api/cards/:cardId/submit-scan-image", authenticateUser, async (req: any, res) => {
+    try {
+      const cardId = parseInt(req.params.cardId);
+      const { imageUrl } = req.body;
+
+      if (!imageUrl) return res.status(400).json({ message: "imageUrl is required" });
+
+      const card = await storage.getCard(cardId);
+      if (!card) return res.status(404).json({ message: "Card not found" });
+
+      const pendingImage = await storage.createPendingCardImage({
+        userId: req.user.id,
+        cardId,
+        frontImageUrl: imageUrl,
+        backImageUrl: null,
+        source: 'scan_to_add',
+      } as any);
+
+      res.json({ success: true, pendingImage });
+    } catch (error) {
+      console.error('[Scan] submit-scan-image error:', error);
+      res.status(500).json({ message: "Failed to submit image for review" });
+    }
+  });
+
   // Admin: Get all pending card images
   app.get("/api/admin/pending-images", authenticateUser, async (req: any, res) => {
     try {

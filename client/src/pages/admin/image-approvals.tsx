@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CheckCircle, XCircle, Image, User, Calendar, Loader2, AlertCircle } from "lucide-react";
+import { CheckCircle, XCircle, Image, User, Calendar, Loader2, AlertCircle, ScanLine } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
@@ -19,6 +19,7 @@ interface PendingSubmission {
   frontImageUrl: string | null;
   backImageUrl: string | null;
   status: 'pending' | 'approved' | 'rejected';
+  source: 'manual_upload' | 'scan_to_add';
   rejectionReason: string | null;
   reviewedBy: number | null;
   reviewedAt: string | null;
@@ -114,14 +115,6 @@ export default function AdminImageApprovals() {
 
   const handleReject = () => {
     if (!selectedSubmission) return;
-    if (!rejectionReason.trim()) {
-      toast({
-        title: "Rejection reason required",
-        description: "Please provide a reason for rejection",
-        variant: "destructive"
-      });
-      return;
-    }
     rejectMutation.mutate({ 
       submissionId: selectedSubmission.id, 
       reason: rejectionReason 
@@ -182,7 +175,14 @@ export default function AdminImageApprovals() {
                       {submission.card.set.name} ({submission.card.set.year})
                     </p>
                   </div>
-                  <Badge className="bg-orange-500">Pending</Badge>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge className="bg-orange-500">Pending</Badge>
+                    {submission.source === 'scan_to_add' && (
+                      <Badge variant="outline" className="text-xs border-blue-300 text-blue-600 flex items-center gap-1">
+                        <ScanLine className="w-3 h-3" /> Scan to Add
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -349,24 +349,21 @@ export default function AdminImageApprovals() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="rejectionReason">Rejection Reason</Label>
+              <Label htmlFor="rejectionReason">Rejection Reason <span className="text-gray-400 font-normal">(optional)</span></Label>
               <Textarea
                 id="rejectionReason"
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Please explain why this image is being rejected (e.g., 'Image is blurry', 'Wrong card', 'Poor lighting')"
-                rows={4}
+                placeholder="e.g. 'Image is blurry', 'Wrong card', 'Lower quality than existing'"
+                rows={3}
                 className="mt-2"
                 data-testid="input-rejection-reason"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                This reason will be shown to the user
-              </p>
             </div>
             <div className="flex gap-2">
               <Button
                 onClick={handleReject}
-                disabled={rejectMutation.isPending || !rejectionReason.trim()}
+                disabled={rejectMutation.isPending}
                 variant="destructive"
                 className="flex-1"
                 data-testid="button-confirm-reject"

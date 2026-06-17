@@ -1,0 +1,321 @@
+We need to build a new Marvel Card Vault feature called “Scan to Add.”
+
+Important context:
+- Users can already upload missing card images today. Keep that functionality.
+- This new feature should NOT replace the current user image upload flow.
+- It should add a faster way for users to scan/photograph a card, attempt to identify it, and add it to their collection.
+- If the system cannot confidently identify the card, the user should be able to manually choose the correct card.
+- If the card has no image, the scanned/uploaded image can be submitted as a pending image submission for admin approval.
+
+Goal:
+Build a complete “Scan to Add” feature that uses camera/photo upload, OCR and matching logic to suggest cards from our database, then allows the user to confirm and add the card to their collection.
+
+Feature name:
+Scan to Add
+
+Primary user flow:
+1. User taps “Scan Card” from the main app navigation, collection page, binder page, or add-card flow.
+2. User can either:
+   - open device camera and take a photo
+   - upload/select an existing image from their phone
+3. The image is uploaded to the backend.
+4. Backend runs OCR/extraction on the image.
+5. Backend attempts to match the image/OCR data against existing card records.
+6. App shows the user:
+   - best match if confidence is high
+   - top 5 possible matches if confidence is medium/low
+   - manual search/select fallback if no useful match is found
+7. User confirms the correct card.
+8. User chooses:
+   - Add to Collection
+   - Add to Wishlist
+   - Mark as Trade Block, if that field exists already, otherwise do not build Trade Block yet
+9. If the confirmed card has no image, give the user an option:
+   - “Submit this photo as the card image”
+10. That image must be saved as a pending image submission, not immediately made public.
+11. Admin can approve/reject the submitted image using the existing image approval queue if one exists. If not, extend the current image submission system cleanly.
+
+Do not build:
+- Full trade functionality
+- Chat
+- Marketplace changes
+- Payment changes
+- Auto-approve user images
+- Unknown card creation without admin review
+
+Keep existing functionality:
+- Current missing-card image upload must continue to work.
+- Current card detail pages must continue to work.
+- Current collection add/remove logic must continue to work.
+- Current admin image approval flow must continue to work.
+
+Frontend requirements:
+Create a Scan to Add page/screen.
+
+Suggested routes:
+- /scan
+- or /scan-to-add depending on existing routing conventions
+
+UI requirements:
+- Clear title: “Scan to Add”
+- Short helper text: “Take a photo of your card and we’ll try to find it in the Marvel Card Vault database.”
+- Camera/upload area
+- Loading state while scanning:
+  “Scanning card…”
+- Results state:
+  - High confidence: show best match large card result
+  - Medium/low confidence: show top 5 possible matches
+  - No match: show manual search/select
+- Each result should show:
+  - card image if available
+  - card name
+  - set name
+  - subset/insert type if available
+  - card number
+  - year if available
+  - confidence label if available
+- Confirmation CTA:
+  “Add to My Collection”
+- Secondary CTA:
+  “Not the right card?”
+- Manual selection CTA:
+  “Search manually”
+- If card image is missing:
+  Show checkbox or prompt:
+  “This card does not have an image yet. Submit your photo for review?”
+- Success state:
+  “Added to your collection”
+  with links/buttons:
+  - View in Collection
+  - Scan another card
+
+Mobile requirements:
+- Must work well on mobile web and app webview.
+- Use device camera capture when available.
+- File input should support:
+  accept="image/*"
+  capture="environment"
+- Do not break desktop upload fallback.
+
+Backend requirements:
+Create a backend endpoint for scan matching.
+
+Suggested endpoint:
+POST /api/cards/scan
+
+Request:
+- image file
+
+Response shape:
+{
+  "ocrText": "...",
+  "parsed": {
+    "cardNumber": "...",
+    "characterName": "...",
+    "setName": "...",
+    "year": "...",
+    "possibleKeywords": []
+  },
+  "matches": [
+    {
+      "cardId": "...",
+      "name": "...",
+      "setName": "...",
+      "subsetName": "...",
+      "cardNumber": "...",
+      "year": "...",
+      "imageUrl": "...",
+      "confidence": 0.91,
+      "matchReasons": ["card number", "character name", "set name"]
+    }
+  ],
+  "confidenceLevel": "high" | "medium" | "low" | "none"
+}
+
+Also create/extend endpoint:
+POST /api/collection/add-from-scan
+
+Request:
+{
+  "cardId": "...",
+  "scanUploadId": "...",
+  "submitImageForReview": true/false
+}
+
+Behavior:
+- Adds confirmed card to user collection.
+- If submitImageForReview = true and card has no existing image, create pending image submission linked to that card and user.
+- Do not overwrite card image directly.
+- Return success and collection item/card data.
+
+OCR/matching logic:
+Start with a pragmatic approach.
+
+The matcher should use:
+1. OCR text extraction
+2. card number matching
+3. character/name matching
+4. set/year matching
+5. subset/insert matching
+6. fuzzy search against card name, set name, card number, and year
+
+Confidence scoring:
+- exact card number + set/year match = high
+- exact card number + partial name match = medium/high
+- name + set match = medium
+- name only = low
+- unclear OCR/no match = none
+
+Important:
+Return multiple possible matches instead of forcing one result.
+Never auto-add without user confirmation.
+
+Image storage:
+- Store scan images temporarily or as scan uploads.
+- If user does not submit image for review, image may be temporary or retained according to current app storage policy.
+- If user submits it for review, store it using the existing image upload/storage system.
+- Prefer existing Cloudinary/storage conventions already used in the app.
+
+Database additions if needed:
+Create table/model: scan_uploads
+
+Fields:
+- id
+- user_id
+- image_url
+- ocr_text
+- parsed_json
+- created_at
+- updated_at
+
+Create table/model only if there is no existing equivalent. If there is already an uploads/image submissions table, reuse it where appropriate.
+
+Potential table/model: card_image_submissions
+Use existing if already present.
+
+Fields if missing:
+- id
+- card_id
+- user_id
+- image_url
+- source: "scan_to_add" | "manual_upload"
+- status: "pending" | "approved" | "rejected"
+- admin_notes
+- created_at
+- updated_at
+- reviewed_at
+- reviewed_by
+
+Admin requirements:
+- If existing image approval queue exists, add source label “Scan to Add.”
+- Admin should see:
+  - submitted image
+  - linked card
+  - submitting user
+  - source
+  - approve/reject buttons
+- Approving should set the card image only if the card still has no image or if admin explicitly confirms replacement.
+- Rejecting should not affect user collection.
+
+Manual fallback:
+If scan does not find a good match:
+- Show search field
+- Allow filtering by:
+  - set
+  - subset
+  - character/name
+  - card number
+- User can choose correct card manually.
+- After manual choice, same add-to-collection and submit-image-for-review flow applies.
+
+Error handling:
+Handle:
+- OCR failure
+- upload failure
+- no matches
+- unauthenticated user
+- duplicate card already in collection
+- large image file
+- unsupported file type
+
+Duplicate behavior:
+If card is already in user collection:
+- Do not silently create duplicates unless app currently supports quantity.
+- If quantity is supported, ask:
+  “You already have this card. Add another copy?”
+- If quantity is not supported, show:
+  “This card is already in your collection.”
+  with CTA to view it.
+
+Privacy/safety:
+- Do not expose user-uploaded images publicly until approved.
+- Do not allow users to replace official card images directly.
+- Validate file type and size.
+- Avoid saving EXIF location data if possible.
+- Strip metadata if current image processing supports it.
+
+Performance:
+- Compress image client-side or server-side if needed.
+- Keep scan response fast.
+- If OCR takes time, use loading state.
+- Do not block the rest of the app.
+
+Navigation:
+Add Scan to Add entry points:
+- Add button on My Collection
+- Add button on Binder
+- Optional nav item: “Scan”
+- Card search/add page should include “Scan instead”
+
+Copy:
+Use friendly collector-focused language.
+
+Examples:
+- “Scan a card”
+- “We found a possible match”
+- “Is this your card?”
+- “Add to My Collection”
+- “Not the right one?”
+- “Submit this image for review”
+- “Thanks. Your image was submitted for admin review.”
+
+QA checklist:
+1. New user can scan/upload image.
+2. Backend returns OCR text and match candidates.
+3. High-confidence match displays correctly.
+4. Low-confidence match displays top possible matches.
+5. No-match flow allows manual search.
+6. Confirming a card adds it to collection.
+7. Duplicate card behavior is handled.
+8. Missing-image card allows image submission.
+9. Submitted image appears in admin approval queue.
+10. Rejected image does not affect collection.
+11. Approved image updates card image only through admin approval.
+12. Current manual image upload still works.
+13. Existing add-to-collection flow still works.
+14. Mobile camera capture works.
+15. Desktop upload fallback works.
+16. Unauthenticated users are redirected to login or prompted to sign in.
+17. Large/invalid files show a clean error.
+18. No Trade Block functionality is introduced yet.
+
+Implementation approach:
+Please inspect the current codebase first and reuse existing patterns, routes, storage, auth, card search, collection add, and image approval systems wherever possible.
+
+Do not create duplicate systems if existing ones already exist.
+
+Build this feature in small safe steps:
+1. Inspect existing upload/image approval/card/collection code.
+2. Add scan upload endpoint.
+3. Add OCR/matching service.
+4. Add frontend Scan to Add page.
+5. Add confirm/add flow.
+6. Add missing-image submission integration.
+7. Add admin source label if needed.
+8. QA and fix regressions.
+
+After implementation:
+- Provide a summary of files changed.
+- Explain how to test the full flow.
+- List any environment variables or third-party OCR keys needed.
+- If OCR requires a provider, recommend the simplest option and add graceful fallback if the key is missing.

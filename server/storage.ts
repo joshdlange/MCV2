@@ -1571,6 +1571,7 @@ export class DatabaseStorage implements IStorage {
         frontImageUrl: pendingCardImages.frontImageUrl,
         backImageUrl: pendingCardImages.backImageUrl,
         status: pendingCardImages.status,
+        source: pendingCardImages.source,
         rejectionReason: pendingCardImages.rejectionReason,
         reviewedBy: pendingCardImages.reviewedBy,
         reviewedAt: pendingCardImages.reviewedAt,
