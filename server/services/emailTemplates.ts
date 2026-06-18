@@ -485,6 +485,31 @@ export function weeklyDigestTemplate(
         Share your binder with anyone — no account needed to view. Open any set in your collection and tap the <strong style="color: ${TEXT_PRIMARY};">Share</strong> button to get a shareable link.
       </p>
     </div>
+    <div style="background: linear-gradient(135deg, #1a0a0a 0%, ${DARK_BG} 100%); padding: 25px; border-radius: 8px; margin: 20px 0; border: 2px solid ${BRAND_RED};">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr>
+          <td style="padding-right: 16px; vertical-align: top; width: 48px;">
+            <div style="width: 44px; height: 44px; background-color: ${BRAND_RED}; border-radius: 10px; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 44px; font-size: 22px;">
+              📷
+            </div>
+          </td>
+          <td style="vertical-align: top;">
+            <p style="margin: 0 0 4px; font-size: 12px; color: ${BRAND_RED}; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">New Feature</p>
+            <p style="margin: 0 0 10px; font-size: 20px; font-weight: 700; color: ${TEXT_PRIMARY};">Scan to Add</p>
+            <p style="margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: ${TEXT_SECONDARY};">
+              Adding cards to your vault just got a whole lot faster. Use the new <strong style="color: ${TEXT_PRIMARY};">Scan to Add</strong> feature to photograph any Marvel card and we'll automatically identify it and add it to your collection — no typing required.
+            </p>
+            <p style="margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: ${TEXT_SECONDARY};">
+              Not sure of an exact match? The built-in <strong style="color: ${TEXT_PRIMARY};">Card Picker</strong> lets you drill down by year, set, and subset to find the right card manually in seconds.
+            </p>
+            <a href="https://www.marvelcardvault.com/scan"
+               style="display: inline-block; background-color: ${BRAND_RED}; color: #ffffff; text-decoration: none; padding: 11px 24px; border-radius: 8px; font-size: 14px; font-weight: 700; letter-spacing: 0.5px;">
+              Try Scan to Add →
+            </a>
+          </td>
+        </tr>
+      </table>
+    </div>
   `;
   return baseTemplate({ title: 'Monthly Update', bodyHtml });
 }
