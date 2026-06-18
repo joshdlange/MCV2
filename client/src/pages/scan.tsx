@@ -244,7 +244,6 @@ export default function ScanToAdd() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [selectedCard, setSelectedCard] = useState<ScanMatch | null>(null);
   const [submitImage, setSubmitImage] = useState(false);
-  const [alreadyOwned, setAlreadyOwned] = useState(false);
 
   // Picker state
   const [pickerYear, setPickerYear] = useState<number | null>(null);
@@ -320,10 +319,7 @@ export default function ScanToAdd() {
       setStage("success");
     },
     onError: (err: Error) => {
-      if (err.message?.toLowerCase().includes("already")) {
-        setAlreadyOwned(true);
-        setStage("confirmed");
-      } else if (err.message?.toLowerCase().includes("limit")) {
+      if (err.message?.toLowerCase().includes("limit")) {
         toast({
           title: "Collection limit reached",
           description: "Upgrade to SUPER HERO for unlimited cards.",
@@ -376,6 +372,17 @@ export default function ScanToAdd() {
     staleTime: 2 * 60 * 1000,
   });
 
+  // Lightweight ownership pre-check — fires when user reaches confirmed stage
+  const { data: ownershipCheck } = useQuery<{ owned: boolean; quantity: number }>({
+    queryKey: ["/api/collection/check", selectedCard?.cardId],
+    queryFn: async () =>
+      (await apiRequest("GET", `/api/collection/check/${selectedCard!.cardId}`)).json(),
+    enabled: stage === "confirmed" && selectedCard !== null,
+    staleTime: 0,
+  });
+  const alreadyOwned = ownershipCheck?.owned ?? false;
+  const ownedQuantity = ownershipCheck?.quantity ?? 0;
+
   // ── Handlers ──
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -388,7 +395,6 @@ export default function ScanToAdd() {
     setScanResult(null);
     setSelectedCard(null);
     setSubmitImage(false);
-    setAlreadyOwned(false);
     scanMutation.mutate(file);
   }
 
@@ -472,7 +478,6 @@ export default function ScanToAdd() {
     setScanResult(null);
     setSelectedCard(null);
     setSubmitImage(false);
-    setAlreadyOwned(false);
     setPickerYear(null);
     setPickerSet(null);
     setPickerSetName("");
@@ -910,11 +915,14 @@ export default function ScanToAdd() {
             {alreadyOwned && (
               <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 text-amber-700 dark:text-amber-400 text-sm">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>This card is already in your collection.</span>
+                <span>
+                  You already have {ownedQuantity} {ownedQuantity === 1 ? "copy" : "copies"} of this card.
+                  Adding will increase your quantity.
+                </span>
               </div>
             )}
 
-            {cardMissingImage && scanResult?.imageUrl && !alreadyOwned && (
+            {cardMissingImage && scanResult?.imageUrl && (
               <label className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 cursor-pointer">
                 <input
                   type="checkbox"
@@ -934,26 +942,25 @@ export default function ScanToAdd() {
             )}
 
             <div className="space-y-2">
-              {!alreadyOwned && (
-                <Button
-                  className="w-full bg-red-600 hover:bg-red-700 text-white"
-                  onClick={() => addToCollectionMutation.mutate(selectedCard.cardId)}
-                  disabled={addToCollectionMutation.isPending}
-                >
-                  {addToCollectionMutation.isPending ? (
-                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Adding…</>
-                  ) : (
-                    <><Star className="w-4 h-4 mr-2" /> Add to My Collection</>
-                  )}
-                </Button>
-              )}
+              <Button
+                className="w-full bg-red-600 hover:bg-red-700 text-white"
+                onClick={() => addToCollectionMutation.mutate(selectedCard.cardId)}
+                disabled={addToCollectionMutation.isPending}
+              >
+                {addToCollectionMutation.isPending ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Adding…</>
+                ) : alreadyOwned ? (
+                  <><Star className="w-4 h-4 mr-2" /> Add Another Copy</>
+                ) : (
+                  <><Star className="w-4 h-4 mr-2" /> Add to My Collection</>
+                )}
+              </Button>
 
               <Button
                 variant="outline"
                 className="w-full"
                 onClick={() => {
                   setSelectedCard(null);
-                  setAlreadyOwned(false);
                   if (isPickerStage || pickerCardSetId) {
                     setStage("picker-card");
                   } else if (scanResult) {

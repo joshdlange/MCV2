@@ -2144,6 +2144,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Lightweight ownership check — used by Scan to Add confirmed stage
+  app.get("/api/collection/check/:cardId", authenticateUser, async (req: any, res) => {
+    try {
+      const cardId = parseInt(req.params.cardId);
+      const [row] = await db
+        .select({ quantity: userCollections.quantity })
+        .from(userCollections)
+        .where(and(eq(userCollections.userId, req.user.id), eq(userCollections.cardId, cardId)))
+        .limit(1);
+      res.json({ owned: !!row, quantity: row?.quantity ?? 0 });
+    } catch (e) {
+      res.status(500).json({ message: "Check failed" });
+    }
+  });
+
   app.post("/api/collection", authenticateUser, async (req: any, res) => {
     try {
       const COLLECTION_LIMIT = 250;
