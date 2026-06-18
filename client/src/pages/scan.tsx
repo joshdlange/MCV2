@@ -24,6 +24,10 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
+  Sparkles,
+  BookOpen,
+  Lightbulb,
+  Zap,
 } from "lucide-react";
 
 // ── Interfaces ──────────────────────────────────────────────────────────────
@@ -372,6 +376,13 @@ export default function ScanToAdd() {
     staleTime: 2 * 60 * 1000,
   });
 
+  // Collection count for idle hero section
+  const { data: userStats } = useQuery<{ totalCards: number }>({
+    queryKey: ["/api/stats"],
+    queryFn: async () => (await apiRequest("GET", "/api/stats")).json(),
+    staleTime: 30 * 1000,
+  });
+
   // Lightweight ownership pre-check — fires when user reaches confirmed stage
   const { data: ownershipCheck } = useQuery<{ owned: boolean; quantity: number }>({
     queryKey: ["/api/collection/check", selectedCard?.cardId],
@@ -499,22 +510,10 @@ export default function ScanToAdd() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-10">
-      <div className="max-w-lg mx-auto px-4 pt-6">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-1">
-            <ScanLine className="w-6 h-6 text-red-500" />
-            <h1 className="text-2xl font-bebas tracking-wide text-gray-900 dark:text-white">
-              Scan to Add
-            </h1>
-          </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Take a photo of your card and we'll try to find it in the Marvel Card Vault database.
-          </p>
-        </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-12">
+      <div className="max-w-lg mx-auto px-4">
 
-        {/* Hidden file input — camera on mobile, file picker on desktop */}
+        {/* Hidden file input */}
         <input
           ref={fileInputRef}
           type="file"
@@ -524,27 +523,161 @@ export default function ScanToAdd() {
           onChange={handleFileChange}
         />
 
-        {/* ── IDLE ── */}
+        {/* ── IDLE: Full Hero ── */}
         {stage === "idle" && (
-          <div className="space-y-4">
+          <div className="space-y-5 pt-6">
+
+            {/* Hero header */}
+            <div className="text-center space-y-1">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center shadow-sm">
+                  <ScanLine className="w-4 h-4 text-white" />
+                </div>
+                <h1 className="text-3xl font-bebas tracking-wide text-gray-900 dark:text-white">
+                  Scan to Add
+                </h1>
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto leading-relaxed">
+                Take a photo of your Marvel card and we'll try to identify it instantly.
+              </p>
+            </div>
+
+            {/* 3-step process */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 shadow-sm">
+              <div className="flex items-start">
+                {[
+                  { Icon: Camera,   label: "Scan Card",          desc: "Take a photo or upload an image" },
+                  { Icon: Sparkles, label: "Identify Card",       desc: "We search the Marvel Card Vault database" },
+                  { Icon: BookOpen, label: "Add to Collection",   desc: "Confirm the match and save it" },
+                ].map(({ Icon, label, desc }, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center text-center relative px-1">
+                    {i > 0 && (
+                      <div className="absolute left-0 top-[15px] w-full h-px bg-gradient-to-r from-red-200 to-red-100 dark:from-red-900/40 dark:to-red-900/20 -translate-x-1/2 z-0" />
+                    )}
+                    <div className="relative z-10 w-8 h-8 rounded-full bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/60 flex items-center justify-center mb-2 shadow-sm">
+                      <Icon className="w-3.5 h-3.5 text-red-500" />
+                    </div>
+                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 leading-tight">{label}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 leading-tight">{desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Upload area — card-themed */}
             <div
-              className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-10 flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-red-400 transition-colors bg-white dark:bg-gray-900"
+              className="group relative cursor-pointer"
               onClick={() => fileInputRef.current?.click()}
             >
-              <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-950/30 flex items-center justify-center">
-                <Camera className="w-8 h-8 text-red-500" />
+              {/* Fanned card stack behind */}
+              <div className="absolute inset-x-6 bottom-0 top-4 rounded-2xl bg-red-100 dark:bg-red-950/30 border border-red-200/60 dark:border-red-900/40 rotate-3 shadow-sm transition-transform group-hover:rotate-[5deg]" />
+              <div className="absolute inset-x-3 bottom-0 top-2 rounded-2xl bg-red-50 dark:bg-red-950/20 border border-red-100/80 dark:border-red-900/30 rotate-1 shadow-sm transition-transform group-hover:rotate-2" />
+
+              {/* Main card face */}
+              <div className="relative rounded-2xl bg-white dark:bg-gray-900 border-2 border-dashed border-gray-200 dark:border-gray-700 group-hover:border-red-400 dark:group-hover:border-red-600 transition-all duration-200 shadow-md group-hover:shadow-red-100 dark:group-hover:shadow-red-950/30 overflow-hidden">
+                {/* Top accent bar */}
+                <div className="h-1 bg-gradient-to-r from-red-500 via-red-600 to-red-500 opacity-80" />
+
+                <div className="px-6 py-8 flex flex-col items-center gap-4">
+                  {/* Camera icon with ring pulse */}
+                  <div className="relative">
+                    <div className="absolute inset-0 rounded-full bg-red-100 dark:bg-red-900/30 scale-150 opacity-0 group-hover:opacity-100 group-hover:scale-[1.7] transition-all duration-300" />
+                    <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-red-500 to-red-600 shadow-lg shadow-red-200 dark:shadow-red-900/40 flex items-center justify-center">
+                      <Camera className="w-7 h-7 text-white" />
+                    </div>
+                  </div>
+
+                  <div className="text-center space-y-1.5">
+                    <p className="font-bold text-gray-800 dark:text-white text-base">
+                      Snap a photo of your card
+                    </p>
+                    <p className="text-sm text-gray-400 dark:text-gray-500 max-w-xs leading-relaxed">
+                      We'll search thousands of Marvel cards and try to find an exact match.
+                    </p>
+                  </div>
+
+                  <Button className="bg-red-600 hover:bg-red-700 text-white gap-2 px-6 py-2 rounded-full shadow-sm shadow-red-200 dark:shadow-red-900/30 transition-transform group-hover:scale-[1.02]">
+                    <Camera className="w-4 h-4" />
+                    Open Camera / Upload
+                  </Button>
+
+                  <p className="text-xs text-gray-300 dark:text-gray-600">JPEG · PNG · WebP · Max 10MB</p>
+                </div>
               </div>
-              <div className="text-center">
-                <p className="font-semibold text-gray-700 dark:text-gray-200">Scan a card</p>
-                <p className="text-sm text-gray-400 mt-1">Take a photo or pick from your gallery</p>
-              </div>
-              <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white gap-2">
-                <Camera className="w-4 h-4" /> Open Camera / Upload
-              </Button>
             </div>
-            <p className="text-center text-xs text-gray-400">
-              Supports JPEG, PNG, WebP · Max 10MB
-            </p>
+
+            {/* Two info panels */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Best Results */}
+              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-3.5 shadow-sm">
+                <div className="flex items-center gap-1.5 mb-2.5">
+                  <Lightbulb className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">Best Results</p>
+                </div>
+                <ul className="space-y-1.5">
+                  {[
+                    "Good lighting",
+                    "Full card visible",
+                    "Front of card",
+                    "Card # visible",
+                  ].map((tip) => (
+                    <li key={tip} className="flex items-start gap-1.5">
+                      <CheckCircle2 className="w-3 h-3 text-green-500 flex-shrink-0 mt-0.5" />
+                      <span className="text-[11px] text-gray-500 dark:text-gray-400 leading-tight">{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Capabilities */}
+              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-3.5 shadow-sm">
+                <div className="flex items-center gap-1.5 mb-2.5">
+                  <Zap className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
+                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">What It Can Do</p>
+                </div>
+                <ul className="space-y-1.5">
+                  {[
+                    "Auto-identify cards",
+                    "Suggest matches",
+                    "Manual picker",
+                    "Submit photos",
+                  ].map((cap) => (
+                    <li key={cap} className="flex items-start gap-1.5">
+                      <CheckCircle2 className="w-3 h-3 text-red-500 flex-shrink-0 mt-0.5" />
+                      <span className="text-[11px] text-gray-500 dark:text-gray-400 leading-tight">{cap}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Collection context */}
+            {userStats && (
+              <div className="flex items-center justify-center gap-2 py-2">
+                <div className="h-px flex-1 bg-gray-100 dark:bg-gray-800" />
+                <p className="text-xs text-gray-400 dark:text-gray-500 px-2 whitespace-nowrap">
+                  You currently have{" "}
+                  <span className="font-semibold text-gray-600 dark:text-gray-300">
+                    {userStats.totalCards.toLocaleString()}
+                  </span>{" "}
+                  {userStats.totalCards === 1 ? "card" : "cards"} in your collection
+                </p>
+                <div className="h-px flex-1 bg-gray-100 dark:bg-gray-800" />
+              </div>
+            )}
+
+          </div>
+        )}
+
+        {/* Slim header shown during all non-idle stages */}
+        {stage !== "idle" && (
+          <div className="pt-5 pb-4 flex items-center gap-2">
+            <div className="w-6 h-6 rounded bg-red-600 flex items-center justify-center">
+              <ScanLine className="w-3.5 h-3.5 text-white" />
+            </div>
+            <h1 className="text-xl font-bebas tracking-wide text-gray-900 dark:text-white">
+              Scan to Add
+            </h1>
           </div>
         )}
 
