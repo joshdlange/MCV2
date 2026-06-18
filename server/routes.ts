@@ -5949,6 +5949,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // ===== CARD PICKER ROUTES =====
+
+  // GET /api/cards/picker/years — distinct years newest first
+  app.get("/api/cards/picker/years", async (_req, res) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT DISTINCT year FROM card_sets
+        WHERE is_active = true AND archived_at IS NULL
+        ORDER BY year DESC
+      `);
+      res.json((result.rows as any[]).map((r) => r.year));
+    } catch (e) {
+      res.status(500).json({ message: "Failed to fetch years" });
+    }
+  });
+
+  // GET /api/cards/picker/sets?year=N — main_sets (grouped) + standalone card_sets for a year
+  app.get("/api/cards/picker/sets", async (req, res) => {
+    try {
+      const year = parseInt(req.query.year as string);
+      if (!year) return res.status(400).json({ message: "year required" });
+      const result = await db.execute(sql`
+        SELECT ms.id, ms.name, 'main_set' AS type, COUNT(cs.id)::int AS subset_count
+        FROM main_sets ms
+        JOIN card_sets cs ON cs.main_set_id = ms.id
+        WHERE cs.year = ${year} AND cs.is_active = true AND cs.archived_at IS NULL
+        GROUP BY ms.id, ms.name
+        UNION ALL
+        SELECT cs.id, cs.name, 'card_set' AS type, 1 AS subset_count
+        FROM card_sets cs
+        WHERE cs.year = ${year} AND cs.is_active = true AND cs.archived_at IS NULL AND cs.main_set_id IS NULL
+        ORDER BY name ASC
+      `);
+      res.json(result.rows);
+    } catch (e) {
+      res.status(500).json({ message: "Failed to fetch sets" });
+    }
+  });
+
+  // GET /api/cards/picker/subsets?mainSetId=N&year=N — card_sets within a main_set for a year
+  app.get("/api/cards/picker/subsets", async (req, res) => {
+    try {
+      const mainSetId = parseInt(req.query.mainSetId as string);
+      const year = parseInt(req.query.year as string);
+      if (!mainSetId || !year) return res.status(400).json({ message: "mainSetId and year required" });
+      const result = await db.execute(sql`
+        SELECT id, name, is_insert_subset AS "isInsertSubset", total_cards AS "totalCards"
+        FROM card_sets
+        WHERE main_set_id = ${mainSetId} AND year = ${year}
+          AND is_active = true AND archived_at IS NULL
+        ORDER BY is_insert_subset ASC, name ASC
+      `);
+      res.json(result.rows);
+    } catch (e) {
+      res.status(500).json({ message: "Failed to fetch subsets" });
+    }
+  });
+
+  // GET /api/cards/picker/cards?setId=N&search=term — cards in a card_set with optional search
+  app.get("/api/cards/picker/cards", async (req, res) => {
+    try {
+      const setId = parseInt(req.query.setId as string);
+      if (!setId) return res.status(400).json({ message: "setId required" });
+      const search = ((req.query.search as string) || "").trim();
+      const result = search
+        ? await db.execute(sql`
+            SELECT id, name, card_number AS "cardNumber", front_image_url AS "frontImageUrl",
+                   variation, is_insert AS "isInsert"
+            FROM cards
+            WHERE set_id = ${setId}
+              AND (name ILIKE ${'%' + search + '%'} OR card_number ILIKE ${'%' + search + '%'})
+            ORDER BY card_number
+            LIMIT 100
+          `)
+        : await db.execute(sql`
+            SELECT id, name, card_number AS "cardNumber", front_image_url AS "frontImageUrl",
+                   variation, is_insert AS "isInsert"
+            FROM cards
+            WHERE set_id = ${setId}
+            ORDER BY card_number
+            LIMIT 100
+          `);
+      res.json(result.rows);
+    } catch (e) {
+      res.status(500).json({ message: "Failed to fetch cards" });
+    }
+  });
+
   // ===== SCAN TO ADD ROUTES =====
 
   // POST /api/cards/scan — upload card image, run OCR, return match candidates

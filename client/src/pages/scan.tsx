@@ -20,7 +20,13 @@ import {
   Star,
   RefreshCw,
   FolderOpen,
+  ArrowLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
+
+// ── Interfaces ──────────────────────────────────────────────────────────────
 
 interface ScanMatch {
   cardId: number;
@@ -42,21 +48,43 @@ interface ScanResult {
   confidenceLevel: "high" | "medium" | "low" | "none";
 }
 
-interface SearchCard {
+interface PickerSet {
+  id: number;
+  name: string;
+  type: "main_set" | "card_set";
+  subset_count: number;
+}
+
+interface PickerSubset {
+  id: number;
+  name: string;
+  isInsertSubset: boolean;
+  totalCards: number;
+}
+
+interface PickerCard {
   id: number;
   name: string;
   cardNumber: string;
   frontImageUrl: string | null;
-  set: { name: string; year: number };
+  variation: string | null;
+  isInsert: boolean;
 }
+
+// ── Stage type ───────────────────────────────────────────────────────────────
 
 type Stage =
   | "idle"
   | "scanning"
   | "results"
-  | "manual-search"
+  | "picker-year"
+  | "picker-set"
+  | "picker-subset"
+  | "picker-card"
   | "confirmed"
   | "success";
+
+// ── Helper components ────────────────────────────────────────────────────────
 
 function ConfidencePill({ level }: { level: ScanResult["confidenceLevel"] }) {
   const map = {
@@ -95,11 +123,7 @@ function CardTile({
     >
       <div className="w-12 h-16 flex-shrink-0 rounded overflow-hidden bg-gray-100 dark:bg-gray-800">
         {card.imageUrl ? (
-          <img
-            src={card.imageUrl}
-            alt={card.name}
-            className="w-full h-full object-contain"
-          />
+          <img src={card.imageUrl} alt={card.name} className="w-full h-full object-contain" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <ImageOff className="w-4 h-4 text-gray-400" />
@@ -107,22 +131,14 @@ function CardTile({
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">
-          {card.name}
-        </p>
+        <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{card.name}</p>
         <p className="text-xs text-gray-500 truncate">{card.setName}</p>
-        {card.subsetName && (
-          <p className="text-xs text-gray-400 truncate">{card.subsetName}</p>
-        )}
+        {card.subsetName && <p className="text-xs text-gray-400 truncate">{card.subsetName}</p>}
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           {card.cardNumber && (
-            <span className="text-xs font-mono text-gray-600 dark:text-gray-400">
-              #{card.cardNumber}
-            </span>
+            <span className="text-xs font-mono text-gray-600 dark:text-gray-400">#{card.cardNumber}</span>
           )}
-          {card.year && (
-            <span className="text-xs text-gray-500">{card.year}</span>
-          )}
+          {card.year && <span className="text-xs text-gray-500">{card.year}</span>}
           {showConfidence && card.matchReasons.length > 0 && (
             <span className="text-xs text-green-600 dark:text-green-400">
               ✓ {card.matchReasons.join(", ")}
@@ -130,12 +146,90 @@ function CardTile({
           )}
         </div>
       </div>
-      {selected && (
-        <CheckCircle2 className="w-5 h-5 text-red-500 flex-shrink-0" />
-      )}
+      {selected && <CheckCircle2 className="w-5 h-5 text-red-500 flex-shrink-0" />}
     </button>
   );
 }
+
+// Progress breadcrumb shown during picker
+function PickerProgress({
+  step,
+  year,
+  setName,
+  subsetName,
+  onBackToYear,
+  onBackToSet,
+  onBackToSubset,
+}: {
+  step: "year" | "set" | "subset" | "card";
+  year: number | null;
+  setName: string;
+  subsetName: string;
+  onBackToYear: () => void;
+  onBackToSet: () => void;
+  onBackToSubset: () => void;
+}) {
+  const steps = ["Year", "Set", "Subset", "Card"];
+  const activeIdx = { year: 0, set: 1, subset: 2, card: 3 }[step];
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-1 text-xs">
+        {steps.map((s, i) => (
+          <span key={s} className="flex items-center gap-1">
+            {i > 0 && <ChevronRight className="w-3 h-3 text-gray-300" />}
+            <span
+              className={
+                i < activeIdx
+                  ? "text-red-500 font-medium cursor-pointer hover:underline"
+                  : i === activeIdx
+                  ? "text-gray-900 dark:text-white font-semibold"
+                  : "text-gray-400"
+              }
+              onClick={() => {
+                if (i < activeIdx) {
+                  if (i === 0) onBackToYear();
+                  else if (i === 1) onBackToSet();
+                  else if (i === 2) onBackToSubset();
+                }
+              }}
+            >
+              {i === 0 && year && i < activeIdx ? year : s}
+            </span>
+          </span>
+        ))}
+      </div>
+      {/* Breadcrumb trail */}
+      <div className="flex flex-wrap gap-1">
+        {year && step !== "year" && (
+          <button
+            onClick={onBackToYear}
+            className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-red-50 hover:text-red-600 transition-colors"
+          >
+            {year}
+          </button>
+        )}
+        {setName && (step === "subset" || step === "card") && (
+          <button
+            onClick={onBackToSet}
+            className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-red-50 hover:text-red-600 transition-colors max-w-[180px] truncate"
+          >
+            {setName}
+          </button>
+        )}
+        {subsetName && step === "card" && (
+          <button
+            onClick={onBackToSubset}
+            className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-red-50 hover:text-red-600 transition-colors max-w-[180px] truncate"
+          >
+            {subsetName}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function ScanToAdd() {
   const { user } = useAuth();
@@ -144,13 +238,24 @@ export default function ScanToAdd() {
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Core scan state
   const [stage, setStage] = useState<Stage>("idle");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [selectedCard, setSelectedCard] = useState<ScanMatch | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
   const [submitImage, setSubmitImage] = useState(false);
   const [alreadyOwned, setAlreadyOwned] = useState(false);
+
+  // Picker state
+  const [pickerYear, setPickerYear] = useState<number | null>(null);
+  const [pickerSet, setPickerSet] = useState<PickerSet | null>(null);
+  const [pickerSetName, setPickerSetName] = useState("");
+  const [pickerSubset, setPickerSubset] = useState<PickerSubset | null>(null);
+  const [pickerSubsetName, setPickerSubsetName] = useState("");
+  const [pickerCardSetId, setPickerCardSetId] = useState<number | null>(null);
+  const [cardSearch, setCardSearch] = useState("");
+
+  // ── Mutations ──
 
   const scanMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -159,9 +264,7 @@ export default function ScanToAdd() {
       const token = await user?.getIdToken();
       const res = await fetch("/api/cards/scan", {
         method: "POST",
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: formData,
       });
       if (!res.ok) {
@@ -173,7 +276,7 @@ export default function ScanToAdd() {
     onSuccess: (data) => {
       setScanResult(data);
       if (data.confidenceLevel === "none") {
-        setStage("manual-search");
+        setStage("picker-year");
       } else {
         setStage("results");
         if (data.confidenceLevel === "high" && data.matches.length > 0) {
@@ -214,7 +317,6 @@ export default function ScanToAdd() {
           // non-fatal
         }
       }
-
       setStage("success");
     },
     onError: (err: Error) => {
@@ -233,25 +335,55 @@ export default function ScanToAdd() {
     },
   });
 
-  const { data: searchResults = [], isFetching: searchLoading } = useQuery<SearchCard[]>({
-    queryKey: ["/api/cards", { search: searchQuery }],
-    queryFn: async () => {
-      if (!searchQuery.trim() || searchQuery.length < 2) return [];
-      const res = await apiRequest("GET", `/api/cards?search=${encodeURIComponent(searchQuery)}&pageSize=20`);
-      const data = await res.json();
-      return (data.cards || data) as SearchCard[];
-    },
-    enabled: searchQuery.length >= 2 && stage === "manual-search",
+  // ── Picker queries ──
+
+  const { data: pickerYears = [], isLoading: yearsLoading } = useQuery<number[]>({
+    queryKey: ["/api/cards/picker/years"],
+    queryFn: async () => (await apiRequest("GET", "/api/cards/picker/years")).json(),
+    enabled: stage === "picker-year",
+    staleTime: 10 * 60 * 1000,
   });
+
+  const { data: pickerSets = [], isLoading: setsLoading } = useQuery<PickerSet[]>({
+    queryKey: ["/api/cards/picker/sets", pickerYear],
+    queryFn: async () =>
+      (await apiRequest("GET", `/api/cards/picker/sets?year=${pickerYear}`)).json(),
+    enabled: stage === "picker-set" && pickerYear !== null,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: pickerSubsets = [], isLoading: subsetsLoading } = useQuery<PickerSubset[]>({
+    queryKey: ["/api/cards/picker/subsets", pickerSet?.id, pickerYear],
+    queryFn: async () =>
+      (
+        await apiRequest(
+          "GET",
+          `/api/cards/picker/subsets?mainSetId=${pickerSet!.id}&year=${pickerYear}`
+        )
+      ).json(),
+    enabled: stage === "picker-subset" && pickerSet?.type === "main_set" && pickerYear !== null,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: pickerCards = [], isLoading: cardsLoading } = useQuery<PickerCard[]>({
+    queryKey: ["/api/cards/picker/cards", pickerCardSetId, cardSearch],
+    queryFn: async () => {
+      const params = new URLSearchParams({ setId: String(pickerCardSetId) });
+      if (cardSearch.trim()) params.set("search", cardSearch.trim());
+      return (await apiRequest("GET", `/api/cards/picker/cards?${params}`)).json();
+    },
+    enabled: stage === "picker-card" && pickerCardSetId !== null,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  // ── Handlers ──
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (ev) => setPreviewUrl(ev.target?.result as string);
     reader.readAsDataURL(file);
-
     setStage("scanning");
     setScanResult(null);
     setSelectedCard(null);
@@ -260,14 +392,14 @@ export default function ScanToAdd() {
     scanMutation.mutate(file);
   }
 
-  function handleManualSelect(card: SearchCard) {
+  function handlePickerCardSelect(card: PickerCard) {
     const match: ScanMatch = {
       cardId: card.id,
       name: card.name,
-      setName: card.set?.name || "",
-      subsetName: null,
+      setName: pickerSubsetName || pickerSetName,
+      subsetName: card.variation || null,
       cardNumber: card.cardNumber,
-      year: card.set?.year || null,
+      year: pickerYear,
       imageUrl: card.frontImageUrl,
       confidence: 0,
       matchReasons: [],
@@ -276,18 +408,90 @@ export default function ScanToAdd() {
     setStage("confirmed");
   }
 
+  function handleSelectYear(year: number) {
+    setPickerYear(year);
+    setPickerSet(null);
+    setPickerSetName("");
+    setPickerSubset(null);
+    setPickerSubsetName("");
+    setPickerCardSetId(null);
+    setCardSearch("");
+    setStage("picker-set");
+  }
+
+  function handleSelectSet(set: PickerSet) {
+    setPickerSet(set);
+    setPickerSetName(set.name);
+    setPickerSubset(null);
+    setPickerSubsetName("");
+    setCardSearch("");
+    if (set.type === "card_set") {
+      setPickerCardSetId(set.id);
+      setStage("picker-card");
+    } else {
+      setPickerCardSetId(null);
+      setStage("picker-subset");
+    }
+  }
+
+  function handleSelectSubset(subset: PickerSubset) {
+    setPickerSubset(subset);
+    setPickerSubsetName(subset.name);
+    setPickerCardSetId(subset.id);
+    setCardSearch("");
+    setStage("picker-card");
+  }
+
+  function goBackToYear() {
+    setPickerSet(null);
+    setPickerSetName("");
+    setPickerSubset(null);
+    setPickerSubsetName("");
+    setPickerCardSetId(null);
+    setCardSearch("");
+    setStage("picker-year");
+  }
+
+  function goBackToSet() {
+    setPickerSubset(null);
+    setPickerSubsetName("");
+    setPickerCardSetId(null);
+    setCardSearch("");
+    setStage("picker-set");
+  }
+
+  function goBackToSubset() {
+    setPickerCardSetId(null);
+    setCardSearch("");
+    setStage("picker-subset");
+  }
+
   function handleReset() {
     setStage("idle");
     setPreviewUrl(null);
     setScanResult(null);
     setSelectedCard(null);
-    setSearchQuery("");
     setSubmitImage(false);
     setAlreadyOwned(false);
+    setPickerYear(null);
+    setPickerSet(null);
+    setPickerSetName("");
+    setPickerSubset(null);
+    setPickerSubsetName("");
+    setPickerCardSetId(null);
+    setCardSearch("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   const cardMissingImage = selectedCard && !selectedCard.imageUrl;
+
+  const isPickerStage =
+    stage === "picker-year" ||
+    stage === "picker-set" ||
+    stage === "picker-subset" ||
+    stage === "picker-card";
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-10">
@@ -304,6 +508,16 @@ export default function ScanToAdd() {
             Take a photo of your card and we'll try to find it in the Marvel Card Vault database.
           </p>
         </div>
+
+        {/* Hidden file input — camera on mobile, file picker on desktop */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleFileChange}
+        />
 
         {/* ── IDLE ── */}
         {stage === "idle" && (
@@ -323,22 +537,11 @@ export default function ScanToAdd() {
                 <Camera className="w-4 h-4" /> Open Camera / Upload
               </Button>
             </div>
-
             <p className="text-center text-xs text-gray-400">
               Supports JPEG, PNG, WebP · Max 10MB
             </p>
           </div>
         )}
-
-        {/* Hidden file input — camera on mobile, file picker on desktop */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={handleFileChange}
-        />
 
         {/* ── SCANNING ── */}
         {stage === "scanning" && (
@@ -370,16 +573,10 @@ export default function ScanToAdd() {
                 <p className="font-semibold text-gray-800 dark:text-white">
                   {scanResult.confidenceLevel === "high"
                     ? "We found a possible match"
-                    : `${scanResult.matches.length} possible matches`}
+                    : `${scanResult.matches.length} possible match${scanResult.matches.length !== 1 ? "es" : ""}`}
                 </p>
                 <ConfidencePill level={scanResult.confidenceLevel} />
               </div>
-              <button
-                onClick={() => setStage("manual-search")}
-                className="text-xs text-red-500 hover:underline"
-              >
-                Search manually
-              </button>
             </div>
 
             <div className="space-y-2">
@@ -400,75 +597,246 @@ export default function ScanToAdd() {
             <Button
               variant="outline"
               className="w-full text-sm"
-              onClick={() => setStage("manual-search")}
+              onClick={() => setStage("picker-year")}
             >
               <Search className="w-4 h-4 mr-2" />
-              Not the right one? Search manually
+              Not listed? Choose card manually
             </Button>
           </div>
         )}
 
-        {/* ── MANUAL SEARCH ── */}
-        {stage === "manual-search" && (
+        {/* ── PICKER: YEAR ── */}
+        {stage === "picker-year" && (
           <div className="space-y-4">
             {previewUrl && (
-              <div className="rounded-xl overflow-hidden border bg-white dark:bg-gray-900 max-h-40 flex items-center justify-center">
-                <img src={previewUrl} alt="Scanned card" className="max-h-40 object-contain" />
+              <div className="rounded-xl overflow-hidden border bg-white dark:bg-gray-900 max-h-36 flex items-center justify-center">
+                <img src={previewUrl} alt="Scanned card" className="max-h-36 object-contain" />
               </div>
             )}
 
-            <div className="space-y-2">
-              <p className="font-semibold text-gray-800 dark:text-white">Search for your card</p>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  placeholder="Card name, character, set…"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 bg-white dark:bg-gray-900"
-                  autoFocus
-                />
-              </div>
+            <div>
+              <p className="font-semibold text-gray-800 dark:text-white mb-1">Step 1 — Select year</p>
+              <p className="text-xs text-gray-400 mb-3">What year was your card released?</p>
             </div>
 
-            {searchLoading && (
-              <div className="flex items-center justify-center py-4 gap-2 text-gray-400">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm">Searching…</span>
+            {yearsLoading ? (
+              <div className="flex items-center justify-center py-8 gap-2 text-gray-400">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Loading years…</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
+                {pickerYears.map((year) => (
+                  <button
+                    key={year}
+                    onClick={() => handleSelectYear(year)}
+                    className="py-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 font-semibold text-gray-800 dark:text-white hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all text-sm"
+                  >
+                    {year}
+                  </button>
+                ))}
               </div>
             )}
 
-            {!searchLoading && searchQuery.length >= 2 && searchResults.length === 0 && (
-              <div className="text-center py-6 text-gray-400">
+            {scanResult && scanResult.matches.length > 0 && (
+              <Button variant="outline" className="w-full text-sm" onClick={() => setStage("results")}>
+                <ArrowLeft className="w-4 h-4 mr-2" /> Back to scan results
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* ── PICKER: SET ── */}
+        {stage === "picker-set" && pickerYear && (
+          <div className="space-y-4">
+            {previewUrl && (
+              <div className="rounded-xl overflow-hidden border bg-white dark:bg-gray-900 max-h-36 flex items-center justify-center">
+                <img src={previewUrl} alt="Scanned card" className="max-h-36 object-contain" />
+              </div>
+            )}
+
+            <PickerProgress
+              step="set"
+              year={pickerYear}
+              setName={pickerSetName}
+              subsetName={pickerSubsetName}
+              onBackToYear={goBackToYear}
+              onBackToSet={goBackToSet}
+              onBackToSubset={goBackToSubset}
+            />
+
+            <div>
+              <p className="font-semibold text-gray-800 dark:text-white mb-1">Step 2 — Select set</p>
+              <p className="text-xs text-gray-400 mb-3">Which set is your card from?</p>
+            </div>
+
+            {setsLoading ? (
+              <div className="flex items-center justify-center py-8 gap-2 text-gray-400">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Loading sets…</span>
+              </div>
+            ) : pickerSets.length === 0 ? (
+              <p className="text-sm text-center text-gray-400 py-6">No sets found for {pickerYear}.</p>
+            ) : (
+              <div className="space-y-2">
+                {pickerSets.map((set) => (
+                  <button
+                    key={`${set.type}-${set.id}`}
+                    onClick={() => handleSelectSet(set)}
+                    className="w-full text-left flex items-center justify-between px-4 py-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all"
+                  >
+                    <span className="text-sm font-medium text-gray-800 dark:text-white">{set.name}</span>
+                    <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── PICKER: SUBSET ── */}
+        {stage === "picker-subset" && pickerSet && (
+          <div className="space-y-4">
+            {previewUrl && (
+              <div className="rounded-xl overflow-hidden border bg-white dark:bg-gray-900 max-h-36 flex items-center justify-center">
+                <img src={previewUrl} alt="Scanned card" className="max-h-36 object-contain" />
+              </div>
+            )}
+
+            <PickerProgress
+              step="subset"
+              year={pickerYear}
+              setName={pickerSetName}
+              subsetName={pickerSubsetName}
+              onBackToYear={goBackToYear}
+              onBackToSet={goBackToSet}
+              onBackToSubset={goBackToSubset}
+            />
+
+            <div>
+              <p className="font-semibold text-gray-800 dark:text-white mb-1">Step 3 — Select subset</p>
+              <p className="text-xs text-gray-400 mb-3">Choose the specific set or insert type.</p>
+            </div>
+
+            {subsetsLoading ? (
+              <div className="flex items-center justify-center py-8 gap-2 text-gray-400">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Loading subsets…</span>
+              </div>
+            ) : pickerSubsets.length === 0 ? (
+              <p className="text-sm text-center text-gray-400 py-6">No subsets found.</p>
+            ) : (
+              <div className="space-y-2">
+                {pickerSubsets.map((subset) => (
+                  <button
+                    key={subset.id}
+                    onClick={() => handleSelectSubset(subset)}
+                    className="w-full text-left flex items-center justify-between px-4 py-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all"
+                  >
+                    <div>
+                      <span className="text-sm font-medium text-gray-800 dark:text-white">{subset.name}</span>
+                      {subset.totalCards > 0 && (
+                        <span className="ml-2 text-xs text-gray-400">{subset.totalCards} cards</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {subset.isInsertSubset && (
+                        <Badge variant="outline" className="text-xs">Insert</Badge>
+                      )}
+                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── PICKER: CARD ── */}
+        {stage === "picker-card" && pickerCardSetId && (
+          <div className="space-y-4">
+            {previewUrl && (
+              <div className="rounded-xl overflow-hidden border bg-white dark:bg-gray-900 max-h-32 flex items-center justify-center">
+                <img src={previewUrl} alt="Scanned card" className="max-h-32 object-contain" />
+              </div>
+            )}
+
+            <PickerProgress
+              step="card"
+              year={pickerYear}
+              setName={pickerSetName}
+              subsetName={pickerSubsetName}
+              onBackToYear={goBackToYear}
+              onBackToSet={goBackToSet}
+              onBackToSubset={goBackToSubset}
+            />
+
+            <div>
+              <p className="font-semibold text-gray-800 dark:text-white mb-1">Step 4 — Select card</p>
+            </div>
+
+            {/* Search within card list */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Search by name or card #…"
+                value={cardSearch}
+                onChange={(e) => setCardSearch(e.target.value)}
+                className="pl-9 bg-white"
+              />
+            </div>
+
+            {cardsLoading ? (
+              <div className="flex items-center justify-center py-8 gap-2 text-gray-400">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Loading cards…</span>
+              </div>
+            ) : pickerCards.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
                 <AlertCircle className="w-8 h-8 mx-auto mb-2" />
-                <p className="text-sm">No cards found. Try a different name or set.</p>
+                <p className="text-sm">
+                  {cardSearch ? "No cards match your search." : "No cards found in this set."}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {pickerCards.map((card) => (
+                  <button
+                    key={card.id}
+                    onClick={() => handlePickerCardSelect(card)}
+                    className="w-full text-left flex items-center gap-3 p-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-red-300 bg-white dark:bg-gray-900 transition-all"
+                  >
+                    <div className="w-10 h-14 flex-shrink-0 rounded overflow-hidden bg-gray-100 dark:bg-gray-800">
+                      {card.frontImageUrl ? (
+                        <img src={card.frontImageUrl} alt={card.name} className="w-full h-full object-contain" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <ImageOff className="w-3 h-3 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{card.name}</p>
+                      {card.variation && (
+                        <p className="text-xs text-gray-500 truncate">{card.variation}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className="text-xs font-mono text-gray-500">#{card.cardNumber}</span>
+                        {card.isInsert && (
+                          <Badge variant="outline" className="text-xs py-0 h-4">Insert</Badge>
+                        )}
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  </button>
+                ))}
+                {pickerCards.length === 100 && (
+                  <p className="text-xs text-center text-gray-400 pt-1">
+                    Showing first 100 results — use search to narrow down.
+                  </p>
+                )}
               </div>
             )}
-
-            <div className="space-y-2">
-              {searchResults.map((card) => (
-                <button
-                  key={card.id}
-                  onClick={() => handleManualSelect(card)}
-                  className="w-full text-left flex items-center gap-3 p-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-red-300 bg-white dark:bg-gray-900 transition-all"
-                >
-                  <div className="w-10 h-14 flex-shrink-0 rounded overflow-hidden bg-gray-100 dark:bg-gray-800">
-                    {card.frontImageUrl ? (
-                      <img src={card.frontImageUrl} alt={card.name} className="w-full h-full object-contain" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <ImageOff className="w-3 h-3 text-gray-400" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{card.name}</p>
-                    <p className="text-xs text-gray-500 truncate">{card.set?.name}</p>
-                    <p className="text-xs font-mono text-gray-400">#{card.cardNumber}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
           </div>
         )}
 
@@ -586,10 +954,16 @@ export default function ScanToAdd() {
                 onClick={() => {
                   setSelectedCard(null);
                   setAlreadyOwned(false);
-                  setStage(scanResult ? "results" : "manual-search");
+                  if (isPickerStage || pickerCardSetId) {
+                    setStage("picker-card");
+                  } else if (scanResult) {
+                    setStage("results");
+                  } else {
+                    setStage("picker-year");
+                  }
                 }}
               >
-                Not the right card?
+                Not the right card? Go back
               </Button>
             </div>
           </div>
@@ -623,18 +997,6 @@ export default function ScanToAdd() {
                 <RefreshCw className="w-4 h-4 mr-2" /> Scan Another Card
               </Button>
             </div>
-          </div>
-        )}
-
-        {/* Always-visible reset link (except idle/success) */}
-        {!["idle", "success"].includes(stage) && (
-          <div className="mt-6 text-center">
-            <button
-              onClick={handleReset}
-              className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 underline-offset-2 hover:underline"
-            >
-              Start over
-            </button>
           </div>
         )}
       </div>

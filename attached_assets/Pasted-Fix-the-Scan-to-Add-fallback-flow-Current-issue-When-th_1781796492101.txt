@@ -1,0 +1,108 @@
+Fix the Scan to Add fallback flow.
+
+Current issue:
+When the scan/OCR does not confidently identify a card, the app asks the user to type in a character. That is not useful enough because many cards share the same character, and users need to identify the exact card.
+
+Replace the current fallback with a guided card picker.
+
+Goal:
+When Scan to Add cannot confidently match a card, the user should be able to choose the exact card step-by-step:
+
+1. Select card year
+2. Select set
+3. Select subset / insert type
+4. Select card
+
+Final fallback flow:
+- If scan confidence is high: keep current match confirmation flow.
+- If scan confidence is medium/low: show suggested matches first, but also include “Choose manually.”
+- If scan confidence is none: skip character entry and show “Choose manually.”
+
+Manual picker requirements:
+Step 1: Year
+- Show available card years from the database.
+- Sort newest to oldest.
+- Once selected, load sets for that year.
+
+Step 2: Set
+- Show only sets from the selected year.
+- Display set name clearly.
+- Once selected, load subsets for that set.
+
+Step 3: Subset
+- Show only subsets/insert types for the selected set.
+- Include a fallback option like “Base Set” or “No Subset” if cards do not have a subset.
+- Once selected, load cards in that subset.
+
+Step 4: Card
+- Show cards matching selected year, set, and subset.
+- Each card row/card should show:
+  - card image if available
+  - card name
+  - card number
+  - subset/insert type
+  - set name
+  - year
+- Include search within this final card list for card name or card number.
+- User taps the correct card.
+
+After card selection:
+- Show confirmation screen:
+  “Is this your card?”
+- Show selected card details.
+- CTA: “Add to My Collection”
+- If the card has no image, show:
+  “This card does not have an image yet. Submit your scanned photo for review?”
+- If user opts in, submit the scan image to the existing pending image approval flow.
+- Do not auto-approve images.
+
+Backend/API requirements:
+Create or reuse endpoints to support dependent dropdowns:
+
+GET /api/cards/years
+Returns:
+[
+  2025,
+  2024,
+  2023
+]
+
+GET /api/cards/sets?year=2024
+Returns sets for that year.
+
+GET /api/cards/subsets?setId=...
+Returns subsets/insert types for that set.
+Include a normalized “Base Set” / null subset option when needed.
+
+GET /api/cards/by-picker?year=2024&setId=...&subset=...
+Returns matching cards.
+
+If existing APIs already support this, reuse them. Do not duplicate logic unnecessarily.
+
+Frontend behavior:
+- Use a clean mobile-first wizard UI.
+- Show progress:
+  Year → Set → Subset → Card
+- Allow the user to go back to previous steps.
+- Reset downstream selections when an upstream selection changes.
+  Example: if year changes, clear set/subset/card.
+- Keep the original scanned image tied to the flow so it can still be submitted for review after manual selection.
+- Do not ask the user to type only a character as the main fallback.
+
+Important:
+The manual fallback must allow exact card identification through the catalog structure:
+Year → Set → Subset → Card
+
+QA checklist:
+1. Failed scan shows manual picker, not character-only entry.
+2. User can select year.
+3. User can select set filtered by year.
+4. User can select subset filtered by set.
+5. User can select exact card filtered by year/set/subset.
+6. Search within final card list works by name and card number.
+7. User can go back and change year/set/subset.
+8. Confirming selected card adds it to collection.
+9. If selected card has no image, scanned image can be submitted for admin approval.
+10. Existing scan match flow still works.
+11. Existing manual image upload still works.
+12. Existing collection add flow still works.
