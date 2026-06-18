@@ -6049,9 +6049,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Update card image
       const cardUpdates: any = {};
+      const overrideImageUrl = (req.body?.overrideImageUrl || "").trim() || null;
       
-      // Always replace frontImageUrl with approved user-submitted image (overrides placeholder)
-      if (pendingImage.frontImageUrl) {
+      // Admin can supply an override URL; otherwise use the submitted image
+      if (overrideImageUrl) {
+        cardUpdates.frontImageUrl = overrideImageUrl;
+      } else if (pendingImage.frontImageUrl) {
         cardUpdates.frontImageUrl = pendingImage.frontImageUrl;
       }
       

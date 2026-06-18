@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CheckCircle, XCircle, Image, User, Calendar, Loader2, AlertCircle, ScanLine } from "lucide-react";
+import { CheckCircle, XCircle, Image, User, Calendar, Loader2, AlertCircle, ScanLine, Link2, ChevronDown, ChevronUp } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
@@ -48,6 +48,9 @@ export default function AdminImageApprovals() {
   const [selectedSubmission, setSelectedSubmission] = useState<PendingSubmission | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  // Per-submission override image URLs
+  const [overrideUrls, setOverrideUrls] = useState<Record<number, string>>({});
+  const [showOverride, setShowOverride] = useState<Record<number, boolean>>({});
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -64,14 +67,19 @@ export default function AdminImageApprovals() {
 
   // Approve mutation
   const approveMutation = useMutation({
-    mutationFn: async (submissionId: number) => {
-      return apiRequest('POST', `/api/admin/pending-images/${submissionId}/approve`);
+    mutationFn: async ({ submissionId, overrideImageUrl }: { submissionId: number; overrideImageUrl?: string }) => {
+      return apiRequest('POST', `/api/admin/pending-images/${submissionId}/approve`, 
+        overrideImageUrl ? { overrideImageUrl } : undefined
+      );
     },
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/pending-images'] });
       queryClient.invalidateQueries({ queryKey: ['/api/cards'] });
+      // Clear override state for this submission
+      setOverrideUrls(prev => { const n = { ...prev }; delete n[vars.submissionId]; return n; });
+      setShowOverride(prev => { const n = { ...prev }; delete n[vars.submissionId]; return n; });
       toast({ 
-        title: "Image approved!",
+        title: vars.overrideImageUrl ? "Approved with custom image!" : "Image approved!",
         description: "The image has been added to the card database."
       });
       setSelectedSubmission(null);
@@ -110,7 +118,8 @@ export default function AdminImageApprovals() {
   });
 
   const handleApprove = (submission: PendingSubmission) => {
-    approveMutation.mutate(submission.id);
+    const override = overrideUrls[submission.id]?.trim();
+    approveMutation.mutate({ submissionId: submission.id, overrideImageUrl: override || undefined });
   };
 
   const handleReject = () => {
@@ -273,6 +282,46 @@ export default function AdminImageApprovals() {
                   )}
                 </div>
 
+                {/* Override Image URL */}
+                <div className="border rounded-lg overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setShowOverride(prev => ({ ...prev, [submission.id]: !prev[submission.id] }))}
+                    className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Link2 className="w-3 h-3" />
+                      Use a different image URL
+                    </span>
+                    {showOverride[submission.id] ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  </button>
+                  {showOverride[submission.id] && (
+                    <div className="p-3 space-y-2 bg-white dark:bg-gray-900">
+                      <Input
+                        placeholder="Paste image URL here…"
+                        value={overrideUrls[submission.id] || ""}
+                        onChange={(e) => setOverrideUrls(prev => ({ ...prev, [submission.id]: e.target.value }))}
+                        className="text-xs bg-white"
+                      />
+                      {overrideUrls[submission.id]?.trim() && (
+                        <div className="flex gap-2 items-start">
+                          <div className="w-16 h-20 flex-shrink-0 rounded border overflow-hidden bg-gray-100 dark:bg-gray-800">
+                            <img
+                              src={overrideUrls[submission.id]}
+                              alt="Preview"
+                              className="w-full h-full object-contain"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            />
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 pt-1">
+                            Clicking <strong>Approve</strong> below will use this URL instead of the submitted image.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-2">
                   <Button
@@ -286,7 +335,7 @@ export default function AdminImageApprovals() {
                     ) : (
                       <CheckCircle className="w-4 h-4 mr-2" />
                     )}
-                    Approve
+                    {overrideUrls[submission.id]?.trim() ? "Approve with Custom Image" : "Approve"}
                   </Button>
                   <Button
                     onClick={() => {

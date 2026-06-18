@@ -475,22 +475,50 @@ export default function ScanToAdd() {
         {/* ── CONFIRMED ── */}
         {stage === "confirmed" && selectedCard && (
           <div className="space-y-4">
-            <div className="bg-white dark:bg-gray-900 rounded-xl border p-4 space-y-3">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Is this your card?</p>
-              <div className="flex gap-4 items-start">
-                <div className="w-20 h-28 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 border">
-                  {selectedCard.imageUrl ? (
-                    <img
-                      src={selectedCard.imageUrl}
-                      alt={selectedCard.name}
-                      className="w-full h-full object-contain"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <ImageOff className="w-6 h-6 text-gray-400" />
+            {/* Side-by-side photo comparison */}
+            {previewUrl && (
+              <div className="bg-white dark:bg-gray-900 rounded-xl border p-4 space-y-2">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  Does this match your card?
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs text-center text-gray-500">Your photo</p>
+                    <div className="aspect-[2.5/3.5] rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 border-2 border-gray-200">
+                      <img src={previewUrl} alt="Your scan" className="w-full h-full object-contain" />
                     </div>
-                  )}
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-center text-gray-500">In our database</p>
+                    <div className="aspect-[2.5/3.5] rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 border-2 border-blue-200">
+                      {selectedCard.imageUrl ? (
+                        <img src={selectedCard.imageUrl} alt={selectedCard.name} className="w-full h-full object-contain" />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-400">
+                          <ImageOff className="w-6 h-6" />
+                          <span className="text-xs">No image yet</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
+              </div>
+            )}
+
+            <div className="bg-white dark:bg-gray-900 rounded-xl border p-4 space-y-3">
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Card details</p>
+              <div className="flex gap-4 items-start">
+                {!previewUrl && (
+                  <div className="w-20 h-28 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 border">
+                    {selectedCard.imageUrl ? (
+                      <img src={selectedCard.imageUrl} alt={selectedCard.name} className="w-full h-full object-contain" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <ImageOff className="w-6 h-6 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="flex-1">
                   <h2 className="font-bold text-gray-900 dark:text-white text-lg leading-tight">
                     {selectedCard.name}
