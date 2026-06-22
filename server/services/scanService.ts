@@ -3,7 +3,7 @@ import { db } from '../db';
 import { cards, cardSets } from '../../shared/schema';
 import { ilike, or, eq } from 'drizzle-orm';
 
-export const FREE_SCAN_LIMIT_PER_MONTH = 10;
+export const FREE_SCAN_LIMIT_PER_MONTH = 25;
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
