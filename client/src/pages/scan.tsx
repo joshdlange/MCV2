@@ -277,6 +277,7 @@ export default function ScanToAdd() {
       return res.json() as Promise<ScanResult>;
     },
     onSuccess: (data) => {
+      refetchUsage();
       setScanResult(data);
       if (data.confidenceLevel === "none") {
         setStage("picker-year");
@@ -288,7 +289,12 @@ export default function ScanToAdd() {
       }
     },
     onError: (err: Error) => {
-      toast({ title: "Scan failed", description: err.message, variant: "destructive" });
+      refetchUsage();
+      if (err.message?.includes("free scans this month")) {
+        toast({ title: "Monthly scan limit reached", description: "Upgrade to Super Hero for unlimited scans.", variant: "destructive" });
+      } else {
+        toast({ title: "Scan failed", description: err.message, variant: "destructive" });
+      }
       setStage("idle");
     },
   });
@@ -382,6 +388,17 @@ export default function ScanToAdd() {
     queryFn: async () => (await apiRequest("GET", "/api/stats")).json(),
     staleTime: 30 * 1000,
   });
+
+  // Scan usage for free users
+  const { data: scanUsage, refetch: refetchUsage } = useQuery<{
+    used: number; limit: number | null; unlimited: boolean; remaining?: number;
+  }>({
+    queryKey: ["/api/cards/scan/usage"],
+    queryFn: async () => (await apiRequest("GET", "/api/cards/scan/usage")).json(),
+    staleTime: 0,
+  });
+
+  const isAtScanLimit = !scanUsage?.unlimited && (scanUsage?.remaining ?? 99) <= 0;
 
   // Lightweight ownership pre-check — fires when user reaches confirmed stage
   const { data: ownershipCheck } = useQuery<{ owned: boolean; quantity: number }>({
@@ -566,8 +583,8 @@ export default function ScanToAdd() {
 
             {/* Upload area — card-themed */}
             <div
-              className="group relative cursor-pointer"
-              onClick={() => fileInputRef.current?.click()}
+              className={`group relative ${isAtScanLimit ? "cursor-not-allowed" : "cursor-pointer"}`}
+              onClick={() => !isAtScanLimit && fileInputRef.current?.click()}
             >
               {/* Fanned card stack behind */}
               <div className="absolute inset-x-6 bottom-0 top-4 rounded-2xl bg-red-100 dark:bg-red-950/30 border border-red-200/60 dark:border-red-900/40 rotate-3 shadow-sm transition-transform group-hover:rotate-[5deg]" />
@@ -596,10 +613,47 @@ export default function ScanToAdd() {
                     </p>
                   </div>
 
-                  <Button className="bg-red-600 hover:bg-red-700 text-white gap-2 px-6 py-2 rounded-full shadow-sm shadow-red-200 dark:shadow-red-900/30 transition-transform group-hover:scale-[1.02]">
-                    <Camera className="w-4 h-4" />
-                    Open Camera / Upload
-                  </Button>
+                  {isAtScanLimit ? (
+                    <div className="text-center space-y-3">
+                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-full">
+                        <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                          Monthly scan limit reached
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
+                        You've used all {scanUsage?.limit} free scans this month.
+                      </p>
+                      <Button
+                        className="bg-red-600 hover:bg-red-700 text-white gap-2 px-6 py-2 rounded-full"
+                        onClick={(e) => { e.stopPropagation(); window.location.href = "/subscribe"; }}
+                      >
+                        <Zap className="w-4 h-4" />
+                        Upgrade for Unlimited Scans
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button className="bg-red-600 hover:bg-red-700 text-white gap-2 px-6 py-2 rounded-full shadow-sm shadow-red-200 dark:shadow-red-900/30 transition-transform group-hover:scale-[1.02]">
+                      <Camera className="w-4 h-4" />
+                      Open Camera / Upload
+                    </Button>
+                  )}
+
+                  {/* Usage meter for free users */}
+                  {!scanUsage?.unlimited && scanUsage?.limit && !isAtScanLimit && (
+                    <div className="w-full max-w-xs space-y-1.5">
+                      <div className="flex justify-between text-[11px] text-gray-400">
+                        <span>{scanUsage.used} of {scanUsage.limit} free scans used this month</span>
+                        <span>{scanUsage.remaining} left</span>
+                      </div>
+                      <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-red-500 rounded-full transition-all"
+                          style={{ width: `${Math.min(100, ((scanUsage.used / scanUsage.limit) * 100))}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   <p className="text-xs text-gray-300 dark:text-gray-600">JPEG · PNG · WebP · Max 10MB</p>
                 </div>

@@ -1,11 +1,22 @@
+import OpenAI from 'openai';
 import { db } from '../db';
 import { cards, cardSets } from '../../shared/schema';
 import { ilike, or, eq } from 'drizzle-orm';
 
-interface ParsedOcrText {
+export const FREE_SCAN_LIMIT_PER_MONTH = 10;
+
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
+
+interface CardVisionResult {
+  characterName: string | null;
+  setName: string | null;
+  subsetName: string | null;
   cardNumber: string | null;
   year: string | null;
-  keywords: string[];
+  brand: string | null;
+  variant: string | null;
 }
 
 export interface ScanMatch {
@@ -22,64 +33,90 @@ export interface ScanMatch {
 
 export interface ScanResult {
   ocrText: string;
-  parsed: ParsedOcrText;
+  parsed: CardVisionResult;
   matches: ScanMatch[];
   confidenceLevel: 'high' | 'medium' | 'low' | 'none';
 }
 
-async function extractTextFromImage(imageBuffer: Buffer): Promise<string> {
-  try {
-    const { createWorker } = await import('tesseract.js');
-    const worker = await createWorker('eng', 1, {
-      logger: () => {},
-    });
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('OCR timeout after 20s')), 20000)
-    );
-    const ocrPromise = worker.recognize(imageBuffer);
-    const result = await Promise.race([ocrPromise, timeoutPromise]) as Awaited<typeof ocrPromise>;
-    await worker.terminate();
-    return result.data.text;
-  } catch (err) {
-    console.warn('[Scan] OCR failed or timed out:', (err as Error).message);
-    return '';
+async function identifyCardWithVision(
+  imageBuffer: Buffer,
+  mimeType: string = 'image/jpeg'
+): Promise<CardVisionResult> {
+  if (!openai) {
+    console.warn('[Scan] OPENAI_API_KEY not set — vision unavailable');
+    return { characterName: null, setName: null, subsetName: null, cardNumber: null, year: null, brand: null, variant: null };
   }
+
+  const base64 = imageBuffer.toString('base64');
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      max_tokens: 300,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: `You are a Marvel trading card expert. Analyze this card image carefully and return ONLY a JSON object with these fields:
+{
+  "characterName": "The character's name exactly as shown on the card (e.g. Spider-Man, Wolverine, Iron Man)",
+  "setName": "The card set name (e.g. Marvel Masterpieces, Fleer Ultra X-Men, Upper Deck Series 1)",
+  "subsetName": "Subset or parallel type if visible (e.g. Canvas, Gold Foil Signature, Printing Plate Black) or null",
+  "cardNumber": "Card number only, no # symbol (e.g. 85, 12, PP-5) or null",
+  "year": "4-digit year printed on the card or null",
+  "brand": "Card manufacturer only (e.g. SkyBox, Upper Deck, Topps, Fleer, Impel) or null",
+  "variant": "Variant or parallel description if different from subsetName, or null"
+}
+Return ONLY the JSON object. No explanation, no markdown.`,
+          },
+          {
+            type: 'image_url',
+            image_url: {
+              url: `data:${mimeType};base64,${base64}`,
+              detail: 'high',
+            },
+          },
+        ],
+      }],
+    });
+
+    const text = (response.choices[0]?.message?.content || '').trim();
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) return JSON.parse(jsonMatch[0]) as CardVisionResult;
+  } catch (err) {
+    console.error('[Scan] Vision API error:', err);
+  }
+
+  return { characterName: null, setName: null, subsetName: null, cardNumber: null, year: null, brand: null, variant: null };
 }
 
-function parseOcrText(text: string): ParsedOcrText {
-  if (!text.trim()) return { cardNumber: null, year: null, keywords: [] };
+async function matchCards(vision: CardVisionResult): Promise<ScanMatch[]> {
+  if (!vision.characterName && !vision.cardNumber && !vision.setName) return [];
 
-  const cardNumberMatch = text.match(/#?(\d{1,4}[A-Za-z]?(?:\/\d{1,4})?)/);
-  const cardNumber = cardNumberMatch ? cardNumberMatch[1] : null;
-
-  const yearMatch = text.match(/\b(19[6-9]\d|20[0-3]\d)\b/);
-  const year = yearMatch ? yearMatch[1] : null;
-
-  const stopwords = new Set([
-    'the', 'and', 'for', 'from', 'with', 'that', 'this', 'card', 'cards',
-    'upper', 'deck', 'skybox', 'fleer', 'impel', 'marvel', 'comics',
-    'trading', 'series', 'base', 'set', 'parallel', 'insert', 'foil',
-  ]);
-
-  const keywords = text
-    .replace(/[^a-zA-Z\s-]/g, ' ')
-    .split(/\s+/)
-    .map(w => w.replace(/^-+|-+$/g, '').toLowerCase())
-    .filter(w => w.length >= 3 && !stopwords.has(w) && !/^\d+$/.test(w))
-    .filter((v, i, a) => a.indexOf(v) === i)
-    .slice(0, 10);
-
-  return { cardNumber, year, keywords };
-}
-
-async function matchCards(parsed: ParsedOcrText): Promise<ScanMatch[]> {
   const conditions: ReturnType<typeof ilike>[] = [];
 
-  if (parsed.cardNumber) {
-    conditions.push(ilike(cards.cardNumber, `%${parsed.cardNumber}%`));
+  if (vision.characterName) {
+    conditions.push(ilike(cards.name, `%${vision.characterName}%`));
+    // Also try first word only (e.g. "Spider" from "Spider-Man")
+    const firstName = vision.characterName.split(/[-\s]/)[0];
+    if (firstName.length > 3 && firstName !== vision.characterName) {
+      conditions.push(ilike(cards.name, `%${firstName}%`));
+    }
   }
-  for (const kw of parsed.keywords.slice(0, 5)) {
-    conditions.push(ilike(cards.name, `%${kw}%`));
+
+  if (vision.cardNumber) {
+    conditions.push(ilike(cards.cardNumber, vision.cardNumber));
+    conditions.push(ilike(cards.cardNumber, `%${vision.cardNumber}`));
+    conditions.push(ilike(cards.cardNumber, `${vision.cardNumber}%`));
+  }
+
+  if (vision.setName) {
+    // Try partial set name words for better matching
+    const setWords = vision.setName.split(' ').filter(w => w.length > 4);
+    for (const word of setWords.slice(0, 3)) {
+      conditions.push(ilike(cardSets.name, `%${word}%`));
+    }
   }
 
   if (conditions.length === 0) return [];
@@ -97,39 +134,56 @@ async function matchCards(parsed: ParsedOcrText): Promise<ScanMatch[]> {
     .from(cards)
     .innerJoin(cardSets, eq(cards.setId, cardSets.id))
     .where(or(...conditions))
-    .limit(30);
+    .limit(60);
 
   const scored = results.map(r => {
     let score = 0;
     const reasons: string[] = [];
 
-    if (parsed.cardNumber) {
-      const normalized = parsed.cardNumber.replace(/\D/g, '');
-      const cardNum = (r.cardNumber || '').replace(/\D/g, '');
-      if (cardNum && cardNum === normalized) {
-        score += 60;
-        reasons.push('card number');
+    // Card number — strong signal
+    if (vision.cardNumber) {
+      const vNum = vision.cardNumber.replace(/\D/g, '');
+      const rNum = (r.cardNumber || '').replace(/\D/g, '');
+      if (vNum && rNum === vNum) { score += 50; reasons.push('card number'); }
+    }
+
+    // Character name — strong signal
+    if (vision.characterName) {
+      const vName = vision.characterName.toLowerCase();
+      const rName = (r.name || '').toLowerCase();
+      if (rName.includes(vName) || vName.includes(rName)) {
+        score += 40; reasons.push('character name');
+      } else {
+        // Partial match on first word
+        const vFirst = vName.split(/[-\s]/)[0];
+        if (rName.includes(vFirst) && vFirst.length > 3) { score += 15; reasons.push('character name (partial)'); }
       }
     }
 
-    if (parsed.year && r.setYear?.toString() === parsed.year) {
-      score += 20;
-      reasons.push('year');
+    // Year — good tiebreaker
+    if (vision.year && r.setYear?.toString() === vision.year) {
+      score += 25; reasons.push('year');
     }
 
-    for (const kw of parsed.keywords) {
-      if ((r.name || '').toLowerCase().includes(kw)) {
-        score += 30;
-        reasons.push('character name');
-        break;
+    // Set name — good signal
+    if (vision.setName) {
+      const vSet = vision.setName.toLowerCase();
+      const rSet = (r.setName || '').toLowerCase();
+      if (rSet.includes(vSet) || vSet.includes(rSet)) {
+        score += 30; reasons.push('set name');
+      } else {
+        // Partial set word match
+        const vWords = vSet.split(' ').filter((w: string) => w.length > 4);
+        const matchedWords = vWords.filter((w: string) => rSet.includes(w));
+        if (matchedWords.length > 0) { score += matchedWords.length * 8; reasons.push('set name (partial)'); }
       }
     }
 
-    for (const kw of parsed.keywords) {
-      if ((r.setName || '').toLowerCase().includes(kw)) {
-        score += 20;
-        reasons.push('set name');
-        break;
+    // Brand in set name
+    if (vision.brand) {
+      const vBrand = vision.brand.toLowerCase();
+      if ((r.setName || '').toLowerCase().includes(vBrand)) {
+        score += 10; reasons.push('brand');
       }
     }
 
@@ -155,16 +209,30 @@ async function matchCards(parsed: ParsedOcrText): Promise<ScanMatch[]> {
 function getConfidenceLevel(matches: ScanMatch[]): 'high' | 'medium' | 'low' | 'none' {
   if (matches.length === 0) return 'none';
   const top = matches[0].confidence;
-  if (top >= 80) return 'high';
-  if (top >= 40) return 'medium';
+  if (top >= 90) return 'high';
+  if (top >= 50) return 'medium';
   if (top > 0) return 'low';
   return 'none';
 }
 
-export async function scanCard(imageBuffer: Buffer): Promise<ScanResult> {
-  const ocrText = await extractTextFromImage(imageBuffer);
-  const parsed = parseOcrText(ocrText);
-  const matches = await matchCards(parsed);
+export async function scanCard(
+  imageBuffer: Buffer,
+  mimeType: string = 'image/jpeg'
+): Promise<ScanResult> {
+  const vision = await identifyCardWithVision(imageBuffer, mimeType);
+
+  console.log('[Scan] Vision result:', JSON.stringify(vision));
+
+  const matches = await matchCards(vision);
   const confidenceLevel = getConfidenceLevel(matches);
-  return { ocrText, parsed, matches, confidenceLevel };
+
+  const ocrText = [
+    vision.characterName,
+    vision.setName,
+    vision.year,
+    vision.cardNumber ? `#${vision.cardNumber}` : null,
+    vision.variant || vision.subsetName,
+  ].filter(Boolean).join(' ');
+
+  return { ocrText, parsed: vision, matches, confidenceLevel };
 }

@@ -17,7 +17,7 @@ import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
 import { uploadImage } from "./cloudinary";
 import { db } from "./db";
-import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks, blocks, friends } from "../shared/schema";
+import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks, blocks, friends, userScanLogs } from "../shared/schema";
 import { sql, eq, ne, ilike, like, and, or, isNull, count, exists, desc } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
@@ -6055,7 +6055,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== SCAN TO ADD ROUTES =====
 
-  // POST /api/cards/scan — upload card image, run OCR, return match candidates
+  // GET /api/cards/scan/usage — remaining scans this month
+  app.get("/api/cards/scan/usage", authenticateUser, async (req: any, res) => {
+    try {
+      const { FREE_SCAN_LIMIT_PER_MONTH } = await import('./services/scanService');
+      const user = req.user;
+      if (user.plan === 'SUPER_HERO') {
+        return res.json({ used: 0, limit: null, unlimited: true });
+      }
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      const [row] = await db
+        .select({ used: count() })
+        .from(userScanLogs)
+        .where(and(eq(userScanLogs.userId, user.id), sql`${userScanLogs.createdAt} >= ${startOfMonth}`));
+      const used = Number(row?.used ?? 0);
+      res.json({ used, limit: FREE_SCAN_LIMIT_PER_MONTH, unlimited: false, remaining: Math.max(0, FREE_SCAN_LIMIT_PER_MONTH - used) });
+    } catch (error) {
+      console.error('[Scan] Usage check error:', error);
+      res.status(500).json({ message: "Failed to check scan usage" });
+    }
+  });
+
+  // POST /api/cards/scan — AI vision card identification
   app.post("/api/cards/scan", authenticateUser, upload.single('image'), async (req: any, res) => {
     try {
       const file = req.file;
@@ -6069,6 +6092,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid file type. Use JPEG, PNG, or WebP." });
       }
 
+      // ── Scan limit check for free users ──────────────────────────────────────
+      const { FREE_SCAN_LIMIT_PER_MONTH } = await import('./services/scanService');
+      const user = req.user;
+      if (user.plan !== 'SUPER_HERO') {
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        const [row] = await db
+          .select({ used: count() })
+          .from(userScanLogs)
+          .where(and(eq(userScanLogs.userId, user.id), sql`${userScanLogs.createdAt} >= ${startOfMonth}`));
+        const used = Number(row?.used ?? 0);
+        if (used >= FREE_SCAN_LIMIT_PER_MONTH) {
+          return res.status(429).json({
+            message: `You've used all ${FREE_SCAN_LIMIT_PER_MONTH} free scans this month. Upgrade to Super Hero for unlimited scans!`,
+            limitReached: true,
+            limit: FREE_SCAN_LIMIT_PER_MONTH,
+          });
+        }
+      }
+
+      // ── Log this scan ─────────────────────────────────────────────────────────
+      await db.insert(userScanLogs).values({ userId: user.id });
+
+      // ── Upload to Cloudinary ──────────────────────────────────────────────────
       let imageUrl: string | null = null;
       try {
         imageUrl = await uploadImage(file.buffer, 'scan_uploads');
@@ -6076,8 +6124,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.warn('[Scan] Cloudinary upload failed, continuing without image URL:', uploadErr);
       }
 
+      // ── AI vision identification ──────────────────────────────────────────────
       const { scanCard } = await import('./services/scanService');
-      const scanResult = await scanCard(file.buffer);
+      const scanResult = await scanCard(file.buffer, file.mimetype);
 
       res.json({ imageUrl, ...scanResult });
     } catch (error) {

@@ -1107,3 +1107,12 @@ export const analyticsEvents = pgTable("analytics_events", {
 
 export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
 export type InsertAnalyticsEvent = typeof analyticsEvents.$inferInsert;
+
+// ── Scan Usage Logs ───────────────────────────────────────────────────────────
+export const userScanLogs = pgTable("user_scan_logs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type UserScanLog = typeof userScanLogs.$inferSelect;

@@ -1,0 +1,1 @@
+- [Scan-to-Add architecture](scan-to-add.md) — uses GPT-4o-mini vision (not Tesseract); free users get 10 scans/month tracked in user_scan_logs table
