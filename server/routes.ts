@@ -5651,6 +5651,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── RevenueCat failure alert tracker ─────────────────────────────────────
+  const _rcFailures: { ts: number }[] = [];
+  const RC_ALERT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+  const RC_ALERT_THRESHOLD = 3;
+  let _rcAlertSentAt = 0;
+
+  async function trackRcFailure() {
+    const now = Date.now();
+    _rcFailures.push({ ts: now });
+    // Prune old entries outside the window
+    const cutoff = now - RC_ALERT_WINDOW_MS;
+    while (_rcFailures.length && _rcFailures[0].ts < cutoff) _rcFailures.shift();
+
+    if (_rcFailures.length >= RC_ALERT_THRESHOLD && now - _rcAlertSentAt > RC_ALERT_WINDOW_MS) {
+      _rcAlertSentAt = now;
+      try {
+        await sendEmail(
+          'josh@marvelcardvault.com',
+          '🚨 RevenueCat Activation Failures — iOS Upgrades Broken',
+          `<p><strong>Alert:</strong> The RevenueCat subscription verification endpoint has failed ${_rcFailures.length} times in the last 10 minutes.</p>
+           <p>iOS users who purchase Super Hero are <strong>not being upgraded</strong>. This likely means the <code>REVENUECAT_SECRET_KEY</code> is invalid or the RevenueCat API is down.</p>
+           <p><strong>Action required:</strong> Check the <code>REVENUECAT_SECRET_KEY</code> secret in Replit and verify it matches the Secret API key in the RevenueCat dashboard (Project Settings → API Keys).</p>
+           <p>Check server logs for <code>[RevenueCat] subscriber lookup failed</code> errors.</p>`
+        );
+        console.error(`[RevenueCat] ALERT EMAIL SENT — ${_rcFailures.length} failures in 10 min window`);
+      } catch (alertErr) {
+        console.error('[RevenueCat] Failed to send alert email:', alertErr);
+      }
+    }
+  }
+
   // RevenueCat: activate SUPER_HERO after a successful iOS in-app purchase.
   // Server verifies the "super_hero" entitlement directly with RevenueCat's
   // REST API before writing to the database — the client is never trusted alone.
@@ -5689,6 +5720,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!rcRes.ok) {
         console.error(`[RevenueCat] subscriber lookup failed for user ${user.id}: HTTP ${rcRes.status}`);
+        await trackRcFailure();
         return res.status(402).json({ success: false, message: 'Could not verify purchase with RevenueCat' });
       }
 
