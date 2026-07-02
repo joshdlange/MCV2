@@ -1,0 +1,996 @@
+1 Deadpool
+2 Old Man Logan
+3 Cable
+4 Domino
+5 Wolverine
+6 Colossus
+7 Sabretooth
+8 Psylocke
+9 Juggernaut
+10 Gambit
+11 Pyro
+12 Toad
+13 Lady Deathstrike
+14 Blob
+15 X-23
+16 Weapon X
+17 Elektra
+18 Blade
+19 Bullseye
+20 Patch
+21 Deadpool
+22 Mr. Paradox
+23 Peter
+24 Headpool
+25 Pyro
+26 Negasonic Teenage Warhead
+27 Ladypool
+28 Dogpool
+29 Happy Hogan
+30 Wolverine
+31 Wade Wilson
+32 Blind Al
+33 Juggernaut
+34 Russian
+35 B-15
+36 Cowboypool
+37 Welshpool
+38 Kidpool
+39 Babypool
+40 Toad
+41 Sabretooth
+42 X-23
+43 Dopinder
+44 Shatterstar
+45 Quill
+46 Cassandra Nova
+47 The Adventure Begins
+48 Searching for Logan
+49 Minutemen In Pursuit
+50 Hiding From The TVA
+51 Deadpool Strikes Back
+52 An All-Out Brawl
+53 Taking Matters Into His Own Hands
+54 Advanced Weaponry
+55 Wade's Big Interview
+56 The Scheming Mr. Paradox
+57 The TVA Office
+58 Fashion and Function
+59 Enjoying His New Threads
+60 Face-To-Face With The Hulk
+61 Finding The Cavillrine
+62 Deadpool Finds His Logan
+63 Fleeing The TVA
+64 First Tango With Wolverine
+65 Patrolling The Void
+66 The FantastiCar
+67 A Fiery Entrance
+68 Pyro's Fury
+69 Fighting Fire With Fire
+70 Magnet Trap
+71 The Nefarious Cassandra Nova
+72 Deadpool's Baby Knife
+73 Dogpool Taking A Stroll
+74 A Pool's Best Friend
+75 Ready For Round 2
+76 Aftermath
+77 Waking Up In A Den of Rebels
+78 A Reminder Of What You Are
+79 Fracas In The Fortress
+80 All Or Nothing
+81 Unstoppable
+82 Battle Prowess
+83 Special Delivery
+84 Caught In The Action
+85 Subdued by Cassandra
+86 The Coup Gone Wrong
+87 Cassandra's Wrath
+88 Into Logan's Mind
+89 A Way Back
+90 A Daring Escape
+91 Cassandra Exits The Void
+92 A Dire Situation
+93 Standoff with Cowboypool
+94 Mercenary Melee
+95 Variant Madness
+96 A Momentary Pause In Chaos
+97 An Army of Two
+98 Accessing The Time Ripper
+99 Destroying All Timelines
+100 Disrupting Cassandra's Plot
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
