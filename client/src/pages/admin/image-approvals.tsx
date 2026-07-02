@@ -2,11 +2,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CheckCircle, XCircle, Image, User, Calendar, Loader2, AlertCircle, ScanLine, Link2, ChevronDown, ChevronUp } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -45,9 +42,6 @@ interface PendingSubmission {
 }
 
 export default function AdminImageApprovals() {
-  const [selectedSubmission, setSelectedSubmission] = useState<PendingSubmission | null>(null);
-  const [rejectionReason, setRejectionReason] = useState("");
-  const [showRejectDialog, setShowRejectDialog] = useState(false);
   // Per-submission override image URLs
   const [overrideUrls, setOverrideUrls] = useState<Record<number, string>>({});
   const [showOverride, setShowOverride] = useState<Record<number, boolean>>({});
@@ -122,12 +116,8 @@ export default function AdminImageApprovals() {
     approveMutation.mutate({ submissionId: submission.id, overrideImageUrl: override || undefined });
   };
 
-  const handleReject = () => {
-    if (!selectedSubmission) return;
-    rejectMutation.mutate({ 
-      submissionId: selectedSubmission.id, 
-      reason: rejectionReason 
-    });
+  const handleReject = (submission: PendingSubmission) => {
+    rejectMutation.mutate({ submissionId: submission.id, reason: '' });
   };
 
   const pendingSubmissions = submissions.filter(s => s.status === 'pending');
@@ -338,16 +328,17 @@ export default function AdminImageApprovals() {
                     {overrideUrls[submission.id]?.trim() ? "Approve with Custom Image" : "Approve"}
                   </Button>
                   <Button
-                    onClick={() => {
-                      setSelectedSubmission(submission);
-                      setShowRejectDialog(true);
-                    }}
+                    onClick={() => handleReject(submission)}
                     disabled={rejectMutation.isPending}
                     variant="destructive"
                     className="flex-1"
                     data-testid="button-reject"
                   >
-                    <XCircle className="w-4 h-4 mr-2" />
+                    {rejectMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <XCircle className="w-4 h-4 mr-2" />
+                    )}
                     Reject
                   </Button>
                 </div>
@@ -390,59 +381,6 @@ export default function AdminImageApprovals() {
         </div>
       )}
 
-      {/* Rejection Dialog */}
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reject Image Submission</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="rejectionReason">Rejection Reason <span className="text-gray-400 font-normal">(optional)</span></Label>
-              <Textarea
-                id="rejectionReason"
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="e.g. 'Image is blurry', 'Wrong card', 'Lower quality than existing'"
-                rows={3}
-                className="mt-2"
-                data-testid="input-rejection-reason"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={handleReject}
-                disabled={rejectMutation.isPending}
-                variant="destructive"
-                className="flex-1"
-                data-testid="button-confirm-reject"
-              >
-                {rejectMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Rejecting...
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="w-4 h-4 mr-2" />
-                    Confirm Rejection
-                  </>
-                )}
-              </Button>
-              <Button
-                onClick={() => {
-                  setShowRejectDialog(false);
-                  setRejectionReason("");
-                }}
-                variant="outline"
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
