@@ -5277,7 +5277,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Stripe webhook endpoint to handle successful payments
   app.post('/api/stripe-webhook', async (req, res) => {
     console.log('🔔 Stripe webhook received at /api/stripe-webhook');
-    console.log('Headers:', JSON.stringify(req.headers, null, 2));
     const sig = req.headers['stripe-signature'];
     let event;
 
@@ -5545,7 +5544,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       console.log(`User ${user.id} upgraded to Super Hero via verify-checkout-session fallback`);
-      
+
+      try {
+        await sendEmail(
+          'josh@marvelcardvault.com',
+          '🎉 New Super Hero Subscriber!',
+          `<p>A user just upgraded to Super Hero via <strong>Stripe (web/Android) — session verify fallback</strong>.</p>
+           <ul>
+             <li><strong>User ID:</strong> ${user.id}</li>
+             <li><strong>Name:</strong> ${updatedUser?.displayName || updatedUser?.username || 'Unknown'}</li>
+             <li><strong>Email:</strong> ${updatedUser?.email || 'Unknown'}</li>
+             <li><strong>Stripe Customer:</strong> ${session.customer}</li>
+           </ul>`
+        );
+      } catch (notifyErr) {
+        console.error('Failed to send upgrade notification email:', notifyErr);
+      }
+
       res.json({ 
         success: true, 
         message: "Successfully upgraded to Super Hero!",
