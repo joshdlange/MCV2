@@ -101,7 +101,7 @@ function ExpireCheckButton() {
       variant="outline"
       onClick={handleExpire}
       disabled={isLoading}
-      className="border-amber-500 text-amber-600 hover:bg-amber-50"
+      className="border-amber-600 bg-white text-amber-700 font-semibold hover:bg-amber-50 select-none"
     >
       {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Clock className="w-4 h-4 mr-2" />}
       Run Expire Check
