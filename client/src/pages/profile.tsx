@@ -411,63 +411,65 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-4 md:p-6">
       <div className="max-w-4xl mx-auto">
         {/* Profile Header */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-              <Avatar className="w-24 h-24">
+        <Card className="mb-6 border-gray-200 shadow-sm overflow-hidden">
+          <div className="h-20 bg-gradient-to-r from-red-500 via-red-600 to-red-700" />
+          <CardContent className="pt-0 pb-6">
+            <div className="flex flex-col md:flex-row items-center md:items-end gap-6 -mt-10">
+              <Avatar className="w-24 h-24 border-4 border-white shadow-lg">
                 <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'User'} />
-                <AvatarFallback className="text-2xl">
+                <AvatarFallback className="text-2xl bg-gray-200">
                   {(user.displayName || currentUser?.username || 'U').charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               
-              <div className="flex-1 text-center md:text-left">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-2">
-                  <div className="flex flex-col md:flex-row md:items-center gap-3">
-                    <h1 className="text-3xl font-bold">{user.displayName || 'User'}</h1>
-                    {currentUser?.isAdmin && (
-                      <Badge className="bg-red-600">
-                        <Shield className="w-3 h-3 mr-1" />
-                        Admin
-                      </Badge>
-                    )}
-                    {getPlanBadge(currentUser?.plan || 'SIDE_KICK')}
+              <div className="flex-1 text-center md:text-left pt-2 md:pt-0">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-1">
+                  <div className="flex flex-col md:flex-row md:items-center gap-2">
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{user.displayName || 'User'}</h1>
+                    <div className="flex items-center justify-center gap-2">
+                      {currentUser?.isAdmin && (
+                        <Badge className="bg-red-600 rounded-full px-2.5">
+                          <Shield className="w-3 h-3 mr-1" />
+                          Admin
+                        </Badge>
+                      )}
+                      {getPlanBadge(currentUser?.plan || 'SIDE_KICK')}
+                    </div>
                   </div>
                   <Button 
                     onClick={() => setIsEditing(!isEditing)} 
-                    variant="outline" 
                     size="sm"
-                    className="bg-background border-border text-foreground hover:bg-accent hover:text-accent-foreground"
+                    className="bg-gray-900 text-white hover:bg-gray-800 rounded-full px-4"
                   >
                     <Settings className="h-4 w-4 mr-2" />
                     {isEditing ? 'Cancel' : 'Edit Profile'}
                   </Button>
                 </div>
                 
-                <p className="text-muted-foreground mb-2">@{currentUser?.username || 'user'}</p>
-                <p className="text-sm text-muted-foreground mb-4">
-                  <Calendar className="w-4 h-4 inline mr-1" />
+                <p className="text-muted-foreground mb-1">@{currentUser?.username || 'user'}</p>
+                <p className="text-sm text-muted-foreground mb-4 flex items-center justify-center md:justify-start gap-1">
+                  <Calendar className="w-4 h-4" />
                   {getAccountAge()}
                 </p>
                 
                 {/* Quick Stats */}
-                <div className="flex flex-wrap gap-4 text-sm">
-                  <div className="flex items-center gap-1">
+                <div className="flex flex-wrap justify-center md:justify-start gap-2 text-sm">
+                  <div className="flex items-center gap-1.5 bg-yellow-50 border border-yellow-100 rounded-full px-3 py-1">
                     <Trophy className="w-4 h-4 text-yellow-500" />
-                    <span className="font-medium">{stats?.totalCards || 0}</span>
+                    <span className="font-semibold text-gray-900">{stats?.totalCards || 0}</span>
                     <span className="text-muted-foreground">Cards</span>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded-full px-3 py-1">
                     <Star className="w-4 h-4 text-blue-500" />
-                    <span className="font-medium">{stats?.insertCards || 0}</span>
+                    <span className="font-semibold text-gray-900">{stats?.insertCards || 0}</span>
                     <span className="text-muted-foreground">Inserts</span>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5 bg-green-50 border border-green-100 rounded-full px-3 py-1">
                     <CreditCard className="w-4 h-4 text-green-500" />
-                    <span className="font-medium">${parseFloat((stats?.totalValue || 0).toString()).toFixed(2)}</span>
+                    <span className="font-semibold text-gray-900">${parseFloat((stats?.totalValue || 0).toString()).toFixed(2)}</span>
                     <span className="text-muted-foreground">Value</span>
                   </div>
                 </div>
@@ -480,79 +482,85 @@ export default function Profile() {
 
         {/* Profile Tabs */}
         <Tabs defaultValue="personal" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-gray-100 border border-gray-300">
-            <TabsTrigger value="personal" className="text-gray-700 font-medium data-[state=active]:text-white data-[state=active]:bg-gray-900 hover:text-gray-900">
+          <TabsList className="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-xl h-auto">
+            <TabsTrigger value="personal" className="text-gray-600 font-medium rounded-lg py-2 data-[state=active]:text-gray-900 data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
               <User className="w-4 h-4 mr-2" />
-              Personal
+              <span className="hidden sm:inline">Personal</span>
             </TabsTrigger>
-            <TabsTrigger value="social" className="text-gray-700 font-medium data-[state=active]:text-white data-[state=active]:bg-gray-900 hover:text-gray-900">
+            <TabsTrigger value="social" className="text-gray-600 font-medium rounded-lg py-2 data-[state=active]:text-gray-900 data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
               <Users className="w-4 h-4 mr-2" />
-              Social
+              <span className="hidden sm:inline">Social</span>
             </TabsTrigger>
-            <TabsTrigger value="billing" className="text-gray-700 font-medium data-[state=active]:text-white data-[state=active]:bg-gray-900 hover:text-gray-900">
+            <TabsTrigger value="billing" className="text-gray-600 font-medium rounded-lg py-2 data-[state=active]:text-gray-900 data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
               <CreditCard className="w-4 h-4 mr-2" />
-              Billing
+              <span className="hidden sm:inline">Billing</span>
             </TabsTrigger>
-            <TabsTrigger value="privacy" className="text-gray-700 font-medium data-[state=active]:text-white data-[state=active]:bg-gray-900 hover:text-gray-900">
+            <TabsTrigger value="privacy" className="text-gray-600 font-medium rounded-lg py-2 data-[state=active]:text-gray-900 data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
               <Lock className="w-4 h-4 mr-2" />
-              Privacy
+              <span className="hidden sm:inline">Privacy</span>
             </TabsTrigger>
           </TabsList>
 
           {/* Personal Information Tab */}
           <TabsContent value="personal">
-            <Card>
+            <Card className="border-gray-200 shadow-sm">
               <CardHeader>
-                <CardTitle>Personal Information</CardTitle>
+                <CardTitle className="text-lg">Personal Information</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="displayName">Display Name</Label>
+                    <Label htmlFor="displayName" className="text-sm font-medium text-gray-700">Display Name</Label>
                     <Input
                       id="displayName"
                       value={profileData.displayName}
                       onChange={(e) => setProfileData(prev => ({ ...prev, displayName: e.target.value }))}
                       disabled={!isEditing}
                       placeholder="Your display name"
-                      className="bg-white text-black border-gray-300 disabled:bg-gray-100 disabled:text-black"
+                      className="mt-1.5 bg-white text-black border-gray-200 rounded-lg disabled:bg-gray-50 disabled:text-gray-600"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="location">Location</Label>
+                    <Label htmlFor="location" className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+                      Location
+                    </Label>
                     <Input
                       id="location"
                       value={profileData.location}
                       onChange={(e) => setProfileData(prev => ({ ...prev, location: e.target.value }))}
                       disabled={!isEditing}
                       placeholder="City, Country"
-                      className="bg-white text-black border-gray-300 disabled:bg-gray-100 disabled:text-black"
+                      className="mt-1.5 bg-white text-black border-gray-200 rounded-lg disabled:bg-gray-50 disabled:text-gray-600"
                     />
-                    <MapPin className="w-4 h-4 inline mr-1 mt-1 text-muted-foreground" />
                   </div>
                 </div>
                 
                 <div>
-                  <Label htmlFor="website">Website</Label>
+                  <Label htmlFor="website" className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                    <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+                    Website
+                  </Label>
                   <Input
                     id="website"
                     value={profileData.website}
                     onChange={(e) => setProfileData(prev => ({ ...prev, website: e.target.value }))}
                     disabled={!isEditing}
                     placeholder="https://yourwebsite.com"
-                    className="bg-white text-black border-gray-300 disabled:bg-gray-100 disabled:text-black"
+                    className="mt-1.5 bg-white text-black border-gray-200 rounded-lg disabled:bg-gray-50 disabled:text-gray-600"
                   />
-                  <Globe className="w-4 h-4 inline mr-1 mt-1 text-muted-foreground" />
                 </div>
 
-                <div className="space-y-4">
-                  <Label className="text-base font-semibold">Shipping Address</Label>
-                  <p className="text-xs text-muted-foreground">
-                    This address will be used for shipping when trading cards
-                  </p>
+                <div className="space-y-4 bg-gray-50 rounded-xl p-4 border border-gray-100">
+                  <div>
+                    <Label className="text-sm font-semibold text-gray-900">Shipping Address</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      This address will be used for shipping when trading cards
+                    </p>
+                  </div>
                   
                   <div>
-                    <Label htmlFor="street">Street Address</Label>
+                    <Label htmlFor="street" className="text-sm font-medium text-gray-700">Street Address</Label>
                     <Input
                       id="street"
                       value={profileData.address.street}
@@ -562,13 +570,13 @@ export default function Profile() {
                       }))}
                       disabled={!isEditing}
                       placeholder="123 Main Street"
-                      className="bg-white text-black border-gray-300 disabled:bg-gray-100 disabled:text-black"
+                      className="mt-1.5 bg-white text-black border-gray-200 rounded-lg disabled:bg-gray-100 disabled:text-gray-600"
                     />
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="city">City</Label>
+                      <Label htmlFor="city" className="text-sm font-medium text-gray-700">City</Label>
                       <Input
                         id="city"
                         value={profileData.address.city}
@@ -578,11 +586,11 @@ export default function Profile() {
                         }))}
                         disabled={!isEditing}
                         placeholder="New York"
-                        className="bg-white text-black border-gray-300 disabled:bg-gray-100 disabled:text-black"
+                        className="mt-1.5 bg-white text-black border-gray-200 rounded-lg disabled:bg-gray-100 disabled:text-gray-600"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="state">State/Province</Label>
+                      <Label htmlFor="state" className="text-sm font-medium text-gray-700">State/Province</Label>
                       <Input
                         id="state"
                         value={profileData.address.state}
@@ -592,14 +600,14 @@ export default function Profile() {
                         }))}
                         disabled={!isEditing}
                         placeholder="NY"
-                        className="bg-white text-black border-gray-300 disabled:bg-gray-100 disabled:text-black"
+                        className="mt-1.5 bg-white text-black border-gray-200 rounded-lg disabled:bg-gray-100 disabled:text-gray-600"
                       />
                     </div>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="postalCode">Postal Code</Label>
+                      <Label htmlFor="postalCode" className="text-sm font-medium text-gray-700">Postal Code</Label>
                       <Input
                         id="postalCode"
                         value={profileData.address.postalCode}
@@ -609,11 +617,11 @@ export default function Profile() {
                         }))}
                         disabled={!isEditing}
                         placeholder="10001"
-                        className="bg-white text-black border-gray-300 disabled:bg-gray-100 disabled:text-black"
+                        className="mt-1.5 bg-white text-black border-gray-200 rounded-lg disabled:bg-gray-100 disabled:text-gray-600"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="country">Country</Label>
+                      <Label htmlFor="country" className="text-sm font-medium text-gray-700">Country</Label>
                       <Input
                         id="country"
                         value={profileData.address.country}
@@ -623,14 +631,14 @@ export default function Profile() {
                         }))}
                         disabled={!isEditing}
                         placeholder="United States"
-                        className="bg-white text-black border-gray-300 disabled:bg-gray-100 disabled:text-black"
+                        className="mt-1.5 bg-white text-black border-gray-200 rounded-lg disabled:bg-gray-100 disabled:text-gray-600"
                       />
                     </div>
                   </div>
                 </div>
                 
                 <div>
-                  <Label htmlFor="bio">Bio</Label>
+                  <Label htmlFor="bio" className="text-sm font-medium text-gray-700">Bio</Label>
                   <Textarea
                     id="bio"
                     value={profileData.bio}
@@ -638,22 +646,23 @@ export default function Profile() {
                     disabled={!isEditing}
                     placeholder="Tell us about yourself and your collecting interests..."
                     rows={4}
-                    className="bg-white text-black border-gray-300 disabled:bg-gray-100 disabled:text-black"
+                    className="mt-1.5 bg-white text-black border-gray-200 rounded-lg disabled:bg-gray-50 disabled:text-gray-600"
                   />
                 </div>
 
                 {isEditing && (
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 pt-1">
                     <Button 
                       onClick={handleSaveProfile}
                       disabled={updateProfileMutation.isPending}
+                      className="bg-red-600 hover:bg-red-700 text-white rounded-lg"
                     >
                       {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
                     </Button>
                     <Button 
                       variant="outline" 
                       onClick={() => setIsEditing(false)}
-                      className="bg-gray-800 text-white border-gray-800 hover:bg-gray-900 hover:text-white hover:border-gray-900"
+                      className="bg-white text-gray-700 border-gray-300 hover:bg-gray-50 rounded-lg"
                     >
                       Cancel
                     </Button>
@@ -667,18 +676,18 @@ export default function Profile() {
           <TabsContent value="social">
             <div className="space-y-6">
               {/* Friends Section */}
-              <Card>
+              <Card className="border-gray-200 shadow-sm">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="w-5 h-5" />
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Users className="w-5 h-5 text-gray-500" />
                       Friends
                     </CardTitle>
                     <Button 
                       variant="outline" 
                       size="sm"
                       onClick={() => setLocation('/social')}
-                      className="text-red-600 border-red-600 hover:bg-red-50"
+                      className="text-red-600 border-red-200 hover:bg-red-50 rounded-full"
                     >
                       View All
                     </Button>
@@ -690,18 +699,18 @@ export default function Profile() {
               </Card>
 
               {/* Badges Section */}
-              <Card>
+              <Card className="border-gray-200 shadow-sm">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <Award className="w-5 h-5" />
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Award className="w-5 h-5 text-gray-500" />
                       Super Powers
                     </CardTitle>
                     <Button 
                       variant="outline" 
                       size="sm"
                       onClick={() => setLocation('/social?tab=badges')}
-                      className="text-red-600 border-red-600 hover:bg-red-50"
+                      className="text-red-600 border-red-200 hover:bg-red-50 rounded-full"
                     >
                       View All
                     </Button>
@@ -713,18 +722,18 @@ export default function Profile() {
               </Card>
 
               {/* Quick Actions */}
-              <Card>
+              <Card className="border-gray-200 shadow-sm">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageCircle className="w-5 h-5" />
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <MessageCircle className="w-5 h-5 text-gray-500" />
                     Social Actions
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <Button 
                       onClick={() => setLocation('/social?tab=messages')}
-                      className="bg-red-500 hover:bg-red-600 text-white"
+                      className="bg-red-600 hover:bg-red-700 text-white rounded-lg"
                     >
                       <MessageCircle className="w-4 h-4 mr-2" />
                       Send Message
@@ -732,7 +741,7 @@ export default function Profile() {
                     <Button 
                       onClick={() => setLocation('/social?tab=friends')}
                       variant="outline"
-                      className="border-red-600 text-red-600 hover:bg-red-50"
+                      className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg"
                     >
                       <UserPlus className="w-4 h-4 mr-2" />
                       Find Friends
@@ -745,15 +754,15 @@ export default function Profile() {
 
           {/* Billing Tab */}
           <TabsContent value="billing">
-            <Card>
+            <Card className="border-gray-200 shadow-sm">
               <CardHeader>
-                <CardTitle>Billing & Subscription</CardTitle>
+                <CardTitle className="text-lg">Billing & Subscription</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="space-y-5">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-xl">
                     <div>
-                      <h3 className="font-semibold">Current Plan</h3>
+                      <h3 className="font-semibold text-gray-900">Current Plan</h3>
                       <p className="text-sm text-muted-foreground">
                         {userProfile?.plan === 'SUPER_HERO' ? 'SUPER HERO - $5/month' : 'SIDE KICK - Free'}
                       </p>
@@ -762,9 +771,12 @@ export default function Profile() {
                   </div>
 
                   {userProfile?.plan === 'SIDE_KICK' && (
-                    <div className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg">
-                      <h3 className="font-semibold text-yellow-800 mb-2">Upgrade to SUPER HERO</h3>
-                      <ul className="text-sm text-yellow-700 space-y-1 mb-3">
+                    <div className="p-5 bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl">
+                      <h3 className="font-semibold text-yellow-800 mb-2 flex items-center gap-2">
+                        <Crown className="w-4 h-4" />
+                        Upgrade to SUPER HERO
+                      </h3>
+                      <ul className="text-sm text-yellow-700 space-y-1 mb-4">
                         <li>• Unlimited card collection</li>
                         <li>• Access to community features</li>
                         <li>• Advanced analytics</li>
@@ -772,7 +784,7 @@ export default function Profile() {
                       </ul>
                       <Button 
                         onClick={() => setShowUpgradeModal(true)}
-                        className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
+                        className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white rounded-lg"
                       >
                         <Crown className="w-4 h-4 mr-2" />
                         Upgrade Now
@@ -784,7 +796,7 @@ export default function Profile() {
                     <div className="space-y-4">
                       <Separator />
                       <div>
-                        <h3 className="font-semibold mb-2">Subscription</h3>
+                        <h3 className="font-semibold mb-2 text-gray-900">Subscription</h3>
                         <p className="text-sm text-muted-foreground mb-4">
                           Your Super Hero subscription is active. To manage your subscription, visit your Stripe customer portal.
                         </p>
@@ -798,23 +810,23 @@ export default function Profile() {
 
           {/* Privacy Tab */}
           <TabsContent value="privacy">
-            <Card>
+            <Card className="border-gray-200 shadow-sm">
               <CardHeader>
-                <CardTitle>Privacy & Notifications</CardTitle>
+                <CardTitle className="text-lg">Privacy & Notifications</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <h3 className="font-semibold mb-3">Privacy Settings</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
+                  <h3 className="font-semibold mb-3 text-gray-900">Privacy Settings</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
                       <div className="flex items-center gap-2">
-                        <Eye className="w-4 h-4" />
-                        <span className="text-sm">Show email publicly</span>
+                        <Eye className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm text-gray-700">Show email publicly</span>
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="bg-white text-black border-gray-300 hover:bg-gray-100"
+                        className="bg-white text-black border-gray-300 hover:bg-gray-100 rounded-full"
                         onClick={() => setProfileData(prev => ({
                           ...prev,
                           privacySettings: {
@@ -827,15 +839,15 @@ export default function Profile() {
                       </Button>
                     </div>
                     
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
                       <div className="flex items-center gap-2">
-                        <Trophy className="w-4 h-4" />
-                        <span className="text-sm">Show collection publicly</span>
+                        <Trophy className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm text-gray-700">Show collection publicly</span>
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="bg-white text-black border-gray-300 hover:bg-gray-100"
+                        className="bg-white text-black border-gray-300 hover:bg-gray-100 rounded-full"
                         onClick={() => setProfileData(prev => ({
                           ...prev,
                           privacySettings: {
@@ -853,17 +865,17 @@ export default function Profile() {
                 <Separator />
 
                 <div>
-                  <h3 className="font-semibold mb-3">Notification Preferences</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
+                  <h3 className="font-semibold mb-3 text-gray-900">Notification Preferences</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
                       <div className="flex items-center gap-2">
-                        <Bell className="w-4 h-4" />
-                        <span className="text-sm">Email updates</span>
+                        <Bell className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm text-gray-700">Email updates</span>
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="bg-white text-black border-gray-300 hover:bg-gray-100"
+                        className="bg-white text-black border-gray-300 hover:bg-gray-100 rounded-full"
                         onClick={() => setProfileData(prev => ({
                           ...prev,
                           notifications: {
@@ -876,15 +888,15 @@ export default function Profile() {
                       </Button>
                     </div>
                     
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
                       <div className="flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4" />
-                        <span className="text-sm">Price alerts</span>
+                        <TrendingUp className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm text-gray-700">Price alerts</span>
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="bg-white text-black border-gray-300 hover:bg-gray-100"
+                        className="bg-white text-black border-gray-300 hover:bg-gray-100 rounded-full"
                         onClick={() => setProfileData(prev => ({
                           ...prev,
                           notifications: {
@@ -905,7 +917,7 @@ export default function Profile() {
               </CardContent>
             </Card>
 
-            <Card className="border-red-200 mt-6">
+            <Card className="border-red-200 shadow-sm mt-6">
               <CardContent className="p-6">
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
@@ -916,7 +928,7 @@ export default function Profile() {
                     </p>
                     <Button
                       variant="outline"
-                      className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+                      className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg"
                       onClick={() => setShowDeleteModal(true)}
                     >
                       <Trash2 className="w-4 h-4 mr-2" />
