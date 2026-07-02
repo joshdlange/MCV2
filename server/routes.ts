@@ -5990,15 +5990,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Auto-add card to user's collection if they don't own it
-      const existingCollection = await storage.getUserCollectionItem(req.user.id, cardId);
-      if (!existingCollection) {
-        await storage.addToCollection({
-          userId: req.user.id,
-          cardId,
-          condition: "Near Mint",
-          acquiredVia: "image-upload",
-        });
+      // Auto-add card to user's collection if they don't own it (skip for admins)
+      if (!req.user.isAdmin) {
+        const existingCollection = await storage.getUserCollectionItem(req.user.id, cardId);
+        if (!existingCollection) {
+          await storage.addToCollection({
+            userId: req.user.id,
+            cardId,
+            condition: "Near Mint",
+            acquiredVia: "image-upload",
+          });
+        }
       }
       
       res.json({
