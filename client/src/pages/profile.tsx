@@ -414,22 +414,39 @@ export default function Profile() {
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-4 md:p-6">
       <div className="max-w-4xl mx-auto">
         {/* Profile Header */}
-        <Card className="mb-6 border-gray-200 shadow-sm overflow-hidden">
-          <div className="h-20 bg-gradient-to-r from-red-500 via-red-600 to-red-700" />
-          <CardContent className="pt-0 pb-6">
-            <div className="flex flex-col md:flex-row items-center md:items-end gap-6 -mt-10">
-              <Avatar className="w-24 h-24 border-4 border-white shadow-lg">
-                <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'User'} />
-                <AvatarFallback className="text-2xl bg-gray-200">
-                  {(user.displayName || currentUser?.username || 'U').charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+        <Card className="mb-6 border-gray-200 shadow-sm overflow-visible pt-0">
+          <div 
+            className="relative h-28 bg-gradient-to-r from-red-600 via-red-600 to-red-800 rounded-t-xl"
+            style={{
+              backgroundImage: "radial-gradient(rgba(255,255,255,0.16) 1.5px, transparent 1.5px), linear-gradient(to right, rgb(220 38 38), rgb(153 27 27))",
+              backgroundSize: "16px 16px, 100% 100%",
+            }}
+          >
+            <Star className="absolute top-3 right-6 w-6 h-6 text-yellow-300/70 fill-yellow-300/70" />
+            <Star className="absolute bottom-4 right-16 w-3 h-3 text-white/40 fill-white/40" />
+            <Star className="absolute top-6 left-1/3 w-2.5 h-2.5 text-white/30 fill-white/30" />
+          </div>
+          <CardContent className="pt-0 pb-6 px-6">
+            <div className="flex flex-col md:flex-row md:items-end gap-4 md:gap-6 -mt-12">
+              <div className="relative mx-auto md:mx-0 shrink-0">
+                <Avatar className="w-28 h-28 border-4 border-white shadow-lg ring-2 ring-yellow-400">
+                  <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'User'} />
+                  <AvatarFallback className="text-2xl bg-gray-200">
+                    {(user.displayName || currentUser?.username || 'U').charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                {currentUser?.plan === 'SUPER_HERO' && (
+                  <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 border-2 border-white shadow-md flex items-center justify-center">
+                    <Crown className="w-4 h-4 text-white" />
+                  </div>
+                )}
+              </div>
               
-              <div className="flex-1 text-center md:text-left pt-2 md:pt-0">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-1">
-                  <div className="flex flex-col md:flex-row md:items-center gap-2">
-                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{user.displayName || 'User'}</h1>
-                    <div className="flex items-center justify-center gap-2">
+              <div className="flex-1 text-center md:text-left pt-3 md:pt-0 min-w-0">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <div className="flex flex-col md:flex-row md:items-center gap-2 min-w-0">
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 truncate">{user.displayName || 'User'}</h1>
+                    <div className="flex items-center justify-center gap-2 shrink-0">
                       {currentUser?.isAdmin && (
                         <Badge className="bg-red-600 rounded-full px-2.5">
                           <Shield className="w-3 h-3 mr-1" />
@@ -442,15 +459,15 @@ export default function Profile() {
                   <Button 
                     onClick={() => setIsEditing(!isEditing)} 
                     size="sm"
-                    className="bg-gray-900 text-white hover:bg-gray-800 rounded-full px-4"
+                    className="bg-gray-900 text-white hover:bg-gray-800 rounded-full px-4 shrink-0"
                   >
                     <Settings className="h-4 w-4 mr-2" />
                     {isEditing ? 'Cancel' : 'Edit Profile'}
                   </Button>
                 </div>
                 
-                <p className="text-muted-foreground mb-1">@{currentUser?.username || 'user'}</p>
-                <p className="text-sm text-muted-foreground mb-4 flex items-center justify-center md:justify-start gap-1">
+                <p className="text-muted-foreground mt-1.5">@{currentUser?.username || 'user'}</p>
+                <p className="text-sm text-muted-foreground mt-1 mb-4 flex items-center justify-center md:justify-start gap-1">
                   <Calendar className="w-4 h-4" />
                   {getAccountAge()}
                 </p>
@@ -474,8 +491,6 @@ export default function Profile() {
                   </div>
                 </div>
               </div>
-              
-
             </div>
           </CardContent>
         </Card>
