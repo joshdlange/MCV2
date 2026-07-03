@@ -427,8 +427,8 @@ export default function Profile() {
             <Star className="absolute top-6 left-1/3 w-2.5 h-2.5 text-white/30 fill-white/30" />
           </div>
           <CardContent className="pt-0 pb-6 px-6">
-            <div className="flex flex-col md:flex-row md:items-end gap-4 md:gap-6 -mt-12">
-              <div className="relative mx-auto md:mx-0 shrink-0">
+            <div className="flex flex-col md:flex-row md:items-start gap-4 md:gap-6">
+              <div className="relative mx-auto md:mx-0 shrink-0 -mt-14 z-10">
                 <Avatar className="w-28 h-28 border-4 border-white shadow-lg ring-2 ring-yellow-400">
                   <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'User'} />
                   <AvatarFallback className="text-2xl bg-gray-200">
@@ -442,7 +442,7 @@ export default function Profile() {
                 )}
               </div>
               
-              <div className="flex-1 text-center md:text-left pt-3 md:pt-0 min-w-0">
+              <div className="flex-1 text-center md:text-left pt-2 md:pt-3 min-w-0">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                   <div className="flex flex-col md:flex-row md:items-center gap-2 min-w-0">
                     <h1 className="text-2xl md:text-3xl font-bold text-gray-900 truncate">{user.displayName || 'User'}</h1>
