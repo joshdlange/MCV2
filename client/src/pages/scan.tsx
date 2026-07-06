@@ -41,15 +41,31 @@ interface ScanMatch {
   year: number | null;
   imageUrl: string | null;
   confidence: number;
+  confidenceLevel?: "high" | "medium" | "low" | "none";
   matchReasons: string[];
+}
+
+interface ScanParsed {
+  characterName: string | null;
+  setName: string | null;
+  subsetName: string | null;
+  cardNumber: string | null;
+  normalizedCardNumber: string | null;
+  year: string | null;
+  brand: string | null;
+  variant: string | null;
+  setCandidates: string[];
+  keywords: string[];
 }
 
 interface ScanResult {
   imageUrl: string | null;
+  scanUploadId: number | null;
   ocrText: string;
-  parsed: { cardNumber: string | null; year: string | null; keywords: string[] };
+  parsed: ScanParsed;
   matches: ScanMatch[];
   confidenceLevel: "high" | "medium" | "low" | "none";
+  preprocessed?: boolean;
 }
 
 interface PickerSet {
@@ -233,6 +249,54 @@ function PickerProgress({
   );
 }
 
+// Admin-only debug panel — shows raw OCR text, parsed fields, and match reasons
+function ScanDebugPanel({ scanResult }: { scanResult: ScanResult }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-lg border border-dashed border-purple-300 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/10 overflow-hidden">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-purple-700 dark:text-purple-400"
+      >
+        <span>Admin debug: scan #{scanResult.scanUploadId ?? "—"}</span>
+        {open ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+      </button>
+      {open && (
+        <div className="px-3 pb-3 space-y-2 text-xs text-purple-900 dark:text-purple-300">
+          <div>
+            <p className="font-semibold">OCR text</p>
+            <p className="whitespace-pre-wrap break-words font-mono text-[11px] bg-white/60 dark:bg-black/20 rounded p-2 mt-0.5 max-h-32 overflow-y-auto">
+              {scanResult.ocrText || "(none)"}
+            </p>
+          </div>
+          <div>
+            <p className="font-semibold">Parsed fields</p>
+            <pre className="whitespace-pre-wrap break-words font-mono text-[11px] bg-white/60 dark:bg-black/20 rounded p-2 mt-0.5 max-h-40 overflow-y-auto">
+              {JSON.stringify(scanResult.parsed, null, 2)}
+            </pre>
+          </div>
+          <div>
+            <p className="font-semibold">Matches ({scanResult.matches.length})</p>
+            <div className="space-y-1 mt-0.5">
+              {scanResult.matches.map((m) => (
+                <div key={m.cardId} className="bg-white/60 dark:bg-black/20 rounded p-2">
+                  <p className="font-mono">
+                    #{m.cardId} — {m.name} ({m.confidence.toFixed(1)}, {m.confidenceLevel})
+                  </p>
+                  <p className="text-[10px] text-purple-600 dark:text-purple-400">
+                    {m.matchReasons.join(" · ") || "no reasons"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <p className="text-[10px] text-purple-500">Preprocessed: {String(scanResult.preprocessed)}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function ScanToAdd() {
@@ -299,6 +363,35 @@ export default function ScanToAdd() {
     },
   });
 
+  const feedbackMutation = useMutation({
+    mutationFn: async ({
+      feedbackType,
+      selectedCardId,
+      note,
+    }: {
+      feedbackType: "correct" | "wrong" | "not_found";
+      selectedCardId?: number | null;
+      note?: string;
+    }) => {
+      if (!scanResult?.scanUploadId) return null;
+      const res = await apiRequest(
+        "POST",
+        `/api/cards/scan/${scanResult.scanUploadId}/feedback`,
+        { feedbackType, selectedCardId: selectedCardId ?? null, note }
+      );
+      return res.json();
+    },
+  });
+
+  const [feedbackGiven, setFeedbackGiven] = useState(false);
+
+  function sendFeedback(feedbackType: "correct" | "wrong" | "not_found", selectedCardId?: number | null) {
+    if (!scanResult?.scanUploadId || feedbackGiven) return;
+    feedbackMutation.mutate({ feedbackType, selectedCardId });
+    setFeedbackGiven(true);
+    toast({ title: "Thanks for the feedback!" });
+  }
+
   const addToCollectionMutation = useMutation({
     mutationFn: async (cardId: number) => {
       const res = await apiRequest("POST", "/api/collection", {
@@ -311,6 +404,11 @@ export default function ScanToAdd() {
     onSuccess: async () => {
       qc.invalidateQueries({ queryKey: ["/api/collection"] });
       qc.invalidateQueries({ queryKey: ["/api/user/stats"] });
+
+      if (scanResult?.scanUploadId && !feedbackGiven) {
+        feedbackMutation.mutate({ feedbackType: "correct", selectedCardId: selectedCard?.cardId ?? null });
+        setFeedbackGiven(true);
+      }
 
       if (submitImage && scanResult?.imageUrl && selectedCard) {
         try {
@@ -423,6 +521,7 @@ export default function ScanToAdd() {
     setScanResult(null);
     setSelectedCard(null);
     setSubmitImage(false);
+    setFeedbackGiven(false);
     scanMutation.mutate(file);
   }
 
@@ -506,6 +605,7 @@ export default function ScanToAdd() {
     setScanResult(null);
     setSelectedCard(null);
     setSubmitImage(false);
+    setFeedbackGiven(false);
     setPickerYear(null);
     setPickerSet(null);
     setPickerSetName("");
@@ -789,11 +889,36 @@ export default function ScanToAdd() {
             <Button
               variant="outline"
               className="w-full text-sm"
-              onClick={() => setStage("picker-year")}
+              onClick={() => {
+                sendFeedback("not_found");
+                setStage("picker-year");
+              }}
             >
               <Search className="w-4 h-4 mr-2" />
               Not listed? Choose card manually
             </Button>
+
+            {!feedbackGiven && (
+              <div className="flex items-center justify-center gap-2 pt-1">
+                <p className="text-xs text-gray-400">Are these matches accurate?</p>
+                <button
+                  onClick={() => sendFeedback("correct", selectedCard?.cardId ?? scanResult.matches[0]?.cardId ?? null)}
+                  className="text-xs px-2 py-1 rounded-full bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 hover:bg-green-100 transition-colors"
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={() => sendFeedback("wrong")}
+                  className="text-xs px-2 py-1 rounded-full bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 hover:bg-red-100 transition-colors"
+                >
+                  No
+                </button>
+              </div>
+            )}
+
+            {user?.isAdmin && (
+              <ScanDebugPanel scanResult={scanResult} />
+            )}
           </div>
         )}
 
@@ -1147,6 +1272,9 @@ export default function ScanToAdd() {
                 variant="outline"
                 className="w-full"
                 onClick={() => {
+                  if (scanResult?.matches.some((m) => m.cardId === selectedCard.cardId)) {
+                    sendFeedback("wrong", selectedCard.cardId);
+                  }
                   setSelectedCard(null);
                   if (isPickerStage || pickerCardSetId) {
                     setStage("picker-card");

@@ -1,0 +1,226 @@
+Improve the Scan to Add matching system.
+
+Current problem:
+The Scan to Add feature technically works as a flow, but it does not reliably identify the correct card from a user photo. Users should be able to take a photo of a card, and the system should search our database and return the most likely exact card match so they can add it to their collection.
+
+Goal:
+Make Scan to Add materially better at identifying the correct card.
+
+Important:
+Do not rebuild the UI flow from scratch.
+Do not remove the manual picker.
+Do not auto-add cards without user confirmation.
+Focus on improving image/OCR/matching accuracy.
+
+Core requirements:
+
+1. Improve image preprocessing before OCR
+When a user uploads/scans a card image:
+- normalize image orientation
+- crop or detect the card area if possible
+- improve contrast/sharpness
+- resize consistently
+- strip metadata
+- handle glare/low-light images gracefully
+
+2. Improve OCR extraction
+Extract and store:
+- raw OCR text
+- possible card number
+- possible year
+- possible set name
+- possible character/card name
+- possible copyright line
+- possible serial/parallel indicators
+
+The OCR should look especially for:
+- card number patterns like #12, 12/100, MM-23, AV-17, SP-5, etc.
+- years like 1994, 1995, 2024, 2025
+- set names like Metal Universe, Fleer Ultra, Marvel Masterpieces, Flair, Annual, Platinum, etc.
+- character names
+- insert/subset names
+
+3. Improve matching/scoring
+Create a dedicated scan matching service instead of loose search.
+
+Scoring should combine:
+- exact card number match
+- normalized card number match
+- year match
+- set name match
+- subset/insert match
+- card/character name match
+- fuzzy text similarity
+- image availability/image similarity if feasible
+
+Suggested confidence scoring:
+- exact card number + exact set/year = very high
+- exact card number + character/name + approximate set/year = high
+- card number + subset/set fuzzy match = high
+- character/name + set/year = medium
+- character/name only = low
+- OCR unclear = none
+
+Return top candidates, not just one.
+
+4. Normalize the database fields for matching
+Build helper normalization functions:
+- lowercase
+- strip punctuation
+- normalize card numbers
+- normalize roman numerals
+- normalize hyphens/spaces
+- normalize common set aliases
+
+Examples:
+- “Marvel Metal Universe” = “Metal Universe”
+- “Fleer Ultra Wolverine” = “Wolverine”
+- “MM 23” = “MM-23”
+- “No. 23” = “23”
+- “#23” = “23”
+
+5. Add alias dictionary
+Create a small alias dictionary for common Marvel card set names and OCR mistakes.
+
+Examples:
+- Metal / Metal Universe / Marvel Metal Universe
+- Masterpieces / Marvel Masterpieces
+- Fleer / Fleer Ultra
+- Flair / Flair Marvel
+- Annual / Marvel Annual
+- Platinum / Marvel Platinum
+- Upper Deck / UD
+- Universe / Marvel Universe
+
+Also account for OCR mistakes:
+- “MetaI” with capital i instead of L
+- “Fleer Uitra” instead of Ultra
+- “Mastepieces” instead of Masterpieces
+
+6. Improve candidate retrieval
+Do not fuzzy-search the entire database blindly.
+
+Use staged narrowing:
+- If year found, prioritize that year
+- If set name found, prioritize matching sets
+- If card number found, search card numbers first
+- If character/name found, search card names
+- Then combine and rank candidates
+
+7. Add debug output for admins
+For admin users only, show a collapsible debug panel on scan results:
+- OCR text
+- parsed fields
+- top candidates
+- confidence scores
+- match reasons
+
+This will help us understand why scans fail.
+
+8. Add scan feedback buttons
+After results are shown, allow user feedback:
+- “Correct match”
+- “Wrong match”
+- “Couldn’t find card”
+
+If user manually selects a different card, save that relationship:
+- scan_upload_id
+- selected_card_id
+- OCR text
+- original candidates
+- confidence scores
+
+This can later be used to improve matching.
+
+9. Improve response shape
+POST /api/cards/scan should return:
+
+{
+  "scanUploadId": "...",
+  "ocrText": "...",
+  "parsed": {
+    "cardNumber": "...",
+    "normalizedCardNumber": "...",
+    "year": "...",
+    "setCandidates": [],
+    "subsetCandidates": [],
+    "nameCandidates": [],
+    "keywords": []
+  },
+  "matches": [
+    {
+      "cardId": "...",
+      "name": "...",
+      "setName": "...",
+      "subsetName": "...",
+      "cardNumber": "...",
+      "year": "...",
+      "imageUrl": "...",
+      "confidence": 0.92,
+      "confidenceLevel": "high",
+      "matchReasons": [
+        "Exact card number match",
+        "Set alias matched Metal Universe",
+        "Year matched 2024"
+      ]
+    }
+  ],
+  "confidenceLevel": "high" | "medium" | "low" | "none"
+}
+
+10. UX behavior
+- If confidence is high, show best match first but still require confirmation.
+- If medium, show top 5 likely matches.
+- If low/none, show manual picker but also display any possible candidates.
+- Never auto-add unless the user confirms.
+
+11. Testing requirements
+Create a test script or test harness that can run known sample inputs against the matcher.
+
+Add at least 10 test cases:
+- exact card number + year
+- card number with hyphen
+- card number with OCR spacing issue
+- set alias match
+- character name only
+- wrong OCR text
+- no OCR result
+- duplicate card number across different sets
+- insert/subset card
+- card with no image
+
+For each test, log:
+- parsed OCR
+- top 5 candidates
+- confidence
+- reasons
+
+12. Preserve existing fallback
+Manual picker must remain:
+Year → Set → Subset → Card
+
+If scan matching fails, fallback still works.
+
+13. Do not break existing systems
+Do not modify:
+- collection add behavior
+- image approval queue
+- manual image upload
+- admin approval
+- marketplace
+- trade block
+
+Implementation order:
+1. Inspect current scan endpoint and matching logic.
+2. Add image preprocessing.
+3. Improve OCR parsing.
+4. Build normalized matching/scoring service.
+5. Add admin debug panel.
+6. Add feedback logging.
+7. Add tests.
+8. QA with real uploaded card photos.
+
+Final deliverable:
+- Explain exactly what changed.
+- Provide before/after examples of matching.
+- List any remaining limitations.

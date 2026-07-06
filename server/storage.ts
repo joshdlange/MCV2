@@ -15,6 +15,12 @@ import {
   marketTrends,
   marketTrendItems,
   analyticsEvents,
+  scanUploads,
+  scanFeedback,
+  type ScanUpload,
+  type InsertScanUpload,
+  type ScanFeedback,
+  type InsertScanFeedback,
   type User, 
   type InsertUser,
   type MainSet,
@@ -146,6 +152,11 @@ interface IStorage {
   updatePendingCardImage(id: number, updates: Partial<PendingCardImage>): Promise<void>;
   getUserApprovedImageCount(userId: number): Promise<number>;
   getUserCollectionItem(userId: number, cardId: number): Promise<UserCollection | undefined>;
+
+  // Scan to Add — matching history & feedback
+  createScanUpload(data: InsertScanUpload): Promise<ScanUpload>;
+  getScanUpload(id: number): Promise<ScanUpload | undefined>;
+  createScanFeedback(data: InsertScanFeedback): Promise<ScanFeedback>;
   
   // Admin Functions
   clearAllData(): Promise<void>;
@@ -1554,6 +1565,22 @@ export class DatabaseStorage implements IStorage {
       console.error('Error getting cards without images:', error);
       return [];
     }
+  }
+
+  // Scan to Add — matching history & feedback
+  async createScanUpload(data: InsertScanUpload): Promise<ScanUpload> {
+    const [row] = await db.insert(scanUploads).values(data).returning();
+    return row;
+  }
+
+  async getScanUpload(id: number): Promise<ScanUpload | undefined> {
+    const [row] = await db.select().from(scanUploads).where(eq(scanUploads.id, id));
+    return row;
+  }
+
+  async createScanFeedback(data: InsertScanFeedback): Promise<ScanFeedback> {
+    const [row] = await db.insert(scanFeedback).values(data).returning();
+    return row;
   }
 
   // User-Submitted Card Images

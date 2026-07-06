@@ -1116,3 +1116,43 @@ export const userScanLogs = pgTable("user_scan_logs", {
 });
 
 export type UserScanLog = typeof userScanLogs.$inferSelect;
+
+// ── Scan Uploads (Scan to Add matching history) ───────────────────────────────
+export const scanUploads = pgTable("scan_uploads", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  imageUrl: text("image_url"),
+  ocrText: text("ocr_text"),
+  parsed: text("parsed"), // JSON string of parsed OCR fields
+  candidates: text("candidates"), // JSON string snapshot of top match candidates
+  confidenceLevel: text("confidence_level").notNull(), // high, medium, low, none
+  topMatchCardId: integer("top_match_card_id").references(() => cards.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertScanUploadSchema = createInsertSchema(scanUploads).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ScanUpload = typeof scanUploads.$inferSelect;
+export type InsertScanUpload = z.infer<typeof insertScanUploadSchema>;
+
+// ── Scan Feedback (user-reported match accuracy, used to improve matching) ────
+export const scanFeedback = pgTable("scan_feedback", {
+  id: serial("id").primaryKey(),
+  scanUploadId: integer("scan_upload_id").notNull().references(() => scanUploads.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  feedbackType: text("feedback_type").notNull(), // correct, wrong, not_found
+  selectedCardId: integer("selected_card_id").references(() => cards.id),
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertScanFeedbackSchema = createInsertSchema(scanFeedback).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ScanFeedback = typeof scanFeedback.$inferSelect;
+export type InsertScanFeedback = z.infer<typeof insertScanFeedbackSchema>;

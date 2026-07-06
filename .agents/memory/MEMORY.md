@@ -1,1 +1,2 @@
 - [Scan-to-Add architecture](scan-to-add.md) — uses GPT-4o-mini vision (not Tesseract); free users get 10 scans/month tracked in user_scan_logs table
+- [Postgres LIMIT without ORDER BY](scan-matching-nondeterminism.md) — paginated candidate queries need explicit ORDER BY or the retrieved row set (and downstream rankings) vary between identical runs.

@@ -6177,10 +6177,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { scanCard } = await import('./services/scanService');
       const scanResult = await scanCard(file.buffer, file.mimetype);
 
-      res.json({ imageUrl, ...scanResult });
+      // ── Persist scan upload for analytics/debugging/feedback ──────────────────
+      let scanUploadId: number | null = null;
+      try {
+        const topMatch = scanResult.matches[0];
+        const scanUpload = await storage.createScanUpload({
+          userId: user.id,
+          imageUrl,
+          ocrText: scanResult.ocrText,
+          parsed: JSON.stringify(scanResult.parsed),
+          candidates: JSON.stringify(scanResult.matches),
+          confidenceLevel: scanResult.confidenceLevel,
+          topMatchCardId: topMatch?.cardId ?? null,
+        });
+        scanUploadId = scanUpload.id;
+      } catch (persistErr) {
+        console.error('[Scan] Failed to persist scan upload record:', persistErr);
+      }
+
+      res.json({ imageUrl, scanUploadId, ...scanResult });
     } catch (error) {
       console.error('[Scan] Error:', error);
       res.status(500).json({ message: "Scan failed. Please try again." });
+    }
+  });
+
+  // POST /api/cards/scan/:scanUploadId/feedback — user feedback on match accuracy
+  app.post("/api/cards/scan/:scanUploadId/feedback", authenticateUser, async (req: any, res) => {
+    try {
+      const scanUploadId = parseInt(req.params.scanUploadId);
+      const { feedbackType, selectedCardId, note } = req.body;
+
+      const validTypes = ['correct', 'wrong', 'not_found'];
+      if (!validTypes.includes(feedbackType)) {
+        return res.status(400).json({ message: "feedbackType must be one of: correct, wrong, not_found" });
+      }
+
+      const scanUpload = await storage.getScanUpload(scanUploadId);
+      if (!scanUpload) return res.status(404).json({ message: "Scan upload not found" });
+
+      const feedback = await storage.createScanFeedback({
+        scanUploadId,
+        userId: req.user.id,
+        feedbackType,
+        selectedCardId: selectedCardId ?? null,
+        note: note ?? null,
+      } as any);
+
+      res.json({ success: true, feedback });
+    } catch (error) {
+      console.error('[Scan] feedback error:', error);
+      res.status(500).json({ message: "Failed to record feedback" });
     }
   });
 
