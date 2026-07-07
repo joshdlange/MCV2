@@ -17,7 +17,7 @@ import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
 import { uploadImage } from "./cloudinary";
 import { db } from "./db";
-import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks, blocks, friends, userScanLogs } from "../shared/schema";
+import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userWishlists, badges, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks, blocks, friends, userScanLogs } from "../shared/schema";
 import { sql, eq, ne, ilike, like, and, or, isNull, count, exists, desc } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
@@ -4391,6 +4391,201 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get friend badges error:', error);
       res.status(500).json({ message: "Failed to fetch friend badges" });
+    }
+  });
+
+  // ─── Collector Profile Public Endpoints ───────────────────────────────────
+
+  // GET /api/collectors/:username — public profile by username
+  app.get("/api/collectors/:username", authenticateUser, async (req: any, res) => {
+    try {
+      const { username } = req.params;
+      const callerId: number | undefined = req.user?.id;
+
+      const [targetUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, username))
+        .limit(1);
+
+      if (!targetUser) return res.status(404).json({ message: "Collector not found" });
+
+      // Bidirectional block check
+      if (callerId && callerId !== targetUser.id) {
+        const [blockExists] = await db
+          .select({ id: blocks.id })
+          .from(blocks)
+          .where(or(
+            and(eq(blocks.blockerId, callerId), eq(blocks.blockedUserId, targetUser.id)),
+            and(eq(blocks.blockerId, targetUser.id), eq(blocks.blockedUserId, callerId))
+          ))
+          .limit(1);
+        if (blockExists) return res.status(403).json({ message: "This profile is not available" });
+      }
+
+      const stats = await storage.getProfileStats(targetUser.id);
+
+      // Friend status
+      let friendStatus = "none";
+      let friendRequestId: number | null = null;
+      if (callerId && callerId !== targetUser.id) {
+        const [friendRecord] = await db
+          .select()
+          .from(friends)
+          .where(or(
+            and(eq(friends.requesterId, callerId), eq(friends.recipientId, targetUser.id)),
+            and(eq(friends.requesterId, targetUser.id), eq(friends.recipientId, callerId))
+          ))
+          .limit(1);
+        if (friendRecord) {
+          friendStatus = friendRecord.status;
+          friendRequestId = friendRecord.id;
+        }
+      }
+
+      // Approved image contributions
+      const [approvedRes] = await db
+        .select({ count: count() })
+        .from(pendingCardImages)
+        .where(and(eq(pendingCardImages.userId, targetUser.id), eq(pendingCardImages.status, 'approved')));
+
+      const isOwnProfile = callerId === targetUser.id;
+      const canViewCollection = targetUser.showCollection || isOwnProfile;
+      const canViewWishlist = targetUser.showWishlist || isOwnProfile;
+
+      res.json({
+        user: {
+          id: targetUser.id,
+          username: targetUser.username,
+          displayName: targetUser.displayName,
+          photoURL: targetUser.photoURL,
+          bio: targetUser.bio,
+          location: targetUser.location,
+          website: targetUser.website,
+          instagramUrl: targetUser.instagramUrl,
+          whatnotUrl: targetUser.whatnotUrl,
+          isAdmin: targetUser.isAdmin,
+          plan: targetUser.plan,
+          createdAt: targetUser.createdAt,
+          loginStreak: targetUser.loginStreak,
+          sellerRating: targetUser.sellerRating,
+        },
+        stats,
+        isOwnProfile,
+        canViewCollection,
+        canViewWishlist,
+        friendStatus,
+        friendRequestId,
+        approvedContributions: approvedRes?.count ?? 0,
+      });
+    } catch (error) {
+      console.error('[Collectors] profile error:', error);
+      res.status(500).json({ message: "Failed to fetch collector profile" });
+    }
+  });
+
+  // GET /api/collectors/:username/trade-block — Phase 1 placeholder
+  app.get("/api/collectors/:username/trade-block", authenticateUser, async (req: any, res) => {
+    res.json({ cards: [], total: 0 });
+  });
+
+  // GET /api/collectors/:username/wishlist — public wishlist respecting privacy
+  app.get("/api/collectors/:username/wishlist", authenticateUser, async (req: any, res) => {
+    try {
+      const { username } = req.params;
+      const callerId: number | undefined = req.user?.id;
+
+      const [targetUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, username))
+        .limit(1);
+
+      if (!targetUser) return res.status(404).json({ message: "Collector not found" });
+
+      const isOwnProfile = callerId === targetUser.id;
+      if (!targetUser.showWishlist && !isOwnProfile) {
+        return res.json({ cards: [], private: true });
+      }
+
+      const items = await db
+        .select({
+          id: userWishlists.id,
+          cardId: userWishlists.cardId,
+          priority: userWishlists.priority,
+          maxPrice: userWishlists.maxPrice,
+          cardName: cards.name,
+          cardNumber: cards.cardNumber,
+          setName: cardSets.name,
+          rarity: cards.rarity,
+          frontImageUrl: cards.frontImageUrl,
+          estimatedValue: cards.estimatedValue,
+        })
+        .from(userWishlists)
+        .innerJoin(cards, eq(userWishlists.cardId, cards.id))
+        .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+        .where(eq(userWishlists.userId, targetUser.id))
+        .orderBy(desc(userWishlists.id))
+        .limit(100);
+
+      res.json({ cards: items, private: false });
+    } catch (error) {
+      console.error('[Collectors] wishlist error:', error);
+      res.status(500).json({ message: "Failed to fetch wishlist" });
+    }
+  });
+
+  // GET /api/collectors/:username/badges — public badges
+  app.get("/api/collectors/:username/badges", authenticateUser, async (req: any, res) => {
+    try {
+      const { username } = req.params;
+
+      const [targetUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, username))
+        .limit(1);
+
+      if (!targetUser) return res.status(404).json({ message: "Collector not found" });
+
+      const earnedBadges = await storage.getUserBadges(targetUser.id);
+      res.json(earnedBadges);
+    } catch (error) {
+      console.error('[Collectors] badges error:', error);
+      res.status(500).json({ message: "Failed to fetch badges" });
+    }
+  });
+
+  // GET /api/collectors/:username/contributions — image contribution stats (approved only)
+  app.get("/api/collectors/:username/contributions", authenticateUser, async (req: any, res) => {
+    try {
+      const { username } = req.params;
+
+      const [targetUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, username))
+        .limit(1);
+
+      if (!targetUser) return res.status(404).json({ message: "Collector not found" });
+
+      const [approvedRes] = await db
+        .select({ count: count() })
+        .from(pendingCardImages)
+        .where(and(eq(pendingCardImages.userId, targetUser.id), eq(pendingCardImages.status, 'approved')));
+
+      const [pendingRes] = await db
+        .select({ count: count() })
+        .from(pendingCardImages)
+        .where(and(eq(pendingCardImages.userId, targetUser.id), eq(pendingCardImages.status, 'pending')));
+
+      res.json({
+        approved: Number(approvedRes?.count ?? 0),
+        pending: Number(pendingRes?.count ?? 0),
+      });
+    } catch (error) {
+      console.error('[Collectors] contributions error:', error);
+      res.status(500).json({ message: "Failed to fetch contributions" });
     }
   });
 

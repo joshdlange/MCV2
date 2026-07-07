@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -87,6 +88,7 @@ export default function Social() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("badges");
   const [selectedFriendProfile, setSelectedFriendProfile] = useState<any>(null);
   const [viewingProfile, setViewingProfile] = useState(false);
@@ -1596,7 +1598,16 @@ export default function Social() {
                         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
                           {selectedFriendProfile.displayName || selectedFriendProfile.username}
                         </h3>
-                        <p className="text-gray-500 dark:text-gray-400 mb-4">@{selectedFriendProfile.username}</p>
+                        <p className="text-gray-500 dark:text-gray-400 mb-2">@{selectedFriendProfile.username}</p>
+                        {selectedFriendProfile.username && (
+                          <button
+                            onClick={() => setLocation(`/collectors/${selectedFriendProfile.username}`)}
+                            className="text-xs text-red-600 hover:underline mb-2 flex items-center gap-1"
+                          >
+                            <Trophy className="w-3 h-3" />
+                            View Collector Profile
+                          </button>
+                        )}
                       </div>
                       {isBlocked ? (
                         <Button

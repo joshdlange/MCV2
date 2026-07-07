@@ -1,0 +1,235 @@
+We are ready to begin building the next major Marvelous Card Vault feature set: Collector Profiles, Trade Block, Wishlist storefronts, trade compatibility, image contribution gamification, and SUPER HERO-only Personal Collections.
+
+Important context:
+
+* The app already has user profiles/settings with tabs: Personal, Social, Billing, Privacy.
+* Do not replace this existing profile/settings page.
+* We want to evolve it into a dual-purpose profile system:
+
+  1. Private profile/settings view for the logged-in user.
+  2. Public collector profile view for other users.
+* The public collector profile should become the home base for Trade Block, Wishlist, trade compatibility, ratings, badges, XP, image contributions, and Personal Collections.
+* SUPER HERO subscription gating already exists. Use the current subscription/tier system.
+* Chat, blocking, and reporting already exist. Reuse them.
+* Shippo integration exists from prior marketplace work. Do not build shipping yet unless needed later.
+* Image upload/admin approval already exists. Reuse and extend it.
+* Do not rebuild existing systems unnecessarily.
+
+PHASE 1 GOAL:
+Build the Collector Profile foundation and public-facing profile page.
+
+The profile should support two contexts:
+
+1. My Profile / Settings
+   This is the current logged-in user profile area.
+   Keep existing tabs:
+
+* Personal
+* Social
+* Billing
+* Privacy
+
+2. Public Collector Profile
+   This is what another user sees when clicking a collector/user.
+   This should feel like a premium collector storefront.
+
+Public Collector Profile route:
+Use existing routing conventions, but preferred:
+
+* /collectors/:username
+  or
+* /profile/:username
+
+If the logged-in user views their own public profile, show an “Edit Profile” button that takes them back to their settings/profile edit page.
+
+Public profile layout:
+Hero section:
+
+* Avatar
+* Display name
+* Username
+* SUPER HERO badge if applicable
+* Admin badge if applicable, but only if already shown elsewhere safely
+* Joined date
+* Collection count
+* Wishlist count
+* Trade Block count
+* Personal Collections count if applicable
+* Trade rating summary if available
+* XP/Collector Level summary if available
+* CTA buttons:
+
+  * Message
+  * Add Friend / Friend status
+  * Block / Report in overflow menu
+  * Edit Profile if viewing your own profile
+
+Public profile tabs/sections:
+
+* Overview
+* Trade Block
+* Wishlist
+* Personal Collections
+* Badges / Achievements
+* Image Contributions
+* Trade Ratings
+
+For Phase 1, build the structure even if some sections are empty placeholders. But use real data where available.
+
+Overview tab should include:
+
+* Collector stats
+* Recent badges/achievements
+* Trade Block preview
+* Wishlist preview
+* Personal Collections preview
+* Image contribution stats
+* Profile privacy-aware empty states
+
+Trade Block tab:
+
+* Show cards the user has marked as available for trade.
+* If no trade block cards yet, show a polished empty state:
+  “No cards available for trade yet.”
+
+Wishlist tab:
+
+* Show cards from the user’s wishlist.
+* If no wishlist cards yet, show:
+  “No wishlist cards yet.”
+
+Personal Collections tab:
+
+* For now, show placeholder if the feature is not built yet:
+  “Personal Collections are coming soon for SUPER HERO collectors.”
+* If any existing favorite sets can be shown, show them carefully, but do not confuse favorite sets with Personal Collections unless already modeled.
+
+Badges / Achievements tab:
+
+* Show existing badges/achievements.
+* If existing badge data exists, reuse it.
+* If XP/level does not exist yet, create a placeholder area but do not fake data.
+
+Image Contributions tab:
+
+* Show approved image count if available.
+* Show pending image count if available.
+* Show placeholder for future contribution badges.
+* Do not expose private images or rejected submissions publicly.
+
+Trade Ratings tab:
+
+* Placeholder for now unless existing ratings exist.
+* Empty state:
+  “No completed trade ratings yet.”
+
+Privacy requirements:
+Respect existing privacy settings.
+If a user has collection privacy turned off/private, do not expose their full collection publicly.
+Trade Block and Wishlist visibility should have privacy controls later, but for now:
+
+* Wishlist can be visible if currently public in the app.
+* Trade Block should only show cards intentionally marked for trade.
+* Do not expose shipping address, email, billing, or private profile fields.
+
+Navigation:
+Add public profile access from:
+
+* Usernames in Social Hub
+* Friends list
+* Chat user profile links
+* Any existing user cards/components
+
+Do not clutter the main sidebar yet unless there is already a logical “Profile” nav item.
+
+Design direction:
+The public collector profile should feel like a collector storefront, not a settings page.
+Use the existing Marvelous Card Vault visual language:
+
+* Red/black/white
+* Card-style sections
+* Hero banner
+* Badges
+* Stats pills
+* Clean mobile-first layout
+* Strong visual hierarchy
+* Polished empty states
+
+Important UX:
+When I view another collector’s profile, I should immediately understand:
+
+* Who they are
+* How active they are
+* What they have for trade
+* What they want
+* Whether I can message them
+* Whether we might be a good trading match later
+
+Database/API:
+Before adding new tables, inspect current schema for:
+
+* users
+* profiles
+* friendships
+* messages
+* blocking
+* reporting
+* wishlist
+* collection
+* achievements/badges
+* image submissions
+* subscription tier
+
+Create only what is missing.
+
+Likely needed:
+
+* public profile endpoint:
+  GET /api/collectors/:username
+* trade block cards endpoint:
+  GET /api/collectors/:username/trade-block
+* wishlist endpoint:
+  GET /api/collectors/:username/wishlist
+* badges endpoint if not already available:
+  GET /api/collectors/:username/badges
+* image contribution stats endpoint:
+  GET /api/collectors/:username/contributions
+
+Response should include privacy-safe data only.
+
+Do not include:
+
+* email
+* shipping address
+* billing info
+* private settings
+* admin-only data
+* rejected image submissions
+* private collection data unless privacy allows it
+
+QA checklist:
+
+1. Logged-in user can view their own current profile/settings page unchanged.
+2. Logged-in user can view their own public collector profile.
+3. Other users can view a public collector profile.
+4. Private fields are not exposed.
+5. Existing Personal/Social/Billing/Privacy tabs still work.
+6. Social actions still work.
+7. Message button opens existing chat flow.
+8. Block/report behavior still works.
+9. Wishlist cards display correctly.
+10. Trade Block tab shows polished empty state if no cards are marked for trade.
+11. Badges render if user has badges.
+12. Image contribution stats do not expose rejected/private uploads.
+13. Mobile layout looks polished.
+14. Desktop layout looks polished.
+15. No subscription/billing regression.
+16. No marketplace or Shippo changes yet.
+
+Deliverables:
+
+* Summary of files changed
+* Explanation of new routes/endpoints
+* Screenshots of public collector profile
+* Confirmation that existing profile settings still work
+* Notes on any missing data needed for next phase

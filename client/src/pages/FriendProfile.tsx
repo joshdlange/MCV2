@@ -304,12 +304,25 @@ export default function FriendProfile() {
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-6">
-          <Button variant="ghost" onClick={() => setLocation("/social")} className="mb-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Social Hub
-          </Button>
-          <h1 className="text-3xl font-bold text-gray-900">Friend Profile</h1>
+        <div className="mb-6 flex items-start justify-between">
+          <div>
+            <Button variant="ghost" onClick={() => setLocation("/social")} className="mb-4">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Social Hub
+            </Button>
+            <h1 className="text-3xl font-bold text-gray-900">Friend Profile</h1>
+          </div>
+          {friend?.username && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLocation(`/collectors/${friend.username}`)}
+              className="mt-1 border-red-200 text-red-600 hover:bg-red-50"
+            >
+              <BookOpen className="w-4 h-4 mr-1.5" />
+              View Collector Profile
+            </Button>
+          )}
         </div>
 
         {/* Profile Header */}
