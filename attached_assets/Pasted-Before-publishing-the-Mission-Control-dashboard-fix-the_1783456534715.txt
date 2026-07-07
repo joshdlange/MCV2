@@ -1,0 +1,96 @@
+Before publishing the Mission Control dashboard, fix the mission logic.
+
+Current issue:
+The dashboard shows Wishlist = 8 in the Collection Snapshot, but Today’s Mission says “Start Your Wishlist.”
+
+That is wrong.
+
+“Start Your Wishlist” should only appear when the user’s real wishlist count is 0.
+
+Fix required:
+Inspect the mission-selection logic and make sure the mission card uses the same wishlist count source as the Collection Snapshot card.
+
+Possible causes to check:
+- Mission card may be choosing before stats load.
+- wishlistCount may be undefined/null during first render.
+- Mission card may be reading a different wishlist source than the stats card.
+- Mission card may not be recalculating after stats load.
+- wishlist count may be named differently across API response/client state.
+
+Correct mission priority:
+
+1. If stats are loading or wishlist count is not yet known:
+Mission:
+“Build Your Vault”
+
+Copy:
+“Every card you add grows your collection value, earns XP, and helps complete your binders.”
+
+CTA:
+“Add Cards”
+
+2. If cards < 10:
+Mission:
+“Build Your Vault”
+
+Copy:
+“Every card you add grows your collection value, earns XP, and helps complete your binders.”
+
+CTA:
+“Add Cards”
+
+3. If wishlistCount === 0:
+Mission:
+“Start Your Wishlist”
+
+Copy:
+“Track the cards you’re chasing and get ready for future trades.”
+
+CTA:
+“Browse Cards”
+
+4. If XP progress is close to the next level:
+Mission:
+“Level Up”
+
+Copy:
+“You’re {xpToNextLevel} XP from Level {nextLevel}. Add cards, earn Super Powers, or contribute images to power up.”
+
+CTA:
+“Continue Building”
+
+Use either:
+- progressPercent >= 60
+or
+- xpToNextLevel <= 250
+
+Whichever fits the current XP helper cleanly.
+
+5. Default:
+Mission:
+“Build Your Vault”
+
+Copy:
+“Every card you add grows your collection value, earns XP, and helps complete your binders.”
+
+CTA:
+“Add Cards”
+
+Important:
+Do not add new expensive dashboard queries.
+Do not change XP math.
+Do not change xp_events.
+Do not change auth/login.
+Do not change routing.
+Do not touch Android back-button / Capacitor work.
+Do not change native app files.
+
+QA:
+1. User with Wishlist count 8 does NOT see “Start Your Wishlist.”
+2. User with Wishlist count 0 CAN see “Start Your Wishlist.”
+3. Mission card does not choose “Start Your Wishlist” while stats are still loading.
+4. Mission updates correctly after stats load.
+5. Add Cards still opens the Add Cards chooser.
+6. Browse Cards CTA routes correctly.
+7. Production build passes.
+8. No new console errors.

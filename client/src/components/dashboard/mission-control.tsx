@@ -39,20 +39,33 @@ type Mission = {
   action: "add-cards" | "browse";
 };
 
+const BUILD_YOUR_VAULT: Mission = {
+  headline: "Build Your Vault",
+  copy: "Every card you add grows your collection value, earns XP, and helps complete your binders.",
+  cta: "Add Cards",
+  action: "add-cards",
+};
+
 function pickMission(stats: CollectionStats, xp: XpProgress | undefined): Mission {
   const totalCards = stats.totalCards || 0;
-  const wishlistItems = stats.wishlistItems || 0;
+
+  // The /api/stats optimized endpoint returns `wishlistCount`, while the shared
+  // CollectionStats type declares `wishlistItems` — read BOTH (same dual-source
+  // as the Collection Snapshot tile) so the mission always matches the tile.
+  const wishlistRaw =
+    (stats as any).wishlistItems ?? (stats as any).wishlistCount;
+  const wishlistKnown = typeof wishlistRaw === "number" && !isNaN(wishlistRaw);
 
   if (totalCards < 10) {
-    return {
-      headline: "Build Your Vault",
-      copy: "Every card you add grows your collection value, earns XP, and helps complete your binders.",
-      cta: "Add Cards",
-      action: "add-cards",
-    };
+    return BUILD_YOUR_VAULT;
   }
 
-  if (wishlistItems === 0) {
+  // Never claim the wishlist is empty unless we KNOW it is zero.
+  if (!wishlistKnown) {
+    return BUILD_YOUR_VAULT;
+  }
+
+  if (wishlistRaw === 0) {
     return {
       headline: "Start Your Wishlist",
       copy: "Track the cards you're chasing and get ready for future trades.",
