@@ -1,0 +1,120 @@
+We need one more profile routing/navigation cleanup.
+
+Current issue:
+There are still multiple profile concepts and confusing routes:
+
+* Sidebar name/avatar links to unified collector profile.
+* Text under name says “View My Profile,” but I want this labeled “Collector Profile.”
+* There is still an old /profile Account Settings page, but there is no clear way to get there.
+* The Settings button on the Collector Profile currently switches to embedded settings inside the collector profile.
+* That makes the collector profile feel private/settings-heavy, but the collector profile should be public-facing.
+
+Direction:
+Separate the concepts cleanly:
+
+1. Collector Profile
+   Route:
+
+* /collectors/:username
+
+Purpose:
+
+* Public-facing collector page.
+* Other users can view it unless profile privacy disables it.
+* Owner can also view it.
+
+Sidebar:
+
+* Avatar/name area should link to /collectors/:username
+* Text should say: “Collector Profile”
+* Do not show two separate hyperlinks in that area.
+* The avatar, display name, and “Collector Profile” text can all be one clickable block.
+
+2. Account Settings
+   Route:
+
+* /profile
+
+Purpose:
+
+* Private account/settings page only.
+* Contains Personal, Social, Billing, Privacy.
+* Other users must never see this.
+* This is where shipping address, billing, subscription, privacy toggles, delete account, and social settings live.
+
+Collector Profile Settings button:
+
+* On my own /collectors/:username page, the button labeled “Settings” should navigate to /profile.
+* It should NOT open embedded settings inside the Collector Profile.
+* Remove the owner-only Settings tab from the Collector Profile tabs.
+* Collector Profile tabs should remain public-profile oriented:
+
+  * Overview
+  * Trade Block
+  * Wishlist
+  * Collections
+  * Badges / Super Powers
+  * Images
+  * Ratings
+
+Account Settings page:
+
+* Keep /profile as the private settings page.
+* Add a clear “Back to Collector Profile” button on /profile.
+* That button should navigate to /collectors/:username.
+* The /profile page title should remain “Account Settings.”
+
+Social tab question:
+For now, keep Social inside Account Settings.
+Do not move it into Collector Profile yet.
+The public-facing social elements should be limited to:
+
+* Friends count
+* Message button
+* Add friend/friend status
+* Block/report options
+  We can redesign Social later.
+
+Privacy:
+Add or verify a setting:
+
+* “Show my Collector Profile publicly”
+  If off:
+* Other users should see a clean private-profile state.
+* Owner can still view their own profile.
+
+Also keep:
+
+* “Show my username on contributed card images”
+
+Mobile:
+
+* Make sure sidebar profile block is easy to tap.
+* Make sure Settings button on Collector Profile works on mobile.
+* Make sure tabs do not horizontally overflow weirdly.
+
+Specific fixes:
+
+1. Change sidebar text from “View My Profile” to “Collector Profile.”
+2. Make the entire sidebar profile block one link to /collectors/:username.
+3. Keep /profile as the account settings route.
+4. Change Collector Profile Settings button to navigate to /profile.
+5. Remove embedded Settings tab from Collector Profile.
+6. Keep Account Settings tabs only on /profile.
+7. Add “Back to Collector Profile” button on /profile.
+8. Confirm other users cannot access my /profile page or private settings.
+9. Confirm other users only see public Collector Profile tabs.
+10. Confirm owner can move cleanly:
+    Sidebar → Collector Profile → Settings → Back to Collector Profile.
+
+QA checklist:
+
+* Sidebar profile block says “Collector Profile.”
+* Clicking sidebar profile block opens /collectors/:username.
+* /collectors/:username has no Settings tab.
+* Owner Settings button goes to /profile.
+* /profile shows Account Settings.
+* /profile has Back to Collector Profile.
+* Other users never see Personal/Social/Billing/Privacy tabs.
+* Public collector profile remains clean and public-facing.
+* Mobile layout works.

@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import type { XpProgress } from "@shared/xp";
 import { XP_PER_APPROVED_IMAGE, XP_FIRST_APPROVED_IMAGE_BONUS } from "@shared/xp";
-import AccountSettings from "@/components/profile/AccountSettings";
 import BadgeIcon from "@/components/profile/BadgeIcon";
 
 interface CollectorUser {
@@ -124,7 +123,7 @@ export default function CollectorProfile() {
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [showOverflowMenu, setShowOverflowMenu] = useState(false);
 
-  const getAuthHeaders = async () => {
+  const getAuthHeaders = async (): Promise<Record<string, string>> => {
     if (!currentUser) return {};
     const token = await currentUser.getIdToken();
     return { Authorization: `Bearer ${token}` };
@@ -323,7 +322,7 @@ export default function CollectorProfile() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setActiveTab("settings")}
+                onClick={() => setLocation("/profile")}
                 className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
               >
                 <Settings className="w-4 h-4 mr-1.5" /> Settings
@@ -477,7 +476,6 @@ export default function CollectorProfile() {
               { value: "badges", label: "Badges" },
               { value: "contributions", label: "Images" },
               { value: "ratings", label: "Ratings" },
-              ...(isOwnProfile ? [{ value: "settings", label: "Settings" }] : []),
             ].map(tab => (
               <TabsTrigger
                 key={tab.value}
@@ -838,12 +836,6 @@ export default function CollectorProfile() {
             </Card>
           </TabsContent>
 
-          {/* ── Settings (owner only) ── */}
-          {isOwnProfile && (
-            <TabsContent value="settings">
-              <AccountSettings />
-            </TabsContent>
-          )}
         </Tabs>
       </div>
 

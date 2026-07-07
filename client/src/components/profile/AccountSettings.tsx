@@ -297,7 +297,8 @@ export default function AccountSettings() {
       showEmail: false,
       showCollection: true,
       showWishlist: true,
-      showImageAttribution: true
+      showImageAttribution: true,
+      profilePublic: true
     },
     notifications: {
       emailUpdates: true,
@@ -355,7 +356,8 @@ export default function AccountSettings() {
         showEmail: userProfile.showEmail ?? false,
         showCollection: userProfile.showCollection ?? true,
         showWishlist: userProfile.showWishlist ?? true,
-        showImageAttribution: userProfile.showImageAttribution ?? true
+        showImageAttribution: userProfile.showImageAttribution ?? true,
+        profilePublic: (userProfile.profileVisibility ?? 'public') !== 'private'
       },
       notifications: {
         emailUpdates: userProfile.emailUpdates ?? true,
@@ -389,9 +391,28 @@ export default function AccountSettings() {
 
   // Save privacy/notification toggles immediately (no edit-mode required)
   const savePreferences = (next: typeof profileData) => {
+    // profilePublic maps to profileVisibility and is saved separately via
+    // toggleProfilePublic, so unrelated toggles never overwrite a 'friends' value.
     updateProfileMutation.mutate({
-      privacySettings: next.privacySettings,
+      privacySettings: {
+        showEmail: next.privacySettings.showEmail,
+        showCollection: next.privacySettings.showCollection,
+        showWishlist: next.privacySettings.showWishlist,
+        showImageAttribution: next.privacySettings.showImageAttribution
+      },
       notifications: next.notifications
+    });
+  };
+
+  // Dedicated handler so only the public-profile control writes profileVisibility
+  const toggleProfilePublic = () => {
+    const nextPublic = !profileData.privacySettings.profilePublic;
+    setProfileData(prev => ({
+      ...prev,
+      privacySettings: { ...prev.privacySettings, profilePublic: nextPublic }
+    }));
+    updateProfileMutation.mutate({
+      privacySettings: { profileVisibility: nextPublic ? 'public' : 'private' }
     });
   };
 
@@ -852,6 +873,26 @@ export default function AccountSettings() {
               <div>
                 <h3 className="font-semibold mb-3 text-gray-900">Privacy Settings</h3>
                 <div className="space-y-2">
+                  <div className="flex items-start justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                    <div className="flex items-start gap-2 pr-3">
+                      <Globe className="w-4 h-4 text-gray-500 mt-0.5" />
+                      <div>
+                        <span className="text-sm text-gray-700">Show my Collector Profile publicly</span>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          When on, other collectors can view your public profile. When off, only you can see it.
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="bg-white text-black border-gray-300 hover:bg-gray-100 rounded-full shrink-0"
+                      onClick={toggleProfilePublic}
+                    >
+                      {profileData.privacySettings.profilePublic ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    </Button>
+                  </div>
+
                   <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
                     <div className="flex items-center gap-2">
                       <Eye className="w-4 h-4 text-gray-500" />

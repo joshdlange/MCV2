@@ -143,8 +143,12 @@ export function Sidebar() {
       {user && (
         <div className="border-b border-border p-3 md:p-4 flex-shrink-0">
           <div className="flex items-center space-x-2 md:space-x-3">
-            <Link href={currentUser?.username ? `/collectors/${currentUser.username}` : "/profile"}>
-              <div className="w-7 h-7 md:w-8 md:h-8 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all overflow-hidden bg-marvel-red flex items-center justify-center" title="View Profile">
+            <Link
+              href={currentUser?.username ? `/collectors/${currentUser.username}` : "/profile"}
+              className="flex items-center space-x-2 md:space-x-3 flex-1 min-w-0 cursor-pointer group py-1"
+              title="Collector Profile"
+            >
+              <div className="w-7 h-7 md:w-8 md:h-8 rounded-full overflow-hidden bg-marvel-red flex items-center justify-center flex-shrink-0 group-hover:ring-2 group-hover:ring-blue-500 transition-all">
                 {user.photoURL ? (
                   <img 
                     src={user.photoURL} 
@@ -157,22 +161,18 @@ export function Sidebar() {
                   {(user.displayName || user.email || 'U').charAt(0).toUpperCase()}
                 </span>
               </div>
-            </Link>
-            <div className="flex-1 min-w-0">
-              <Link href={currentUser?.username ? `/collectors/${currentUser.username}` : "/profile"} className="block">
-                <p className="text-xs md:text-sm font-medium text-foreground truncate hover:text-blue-600 cursor-pointer">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs md:text-sm font-medium text-foreground truncate group-hover:text-blue-600">
                   {user.displayName || 'User'}
                 </p>
-                {currentUser?.username && (
-                  <p className="text-[10px] md:text-xs text-marvel-red hover:text-red-700 truncate cursor-pointer font-medium">
-                    View My Profile
-                  </p>
-                )}
-              </Link>
-            </div>
+                <p className="text-[10px] md:text-xs text-marvel-red group-hover:text-red-700 truncate font-medium">
+                  Collector Profile
+                </p>
+              </div>
+            </Link>
             <button 
               onClick={() => signOutUser()}
-              className="text-red-500 hover:text-red-600"
+              className="text-red-500 hover:text-red-600 flex-shrink-0"
               title="Sign out"
             >
               <LogOut className="w-4 h-4" />

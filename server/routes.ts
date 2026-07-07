@@ -718,6 +718,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (privacySettings.showCollection !== undefined) updates.showCollection = privacySettings.showCollection;
         if (privacySettings.showWishlist !== undefined) updates.showWishlist = privacySettings.showWishlist;
         if (privacySettings.showImageAttribution !== undefined) updates.showImageAttribution = privacySettings.showImageAttribution;
+        if (privacySettings.profileVisibility !== undefined && ['public', 'friends', 'private'].includes(privacySettings.profileVisibility)) {
+          updates.profileVisibility = privacySettings.profileVisibility;
+        }
       }
       
       // Notification settings
@@ -4398,6 +4401,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ─── Collector Profile Public Endpoints ───────────────────────────────────
 
+  // Shared access guard for public collector endpoints.
+  // Returns { ok: false, status, message } to block, or { ok: true, targetUser, isOwnProfile } to allow.
+  const resolveCollectorAccess = async (username: string, callerId?: number) => {
+    const [targetUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username))
+      .limit(1);
+    if (!targetUser) return { ok: false as const, status: 404, message: "Collector not found" };
+
+    const isOwnProfile = callerId === targetUser.id;
+    if (isOwnProfile) return { ok: true as const, targetUser, isOwnProfile };
+
+    // Bidirectional block check
+    if (callerId) {
+      const [blockExists] = await db
+        .select({ id: blocks.id })
+        .from(blocks)
+        .where(or(
+          and(eq(blocks.blockerId, callerId), eq(blocks.blockedUserId, targetUser.id)),
+          and(eq(blocks.blockerId, targetUser.id), eq(blocks.blockedUserId, callerId))
+        ))
+        .limit(1);
+      if (blockExists) return { ok: false as const, status: 403, message: "This profile is not available" };
+    }
+
+    // Visibility enforcement — owner already returned above
+    const visibility = (targetUser.profileVisibility || 'public').toLowerCase();
+    if (visibility === 'private') {
+      return { ok: false as const, status: 403, message: "This profile is not available" };
+    }
+    if (visibility === 'friends') {
+      let accepted = false;
+      if (callerId) {
+        const [friendRecord] = await db
+          .select({ status: friends.status })
+          .from(friends)
+          .where(or(
+            and(eq(friends.requesterId, callerId), eq(friends.recipientId, targetUser.id)),
+            and(eq(friends.requesterId, targetUser.id), eq(friends.recipientId, callerId))
+          ))
+          .limit(1);
+        accepted = friendRecord?.status === 'accepted';
+      }
+      if (!accepted) return { ok: false as const, status: 403, message: "This profile is not available" };
+    }
+
+    return { ok: true as const, targetUser, isOwnProfile };
+  };
+
   // GET /api/collectors/:username — public profile by username
   app.get("/api/collectors/:username", authenticateUser, async (req: any, res) => {
     try {
@@ -4412,8 +4465,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!targetUser) return res.status(404).json({ message: "Collector not found" });
 
+      const isOwnProfile = callerId === targetUser.id;
+
       // Bidirectional block check
-      if (callerId && callerId !== targetUser.id) {
+      if (callerId && !isOwnProfile) {
         const [blockExists] = await db
           .select({ id: blocks.id })
           .from(blocks)
@@ -4425,12 +4480,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (blockExists) return res.status(403).json({ message: "This profile is not available" });
       }
 
-      const stats = await storage.getProfileStats(targetUser.id);
-
       // Friend status
       let friendStatus = "none";
       let friendRequestId: number | null = null;
-      if (callerId && callerId !== targetUser.id) {
+      if (callerId && !isOwnProfile) {
         const [friendRecord] = await db
           .select()
           .from(friends)
@@ -4444,6 +4497,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           friendRequestId = friendRecord.id;
         }
       }
+
+      // Profile visibility enforcement — owner can always view their own profile
+      if (!isOwnProfile) {
+        const visibility = (targetUser.profileVisibility || 'public').toLowerCase();
+        if (visibility === 'private' || (visibility === 'friends' && friendStatus !== 'accepted')) {
+          return res.status(403).json({ message: "This profile is not available" });
+        }
+      }
+
+      const stats = await storage.getProfileStats(targetUser.id);
 
       // Approved image contributions
       const [approvedRes] = await db
@@ -4463,7 +4526,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const imageXp = imageContributionXp(approvedContributions);
       const xp = computeXpProgress(badgeXp + imageXp);
 
-      const isOwnProfile = callerId === targetUser.id;
       const canViewCollection = targetUser.showCollection || isOwnProfile;
       const canViewWishlist = targetUser.showWishlist || isOwnProfile;
 
@@ -4512,15 +4574,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { username } = req.params;
       const callerId: number | undefined = req.user?.id;
 
-      const [targetUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username))
-        .limit(1);
+      const access = await resolveCollectorAccess(username, callerId);
+      if (!access.ok) return res.status(access.status).json({ message: access.message });
+      const { targetUser, isOwnProfile } = access;
 
-      if (!targetUser) return res.status(404).json({ message: "Collector not found" });
-
-      const isOwnProfile = callerId === targetUser.id;
       if (!targetUser.showWishlist && !isOwnProfile) {
         return res.json({ cards: [], private: true });
       }
@@ -4556,16 +4613,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/collectors/:username/badges", authenticateUser, async (req: any, res) => {
     try {
       const { username } = req.params;
+      const callerId: number | undefined = req.user?.id;
 
-      const [targetUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username))
-        .limit(1);
+      const access = await resolveCollectorAccess(username, callerId);
+      if (!access.ok) return res.status(access.status).json({ message: access.message });
 
-      if (!targetUser) return res.status(404).json({ message: "Collector not found" });
-
-      const earnedBadges = await storage.getUserBadges(targetUser.id);
+      const earnedBadges = await storage.getUserBadges(access.targetUser.id);
       res.json(earnedBadges);
     } catch (error) {
       console.error('[Collectors] badges error:', error);
@@ -4579,15 +4632,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { username } = req.params;
       const callerId: number | undefined = req.user?.id;
 
-      const [targetUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username))
-        .limit(1);
-
-      if (!targetUser) return res.status(404).json({ message: "Collector not found" });
-
-      const isOwnProfile = callerId === targetUser.id;
+      const access = await resolveCollectorAccess(username, callerId);
+      if (!access.ok) return res.status(access.status).json({ message: access.message });
+      const { targetUser, isOwnProfile } = access;
 
       const [approvedRes] = await db
         .select({ count: count() })

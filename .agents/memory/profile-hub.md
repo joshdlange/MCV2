@@ -1,23 +1,28 @@
 ---
-name: Unified collector profile hub
-description: The single-hub profile architecture and the badge rarity taxonomy gotcha
+name: Two separate profile pages
+description: The collector-profile vs account-settings split and the badge rarity taxonomy gotcha
 ---
 
-# Unified collector profile hub
+# Two separate profile pages (public vs private)
 
-`/collectors/:username` (`CollectorProfile.tsx`) is the ONE profile experience.
-Public collector tabs are visible to everyone; an owner-only `Settings` tab
-renders `AccountSettings.tsx` (gated by server-computed `isOwnProfile`).
-`/profile` is kept only as a thin wrapper around `AccountSettings` for the
-fallback case where a user has no `username`.
+There are TWO distinct pages, deliberately kept apart:
+- `/collectors/:username` (`CollectorProfile.tsx`) = the PUBLIC collector profile.
+  Tabs only: Overview, Trade Block, Wishlist, Collections, Badges, Images,
+  Ratings. There is NO embedded Settings tab. The owner-only "Settings" button
+  here navigates (`setLocation("/profile")`) to the private page.
+- `/profile` (`profile.tsx` → `AccountSettings.tsx`) = the PRIVATE Account
+  Settings (Personal / Social / Billing / Privacy), titled "Account Settings",
+  with a "Back to Collector Profile" button. It always renders the *current*
+  user's own settings, so one user can never see another's settings.
 
-**Why:** The app previously had two disjointed profile pages that drifted apart.
-Consolidating into one hub keeps owner and public views in sync.
+**Why:** An earlier iteration MERGED settings into the collector hub as an
+owner-only tab; that conflated the public profile with private account settings.
+This was reverted to a clean public/private split. Do NOT re-merge them or
+re-add an embedded Settings tab to `CollectorProfile.tsx`.
 
-**How to apply:** Do NOT re-add a second standalone profile/settings page or
-duplicate settings UI. New profile/settings features go into the hub (public tab
-or the owner Settings tab / `AccountSettings`). Gating is enforced server-side —
-the client `isOwnProfile` tab gate is cosmetic only.
+**How to apply:** Public-facing profile features → a tab on `CollectorProfile`.
+Account/settings features → `AccountSettings`. Profile visibility is enforced
+server-side per-endpoint — see `collector-profile-privacy.md`.
 
 ## Badge rarity taxonomy gotcha
 Badge rarities are **bronze / silver / gold / platinum / special** — NOT

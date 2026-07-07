@@ -27,8 +27,9 @@ export default function Profile() {
               onClick={() => setLocation(hubHref)}
               className="bg-white text-gray-700 border-gray-300 hover:bg-gray-50 rounded-full shrink-0"
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Back to Profile</span>
+              <ArrowLeft className="w-4 h-4 mr-1.5" />
+              <span className="sm:hidden">Back</span>
+              <span className="hidden sm:inline">Back to Collector Profile</span>
             </Button>
           )}
         </div>
