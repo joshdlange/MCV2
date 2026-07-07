@@ -1,0 +1,97 @@
+Before publishing, tighten the Dashboard XP/Collector Power UI.
+
+Current issue:
+The XP module works technically, but it takes up too much space and feels visually disconnected from the dashboard. The dashboard goal is to push users to keep adding cards, viewing their collection, building binders, and coming back. XP should support that, not dominate the page.
+
+Specific problems:
+1. The Collector Power card is too tall.
+2. It repeats card/image/power numbers already shown elsewhere.
+3. The “885 Powers” label is wrong/confusing. That number is XP from Super Powers/badges, not a count of powers.
+4. The dashboard should feel more action-oriented: add cards, scan cards, view collection, build/share binder.
+
+Redesign direction:
+Integrate Collector Power into the existing top dashboard stats area instead of making it a huge separate section.
+
+Recommended layout:
+Top dashboard section should include:
+- Cards
+- Value
+- Wishlist
+- Super Powers
+- Collector Level / XP progress
+
+Either:
+Option A:
+Add Collector Level as a fifth compact stat card.
+
+Or better:
+Option B:
+Keep the four stat cards, and add a slim XP progress bar directly underneath them within the same bordered dashboard stats container.
+
+The XP bar should be compact:
+- Height should be much smaller than current module.
+- Show:
+  “Collector Level 13”
+  “4,621 total XP”
+  “579 XP to Level 14”
+  progress bar
+- Do not show redundant source chips unless in tooltip/details.
+
+Remove or hide:
+- Cards XP chip
+- Images XP chip
+- Powers XP chip
+from the main dashboard view.
+
+If source breakdown is kept, place it behind a small “View XP details” dropdown or tooltip:
+- Cards: 2,521 XP
+- Image Contributions: 1,215 XP
+- Super Powers: 885 XP
+
+Fix wording:
+- Do not say “885 Powers.”
+- Say “885 Super Power XP” or “885 Badge XP.”
+
+Add a dashboard action row under the XP/stats area:
+Primary CTAs:
+- Add Cards
+- Scan to Add
+- View My Collection
+- View Binder / Share Binder if available
+
+Copy direction:
+Use language that pushes collection growth:
+- “Keep building your vault.”
+- “Add cards to level up.”
+- “Scan cards, complete sets, and grow your collector power.”
+
+Performance:
+- XP summary must not slow dashboard initial render.
+- Dashboard stat cards should render first.
+- XP bar can load after with a compact skeleton:
+  “Powering up…”
+
+Mobile:
+- On mobile, stat cards should stack or become a 2-column grid.
+- XP bar should fit cleanly below them.
+- CTAs should be large tap targets.
+- No horizontal overflow.
+
+Do not change:
+- XP math
+- xp_events ledger
+- backfill logic
+- Collector Profile XP
+- Account Settings
+- auth/login
+- routing
+
+QA:
+1. Dashboard loads quickly.
+2. Stats render even if XP is still loading.
+3. XP bar is compact and aligned with stats.
+4. “Powers” count remains the number of badges/super powers earned.
+5. XP breakdown does not incorrectly label XP as number of powers.
+6. Mobile dashboard looks clean.
+7. No login/auth/routing regressions.
+8. Production build still succeeds.

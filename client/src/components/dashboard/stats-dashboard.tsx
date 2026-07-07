@@ -5,12 +5,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Info, Layers, DollarSign, Heart, Plus, ArrowRight, Zap } from "lucide-react";
+import { Info, Layers, DollarSign, Heart, Plus, ArrowRight, Zap, ScanLine, Share2 } from "lucide-react";
 import type { CollectionStats } from "@shared/schema";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { XpPowerMeter } from "./xp-power-meter";
+import { useAppStore } from "@/lib/store";
 
 const TILES = [
   {
@@ -183,6 +184,7 @@ function PowerTile({
 
 export function StatsDashboard() {
   const [, setLocation] = useLocation();
+  const { currentUser } = useAppStore();
   const { data: stats, isLoading } = useQuery<CollectionStats>({
     queryKey: ["/api/stats"],
     staleTime: 0,
@@ -235,9 +237,16 @@ export function StatsDashboard() {
     { tile: TILES[3], rawValue: superpowersCount, displayValue: superpowersCount.toLocaleString(), onClick: () => setLocation("/social?tab=superpowers") },
   ];
 
+  const actions = [
+    { label: "Add Cards", icon: Plus, color: "#ffffff", testId: "button-action-add-cards", primary: true, onClick: () => setLocation("/browse") },
+    { label: "Scan to Add", icon: ScanLine, color: "#f59e0b", testId: "button-action-scan", primary: false, onClick: () => setLocation("/scan") },
+    { label: "My Collection", icon: Layers, color: "#10b981", testId: "button-action-collection", primary: false, onClick: () => setLocation("/my-collection") },
+    { label: "Share My Vault", icon: Share2, color: "#a855f7", testId: "button-action-share", primary: false, onClick: () => setLocation(currentUser?.username ? `/collectors/${currentUser.username}` : "/my-collection") },
+  ];
+
   return (
     <div className="space-y-4">
-      {/* ── Power Badge Bar ── */}
+      {/* ── Stats + Collector Power ── */}
       <div
         className="rounded-xl p-2.5 border shadow-2xl"
         style={{
@@ -252,12 +261,12 @@ export function StatsDashboard() {
             </div>
           ))}
         </div>
+
+        {/* Slim Collector Power / XP bar — inside the same stats container */}
+        <XpPowerMeter />
       </div>
 
-      {/* ── Collector Power Meter (XP / Level) ── */}
-      <XpPowerMeter />
-
-      {/* Onboarding / Next Steps */}
+      {/* Onboarding (empty state) OR persistent action row */}
       {totalCards === 0 ? (
         <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-xl p-5 text-white shadow-lg">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -288,38 +297,40 @@ export function StatsDashboard() {
             </div>
           </div>
         </div>
-      ) : totalCards < 50 ? (
-        <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-5 text-white shadow-lg">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex-1">
-              <h3 className="text-lg font-bold mb-1">Nice start! Keep building your collection.</h3>
-              <p className="text-gray-300 text-sm">
-                You've added <span className="text-white font-semibold">{totalCards} cards</span> so far.
-                Add more to unlock richer value insights and set completion tracking.
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button
-                onClick={() => setLocation("/browse")}
-                className="bg-red-600 hover:bg-red-700 text-white font-semibold shadow-md"
-                data-testid="button-add-more-cards"
+      ) : (
+        <div
+          className="rounded-xl p-4 border shadow-xl"
+          style={{
+            background: "linear-gradient(180deg, #181818 0%, #111 100%)",
+            borderColor: "rgba(255,255,255,0.07)",
+          }}
+        >
+          <div className="mb-3">
+            <h3 className="text-white font-bold text-sm sm:text-base leading-tight">Keep building your vault</h3>
+            <p className="text-white/50 text-[11px] sm:text-xs leading-snug">
+              Scan cards, complete sets, and grow your collector power.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {actions.map((a) => (
+              <button
+                key={a.label}
+                onClick={a.onClick}
+                data-testid={a.testId}
+                className="flex items-center justify-center gap-2 rounded-lg px-3 py-3 min-h-[52px] font-semibold text-sm text-white transition-transform active:scale-[0.98]"
+                style={
+                  a.primary
+                    ? { background: "linear-gradient(135deg, #dc2626, #b91c1c)", border: "1px solid rgba(239,68,68,0.5)", boxShadow: "0 0 16px rgba(239,68,68,0.25)" }
+                    : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }
+                }
               >
-                <Plus className="w-4 h-4 mr-2" />
-                Add More Cards
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setLocation("/browse")}
-                className="text-gray-300 hover:bg-white/10 text-sm"
-                data-testid="link-view-sets"
-              >
-                View All Sets
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </Button>
-            </div>
+                <a.icon className="w-4 h-4 shrink-0" style={{ color: a.color }} strokeWidth={2.5} />
+                <span className="truncate">{a.label}</span>
+              </button>
+            ))}
           </div>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
