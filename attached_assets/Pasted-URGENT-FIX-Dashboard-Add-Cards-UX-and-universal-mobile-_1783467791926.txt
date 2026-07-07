@@ -1,0 +1,99 @@
+URGENT FIX — Dashboard Add Cards UX and universal mobile header safe-area.
+
+The new Add Cards chooser/modal is not approved and needs to be removed.
+
+Issue 1 — Add Cards modal
+
+Current issue:
+Clicking Add Cards opens a modal with:
+- Search Manually
+- Browse Sets
+- Scan to Add
+- View Trending Cards
+
+This adds friction and looks bad on mobile. It also introduces an extra step we do not want.
+
+Required fix:
+Remove the Add Cards chooser/modal entirely.
+
+Expected behavior:
+- Any “Add Cards” button on the Dashboard should navigate directly to the existing Browse Cards flow/page.
+- Use the same path as before: /browse or the existing Browse Cards route.
+- Do not open a modal.
+- Do not force Scan to Add.
+- Do not add a new extra step.
+- Add Cards should simply mean: go browse cards and add from there.
+
+Keep:
+- Scan to Add as its own separate button in Continue Building.
+- My Collection button.
+- Share My Vault button.
+- Today’s Mission card.
+- Collection Snapshot.
+- Compact XP bar.
+
+Issue 2 — Universal mobile header safe-area / notch handling
+
+Current issue:
+On the Pixel 8 Pro Android emulator, the camera cutout/notch overlaps the Marvelous Card Vault header/title. The title becomes unreadable.
+
+This should NOT be treated as a Pixel-only or Android-only fix.
+
+Required behavior:
+The app header must respect safe areas across all mobile devices:
+- Android phones with camera cutouts / notches
+- iPhones with notch / Dynamic Island
+- tablets
+- mobile browser views
+- Capacitor Android
+- Capacitor iOS
+
+Requirements:
+- Header content must sit below the status bar/camera cutout/safe area.
+- Logo/title must not overlap with notches, camera holes, status bar, or system icons.
+- Header icons must remain aligned and tappable.
+- Header should not become unnecessarily huge.
+- Desktop header should remain unchanged.
+- Mobile web should remain clean.
+- iOS should not break.
+- Android edge-to-edge devices should render correctly.
+
+Implementation guidance:
+- Inspect the shared mobile header/layout component, not only the Android page.
+- Use CSS safe-area values where appropriate:
+  env(safe-area-inset-top)
+  env(safe-area-inset-left)
+  env(safe-area-inset-right)
+- If Capacitor edge-to-edge behavior requires body/root padding, apply it globally and carefully.
+- Avoid hardcoded Pixel-only values.
+- Avoid device-specific hacks.
+- Prefer one robust mobile header/safe-area pattern used everywhere.
+
+Important:
+Do not touch:
+- auth/login
+- Android back-button handler
+- Capacitor plugin registration
+- XP math
+- xp_events
+- billing/subscription logic
+- RevenueCat
+- Stripe
+- Shippo
+- Trade Block
+- iOS native project files unless absolutely required for safe-area support
+
+QA:
+1. Dashboard Add Cards button routes directly to Browse Cards.
+2. No Add Cards chooser/modal appears.
+3. Scan to Add remains available as its own separate button.
+4. Header is readable on Pixel 8 Pro emulator.
+5. Header is readable on Android cutout/notch devices.
+6. Header remains readable on iPhone/safe-area devices.
+7. Header icons remain aligned and tappable.
+8. Desktop header is unchanged.
+9. Mobile browser layout still looks good.
+10. Production build passes.
+11. No new console errors.
+
+This is urgent because the current published/dashboard experience may already include the Add Cards modal, and the mobile header is not acceptable for app-store users.

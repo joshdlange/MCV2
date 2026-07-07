@@ -1,21 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Target,
-  Search,
-  Layers,
-  ScanLine,
-  TrendingUp,
-  ChevronRight,
-} from "lucide-react";
+import { Target, ChevronRight } from "lucide-react";
 import type { CollectionStats } from "@shared/schema";
 import type { XpProgress } from "@shared/xp";
 
@@ -36,14 +22,12 @@ type Mission = {
   headline: string;
   copy: string;
   cta: string;
-  action: "add-cards" | "browse";
 };
 
 const BUILD_YOUR_VAULT: Mission = {
   headline: "Build Your Vault",
   copy: "Every card you add grows your collection value, earns XP, and helps complete your binders.",
   cta: "Add Cards",
-  action: "add-cards",
 };
 
 function pickMission(stats: CollectionStats, xp: XpProgress | undefined): Mission {
@@ -70,7 +54,6 @@ function pickMission(stats: CollectionStats, xp: XpProgress | undefined): Missio
       headline: "Start Your Wishlist",
       copy: "Track the cards you're chasing and get ready for future trades.",
       cta: "Browse Cards",
-      action: "browse",
     };
   }
 
@@ -80,26 +63,18 @@ function pickMission(stats: CollectionStats, xp: XpProgress | undefined): Missio
       headline: "Level Up",
       copy: `You're ${remaining.toLocaleString()} XP from Level ${xp.level + 1}. Add cards, earn Super Powers, or contribute images to power up.`,
       cta: "Continue Building",
-      action: "add-cards",
     };
   }
 
-  return {
-    headline: "Build Your Vault",
-    copy: "Every card you add grows your collection value, earns XP, and helps complete your binders.",
-    cta: "Add Cards",
-    action: "add-cards",
-  };
+  return BUILD_YOUR_VAULT;
 }
 
 export function MissionCard({
   stats,
   isLoading,
-  onAddCards,
 }: {
   stats: CollectionStats | undefined;
   isLoading: boolean;
-  onAddCards: () => void;
 }) {
   const [, setLocation] = useLocation();
   const { data: xp } = useXpSummary();
@@ -126,13 +101,6 @@ export function MissionCard({
   if (!stats || (stats.totalCards || 0) === 0) return null;
 
   const mission = pickMission(stats, xp);
-  const handleCta = () => {
-    if (mission.action === "browse") {
-      setLocation("/browse");
-    } else {
-      onAddCards();
-    }
-  };
 
   return (
     <div
@@ -163,7 +131,7 @@ export function MissionCard({
           </p>
         </div>
         <Button
-          onClick={handleCta}
+          onClick={() => setLocation("/browse")}
           data-testid="button-mission-cta"
           className="w-full sm:w-auto shrink-0 min-h-[44px] font-semibold text-white border"
           style={{
@@ -177,108 +145,5 @@ export function MissionCard({
         </Button>
       </div>
     </div>
-  );
-}
-
-const ADD_OPTIONS = [
-  {
-    label: "Search Manually",
-    description: "Find a specific card by name or number",
-    icon: Search,
-    color: "#ef4444",
-    testId: "option-search-manually",
-  },
-  {
-    label: "Browse Sets",
-    description: "Explore sets and add cards as you go",
-    icon: Layers,
-    color: "#10b981",
-    testId: "option-browse-sets",
-  },
-  {
-    label: "Scan to Add",
-    description: "Snap a photo and let the vault identify it",
-    icon: ScanLine,
-    color: "#f59e0b",
-    testId: "option-scan-to-add",
-  },
-  {
-    label: "View Trending Cards",
-    description: "See what other collectors are chasing",
-    icon: TrendingUp,
-    color: "#a855f7",
-    testId: "option-trending-cards",
-  },
-] as const;
-
-export function AddCardsDialog({
-  open,
-  onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  const [location, setLocation] = useLocation();
-
-  const handleSelect = (label: (typeof ADD_OPTIONS)[number]["label"]) => {
-    onOpenChange(false);
-    switch (label) {
-      case "Search Manually":
-        setLocation("/card-search");
-        break;
-      case "Browse Sets":
-        setLocation("/browse");
-        break;
-      case "Scan to Add":
-        setLocation("/scan");
-        break;
-      case "View Trending Cards": {
-        if (location !== "/") {
-          setLocation("/");
-        }
-        // Wait for dialog close (and navigation, if any) before scrolling.
-        setTimeout(() => {
-          document
-            .getElementById("trending-cards")
-            ?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 200);
-        break;
-      }
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md" data-testid="dialog-add-cards">
-        <DialogHeader>
-          <DialogTitle>Add Cards</DialogTitle>
-          <DialogDescription>
-            How would you like to build your vault?
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-2 mt-1">
-          {ADD_OPTIONS.map((opt) => (
-            <button
-              key={opt.label}
-              onClick={() => handleSelect(opt.label)}
-              data-testid={opt.testId}
-              className="flex items-center gap-3 rounded-lg border border-border bg-card hover:bg-accent px-3 py-3 min-h-[56px] text-left transition-colors"
-            >
-              <div
-                className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-                style={{ background: `${opt.color}1f` }}
-              >
-                <opt.icon className="w-[18px] h-[18px]" style={{ color: opt.color }} strokeWidth={2.5} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-sm text-foreground">{opt.label}</div>
-                <div className="text-xs text-muted-foreground truncate">{opt.description}</div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-            </button>
-          ))}
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }

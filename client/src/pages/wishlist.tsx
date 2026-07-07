@@ -138,7 +138,7 @@ export default function Wishlist() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sticky Header (offset for mobile header + safe area on mobile, top-0 on desktop) */}
-      <div className="sticky top-[calc(4rem_+_env(safe-area-inset-top))] lg:top-0 z-10 bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+      <div className="sticky top-[calc(4rem_+_var(--safe-area-top))] lg:top-0 z-10 bg-white shadow-sm border-b border-gray-200 px-6 py-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h2 className="text-2xl font-bebas text-gray-900 tracking-wide">MY WISHLIST</h2>
         </div>

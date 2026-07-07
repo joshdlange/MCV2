@@ -288,3 +288,15 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(4 86% 48%);
 }
+
+/* ── Universal mobile safe-area (notch / camera cutout / Dynamic Island) ──
+   iOS WebKit exposes env(safe-area-inset-*). Android WebViews report env()
+   as 0 even when drawing edge-to-edge under the status bar; there, Capacitor
+   8 natively injects --safe-area-inset-* custom properties instead. Taking
+   the max of both gives one variable that is correct on every platform, and
+   computes to 0 on desktop/plain mobile web (no visual change). */
+:root {
+  --safe-area-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+  --safe-area-left: max(env(safe-area-inset-left, 0px), var(--safe-area-inset-left, 0px));
+  --safe-area-right: max(env(safe-area-inset-right, 0px), var(--safe-area-inset-right, 0px));
+}

@@ -30,7 +30,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       {/* Page Header - STICKY (offset for mobile header + safe area on mobile, top-0 on desktop) */}
-      <div className="sticky top-[calc(4rem_+_env(safe-area-inset-top))] lg:top-0 z-10 bg-card shadow-sm border-b border-border px-4 sm:px-6 py-4">
+      <div className="sticky top-[calc(4rem_+_var(--safe-area-top))] lg:top-0 z-10 bg-card shadow-sm border-b border-border px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-2xl font-bebas text-card-foreground tracking-wide truncate" data-testid="text-welcome-heading">
@@ -53,7 +53,7 @@ export default function Dashboard() {
         <StatsDashboard />
 
         {/* Trending Cards */}
-        <div className="mt-6 scroll-mt-[calc(10rem_+_env(safe-area-inset-top))] lg:scroll-mt-24" id="trending-cards">
+        <div className="mt-6 scroll-mt-[calc(10rem_+_var(--safe-area-top))] lg:scroll-mt-24" id="trending-cards">
           <TrendingCards />
         </div>
 

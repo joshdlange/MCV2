@@ -19,13 +19,18 @@ export function MobileHeader() {
   });
 
   return (
-    // Height GROWS with the device safe-area inset (notch/status bar) so the
-    // 64px content row is never squeezed and icons never hang off the header.
+    // Height GROWS with the device safe-area inset (notch/cutout/status bar)
+    // so the 64px content row is never squeezed and icons never hang off the
+    // header. --safe-area-top (defined in index.css) is the max of iOS
+    // env(safe-area-inset-top) and the native inset Capacitor injects on
+    // Android edge-to-edge devices, where env() always reports 0.
     <div
-      className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-3 flex items-center justify-between gap-2"
+      className="lg:hidden bg-white shadow-sm border-b border-gray-200 flex items-center justify-between gap-2"
       style={{
-        paddingTop: "env(safe-area-inset-top)",
-        height: "calc(4rem + env(safe-area-inset-top))",
+        paddingTop: "var(--safe-area-top)",
+        paddingLeft: "calc(0.75rem + var(--safe-area-left))",
+        paddingRight: "calc(0.75rem + var(--safe-area-right))",
+        height: "calc(4rem + var(--safe-area-top))",
       }}
     >
       <div className="flex items-center gap-1 min-w-0 flex-1">

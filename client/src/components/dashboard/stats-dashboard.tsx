@@ -11,7 +11,7 @@ import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { XpPowerMeter } from "./xp-power-meter";
-import { MissionCard, AddCardsDialog } from "./mission-control";
+import { MissionCard } from "./mission-control";
 import { useAppStore } from "@/lib/store";
 
 const TILES = [
@@ -186,7 +186,6 @@ function PowerTile({
 export function StatsDashboard() {
   const [, setLocation] = useLocation();
   const { currentUser } = useAppStore();
-  const [addCardsOpen, setAddCardsOpen] = useState(false);
   const { data: stats, isLoading } = useQuery<CollectionStats>({
     queryKey: ["/api/stats"],
     staleTime: 0,
@@ -201,7 +200,7 @@ export function StatsDashboard() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <MissionCard stats={undefined} isLoading onAddCards={() => setAddCardsOpen(true)} />
+        <MissionCard stats={undefined} isLoading />
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground mb-2 flex items-center gap-2">
             Collection Snapshot
@@ -251,7 +250,7 @@ export function StatsDashboard() {
   ];
 
   const actions = [
-    { label: "Add Cards", icon: Plus, color: "#ffffff", testId: "button-action-add-cards", primary: true, onClick: () => setAddCardsOpen(true) },
+    { label: "Add Cards", icon: Plus, color: "#ffffff", testId: "button-action-add-cards", primary: true, onClick: () => setLocation("/browse") },
     { label: "Scan to Add", icon: ScanLine, color: "#f59e0b", testId: "button-action-scan", primary: false, onClick: () => setLocation("/scan") },
     { label: "My Collection", icon: Layers, color: "#10b981", testId: "button-action-collection", primary: false, onClick: () => setLocation("/my-collection") },
     { label: "Share My Vault", icon: Share2, color: "#a855f7", testId: "button-action-share", primary: false, onClick: () => setLocation(currentUser?.username ? `/collectors/${currentUser.username}` : "/my-collection") },
@@ -260,7 +259,7 @@ export function StatsDashboard() {
   return (
     <div className="space-y-4">
       {/* ── Today's Mission ── */}
-      <MissionCard stats={stats} isLoading={false} onAddCards={() => setAddCardsOpen(true)} />
+      <MissionCard stats={stats} isLoading={false} />
 
       {/* ── Collection Snapshot: stats + Collector Power ── */}
       <div>
@@ -352,8 +351,6 @@ export function StatsDashboard() {
           </div>
         </div>
       )}
-
-      <AddCardsDialog open={addCardsOpen} onOpenChange={setAddCardsOpen} />
     </div>
   );
 }
