@@ -164,9 +164,13 @@ export function Sidebar() {
                   {user.displayName || 'User'}
                 </p>
               </Link>
-              <p className="text-[10px] md:text-xs text-muted-foreground truncate">
-                {user.email}
-              </p>
+              {currentUser?.username && (
+                <Link href={`/collectors/${currentUser.username}`} className="block">
+                  <p className="text-[10px] md:text-xs text-marvel-red hover:text-red-700 truncate cursor-pointer font-medium">
+                    My Collector Profile
+                  </p>
+                </Link>
+              )}
             </div>
             <button 
               onClick={() => signOutUser()}
