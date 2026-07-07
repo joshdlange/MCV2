@@ -10,6 +10,7 @@ import type { CollectionStats } from "@shared/schema";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import { XpPowerMeter } from "./xp-power-meter";
 
 const TILES = [
   {
@@ -102,7 +103,7 @@ function PowerTile({
   return (
     <motion.div
       onClick={onClick}
-      className="relative flex flex-col items-center justify-center gap-2 px-4 py-4 rounded-xl cursor-pointer overflow-hidden"
+      className="relative flex flex-col items-center justify-center gap-2 px-4 py-4 rounded-xl cursor-pointer overflow-hidden h-full min-h-[128px]"
       style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
       whileHover={{ y: -3, scale: 1.02 }}
       transition={{ type: "spring", stiffness: 320, damping: 22 }}
@@ -244,14 +245,17 @@ export function StatsDashboard() {
           borderColor: "rgba(255,255,255,0.07)",
         }}
       >
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 items-stretch">
           {tileData.map(({ tile, rawValue, displayValue, onClick }) => (
-            <div key={tile.key} className="group">
+            <div key={tile.key} className="group h-full">
               <PowerTile tile={tile} rawValue={rawValue} displayValue={displayValue} onClick={onClick} />
             </div>
           ))}
         </div>
       </div>
+
+      {/* ── Collector Power Meter (XP / Level) ── */}
+      <XpPowerMeter />
 
       {/* Onboarding / Next Steps */}
       {totalCards === 0 ? (

@@ -4,6 +4,13 @@ export const MAX_LEVEL = 50;
 export const XP_PER_APPROVED_IMAGE = 10;
 export const XP_FIRST_APPROVED_IMAGE_BONUS = 25;
 
+// XP awarded for adding a card to a collection (once per user/card — see xp_events ledger)
+export const XP_PER_CARD_ADDED = 1;
+
+// TODO: Set completion bonus. Reliable set-completion logic does not exist yet
+// (profile completedSets is hardcoded 0), so this is reserved and NOT awarded.
+export const XP_SET_COMPLETED = 100;
+
 // Default XP by badge rarity (used only if a badge has no explicit points value)
 export const DEFAULT_BADGE_XP: Record<string, number> = {
   bronze: 10,

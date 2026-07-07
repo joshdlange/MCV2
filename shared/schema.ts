@@ -140,6 +140,25 @@ export const userWishlists = pgTable("user_wishlists", {
   userCardIdx: uniqueIndex("user_wishlists_user_card_idx").on(table.userId, table.cardId),
 }));
 
+// XP ledger — decoupled append-only event log (no FK refs so it never blocks
+// card/user deletion). Source of truth for card_added / set_completed XP.
+// Badge & image XP stay derived (see server/services/xpService.ts). The unique
+// index makes card_added farm-proof: re-adding the same card is a no-op insert.
+export const xpEvents = pgTable("xp_events", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  eventType: text("event_type").notNull(), // card_added | image_approved | badge_earned | set_completed
+  cardId: integer("card_id"),
+  imageSubmissionId: integer("image_submission_id"),
+  badgeId: integer("badge_id"),
+  points: integer("points").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("xp_events_user_id_idx").on(table.userId),
+  userCreatedIdx: index("xp_events_user_created_idx").on(table.userId, table.createdAt),
+  userEventCardIdx: uniqueIndex("xp_events_user_event_card_idx").on(table.userId, table.eventType, table.cardId),
+}));
+
 export const cardPriceCache = pgTable("card_price_cache", {
   id: serial("id").primaryKey(),
   cardId: integer("card_id").notNull().references(() => cards.id, { onDelete: "cascade" }),
@@ -357,6 +376,13 @@ export const insertUserWishlistSchema = createInsertSchema(userWishlists).omit({
   id: true,
   addedDate: true,
 });
+
+export const insertXpEventSchema = createInsertSchema(xpEvents).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertXpEvent = z.infer<typeof insertXpEventSchema>;
+export type XpEvent = typeof xpEvents.$inferSelect;
 
 export const insertCardPriceCacheSchema = createInsertSchema(cardPriceCache).omit({
   id: true,

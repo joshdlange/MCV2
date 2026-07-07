@@ -1,0 +1,163 @@
+We want to extend the XP/Level system into the Dashboard and tighten the visual alignment of the profile/dashboard experience.
+
+Goal:
+Add a stunning XP progress module to the Dashboard that matches the Collector Profile XP system, and improve dashboard alignment/spacing so it feels premium and intentional.
+
+Important:
+Do not rebuild the Dashboard from scratch.
+Do not break existing dashboard stats.
+Do not reintroduce old dashboard performance issues.
+Reuse the existing XP helper/service used by Collector Profile.
+
+Dashboard XP module:
+Add an XP/Level progress card near the top of the Dashboard, preferably directly under the main stat cards or integrated beautifully into the stat card section.
+
+It should show:
+
+* Current Level
+* Total XP
+* XP progress toward next level
+* XP remaining to next level
+* Progress bar
+* Short motivational copy
+
+Example:
+Level 8 Collector
+2,100 total XP
+350 / 450 XP to Level 9
+100 XP until next level
+
+Visual direction:
+
+* Match Marvelous Card Vault styling.
+* Red/black/gold energy.
+* Should feel like a “collector power meter.”
+* Make it look premium, not like a plain form progress bar.
+* Must look excellent on mobile and desktop.
+
+Dashboard stat card alignment:
+Review the existing dashboard stat cards:
+
+* Cards
+* Value
+* Wishlist
+* Powers
+
+Make sure:
+
+* Cards are equal height.
+* Icons are visually centered.
+* Text alignment is consistent.
+* Spacing between cards is even.
+* Mobile stacking looks clean.
+* No awkward empty space or clipped content.
+* The XP module aligns with the card grid width.
+
+XP awards:
+Extend the XP calculation system so these actions can award XP:
+
+1. Add card to collection
+
+* +1 XP per card added
+* If user adds another copy/quantity, +1 XP only if this is consistent with current collection behavior. Avoid abuse if needed.
+
+2. Approved image contribution
+
+* Keep current image XP logic.
+* Approved image = +10 XP.
+
+3. Badge/Super Power earned
+
+* Keep existing badge XP values.
+
+4. Set completion bonus
+   If reliable set completion logic exists:
+
+* Completing a set = +100 XP
+  If reliable set completion logic does not exist:
+* Do not implement the bonus yet.
+* Add a TODO or placeholder only.
+
+Important anti-abuse note:
+Do not allow users to farm XP by repeatedly adding/removing the same card.
+If practical, award collection-add XP only once per user/cardId.
+If that requires a new table, create a simple xp_events table.
+
+Recommended xp_events table:
+
+* id
+* user_id
+* event_type
+* card_id nullable
+* image_submission_id nullable
+* badge_id nullable
+* points
+* created_at
+
+Use this table to prevent duplicate XP events for the same user/card/action.
+
+XP event types:
+
+* card_added
+* image_approved
+* badge_earned
+* set_completed
+
+Dashboard data:
+Add or reuse endpoint:
+GET /api/user/xp-summary
+
+Response:
+{
+"level": 8,
+"totalXp": 2100,
+"currentLevelXp": 350,
+"nextLevelXp": 450,
+"xpToNextLevel": 100,
+"progressPercent": 77,
+"recentXpEvents": [
+{
+"type": "card_added",
+"points": 1,
+"label": "Added card to collection",
+"createdAt": "..."
+}
+]
+}
+
+If this already exists for Collector Profile, reuse it.
+
+Profile/dashboard consistency:
+The Dashboard XP module and Collector Profile XP bar should use the same source of truth.
+Do not calculate XP differently in two places.
+
+Mobile:
+Dashboard XP card must:
+
+* Fit cleanly on mobile
+* Not overflow horizontally
+* Have readable text
+* Stack under the stat cards cleanly
+
+QA checklist:
+
+1. Dashboard loads without performance regression.
+2. XP module displays current level correctly.
+3. Progress bar matches Collector Profile level data.
+4. Adding a new card awards +1 XP once.
+5. Re-adding/removing/re-adding the same card does not create infinite XP farming.
+6. Approved image contribution XP still works.
+7. Badge XP still works.
+8. Dashboard stat cards align cleanly on desktop.
+9. Dashboard stat cards stack cleanly on mobile.
+10. Collector Profile XP still works.
+11. No old dashboard quick overview bugs return.
+12. No extra aggressive polling is added.
+
+Deliverables:
+
+* Summary of XP source of truth
+* Screenshot of Dashboard desktop
+* Screenshot of Dashboard mobile
+* Explanation of how duplicate XP farming is prevented
+* Any remaining TODOs for future level-up animation

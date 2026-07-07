@@ -18,7 +18,13 @@ import { proxyImage } from "./image-proxy";
 import { uploadImage } from "./cloudinary";
 import { db } from "./db";
 import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userWishlists, badges, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks, blocks, friends, userScanLogs } from "../shared/schema";
-import { computeXpProgress, imageContributionXp, DEFAULT_BADGE_XP } from "../shared/xp";
+import { imageContributionXp } from "../shared/xp";
+import {
+  computeUserXp,
+  getRecentXpEvents,
+  backfillCardAddedXpIfEmpty,
+  backfillCardAddedXp,
+} from "./services/xpService";
 import { sql, eq, ne, ilike, like, and, or, isNull, count, exists, desc } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
@@ -4516,15 +4522,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const approvedContributions = Number(approvedRes?.count ?? 0);
 
-      // XP = sum of earned badge points + image contribution XP
-      const earnedBadges = await storage.getUserBadges(targetUser.id);
-      const badgeXp = earnedBadges.reduce((sum, ub) => {
-        const rarity = (ub.badge?.rarity || 'bronze').toLowerCase();
-        const pts = ub.badge?.points ?? DEFAULT_BADGE_XP[rarity] ?? 10;
-        return sum + pts;
-      }, 0);
-      const imageXp = imageContributionXp(approvedContributions);
-      const xp = computeXpProgress(badgeXp + imageXp);
+      // XP — single source of truth (badge + image derived, card_added from the
+      // xp_events ledger). Shared with the dashboard via computeUserXp().
+      const xp = (await computeUserXp(targetUser.id)).progress;
 
       const canViewCollection = targetUser.showCollection || isOwnProfile;
       const canViewWishlist = targetUser.showWishlist || isOwnProfile;
@@ -4560,6 +4560,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[Collectors] profile error:', error);
       res.status(500).json({ message: "Failed to fetch collector profile" });
+    }
+  });
+
+  // GET /api/user/xp-summary — dashboard XP module. Same source of truth as the
+  // collector profile (computeUserXp) plus a recent-activity feed.
+  app.get("/api/user/xp-summary", authenticateUser, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const { badgeXp, imageXp, cardXp, totalXp, progress } = await computeUserXp(userId);
+      const recentXpEvents = await getRecentXpEvents(userId, 10);
+      res.json({
+        ...progress,
+        breakdown: { badgeXp, imageXp, cardXp, totalXp },
+        recentXpEvents,
+      });
+    } catch (error) {
+      console.error('[XP] xp-summary error:', error);
+      res.status(500).json({ message: "Failed to fetch XP summary" });
+    }
+  });
+
+  // POST /api/admin/xp/backfill — admin-only manual re-run of the card_added
+  // backfill (idempotent; safe to call repeatedly).
+  app.post("/api/admin/xp/backfill", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const inserted = await backfillCardAddedXp();
+      res.json({ success: true, inserted });
+    } catch (error) {
+      console.error('[XP] backfill error:', error);
+      res.status(500).json({ message: "Failed to backfill XP" });
     }
   });
 
@@ -9529,6 +9561,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await tx.delete(schema.payoutAccounts).where(eq(schema.payoutAccounts.userId, userId));
         await tx.delete(schema.userCollections).where(eq(schema.userCollections.userId, userId));
         await tx.delete(schema.userWishlists).where(eq(schema.userWishlists.userId, userId));
+        await tx.delete(schema.xpEvents).where(eq(schema.xpEvents.userId, userId));
         await tx.delete(schema.userBadges).where(eq(schema.userBadges.userId, userId));
         await tx.delete(schema.notifications).where(eq(schema.notifications.userId, userId));
         await tx.delete(schema.friends).where(
@@ -9578,6 +9611,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize upcoming sets: seed data + cron jobs (RSS sync + auto-expire)
   initializeUpcomingSets().catch(err => {
     console.error('[Upcoming Sets] Initialization error:', err);
+  });
+
+  // One-time XP backfill: seed card_added XP from existing collections so
+  // long-time collectors don't show 0 card XP. Guarded — only runs if empty.
+  backfillCardAddedXpIfEmpty().catch(err => {
+    console.error('[XP] Startup backfill error:', err);
   });
 
   const httpServer = createServer(app);

@@ -61,6 +61,7 @@ import {
   upcomingSetInterests
 } from "../shared/schema";
 import { db, withDatabaseRetry } from "./db";
+import { awardCardAddedXp } from "./services/xpService";
 import { eq, ilike, and, count, sum, desc, sql, isNull, isNotNull, or, lt, gte, gt, ne, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
@@ -960,6 +961,14 @@ export class DatabaseStorage implements IStorage {
         }
       })
       .returning();
+
+    // Award +1 XP the first time this user adds this card (farm-proof via the
+    // xp_events unique index). Covers both add paths (manual + image auto-add).
+    // Awaited but never throws — a failed award must not fail the add.
+    if (item?.userId && item?.cardId) {
+      await awardCardAddedXp(item.userId, item.cardId);
+    }
+
     return item;
   }
 
