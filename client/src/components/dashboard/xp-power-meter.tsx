@@ -49,15 +49,44 @@ export function XpPowerMeter() {
   if (isLoading) {
     return (
       <div
-        className="rounded-xl p-4 sm:p-5 border shadow-2xl animate-pulse"
-        style={{ background: "linear-gradient(180deg, #181818 0%, #0d0d0d 100%)", borderColor: "rgba(255,255,255,0.07)" }}
+        className="relative rounded-xl p-4 sm:p-5 border shadow-2xl overflow-hidden"
+        style={{
+          background:
+            "radial-gradient(120% 120% at 0% 0%, rgba(239,68,68,0.16) 0%, transparent 55%), linear-gradient(180deg, #181818 0%, #0b0b0b 100%)",
+          borderColor: "rgba(255,255,255,0.08)",
+        }}
+        data-testid="loading-xp-power-meter"
       >
-        <div className="flex items-center justify-between mb-4">
-          <div className="h-6 w-32 bg-white/10 rounded" />
-          <div className="h-5 w-20 bg-white/10 rounded" />
+        {/* Gold glow accent */}
+        <div
+          className="absolute -top-16 -right-16 w-48 h-48 rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle, rgba(251,191,36,0.14) 0%, transparent 70%)" }}
+        />
+        <div className="relative flex items-center gap-2.5">
+          <div
+            className="flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 shrink-0 animate-pulse"
+            style={{ boxShadow: "0 0 16px 2px rgba(251,191,36,0.4)" }}
+          >
+            <Zap className="w-[18px] h-[18px] text-black" strokeWidth={2.5} fill="currentColor" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-[10px] font-bold tracking-[0.18em] uppercase text-amber-400/90 leading-none">
+              Collector Power
+            </div>
+            <div className="text-white font-bold text-sm sm:text-base mt-1.5 leading-tight">
+              Powering up your collector level…
+            </div>
+          </div>
         </div>
-        <div className="h-4 w-full bg-white/10 rounded-full mb-3" />
-        <div className="h-3 w-48 bg-white/10 rounded" />
+        {/* Shimmer progress bar */}
+        <div className="relative mt-4 h-4 bg-black/50 rounded-full overflow-hidden border border-white/10">
+          <motion.div
+            className="absolute inset-y-0 w-1/3 rounded-full bg-gradient-to-r from-transparent via-amber-400/70 to-transparent"
+            initial={{ x: "-120%" }}
+            animate={{ x: "320%" }}
+            transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </div>
       </div>
     );
   }

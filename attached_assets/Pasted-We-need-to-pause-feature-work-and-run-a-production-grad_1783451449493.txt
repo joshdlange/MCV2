@@ -1,0 +1,182 @@
+We need to pause feature work and run a production-grade hardening pass before publishing.
+
+Context:
+Marvelous Card Vault is live in production on iOS and Android with nearly 700 users. We cannot ship anything that risks login, routing, database stability, app-store users, or type incompatibility issues.
+
+Recent work added:
+- Unified Collector Profile / Account Settings separation
+- XP / Collector Power Meter
+- xp_events ledger
+- Dashboard XP module
+- Public/private collector profile controls
+
+Before publishing, do the following in order.
+
+PART 1 — Production Safety Checks
+
+1. Routing/default page verification
+Confirm the app does NOT default users to /profile after login, refresh, app launch, server restart, or mobile app launch.
+
+The preview browser may stay on /profile because it retained the last URL, but real users should not be forced there.
+
+Verify:
+- unauthenticated users go to login as expected
+- logged-in users land on normal dashboard/home route
+- refreshing /dashboard stays on dashboard
+- refreshing /collectors/:username stays on collector profile
+- refreshing /profile stays on account settings only for the owner
+- sidebar profile block goes to /collectors/:username
+- Collector Profile Settings button goes to /profile
+- no accidental redirect to /profile exists anywhere
+
+If any redirect to /profile exists, fix it.
+
+2. XP migration/backfill safety
+Confirm xp_events table creation and production backfill are:
+- additive only
+- idempotent
+- safe to run more than once
+- safe for ~700 users
+- non-blocking or minimally blocking on first boot
+- not creating duplicate XP events
+- not creating activity feed spam
+- not capable of breaking login or dashboard load
+
+If the backfill runs on startup, make sure it cannot create production startup timeouts.
+
+3. Dashboard XP loading state
+Add a polished loading state for the XP dashboard module.
+
+While loading, show:
+“Powering up your collector level…”
+
+Requirements:
+- Do not block the full dashboard.
+- Do not leave blank space.
+- Use MCV styling.
+- Must look good on mobile and desktop.
+
+PART 2 — Investigate the 341 Errors Before Fixing
+
+Important:
+Do NOT blindly fix errors yet.
+First produce a real diagnostic report.
+
+Run the correct project commands to determine what the “341 errors” actually are.
+
+Investigate:
+- Are these TypeScript compile errors?
+- Are they frontend-only?
+- Backend-only?
+- ESLint warnings?
+- stale editor diagnostics?
+- dead code?
+- files excluded from production build?
+- actual production build blockers?
+
+Provide a report with:
+
+1. Exact commands run
+Example:
+- npm run build
+- npm run check
+- npm run typecheck, if it exists
+- npx tsc -p client/tsconfig.json --noEmit
+- any server typecheck command that actually applies to this repo
+
+2. Summary counts
+Break down by:
+- build-breaking errors
+- TypeScript errors
+- lint warnings
+- runtime console errors
+- stale/irrelevant diagnostics
+- errors in files touched by recent XP/profile work
+- errors in unrelated legacy files
+
+3. Affected files
+List the top files producing errors and rough counts per file.
+
+4. Risk classification
+Classify each category:
+- Critical: can break login, auth, routing, production build, database, payments, app stores
+- High: likely runtime bugs
+- Medium: type-safety issues but app currently builds/runs
+- Low: cleanup/unused/dead code
+- Cosmetic: formatting/lint only
+
+5. Production impact
+For each category, explain:
+- Does this affect production users?
+- Does it affect iOS/Android app wrappers?
+- Does it affect login/auth?
+- Does it affect subscriptions/billing?
+- Does it affect dashboard/profile/collection flows?
+- Does it block publishing?
+
+6. Recent-work impact
+Explicitly confirm whether any of the errors are caused by:
+- xp-power-meter
+- stats-dashboard
+- xpService
+- xp_events schema
+- CollectorProfile
+- AccountSettings
+- Sidebar routing changes
+- profile privacy changes
+
+PART 3 — Fix Critical/High Issues Only First
+
+After the report, fix only:
+- login/auth issues
+- incompatible type errors that can break production
+- build blockers
+- app-startup blockers
+- database/schema blockers
+- route/privacy/security issues
+- errors introduced by recent XP/profile work
+
+Do NOT spend time fixing harmless cosmetic noise unless it is quick and safe.
+
+PART 4 — Production Build Verification
+
+After fixes, run the actual production build/start verification.
+
+Confirm:
+- production build succeeds
+- app starts cleanly
+- no login regression
+- no forced /profile redirect
+- dashboard loads
+- XP module loads
+- collector profile loads
+- account settings loads
+- collection add still works
+- wishlist still works
+- billing/settings are not broken
+- no new console errors from recent work
+- no DB timeouts
+
+PART 5 — Final Publish Readiness Report
+
+Before publishing, provide:
+
+1. Safe to publish? yes/no
+2. Remaining errors count
+3. Which remaining errors are safe to defer and why
+4. What was fixed
+5. What was not fixed
+6. Any production migration/backfill risk
+7. Expected first production boot behavior
+8. Screenshots:
+- Dashboard desktop
+- Dashboard mobile
+- Collector Profile
+- Account Settings
+9. Specific confirmation:
+“This should not impact login/auth.”
+“This should not redirect users to /profile.”
+“This should not break iOS or Android app users.”
+
+Important:
+Marvelous Card Vault is live. Prioritize safety, correctness, and production stability over speed.

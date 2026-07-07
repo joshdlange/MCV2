@@ -27,3 +27,10 @@ script is meaningless.
   changed to see if YOUR edits introduced anything).
 - Server (`server/**`) is never type-checked — it runs via `tsx` (transpile-only). Confirm server
   correctness by booting the workflow and exercising the code path, not by tsc.
+
+## Screenshot tool can't see authed (Firebase) pages
+The `app_preview` screenshot tool spins up its OWN headless browser with no Firebase session, so it
+always lands on the Login page for auth-gated routes — even though the user's real preview browser
+IS logged in (you can see it in the browser console logs). Do NOT keep retrying screenshots of
+authed pages; verify those flows via the network/console logs (endpoint responses) instead. The
+login screenshot is still useful: it proves unauth users correctly route to Login, not elsewhere.

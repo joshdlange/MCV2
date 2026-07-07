@@ -104,12 +104,14 @@ export async function getRecentXpEvents(userId: number, limit = 10): Promise<Rec
 
 /** True if any card_added XP has ever been recorded (backfill guard). */
 export async function hasAnyCardAddedXp(): Promise<boolean> {
-  const [row] = await db
-    .select({ count: count() })
+  // Existence check (not count) so it short-circuits at the first row instead of
+  // scanning every card_added row on each boot.
+  const rows = await db
+    .select({ one: sql<number>`1` })
     .from(xpEvents)
     .where(eq(xpEvents.eventType, 'card_added'))
     .limit(1);
-  return Number(row?.count ?? 0) > 0;
+  return rows.length > 0;
 }
 
 /**
