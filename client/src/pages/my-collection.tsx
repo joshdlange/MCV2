@@ -503,7 +503,7 @@ export default function MyCollection() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sticky Header - flush with mobile header */}
-      <div className="sticky top-16 lg:top-0 z-20 bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 py-2 sm:py-3">
+      <div className="sticky top-[calc(4rem_+_env(safe-area-inset-top))] lg:top-0 z-20 bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 py-2 sm:py-3">
         <div className="flex flex-col gap-2">
           {/* Row 1: Title/Back + toggles */}
           <div className="flex items-center justify-between">

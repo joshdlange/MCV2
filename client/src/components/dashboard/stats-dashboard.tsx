@@ -11,6 +11,7 @@ import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { XpPowerMeter } from "./xp-power-meter";
+import { MissionCard, AddCardsDialog } from "./mission-control";
 import { useAppStore } from "@/lib/store";
 
 const TILES = [
@@ -185,6 +186,7 @@ function PowerTile({
 export function StatsDashboard() {
   const [, setLocation] = useLocation();
   const { currentUser } = useAppStore();
+  const [addCardsOpen, setAddCardsOpen] = useState(false);
   const { data: stats, isLoading } = useQuery<CollectionStats>({
     queryKey: ["/api/stats"],
     staleTime: 0,
@@ -198,15 +200,26 @@ export function StatsDashboard() {
 
   if (isLoading) {
     return (
-      <div className="bg-[#111] rounded-xl p-3 border border-white/[0.07] shadow-xl">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-          {TILES.map((t) => (
-            <div key={t.key} className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white/[0.04] animate-pulse">
-              <div className="w-11 h-11 rounded-full bg-white/10" />
-              <div className="h-6 w-12 bg-white/10 rounded" />
-              <div className="h-2.5 w-10 bg-white/10 rounded" />
+      <div className="space-y-4">
+        <MissionCard stats={undefined} isLoading onAddCards={() => setAddCardsOpen(true)} />
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground mb-2 flex items-center gap-2">
+            Collection Snapshot
+            <span className="normal-case tracking-normal font-medium text-muted-foreground/70">
+              Powering up your vault…
+            </span>
+          </p>
+          <div className="bg-[#111] rounded-xl p-3 border border-white/[0.07] shadow-xl">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+              {TILES.map((t) => (
+                <div key={t.key} className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white/[0.04] animate-pulse">
+                  <div className="w-11 h-11 rounded-full bg-white/10" />
+                  <div className="h-6 w-12 bg-white/10 rounded" />
+                  <div className="h-2.5 w-10 bg-white/10 rounded" />
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       </div>
     );
@@ -238,7 +251,7 @@ export function StatsDashboard() {
   ];
 
   const actions = [
-    { label: "Add Cards", icon: Plus, color: "#ffffff", testId: "button-action-add-cards", primary: true, onClick: () => setLocation("/browse") },
+    { label: "Add Cards", icon: Plus, color: "#ffffff", testId: "button-action-add-cards", primary: true, onClick: () => setAddCardsOpen(true) },
     { label: "Scan to Add", icon: ScanLine, color: "#f59e0b", testId: "button-action-scan", primary: false, onClick: () => setLocation("/scan") },
     { label: "My Collection", icon: Layers, color: "#10b981", testId: "button-action-collection", primary: false, onClick: () => setLocation("/my-collection") },
     { label: "Share My Vault", icon: Share2, color: "#a855f7", testId: "button-action-share", primary: false, onClick: () => setLocation(currentUser?.username ? `/collectors/${currentUser.username}` : "/my-collection") },
@@ -246,24 +259,32 @@ export function StatsDashboard() {
 
   return (
     <div className="space-y-4">
-      {/* ── Stats + Collector Power ── */}
-      <div
-        className="rounded-xl p-2.5 border shadow-2xl"
-        style={{
-          background: "linear-gradient(180deg, #181818 0%, #111 100%)",
-          borderColor: "rgba(255,255,255,0.07)",
-        }}
-      >
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 items-stretch">
-          {tileData.map(({ tile, rawValue, displayValue, onClick }) => (
-            <div key={tile.key} className="group h-full">
-              <PowerTile tile={tile} rawValue={rawValue} displayValue={displayValue} onClick={onClick} />
-            </div>
-          ))}
-        </div>
+      {/* ── Today's Mission ── */}
+      <MissionCard stats={stats} isLoading={false} onAddCards={() => setAddCardsOpen(true)} />
 
-        {/* Slim Collector Power / XP bar — inside the same stats container */}
-        <XpPowerMeter />
+      {/* ── Collection Snapshot: stats + Collector Power ── */}
+      <div>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground mb-2" data-testid="text-snapshot-heading">
+          Collection Snapshot
+        </p>
+        <div
+          className="rounded-xl p-2.5 border shadow-2xl"
+          style={{
+            background: "linear-gradient(180deg, #181818 0%, #111 100%)",
+            borderColor: "rgba(255,255,255,0.07)",
+          }}
+        >
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 items-stretch">
+            {tileData.map(({ tile, rawValue, displayValue, onClick }) => (
+              <div key={tile.key} className="group h-full">
+                <PowerTile tile={tile} rawValue={rawValue} displayValue={displayValue} onClick={onClick} />
+              </div>
+            ))}
+          </div>
+
+          {/* Slim Collector Power / XP bar — inside the same stats container */}
+          <XpPowerMeter />
+        </div>
       </div>
 
       {/* Onboarding (empty state) OR persistent action row */}
@@ -306,9 +327,9 @@ export function StatsDashboard() {
           }}
         >
           <div className="mb-3">
-            <h3 className="text-white font-bold text-sm sm:text-base leading-tight">Keep building your vault</h3>
+            <h3 className="text-white font-bold text-sm sm:text-base leading-tight">Continue Building</h3>
             <p className="text-white/50 text-[11px] sm:text-xs leading-snug">
-              Scan cards, complete sets, and grow your collector power.
+              Add cards, complete sets, and grow your collector power.
             </p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -331,6 +352,8 @@ export function StatsDashboard() {
           </div>
         </div>
       )}
+
+      <AddCardsDialog open={addCardsOpen} onOpenChange={setAddCardsOpen} />
     </div>
   );
 }

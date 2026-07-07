@@ -157,7 +157,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
       
       <MobileMenu />
       
-      <div className="lg:ml-80 pt-16 lg:pt-0">
+      <div className="lg:ml-80 pt-[calc(4rem_+_env(safe-area-inset-top))] lg:pt-0">
         {children}
       </div>
     </div>

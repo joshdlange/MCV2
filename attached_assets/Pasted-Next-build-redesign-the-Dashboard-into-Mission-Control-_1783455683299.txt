@@ -1,0 +1,256 @@
+Next build: redesign the Dashboard into “Mission Control” and give users clearer direction.
+
+Important context:
+Marvelous Card Vault is live on iOS and Android with nearly 700 users. The dashboard is the first thing users see. We do not want it to feel like a generic stats page. We want it to feel like the home screen for a Marvel card collector.
+
+The goal is NOT to push users directly into Scan to Add. Scan to Add is still imperfect, so it should be one option, not the main promise.
+
+Core product goal:
+When a user lands on the Dashboard, they should immediately understand:
+1. How their collection is doing
+2. What their collector level/progress is
+3. What they should do next
+4. How to continue building their vault
+
+Think of the Dashboard as:
+“Collector Mission Control”
+
+Do not make this heavier or slower. Use existing data only.
+
+Current dashboard has:
+- Cards
+- Value
+- Wishlist
+- Powers
+- Collector Level / XP bar
+- Quick action buttons
+- Trending cards
+
+This is good, but it is missing a clear purpose and guidance.
+
+Build this direction:
+
+1. Improve the dashboard header copy
+
+Replace generic copy like:
+“Welcome back! Here’s your collection overview.”
+
+With something more personal and action-oriented.
+
+Example:
+“Welcome back, Joshua.”
+“You’re 579 XP from Level 14. Keep building your vault.”
+
+Use actual available user/display name and XP data if available.
+If XP is still loading, fallback gracefully:
+“Keep building your Marvel card vault.”
+
+2. Add a clear section header above the stat cards
+
+Add:
+“Collection Snapshot”
+or
+“Vault Overview”
+
+This should sit above the Cards / Value / Wishlist / Powers cards.
+
+Purpose:
+The stat cards should no longer feel like floating boxes. They should clearly summarize the user’s collection.
+
+3. Add a “Today’s Mission” / “Next Move” card
+
+Add a compact, premium mission card near the top of the dashboard, ideally between the welcome header and the Collection Snapshot, or directly above the Quick Actions.
+
+This should be short, motivating, and actionable.
+
+Do NOT make Scan to Add the default mission.
+
+Good mission examples:
+
+A. Build Your Vault
+Headline:
+“Build Your Vault”
+
+Copy:
+“Every card you add grows your collection value, earns XP, and helps complete your binders.”
+
+CTA:
+“Add Cards”
+
+B. Level Up
+Headline:
+“Level Up”
+
+Copy:
+“You’re 579 XP from Level 14. Add cards, earn Super Powers, or contribute images to power up.”
+
+CTA:
+“Continue Building”
+
+C. Start Your Wishlist
+If wishlist count is 0:
+Headline:
+“Start Your Wishlist”
+
+Copy:
+“Track the cards you’re chasing and get ready for future trades.”
+
+CTA:
+“Browse Cards”
+
+D. Share Your Vault
+If user already has a strong collection:
+Headline:
+“Show Off Your Vault”
+
+Copy:
+“Your Collector Profile is ready to share with other Marvel collectors.”
+
+CTA:
+“View Collector Profile”
+
+Mission logic:
+Use existing data only.
+Keep it simple.
+
+Suggested priority:
+- If user has fewer than 10 cards:
+  Mission = “Build Your Vault”
+  CTA = Add Cards
+
+- Else if wishlist count is 0:
+  Mission = “Start Your Wishlist”
+  CTA = Browse Cards
+
+- Else if user is close to next XP level:
+  Mission = “Level Up”
+  CTA = Continue Building
+
+- Else:
+  Mission = “Build Your Vault”
+  CTA = Add Cards
+
+Do not add expensive queries.
+Do not block dashboard rendering.
+Do not add polling.
+
+4. Improve “Add Cards” experience directionally
+
+The dashboard should not push “Scan to Add” as the only path.
+
+If there is already an Add Cards route/modal/page:
+- Make Add Cards the primary CTA.
+
+If not, create a lightweight Add Cards choice modal/page.
+
+When user clicks Add Cards, show options:
+- Search Manually
+- Browse Sets
+- Scan to Add
+- View Trending Cards
+
+Copy:
+“How would you like to build your vault?”
+
+Important:
+Scan to Add can be one option, but not the default or only option.
+
+This protects the user experience if scanning does not identify the card correctly.
+
+5. Rename the quick-action section
+
+Current:
+“Keep building your vault”
+
+Consider:
+“Continue Building”
+or
+“What’s Next?”
+
+Keep the buttons:
+- Add Cards
+- Scan to Add
+- My Collection
+- Share My Vault
+
+But visually make Add Cards the primary action.
+
+6. Keep the Collector Level bar compact
+
+The current compact Collector Level bar is good.
+Do not make it bigger.
+Do not reintroduce the large XP block.
+Do not show redundant XP chips in the main view.
+
+If XP details exist, keep them hidden behind the small XP details control.
+
+7. Mobile-first design
+
+This must look excellent on mobile.
+
+Requirements:
+- Mission card should be compact and readable.
+- Stat cards should not feel too cramped.
+- Header should not overflow.
+- Top icons should not hang off the header.
+- No horizontal overflow.
+- Buttons should have full tap targets.
+- The dashboard should feel intentional within the first screen.
+
+Also inspect the mobile header:
+There may be a mismatch between emulator and real device.
+On some devices, the header icons appear to hang over the header area.
+Fix spacing/alignment if needed without making the header overly tall.
+
+8. Loading behavior
+
+Dashboard should not feel blank while loading.
+
+If dashboard data is loading:
+- Show a branded lightweight loading/skeleton state.
+- Suggested copy:
+  “Powering up your vault…”
+
+Do not block the whole page waiting for XP.
+Stats and dashboard shell should render as soon as possible.
+
+9. Do not touch
+
+Do not change:
+- auth/login
+- Android back-button work
+- Capacitor files
+- iOS/Android native build files
+- XP math
+- xp_events ledger
+- XP backfill
+- billing/subscriptions
+- Collector Profile privacy
+- Account Settings routing
+- Shippo
+- Marketplace
+- Trade Block
+
+10. QA checklist
+
+Confirm:
+1. Dashboard loads quickly.
+2. No forced redirect to /profile.
+3. Mobile dashboard looks good.
+4. Header icons align correctly on real mobile size.
+5. Mission card appears and uses safe existing data.
+6. Add Cards does not immediately force Scan to Add unless user chooses it.
+7. Scan to Add remains available as an option.
+8. Collection Snapshot heading appears above stats.
+9. XP bar still works.
+10. Quick actions route correctly.
+11. Production build succeeds.
+12. No auth/login/routing regressions.
+13. No Android back-button changes are touched.
+
+Deliverables:
+- Explain the mission logic used.
+- Screenshot desktop dashboard.
+- Screenshot mobile dashboard.
+- Confirm no expensive queries were added.
+- Confirm build passes.

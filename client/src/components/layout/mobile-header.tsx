@@ -19,43 +19,53 @@ export function MobileHeader() {
   });
 
   return (
-    <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 flex items-center justify-between h-16" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-      <div className="flex items-center space-x-3">
-        <button 
+    // Height GROWS with the device safe-area inset (notch/status bar) so the
+    // 64px content row is never squeezed and icons never hang off the header.
+    <div
+      className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-3 flex items-center justify-between gap-2"
+      style={{
+        paddingTop: "env(safe-area-inset-top)",
+        height: "calc(4rem + env(safe-area-inset-top))",
+      }}
+    >
+      <div className="flex items-center gap-1 min-w-0 flex-1">
+        <button
           onClick={toggleMobileMenu}
-          className="text-gray-600 hover:text-gray-900 flex-shrink-0"
-          style={{ minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          className="text-gray-600 hover:text-gray-900 flex-shrink-0 w-11 h-11 flex items-center justify-center"
+          aria-label="Open menu"
         >
           <Menu className="w-6 h-6" />
         </button>
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-marvel-red rounded-lg flex items-center justify-center">
-            <img 
-              src={heroLogoWhite} 
-              alt="Marvelous Card Vault" 
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 bg-marvel-red rounded-lg flex items-center justify-center flex-shrink-0">
+            <img
+              src={heroLogoWhite}
+              alt="Marvelous Card Vault"
               className="w-5 h-5 object-contain"
             />
           </div>
-          <h1 className="text-gray-900 font-bebas text-xl tracking-wide font-bold">
+          <h1 className="text-gray-900 font-bebas text-xl tracking-wide font-bold truncate">
             MARVELOUS CARD VAULT
           </h1>
         </div>
       </div>
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center flex-shrink-0">
         <NotificationBell />
-        <button 
-          className="relative text-gray-600 hover:text-gray-900"
+        <button
+          className="relative text-gray-600 hover:text-gray-900 w-10 h-11 flex items-center justify-center"
           onClick={() => setLocation('/social?tab=messages')}
           title="Messages"
+          aria-label="Messages"
         >
           <MessageCircle className="w-5 h-5" />
           {(unreadMessages?.count || 0) > 0 && (
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500" />
+            <span className="absolute top-2 right-1.5 w-2.5 h-2.5 rounded-full bg-red-500" />
           )}
         </button>
-        <button 
-          className="text-gray-600 hover:text-gray-900"
+        <button
+          className="text-gray-600 hover:text-gray-900 w-10 h-11 flex items-center justify-center"
           onClick={() => setLocation('/card-search')}
+          aria-label="Search cards"
         >
           <Search className="w-5 h-5" />
         </button>

@@ -674,7 +674,7 @@ export default function BrowseCards() {
     return (
       <div className="min-h-screen bg-gray-50">
         {/* Sticky header container */}
-        <div className="sticky top-16 lg:top-0 z-40 bg-gray-50">
+        <div className="sticky top-[calc(4rem_+_env(safe-area-inset-top))] lg:top-0 z-40 bg-gray-50">
           <div className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-2 md:py-4">
           <div className="flex flex-col space-y-2 md:space-y-0 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-3">
@@ -795,7 +795,7 @@ export default function BrowseCards() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sticky header for browse view */}
-      <div className="sticky top-16 lg:top-0 z-40 bg-gray-50">
+      <div className="sticky top-[calc(4rem_+_env(safe-area-inset-top))] lg:top-0 z-40 bg-gray-50">
         <div className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-2 md:py-4">
         <div className="flex flex-col space-y-2 md:space-y-4">
           <div className="flex items-center justify-between gap-2">
