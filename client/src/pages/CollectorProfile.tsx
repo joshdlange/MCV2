@@ -15,8 +15,12 @@ import {
   ArrowLeft, MapPin, Globe, Calendar, MessageCircle, UserPlus, UserCheck, UserX,
   ShieldOff, Flag, MoreVertical, Star, Award, Image, ShoppingBag, Heart,
   Package, Edit, Zap, TrendingUp, CheckCircle, Clock, EyeOff, Repeat2,
-  Instagram, ExternalLink
+  Instagram, ExternalLink, Settings, Sparkles, UserCircle
 } from "lucide-react";
+import type { XpProgress } from "@shared/xp";
+import { XP_PER_APPROVED_IMAGE, XP_FIRST_APPROVED_IMAGE_BONUS } from "@shared/xp";
+import AccountSettings from "@/components/profile/AccountSettings";
+import BadgeIcon from "@/components/profile/BadgeIcon";
 
 interface CollectorUser {
   id: number;
@@ -31,7 +35,6 @@ interface CollectorUser {
   isAdmin: boolean;
   plan: string;
   createdAt: string;
-  loginStreak: number;
   sellerRating?: string;
 }
 
@@ -41,13 +44,12 @@ interface CollectorStats {
   wishlistItems: number;
   friendsCount: number;
   badgesCount: number;
-  completedSets: number;
-  loginStreak: number;
 }
 
 interface CollectorProfile {
   user: CollectorUser;
   stats: CollectorStats;
+  xp: XpProgress;
   isOwnProfile: boolean;
   canViewCollection: boolean;
   canViewWishlist: boolean;
@@ -89,21 +91,6 @@ interface EarnedBadge {
   points?: number;
   iconUrl?: string;
 }
-
-const rarityColors: Record<string, string> = {
-  common: "bg-gray-100 text-gray-700 border-gray-300",
-  uncommon: "bg-green-50 text-green-700 border-green-300",
-  rare: "bg-blue-50 text-blue-700 border-blue-300",
-  epic: "bg-purple-50 text-purple-700 border-purple-300",
-  legendary: "bg-yellow-50 text-yellow-700 border-yellow-300",
-};
-
-const categoryIcons: Record<string, JSX.Element> = {
-  Collection: <Star className="w-4 h-4" />,
-  Social: <UserPlus className="w-4 h-4" />,
-  Achievement: <Award className="w-4 h-4" />,
-  Event: <Zap className="w-4 h-4" />,
-};
 
 function StatPill({ value, label, icon }: { value: string | number; label: string; icon?: JSX.Element }) {
   return (
@@ -190,7 +177,7 @@ export default function CollectorProfile() {
     enabled: !!username && !!currentUser,
   });
 
-  const { data: contributions } = useQuery<{ approved: number; pending: number }>({
+  const { data: contributions } = useQuery<{ approved: number; pending: number; xpEarned?: number; showAttribution?: boolean }>({
     queryKey: ["/api/collectors", username, "contributions"],
     queryFn: async () => {
       const headers = await getAuthHeaders();
@@ -269,7 +256,7 @@ export default function CollectorProfile() {
     );
   }
 
-  const { user, stats, isOwnProfile, canViewWishlist, friendStatus, approvedContributions } = profile;
+  const { user, stats, xp, isOwnProfile, canViewWishlist, friendStatus, approvedContributions } = profile;
   const isSuperHero = user.plan === "SUPER_HERO";
   const displayName = user.displayName || user.username;
   const wishlistCards = wishlistData?.cards ?? [];
@@ -304,10 +291,9 @@ export default function CollectorProfile() {
         </div>
         <div className="absolute top-4 left-4">
           <Button
-            variant="ghost"
             size="sm"
             onClick={() => window.history.back()}
-            className="text-white/80 hover:text-white hover:bg-white/10"
+            className="bg-white/95 text-gray-900 hover:bg-white shadow-md font-semibold rounded-full px-4"
           >
             <ArrowLeft className="w-4 h-4 mr-1" /> Back
           </Button>
@@ -337,10 +323,10 @@ export default function CollectorProfile() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setLocation("/profile")}
+                onClick={() => setActiveTab("settings")}
                 className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
               >
-                <Edit className="w-4 h-4 mr-1.5" /> Edit Profile
+                <Settings className="w-4 h-4 mr-1.5" /> Settings
               </Button>
             ) : (
               <>
@@ -401,6 +387,9 @@ export default function CollectorProfile() {
         <div className="mb-4">
           <div className="flex items-center flex-wrap gap-2 mb-1">
             <h1 className="text-2xl font-bold text-gray-900">{displayName}</h1>
+            <span className="inline-flex items-center gap-1 bg-gradient-to-r from-red-600 to-red-500 text-white px-2 py-0.5 rounded-full text-xs font-bold shadow-sm">
+              <Sparkles className="w-3 h-3" /> LVL {xp.level}
+            </span>
             {isSuperHero && (
               <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-800 border border-yellow-300 px-2 py-0.5 rounded-full text-xs font-bold">
                 <Star className="w-3 h-3 fill-yellow-600 text-yellow-600" /> SUPER HERO
@@ -452,11 +441,34 @@ export default function CollectorProfile() {
             <StatPill value={earnedBadges.length} label="Badges" icon={<Award className="w-4 h-4" />} />
             <StatPill value={approvedContributions} label="Images" icon={<Image className="w-4 h-4" />} />
           </div>
+
+          {/* Hero XP / Level progress bar */}
+          <div className="mt-4 bg-white/10 rounded-xl p-3 backdrop-blur-sm border border-white/20">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-white font-bold text-sm flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-yellow-300" /> Level {xp.level}
+                <span className="text-white/60 font-normal">/ {50}</span>
+              </span>
+              <span className="text-white/90 text-xs font-medium">
+                {xp.isMaxLevel ? "MAX LEVEL" : `${xp.xpIntoLevel.toLocaleString()} / ${xp.xpForNextLevel.toLocaleString()} XP`}
+              </span>
+            </div>
+            <div className="h-3 bg-black/25 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-500 rounded-full transition-all duration-500"
+                style={{ width: `${xp.progressPct}%` }}
+              />
+            </div>
+            <div className="text-white/70 text-[11px] mt-1.5">
+              {xp.totalXp.toLocaleString()} total XP
+              {!xp.isMaxLevel && ` · ${(xp.xpForNextLevel - xp.xpIntoLevel).toLocaleString()} XP to Level ${xp.level + 1}`}
+            </div>
+          </div>
         </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="pb-10">
-          <TabsList className="flex w-full overflow-x-auto gap-0 bg-white border border-gray-200 rounded-xl p-1 mb-6 shadow-sm">
+          <TabsList className="flex w-full overflow-x-auto justify-start gap-1 bg-white border border-gray-200 rounded-xl p-1 mb-6 shadow-sm no-scrollbar">
             {[
               { value: "overview", label: "Overview" },
               { value: "trade-block", label: "Trade Block" },
@@ -465,11 +477,12 @@ export default function CollectorProfile() {
               { value: "badges", label: "Badges" },
               { value: "contributions", label: "Images" },
               { value: "ratings", label: "Ratings" },
+              ...(isOwnProfile ? [{ value: "settings", label: "Settings" }] : []),
             ].map(tab => (
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
-                className="flex-1 text-xs md:text-sm whitespace-nowrap data-[state=active]:bg-red-600 data-[state=active]:text-white rounded-lg"
+                className="shrink-0 px-3 py-1.5 text-sm whitespace-nowrap data-[state=active]:bg-red-600 data-[state=active]:text-white rounded-lg"
               >
                 {tab.label}
               </TabsTrigger>
@@ -490,10 +503,10 @@ export default function CollectorProfile() {
                   {[
                     { label: "Cards Collected", value: stats.totalCards.toLocaleString(), color: "text-red-600" },
                     { label: "Collection Value", value: `$${Number(stats.totalValue || 0).toLocaleString()}`, color: "text-green-600" },
-                    { label: "Completed Sets", value: stats.completedSets, color: "text-blue-600" },
                     { label: "Wishlist Items", value: stats.wishlistItems, color: "text-purple-600" },
-                    { label: "Login Streak", value: `${stats.loginStreak} days`, color: "text-orange-600" },
                     { label: "Friends", value: stats.friendsCount, color: "text-pink-600" },
+                    { label: "Badges Earned", value: earnedBadges.length, color: "text-yellow-600" },
+                    { label: "Collector Level", value: `Lvl ${xp.level}`, color: "text-blue-600" },
                   ].map(({ label, value, color }) => (
                     <div key={label} className="bg-gray-50 rounded-xl p-4 text-center">
                       <div className={`text-2xl font-bold ${color} mb-1`}>{value}</div>
@@ -516,15 +529,15 @@ export default function CollectorProfile() {
                   </button>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-4">
                     {earnedBadges.slice(0, 6).map((b) => {
                       const badgeName = b.badge?.name ?? b.name ?? "Badge";
-                      const category = b.badge?.category ?? b.category ?? "Achievement";
-                      const rarity = b.badge?.rarity ?? b.rarity ?? "common";
+                      const rarity = b.badge?.rarity ?? b.rarity ?? "bronze";
+                      const iconUrl = b.badge?.iconUrl ?? b.iconUrl;
                       return (
-                        <div key={b.id} className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium ${rarityColors[rarity] ?? rarityColors.common}`}>
-                          {categoryIcons[category] ?? <Star className="w-4 h-4" />}
-                          {badgeName}
+                        <div key={b.id} className="flex flex-col items-center gap-1.5 w-16 text-center">
+                          <BadgeIcon name={badgeName} iconUrl={iconUrl} rarity={rarity} size="md" />
+                          <span className="text-[11px] font-medium text-gray-600 leading-tight line-clamp-2">{badgeName}</span>
                         </div>
                       );
                     })}
@@ -719,24 +732,22 @@ export default function CollectorProfile() {
                     {earnedBadges.map((b) => {
                       const badgeName = b.badge?.name ?? b.name ?? "Badge";
                       const description = b.badge?.description ?? b.description ?? "";
-                      const category = b.badge?.category ?? b.category ?? "Achievement";
-                      const rarity = b.badge?.rarity ?? b.rarity ?? "common";
+                      const rarity = b.badge?.rarity ?? b.rarity ?? "bronze";
+                      const iconUrl = b.badge?.iconUrl ?? b.iconUrl;
                       const points = b.badge?.points ?? b.points ?? 0;
                       return (
-                        <div key={b.id} className={`flex items-center gap-3 p-3 rounded-xl border ${rarityColors[rarity] ?? rarityColors.common}`}>
-                          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white/60 flex items-center justify-center">
-                            {categoryIcons[category] ?? <Star className="w-5 h-5" />}
-                          </div>
+                        <div key={b.id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-white shadow-sm">
+                          <BadgeIcon name={badgeName} iconUrl={iconUrl} rarity={rarity} size="md" glow className="flex-shrink-0" />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <p className="font-semibold text-sm">{badgeName}</p>
-                              <span className="text-xs opacity-70 capitalize">{rarity}</span>
+                              <p className="font-semibold text-sm text-gray-800">{badgeName}</p>
+                              <span className="text-xs text-gray-400 capitalize">{rarity}</span>
                             </div>
-                            {description && <p className="text-xs opacity-70 truncate">{description}</p>}
-                            <p className="text-xs opacity-60 mt-0.5">Earned {new Date(b.earnedAt).toLocaleDateString()}</p>
+                            {description && <p className="text-xs text-gray-500 truncate">{description}</p>}
+                            <p className="text-xs text-gray-400 mt-0.5">Earned {new Date(b.earnedAt).toLocaleDateString()}</p>
                           </div>
                           {points > 0 && (
-                            <div className="text-xs font-bold opacity-70">+{points}xp</div>
+                            <div className="text-xs font-bold text-red-500 flex items-center gap-0.5"><Sparkles className="w-3 h-3" />+{points}</div>
                           )}
                         </div>
                       );
@@ -760,21 +771,48 @@ export default function CollectorProfile() {
                   <EmptyState
                     icon={<Image className="w-14 h-14" />}
                     title="No image contributions yet."
-                    subtitle={isOwnProfile ? "Submit card images from any card detail page to contribute to the community." : `${displayName} hasn't contributed any card images yet.`}
+                    subtitle={isOwnProfile ? "Submit card images from any card detail page to help build the community's card library — you'll earn XP for every approved image." : `${displayName} hasn't contributed any card images yet.`}
                   />
                 ) : (
-                  <div className="grid grid-cols-2 gap-4 max-w-xs mx-auto">
-                    <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
-                      <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                      <div className="text-3xl font-bold text-green-700">{contributions?.approved ?? 0}</div>
-                      <div className="text-sm text-green-600 mt-1">Approved</div>
-                    </div>
-                    {isOwnProfile && (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center">
-                        <Clock className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
-                        <div className="text-3xl font-bold text-yellow-700">{contributions?.pending ?? 0}</div>
-                        <div className="text-sm text-yellow-600 mt-1">Pending</div>
+                  <div className="space-y-5">
+                    <div className={`grid gap-4 ${isOwnProfile ? "grid-cols-3" : "grid-cols-2"} max-w-md mx-auto`}>
+                      <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+                        <CheckCircle className="w-7 h-7 text-green-500 mx-auto mb-1.5" />
+                        <div className="text-2xl md:text-3xl font-bold text-green-700">{contributions?.approved ?? 0}</div>
+                        <div className="text-xs md:text-sm text-green-600 mt-1">Approved</div>
                       </div>
+                      {isOwnProfile && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center">
+                          <Clock className="w-7 h-7 text-yellow-500 mx-auto mb-1.5" />
+                          <div className="text-2xl md:text-3xl font-bold text-yellow-700">{contributions?.pending ?? 0}</div>
+                          <div className="text-xs md:text-sm text-yellow-600 mt-1">Pending</div>
+                        </div>
+                      )}
+                      <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+                        <Sparkles className="w-7 h-7 text-red-500 mx-auto mb-1.5" />
+                        <div className="text-2xl md:text-3xl font-bold text-red-700">{(contributions?.xpEarned ?? 0).toLocaleString()}</div>
+                        <div className="text-xs md:text-sm text-red-600 mt-1">XP Earned</div>
+                      </div>
+                    </div>
+
+                    {/* Attribution status */}
+                    <div className="flex items-center justify-center gap-2 text-sm">
+                      {contributions?.showAttribution === false ? (
+                        <span className="inline-flex items-center gap-1.5 text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full">
+                          <EyeOff className="w-4 h-4" /> Contributions shown anonymously
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-green-700 bg-green-50 px-3 py-1.5 rounded-full">
+                          <UserCircle className="w-4 h-4" /> Credited on contributed images
+                        </span>
+                      )}
+                    </div>
+
+                    {isOwnProfile && (
+                      <p className="text-center text-xs text-gray-400 max-w-sm mx-auto">
+                        You earn {XP_PER_APPROVED_IMAGE} XP per approved image, plus a one-time {XP_FIRST_APPROVED_IMAGE_BONUS} XP bonus for your first contribution.
+                        Manage whether your name appears on images in the Settings tab.
+                      </p>
                     )}
                   </div>
                 )}
@@ -799,6 +837,13 @@ export default function CollectorProfile() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* ── Settings (owner only) ── */}
+          {isOwnProfile && (
+            <TabsContent value="settings">
+              <AccountSettings />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
 

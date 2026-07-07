@@ -18,6 +18,7 @@ import { proxyImage } from "./image-proxy";
 import { uploadImage } from "./cloudinary";
 import { db } from "./db";
 import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userWishlists, badges, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks, blocks, friends, userScanLogs } from "../shared/schema";
+import { computeXpProgress, imageContributionXp, DEFAULT_BADGE_XP } from "../shared/xp";
 import { sql, eq, ne, ilike, like, and, or, isNull, count, exists, desc } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
@@ -716,6 +717,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (privacySettings.showEmail !== undefined) updates.showEmail = privacySettings.showEmail;
         if (privacySettings.showCollection !== undefined) updates.showCollection = privacySettings.showCollection;
         if (privacySettings.showWishlist !== undefined) updates.showWishlist = privacySettings.showWishlist;
+        if (privacySettings.showImageAttribution !== undefined) updates.showImageAttribution = privacySettings.showImageAttribution;
       }
       
       // Notification settings
@@ -4449,9 +4451,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(pendingCardImages)
         .where(and(eq(pendingCardImages.userId, targetUser.id), eq(pendingCardImages.status, 'approved')));
 
+      const approvedContributions = Number(approvedRes?.count ?? 0);
+
+      // XP = sum of earned badge points + image contribution XP
+      const earnedBadges = await storage.getUserBadges(targetUser.id);
+      const badgeXp = earnedBadges.reduce((sum, ub) => {
+        const rarity = (ub.badge?.rarity || 'bronze').toLowerCase();
+        const pts = ub.badge?.points ?? DEFAULT_BADGE_XP[rarity] ?? 10;
+        return sum + pts;
+      }, 0);
+      const imageXp = imageContributionXp(approvedContributions);
+      const xp = computeXpProgress(badgeXp + imageXp);
+
       const isOwnProfile = callerId === targetUser.id;
       const canViewCollection = targetUser.showCollection || isOwnProfile;
       const canViewWishlist = targetUser.showWishlist || isOwnProfile;
+
+      // Strip unreliable stats (completedSets is hardcoded 0; loginStreak flagged unreliable)
+      const { completedSets: _cs, loginStreak: _ls, ...publicStats } = stats as any;
 
       res.json({
         user: {
@@ -4467,16 +4484,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isAdmin: targetUser.isAdmin,
           plan: targetUser.plan,
           createdAt: targetUser.createdAt,
-          loginStreak: targetUser.loginStreak,
           sellerRating: targetUser.sellerRating,
         },
-        stats,
+        stats: publicStats,
+        xp,
         isOwnProfile,
         canViewCollection,
         canViewWishlist,
         friendStatus,
         friendRequestId,
-        approvedContributions: approvedRes?.count ?? 0,
+        approvedContributions,
       });
     } catch (error) {
       console.error('[Collectors] profile error:', error);
@@ -4560,6 +4577,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/collectors/:username/contributions", authenticateUser, async (req: any, res) => {
     try {
       const { username } = req.params;
+      const callerId: number | undefined = req.user?.id;
 
       const [targetUser] = await db
         .select()
@@ -4568,6 +4586,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(1);
 
       if (!targetUser) return res.status(404).json({ message: "Collector not found" });
+
+      const isOwnProfile = callerId === targetUser.id;
 
       const [approvedRes] = await db
         .select({ count: count() })
@@ -4579,9 +4599,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(pendingCardImages)
         .where(and(eq(pendingCardImages.userId, targetUser.id), eq(pendingCardImages.status, 'pending')));
 
+      const approved = Number(approvedRes?.count ?? 0);
+      const pending = Number(pendingRes?.count ?? 0);
+
       res.json({
-        approved: Number(approvedRes?.count ?? 0),
-        pending: Number(pendingRes?.count ?? 0),
+        approved,
+        // Pending contributions are private to the owner
+        pending: isOwnProfile ? pending : 0,
+        xpEarned: imageContributionXp(approved),
+        showAttribution: targetUser.showImageAttribution,
       });
     } catch (error) {
       console.error('[Collectors] contributions error:', error);

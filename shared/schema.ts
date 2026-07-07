@@ -27,6 +27,7 @@ export const users = pgTable("users", {
   showEmail: boolean("show_email").default(false).notNull(),
   showCollection: boolean("show_collection").default(true).notNull(),
   showWishlist: boolean("show_wishlist").default(true).notNull(),
+  showImageAttribution: boolean("show_image_attribution").default(true).notNull(),
   emailUpdates: boolean("email_updates").default(true).notNull(),
   priceAlerts: boolean("price_alerts").default(true).notNull(),
   friendActivity: boolean("friend_activity").default(true).notNull(),

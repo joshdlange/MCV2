@@ -1,0 +1,320 @@
+We need to pause new feature work and clean up the Collector Profile foundation.
+
+Current problem:
+The new Collector Profile is disjointed from the existing user profile/settings experience. Right now there are two separate profile concepts:
+
+1. Existing profile/settings page with Personal, Social, Billing, Privacy
+2. New Collector Profile page at /collectors/:username
+
+This is creating confusion. We need one unified profile experience with clear separation between:
+
+* Public collector-facing information
+* Private account/settings information
+
+Goal:
+Create one unified Profile hub that can support both:
+
+* “My Profile” for the logged-in user
+* “Public Collector Profile” for other users
+
+The user should not feel like there are two unrelated profile pages.
+
+Core direction:
+When I click my name/avatar from the sidebar, take me to my unified profile hub.
+
+The unified profile should include:
+
+1. Collector-facing tabs:
+
+* Overview
+* Trade Block
+* Wishlist
+* Personal Collections
+* Badges / Super Powers
+* Images
+* Ratings
+
+2. Private settings tabs/sections:
+
+* Personal
+* Social
+* Billing
+* Privacy
+
+But private settings must only be visible to the profile owner.
+
+For other users viewing my profile:
+They should only see public collector tabs:
+
+* Overview
+* Trade Block
+* Wishlist
+* Personal Collections, if public
+* Badges
+* Images, subject to privacy setting
+* Ratings
+
+They must NOT see:
+
+* Personal info form
+* Shipping address
+* Billing
+* Privacy settings
+* Email
+* Delete account
+* Subscription management
+
+Fixes needed:
+
+1. Navigation
+
+* Remove the awkward split where username goes to settings and “My Collector Profile” goes somewhere else.
+* Sidebar name/avatar should go to the unified profile hub.
+* If logged-in user is viewing their own profile, show an obvious “Edit Settings” or “Account Settings” section/button inside the unified profile.
+* Do not create two competing profile links.
+
+2. Back button issue
+
+* The unreadable Back button on the Collector Profile page must be fixed.
+* Make it readable in all states.
+* Use dark text on light button or white text on dark button.
+* Test desktop and mobile.
+
+3. Completed Sets data
+
+* The “Completed Sets” value is currently wrong or misleading.
+* If reliable completed set data exists, use it.
+* If not reliable, remove this stat from Collector Profile for now.
+* Do not show incorrect stats.
+
+4. Login Streak data
+
+* The streak tracking is currently wrong.
+* If reliable streak data exists, fix it.
+* If not reliable, remove Login Streak from Collector Profile for now.
+* Do not show fake or incorrect dashboard data.
+
+5. Super Powers / Badges
+
+* Badges are shown in multiple places, but the new Collector Profile version does not match the existing profile/social version.
+* Reuse the existing badge/superpower source of truth.
+* Use the same badge images/icons/artwork that are already used in the regular settings/social area.
+* Do not create generic placeholder icons if real badge art exists.
+* Rename consistently:
+
+  * User-facing label can be “Super Powers”
+  * Internal/database label can remain badges/achievements if needed
+
+6. XP system foundation
+   The XP system is currently underdeveloped.
+
+Create a clean XP foundation:
+
+* Total XP
+* Current Level
+* XP toward next level
+* Progress bar
+* Level name/title if desired
+
+Add XP progress to the profile hero or just under the hero.
+
+Example:
+Level 12 Collector
+2,840 / 3,000 XP to Level 13
+
+Use a progress bar.
+
+Create 50 levels for now.
+Use a simple scalable formula.
+
+Example:
+Level 1: 0 XP
+Level 2: 100 XP
+Level 3: 250 XP
+Level 4: 450 XP
+Then increase progressively.
+
+Do not overcomplicate this. It just needs to work and look good.
+
+Existing badges should award XP if they already have XP values.
+If badge XP values already exist, use them.
+If not, create reasonable defaults:
+
+* Bronze: 10 XP
+* Silver: 25 XP
+* Gold: 50 XP
+* Platinum: 100 XP
+* Special/Launch/Hall of Fame: 250 XP
+
+Image contribution XP:
+
+* Approved image: +10 XP
+* First approved image: badge or bonus +25 XP if easy
+* Pending images should not award XP
+* Rejected images should not award XP
+
+7. Images tab
+   Improve the Images tab.
+
+It should show:
+
+* Approved image count
+* Pending image count
+* XP earned from approved images
+* A short explanation:
+  “Approved image contributions help build the Marvelous Card Vault archive. Each approved image earns XP.”
+* If public attribution is enabled, say:
+  “Your username may appear as the image contributor on approved card images.”
+* If disabled:
+  “Image attribution is currently private.”
+
+Do not show rejected images publicly.
+
+8. Image attribution privacy setting
+   Add or reuse a privacy setting:
+
+* “Show my username on contributed card images”
+  Default: on or current safest app convention.
+
+When enabled:
+
+* Approved image pages/card image attribution can show username.
+  When disabled:
+* Show “Community contributor” or hide attribution.
+
+Use username, not real name.
+
+9. Dashboard vs Profile
+   Do not simply duplicate dashboard stats into Collector Profile.
+   Collector Profile should show collector identity and credibility.
+
+Good public stats:
+
+* Cards collected
+* Wishlist count
+* Trade Block count
+* Friends count
+* Super Powers earned
+* Approved image contributions
+* Trade rating when available
+* XP level
+
+Bad/unsafe stats unless reliable:
+
+* Completed sets
+* Login streak
+* Account/private activity
+* Billing/subscription details
+
+10. Mobile-first requirement
+    The unified profile must be excellent on mobile.
+    Prioritize:
+
+* Hero section fits mobile
+* Stats wrap cleanly
+* Tabs should be horizontally scrollable or converted into a mobile-friendly segmented layout
+* Back button readable
+* CTA buttons easy to tap
+* No clipped tab bar
+* No weird horizontal overflow
+
+11. Profile layout recommendation
+    Use this structure:
+
+Hero:
+
+* Avatar
+* Display name
+* username
+* SUPER HERO badge
+* admin badge only if appropriate
+* joined date
+* website if public
+* message/friend/edit buttons depending on viewer
+* XP level/progress bar
+
+Stats row:
+
+* Cards
+* Wishlist
+* For Trade
+* Friends
+* Super Powers
+* Images
+* Rating, once available
+
+Tabs:
+Public tabs:
+
+* Overview
+* Trade Block
+* Wishlist
+* Collections
+* Super Powers
+* Images
+* Ratings
+
+Owner-only settings:
+Either as a separate “Settings” tab visible only to owner, or a clear “Edit Settings” button that opens:
+
+* Personal
+* Social
+* Billing
+* Privacy
+
+Do whichever best fits the current codebase, but do not make two separate profile experiences feel disconnected.
+
+12. Keep existing functionality working
+    Do not break:
+
+* Existing Personal tab fields
+* Shipping address
+* Social/friends tools
+* Billing/subscription display
+* Privacy settings
+* Delete account
+* Chat
+* Blocking
+* Reporting
+* Wishlist
+* Badge earning
+* Image approval queue
+
+13. Subscription downgrade issue
+    While in the Billing tab, check whether users can manage/cancel/downgrade their subscription.
+    If this app uses Stripe/RevenueCat/customer portal, add a clear button:
+    “Manage Subscription”
+    This should open the correct billing portal or subscription management flow.
+    If the backend does not support this yet, add a safe placeholder and report what endpoint/provider is needed.
+    Do not fake cancellation.
+
+14. QA checklist
+
+* Clicking sidebar avatar/name goes to unified profile.
+* There is no confusing separate “My Collector Profile” link unless it clearly points to the same unified profile.
+* Owner sees public profile plus access to private settings.
+* Other users only see public collector information.
+* Back button is readable.
+* Completed Sets is removed or correct.
+* Login Streak is removed or correct.
+* Super Powers use correct existing badge artwork/data.
+* XP bar appears and uses real earned XP.
+* Image tab explains approved image XP.
+* Image contribution count matches approved images.
+* Pending images do not award XP.
+* Image attribution privacy toggle exists and works.
+* Billing has a clear Manage Subscription path or documented missing backend.
+* Mobile layout is clean and no horizontal overflow.
+* Existing profile settings still work.
+* Existing social/chat/block/report still work.
+
+Deliverable:
+After changes, provide:
+
+* Summary of what was consolidated
+* New route behavior
+* What is visible to profile owner vs other users
+* XP formula used
+* How image XP is calculated
+* Screenshots for desktop and mobile
+* Any remaining known gaps

@@ -143,7 +143,7 @@ export function Sidebar() {
       {user && (
         <div className="border-b border-border p-3 md:p-4 flex-shrink-0">
           <div className="flex items-center space-x-2 md:space-x-3">
-            <Link href="/profile">
+            <Link href={currentUser?.username ? `/collectors/${currentUser.username}` : "/profile"}>
               <div className="w-7 h-7 md:w-8 md:h-8 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all overflow-hidden bg-marvel-red flex items-center justify-center" title="View Profile">
                 {user.photoURL ? (
                   <img 
@@ -159,18 +159,16 @@ export function Sidebar() {
               </div>
             </Link>
             <div className="flex-1 min-w-0">
-              <Link href="/profile" className="block">
+              <Link href={currentUser?.username ? `/collectors/${currentUser.username}` : "/profile"} className="block">
                 <p className="text-xs md:text-sm font-medium text-foreground truncate hover:text-blue-600 cursor-pointer">
                   {user.displayName || 'User'}
                 </p>
-              </Link>
-              {currentUser?.username && (
-                <Link href={`/collectors/${currentUser.username}`} className="block">
+                {currentUser?.username && (
                   <p className="text-[10px] md:text-xs text-marvel-red hover:text-red-700 truncate cursor-pointer font-medium">
-                    My Collector Profile
+                    View My Profile
                   </p>
-                </Link>
-              )}
+                )}
+              </Link>
             </div>
             <button 
               onClick={() => signOutUser()}
