@@ -4,3 +4,4 @@
 - [XP / Collector Power system](xp-system.md) — single source of truth computeUserXp; hybrid model (badge/image derived, card_added from decoupled no-FK xp_events ledger); farm-proof unique index
 - [Repo tooling quirks](env-quirks.md) — db:push prompt needs a TTY (create additive tables via SQL matching schema); no root tsconfig so `npm run check`/tsc never type-checks the server (tsx only)
 - [Collector profile privacy](collector-profile-privacy.md) — every /api/collectors/:username/* data endpoint must run resolveCollectorAccess; UI hiding isn't a security boundary. profileVisibility is tri-state.
+- [Capacitor Android plugin sync](capacitor-android-sync.md) — cap update android must run before every AAB (via nix-shell nodejs_22) or capacitor.plugins.json ships empty and native plugins (App, RevenueCat) silently don't work.

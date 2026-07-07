@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
+import { useHardwareBackHandler } from "@/hooks/useBackButton";
 import {
   Camera,
   Upload,
@@ -615,6 +616,56 @@ export default function ScanToAdd() {
     setCardSearch("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
+
+  // Android hardware back: step backwards through the scan stages instead of
+  // leaving the page. Returns false only when at the idle stage, letting the
+  // global handler navigate away normally.
+  useHardwareBackHandler(() => {
+    switch (stage) {
+      case "idle":
+        return false;
+      case "scanning":
+        return true; // swallow back while a scan is in flight
+      case "results":
+        handleReset();
+        return true;
+      case "picker-year":
+        if (scanResult) {
+          setStage("results");
+        } else {
+          handleReset();
+        }
+        return true;
+      case "picker-set":
+        goBackToYear();
+        return true;
+      case "picker-subset":
+        goBackToSet();
+        return true;
+      case "picker-card":
+        if (pickerSubset) {
+          goBackToSubset();
+        } else {
+          goBackToSet();
+        }
+        return true;
+      case "confirmed":
+        setSelectedCard(null);
+        if (pickerCardSetId) {
+          setStage("picker-card");
+        } else if (scanResult) {
+          setStage("results");
+        } else {
+          setStage("picker-year");
+        }
+        return true;
+      case "success":
+        handleReset();
+        return true;
+      default:
+        return false;
+    }
+  });
 
   const cardMissingImage = selectedCard && !selectedCard.imageUrl;
 

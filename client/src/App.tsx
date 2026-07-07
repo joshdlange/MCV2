@@ -15,7 +15,7 @@ import { Search, MessageCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { NotificationBell } from "@/components/NotificationBell";
-import { useBackButton } from "@/hooks/useBackButton";
+import { useBackButton, useHardwareBackHandler } from "@/hooks/useBackButton";
 import heroLogoWhite from "@assets/noun-super-hero-380874-FFFFFF.png";
 import { Login } from "@/components/auth/Login";
 import { Onboarding } from "@/components/auth/Onboarding";
@@ -112,6 +112,15 @@ function DesktopHeader() {
 
 function MobileMenu() {
   const { isMobileMenuOpen, setMobileMenuOpen } = useAppStore();
+
+  // Android hardware back closes the drawer instead of navigating.
+  useHardwareBackHandler(() => {
+    if (isMobileMenuOpen) {
+      setMobileMenuOpen(false);
+      return true;
+    }
+    return false;
+  });
 
   return (
     <div
