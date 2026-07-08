@@ -27,6 +27,11 @@ script is meaningless.
   changed to see if YOUR edits introduced anything).
 - Server (`server/**`) is never type-checked — it runs via `tsx` (transpile-only). Confirm server
   correctness by booting the workflow and exercising the code path, not by tsc.
+- Vite `npm run build` does NOT type-check either, so calls to undefined identifiers ship to prod
+  silently (real incident: admin image-approvals page crashed after every approve because dead
+  `setSelectedSubmission(...)` calls from a removed modal survived a refactor — server 200'd, client
+  threw). Symptom pattern "server says success, UI shows error" ⇒ suspect a client-side exception in
+  a success handler. Before publishing changes to a page, tsc that page's file specifically.
 
 ## Screenshot tool can't see authed (Firebase) pages
 The `app_preview` screenshot tool spins up its OWN headless browser with no Firebase session, so it

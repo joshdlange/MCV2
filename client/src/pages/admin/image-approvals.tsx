@@ -77,7 +77,6 @@ export default function AdminImageApprovals() {
         title: vars.overrideImageUrl ? "Approved with custom image!" : "Image approved!",
         description: "The image has been added to the card database."
       });
-      setSelectedSubmission(null);
     },
     onError: (error: any) => {
       toast({ 
@@ -99,9 +98,6 @@ export default function AdminImageApprovals() {
         title: "Image rejected",
         description: "The submitter has been notified."
       });
-      setShowRejectDialog(false);
-      setSelectedSubmission(null);
-      setRejectionReason("");
     },
     onError: (error: any) => {
       toast({ 
