@@ -1,0 +1,375 @@
+Create a branded 404 page for Marvel Card Vault.
+
+Goal:
+Replace the plain/default 404 page with a fun Marvel Card Vault themed 404 page.
+
+Creative direction:
+Use the existing Marvel Card Vault logo asset. The little caped superhero from the logo should feel like the star of the page. The tone should be playful, comic-inspired, and collector-friendly.
+
+Copy direction:
+- Main badge: “404 ERROR”
+- Main heading: “Oh no...”
+- Subheading: “My only weakness: a 404 page.”
+- Supporting copy:
+  “The page you were looking for either flew off to another universe, got lost in the vault, or doesn’t exist anymore.”
+- Secondary copy:
+  “Try refreshing the page or head back home and keep building your collection.”
+- Buttons:
+  - “Back Home”
+  - “Refresh”
+
+Design direction:
+- Dark comic-inspired background
+- Red/black/white Marvel Card Vault color palette
+- Centered polished card/container
+- Use halftone/dot texture if possible
+- Slight animation is welcome but not required
+- Fully mobile responsive
+- Keep it fun, not corporate
+
+Must do:
+- Build this as a reusable 404 page/component.
+- Use the existing Marvel Card Vault logo asset from the project.
+- Hook it up as the catch-all route for unknown pages.
+- Preserve all existing valid routes.
+- Make the Back Home button route to "/".
+- Make the Refresh button reload the current page.
+- Ensure mobile layout looks good.
+
+Must not do:
+- Do not change existing working routes.
+- Do not change app navigation beyond adding the 404 fallback.
+- Do not touch auth, billing, XP, collection logic, PC binders, image approval, Stripe, Shippo, RevenueCat, Resend, or subscription logic.
+- Do not introduce Marvel/Disney affiliation language.
+- Do not use copyrighted Marvel character names.
+- Do not redesign the app/site globally.
+
+Preserve:
+- Existing app/site layout.
+- Existing routing behavior.
+- Existing Marvel Card Vault branding.
+- Existing logo asset.
+- Existing mobile responsiveness.
+
+Implementation reference:
+
+Create a page/component similar to this and adapt paths/imports to the current project structure.
+
+File suggestion:
+client/src/pages/NotFound.tsx
+or the closest equivalent pages/components folder used by this project.
+
+Code:
+
+```tsx
+import React from "react";
+import "./not-found.css";
+
+// Update this import path to match where the logo lives in this project.
+// Use the existing Marvel Card Vault logo asset.
+import logo from "../assets/marvel-card-vault-logo.png";
+
+export default function NotFound() {
+  const goHome = () => {
+    window.location.href = "/";
+  };
+
+  const refreshPage = () => {
+    window.location.reload();
+  };
+
+  return (
+    <main className="not-found-page">
+      <div className="nf-background-pattern" />
+
+      <section className="not-found-card" aria-labelledby="not-found-title">
+        <div className="nf-badge">404 ERROR</div>
+
+        <div className="nf-logo-wrap">
+          <img
+            src={logo}
+            alt="Marvel Card Vault"
+            className="nf-logo"
+          />
+        </div>
+
+        <h1 id="not-found-title" className="nf-title">
+          Oh no...
+        </h1>
+
+        <h2 className="nf-subtitle">
+          My only weakness: a 404 page.
+        </h2>
+
+        <p className="nf-copy">
+          The page you were looking for either flew off to another universe,
+          got lost in the vault, or doesn’t exist anymore.
+        </p>
+
+        <p className="nf-copy nf-copy-secondary">
+          Try refreshing the page or head back home and keep building your collection.
+        </p>
+
+        <div className="nf-actions">
+          <button
+            type="button"
+            className="nf-button nf-button-primary"
+            onClick={goHome}
+          >
+            Back Home
+          </button>
+
+          <button
+            type="button"
+            className="nf-button nf-button-secondary"
+            onClick={refreshPage}
+          >
+            Refresh
+          </button>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+CSS:
+
+Create:
+client/src/pages/not-found.css
+or the closest matching CSS/module file used by this project.
+
+.not-found-page {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(255, 0, 51, 0.14), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(0, 180, 255, 0.1), transparent 30%),
+    linear-gradient(180deg, #06070d 0%, #02030a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: #ffffff;
+}
+
+.nf-background-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 8px 8px;
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+.not-found-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 720px;
+  background:
+    linear-gradient(180deg, rgba(18, 21, 34, 0.96), rgba(8, 10, 18, 0.98));
+  border: 2px solid rgba(255, 255, 255, 0.09);
+  border-radius: 24px;
+  box-shadow:
+    0 18px 50px rgba(0, 0, 0, 0.48),
+    0 0 0 1px rgba(255, 0, 51, 0.18),
+    0 0 36px rgba(255, 0, 51, 0.12);
+  padding: 42px 28px;
+  text-align: center;
+}
+
+.nf-badge {
+  display: inline-block;
+  margin-bottom: 18px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #ff123d;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 8px 24px rgba(255, 18, 61, 0.35);
+  animation: nf-pulse-badge 2s ease-in-out infinite;
+}
+
+.nf-logo-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.nf-logo {
+  width: 190px;
+  max-width: 62vw;
+  height: auto;
+  filter:
+    drop-shadow(0 10px 24px rgba(255, 0, 51, 0.28))
+    drop-shadow(0 0 18px rgba(255, 255, 255, 0.08));
+  animation: nf-float-logo 3.5s ease-in-out infinite;
+}
+
+.nf-title {
+  margin: 6px 0 6px;
+  font-size: clamp(2.2rem, 6vw, 3.4rem);
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+  color: #ffffff;
+}
+
+.nf-subtitle {
+  margin: 0 0 18px;
+  font-size: clamp(1.2rem, 3vw, 1.8rem);
+  line-height: 1.2;
+  font-weight: 900;
+  color: #ff294f;
+}
+
+.nf-copy {
+  margin: 0 auto 10px;
+  max-width: 570px;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.nf-copy-secondary {
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 28px;
+}
+
+.nf-actions {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.nf-button {
+  appearance: none;
+  border-radius: 14px;
+  padding: 14px 20px;
+  font-size: 0.98rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease,
+    opacity 0.18s ease;
+  min-width: 140px;
+}
+
+.nf-button:hover {
+  transform: translateY(-2px);
+}
+
+.nf-button:active {
+  transform: translateY(0);
+}
+
+.nf-button-primary {
+  border: none;
+  background: linear-gradient(180deg, #ff234b, #d60f35);
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(255, 35, 75, 0.36);
+}
+
+.nf-button-primary:hover {
+  box-shadow: 0 14px 30px rgba(255, 35, 75, 0.46);
+}
+
+.nf-button-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.nf-button-secondary:hover {
+  background: rgba(255, 255, 255, 0.13);
+}
+
+@keyframes nf-float-logo {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(-1deg);
+  }
+
+  50% {
+    transform: translateY(-8px) rotate(1deg);
+  }
+}
+
+@keyframes nf-pulse-badge {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 8px 24px rgba(255, 18, 61, 0.35);
+  }
+
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 10px 28px rgba(255, 18, 61, 0.52);
+  }
+}
+
+@media (max-width: 640px) {
+  .not-found-page {
+    padding: 18px;
+  }
+
+  .not-found-card {
+    padding: 30px 20px;
+    border-radius: 18px;
+  }
+
+  .nf-logo {
+    width: 155px;
+  }
+
+  .nf-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .nf-button {
+    width: 100%;
+  }
+}
+
+Routing instructions:
+
+If this project uses React Router, add the NotFound component as the final catch-all route:
+
+import NotFound from "./pages/NotFound";
+
+// inside the route config
+<Route path="*" element={<NotFound />} />
+
+If this project uses Wouter, add it as the fallback route inside Switch:
+
+import { Route, Switch } from "wouter";
+import NotFound from "./pages/NotFound";
+
+<Switch>
+  {/* existing routes stay above this */}
+  <Route>
+    <NotFound />
+  </Route>
+</Switch>
+
+If the project uses a different routing setup, adapt the same component as the default/fallback 404 page.
+
+QA:
+
+Visit a fake URL like /this-page-does-not-exist.
+Confirm the new branded 404 page appears.
+Confirm normal valid routes still work.
+Confirm Back Home returns to "/".
+Confirm Refresh reloads the current page.
+Confirm the logo loads.
+Confirm desktop looks good.
+Confirm mobile looks good.
+Confirm no console errors

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SIDE_KICK_CARD_LIMIT } from "@shared/schema";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,7 +68,7 @@ export function CardGrid({
   const { toast } = useToast();
   const { currentUser } = useAppStore();
   
-  const COLLECTION_LIMIT = 250;
+  const COLLECTION_LIMIT = SIDE_KICK_CARD_LIMIT;
   
   // Use dedicated set endpoint for complete card list when filtering by set
   const apiEndpoint = filters.setId ? `/api/sets/${filters.setId}/cards` : '/api/cards';

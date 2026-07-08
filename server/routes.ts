@@ -17,7 +17,7 @@ import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
 import { uploadImage } from "./cloudinary";
 import { db } from "./db";
-import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userWishlists, badges, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks, blocks, friends, userScanLogs, pcBinders, pcBinderCards, pcBinderShareLinks, PC_BINDER_CATEGORIES } from "../shared/schema";
+import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userWishlists, badges, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks, blocks, friends, userScanLogs, pcBinders, pcBinderCards, pcBinderShareLinks, PC_BINDER_CATEGORIES, SIDE_KICK_CARD_LIMIT } from "../shared/schema";
 import { imageContributionXp } from "../shared/xp";
 import {
   computeUserXp,
@@ -2174,7 +2174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/collection", authenticateUser, async (req: any, res) => {
     try {
-      const COLLECTION_LIMIT = 250;
+      const COLLECTION_LIMIT = SIDE_KICK_CARD_LIMIT;
       
       const [userData] = await db.select({ plan: users.plan }).from(users).where(eq(users.id, req.user.id)).limit(1);
       

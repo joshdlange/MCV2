@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SIDE_KICK_CARD_LIMIT } from "@shared/schema";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { UpgradeModal } from "./upgrade-modal";
@@ -13,8 +14,8 @@ interface CardLimitWarningProps {
 export function CardLimitWarning({ currentCards, userPlan, variant = "warning" }: CardLimitWarningProps) {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   
-  const isAtLimit = currentCards >= 250;
-  const isNearLimit = currentCards >= 200;
+  const isAtLimit = currentCards >= SIDE_KICK_CARD_LIMIT;
+  const isNearLimit = currentCards >= SIDE_KICK_CARD_LIMIT - 50;
   
   if (userPlan === "SUPER_HERO") return null;
   
@@ -29,7 +30,7 @@ export function CardLimitWarning({ currentCards, userPlan, variant = "warning" }
                 Collection limit reached!
               </span>
               <p className="text-red-700 dark:text-red-300 mt-1 text-sm">
-                You've reached the 250 card limit for Side Kick plans. Upgrade to Super Hero for unlimited cards.
+                You've reached the {SIDE_KICK_CARD_LIMIT} card limit for Side Kick plans. Upgrade to Super Hero for unlimited cards.
               </p>
             </div>
             <Button 
@@ -64,7 +65,7 @@ export function CardLimitWarning({ currentCards, userPlan, variant = "warning" }
                 Approaching card limit
               </span>
               <p className="text-yellow-700 dark:text-yellow-300 mt-1 text-sm">
-                You have {250 - currentCards} cards remaining in your Side Kick plan.
+                You have {SIDE_KICK_CARD_LIMIT - currentCards} cards remaining in your Side Kick plan.
               </p>
             </div>
             <Button 

@@ -3,6 +3,10 @@ import { relations, sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Collection card limit for Side Kick (non-Super Hero) plans.
+// Single source of truth — used by server enforcement and all client checks/copy.
+export const SIDE_KICK_CARD_LIMIT = 500;
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   firebaseUid: text("firebase_uid").notNull().unique(),

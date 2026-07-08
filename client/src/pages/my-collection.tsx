@@ -17,6 +17,7 @@ import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
+import { SIDE_KICK_CARD_LIMIT } from "@shared/schema";
 import type { CollectionItem, CardWithSet, CardSet, MainSet } from "@shared/schema";
 import { formatCardName, formatSetName } from "@/lib/formatTitle";
 import { useAppStore } from "@/lib/store";
@@ -37,7 +38,7 @@ export default function MyCollection() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const COLLECTION_LIMIT = 250;
+  const COLLECTION_LIMIT = SIDE_KICK_CARD_LIMIT;
   const favStorageKey = currentUser ? `favoriteSetIds_user_${currentUser.id}` : 'favoriteSetIds';
   const [favoriteSetIds, setFavoriteSetIds] = useState<number[]>(() => {
     try {

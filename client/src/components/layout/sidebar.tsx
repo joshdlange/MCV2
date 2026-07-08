@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import { SIDE_KICK_CARD_LIMIT } from "@shared/schema";
 import { AdminToggle } from "@/components/admin/admin-toggle";
 import { useAppStore } from "@/lib/store";
 import { NavigationItem } from "@/types";
@@ -110,7 +111,7 @@ export function Sidebar() {
       currentUser &&
       currentUser.plan === 'SIDE_KICK' &&
       collectionStats &&
-      (collectionStats as any).totalCards >= 250 &&
+      (collectionStats as any).totalCards >= SIDE_KICK_CARD_LIMIT &&
       !sessionStorage.getItem(`upgrade_prompt_shown_${currentUser.id}`)
     ) {
       sessionStorage.setItem(`upgrade_prompt_shown_${currentUser.id}`, '1');
@@ -228,9 +229,9 @@ export function Sidebar() {
             </Button>
             <div className="mt-2 flex flex-col items-center gap-0.5">
               <span className="text-[10px] md:text-xs text-gray-500">Collection Limit</span>
-              <span className={`text-[11px] md:text-xs font-medium ${(collectionStats as any)?.totalCards >= 250 ? 'text-red-600 font-bold' : 'text-gray-600'}`}>
-                {collectionStats?.totalCards || 0} / 250
-                {(collectionStats as any)?.totalCards >= 250 && ' (Full!)'}
+              <span className={`text-[11px] md:text-xs font-medium ${(collectionStats as any)?.totalCards >= SIDE_KICK_CARD_LIMIT ? 'text-red-600 font-bold' : 'text-gray-600'}`}>
+                {collectionStats?.totalCards || 0} / {SIDE_KICK_CARD_LIMIT}
+                {(collectionStats as any)?.totalCards >= SIDE_KICK_CARD_LIMIT && ' (Full!)'}
               </span>
             </div>
           </div>

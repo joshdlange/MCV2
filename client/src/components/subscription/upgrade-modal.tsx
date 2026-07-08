@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { SIDE_KICK_CARD_LIMIT } from "@shared/schema";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Lock, Sparkles, Star, AlertCircle, Loader2 } from "lucide-react";
@@ -414,7 +415,7 @@ export function UpgradeModal({ isOpen, onClose, currentPlan, trigger }: UpgradeM
             </Button>
 
             <p className="text-center text-[11px] text-gray-500 italic pt-1 border-t border-gray-800">
-              This is a preview of what Sidekick users see when they hit the 250-card limit.
+              This is a preview of what Sidekick users see when they hit the {SIDE_KICK_CARD_LIMIT}-card limit.
             </p>
           </div>
         </DialogContent>

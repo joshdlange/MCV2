@@ -1,0 +1,66 @@
+We need to update Marvel Card Vault plan limits in the app.
+
+Current issue:
+The Side Kick plan currently appears to be limited to 250 cards in some places. We are increasing the Side Kick card limit to 500 cards. This needs to be changed functionally and in all user-facing app copy.
+
+Goal:
+Side Kick users should be able to track up to 500 cards, and every app screen/message/upgrade prompt should consistently say 500 instead of 250.
+
+Must do:
+- Find all app logic that enforces card count limits by plan.
+- Update the Side Kick plan limit from 250 cards to 500 cards.
+- Ensure server-side enforcement allows Side Kick users up to 500 cards.
+- Ensure frontend checks/warnings/upgrade prompts allow Side Kick users up to 500 cards.
+- Search the entire app codebase for references to:
+  - "250"
+  - "250 cards"
+  - "up to 250"
+  - "Side Kick"
+  - "card limit"
+  - "collection limit"
+  - "plan limit"
+- Update all Side Kick card limit copy from 250 to 500.
+- Update plan comparison UI if it exists.
+- Update upgrade modal/copy if it exists.
+- Update account/billing/subscription screens if they mention Side Kick limits.
+- Update any onboarding or collection-limit messaging if it references Side Kick limits.
+- Confirm Free and Super Hero behavior remains unchanged unless the current feature branch already intentionally changed Free limits.
+- Add/adjust constants if card limits are hardcoded in multiple places, so Side Kick uses one clear source of truth if practical.
+
+Must not do:
+- Do not change pricing.
+- Do not change Stripe products/prices.
+- Do not change RevenueCat products/entitlements.
+- Do not change billing behavior.
+- Do not change plan names.
+- Do not change Super Hero behavior.
+- Do not change Trade Block access.
+- Do not change Add Cards behavior except allowing Side Kick up to 500 cards.
+- Do not touch Android native files.
+- Do not touch iOS native files.
+- Do not touch email/Resend/Brevo in this task.
+- Do not build or modify PC Binders in this task unless needed only to update plan-limit copy.
+- Do not refactor broadly.
+
+Preserve:
+- Existing plan names: Free, Side Kick, Super Hero.
+- Existing subscription detection.
+- Existing upgrade flow.
+- Existing card add flow.
+- Existing collection behavior.
+- Existing XP system.
+- Existing marketplace/trade behavior.
+- Existing auth behavior.
+
+QA:
+- Side Kick user with under 500 cards can add cards.
+- Side Kick user at 250+ cards is not blocked.
+- Side Kick user is blocked only after reaching 500 cards.
+- Upgrade prompts reference 500, not 250.
+- Plan comparison UI references 500, not 250.
+- Billing/account screen references 500, not 250.
+- Search confirms no stale Side Kick "250 cards" copy remains.
+- Free plan behavior is unchanged unless already intentionally updated elsewhere.
+- Super Hero behavior is unchanged.
+- No console errors.
+- No billing/subscription regression.
