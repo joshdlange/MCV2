@@ -1,9 +1,6 @@
-import { useLocation } from "wouter";
-import logoImage from "@assets/Marvelous_Card_Valut_-_Trans_1772678671637.png";
+import "./_group.css";
 
-export default function NotFound() {
-  const [, setLocation] = useLocation();
-
+export function NotFound404() {
   return (
     <main
       className="relative flex min-h-screen w-full items-center justify-center overflow-hidden p-6 text-white"
@@ -39,14 +36,13 @@ export default function NotFound() {
             boxShadow: "0 8px 24px rgba(255, 18, 61, 0.35)",
             animation: "nf-pulse-badge 2s ease-in-out infinite",
           }}
-          data-testid="badge-404"
         >
           404 Error
         </div>
 
         <div className="mb-4 flex justify-center">
           <img
-            src={logoImage}
+            src="/__mockup/images/mcv-logo.png"
             alt="Marvelous Card Vault"
             className="h-auto w-40 max-w-[62vw] sm:w-48"
             style={{
@@ -54,14 +50,12 @@ export default function NotFound() {
                 "drop-shadow(0 10px 24px rgba(255, 0, 51, 0.28)) drop-shadow(0 0 18px rgba(255, 255, 255, 0.08))",
               animation: "nf-float-logo 3.5s ease-in-out infinite",
             }}
-            data-testid="img-404-logo"
           />
         </div>
 
         <h1
           id="not-found-title"
           className="mb-1 text-4xl font-black leading-none tracking-tight text-white sm:text-5xl"
-          data-testid="text-404-title"
         >
           Oh no...
         </h1>
@@ -69,7 +63,6 @@ export default function NotFound() {
         <h2
           className="mb-4 text-xl font-black leading-tight sm:text-2xl"
           style={{ color: "#ff294f" }}
-          data-testid="text-404-subtitle"
         >
           My only weakness: a 404 page.
         </h2>
@@ -87,22 +80,18 @@ export default function NotFound() {
         <div className="flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
           <button
             type="button"
-            onClick={() => setLocation("/")}
             className="min-w-[140px] cursor-pointer rounded-xl border-0 px-5 py-3.5 text-sm font-black text-white transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
             style={{
               background: "linear-gradient(180deg, #ff234b, #d60f35)",
               boxShadow: "0 10px 24px rgba(255, 35, 75, 0.36)",
             }}
-            data-testid="button-back-home"
           >
             Back Home
           </button>
 
           <button
             type="button"
-            onClick={() => window.location.reload()}
             className="min-w-[140px] cursor-pointer rounded-xl border border-white/15 bg-white/10 px-5 py-3.5 text-sm font-black text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/15 active:translate-y-0"
-            data-testid="button-refresh"
           >
             Refresh
           </button>
