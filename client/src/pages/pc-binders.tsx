@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -60,6 +60,7 @@ interface PcBinderSummary {
   createdAt: string;
   totalCards: number;
   ownedCards: number;
+  coverImageUrl: string | null;
 }
 
 const binderFormSchema = z.object({
@@ -218,6 +219,7 @@ function BinderFormDialog({
 
 export default function PcBinders() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [showForm, setShowForm] = useState(false);
   const [editingBinder, setEditingBinder] = useState<PcBinderSummary | null>(null);
   const [deletingBinder, setDeletingBinder] = useState<PcBinderSummary | null>(null);
@@ -301,7 +303,38 @@ export default function PcBinders() {
                 className="group hover:shadow-lg transition-all duration-200"
                 data-testid={`card-pc-binder-${binder.id}`}
               >
-                <CardContent className="p-4">
+                <CardContent className="p-0">
+                  <Link href={`/pc-binders/${binder.id}`} className="block">
+                    <div className="relative h-40 bg-gray-100 rounded-t-lg overflow-hidden">
+                      {binder.coverImageUrl ? (
+                        <img
+                          src={binder.coverImageUrl}
+                          alt={binder.name}
+                          className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-200"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
+                          <BookOpen className="w-10 h-10 text-red-400" />
+                        </div>
+                      )}
+                      <div className="absolute top-2 right-2">
+                        <Badge
+                          className={`text-white font-bold ${
+                            pct === 100
+                              ? "bg-green-600"
+                              : pct >= 75
+                              ? "bg-blue-600"
+                              : pct >= 50
+                              ? "bg-yellow-600"
+                              : "bg-gray-600"
+                          }`}
+                        >
+                          {pct}%
+                        </Badge>
+                      </div>
+                    </div>
+                  </Link>
+                  <div className="p-4 pt-3">
                   <div className="flex items-start justify-between gap-2">
                     <Link href={`/pc-binders/${binder.id}`} className="flex-1 min-w-0">
                       <h3 className="font-semibold text-gray-900 truncate group-hover:text-red-600 transition-colors">
@@ -355,6 +388,25 @@ export default function PcBinders() {
                       <Progress value={pct} className="h-2" />
                     </div>
                   </Link>
+                  <div className="flex gap-2 pt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-xs text-white bg-green-600 border-green-600 hover:bg-green-700 hover:text-white"
+                      onClick={() => navigate(`/pc-binders/${binder.id}?filter=owned`)}
+                    >
+                      Owned
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-xs text-white bg-[#f73f32] border-[#f73f32] hover:bg-red-700 hover:text-white"
+                      onClick={() => navigate(`/pc-binders/${binder.id}?filter=missing`)}
+                    >
+                      Missing
+                    </Button>
+                  </div>
+                  </div>
                 </CardContent>
               </Card>
             );

@@ -17,7 +17,7 @@ import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
 import { uploadImage } from "./cloudinary";
 import { db } from "./db";
-import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userWishlists, badges, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks, blocks, friends, userScanLogs, pcBinders, pcBinderCards, PC_BINDER_CATEGORIES } from "../shared/schema";
+import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userWishlists, badges, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks, blocks, friends, userScanLogs, pcBinders, pcBinderCards, pcBinderShareLinks, PC_BINDER_CATEGORIES } from "../shared/schema";
 import { imageContributionXp } from "../shared/xp";
 import {
   computeUserXp,
@@ -9140,6 +9140,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     shareLinkCache.delete(token);
   }
 
+  // Short URL-safe share token (~46 bits) used by both set share links and
+  // PC binder share links. Ambiguous chars (0/O, 1/l/I) are excluded.
+  const generateShortToken = (): string => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    let result = '';
+    const bytes = crypto.randomBytes(8);
+    for (let i = 0; i < 8; i++) {
+      result += chars[bytes[i] % chars.length];
+    }
+    return result;
+  };
+
   // POST /api/share-links — create or return existing share link
   app.post("/api/share-links", authenticateUser, async (req: any, res) => {
     try {
@@ -9170,16 +9182,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create new share link with short 8-char token
-      const generateShortToken = (): string => {
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-        let result = '';
-        const bytes = crypto.randomBytes(8);
-        for (let i = 0; i < 8; i++) {
-          result += chars[bytes[i] % chars.length];
-        }
-        return result;
-      };
-
       let token: string;
       let attempts = 0;
       do {
@@ -9239,16 +9241,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create new short token
-      const generateShortToken = (): string => {
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-        let result = '';
-        const bytes = crypto.randomBytes(8);
-        for (let i = 0; i < 8; i++) {
-          result += chars[bytes[i] % chars.length];
-        }
-        return result;
-      };
-
       let token: string;
       let attempts = 0;
       do {
@@ -9422,6 +9414,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           createdAt: pcBinders.createdAt,
           totalCards: sql<number>`count(${pcBinderCards.id})::int`,
           ownedCards: sql<number>`count(${userCollections.id})::int`,
+          // Representative cover image: earliest-added card with a real image.
+          // Correlated subquery is fine at this scale (max 50 binders/user,
+          // indexed lookups via pc_binder_cards_binder_id_idx).
+          coverImageUrl: sql<string | null>`(
+            SELECT c.front_image_url FROM pc_binder_cards pbc
+            JOIN cards c ON c.id = pbc.card_id
+            WHERE pbc.binder_id = ${pcBinders.id}
+              AND c.front_image_url IS NOT NULL
+              AND c.front_image_url != ''
+              AND c.front_image_url != 'https://res.cloudinary.com/dlwfuryyz/image/upload/v1748442577/card-placeholder_ysozlo.png'
+            ORDER BY pbc.added_at, pbc.id
+            LIMIT 1
+          )`,
         })
         .from(pcBinders)
         .leftJoin(pcBinderCards, eq(pcBinderCards.binderId, pcBinders.id))
@@ -9597,6 +9602,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk-add every card whose NAME matches a search term (user-facing "Add All").
+  // Matches card name only (NOT set name — /api/cards search matches both, so
+  // its totalCount must never drive this flow; use dryRun here instead).
+  // Excludes archived sets and cards already in the binder BEFORE applying the
+  // remaining-capacity cap, so no-op conflicts can't burn capacity slots.
+  app.post("/api/pc-binders/:id/cards/bulk", authenticateUser, async (req: any, res) => {
+    try {
+      const binderId = parseInt(req.params.id);
+      const binder = await getOwnedPcBinder(binderId, req.user.id);
+      if (!binder) return res.status(404).json({ message: "PC binder not found" });
+
+      const search = typeof req.body?.search === "string" ? req.body.search.trim() : "";
+      if (search.length < 2) {
+        return res.status(400).json({ message: "Search term must be at least 2 characters" });
+      }
+      const dryRun = req.body?.dryRun === true;
+      const pattern = `%${search}%`;
+
+      const result = await db.transaction(async (tx) => {
+        const [{ currentCount }] = await tx
+          .select({ currentCount: count() })
+          .from(pcBinderCards)
+          .where(eq(pcBinderCards.binderId, binderId));
+        const remaining = Math.max(0, MAX_CARDS_PER_PC_BINDER - Number(currentCount));
+
+        // Cards matching by name, in active (non-archived) sets, not already in the binder
+        const [{ matchCount }] = await tx
+          .select({ matchCount: count() })
+          .from(cards)
+          .innerJoin(cardSets, eq(cardSets.id, cards.setId))
+          .where(and(
+            ilike(cards.name, pattern),
+            eq(cardSets.isActive, true),
+            sql`NOT EXISTS (SELECT 1 FROM pc_binder_cards pbc WHERE pbc.binder_id = ${binderId} AND pbc.card_id = ${cards.id})`
+          ));
+        const matched = Number(matchCount);
+
+        if (dryRun) {
+          return { matched, added: 0, remaining, capped: matched > remaining };
+        }
+
+        if (matched === 0 || remaining === 0) {
+          return { matched, added: 0, remaining, capped: matched > remaining };
+        }
+
+        // Single INSERT ... SELECT with deterministic ORDER BY for cap truncation
+        const inserted = await tx.execute(sql`
+          INSERT INTO pc_binder_cards (binder_id, card_id)
+          SELECT ${binderId}, c.id
+          FROM cards c
+          JOIN card_sets cs ON cs.id = c.set_id
+          WHERE c.name ILIKE ${pattern}
+            AND cs.is_active = true
+            AND NOT EXISTS (
+              SELECT 1 FROM pc_binder_cards pbc
+              WHERE pbc.binder_id = ${binderId} AND pbc.card_id = c.id
+            )
+          ORDER BY c.id
+          LIMIT ${remaining}
+          ON CONFLICT DO NOTHING
+        `);
+
+        return {
+          matched,
+          added: inserted.rowCount ?? 0,
+          remaining,
+          capped: matched > remaining,
+        };
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error bulk-adding cards to PC binder:", error);
+      res.status(500).json({ message: "Failed to add cards to PC binder" });
+    }
+  });
+
   app.delete("/api/pc-binders/:id/cards/:cardId", authenticateUser, async (req: any, res) => {
     try {
       const binderId = parseInt(req.params.id);
@@ -9614,6 +9696,203 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error removing card from PC binder:", error);
       res.status(500).json({ message: "Failed to remove card from PC binder" });
+    }
+  });
+
+  // ---- PC Binder share links (separate namespace from set share links) ----
+
+  const pcShareUrl = (token: string) => `https://app.marvelcardvault.com/pc-share/${token}`;
+
+  // GET current active share link for a PC binder (owner only)
+  app.get("/api/pc-binders/:id/share-link", authenticateUser, async (req: any, res) => {
+    try {
+      const binderId = parseInt(req.params.id);
+      const binder = await getOwnedPcBinder(binderId, req.user.id);
+      if (!binder) return res.status(404).json({ message: "PC binder not found" });
+
+      const [link] = await db
+        .select()
+        .from(pcBinderShareLinks)
+        .where(and(eq(pcBinderShareLinks.binderId, binderId), eq(pcBinderShareLinks.isActive, true)))
+        .limit(1);
+
+      res.json({
+        shareLink: link
+          ? { id: link.id, token: link.token, url: pcShareUrl(link.token), createdAt: link.createdAt }
+          : null,
+      });
+    } catch (error) {
+      console.error("Error fetching PC binder share link:", error);
+      res.status(500).json({ message: "Failed to fetch share link" });
+    }
+  });
+
+  // POST create (or return existing) share link for a PC binder
+  app.post("/api/pc-binders/:id/share-link", authenticateUser, async (req: any, res) => {
+    try {
+      const binderId = parseInt(req.params.id);
+      const binder = await getOwnedPcBinder(binderId, req.user.id);
+      if (!binder) return res.status(404).json({ message: "PC binder not found" });
+
+      const [existing] = await db
+        .select()
+        .from(pcBinderShareLinks)
+        .where(and(eq(pcBinderShareLinks.binderId, binderId), eq(pcBinderShareLinks.isActive, true)))
+        .limit(1);
+      if (existing) {
+        return res.json({ id: existing.id, token: existing.token, url: pcShareUrl(existing.token) });
+      }
+
+      let token: string;
+      let attempts = 0;
+      do {
+        token = generateShortToken();
+        const [dup] = await db
+          .select({ id: pcBinderShareLinks.id })
+          .from(pcBinderShareLinks)
+          .where(eq(pcBinderShareLinks.token, token))
+          .limit(1);
+        if (!dup) break;
+        attempts++;
+      } while (attempts < 5);
+
+      const [newLink] = await db
+        .insert(pcBinderShareLinks)
+        .values({ binderId, token, isActive: true })
+        .returning();
+      res.json({ id: newLink.id, token: newLink.token, url: pcShareUrl(newLink.token) });
+    } catch (error) {
+      console.error("Error creating PC binder share link:", error);
+      res.status(500).json({ message: "Failed to create share link" });
+    }
+  });
+
+  // POST regenerate — revoke old + create new
+  app.post("/api/pc-binders/:id/share-link/regenerate", authenticateUser, async (req: any, res) => {
+    try {
+      const binderId = parseInt(req.params.id);
+      const binder = await getOwnedPcBinder(binderId, req.user.id);
+      if (!binder) return res.status(404).json({ message: "PC binder not found" });
+
+      await db
+        .update(pcBinderShareLinks)
+        .set({ isActive: false, revokedAt: new Date() })
+        .where(and(eq(pcBinderShareLinks.binderId, binderId), eq(pcBinderShareLinks.isActive, true)));
+
+      let token: string;
+      let attempts = 0;
+      do {
+        token = generateShortToken();
+        const [dup] = await db
+          .select({ id: pcBinderShareLinks.id })
+          .from(pcBinderShareLinks)
+          .where(eq(pcBinderShareLinks.token, token))
+          .limit(1);
+        if (!dup) break;
+        attempts++;
+      } while (attempts < 5);
+
+      const [newLink] = await db
+        .insert(pcBinderShareLinks)
+        .values({ binderId, token, isActive: true })
+        .returning();
+      res.json({ id: newLink.id, token: newLink.token, url: pcShareUrl(newLink.token) });
+    } catch (error) {
+      console.error("Error regenerating PC binder share link:", error);
+      res.status(500).json({ message: "Failed to regenerate share link" });
+    }
+  });
+
+  // DELETE — revoke active share link
+  app.delete("/api/pc-binders/:id/share-link", authenticateUser, async (req: any, res) => {
+    try {
+      const binderId = parseInt(req.params.id);
+      const binder = await getOwnedPcBinder(binderId, req.user.id);
+      if (!binder) return res.status(404).json({ message: "PC binder not found" });
+
+      await db
+        .update(pcBinderShareLinks)
+        .set({ isActive: false, revokedAt: new Date() })
+        .where(and(eq(pcBinderShareLinks.binderId, binderId), eq(pcBinderShareLinks.isActive, true)));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error revoking PC binder share link:", error);
+      res.status(500).json({ message: "Failed to revoke share link" });
+    }
+  });
+
+  // GET /api/pc-share/:token — PUBLIC endpoint for shared PC binder pages.
+  // Payload is privacy-scoped: sharer display name only (no email/userId), no
+  // prices. Mirrors /api/share/:token semantics: 404 unknown, 410 revoked.
+  app.get("/api/pc-share/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+
+      const [link] = await db
+        .select()
+        .from(pcBinderShareLinks)
+        .where(eq(pcBinderShareLinks.token, token))
+        .limit(1);
+      if (!link) return res.status(404).json({ message: "Share link not found" });
+      if (!link.isActive) return res.status(410).json({ message: "This share link has been revoked" });
+
+      const [binder] = await db
+        .select()
+        .from(pcBinders)
+        .where(eq(pcBinders.id, link.binderId))
+        .limit(1);
+      if (!binder) return res.status(404).json({ message: "Binder not found" });
+
+      // Update last_accessed_at (fire and forget)
+      db.update(pcBinderShareLinks)
+        .set({ lastAccessedAt: new Date() })
+        .where(eq(pcBinderShareLinks.id, link.id))
+        .then(() => {})
+        .catch(() => {});
+
+      const [sharer] = await db
+        .select({ displayName: users.displayName, username: users.username })
+        .from(users)
+        .where(eq(users.id, binder.userId))
+        .limit(1);
+
+      const binderCards = await db
+        .select({
+          id: cards.id,
+          name: cards.name,
+          cardNumber: cards.cardNumber,
+          frontImageUrl: cards.frontImageUrl,
+          isInsert: cards.isInsert,
+          setName: cardSets.name,
+          owned: sql<boolean>`(${userCollections.id} IS NOT NULL)`,
+        })
+        .from(pcBinderCards)
+        .innerJoin(cards, eq(cards.id, pcBinderCards.cardId))
+        .leftJoin(cardSets, eq(cardSets.id, cards.setId))
+        .leftJoin(userCollections, and(
+          eq(userCollections.cardId, pcBinderCards.cardId),
+          eq(userCollections.userId, binder.userId)
+        ))
+        .where(eq(pcBinderCards.binderId, binder.id))
+        .orderBy(pcBinderCards.addedAt, pcBinderCards.id);
+
+      const totalCards = binderCards.length;
+      const ownedCount = binderCards.filter(c => c.owned).length;
+
+      res.json({
+        sharerName: sharer?.displayName || sharer?.username || "A collector",
+        binder: {
+          name: binder.name,
+          description: binder.description,
+          category: binder.category,
+        },
+        cards: binderCards.map(({ owned, ...card }) => card),
+        ownedCardIds: binderCards.filter(c => c.owned).map(c => c.id),
+        stats: { totalCards, ownedCount },
+      });
+    } catch (error) {
+      console.error("Error fetching shared PC binder:", error);
+      res.status(500).json({ message: "Failed to load shared binder" });
     }
   });
 

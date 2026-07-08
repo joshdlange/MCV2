@@ -1127,6 +1127,22 @@ export const pcBinderCards = pgTable("pc_binder_cards", {
   binderCardIdx: uniqueIndex("pc_binder_cards_binder_card_idx").on(table.binderId, table.cardId),
 }));
 
+// Public share links for PC binders. Deliberately a SEPARATE table from
+// share_links (which is keyed by cardSetId NOT NULL); owner is derived via
+// pc_binders.user_id, and FK cascade kills tokens when a binder is deleted.
+export const pcBinderShareLinks = pgTable("pc_binder_share_links", {
+  id: serial("id").primaryKey(),
+  binderId: integer("binder_id").references(() => pcBinders.id, { onDelete: "cascade" }).notNull(),
+  token: text("token").notNull().unique(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  revokedAt: timestamp("revoked_at"),
+  lastAccessedAt: timestamp("last_accessed_at"),
+}, (table) => ({
+  tokenIdx: uniqueIndex("pc_binder_share_links_token_idx").on(table.token),
+  binderIdx: index("pc_binder_share_links_binder_idx").on(table.binderId),
+}));
+
 export const PC_BINDER_CATEGORIES = ["Character", "Artist", "Theme", "Chase List", "Other"] as const;
 
 export const insertPcBinderSchema = createInsertSchema(pcBinders).omit({
@@ -1143,6 +1159,7 @@ export type InsertPcBinder = z.infer<typeof insertPcBinderSchema>;
 export type PcBinder = typeof pcBinders.$inferSelect;
 export type InsertPcBinderCard = z.infer<typeof insertPcBinderCardSchema>;
 export type PcBinderCard = typeof pcBinderCards.$inferSelect;
+export type PcBinderShareLink = typeof pcBinderShareLinks.$inferSelect;
 
 // Extended types for social features
 export type FriendWithUser = Friend & {
