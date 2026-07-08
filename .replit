@@ -55,3 +55,7 @@ VITE_EBAY_CUSTOMID_PREFIX = "MCV"
 
 [userenv.production]
 MARKETPLACE_PUBLIC_URL = "https://app.marvelcardvault.com"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 120000
