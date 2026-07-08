@@ -26,7 +26,7 @@ import {
   backfillCardAddedXp,
   awardBinderShareXp,
 } from "./services/xpService";
-import { sql, eq, ne, ilike, like, and, or, isNull, count, exists, desc } from "drizzle-orm";
+import { sql, eq, ne, ilike, like, and, or, isNull, count, exists, desc, inArray } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
 import { badgeService } from "./badge-service";
@@ -9586,7 +9586,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(pcBinderCards)
         .where(eq(pcBinderCards.binderId, binderId));
       if (Number(cardCount) >= MAX_CARDS_PER_PC_BINDER) {
-        return res.status(400).json({ message: `This binder is full (max ${MAX_CARDS_PER_PC_BINDER} cards)` });
+        // code lets the client distinguish "full" from other errors and offer
+        // the "start a Vol. 2 binder" flow
+        return res.status(409).json({ code: "BINDER_FULL", message: `This binder is full (max ${MAX_CARDS_PER_PC_BINDER} cards)` });
       }
 
       // Duplicate adds are safe no-ops (unique binder_id+card_id index)
@@ -9620,6 +9622,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dryRun = req.body?.dryRun === true;
       const pattern = `%${search}%`;
 
+      // Optional: exclude cards already in other binders the caller owns.
+      // Powers the "Vol. 2" overflow flow — a continuation binder receives the
+      // NEXT batch of matches instead of repeating the first 500. Only the
+      // caller's own binder IDs are honored (ownership re-verified here).
+      const rawExclude = Array.isArray(req.body?.excludeBinderIds) ? req.body.excludeBinderIds : [];
+      const excludeCandidates: number[] = Array.from(new Set(
+        rawExclude
+          .map((v: any) => parseInt(v))
+          .filter((v: number) => Number.isInteger(v) && v > 0 && v !== binderId)
+      )).slice(0, 50) as number[];
+      let excludeIds: number[] = [];
+      if (excludeCandidates.length > 0) {
+        const ownedBinders = await db
+          .select({ id: pcBinders.id })
+          .from(pcBinders)
+          .where(and(eq(pcBinders.userId, req.user.id), inArray(pcBinders.id, excludeCandidates)));
+        excludeIds = ownedBinders.map((b) => b.id);
+      }
+      // Verified-int IDs from our own DB — safe to inline
+      const excludeFragment = excludeIds.length > 0
+        ? sql` AND NOT EXISTS (SELECT 1 FROM pc_binder_cards pbx WHERE pbx.binder_id IN (${sql.raw(excludeIds.join(","))}) AND pbx.card_id = c.id)`
+        : sql``;
+
       const result = await db.transaction(async (tx) => {
         const [{ currentCount }] = await tx
           .select({ currentCount: count() })
@@ -9628,15 +9653,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const remaining = Math.max(0, MAX_CARDS_PER_PC_BINDER - Number(currentCount));
 
         // Cards matching by name, in active (non-archived) sets, not already in the binder
+        const matchConditions = [
+          ilike(cards.name, pattern),
+          eq(cardSets.isActive, true),
+          sql`NOT EXISTS (SELECT 1 FROM pc_binder_cards pbc WHERE pbc.binder_id = ${binderId} AND pbc.card_id = ${cards.id})`,
+        ];
+        if (excludeIds.length > 0) {
+          matchConditions.push(
+            sql`NOT EXISTS (SELECT 1 FROM pc_binder_cards pbx WHERE pbx.binder_id IN (${sql.raw(excludeIds.join(","))}) AND pbx.card_id = ${cards.id})`
+          );
+        }
         const [{ matchCount }] = await tx
           .select({ matchCount: count() })
           .from(cards)
           .innerJoin(cardSets, eq(cardSets.id, cards.setId))
-          .where(and(
-            ilike(cards.name, pattern),
-            eq(cardSets.isActive, true),
-            sql`NOT EXISTS (SELECT 1 FROM pc_binder_cards pbc WHERE pbc.binder_id = ${binderId} AND pbc.card_id = ${cards.id})`
-          ));
+          .where(and(...matchConditions));
         const matched = Number(matchCount);
 
         if (dryRun) {
@@ -9658,7 +9689,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             AND NOT EXISTS (
               SELECT 1 FROM pc_binder_cards pbc
               WHERE pbc.binder_id = ${binderId} AND pbc.card_id = c.id
-            )
+            )${excludeFragment}
           ORDER BY c.id
           LIMIT ${remaining}
           ON CONFLICT DO NOTHING

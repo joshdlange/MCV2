@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link, useParams, useSearch } from "wouter";
+import { Link, useParams, useSearch, useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { PcBinderShareModal } from "@/components/collection/pc-binder-share-modal";
 import type { CardWithSet, CollectionItem, InsertUserCollection, InsertUserWishlist, WishlistItem } from "@shared/schema";
@@ -79,16 +89,46 @@ const CATEGORY_COLORS: Record<string, string> = {
   Other: "bg-gray-100 text-gray-700 border-gray-200",
 };
 
+// Binder names are capped at 60 chars server-side
+const MAX_BINDER_NAME_LEN = 60;
+
+function truncateForSuffix(base: string, suffix: string): string {
+  const max = MAX_BINDER_NAME_LEN - suffix.length;
+  return base.length > max ? base.slice(0, max).trimEnd() : base;
+}
+
+// "Sabretooth PC" -> "Sabretooth PC Vol. 2"; "Sabretooth PC Vol. 2" -> "... Vol. 3"
+// Requires whitespace before "vol" so names like "Marvol 2" aren't mangled.
+function nextVolumeName(name: string): string {
+  const m = name.match(/^(.*\S)\s+vol\.?\s*(\d+)\s*$/i);
+  if (m && m[1].trim().length > 0) {
+    const suffix = ` Vol. ${parseInt(m[2], 10) + 1}`;
+    return truncateForSuffix(m[1].trim(), suffix) + suffix;
+  }
+  const suffix = " Vol. 2";
+  return truncateForSuffix(name.trim(), suffix) + suffix;
+}
+
+// Info handed to the parent when an add hits the 500-card cap, so it can
+// offer creating the next volume binder with the leftover cards.
+interface BinderFullInfo {
+  search?: string;
+  cardId?: number;
+  leftover: number;
+}
+
 function AddCardsDialog({
   open,
   onOpenChange,
   binderId,
   binderCardIds,
+  onBinderFull,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   binderId: number;
   binderCardIds: Set<number>;
+  onBinderFull: (info: BinderFullInfo) => void;
 }) {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
@@ -138,7 +178,11 @@ function AddCardsDialog({
       queryClient.invalidateQueries({ queryKey: ["/api/pc-binders", String(binderId)] });
       queryClient.invalidateQueries({ queryKey: ["/api/pc-binders"] });
     },
-    onError: (err: any) => {
+    onError: (err: any, cardId: number) => {
+      if (String(err?.message || "").includes("BINDER_FULL")) {
+        onBinderFull({ cardId, leftover: 1 });
+        return;
+      }
       toast({
         title: "Couldn't add card",
         description: err?.message || undefined,
@@ -172,6 +216,10 @@ function AddCardsDialog({
             ? `Binders hold up to 500 cards — ${data.matched - data.added} matching cards didn't fit.`
             : undefined,
         });
+      }
+      const leftover = data.matched - data.added;
+      if (data.capped && leftover > 0) {
+        onBinderFull({ search: debounced, leftover });
       }
     },
     onError: (err: any) => {
@@ -232,8 +280,15 @@ function AddCardsDialog({
             </div>
             <Button
               size="sm"
-              onClick={() => bulkMutation.mutate()}
-              disabled={bulkMutation.isPending || bulkPreview?.remaining === 0}
+              onClick={() => {
+                // Binder already full — skip the no-op request and offer Vol. 2
+                if (bulkPreview && bulkPreview.remaining === 0) {
+                  onBinderFull({ search: debounced, leftover: matched });
+                } else {
+                  bulkMutation.mutate();
+                }
+              }}
+              disabled={bulkMutation.isPending}
               className="bg-red-600 hover:bg-red-700 shrink-0"
               data-testid="button-add-all"
             >
@@ -312,11 +367,23 @@ function AddCardsDialog({
   );
 }
 
+// The "start the next volume?" prompt shown when a binder hits its 500-card cap
+interface VolumePrompt {
+  search?: string;
+  cardId?: number;
+  leftover: number;
+  // Binder IDs whose cards must NOT be repeated in the new volume
+  chain: number[];
+  fullBinderName: string;
+  nextName: string;
+}
+
 export default function PcBinderDetail() {
   const params = useParams<{ id: string }>();
   const binderId = parseInt(params.id || "");
   const searchString = useSearch();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [filter, setFilter] = useState<"all" | "owned" | "missing">(() => {
     const f = new URLSearchParams(searchString).get("filter");
     return f === "owned" || f === "missing" ? f : "all";
@@ -326,6 +393,7 @@ export default function PcBinderDetail() {
   const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
   const [isCardModalOpen, setIsCardModalOpen] = useState(false);
   const [loadingCardId, setLoadingCardId] = useState<number | null>(null);
+  const [volumePrompt, setVolumePrompt] = useState<VolumePrompt | null>(null);
 
   const { data: binder, isLoading, isError } = useQuery<PcBinderDetail>({
     queryKey: ["/api/pc-binders", String(binderId)],
@@ -456,6 +524,62 @@ export default function PcBinderDetail() {
     },
     onError: () => {
       toast({ title: "Couldn't add to wishlist", variant: "destructive" });
+    },
+  });
+
+  // Create the next volume binder ("<Name> Vol. 2") and move the leftover
+  // cards into it — excludeBinderIds guarantees no card is repeated across
+  // volumes. Chains to Vol. 3+ if the leftovers still don't fit.
+  const createVolumeMutation = useMutation({
+    mutationFn: async (prompt: VolumePrompt) => {
+      const res = await apiRequest("POST", "/api/pc-binders", {
+        name: prompt.nextName,
+        description: binder?.description || null,
+        category: binder?.category || "Other",
+      });
+      const newBinder = await res.json();
+      let bulkResult: BulkResult | null = null;
+      if (prompt.cardId != null) {
+        await apiRequest("POST", `/api/pc-binders/${newBinder.id}/cards`, { cardId: prompt.cardId });
+      } else if (prompt.search) {
+        const bulkRes = await apiRequest("POST", `/api/pc-binders/${newBinder.id}/cards/bulk`, {
+          search: prompt.search,
+          excludeBinderIds: prompt.chain,
+        });
+        bulkResult = (await bulkRes.json()) as BulkResult;
+      }
+      return { newBinder, bulkResult, prompt };
+    },
+    onSuccess: ({ newBinder, bulkResult, prompt }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/pc-binders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pc-binders", String(newBinder.id)] });
+      const addedCount = bulkResult ? bulkResult.added : 1;
+      toast({
+        title: `Created "${newBinder.name}"`,
+        description: `${addedCount.toLocaleString()} card${addedCount === 1 ? "" : "s"} added.`,
+      });
+      navigate(`/pc-binders/${newBinder.id}`);
+      const leftover = bulkResult ? bulkResult.matched - bulkResult.added : 0;
+      if (bulkResult && bulkResult.capped && leftover > 0) {
+        // Still more cards than fit — offer Vol. 3 (and so on)
+        setVolumePrompt({
+          search: prompt.search,
+          leftover,
+          chain: [...prompt.chain, newBinder.id],
+          fullBinderName: newBinder.name,
+          nextName: nextVolumeName(newBinder.name),
+        });
+      } else {
+        setVolumePrompt(null);
+      }
+    },
+    onError: (err: any) => {
+      setVolumePrompt(null);
+      toast({
+        title: "Couldn't create the next binder",
+        description: err?.message || undefined,
+        variant: "destructive",
+      });
     },
   });
 
@@ -701,7 +825,51 @@ export default function PcBinderDetail() {
         onOpenChange={setShowAddDialog}
         binderId={binderId}
         binderCardIds={new Set(binder.cards.map((c) => c.id))}
+        onBinderFull={(info) => {
+          setShowAddDialog(false);
+          setVolumePrompt({
+            ...info,
+            chain: [binderId],
+            fullBinderName: binder.name,
+            nextName: nextVolumeName(binder.name),
+          });
+        }}
       />
+
+      <AlertDialog
+        open={!!volumePrompt}
+        onOpenChange={(open) => {
+          if (!open && !createVolumeMutation.isPending) setVolumePrompt(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>This binder is full</AlertDialogTitle>
+            <AlertDialogDescription>
+              {volumePrompt?.cardId != null
+                ? `"${volumePrompt?.fullBinderName}" holds up to 500 cards. Start "${volumePrompt?.nextName}" and add this card there instead?`
+                : `"${volumePrompt?.fullBinderName}" holds up to 500 cards — ${volumePrompt?.leftover.toLocaleString()} matching card${volumePrompt?.leftover === 1 ? "" : "s"} didn't fit. Start "${volumePrompt?.nextName}" with the rest? No cards will be repeated between volumes.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={createVolumeMutation.isPending} data-testid="button-decline-next-volume">
+              Not now
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              disabled={createVolumeMutation.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (volumePrompt) createVolumeMutation.mutate(volumePrompt);
+              }}
+              data-testid="button-create-next-volume"
+            >
+              {createVolumeMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-1" />}
+              Create "{volumePrompt?.nextName}"
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <PcBinderShareModal
         isOpen={showShareModal}
