@@ -49,7 +49,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { BookOpen, Plus, MoreVertical, Pencil, Trash2, Loader2 } from "lucide-react";
+import { BookOpen, Plus, MoreVertical, Pencil, Trash2, Loader2, AlertTriangle } from "lucide-react";
 import { PC_BINDER_CATEGORIES } from "@shared/schema";
 
 interface PcBinderSummary {
@@ -71,6 +71,40 @@ const binderFormSchema = z.object({
 
 type BinderFormValues = z.infer<typeof binderFormSchema>;
 
+// Volume-chain helpers — mirror normalizeVolName/nextVolumeName in
+// pc-binder-detail.tsx, where the overflow flow links binder volumes purely
+// by name ("<Name> Vol. 2", "Vol. 3", ...). Requires whitespace before "vol"
+// so names like "Marvol 2" aren't matched.
+const VOL_SUFFIX_RE = /\s+vol\.?\s*\d+\s*$/i;
+
+// Case/format-insensitive comparison so "Sabretooth PC Vol. 2",
+// "sabretooth pc vol 2" and "Sabretooth PC Vol.2" are treated as the same name
+function normalizeVolName(name: string): string {
+  return name.trim().toLowerCase().replace(/\s+vol\.?\s*(\d+)\s*$/i, " vol $1");
+}
+
+function volBaseName(name: string): string {
+  return name.trim().toLowerCase().replace(VOL_SUFFIX_RE, "").trim();
+}
+
+// True when the binder is part of a "Vol. N" volume series: either its own
+// name carries a Vol. N suffix, or a sibling binder is a Vol. N of this
+// binder's base name (i.e. this binder is the base of a chain).
+function isPartOfVolumeSeries(
+  binder: PcBinderSummary,
+  allBinders: PcBinderSummary[] | undefined,
+): boolean {
+  if (VOL_SUFFIX_RE.test(binder.name)) return true;
+  if (!allBinders) return false;
+  const base = volBaseName(binder.name);
+  return allBinders.some(
+    (b) =>
+      b.id !== binder.id &&
+      VOL_SUFFIX_RE.test(b.name) &&
+      volBaseName(b.name) === base,
+  );
+}
+
 const CATEGORY_COLORS: Record<string, string> = {
   Character: "bg-red-100 text-red-800 border-red-200",
   Artist: "bg-purple-100 text-purple-800 border-purple-200",
@@ -83,10 +117,12 @@ function BinderFormDialog({
   open,
   onOpenChange,
   binder,
+  allBinders,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   binder: PcBinderSummary | null;
+  allBinders: PcBinderSummary[] | undefined;
 }) {
   const { toast } = useToast();
   const isEdit = !!binder;
@@ -101,6 +137,12 @@ function BinderFormDialog({
         : "Other",
     },
   });
+
+  const watchedName = form.watch("name");
+  const showVolumeWarning =
+    isEdit &&
+    isPartOfVolumeSeries(binder!, allBinders) &&
+    normalizeVolName(watchedName || "") !== normalizeVolName(binder!.name);
 
   const saveMutation = useMutation({
     mutationFn: async (values: BinderFormValues) => {
@@ -157,6 +199,17 @@ function BinderFormDialog({
                     />
                   </FormControl>
                   <FormMessage />
+                  {showVolumeWarning && (
+                    <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
+                      <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
+                      <span>
+                        This binder is part of a volume series (linked by name, e.g.
+                        "Vol. 2"). Renaming it disconnects it from the series — future
+                        overflow volumes won't know about its cards and could repeat
+                        them in a new binder.
+                      </span>
+                    </div>
+                  )}
                 </FormItem>
               )}
             />
@@ -421,6 +474,7 @@ export default function PcBinders() {
           if (!open) setEditingBinder(null);
         }}
         binder={editingBinder}
+        allBinders={binders}
       />
 
       <AlertDialog open={!!deletingBinder} onOpenChange={(open) => !open && setDeletingBinder(null)}>
