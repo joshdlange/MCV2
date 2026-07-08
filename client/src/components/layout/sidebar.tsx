@@ -26,6 +26,7 @@ import {
   Calendar,
   Activity,
   ScanLine,
+  BookOpen,
 } from "lucide-react";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 
@@ -34,6 +35,7 @@ const getNavigationItems = (userPlan: string): NavigationItem[] => {
     { href: "/", label: "Dashboard", icon: "LayoutDashboard" },
     { href: "/browse", label: "Browse Cards", icon: "Grid3X3" },
     { href: "/my-collection", label: "My Collection", icon: "FolderOpen" },
+    { href: "/pc-binders", label: "PC Binders", icon: "BookOpen" },
     { href: "/wishlist", label: "Wishlist", icon: "Heart" },
   ];
 
@@ -80,6 +82,7 @@ const iconMap = {
   Store,
   Calendar,
   Activity,
+  BookOpen,
 };
 
 export function Sidebar() {

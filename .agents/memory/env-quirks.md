@@ -33,6 +33,23 @@ script is meaningless.
   threw). Symptom pattern "server says success, UI shows error" ⇒ suspect a client-side exception in
   a success handler. Before publishing changes to a page, tsc that page's file specifically.
 
+## TanStack Query default fetcher only uses `queryKey[0]`
+The default queryFn in `client/src/lib/queryClient.ts` fetches ONLY the first key segment — it does
+NOT join hierarchical keys into a URL. `queryKey: ["/api/things", id]` silently fetches
+`/api/things` (the list) and the detail component crashes on the wrong shape.
+
+**How to apply:** every hierarchical/detail query needs an explicit `queryFn` (via `apiRequest`)
+that builds the full URL, while KEEPING the array key so prefix invalidation still works. This
+caused a would-have-shipped crash once; the architect review caught it.
+
+## E2E-testing authed API routes without a browser
+Auth is a strict Firebase `verifyIdToken` — curl alone can't hit authed routes. But you CAN mint a
+real session server-side: `admin.createCustomToken(uid)` (FIREBASE_SERVICE_ACCOUNT_KEY) → exchange
+at `identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=$VITE_FIREBASE_API_KEY` →
+use the returned `idToken` as Bearer. Run the script from the workspace root (not /tmp) so
+`firebase-admin` resolves. This gives full runtime verification of authed endpoints despite the
+screenshot tool's auth limitation.
+
 ## Screenshot tool can't see authed (Firebase) pages
 The `app_preview` screenshot tool spins up its OWN headless browser with no Firebase session, so it
 always lands on the Login page for auth-gated routes — even though the user's real preview browser

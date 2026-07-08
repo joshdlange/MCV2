@@ -17,7 +17,7 @@ import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
 import { uploadImage } from "./cloudinary";
 import { db } from "./db";
-import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userWishlists, badges, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks, blocks, friends, userScanLogs } from "../shared/schema";
+import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userWishlists, badges, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks, blocks, friends, userScanLogs, pcBinders, pcBinderCards, PC_BINDER_CATEGORIES } from "../shared/schema";
 import { imageContributionXp } from "../shared/xp";
 import {
   computeUserXp,
@@ -9378,6 +9378,242 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error awarding binder share XP:", error);
       res.status(500).json({ message: "Failed to record share" });
+    }
+  });
+
+  // ================= PC BINDERS (personal collection binders) =================
+  // User-created custom binders (character/artist/theme/chase lists). Cards in
+  // a PC Binder are INDEPENDENT of ownership — adding/removing never touches
+  // user_collections. All routes are auth'd and owner-scoped. Private feature:
+  // no public/share endpoints.
+
+  const MAX_PC_BINDERS_PER_USER = 50;
+  const MAX_CARDS_PER_PC_BINDER = 500;
+
+  const pcBinderInputSchema = z.object({
+    name: z.string().trim().min(1, "Name is required").max(60, "Name must be 60 characters or less"),
+    description: z.string().trim().max(500, "Description must be 500 characters or less").optional().nullable(),
+    category: z.enum(PC_BINDER_CATEGORIES).optional(),
+  });
+
+  // Fetch a binder ONLY if owned by the caller (single ownership gate for all routes)
+  const getOwnedPcBinder = async (binderId: number, userId: number) => {
+    if (isNaN(binderId)) return null;
+    const [binder] = await db
+      .select()
+      .from(pcBinders)
+      .where(and(eq(pcBinders.id, binderId), eq(pcBinders.userId, userId)))
+      .limit(1);
+    return binder || null;
+  };
+
+  // List the caller's PC binders with counts. The user_collections predicate
+  // MUST be in the JOIN ON clause (not WHERE) so empty/zero-owned binders
+  // still appear.
+  app.get("/api/pc-binders", authenticateUser, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const binders = await db
+        .select({
+          id: pcBinders.id,
+          name: pcBinders.name,
+          description: pcBinders.description,
+          category: pcBinders.category,
+          createdAt: pcBinders.createdAt,
+          totalCards: sql<number>`count(${pcBinderCards.id})::int`,
+          ownedCards: sql<number>`count(${userCollections.id})::int`,
+        })
+        .from(pcBinders)
+        .leftJoin(pcBinderCards, eq(pcBinderCards.binderId, pcBinders.id))
+        .leftJoin(userCollections, and(
+          eq(userCollections.cardId, pcBinderCards.cardId),
+          eq(userCollections.userId, userId)
+        ))
+        .where(eq(pcBinders.userId, userId))
+        .groupBy(pcBinders.id)
+        .orderBy(desc(pcBinders.createdAt));
+      res.json(binders);
+    } catch (error) {
+      console.error("Error fetching PC binders:", error);
+      res.status(500).json({ message: "Failed to fetch PC binders" });
+    }
+  });
+
+  app.post("/api/pc-binders", authenticateUser, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const parsed = pcBinderInputSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.errors[0]?.message || "Invalid input" });
+      }
+
+      const [{ binderCount }] = await db
+        .select({ binderCount: count() })
+        .from(pcBinders)
+        .where(eq(pcBinders.userId, userId));
+      if (Number(binderCount) >= MAX_PC_BINDERS_PER_USER) {
+        return res.status(400).json({ message: `You've reached the limit of ${MAX_PC_BINDERS_PER_USER} PC binders` });
+      }
+
+      const [binder] = await db
+        .insert(pcBinders)
+        .values({
+          userId,
+          name: parsed.data.name,
+          description: parsed.data.description || null,
+          category: parsed.data.category || "Other",
+        })
+        .returning();
+      res.status(201).json(binder);
+    } catch (error) {
+      console.error("Error creating PC binder:", error);
+      res.status(500).json({ message: "Failed to create PC binder" });
+    }
+  });
+
+  app.patch("/api/pc-binders/:id", authenticateUser, async (req: any, res) => {
+    try {
+      const binderId = parseInt(req.params.id);
+      const binder = await getOwnedPcBinder(binderId, req.user.id);
+      if (!binder) return res.status(404).json({ message: "PC binder not found" });
+
+      const parsed = pcBinderInputSchema.partial().safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.errors[0]?.message || "Invalid input" });
+      }
+      if (parsed.data.name !== undefined && parsed.data.name.length === 0) {
+        return res.status(400).json({ message: "Name is required" });
+      }
+
+      const [updated] = await db
+        .update(pcBinders)
+        .set({
+          ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
+          ...(parsed.data.description !== undefined ? { description: parsed.data.description || null } : {}),
+          ...(parsed.data.category !== undefined ? { category: parsed.data.category } : {}),
+        })
+        .where(and(eq(pcBinders.id, binderId), eq(pcBinders.userId, req.user.id)))
+        .returning();
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating PC binder:", error);
+      res.status(500).json({ message: "Failed to update PC binder" });
+    }
+  });
+
+  app.delete("/api/pc-binders/:id", authenticateUser, async (req: any, res) => {
+    try {
+      const binderId = parseInt(req.params.id);
+      const binder = await getOwnedPcBinder(binderId, req.user.id);
+      if (!binder) return res.status(404).json({ message: "PC binder not found" });
+
+      // FK cascade removes pc_binder_cards rows automatically
+      await db.delete(pcBinders).where(and(eq(pcBinders.id, binderId), eq(pcBinders.userId, req.user.id)));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting PC binder:", error);
+      res.status(500).json({ message: "Failed to delete PC binder" });
+    }
+  });
+
+  // Binder detail: binder + all its cards with an `owned` flag (never paginated;
+  // binders are capped at MAX_CARDS_PER_PC_BINDER).
+  app.get("/api/pc-binders/:id", authenticateUser, async (req: any, res) => {
+    try {
+      const binderId = parseInt(req.params.id);
+      const userId = req.user.id;
+      const binder = await getOwnedPcBinder(binderId, userId);
+      if (!binder) return res.status(404).json({ message: "PC binder not found" });
+
+      const binderCards = await db
+        .select({
+          id: cards.id,
+          name: cards.name,
+          cardNumber: cards.cardNumber,
+          frontImageUrl: cards.frontImageUrl,
+          rarity: cards.rarity,
+          isInsert: cards.isInsert,
+          setId: cards.setId,
+          setName: cardSets.name,
+          addedAt: pcBinderCards.addedAt,
+          owned: sql<boolean>`(${userCollections.id} IS NOT NULL)`,
+        })
+        .from(pcBinderCards)
+        .innerJoin(cards, eq(cards.id, pcBinderCards.cardId))
+        .leftJoin(cardSets, eq(cardSets.id, cards.setId))
+        .leftJoin(userCollections, and(
+          eq(userCollections.cardId, pcBinderCards.cardId),
+          eq(userCollections.userId, userId)
+        ))
+        .where(eq(pcBinderCards.binderId, binderId))
+        .orderBy(pcBinderCards.addedAt, pcBinderCards.id);
+
+      const totalCards = binderCards.length;
+      const ownedCards = binderCards.filter(c => c.owned).length;
+      res.json({
+        ...binder,
+        cards: binderCards,
+        totalCards,
+        ownedCards,
+        missingCards: totalCards - ownedCards,
+        completionPct: totalCards > 0 ? Math.round((ownedCards / totalCards) * 100) : 0,
+      });
+    } catch (error) {
+      console.error("Error fetching PC binder:", error);
+      res.status(500).json({ message: "Failed to fetch PC binder" });
+    }
+  });
+
+  app.post("/api/pc-binders/:id/cards", authenticateUser, async (req: any, res) => {
+    try {
+      const binderId = parseInt(req.params.id);
+      const binder = await getOwnedPcBinder(binderId, req.user.id);
+      if (!binder) return res.status(404).json({ message: "PC binder not found" });
+
+      const cardId = parseInt(req.body?.cardId);
+      if (isNaN(cardId)) return res.status(400).json({ message: "Invalid cardId" });
+
+      const [card] = await db.select({ id: cards.id }).from(cards).where(eq(cards.id, cardId)).limit(1);
+      if (!card) return res.status(404).json({ message: "Card not found" });
+
+      const [{ cardCount }] = await db
+        .select({ cardCount: count() })
+        .from(pcBinderCards)
+        .where(eq(pcBinderCards.binderId, binderId));
+      if (Number(cardCount) >= MAX_CARDS_PER_PC_BINDER) {
+        return res.status(400).json({ message: `This binder is full (max ${MAX_CARDS_PER_PC_BINDER} cards)` });
+      }
+
+      // Duplicate adds are safe no-ops (unique binder_id+card_id index)
+      const inserted = await db
+        .insert(pcBinderCards)
+        .values({ binderId, cardId })
+        .onConflictDoNothing()
+        .returning({ id: pcBinderCards.id });
+      res.json({ added: inserted.length > 0 });
+    } catch (error) {
+      console.error("Error adding card to PC binder:", error);
+      res.status(500).json({ message: "Failed to add card to PC binder" });
+    }
+  });
+
+  app.delete("/api/pc-binders/:id/cards/:cardId", authenticateUser, async (req: any, res) => {
+    try {
+      const binderId = parseInt(req.params.id);
+      const binder = await getOwnedPcBinder(binderId, req.user.id);
+      if (!binder) return res.status(404).json({ message: "PC binder not found" });
+
+      const cardId = parseInt(req.params.cardId);
+      if (isNaN(cardId)) return res.status(400).json({ message: "Invalid cardId" });
+
+      // Only removes the binder entry — the user's main collection is untouched
+      await db
+        .delete(pcBinderCards)
+        .where(and(eq(pcBinderCards.binderId, binderId), eq(pcBinderCards.cardId, cardId)));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing card from PC binder:", error);
+      res.status(500).json({ message: "Failed to remove card from PC binder" });
     }
   });
 

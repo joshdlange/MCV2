@@ -1,0 +1,80 @@
+We want to build Marvel Card Vault “PC Binders” / Personal Collection Binders.
+
+Concept:
+A PC Binder is a user-created custom binder/set. It should behave similarly to existing subset binders wherever possible, but it is created and managed by the user instead of coming from official card set data.
+
+Important:
+PC does not mean “entire collection.” It means a custom personal collection binder around a character, artist, theme, chase list, or collecting goal.
+
+Examples:
+- Spider-Man PC
+- Wolverine PC
+- Venom PC
+- Jim Lee PC
+- 90s Inserts PC
+- Cards I’m Chasing
+
+Must do:
+- Investigate the existing official set/subset/binder data model and UI.
+- Reuse existing subset binder display logic wherever practical.
+- Add user-created PC Binders.
+- A user should be able to create a PC Binder with:
+  - name
+  - optional description
+  - optional theme/category if easy, such as Character, Artist, Theme, Chase List, Other
+- A user should be able to add cards to a PC Binder.
+- PC Binders should support both:
+  - cards the user owns
+  - cards the user does not own yet
+- Owned cards should display as owned/collected.
+- Unowned cards should display as wanted/chase/missing.
+- PC Binder progress should be based on cards added to that PC Binder:
+  - total cards in PC Binder
+  - owned count
+  - missing/chase count
+  - completion percentage
+- Add a PC Binder detail page using the existing binder/grid style where practical.
+- Add basic edit/delete management for PC Binders.
+- Add/remove cards from a PC Binder without changing whether the card is owned in the main collection.
+- Respect user authentication and ownership. Users can only edit their own PC Binders.
+- Keep this feature private by default unless existing public binder/share logic can be reused safely without adding new privacy risk.
+
+Must not do:
+- Do not replace official sets/subsets.
+- Do not change official subset completion logic.
+- Do not treat PC Binder as sharing the user’s entire collection.
+- Do not require a user to own a card before adding it to a PC Binder.
+- Do not add marketplace/trade behavior in this task.
+- Do not change Add Cards behavior.
+- Do not change Dashboard UX unless adding a small entry point is required and approved.
+- Do not touch Android native files.
+- Do not touch iOS native files.
+- Do not change Stripe, RevenueCat, Shippo, billing, subscriptions, or auth.
+- Do not touch XP/xp_events in this task unless required for existing side effects.
+- Do not build referral tracking.
+- Do not send emails in this task.
+- Do not migrate Brevo/Resend in this task.
+
+Preserve:
+- Existing My Collection behavior.
+- Existing official set/subset pages.
+- Existing card detail behavior.
+- Existing Add Cards → Browse Cards behavior.
+- Existing Android Back behavior.
+- Existing share behavior for subset binders.
+- Existing XP system.
+- Existing subscription limits unless separately changed.
+
+QA:
+- User can create a PC Binder.
+- User can edit/delete their own PC Binder.
+- User can add an owned card to a PC Binder.
+- User can add an unowned card to a PC Binder.
+- Owned and unowned cards render differently and clearly.
+- Removing a card from a PC Binder does not remove it from the user’s main collection.
+- Adding an unowned card to a PC Binder does not add it to the user’s owned collection.
+- PC Binder counts and completion percentage are correct.
+- Existing official subset binders still work.
+- Existing My Collection still works.
+- Existing Add Cards behavior is unchanged.
+- No console errors.

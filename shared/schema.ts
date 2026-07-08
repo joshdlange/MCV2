@@ -1103,6 +1103,47 @@ export const insertShareLinkSchema = createInsertSchema(shareLinks).omit({
 export type InsertShareLink = z.infer<typeof insertShareLinkSchema>;
 export type ShareLink = typeof shareLinks.$inferSelect;
 
+// PC Binders — user-created custom binders (character/artist/theme/chase lists).
+// Cards in a PC Binder are independent of ownership: users may add cards they
+// don't own (rendered as "chase" cards). Never mutates user_collections.
+export const pcBinders = pgTable("pc_binders", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category").default("Other").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("pc_binders_user_id_idx").on(table.userId),
+}));
+
+export const pcBinderCards = pgTable("pc_binder_cards", {
+  id: serial("id").primaryKey(),
+  binderId: integer("binder_id").references(() => pcBinders.id, { onDelete: "cascade" }).notNull(),
+  cardId: integer("card_id").references(() => cards.id, { onDelete: "cascade" }).notNull(),
+  addedAt: timestamp("added_at").defaultNow().notNull(),
+}, (table) => ({
+  binderIdIdx: index("pc_binder_cards_binder_id_idx").on(table.binderId),
+  binderCardIdx: uniqueIndex("pc_binder_cards_binder_card_idx").on(table.binderId, table.cardId),
+}));
+
+export const PC_BINDER_CATEGORIES = ["Character", "Artist", "Theme", "Chase List", "Other"] as const;
+
+export const insertPcBinderSchema = createInsertSchema(pcBinders).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPcBinderCardSchema = createInsertSchema(pcBinderCards).omit({
+  id: true,
+  addedAt: true,
+});
+
+export type InsertPcBinder = z.infer<typeof insertPcBinderSchema>;
+export type PcBinder = typeof pcBinders.$inferSelect;
+export type InsertPcBinderCard = z.infer<typeof insertPcBinderCardSchema>;
+export type PcBinderCard = typeof pcBinderCards.$inferSelect;
+
 // Extended types for social features
 export type FriendWithUser = Friend & {
   requester: User;

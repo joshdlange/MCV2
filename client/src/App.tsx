@@ -29,6 +29,8 @@ function RouteErrorBoundary({ children }: { children: React.ReactNode }) {
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const BrowseCards = lazy(() => import("@/pages/browse-cards"));
 const MyCollection = lazy(() => import("@/pages/my-collection"));
+const PcBinders = lazy(() => import("@/pages/pc-binders"));
+const PcBinderDetail = lazy(() => import("@/pages/pc-binder-detail"));
 const Wishlist = lazy(() => import("@/pages/wishlist"));
 const Marketplace = lazy(() => import("@/pages/marketplace"));
 const Profile = lazy(() => import("@/pages/profile"));
@@ -175,6 +177,8 @@ function Router() {
           <Route path="/browse/:mainSetSlug/:setSlug" component={BrowseCards} />
           <Route path="/card-search" component={CardSearch} />
           <Route path="/my-collection" component={MyCollection} />
+          <Route path="/pc-binders" component={PcBinders} />
+          <Route path="/pc-binders/:id" component={PcBinderDetail} />
           <Route path="/wishlist" component={Wishlist} />
           <Route path="/marketplace" component={Marketplace} />
           <Route path="/activity" component={Activity} />
