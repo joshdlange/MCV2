@@ -16,6 +16,19 @@ same column types, nullability, and index names. Because it matches the Drizzle 
 `db:push` sees the DB as already in-sync and won't try to recreate it. Verify columns + indexes
 after creating. For destructive changes, prefer `db:push --force` only with explicit user awareness.
 
+## Drizzle push matches unique constraints by NAME, and prompts abort everything
+`db:push` compares unique constraints by drizzle's naming convention (`<table>_<col>_unique`).
+The prod DB had many legacy Postgres-default names (`<table>_<col>_key`), so push kept prompting
+"add constraint … truncate?" — one prompt per run, and on EOF (closed stdin, e.g. the post-merge
+script) it ABORTS the whole push, so no queued schema changes apply until every prompt is cleared.
+
+**How to apply:** for each prompt, `ALTER TABLE t RENAME CONSTRAINT t_col_key TO t_col_unique;`
+(verify no duplicate rows first). All legacy `_key` unique constraints were renamed July 2026.
+**Remaining permanent blocker:** `users.email` has `.unique()` in schema but prod has 4 real
+accounts sharing 2 emails (distinct firebase_uids), so `users_email_unique` can never be added
+without a user decision (merge/delete accounts or drop `.unique()` from email). Until resolved,
+db:push stops at that prompt and applies NOTHING — make schema changes via matching raw SQL instead.
+
 ## There is NO root `tsconfig.json`
 `npm run check` is just `tsc`, and with no tsconfig in the working dir, tsc prints its help text
 (~141 lines) and exits 1 — it does NOT type-check anything. So "check passed/failed" from that

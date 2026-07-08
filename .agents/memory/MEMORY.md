@@ -2,7 +2,7 @@
 - [Scan-to-Add architecture](scan-to-add.md) — uses GPT-4o-mini vision (not Tesseract); free users get 10 scans/month tracked in user_scan_logs table
 - [Postgres LIMIT without ORDER BY](scan-matching-nondeterminism.md) — paginated candidate queries need explicit ORDER BY or the retrieved row set (and downstream rankings) vary between identical runs.
 - [XP / Collector Power system](xp-system.md) — single source of truth computeUserXp; hybrid model (badge/image derived, card_added from decoupled no-FK xp_events ledger); farm-proof unique index
-- [Repo tooling quirks](env-quirks.md) — db:push prompt needs a TTY (create additive tables via SQL matching schema); no root tsconfig so `npm run check`/tsc never type-checks the server (tsx only)
+- [Repo tooling quirks](env-quirks.md) — db:push prompt needs a TTY & aborts ALL changes at first prompt (users.email dupes block it permanently); no root tsconfig so tsc never checks the server
 - [Collector profile privacy](collector-profile-privacy.md) — every /api/collectors/:username/* data endpoint must run resolveCollectorAccess; UI hiding isn't a security boundary. profileVisibility is tri-state.
 - [Capacitor Android plugin sync](capacitor-android-sync.md) — cap update android must run before every AAB (via nix-shell nodejs_22) or capacitor.plugins.json ships empty and native plugins (App, RevenueCat) silently don't work.
 - [Mobile safe-area insets](safe-area-insets.md) — env(safe-area-inset-*) is 0 on Android WebView; use the max(env, var) --safe-area-top vars from index.css for all fixed/sticky mobile offsets.
