@@ -116,6 +116,56 @@ function nextVolumeName(name: string): string {
   return truncateForSuffix(name.trim(), suffix) + suffix;
 }
 
+// Server caps binders at 500 cards (MAX_CARDS_PER_PC_BINDER)
+const MAX_CARDS_PER_BINDER = 500;
+
+interface BinderSummaryLite {
+  id: number;
+  name: string;
+  totalCards: number;
+}
+
+// Case/format-insensitive name comparison so "Sabretooth PC Vol. 2",
+// "sabretooth pc vol 2" and "Sabretooth PC Vol.2" are treated as the same
+// volume binder
+function normalizeVolName(name: string): string {
+  return name.trim().toLowerCase().replace(/\s+vol\.?\s*(\d+)\s*$/i, " vol $1");
+}
+
+// Resolves where overflow cards should go, accounting for binders the user
+// may have created manually. Walks the "Vol. N" sequence from baseName:
+// - name is unused -> create it
+// - a binder with that name exists and has room -> reuse it (the bulk
+//   endpoint already skips cards it holds; prior volumes are excluded via
+//   the chain)
+// - it exists but is full -> add its ID to the exclusion chain (so its
+//   cards are never repeated) and bump to the next volume number
+// Guarantees no duplicate binder names and no card repeats across the chain.
+function resolveVolumeTarget(
+  baseName: string,
+  chain: number[],
+  binders: BinderSummaryLite[] | undefined,
+): { nextName: string; chain: number[]; existingBinder?: BinderSummaryLite } {
+  let candidate = nextVolumeName(baseName);
+  const nextChain = [...chain];
+  if (!binders) return { nextName: candidate, chain: nextChain };
+  // Bounded walk — 60 comfortably covers the 50-binders-per-user cap
+  for (let i = 0; i < 60; i++) {
+    const existing = binders.find(
+      (b) =>
+        !nextChain.includes(b.id) &&
+        normalizeVolName(b.name) === normalizeVolName(candidate),
+    );
+    if (!existing) return { nextName: candidate, chain: nextChain };
+    if (existing.totalCards < MAX_CARDS_PER_BINDER) {
+      return { nextName: existing.name, chain: nextChain, existingBinder: existing };
+    }
+    nextChain.push(existing.id);
+    candidate = nextVolumeName(existing.name);
+  }
+  return { nextName: candidate, chain: nextChain };
+}
+
 // Info handed to the parent when an add hits the 500-card cap, so it can
 // offer creating the next volume binder with the leftover cards.
 interface BinderFullInfo {
@@ -383,6 +433,9 @@ interface VolumePrompt {
   chain: number[];
   fullBinderName: string;
   nextName: string;
+  // Set when a binder with nextName already exists and has room — the flow
+  // adds to it instead of creating a duplicate-named binder
+  existingBinderId?: number;
 }
 
 export default function PcBinderDetail() {
@@ -420,6 +473,12 @@ export default function PcBinderDetail() {
       return res.json();
     },
     enabled: !isNaN(binderId),
+  });
+
+  // All of the user's binders — used to detect manually-created "Vol. N"
+  // binders so the overflow flow never duplicates a name or repeats cards
+  const { data: allBinders } = useQuery<BinderSummaryLite[]>({
+    queryKey: ["/api/pc-binders"],
   });
 
   const { data: wishlist } = useQuery<WishlistItem[]>({
@@ -549,12 +608,21 @@ export default function PcBinderDetail() {
   // volumes. Chains to Vol. 3+ if the leftovers still don't fit.
   const createVolumeMutation = useMutation({
     mutationFn: async (prompt: VolumePrompt) => {
-      const res = await apiRequest("POST", "/api/pc-binders", {
-        name: prompt.nextName,
-        description: binder?.description || null,
-        category: binder?.category || "Other",
-      });
-      const newBinder = await res.json();
+      let newBinder: { id: number; name: string };
+      let reused = false;
+      if (prompt.existingBinderId != null) {
+        // A binder with this name already exists and has room — fill it
+        // instead of creating a duplicate-named binder
+        newBinder = { id: prompt.existingBinderId, name: prompt.nextName };
+        reused = true;
+      } else {
+        const res = await apiRequest("POST", "/api/pc-binders", {
+          name: prompt.nextName,
+          description: binder?.description || null,
+          category: binder?.category || "Other",
+        });
+        newBinder = await res.json();
+      }
       let bulkResult: BulkResult | null = null;
       if (prompt.cardId != null) {
         await apiRequest("POST", `/api/pc-binders/${newBinder.id}/cards`, { cardId: prompt.cardId });
@@ -565,26 +633,32 @@ export default function PcBinderDetail() {
         });
         bulkResult = (await bulkRes.json()) as BulkResult;
       }
-      return { newBinder, bulkResult, prompt };
+      return { newBinder, reused, bulkResult, prompt };
     },
-    onSuccess: ({ newBinder, bulkResult, prompt }) => {
+    onSuccess: ({ newBinder, reused, bulkResult, prompt }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/pc-binders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/pc-binders", String(newBinder.id)] });
       const addedCount = bulkResult ? bulkResult.added : 1;
       toast({
-        title: `Created "${newBinder.name}"`,
+        title: reused ? `Added to "${newBinder.name}"` : `Created "${newBinder.name}"`,
         description: `${addedCount.toLocaleString()} card${addedCount === 1 ? "" : "s"} added.`,
       });
       navigate(`/pc-binders/${newBinder.id}`);
       const leftover = bulkResult ? bulkResult.matched - bulkResult.added : 0;
       if (bulkResult && bulkResult.capped && leftover > 0) {
-        // Still more cards than fit — offer Vol. 3 (and so on)
+        // Still more cards than fit — offer the next volume (existing or new)
+        const target = resolveVolumeTarget(
+          newBinder.name,
+          [...prompt.chain, newBinder.id],
+          allBinders,
+        );
         setVolumePrompt({
           search: prompt.search,
           leftover,
-          chain: [...prompt.chain, newBinder.id],
+          chain: target.chain,
           fullBinderName: newBinder.name,
-          nextName: nextVolumeName(newBinder.name),
+          nextName: target.nextName,
+          existingBinderId: target.existingBinder?.id,
         });
       } else {
         setVolumePrompt(null);
@@ -932,11 +1006,13 @@ export default function PcBinderDetail() {
         binderCardIds={new Set(binder.cards.map((c) => c.id))}
         onBinderFull={(info) => {
           setShowAddDialog(false);
+          const target = resolveVolumeTarget(binder.name, [binderId], allBinders);
           setVolumePrompt({
             ...info,
-            chain: [binderId],
+            chain: target.chain,
             fullBinderName: binder.name,
-            nextName: nextVolumeName(binder.name),
+            nextName: target.nextName,
+            existingBinderId: target.existingBinder?.id,
           });
         }}
       />
@@ -952,8 +1028,12 @@ export default function PcBinderDetail() {
             <AlertDialogTitle>This binder is full</AlertDialogTitle>
             <AlertDialogDescription>
               {volumePrompt?.cardId != null
-                ? `"${volumePrompt?.fullBinderName}" holds up to 500 cards. Start "${volumePrompt?.nextName}" and add this card there instead?`
-                : `"${volumePrompt?.fullBinderName}" holds up to 500 cards — ${volumePrompt?.leftover.toLocaleString()} matching card${volumePrompt?.leftover === 1 ? "" : "s"} didn't fit. Start "${volumePrompt?.nextName}" with the rest? No cards will be repeated between volumes.`}
+                ? volumePrompt?.existingBinderId != null
+                  ? `"${volumePrompt?.fullBinderName}" holds up to 500 cards. Add this card to your existing "${volumePrompt?.nextName}" binder instead?`
+                  : `"${volumePrompt?.fullBinderName}" holds up to 500 cards. Start "${volumePrompt?.nextName}" and add this card there instead?`
+                : volumePrompt?.existingBinderId != null
+                  ? `"${volumePrompt?.fullBinderName}" holds up to 500 cards — ${volumePrompt?.leftover.toLocaleString()} matching card${volumePrompt?.leftover === 1 ? "" : "s"} didn't fit. Add the rest to your existing "${volumePrompt?.nextName}" binder? No cards will be repeated between volumes.`
+                  : `"${volumePrompt?.fullBinderName}" holds up to 500 cards — ${volumePrompt?.leftover.toLocaleString()} matching card${volumePrompt?.leftover === 1 ? "" : "s"} didn't fit. Start "${volumePrompt?.nextName}" with the rest? No cards will be repeated between volumes.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -970,7 +1050,7 @@ export default function PcBinderDetail() {
               data-testid="button-create-next-volume"
             >
               {createVolumeMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-1" />}
-              Create "{volumePrompt?.nextName}"
+              {volumePrompt?.existingBinderId != null ? "Add to" : "Create"} "{volumePrompt?.nextName}"
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
