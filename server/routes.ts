@@ -24,6 +24,7 @@ import {
   getRecentXpEvents,
   backfillCardAddedXpIfEmpty,
   backfillCardAddedXp,
+  awardBinderShareXp,
 } from "./services/xpService";
 import { sql, eq, ne, ilike, like, and, or, isNull, count, exists, desc } from "drizzle-orm";
 import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-finder";
@@ -4569,11 +4570,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user?.id;
       if (!userId) return res.status(401).json({ message: "Not authenticated" });
-      const { badgeXp, imageXp, cardXp, totalXp, progress } = await computeUserXp(userId);
+      const { badgeXp, imageXp, cardXp, shareXp, totalXp, progress } = await computeUserXp(userId);
       const recentXpEvents = await getRecentXpEvents(userId, 10);
       res.json({
         ...progress,
-        breakdown: { badgeXp, imageXp, cardXp, totalXp },
+        breakdown: { badgeXp, imageXp, cardXp, shareXp, totalXp },
         recentXpEvents,
       });
     } catch (error) {
@@ -9345,6 +9346,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching share link:", error);
       res.status(500).json({ message: "Failed to fetch share link" });
+    }
+  });
+
+  // POST /api/share-links/:cardSetId/shared — award XP after a successful
+  // share/copy of a binder link. Farm-proof: requires an ACTIVE share link
+  // owned by the caller, +25 once ever, then +10 max once per day (both
+  // enforced in awardBinderShareXp; repeats are no-ops).
+  app.post("/api/share-links/:cardSetId/shared", authenticateUser, async (req: any, res) => {
+    try {
+      const cardSetId = parseInt(req.params.cardSetId);
+      if (isNaN(cardSetId)) return res.status(400).json({ message: "Invalid cardSetId" });
+      const userId = req.user.id;
+
+      const existing = await db
+        .select({ id: shareLinks.id })
+        .from(shareLinks)
+        .where(and(
+          eq(shareLinks.userId, userId),
+          eq(shareLinks.cardSetId, cardSetId),
+          eq(shareLinks.isActive, true)
+        ))
+        .limit(1);
+
+      if (existing.length === 0) {
+        return res.status(404).json({ message: "No active share link for this binder" });
+      }
+
+      const result = await awardBinderShareXp(userId, cardSetId);
+      res.json(result);
+    } catch (error) {
+      console.error("Error awarding binder share XP:", error);
+      res.status(500).json({ message: "Failed to record share" });
     }
   });
 

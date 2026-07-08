@@ -11,11 +11,13 @@ function: `computeUserXp` in `server/services/xpService.ts`. Both the collector 
 inline anywhere else.
 
 ## Hybrid model (important)
-Total XP = badge XP + image XP + card XP, but the three come from different places:
+Total XP = badge XP + image XP + card XP + share XP, from different places:
 - **Badge XP** and **Image XP** are DERIVED at read time (badges from `user_badges`, images from
   approved `pending_card_images` via `imageContributionXp`). They are NOT stored in the ledger.
 - **Card XP** comes from the `xp_events` ledger, summed over rows with `event_type = 'card_added'`
   only (filter by event_type so future event types don't leak into the "Cards" total).
+- **Share XP** (binder shares) also comes from the ledger: `subset_binder_share_first` (+25 once
+  ever) and `subset_binder_share_daily` (+10 max once/user/day). Summed separately as `shareXp`.
 
 **Why:** badge/image counts are already authoritative in their own tables, so storing them in a
 ledger would risk double-counting. Card-added XP needs a ledger to be farm-proof (see below).
@@ -35,6 +37,13 @@ Both add paths funnel through `storage.addToCollection`, which is the sole calle
 `shared/xp.ts` as a TODO), remember card_id is NULL for it, and Postgres treats NULLs as distinct —
 the existing unique index will NOT dedupe it. Give set-completed its own dedupe key/index, and add
 its own component to the total in `computeUserXp` rather than folding it into the card sum.
+
+Binder-share XP follows that pattern: `subset_binder_share_first` is deduped by a PARTIAL unique
+index on user_id (`WHERE event_type='subset_binder_share_first'`); the daily +10 uses an atomic
+guarded INSERT (`WHERE NOT EXISTS` today's row) — no expression index. Award happens server-side
+only after a client-confirmed share (native share success or clipboard copy), never for social
+window.open buttons (unconfirmable). The award endpoint also requires an ACTIVE owned share link,
+so direct-API farming caps at +10/day. `card_set_id` on xp_events is plain metadata (no FK).
 
 ## Backfill
 `backfillCardAddedXpIfEmpty` runs once on startup (idempotent, ON CONFLICT-safe). It backdates

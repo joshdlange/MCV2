@@ -1,5 +1,5 @@
 import { pgTable, text, serial, integer, boolean, timestamp, decimal, index, uniqueIndex } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -147,8 +147,9 @@ export const userWishlists = pgTable("user_wishlists", {
 export const xpEvents = pgTable("xp_events", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
-  eventType: text("event_type").notNull(), // card_added | image_approved | badge_earned | set_completed
+  eventType: text("event_type").notNull(), // card_added | image_approved | badge_earned | set_completed | subset_binder_share_first | subset_binder_share_daily
   cardId: integer("card_id"),
+  cardSetId: integer("card_set_id"), // metadata for binder-share events (no FK — ledger stays decoupled)
   imageSubmissionId: integer("image_submission_id"),
   badgeId: integer("badge_id"),
   points: integer("points").default(0).notNull(),
@@ -157,6 +158,11 @@ export const xpEvents = pgTable("xp_events", {
   userIdIdx: index("xp_events_user_id_idx").on(table.userId),
   userCreatedIdx: index("xp_events_user_created_idx").on(table.userId, table.createdAt),
   userEventCardIdx: uniqueIndex("xp_events_user_event_card_idx").on(table.userId, table.eventType, table.cardId),
+  // Lifetime dedupe for the one-time first-share bonus (card_id is NULL for
+  // share events, so the index above cannot dedupe them — NULLs are distinct).
+  shareFirstIdx: uniqueIndex("xp_events_share_first_idx")
+    .on(table.userId)
+    .where(sql`event_type = 'subset_binder_share_first'`),
 }));
 
 export const cardPriceCache = pgTable("card_price_cache", {

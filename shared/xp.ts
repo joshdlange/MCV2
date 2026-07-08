@@ -11,6 +11,13 @@ export const XP_PER_CARD_ADDED = 1;
 // (profile completedSets is hardcoded 0), so this is reserved and NOT awarded.
 export const XP_SET_COMPLETED = 100;
 
+// XP awarded for sharing a subset binder (see awardBinderShareXp in xpService).
+// First share ever: one-time bonus. After that: max once per UTC day.
+export const XP_FIRST_BINDER_SHARE = 25;
+export const XP_DAILY_BINDER_SHARE = 10;
+export const XP_EVENT_BINDER_SHARE_FIRST = "subset_binder_share_first";
+export const XP_EVENT_BINDER_SHARE_DAILY = "subset_binder_share_daily";
+
 // Default XP by badge rarity (used only if a badge has no explicit points value)
 export const DEFAULT_BADGE_XP: Record<string, number> = {
   bronze: 10,

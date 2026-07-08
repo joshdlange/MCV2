@@ -1,0 +1,70 @@
+We need to improve discoverability of the existing subset binder sharing feature and add safe XP rewards for sharing.
+
+Important correction:
+Marvel Card Vault currently supports sharing specific subset binders only. We do not currently support sharing an entire collection, and we do not want to add whole-collection sharing in this task.
+
+Goal:
+Make the existing subset binder share feature easier to find and reward users with limited XP when they share a subset binder, without allowing spam/farming.
+
+Must do:
+- Preserve the existing share behavior for specific subset binders.
+- Make the share action more visible on the subset binder/detail page.
+- Use clear user-facing language such as “Share Binder” or “Share This Binder.”
+- If My Collection has a place where users view sets/subsets, add a small prompt or CTA that directs users to open a specific subset to share that binder.
+- Do not imply that the user can share their entire collection.
+- Use native mobile share when available.
+- Provide copy-link fallback for web/desktop or when native share is unavailable.
+- Shared links must point to the existing public subset binder URL structure.
+- Add XP for sharing using the existing XP/xp_events system.
+- Add a one-time lifetime XP event for the first subset binder share:
+  - event_type: subset_binder_share_first
+  - XP: 25
+- Add limited repeat XP for subset binder sharing:
+  - event_type: subset_binder_share_daily
+  - XP: 10
+  - max once per user per day
+- Only award XP after a successful native share trigger or successful copy-link action.
+- Store enough metadata if the existing xp_events system supports it, such as subset_id/shared_url, so future analytics or anti-spam logic can distinguish which binder was shared.
+- Show user feedback when XP is awarded, consistent with existing XP/toast style.
+- Show user feedback when the binder link is shared/copied but no XP is awarded because the daily/lifetime limit was already reached.
+
+Must not do:
+- Do not add whole-collection sharing.
+- Do not add a “Share My Collection” feature.
+- Do not label the feature “Share My Binder” if it implies the entire collection.
+- Do not redesign My Collection.
+- Do not create a new subset picker unless needed and explicitly approved.
+- Do not change Add Cards behavior.
+- Do not change Dashboard UX.
+- Do not change Android back-button behavior.
+- Do not touch image approval work unless required for merge conflicts.
+- Do not change Stripe, Shippo, RevenueCat, subscriptions, or auth.
+- Do not add referral/signup tracking yet.
+- Do not add public/private profile changes unless existing settings already control public visibility.
+- Do not award XP every time the button is clicked.
+- Do not allow XP farming by repeatedly copying/sharing the same subset link.
+
+Preserve:
+- Existing subset binder share URLs.
+- Existing subset binder page behavior.
+- Existing My Collection layout and navigation.
+- Existing XP level calculations.
+- Existing xp_events duplicate-prevention pattern.
+- Existing mobile styling and Marvel Card Vault branding.
+- Existing image approval fixes.
+
+QA:
+- Existing subset binder share still works.
+- Share button is easier to find on the subset binder page.
+- No UI suggests that the entire collection can be shared.
+- Native share works on mobile when available.
+- Copy-link fallback works.
+- First subset binder share awards XP only once.
+- Daily subset binder share XP can only be awarded once per day.
+- Repeated clicks/copies do not keep adding XP.
+- XP total/level updates correctly after awarded XP.
+- No console errors.
+- Existing My Collection behavior still works.
+- Existing Add Cards → Browse Cards behavior is unchanged.
+- Existing Android back-button behavior is unchanged.
+- Existing image approval fix is not regressed.

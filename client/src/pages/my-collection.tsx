@@ -594,10 +594,9 @@ export default function MyCollection() {
 
             {selectedSet !== "all" && (
               <Button
-                variant="outline"
                 size="sm"
                 onClick={() => setShowShareModal(true)}
-                className="bg-white text-gray-800 border-2 border-gray-400"
+                className="bg-red-600 hover:bg-red-700 text-white border-2 border-red-600"
               >
                 <Share2 className="h-4 w-4 mr-1" />
                 <span className="hidden sm:inline">Share Binder</span>
@@ -959,7 +958,17 @@ export default function MyCollection() {
           </>
         ) : (
           // Sets View
-          viewMode === "grid" ? (
+          <>
+          {collectionSets.length > 0 && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+              <Share2 className="h-4 w-4 shrink-0 text-red-600" />
+              <span>
+                Show off a binder! Open any set below and tap{" "}
+                <span className="font-semibold">Share Binder</span> to share it — and earn XP.
+              </span>
+            </div>
+          )}
+          {viewMode === "grid" ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {collectionSets.map((set) => (
               <Card 
@@ -1188,7 +1197,8 @@ export default function MyCollection() {
                 </Card>
               ))}
             </div>
-          )
+          )}
+          </>
         )}
       </div>
 

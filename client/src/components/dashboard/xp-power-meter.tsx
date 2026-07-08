@@ -9,7 +9,7 @@ import {
 import type { XpProgress } from "@shared/xp";
 
 interface XpSummary extends XpProgress {
-  breakdown: { badgeXp: number; imageXp: number; cardXp: number; totalXp: number };
+  breakdown: { badgeXp: number; imageXp: number; cardXp: number; shareXp?: number; totalXp: number };
   recentXpEvents: Array<{
     id: number;
     eventType: string;
@@ -114,6 +114,7 @@ export function XpPowerMeter() {
           <BreakdownRow label="Cards" value={data!.breakdown.cardXp} color="#ef4444" />
           <BreakdownRow label="Image Contributions" value={data!.breakdown.imageXp} color="#10b981" />
           <BreakdownRow label="Super Power XP" value={data!.breakdown.badgeXp} color="#a855f7" />
+          <BreakdownRow label="Binder Shares" value={data!.breakdown.shareXp ?? 0} color="#3b82f6" />
         </div>
         <div className="mt-2 pt-2 border-t border-border flex items-center justify-between text-sm font-bold">
           <span>Total</span>

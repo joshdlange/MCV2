@@ -24,6 +24,12 @@ interface ShareBinderModalProps {
   mainSetName?: string;
 }
 
+interface ShareXpResult {
+  awarded: boolean;
+  points: number;
+  kind: "first" | "daily" | "limit";
+}
+
 export function ShareBinderModal({ isOpen, onClose, cardSetId, setName, mainSetName }: ShareBinderModalProps) {
   const [copied, setCopied] = useState(false);
   const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
@@ -51,6 +57,41 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName, mainSetN
     enabled: isOpen,
   });
 
+  // Award XP after a real share/copy action. The server enforces limits
+  // (+25 first ever, +10 max once/day) — repeats are safe no-ops. One
+  // consolidated toast covers both the action and the XP outcome.
+  const awardMutation = useMutation({
+    mutationFn: async (_vars: { base: string }) => {
+      const res = await apiRequest("POST", `/api/share-links/${cardSetId}/shared`);
+      return res.json() as Promise<ShareXpResult>;
+    },
+    onSuccess: (data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/xp-summary"] });
+      if (data?.awarded) {
+        toast({
+          title: `${vars.base} +${data.points} XP!`,
+          description: data.kind === "first"
+            ? "First binder share bonus earned!"
+            : "Daily share XP earned!",
+        });
+      } else {
+        toast({
+          title: vars.base,
+          description: "You've already earned today's share XP — share again tomorrow!",
+        });
+      }
+    },
+    onError: (_err, vars) => {
+      // Sharing still worked — just couldn't record XP. Don't scare the user.
+      toast({ title: vars.base });
+    },
+  });
+
+  const reportShare = (base: string) => {
+    if (awardMutation.isPending) return;
+    awardMutation.mutate({ base });
+  };
+
   const createMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/share-links", { cardSetId });
@@ -64,7 +105,7 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName, mainSetN
           await navigator.clipboard.writeText(url);
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
-          toast({ title: "Share link created and copied!" });
+          reportShare("Share link created and copied!");
         } catch {
           toast({ title: "Share link created" });
         }
@@ -91,7 +132,7 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName, mainSetN
           await navigator.clipboard.writeText(url);
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
-          toast({ title: "New link generated and copied!" });
+          reportShare("New link generated and copied!");
         } catch {
           toast({ title: "New share link generated. The old link no longer works." });
         }
@@ -124,12 +165,32 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName, mainSetN
     return `BEHOLD my collection of ${displayName}! ${link}\n\nTrack your collection and its value at marvelcardvault.com`;
   };
 
+  // Native share (iOS/mobile browsers). Android WebView generally lacks
+  // navigator.share, so the button only renders when it's available —
+  // copy-link below is the universal fallback.
+  const canNativeShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+
+  const handleNativeShare = async () => {
+    try {
+      await navigator.share({
+        title: `My ${displayName} binder`,
+        text: `BEHOLD my collection of ${displayName}! Track your collection and its value at marvelcardvault.com`,
+        url: shareUrl,
+      });
+      reportShare("Binder shared!");
+    } catch (err: any) {
+      // User cancelled the share sheet — not an error, no XP.
+      if (err?.name === "AbortError") return;
+      toast({ title: "Couldn't open share menu — try Copy instead", variant: "destructive" });
+    }
+  };
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast({ title: "Link copied to clipboard" });
+      reportShare("Link copied to clipboard!");
     } catch {
       toast({ title: "Failed to copy", variant: "destructive" });
     }
@@ -165,7 +226,7 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName, mainSetN
       await navigator.clipboard.writeText(buildShareMessage());
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast({ title: "Share message copied! Paste it in your Instagram post or story." });
+      reportShare("Share message copied for Instagram!");
       window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
     } catch {
       toast({ title: "Failed to copy link", variant: "destructive" });
@@ -182,7 +243,7 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName, mainSetN
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Share2 className="w-5 h-5 text-red-600" />
-            Share Your Binder
+            Share This Binder
           </DialogTitle>
         </DialogHeader>
 
@@ -210,6 +271,17 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName, mainSetN
             </Button>
           ) : (
             <>
+              {canNativeShare && (
+                <Button
+                  onClick={handleNativeShare}
+                  disabled={awardMutation.isPending}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <Share2 className="w-4 h-4 mr-2" />
+                  Share Binder
+                </Button>
+              )}
+
               <div className="flex gap-2">
                 <Input
                   value={shareUrl}
@@ -221,6 +293,7 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName, mainSetN
                   size="sm"
                   variant="outline"
                   onClick={handleCopy}
+                  disabled={awardMutation.isPending}
                   className="shrink-0"
                 >
                   {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
@@ -253,6 +326,7 @@ export function ShareBinderModal({ isOpen, onClose, cardSetId, setName, mainSetN
                   </button>
                   <button
                     onClick={handleInstagramShare}
+                    disabled={awardMutation.isPending}
                     className="w-10 h-10 rounded-full bg-gradient-to-br from-[#833AB4] via-[#FD1D1D] to-[#F77737] hover:opacity-90 text-white flex items-center justify-center transition-colors"
                     title="Copy link & open Instagram"
                   >

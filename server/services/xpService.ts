@@ -6,12 +6,16 @@ import {
   pendingCardImages,
   cards,
 } from '../../shared/schema';
-import { and, eq, sql, count, desc } from 'drizzle-orm';
+import { and, eq, sql, count, desc, inArray } from 'drizzle-orm';
 import {
   computeXpProgress,
   imageContributionXp,
   DEFAULT_BADGE_XP,
   XP_PER_CARD_ADDED,
+  XP_FIRST_BINDER_SHARE,
+  XP_DAILY_BINDER_SHARE,
+  XP_EVENT_BINDER_SHARE_FIRST,
+  XP_EVENT_BINDER_SHARE_DAILY,
   type XpProgress,
 } from '../../shared/xp';
 
@@ -19,8 +23,15 @@ export interface UserXpBreakdown {
   badgeXp: number;
   imageXp: number;
   cardXp: number;
+  shareXp: number;
   totalXp: number;
   progress: XpProgress;
+}
+
+export interface BinderShareXpResult {
+  awarded: boolean;
+  points: number;
+  kind: 'first' | 'daily' | 'limit';
 }
 
 export interface RecentXpEvent {
@@ -50,12 +61,56 @@ export async function awardCardAddedXp(userId: number, cardId: number): Promise<
 }
 
 /**
+ * Award XP for sharing a subset binder. Farm-proof, two tiers:
+ * - First share ever: +25 one-time bonus, DB-enforced by the partial unique
+ *   index xp_events_share_first_idx (ON CONFLICT DO NOTHING makes repeats no-ops).
+ * - After that: +10 max once per UTC day, enforced by an atomic guarded INSERT
+ *   (INSERT ... WHERE NOT EXISTS today's event). Repeated shares/copies the
+ *   same day award nothing.
+ * cardSetId is stored as metadata for future analytics/anti-spam.
+ * Must never throw into the caller — sharing must always succeed.
+ */
+export async function awardBinderShareXp(userId: number, cardSetId: number): Promise<BinderShareXpResult> {
+  try {
+    const firstRes = await db.execute(sql`
+      INSERT INTO xp_events (user_id, event_type, card_set_id, points)
+      VALUES (${userId}, ${XP_EVENT_BINDER_SHARE_FIRST}, ${cardSetId}, ${XP_FIRST_BINDER_SHARE})
+      ON CONFLICT DO NOTHING
+      RETURNING id
+    `);
+    if (((firstRes as any).rowCount ?? 0) > 0) {
+      return { awarded: true, points: XP_FIRST_BINDER_SHARE, kind: 'first' };
+    }
+
+    const dailyRes = await db.execute(sql`
+      INSERT INTO xp_events (user_id, event_type, card_set_id, points)
+      SELECT ${userId}, ${XP_EVENT_BINDER_SHARE_DAILY}, ${cardSetId}, ${XP_DAILY_BINDER_SHARE}
+      WHERE NOT EXISTS (
+        SELECT 1 FROM xp_events
+        WHERE user_id = ${userId}
+          AND event_type = ${XP_EVENT_BINDER_SHARE_DAILY}
+          AND created_at >= date_trunc('day', now())
+      )
+      RETURNING id
+    `);
+    if (((dailyRes as any).rowCount ?? 0) > 0) {
+      return { awarded: true, points: XP_DAILY_BINDER_SHARE, kind: 'daily' };
+    }
+
+    return { awarded: false, points: 0, kind: 'limit' };
+  } catch (err) {
+    console.error('[xpService] awardBinderShareXp failed', { userId, cardSetId, err });
+    return { awarded: false, points: 0, kind: 'limit' };
+  }
+}
+
+/**
  * Single source of truth for a user's XP, shared by the dashboard summary and
  * the collector profile. Badge XP and image XP stay DERIVED (as before);
- * card_added / set_completed XP come from the xp_events ledger.
+ * card_added and binder-share XP come from the xp_events ledger.
  */
 export async function computeUserXp(userId: number): Promise<UserXpBreakdown> {
-  const [badgeRows, approvedResArr, ledgerResArr] = await Promise.all([
+  const [badgeRows, approvedResArr, ledgerResArr, shareResArr] = await Promise.all([
     db
       .select({ points: badges.points, rarity: badges.rarity })
       .from(userBadges)
@@ -69,6 +124,13 @@ export async function computeUserXp(userId: number): Promise<UserXpBreakdown> {
       .select({ total: sql<number>`coalesce(sum(${xpEvents.points}), 0)` })
       .from(xpEvents)
       .where(and(eq(xpEvents.userId, userId), eq(xpEvents.eventType, 'card_added'))),
+    db
+      .select({ total: sql<number>`coalesce(sum(${xpEvents.points}), 0)` })
+      .from(xpEvents)
+      .where(and(
+        eq(xpEvents.userId, userId),
+        inArray(xpEvents.eventType, [XP_EVENT_BINDER_SHARE_FIRST, XP_EVENT_BINDER_SHARE_DAILY]),
+      )),
   ]);
 
   const badgeXp = badgeRows.reduce((sum, b) => {
@@ -78,9 +140,10 @@ export async function computeUserXp(userId: number): Promise<UserXpBreakdown> {
   }, 0);
   const imageXp = imageContributionXp(Number(approvedResArr[0]?.count ?? 0));
   const cardXp = Number(ledgerResArr[0]?.total ?? 0);
-  const totalXp = badgeXp + imageXp + cardXp;
+  const shareXp = Number(shareResArr[0]?.total ?? 0);
+  const totalXp = badgeXp + imageXp + cardXp + shareXp;
 
-  return { badgeXp, imageXp, cardXp, totalXp, progress: computeXpProgress(totalXp) };
+  return { badgeXp, imageXp, cardXp, shareXp, totalXp, progress: computeXpProgress(totalXp) };
 }
 
 /** Recent XP-earning activity for the dashboard feed (ledger events only). */
