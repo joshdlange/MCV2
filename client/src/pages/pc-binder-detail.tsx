@@ -24,6 +24,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { PcBinderShareModal } from "@/components/collection/pc-binder-share-modal";
 import type { CardWithSet, CollectionItem, InsertUserCollection, InsertUserWishlist, WishlistItem } from "@shared/schema";
@@ -394,6 +401,16 @@ export default function PcBinderDetail() {
   const [isCardModalOpen, setIsCardModalOpen] = useState(false);
   const [loadingCardId, setLoadingCardId] = useState<number | null>(null);
   const [volumePrompt, setVolumePrompt] = useState<VolumePrompt | null>(null);
+  // In-binder search + set filter (client-side; binders cap at 500 cards)
+  const [cardSearch, setCardSearch] = useState("");
+  const [setFilterId, setSetFilterId] = useState<string>("all");
+
+  // Same component instance stays mounted when navigating between binders
+  // (e.g. the Vol. 2 auto-navigate), so reset filters on binder change
+  useEffect(() => {
+    setCardSearch("");
+    setSetFilterId("all");
+  }, [binderId]);
 
   const { data: binder, isLoading, isError } = useQuery<PcBinderDetail>({
     queryKey: ["/api/pc-binders", String(binderId)],
@@ -622,10 +639,33 @@ export default function PcBinderDetail() {
     );
   }
 
-  const visibleCards =
-    filter === "all"
-      ? binder.cards
-      : binder.cards.filter((c) => (filter === "owned" ? c.owned : !c.owned));
+  // Distinct sets represented in this binder, with card counts, for the set filter
+  const setCounts = new Map<number, { name: string; count: number }>();
+  for (const c of binder.cards) {
+    const entry = setCounts.get(c.setId);
+    if (entry) entry.count++;
+    else setCounts.set(c.setId, { name: c.setName || "Unknown set", count: 1 });
+  }
+  const binderSets = Array.from(setCounts.entries())
+    .map(([id, { name, count }]) => ({ id, name, count }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const searchQuery = cardSearch.trim().toLowerCase();
+  const hasActiveFilters = searchQuery.length > 0 || setFilterId !== "all";
+  const visibleCards = binder.cards.filter((c) => {
+    if (filter === "owned" && !c.owned) return false;
+    if (filter === "missing" && c.owned) return false;
+    if (setFilterId !== "all" && String(c.setId) !== setFilterId) return false;
+    if (
+      searchQuery &&
+      !c.name.toLowerCase().includes(searchQuery) &&
+      !(c.setName || "").toLowerCase().includes(searchQuery) &&
+      !(c.cardNumber || "").toLowerCase().includes(searchQuery)
+    ) {
+      return false;
+    }
+    return true;
+  });
 
   const selectedBinderCard = selectedCard
     ? binder.cards.find((c) => c.id === selectedCard.id)
@@ -691,7 +731,50 @@ export default function PcBinderDetail() {
       </Card>
 
       {binder.totalCards > 0 && (
-        <div className="flex gap-2 mb-4">
+        <div className="flex flex-col sm:flex-row gap-2 mb-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              value={cardSearch}
+              onChange={(e) => setCardSearch(e.target.value)}
+              placeholder="Search this binder — card name, set, or number…"
+              className="pl-9 pr-8 bg-white text-gray-900"
+              data-testid="input-binder-card-search"
+            />
+            {cardSearch && (
+              <button
+                onClick={() => setCardSearch("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                title="Clear search"
+                data-testid="button-clear-binder-search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          {binderSets.length > 1 && (
+            <Select value={setFilterId} onValueChange={setSetFilterId}>
+              <SelectTrigger
+                className="w-full sm:w-72 bg-white text-gray-900"
+                data-testid="select-binder-set-filter"
+              >
+                <SelectValue placeholder="All sets" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All sets ({binder.totalCards})</SelectItem>
+                {binderSets.map((s) => (
+                  <SelectItem key={s.id} value={String(s.id)}>
+                    {s.name} ({s.count})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      )}
+
+      {binder.totalCards > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-4">
           <Button
             size="sm"
             variant={filter === "all" ? "default" : "outline"}
@@ -724,6 +807,11 @@ export default function PcBinderDetail() {
           >
             Missing ({binder.missingCards})
           </Button>
+          {hasActiveFilters && (
+            <span className="text-xs text-gray-600 ml-1" data-testid="text-filter-result-count">
+              Showing {visibleCards.length} of {binder.totalCards} cards
+            </span>
+          )}
         </div>
       )}
 
@@ -743,9 +831,26 @@ export default function PcBinderDetail() {
           </CardContent>
         </Card>
       ) : visibleCards.length === 0 ? (
-        <p className="text-sm text-gray-500 text-center py-10">
-          {filter === "owned" ? "You don't own any of these cards yet." : "You own every card in this binder — fully complete!"}
-        </p>
+        hasActiveFilters ? (
+          <div className="text-center py-10">
+            <p className="text-sm text-gray-500 mb-3">No cards in this binder match your search.</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setCardSearch("");
+                setSetFilterId("all");
+              }}
+              data-testid="button-clear-binder-filters"
+            >
+              Clear search & filters
+            </Button>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500 text-center py-10">
+            {filter === "owned" ? "You don't own any of these cards yet." : "You own every card in this binder — fully complete!"}
+          </p>
+        )
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {visibleCards.map((card) => (
