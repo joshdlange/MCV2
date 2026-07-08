@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link, useParams } from "wouter";
+import { Link, useParams, useSearch } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -14,15 +14,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CardDetailModal } from "@/components/cards/card-detail-modal";
+import { PcBinderShareModal } from "@/components/collection/pc-binder-share-modal";
+import type { CardWithSet, CollectionItem, InsertUserCollection, InsertUserWishlist, WishlistItem } from "@shared/schema";
 import {
   ArrowLeft,
   BookOpen,
   Plus,
   Search,
+  Share2,
   X,
   Check,
   Loader2,
   Target,
+  Layers,
 } from "lucide-react";
 
 interface BinderCard {
@@ -59,6 +64,21 @@ interface SearchCard {
   set: { id: number; name: string; year: number } | null;
 }
 
+interface BulkResult {
+  matched: number;
+  added: number;
+  remaining: number;
+  capped: boolean;
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+  Character: "bg-red-100 text-red-800 border-red-200",
+  Artist: "bg-purple-100 text-purple-800 border-purple-200",
+  Theme: "bg-blue-100 text-blue-800 border-blue-200",
+  "Chase List": "bg-amber-100 text-amber-800 border-amber-200",
+  Other: "bg-gray-100 text-gray-700 border-gray-200",
+};
+
 function AddCardsDialog({
   open,
   onOpenChange,
@@ -85,8 +105,24 @@ function AddCardsDialog({
     queryFn: async () => {
       const res = await apiRequest(
         "GET",
-        `/api/cards?search=${encodeURIComponent(debounced)}&pageSize=30`
+        `/api/cards?search=${encodeURIComponent(debounced)}&pageSize=100`
       );
+      return res.json();
+    },
+    enabled: open && debounced.length >= 2,
+  });
+
+  // Dry-run of the bulk endpoint: how many cards match this term BY NAME
+  // (excluding ones already in the binder). This is the number "Add All"
+  // will actually add — never use /api/cards totalCount, which also
+  // matches set names.
+  const { data: bulkPreview } = useQuery<BulkResult>({
+    queryKey: ["/api/pc-binders", String(binderId), "bulk-preview", debounced],
+    queryFn: async () => {
+      const res = await apiRequest("POST", `/api/pc-binders/${binderId}/cards/bulk`, {
+        search: debounced,
+        dryRun: true,
+      });
       return res.json();
     },
     enabled: open && debounced.length >= 2,
@@ -111,7 +147,44 @@ function AddCardsDialog({
     },
   });
 
+  const bulkMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/pc-binders/${binderId}/cards/bulk`, {
+        search: debounced,
+      });
+      return res.json() as Promise<BulkResult>;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/pc-binders", String(binderId)] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pc-binders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pc-binders", String(binderId), "bulk-preview"] });
+      if (data.added === 0) {
+        toast({
+          title: "No cards added",
+          description: data.capped
+            ? "This binder is already at its 500 card limit."
+            : "All matching cards are already in this binder.",
+        });
+      } else {
+        toast({
+          title: `Added ${data.added} card${data.added === 1 ? "" : "s"}!`,
+          description: data.capped
+            ? `Binders hold up to 500 cards — ${data.matched - data.added} matching cards didn't fit.`
+            : undefined,
+        });
+      }
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Couldn't add cards",
+        description: err?.message || undefined,
+        variant: "destructive",
+      });
+    },
+  });
+
   const isInBinder = (cardId: number) => binderCardIds.has(cardId) || justAdded.has(cardId);
+  const matched = bulkPreview?.matched ?? 0;
 
   return (
     <Dialog
@@ -144,6 +217,35 @@ function AddCardsDialog({
             data-testid="input-pc-binder-card-search"
           />
         </div>
+
+        {debounced.length >= 2 && matched > 0 && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-gray-900">
+                {matched.toLocaleString()} card{matched === 1 ? "" : "s"} named "{debounced}"
+              </p>
+              <p className="text-xs text-gray-600">
+                {bulkPreview?.capped
+                  ? `Binder has room for ${bulkPreview.remaining} more (500 max)`
+                  : "not yet in this binder"}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => bulkMutation.mutate()}
+              disabled={bulkMutation.isPending || bulkPreview?.remaining === 0}
+              className="bg-red-600 hover:bg-red-700 shrink-0"
+              data-testid="button-add-all"
+            >
+              {bulkMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-1" />
+              ) : (
+                <Layers className="w-4 h-4 mr-1" />
+              )}
+              Add All
+            </Button>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto min-h-[200px] -mx-2 px-2">
           {debounced.length < 2 ? (
@@ -196,6 +298,12 @@ function AddCardsDialog({
                   </div>
                 );
               })}
+              {results.totalCount > results.items.length && (
+                <p className="text-xs text-gray-500 text-center py-2">
+                  Showing first {results.items.length} of {results.totalCount.toLocaleString()} search
+                  results — use Add All above to grab every "{debounced}" card at once.
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -207,9 +315,17 @@ function AddCardsDialog({
 export default function PcBinderDetail() {
   const params = useParams<{ id: string }>();
   const binderId = parseInt(params.id || "");
+  const searchString = useSearch();
   const { toast } = useToast();
-  const [filter, setFilter] = useState<"all" | "owned" | "chase">("all");
+  const [filter, setFilter] = useState<"all" | "owned" | "missing">(() => {
+    const f = new URLSearchParams(searchString).get("filter");
+    return f === "owned" || f === "missing" ? f : "all";
+  });
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<CardWithSet | null>(null);
+  const [isCardModalOpen, setIsCardModalOpen] = useState(false);
+  const [loadingCardId, setLoadingCardId] = useState<number | null>(null);
 
   const { data: binder, isLoading, isError } = useQuery<PcBinderDetail>({
     queryKey: ["/api/pc-binders", String(binderId)],
@@ -220,6 +336,20 @@ export default function PcBinderDetail() {
     },
     enabled: !isNaN(binderId),
   });
+
+  const { data: wishlist } = useQuery<WishlistItem[]>({
+    queryKey: ["/api/wishlist"],
+  });
+
+  const { data: collection } = useQuery<CollectionItem[]>({
+    queryKey: ["/api/collection"],
+  });
+
+  const isCardInWishlist = (cardId: number) =>
+    wishlist?.some((item) => item.card?.id === cardId || (item as any).cardId === cardId) || false;
+
+  const isCardInCollection = (cardId: number) =>
+    collection?.some((item) => item.card?.id === cardId || (item as any).cardId === cardId) || false;
 
   const removeMutation = useMutation({
     mutationFn: async (cardId: number) => {
@@ -237,6 +367,114 @@ export default function PcBinderDetail() {
       toast({ title: "Couldn't remove card", variant: "destructive" });
     },
   });
+
+  const addToCollectionMutation = useMutation({
+    mutationFn: async (cardId: number) => {
+      const insertData: InsertUserCollection = {
+        userId: 1,
+        cardId,
+        condition: "Near Mint",
+        quantity: 1,
+        personalValue: "0",
+        isForSale: false,
+        isFavorite: false,
+      };
+      return apiRequest("POST", "/api/collection", insertData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collection"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pc-binders", String(binderId)] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pc-binders"] });
+      toast({
+        title: "Added to Collection",
+        description: "Card successfully added to your collection",
+      });
+    },
+    onError: () => {
+      toast({ title: "Couldn't add to collection", variant: "destructive" });
+    },
+  });
+
+  const removeFromCollectionMutation = useMutation({
+    mutationFn: (cardId: number) => {
+      const collectionItem = collection?.find(
+        (item) => item.card?.id === cardId || (item as any).cardId === cardId
+      );
+      if (collectionItem) {
+        return apiRequest("DELETE", `/api/collection/${collectionItem.id}`);
+      }
+      throw new Error("Card not found in collection");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/collection"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pc-binders", String(binderId)] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pc-binders"] });
+      toast({ title: "Removed from collection" });
+    },
+    onError: () => {
+      toast({ title: "Couldn't remove from collection", variant: "destructive" });
+    },
+  });
+
+  const removeFromWishlistMutation = useMutation({
+    mutationFn: (cardId: number) => {
+      const wishlistItem = wishlist?.find(
+        (item) => item.card?.id === cardId || (item as any).cardId === cardId
+      );
+      if (wishlistItem) {
+        return apiRequest("DELETE", `/api/wishlist/${wishlistItem.id}`);
+      }
+      throw new Error("Card not found in wishlist");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
+      toast({ title: "Removed from wishlist" });
+    },
+    onError: () => {
+      toast({ title: "Couldn't remove from wishlist", variant: "destructive" });
+    },
+  });
+
+  const addToWishlistMutation = useMutation({
+    mutationFn: async (cardId: number) => {
+      const insertData: InsertUserWishlist = {
+        userId: 1,
+        cardId,
+        priority: 1,
+        maxPrice: null,
+      };
+      return apiRequest("POST", "/api/wishlist", insertData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
+      toast({
+        title: "Added to Wishlist",
+        description: "Card successfully added to your wishlist",
+      });
+    },
+    onError: () => {
+      toast({ title: "Couldn't add to wishlist", variant: "destructive" });
+    },
+  });
+
+  // Open the full card detail modal (same one used across the app). The
+  // binder API returns a slim card shape, so fetch the full card first.
+  const handleCardClick = async (cardId: number) => {
+    if (loadingCardId) return;
+    setLoadingCardId(cardId);
+    try {
+      const res = await apiRequest("GET", `/api/cards/${cardId}`);
+      const fullCard: CardWithSet = await res.json();
+      setSelectedCard(fullCard);
+      setIsCardModalOpen(true);
+    } catch {
+      toast({ title: "Couldn't load card details", variant: "destructive" });
+    } finally {
+      setLoadingCardId(null);
+    }
+  };
 
   if (isNaN(binderId) || isError) {
     return (
@@ -265,6 +503,10 @@ export default function PcBinderDetail() {
       ? binder.cards
       : binder.cards.filter((c) => (filter === "owned" ? c.owned : !c.owned));
 
+  const selectedBinderCard = selectedCard
+    ? binder.cards.find((c) => c.id === selectedCard.id)
+    : undefined;
+
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
       <Link href="/pc-binders" className="inline-flex items-center text-sm text-gray-600 hover:text-red-600 mb-3">
@@ -279,16 +521,31 @@ export default function PcBinderDetail() {
             <span className="truncate">{binder.name}</span>
           </h1>
           <div className="flex items-center gap-2 mt-1">
-            <Badge variant="outline" className="text-xs">{binder.category}</Badge>
+            <Badge
+              variant="outline"
+              className={`text-xs ${CATEGORY_COLORS[binder.category] || CATEGORY_COLORS.Other}`}
+            >
+              {binder.category}
+            </Badge>
             {binder.description && (
               <span className="text-sm text-gray-600 truncate">{binder.description}</span>
             )}
           </div>
         </div>
-        <Button onClick={() => setShowAddDialog(true)} className="bg-red-600 hover:bg-red-700">
-          <Plus className="w-4 h-4 mr-1" />
-          Add Cards
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowShareModal(true)}
+            data-testid="button-share-binder"
+          >
+            <Share2 className="w-4 h-4 mr-1" />
+            Share
+          </Button>
+          <Button onClick={() => setShowAddDialog(true)} className="bg-red-600 hover:bg-red-700">
+            <Plus className="w-4 h-4 mr-1" />
+            Add Cards
+          </Button>
+        </div>
       </div>
 
       <Card className="mt-4 mb-5">
@@ -301,7 +558,7 @@ export default function PcBinderDetail() {
               <span className="font-bold">{binder.ownedCards}</span> owned
             </span>
             <span className="text-amber-700">
-              <span className="font-bold">{binder.missingCards}</span> chasing
+              <span className="font-bold">{binder.missingCards}</span> missing
             </span>
             <span className="ml-auto font-bold text-gray-900">{binder.completionPct}% complete</span>
           </div>
@@ -311,21 +568,38 @@ export default function PcBinderDetail() {
 
       {binder.totalCards > 0 && (
         <div className="flex gap-2 mb-4">
-          {([
-            ["all", `All (${binder.totalCards})`],
-            ["owned", `Owned (${binder.ownedCards})`],
-            ["chase", `Chasing (${binder.missingCards})`],
-          ] as const).map(([key, label]) => (
-            <Button
-              key={key}
-              size="sm"
-              variant={filter === key ? "default" : "outline"}
-              onClick={() => setFilter(key)}
-              className={filter === key ? "bg-red-600 hover:bg-red-700" : ""}
-            >
-              {label}
-            </Button>
-          ))}
+          <Button
+            size="sm"
+            variant={filter === "all" ? "default" : "outline"}
+            onClick={() => setFilter("all")}
+            className={filter === "all" ? "bg-red-600 hover:bg-red-700" : ""}
+          >
+            All ({binder.totalCards})
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setFilter("owned")}
+            className={
+              filter === "owned"
+                ? "text-white bg-green-600 border-green-600 hover:bg-green-700 hover:text-white"
+                : "text-green-700 border-green-300 hover:bg-green-50"
+            }
+          >
+            Owned ({binder.ownedCards})
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setFilter("missing")}
+            className={
+              filter === "missing"
+                ? "text-white bg-[#f73f32] border-[#f73f32] hover:bg-red-700 hover:text-white"
+                : "text-red-600 border-red-300 hover:bg-red-50"
+            }
+          >
+            Missing ({binder.missingCards})
+          </Button>
         </div>
       )}
 
@@ -353,12 +627,16 @@ export default function PcBinderDetail() {
           {visibleCards.map((card) => (
             <Card
               key={card.id}
-              className="group relative overflow-hidden hover:shadow-lg transition-all duration-200"
+              className="group relative overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer"
+              onClick={() => handleCardClick(card.id)}
               data-testid={`card-binder-card-${card.id}`}
             >
               <CardContent className="p-0">
                 <button
-                  onClick={() => removeMutation.mutate(card.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeMutation.mutate(card.id);
+                  }}
                   disabled={removeMutation.isPending}
                   className="absolute top-2 right-2 z-10 p-1 rounded-full bg-white/85 text-gray-500 hover:text-red-600 hover:bg-white opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                   title="Remove from binder (doesn't affect your collection)"
@@ -390,6 +668,11 @@ export default function PcBinderDetail() {
                       </span>
                     </div>
                   )}
+                  {loadingCardId === card.id && (
+                    <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
+                      <Loader2 className="w-6 h-6 animate-spin text-red-600" />
+                    </div>
+                  )}
                   <div className="absolute bottom-2 left-2">
                     {card.owned ? (
                       <Badge className="bg-green-600 text-white text-xs shadow">Owned</Badge>
@@ -418,6 +701,39 @@ export default function PcBinderDetail() {
         onOpenChange={setShowAddDialog}
         binderId={binderId}
         binderCardIds={new Set(binder.cards.map((c) => c.id))}
+      />
+
+      <PcBinderShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        binderId={binderId}
+        binderName={binder.name}
+      />
+
+      <CardDetailModal
+        card={selectedCard}
+        isOpen={isCardModalOpen}
+        onClose={() => setIsCardModalOpen(false)}
+        isInCollection={
+          selectedCard
+            ? collection
+              ? isCardInCollection(selectedCard.id)
+              : selectedBinderCard?.owned ?? false
+            : false
+        }
+        isInWishlist={selectedCard ? isCardInWishlist(selectedCard.id) : false}
+        onAddToCollection={() => {
+          if (selectedCard) addToCollectionMutation.mutate(selectedCard.id);
+        }}
+        onAddToWishlist={() => {
+          if (selectedCard) addToWishlistMutation.mutate(selectedCard.id);
+        }}
+        onRemoveFromCollection={() => {
+          if (selectedCard) removeFromCollectionMutation.mutate(selectedCard.id);
+        }}
+        onRemoveFromWishlist={() => {
+          if (selectedCard) removeFromWishlistMutation.mutate(selectedCard.id);
+        }}
       />
     </div>
   );

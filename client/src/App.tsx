@@ -56,6 +56,7 @@ const SubscriptionCancelled = lazy(() => import("@/pages/subscription-cancelled"
 const Subscribe = lazy(() => import("@/pages/subscribe"));
 const Activity = lazy(() => import("@/pages/Activity"));
 const SharedBinder = lazy(() => import("@/pages/shared-binder"));
+const SharedPcBinder = lazy(() => import("@/pages/shared-pc-binder"));
 const ScanToAdd = lazy(() => import("@/pages/scan"));
 const CollectorProfile = lazy(() => import("@/pages/CollectorProfile"));
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -281,7 +282,7 @@ function App() {
     return () => { listenerPromise.then(l => l.remove()); };
   }, []);
 
-  if (location.startsWith('/share/')) {
+  if (location.startsWith('/share/') || location.startsWith('/pc-share/')) {
     return (
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
@@ -290,6 +291,7 @@ function App() {
             <Suspense fallback={<PageSpinner />}>
               <Switch>
                 <Route path="/share/:token" component={SharedBinder} />
+                <Route path="/pc-share/:token" component={SharedPcBinder} />
               </Switch>
             </Suspense>
           </ErrorBoundary>
