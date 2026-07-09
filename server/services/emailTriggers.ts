@@ -3,7 +3,7 @@
  * Handles all automated email sending based on user actions
  */
 
-import { sendEmail } from './emailService';
+import { sendEmail, sendPasswordResetEmail } from './emailService';
 import * as templates from './emailTemplates';
 
 interface User {
@@ -64,11 +64,14 @@ export async function onUserSignup(user: User): Promise<void> {
 
 /**
  * Trigger: User requests password reset
+ * NOTE: The live forgot-password endpoint (POST /api/auth/forgot-password) calls
+ * sendPasswordResetEmail() from emailService.ts directly — this function is kept
+ * for completeness but is not called from the current routing layer.
+ * It now correctly routes through Resend (not Brevo).
  */
 export async function onPasswordReset(user: User, resetLink: string): Promise<void> {
   try {
-    const html = templates.passwordResetTemplate({ email: user.email }, resetLink);
-    await sendEmail(user.email, 'Reset Your Password', html, 'password-reset');
+    await sendPasswordResetEmail({ to: user.email, resetUrl: resetLink });
   } catch (error) {
     console.error('Failed to send password reset email:', error);
   }

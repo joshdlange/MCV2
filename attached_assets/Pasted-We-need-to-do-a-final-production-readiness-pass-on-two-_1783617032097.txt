@@ -1,0 +1,162 @@
+We need to do a final production-readiness pass on two areas:
+
+1. Card count limits/paywalls, especially Side Kick = 500 cards
+2. Resend email service/password reset migration
+
+Context:
+- Side Kick should now allow up to 500 cards.
+- Super Hero should remain unlimited.
+- PC Binders are Super Hero-only.
+- PC Binders should show a gold “NEW” badge in nav/sidebar.
+- Side Kick/Free users who click PC Binders should see an upgrade/upsell page.
+- Resend has been partially implemented/tested.
+- A Resend test email was sent successfully and the reset/test URL looked correct.
+- Do not send any marketing announcement yet.
+
+Goal:
+Verify and harden the card-limit/paywall behavior and finalize the Resend password reset/email service work.
+
+Must do — card limits/paywalls:
+- Confirm the app has a single reliable source of truth for plan card limits where practical.
+- Confirm Side Kick card limit is 500 everywhere.
+- Search the entire app codebase for stale references to:
+  - “250”
+  - “250 cards”
+  - “up to 250”
+  - “Side Kick”
+  - “card limit”
+  - “collection limit”
+  - “plan limit”
+- Update any stale Side Kick card-limit copy from 250 to 500.
+- Confirm frontend displays Side Kick as 500 cards.
+- Confirm backend enforcement allows Side Kick users up to 500 cards.
+- Confirm Side Kick users are blocked only after reaching 500 cards.
+- Confirm Super Hero users remain unlimited.
+- Confirm Free plan behavior remains whatever the current intended limit is.
+- Confirm all add-card paths respect the same card limits:
+  - Browse Cards add flow
+  - Scan to Add flow
+  - image upload / photo submission auto-add flow
+  - any quick-add or bulk-add path if it exists
+- Confirm image upload/photo submission at the card cap still allows the photo submission if intended, but does not sneakily add a card past the plan limit.
+- Confirm paywall/upgrade modals trigger correctly when the user reaches their limit.
+- Confirm paywall copy accurately reflects the user’s plan and card limit.
+- Confirm PC Binders are Super Hero-only:
+  - nav/sidebar entry can be visible to all users
+  - gold “NEW” badge appears next to PC Binders
+  - Free/Side Kick users clicking PC Binders see an upsell page
+  - Super Hero users access the actual PC Binder feature
+  - direct PC Binder URLs are gated
+  - all private PC Binder API routes require Super Hero
+  - token-based public shared binder routes remain accessible if already designed that way
+- Confirm PC Binder upsell page explains:
+  - PC Binders are custom private collection sets
+  - users can organize by character, artist, theme, chase list, or whatever they collect
+  - Super Hero includes unlimited cards
+  - Market Trends
+  - Scan to Add
+  - Trade Block — Coming Soon
+  - Marketplace — Coming Soon
+
+Must do — Resend:
+- Audit current Resend integration and identify all changed email files.
+- Confirm RESEND_API_KEY is read only from environment/secrets.
+- Confirm RESEND_API_KEY is never exposed to frontend code.
+- Confirm no API key is hardcoded.
+- Confirm there is a centralized server-side email service/helper for Resend.
+- Confirm password reset emails now send through Resend.
+- Confirm password reset no longer calls Brevo.
+- Preserve the existing password reset flow:
+  - reset request endpoint
+  - token generation
+  - token expiration
+  - reset link construction
+  - reset page
+  - reset completion endpoint
+- Confirm the Resend test email sends successfully.
+- Confirm the password reset email sends successfully.
+- Confirm the reset link opens the correct reset page.
+- Confirm the reset link has the correct production/dev base URL depending on environment.
+- Confirm password reset succeeds with a valid token.
+- Confirm expired/invalid tokens still fail correctly.
+- Confirm missing or invalid RESEND_API_KEY logs a clear server-side error without crashing unrelated app functionality.
+- Confirm there is no public unprotected test-email endpoint.
+- If a test email endpoint exists, ensure it is admin-only or dev-only.
+- Document which email flows now use Resend and which, if any, still use Brevo.
+- Leave marketing email sending disabled/not triggered for now.
+
+Must not do:
+- Do not send any marketing announcement.
+- Do not email all users.
+- Do not change pricing.
+- Do not change Stripe products/prices.
+- Do not change RevenueCat products/entitlements.
+- Do not change billing/subscription behavior.
+- Do not change Super Hero benefits except confirming existing copy/gating.
+- Do not change Trade Block or Marketplace functionality.
+- Do not change Add Cards UX except enforcing the correct card limits.
+- Do not change PC Binder functionality except gating/paywall fixes if needed.
+- Do not change auth/session behavior beyond using Resend for password reset email delivery.
+- Do not change reset token security logic.
+- Do not expose secrets.
+- Do not remove Brevo broadly unless every remaining email flow is audited and intentionally migrated.
+- Do not touch Android native files.
+- Do not touch iOS native files.
+- Do not create new product features.
+- Do not refactor broadly.
+
+Preserve:
+- Existing plan names: Free, Side Kick, Super Hero.
+- Side Kick card limit: 500.
+- Super Hero unlimited card behavior.
+- Existing upgrade flow/modal.
+- Existing PC Binder feature behavior for Super Hero users.
+- Existing public shared binder behavior if already live.
+- Existing Add Cards → Browse Cards behavior.
+- Existing Scan to Add behavior.
+- Existing image approval behavior.
+- Existing XP/xp_events behavior.
+- Existing subscription detection.
+- Existing password reset UX.
+- Existing user database/auth behavior.
+- Existing logging style.
+
+QA required:
+Card limits:
+- Free user can add cards up to the current intended Free limit.
+- Free user is blocked at the correct Free limit.
+- Side Kick user at 249 cards can add a card.
+- Side Kick user at 250 cards can still add a card.
+- Side Kick user at 499 cards can add a card.
+- Side Kick user at 500 cards is blocked/paywalled from adding another card.
+- Side Kick user cannot bypass the 500 limit through Scan to Add.
+- Side Kick user cannot bypass the 500 limit through image upload/photo submission auto-add.
+- Super Hero user can exceed 500 cards.
+- Upgrade/paywall copy says 500 for Side Kick, not 250.
+- Code search confirms no stale “250 cards” Side Kick copy remains.
+
+PC Binder gating:
+- Super Hero user can open PC Binders.
+- Super Hero user can create/view/edit PC Binders.
+- Free/Side Kick user clicking PC Binders sees the upsell page.
+- Free/Side Kick direct PC Binder URL redirects or blocks correctly.
+- Free/Side Kick private PC Binder API calls return upgrade-required/403.
+- Public token-based shared binder links still work if designed to be public.
+- Gold “NEW” badge appears next to PC Binders.
+
+Resend:
+- Request password reset for a valid user.
+- Confirm email arrives through Resend.
+- Confirm reset URL is correct.
+- Confirm password can be reset successfully.
+- Confirm invalid/expired token behavior still works.
+- Confirm no Brevo call is made for password reset.
+- Confirm no marketing emails are sent.
+- Confirm no public unprotected test email endpoint exists.
+- Confirm secrets are not exposed to frontend or logs.
+
+Final response:
+- Summarize changed files.
+- List exactly what was verified.
+- List any remaining risks or unresolved issues.
+- Confirm whether this is safe to publish.
