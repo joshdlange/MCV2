@@ -1,0 +1,126 @@
+We need to migrate Marvel Card Vault email sending from Brevo to Resend more broadly.
+
+Context:
+- RESEND_API_KEY is already configured in Replit Secrets.
+- Resend test email works.
+- Password reset is already using Resend successfully.
+- Current audit showed most other email flows still use Brevo:
+  - Welcome email
+  - Monthly nudge / digest
+  - Badge unlocked
+  - Trade notifications
+  - Card image approved/rejected
+  - Coupon blast
+  - Admin campaign / contact sync
+- Resend has a larger free sending allowance than Brevo for our current needs.
+- Goal is to make Resend the default/primary email provider for almost all Marvel Card Vault emails.
+- Do not send any mass marketing campaign yet.
+
+Goal:
+Move all normal outbound Marvel Card Vault emails to Resend unless there is a specific technical reason to keep an individual flow on Brevo. Brevo should no longer be the default provider.
+
+Must do:
+- Audit every current email-sending path in the app.
+- Identify all Brevo usage.
+- Migrate the following flows to Resend:
+  - Welcome email
+  - Password reset, already done — verify it stays Resend
+  - Monthly nudge / digest
+  - Badge unlocked
+  - Trade notifications
+  - Card image approved
+  - Card image rejected
+  - Coupon/promotional blast infrastructure
+  - Admin campaign send, if currently implemented
+  - Any other user-facing transactional or marketing email currently sent through Brevo
+- Keep a centralized server-side email service/helper so Resend sending is not scattered across the codebase.
+- Make Resend the default provider for app emails.
+- Preserve existing email templates/copy as much as possible unless small formatting changes are required for Resend.
+- Preserve unsubscribe/footer handling for marketing emails.
+- Preserve no-affiliation language where currently used.
+- Preserve current recipient selection logic.
+- Preserve current timing/scheduling logic for nudges/digests.
+- Preserve current admin-only protections for campaign/test-send endpoints.
+- Ensure RESEND_API_KEY is read only from server-side environment/secrets.
+- Ensure RESEND_API_KEY is never exposed to frontend code.
+- Ensure no API keys are hardcoded.
+- Add clear logging for Resend send success/failure.
+- Handle Resend API errors gracefully.
+- If a sender/from address or domain is not verified in Resend, stop and tell me exactly what must be verified before proceeding.
+- Leave Brevo code only if needed as a temporary fallback or for contact-list management that has not been replaced yet.
+- Document exactly what remains on Brevo, if anything, and why.
+
+Must not do:
+- Do not send any mass marketing campaign.
+- Do not email all users.
+- Do not trigger the product announcement email yet.
+- Do not change email recipient logic unless required for provider compatibility.
+- Do not change password reset security behavior.
+- Do not change auth/session behavior.
+- Do not change subscriptions, Stripe, RevenueCat, Shippo, marketplace, PC Binders, card limits, XP, image approval logic, or collection behavior.
+- Do not expose RESEND_API_KEY to frontend code.
+- Do not hardcode secrets.
+- Do not create an unprotected public test-email endpoint.
+- Do not remove Brevo entirely unless every remaining Brevo dependency has been audited and safely replaced.
+- Do not touch Android native files.
+- Do not touch iOS native files.
+- Do not broadly refactor unrelated code.
+
+Preserve:
+- Existing password reset flow using Resend.
+- Existing email template branding.
+- Existing email copy unless compatibility changes are needed.
+- Existing unsubscribe/footer compliance for marketing emails.
+- Existing admin-only protections.
+- Existing user notification preferences if any exist.
+- Existing monthly nudge/digest cadence.
+- Existing badge/trade/image approval trigger behavior.
+- Existing app functionality.
+
+Implementation guidance:
+- Prefer one centralized email service, for example:
+  server/services/emailService.ts
+  or the existing equivalent.
+- The service should support:
+  - sendEmail({ to, subject, html, text, category/type })
+  - sendPasswordResetEmail(...)
+  - sendWelcomeEmail(...)
+  - sendBadgeUnlockedEmail(...)
+  - sendTradeNotificationEmail(...)
+  - sendImageApprovalEmail(...)
+  - sendImageRejectionEmail(...)
+  - sendMarketingEmail(...) or sendCampaignEmail(...)
+- Resend should be the default low-level provider.
+- If keeping Brevo as fallback, make fallback explicit and documented, not accidental.
+- For marketing/campaign emails, build/prepare the Resend path but do not send to the full user base yet.
+- If there is an admin test-send function, allow test-send to a single specified admin email only.
+
+QA:
+- Password reset still sends through Resend and reset link works.
+- Welcome email sends through Resend.
+- Badge unlocked email sends through Resend.
+- Trade notification email sends through Resend.
+- Card image approved email sends through Resend.
+- Card image rejected email sends through Resend.
+- Monthly nudge/digest test sends through Resend.
+- Admin campaign test email sends through Resend to one test/admin address only.
+- No full-list campaign is sent.
+- No Brevo call is made for migrated flows.
+- Any remaining Brevo calls are listed and justified.
+- Missing/invalid RESEND_API_KEY logs a clear server-side error without crashing unrelated app functionality.
+- No API keys appear in frontend code or logs.
+- All test email endpoints are admin-only or dev-only.
+- App builds/runs cleanly.
+- No unrelated functionality regressed.
+
+Final response:
+- List every email flow found.
+- For each flow, state provider after migration:
+  - Resend
+  - Brevo fallback
+  - Brevo remaining, with reason
+- List changed files.
+- Confirm password reset still works.
+- Confirm test emails sent successfully through Resend.
+- Confirm no marketing campaign was sent.
+- Confirm whether this is safe to publish.

@@ -1,31 +1,17 @@
-import nodemailer from 'nodemailer';
-import type { Transporter } from 'nodemailer';
-
-const transporter: Transporter = nodemailer.createTransport({
-  host: 'smtp-relay.brevo.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.BREVO_SMTP_USER,
-    pass: process.env.BREVO_SMTP_KEY,
-  },
-});
+/**
+ * server/email.ts — thin wrapper used by direct routes.ts call sites.
+ * All sends now go through Resend via emailService.sendResendEmail.
+ *
+ * Remaining Brevo usage in the codebase:
+ *   - server/contactsSync.ts (syncFirebaseUsersToBrevo) — Brevo Contacts REST API
+ *     for contact-list management only; not email sending. Kept on Brevo intentionally.
+ */
+import { sendResendEmail } from './services/emailService';
 
 export async function sendEmail(
   to: string,
   subject: string,
   html: string
 ): Promise<void> {
-  try {
-    await transporter.sendMail({
-      from: 'Marvelous Card Vault <no-reply@marvelcardvault.com>',
-      to,
-      subject,
-      html,
-    });
-    console.log(`Email sent successfully to ${to}`);
-  } catch (error) {
-    console.error('Error sending email:', error);
-    throw error;
-  }
+  await sendResendEmail({ to, subject, html, template: 'direct' });
 }

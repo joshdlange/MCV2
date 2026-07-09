@@ -3799,7 +3799,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ========== BREVO EMAIL & CONTACT SYNC ROUTES ==========
 
-  // Admin-only: Test email sending via Brevo (legacy provider)
+  // Admin-only: Test email sending (routes through Resend)
   app.post("/api/test-email", authenticateUser, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) {
