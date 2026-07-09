@@ -5,5 +5,6 @@
 - [Repo tooling quirks](env-quirks.md) — db:push prompt needs a TTY & aborts ALL changes at first prompt (users.email dupes block it permanently); no root tsconfig so tsc never checks the server
 - [Collector profile privacy](collector-profile-privacy.md) — every /api/collectors/:username/* data endpoint must run resolveCollectorAccess; UI hiding isn't a security boundary. profileVisibility is tri-state.
 - [Capacitor Android plugin sync](capacitor-android-sync.md) — cap update android must run before every AAB (via nix-shell nodejs_22) or capacitor.plugins.json ships empty and native plugins (App, RevenueCat) silently don't work.
+- [Password reset via Resend](password-reset-resend.md) — Resend=reset emails only, Brevo=rest; generatePasswordResetLink throws opaque internal-error for unknown users (check getUserByEmail first); never 500 on send path.
 - [Mobile safe-area insets](safe-area-insets.md) — env(safe-area-inset-*) is 0 on Android WebView; use the max(env, var) --safe-area-top vars from index.css for all fixed/sticky mobile offsets.
 - [/api/stats field mismatch](stats-field-mismatch.md) — /api/stats returns wishlistCount but the shared CollectionStats type claims wishlistItems; always read both or the value is silently 0.

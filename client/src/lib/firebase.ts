@@ -8,7 +8,6 @@ import {
   signOut,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  sendPasswordResetEmail,
   updateProfile,
   type Auth 
 } from "firebase/auth";
@@ -215,7 +214,17 @@ export const signInWithEmail = async (email: string, password: string) => {
 
 export const resetPassword = async (email: string) => {
   try {
-    await sendPasswordResetEmail(auth, email);
+    const response = await fetch('/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error: any = new Error(data.message || 'Password reset failed. Please try again.');
+      if (data.code) error.code = data.code;
+      throw error;
+    }
     return { success: true };
   } catch (error: any) {
     console.error('Password reset error:', error);

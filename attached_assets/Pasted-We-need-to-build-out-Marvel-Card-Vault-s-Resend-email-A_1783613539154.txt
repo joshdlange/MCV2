@@ -1,0 +1,100 @@
+We need to build out Marvel Card Vault’s Resend email API/service layer.
+
+Context:
+- I have already added RESEND_API_KEY to Replit Secrets.
+- We previously used Brevo for emails.
+- We want to move to Resend.
+- Do not send any marketing campaign yet.
+- First priority is getting the Resend email service/API working safely, then migrating password reset to Resend.
+- Later we will use this same Resend setup for product announcement/marketing emails, but not in this task.
+
+Goal:
+Create a clean Resend-backed email service/API and migrate password reset emails to Resend without changing the existing password reset flow.
+
+Must do:
+- Locate the current email sending implementation, including Brevo usage.
+- Locate the current password reset flow:
+  - reset request endpoint
+  - token generation
+  - reset email template/copy
+  - reset link construction
+  - reset completion endpoint
+- Add Resend integration using the RESEND_API_KEY environment secret.
+- Create or update a centralized email service/helper so email sending is not scattered throughout the codebase.
+- Implement a Resend sendEmail function that supports:
+  - to
+  - subject
+  - html body
+  - optional text body
+  - from address/name
+  - reply-to if needed
+- Use a verified/safe sender address configured for Marvel Card Vault.
+- If sender/domain is not obvious, identify where it should be configured and ask before hardcoding.
+- Migrate password reset emails to use Resend.
+- Preserve the current password reset link structure unless a change is absolutely required.
+- Preserve token generation, expiration, validation, and security behavior.
+- Preserve the existing user-facing reset password UX.
+- Add clear server-side logging for email send success/failure.
+- Handle Resend API errors gracefully.
+- Ensure missing RESEND_API_KEY causes a clear server-side error and does not crash unrelated app functionality.
+- Keep Brevo code only if needed temporarily, but password reset should use Resend after this change.
+- Add a simple internal/test-only way to send a Resend test email if the app already has admin/test tooling. If not, do not create a public endpoint without protection.
+- Document exactly which email flows now use Resend and which still use Brevo.
+
+Must not do:
+- Do not send any marketing campaign.
+- Do not email all users.
+- Do not migrate marketing emails yet.
+- Do not change subscription, Stripe, RevenueCat, Shippo, marketplace, XP, collection, PC Binder, image approval, or auth behavior beyond the email provider used for password reset.
+- Do not change reset token generation, expiration, validation, or security logic.
+- Do not expose RESEND_API_KEY to the frontend.
+- Do not hardcode RESEND_API_KEY anywhere.
+- Do not create an unprotected public test email endpoint.
+- Do not remove Brevo broadly until all email flows are audited.
+- Do not touch Android native files.
+- Do not touch iOS native files.
+- Do not change app routes unless required for existing password reset behavior.
+- Do not change email copy except where required for Resend compatibility.
+
+Preserve:
+- Existing password reset user experience.
+- Existing reset URL behavior.
+- Existing auth/session behavior.
+- Existing user database.
+- Existing environment variable/secrets patterns.
+- Existing logging style.
+- Existing app branding.
+- Existing no-affiliation/disclaimer language where already used.
+
+Implementation guidance:
+- Prefer a centralized server-side module such as:
+  server/services/emailService.ts
+  or whatever naming/location matches the current project structure.
+- The service should make it easy to add future email types:
+  - password reset
+  - welcome
+  - image approval/rejection
+  - product announcement
+  - monthly digest
+- Password reset should call something like:
+  sendPasswordResetEmail({ to, resetUrl, userName })
+- The low-level Resend function should be reusable:
+  sendEmail({ to, subject, html, text })
+- Use the official Resend Node package if appropriate for the project.
+- If package installation is required, install only what is needed for Resend.
+
+QA:
+- Request password reset for a valid user.
+- Confirm email is sent through Resend.
+- Confirm reset email arrives.
+- Confirm reset link opens the correct reset page.
+- Confirm password can be reset successfully.
+- Confirm expired/invalid reset links still fail correctly.
+- Confirm no Brevo call is made for password reset.
+- Confirm missing/invalid RESEND_API_KEY logs a clear server-side error.
+- Confirm RESEND_API_KEY is never exposed in frontend code.
+- Confirm no marketing emails are sent.
+- Confirm no unrelated functionality regressed.
+- Confirm app builds/runs cleanly.
+- Provide a summary of changed files.
+- Provide exact instructions for testing password reset through Resend.

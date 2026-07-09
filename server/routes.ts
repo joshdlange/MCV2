@@ -35,7 +35,7 @@ import { ebayBrowseApi } from "./ebay-browse-api";
 import { ebayMarketplaceInsights } from "./ebay-marketplace-insights";
 import { sendEmail } from "./email";
 import { syncFirebaseUsersToBrevo } from "./contactsSync";
-import { emailService } from "./services/emailService";
+import { sendResendEmail, sendPasswordResetEmail } from "./services/emailService";
 import * as emailTriggers from "./services/emailTriggers";
 import { startEmailCronJobs } from "./jobs/emailCron";
 import { initializeUpcomingSets, syncRSSFeed, expireReleasedSets } from "./services/upcomingSetsSync";
@@ -379,6 +379,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get current user
   app.get("/api/auth/me", authenticateUser, (req: any, res) => {
     res.json({ user: req.user });
+  });
+
+  // Simple in-memory rate limiter for the public forgot-password endpoint.
+  // Limits: 5 requests per hour per IP, and 3 per hour per email address.
+  const passwordResetAttempts = new Map<string, { count: number; windowStart: number }>();
+  const PASSWORD_RESET_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+  function isPasswordResetRateLimited(key: string, maxPerWindow: number): boolean {
+    const now = Date.now();
+    const entry = passwordResetAttempts.get(key);
+    if (!entry || now - entry.windowStart > PASSWORD_RESET_WINDOW_MS) {
+      passwordResetAttempts.set(key, { count: 1, windowStart: now });
+      return false;
+    }
+    entry.count++;
+    return entry.count > maxPerWindow;
+  }
+  // Periodically evict stale entries so the map doesn't grow unbounded
+  setInterval(() => {
+    const now = Date.now();
+    passwordResetAttempts.forEach((entry, key) => {
+      if (now - entry.windowStart > PASSWORD_RESET_WINDOW_MS) {
+        passwordResetAttempts.delete(key);
+      }
+    });
+  }, 15 * 60 * 1000).unref();
+
+  // Request a password reset email (sent via Resend).
+  // Firebase Auth generates the reset link — token generation, expiration,
+  // and validation are fully handled by Firebase. This endpoint only wraps
+  // the link in the branded template and delivers it via Resend.
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      return res.status(400).json({
+        code: 'auth/invalid-email',
+        message: 'Please enter a valid email address.',
+      });
+    }
+
+    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
+    if (
+      isPasswordResetRateLimited(`ip:${clientIp}`, 5) ||
+      isPasswordResetRateLimited(`email:${email}`, 3)
+    ) {
+      return res.status(429).json({
+        code: 'auth/too-many-requests',
+        message: 'Too many password reset requests. Please try again later.',
+      });
+    }
+
+    // Always return the same generic response whether or not the account
+    // exists — and even if the send fails — to prevent email enumeration
+    // (matches Firebase's own email-enumeration-protection behavior).
+    const genericResponse = {
+      success: true,
+      message: 'If an account exists for that email, a password reset link has been sent.',
+    };
+
+    try {
+      // Check account existence first — generatePasswordResetLink throws an
+      // opaque auth/internal-error for unknown emails, so this gives us a
+      // clean signal without masking genuine internal failures.
+      try {
+        await admin.auth().getUserByEmail(email);
+      } catch (error: any) {
+        if (error?.code === 'auth/user-not-found') {
+          console.log(`[Password Reset] No account found for requested email — no email sent`);
+          return res.json(genericResponse);
+        }
+        throw error;
+      }
+
+      const resetLink = await admin.auth().generatePasswordResetLink(email);
+      await sendPasswordResetEmail({ to: email, resetUrl: resetLink });
+    } catch (error) {
+      // Log internally but never surface a failure — a 500 here would let an
+      // attacker distinguish existing accounts from unknown ones during
+      // provider outages, and federated-only accounts (Google/Apple sign-in)
+      // may not support password reset links at all.
+      console.error('[Password Reset] Failed to generate/send reset email:', error);
+    }
+    return res.json(genericResponse);
   });
 
   // Onboarding routes
@@ -3716,9 +3799,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ========== BREVO EMAIL & CONTACT SYNC ROUTES ==========
 
-  // Test email sending route (development only)
-  app.post("/api/test-email", async (req, res) => {
+  // Admin-only: Test email sending via Brevo (legacy provider)
+  app.post("/api/test-email", authenticateUser, async (req: any, res) => {
     try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
       const { to, subject, html } = req.body;
 
       if (!to || !subject || !html) {
@@ -3736,6 +3823,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Test email error:', error);
       res.status(500).json({ 
         message: "Failed to send test email",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Admin-only: Send a test email via Resend (new provider)
+  app.post("/api/admin/test-resend-email", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const to = typeof req.body?.to === 'string' && req.body.to.trim()
+        ? req.body.to.trim()
+        : req.user.email;
+
+      const messageId = await sendResendEmail({
+        to,
+        subject: 'Marvelous Card Vault — Resend Test Email',
+        html: '<p>This is a test email sent through <strong>Resend</strong> from Marvelous Card Vault. If you received this, the Resend integration is working.</p>',
+        text: 'This is a test email sent through Resend from Marvelous Card Vault. If you received this, the Resend integration is working.',
+        template: 'resend-test',
+      });
+
+      res.json({
+        success: true,
+        message: `Test email sent via Resend to ${to}`,
+        messageId,
+      });
+    } catch (error) {
+      console.error('Resend test email error:', error);
+      res.status(500).json({
+        message: "Failed to send test email via Resend",
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
