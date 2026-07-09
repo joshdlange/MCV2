@@ -49,8 +49,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { BookOpen, Plus, MoreVertical, Pencil, Trash2, Loader2, AlertTriangle } from "lucide-react";
+import { BookOpen, Plus, MoreVertical, Pencil, Trash2, Loader2, AlertTriangle, Crown, Star } from "lucide-react";
 import { PC_BINDER_CATEGORIES } from "@shared/schema";
+import { useAppStore } from "@/lib/store";
+import { UpgradeModal, type UpgradeFeature } from "@/components/subscription/upgrade-modal";
+
+export const PC_BINDER_UPGRADE_FEATURES: UpgradeFeature[] = [
+  { label: "PC Binders — build custom collection sets" },
+  { label: "Unlimited cards in your collection" },
+  { label: "Full access to Market Trends" },
+  { label: "Scan to Add" },
+  { label: "Trade Block", comingSoon: true },
+  { label: "Marketplace", comingSoon: true },
+];
 
 interface PcBinderSummary {
   id: number;
@@ -273,12 +284,17 @@ function BinderFormDialog({
 export default function PcBinders() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
+  const { currentUser } = useAppStore();
   const [showForm, setShowForm] = useState(false);
   const [editingBinder, setEditingBinder] = useState<PcBinderSummary | null>(null);
   const [deletingBinder, setDeletingBinder] = useState<PcBinderSummary | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const hasAccess = !!currentUser && (currentUser.plan === 'SUPER_HERO' || currentUser.isAdmin);
 
   const { data: binders, isLoading } = useQuery<PcBinderSummary[]>({
     queryKey: ["/api/pc-binders"],
+    enabled: hasAccess,
   });
 
   const deleteMutation = useMutation({
@@ -294,6 +310,85 @@ export default function PcBinders() {
       toast({ title: "Couldn't delete binder", variant: "destructive" });
     },
   });
+
+  // Wait for user to load before deciding access.
+  // NOTE: all hooks must be declared above these early returns — hasAccess can
+  // flip while mounted (e.g. successful upgrade purchase from the upsell view).
+  if (!currentUser) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return (
+      <div className="p-4 md:p-6 max-w-2xl mx-auto">
+        <div className="flex items-center gap-2 mb-6">
+          <BookOpen className="w-6 h-6 text-red-600" />
+          <h1 className="text-2xl font-bold text-gray-900">PC Binders</h1>
+          <span className="text-[10px] font-bold tracking-wide px-1.5 py-0.5 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 text-yellow-950">
+            NEW
+          </span>
+        </div>
+
+        <Card className="overflow-hidden">
+          <div className="bg-gradient-to-r from-yellow-400 to-amber-500 px-6 py-4 flex items-center gap-3">
+            <Crown className="w-7 h-7 text-yellow-950 flex-shrink-0" />
+            <div>
+              <h2 className="text-lg font-bold text-yellow-950">A Super Hero Feature</h2>
+              <p className="text-sm text-yellow-900">Upgrade to unlock PC Binders</p>
+            </div>
+          </div>
+          <CardContent className="p-6 space-y-5">
+            <div className="space-y-2">
+              <p className="text-sm text-gray-700 leading-relaxed">
+                <span className="font-semibold">PC Binders</span> let you build your own custom
+                collection sets — organize cards by character, artist, theme, or a chase list of
+                cards you're hunting. Track cards you own and cards you're still after, all in
+                one private binder.
+              </p>
+            </div>
+
+            <div className="space-y-2.5">
+              <p className="text-sm font-semibold text-gray-900">Everything included with Super Hero:</p>
+              {PC_BINDER_UPGRADE_FEATURES.map((feature, index) => (
+                <div key={index} className="flex items-center gap-2.5">
+                  <Star className="w-4 h-4 text-red-500 fill-red-500 flex-shrink-0" />
+                  <span className="text-sm text-gray-800">{feature.label}</span>
+                  {feature.comingSoon && (
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-600 border border-amber-400 rounded-full px-1.5 py-0.5 flex-shrink-0">
+                      Coming Soon
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <Button
+              onClick={() => setShowUpgradeModal(true)}
+              className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-yellow-900 font-bold py-5 rounded-xl shadow-lg transition-all duration-200"
+              data-testid="button-upgrade-pc-binders"
+            >
+              <Crown className="w-5 h-5 mr-2" />
+              Upgrade to Super Hero
+            </Button>
+          </CardContent>
+        </Card>
+
+        <UpgradeModal
+          isOpen={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+          currentPlan={currentUser.plan || 'SIDE_KICK'}
+          trigger="pc_binders"
+          title="PC Binders is a Super Hero feature"
+          description="Build custom collection sets around characters, artists, themes, or chase lists. Upgrade to Super Hero to start building your PC binders."
+          features={PC_BINDER_UPGRADE_FEATURES}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto">

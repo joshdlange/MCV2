@@ -1,10 +1,10 @@
-- [Two separate profile pages](profile-hub.md) — /collectors/:username is PUBLIC (no Settings tab); /profile is PRIVATE Account Settings. Don't re-merge. Badge rarities are bronze/silver/gold/platinum/special.
+- [Two separate profile pages](profile-hub.md) — /collectors/:username is PUBLIC; /profile is PRIVATE Account Settings. Don't re-merge.
 - [Scan-to-Add architecture](scan-to-add.md) — uses GPT-4o-mini vision (not Tesseract); free users get 10 scans/month tracked in user_scan_logs table
-- [Postgres LIMIT without ORDER BY](scan-matching-nondeterminism.md) — paginated candidate queries need explicit ORDER BY or the retrieved row set (and downstream rankings) vary between identical runs.
+- [Postgres LIMIT without ORDER BY](scan-matching-nondeterminism.md) — paginated candidate queries need explicit ORDER BY or results vary between runs.
 - [XP / Collector Power system](xp-system.md) — single source of truth computeUserXp; hybrid model (badge/image derived, card_added from decoupled no-FK xp_events ledger); farm-proof unique index
 - [Repo tooling quirks](env-quirks.md) — db:push prompt needs a TTY & aborts ALL changes at first prompt (users.email dupes block it permanently); no root tsconfig so tsc never checks the server
-- [Collector profile privacy](collector-profile-privacy.md) — every /api/collectors/:username/* data endpoint must run resolveCollectorAccess; UI hiding isn't a security boundary. profileVisibility is tri-state.
-- [Capacitor Android plugin sync](capacitor-android-sync.md) — cap update android must run before every AAB (via nix-shell nodejs_22) or capacitor.plugins.json ships empty and native plugins (App, RevenueCat) silently don't work.
-- [Password reset via Resend](password-reset-resend.md) — Resend=reset emails only, Brevo=rest; generatePasswordResetLink throws opaque internal-error for unknown users (check getUserByEmail first); never 500 on send path.
+- [Collector profile privacy](collector-profile-privacy.md) — every /api/collectors/:username/* endpoint must run resolveCollectorAccess; UI hiding isn't a security boundary.
+- [Capacitor Android plugin sync](capacitor-android-sync.md) — cap update android must run before every AAB build or native plugins silently ship missing.
+- [Password reset via Resend](password-reset-resend.md) — Resend=reset emails only, Brevo=rest; check getUserByEmail before generatePasswordResetLink; never 500 on send path.
 - [Mobile safe-area insets](safe-area-insets.md) — env(safe-area-inset-*) is 0 on Android WebView; use the max(env, var) --safe-area-top vars from index.css for all fixed/sticky mobile offsets.
 - [/api/stats field mismatch](stats-field-mismatch.md) — /api/stats returns wishlistCount but the shared CollectionStats type claims wishlistItems; always read both or the value is silently 0.

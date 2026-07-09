@@ -32,14 +32,28 @@ import {
 import { useAppStore } from "@/lib/store";
 import { queryClient } from "@/lib/queryClient";
 
+export interface UpgradeFeature {
+  label: string;
+  comingSoon?: boolean;
+}
+
 interface UpgradeModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentPlan: string;
   trigger?: string;
+  title?: string;
+  description?: string;
+  features?: UpgradeFeature[];
 }
 
-export function UpgradeModal({ isOpen, onClose, currentPlan, trigger }: UpgradeModalProps) {
+const DEFAULT_UPGRADE_FEATURES: UpgradeFeature[] = [
+  { label: "Add unlimited cards to your collection" },
+  { label: "Show off your full binder to friends" },
+  { label: "Track every set, subset, and variant" },
+];
+
+export function UpgradeModal({ isOpen, onClose, currentPlan, trigger, title, description, features }: UpgradeModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [iapReadiness, setIapReadiness] = useState<AppleIAPReadiness>(getAppleIAPReadiness());
@@ -431,27 +445,27 @@ export function UpgradeModal({ isOpen, onClose, currentPlan, trigger }: UpgradeM
         <div className="bg-gradient-to-b from-gray-900 to-gray-950 px-5 sm:px-6 pt-5 sm:pt-6 pb-3 sm:pb-4 flex flex-col items-center">
           <img src={logoImage} alt="Marvelous Card Vault" className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl mb-3" />
           <h2 className="text-lg sm:text-xl font-bold text-white text-center">
-            Your Sidekick limit has been reached
+            {title ?? "Your Sidekick limit has been reached"}
           </h2>
         </div>
 
         <div className="px-5 sm:px-6 pt-3 sm:pt-4 pb-5 sm:pb-6 space-y-4 sm:space-y-5">
           <p className="text-gray-300 text-sm text-center leading-relaxed">
-            You've added all the cards a Sidekick can carry.
-            To keep growing your vault, it's time to level up.
+            {description ?? "You've added all the cards a Sidekick can carry. To keep growing your vault, it's time to level up."}
           </p>
 
           <div className="space-y-3">
             <p className="text-sm font-semibold text-white">Upgrade to Super Hero and:</p>
             <div className="space-y-2.5">
-              {[
-                "Add unlimited cards to your collection",
-                "Show off your full binder to friends",
-                "Track every set, subset, and variant",
-              ].map((feature, index) => (
+              {(features ?? DEFAULT_UPGRADE_FEATURES).map((feature, index) => (
                 <div key={index} className="flex items-center gap-2.5">
                   <Star className="w-4 h-4 text-red-500 fill-red-500 flex-shrink-0" />
-                  <span className="text-sm text-white">{feature}</span>
+                  <span className="text-sm text-white">{feature.label}</span>
+                  {feature.comingSoon && (
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-400 border border-amber-400/40 rounded-full px-1.5 py-0.5 flex-shrink-0">
+                      Coming Soon
+                    </span>
+                  )}
                 </div>
               ))}
             </div>

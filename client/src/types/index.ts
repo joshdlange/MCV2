@@ -3,6 +3,7 @@ export interface NavigationItem {
   label: string;
   icon: string;
   badge?: string | number;
+  isNew?: boolean;
 }
 
 export interface StatCard {

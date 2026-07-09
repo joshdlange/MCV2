@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { PcBinderShareModal } from "@/components/collection/pc-binder-share-modal";
+import { useAppStore } from "@/lib/store";
 import type { CardWithSet, CollectionItem, InsertUserCollection, InsertUserWishlist, WishlistItem } from "@shared/schema";
 import {
   ArrowLeft,
@@ -465,6 +466,15 @@ export default function PcBinderDetail() {
     setSetFilterId("all");
   }, [binderId]);
 
+  // PC Binders are a SUPER_HERO feature — send Side Kick users to the
+  // /pc-binders upsell page (which explains the feature and offers upgrade)
+  const { currentUser } = useAppStore();
+  const hasAccess = !!currentUser && (currentUser.plan === 'SUPER_HERO' || currentUser.isAdmin);
+  const redirectingToUpsell = !!currentUser && !hasAccess;
+  useEffect(() => {
+    if (redirectingToUpsell) navigate("/pc-binders");
+  }, [redirectingToUpsell, navigate]);
+
   const { data: binder, isLoading, isError } = useQuery<PcBinderDetail>({
     queryKey: ["/api/pc-binders", String(binderId)],
     // Default fetcher only uses queryKey[0]; hierarchical keys need an explicit queryFn
@@ -472,13 +482,14 @@ export default function PcBinderDetail() {
       const res = await apiRequest("GET", `/api/pc-binders/${binderId}`);
       return res.json();
     },
-    enabled: !isNaN(binderId),
+    enabled: !isNaN(binderId) && hasAccess,
   });
 
   // All of the user's binders — used to detect manually-created "Vol. N"
   // binders so the overflow flow never duplicates a name or repeats cards
   const { data: allBinders } = useQuery<BinderSummaryLite[]>({
     queryKey: ["/api/pc-binders"],
+    enabled: hasAccess,
   });
 
   const { data: wishlist } = useQuery<WishlistItem[]>({

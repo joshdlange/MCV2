@@ -36,7 +36,7 @@ const getNavigationItems = (userPlan: string): NavigationItem[] => {
     { href: "/", label: "Dashboard", icon: "LayoutDashboard" },
     { href: "/browse", label: "Browse Cards", icon: "Grid3X3" },
     { href: "/my-collection", label: "My Collection", icon: "FolderOpen" },
-    { href: "/pc-binders", label: "PC Binders", icon: "BookOpen" },
+    { href: "/pc-binders", label: "PC Binders", icon: "BookOpen", isNew: true },
     { href: "/wishlist", label: "Wishlist", icon: "Heart" },
   ];
 
@@ -201,6 +201,11 @@ export function Sidebar() {
             >
               <IconComponent iconName={item.icon} />
               <span className="font-medium">{item.label}</span>
+              {item.isNew && (
+                <span className="ml-2 text-[10px] font-bold tracking-wide px-1.5 py-0.5 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 text-yellow-950 shadow-sm flex-shrink-0">
+                  NEW
+                </span>
+              )}
               {item.href === '/social' && (unreadMessages?.count || 0) > 0 && (
                 <span className="ml-auto w-2.5 h-2.5 rounded-full bg-red-500 flex-shrink-0" />
               )}

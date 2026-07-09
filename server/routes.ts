@@ -6411,16 +6411,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Auto-add card to user's collection if they don't own it (skip for admins)
+      // Auto-add card to user's collection if they don't own it (skip for admins).
+      // Respect the Side Kick card limit — skip the auto-add silently (image
+      // submission still succeeds) if a non-Super Hero user is at the cap.
       if (!req.user.isAdmin) {
         const existingCollection = await storage.getUserCollectionItem(req.user.id, cardId);
         if (!existingCollection) {
-          await storage.addToCollection({
-            userId: req.user.id,
-            cardId,
-            condition: "Near Mint",
-            acquiredVia: "image-upload",
-          });
+          let withinLimit = true;
+          if (req.user.plan !== 'SUPER_HERO') {
+            const [countResult] = await db.select({ count: sql<number>`count(*)::int` })
+              .from(userCollections)
+              .where(eq(userCollections.userId, req.user.id));
+            withinLimit = (countResult?.count || 0) < SIDE_KICK_CARD_LIMIT;
+          }
+          if (withinLimit) {
+            await storage.addToCollection({
+              userId: req.user.id,
+              cardId,
+              condition: "Near Mint",
+              acquiredVia: "image-upload",
+            });
+          }
         }
       }
       
@@ -9508,6 +9519,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     category: z.enum(PC_BINDER_CATEGORIES).optional(),
   });
 
+  // PC Binders are a SUPER_HERO feature (admins bypass). Applied to every
+  // /api/pc-binders route; the public share-view route (token-based) is exempt.
+  const requirePcBinderAccess = (req: any, res: any, next: any) => {
+    if (req.user?.plan === 'SUPER_HERO' || req.user?.isAdmin) return next();
+    return res.status(403).json({
+      message: "PC Binders are a Super Hero feature. Upgrade to unlock custom binders.",
+      code: "SUPER_HERO_REQUIRED",
+    });
+  };
+
   // Fetch a binder ONLY if owned by the caller (single ownership gate for all routes)
   const getOwnedPcBinder = async (binderId: number, userId: number) => {
     if (isNaN(binderId)) return null;
@@ -9522,7 +9543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // List the caller's PC binders with counts. The user_collections predicate
   // MUST be in the JOIN ON clause (not WHERE) so empty/zero-owned binders
   // still appear.
-  app.get("/api/pc-binders", authenticateUser, async (req: any, res) => {
+  app.get("/api/pc-binders", authenticateUser, requirePcBinderAccess, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const binders = await db
@@ -9564,7 +9585,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/pc-binders", authenticateUser, async (req: any, res) => {
+  app.post("/api/pc-binders", authenticateUser, requirePcBinderAccess, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const parsed = pcBinderInputSchema.safeParse(req.body);
@@ -9596,7 +9617,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/pc-binders/:id", authenticateUser, async (req: any, res) => {
+  app.patch("/api/pc-binders/:id", authenticateUser, requirePcBinderAccess, async (req: any, res) => {
     try {
       const binderId = parseInt(req.params.id);
       const binder = await getOwnedPcBinder(binderId, req.user.id);
@@ -9626,7 +9647,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/pc-binders/:id", authenticateUser, async (req: any, res) => {
+  app.delete("/api/pc-binders/:id", authenticateUser, requirePcBinderAccess, async (req: any, res) => {
     try {
       const binderId = parseInt(req.params.id);
       const binder = await getOwnedPcBinder(binderId, req.user.id);
@@ -9643,7 +9664,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Binder detail: binder + all its cards with an `owned` flag (never paginated;
   // binders are capped at MAX_CARDS_PER_PC_BINDER).
-  app.get("/api/pc-binders/:id", authenticateUser, async (req: any, res) => {
+  app.get("/api/pc-binders/:id", authenticateUser, requirePcBinderAccess, async (req: any, res) => {
     try {
       const binderId = parseInt(req.params.id);
       const userId = req.user.id;
@@ -9689,7 +9710,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/pc-binders/:id/cards", authenticateUser, async (req: any, res) => {
+  app.post("/api/pc-binders/:id/cards", authenticateUser, requirePcBinderAccess, async (req: any, res) => {
     try {
       const binderId = parseInt(req.params.id);
       const binder = await getOwnedPcBinder(binderId, req.user.id);
@@ -9729,7 +9750,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // its totalCount must never drive this flow; use dryRun here instead).
   // Excludes archived sets and cards already in the binder BEFORE applying the
   // remaining-capacity cap, so no-op conflicts can't burn capacity slots.
-  app.post("/api/pc-binders/:id/cards/bulk", authenticateUser, async (req: any, res) => {
+  app.post("/api/pc-binders/:id/cards/bulk", authenticateUser, requirePcBinderAccess, async (req: any, res) => {
     try {
       const binderId = parseInt(req.params.id);
       const binder = await getOwnedPcBinder(binderId, req.user.id);
@@ -9830,7 +9851,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/pc-binders/:id/cards/:cardId", authenticateUser, async (req: any, res) => {
+  app.delete("/api/pc-binders/:id/cards/:cardId", authenticateUser, requirePcBinderAccess, async (req: any, res) => {
     try {
       const binderId = parseInt(req.params.id);
       const binder = await getOwnedPcBinder(binderId, req.user.id);
@@ -9855,7 +9876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const pcShareUrl = (token: string) => `https://app.marvelcardvault.com/pc-share/${token}`;
 
   // GET current active share link for a PC binder (owner only)
-  app.get("/api/pc-binders/:id/share-link", authenticateUser, async (req: any, res) => {
+  app.get("/api/pc-binders/:id/share-link", authenticateUser, requirePcBinderAccess, async (req: any, res) => {
     try {
       const binderId = parseInt(req.params.id);
       const binder = await getOwnedPcBinder(binderId, req.user.id);
@@ -9879,7 +9900,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST create (or return existing) share link for a PC binder
-  app.post("/api/pc-binders/:id/share-link", authenticateUser, async (req: any, res) => {
+  app.post("/api/pc-binders/:id/share-link", authenticateUser, requirePcBinderAccess, async (req: any, res) => {
     try {
       const binderId = parseInt(req.params.id);
       const binder = await getOwnedPcBinder(binderId, req.user.id);
@@ -9919,7 +9940,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST regenerate — revoke old + create new
-  app.post("/api/pc-binders/:id/share-link/regenerate", authenticateUser, async (req: any, res) => {
+  app.post("/api/pc-binders/:id/share-link/regenerate", authenticateUser, requirePcBinderAccess, async (req: any, res) => {
     try {
       const binderId = parseInt(req.params.id);
       const binder = await getOwnedPcBinder(binderId, req.user.id);
@@ -9955,7 +9976,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // DELETE — revoke active share link
-  app.delete("/api/pc-binders/:id/share-link", authenticateUser, async (req: any, res) => {
+  app.delete("/api/pc-binders/:id/share-link", authenticateUser, requirePcBinderAccess, async (req: any, res) => {
     try {
       const binderId = parseInt(req.params.id);
       const binder = await getOwnedPcBinder(binderId, req.user.id);
