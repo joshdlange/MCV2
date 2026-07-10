@@ -8,6 +8,8 @@ import { db } from '../db';
 import { users, userCollections, cardSets } from '../../shared/schema';
 import { sql, lt, eq, and, ne } from 'drizzle-orm';
 import * as emailTriggers from '../services/emailTriggers';
+import { sendResendEmail } from '../services/emailService';
+import { vaultUpgradeAnnouncementTemplate } from '../services/emailTemplates';
 
 const { CronJob } = cron;
 
@@ -446,6 +448,77 @@ export function getThanks2uStatus() {
 }
 
 /**
+ * Vault Upgrade Announcement Campaign
+ * One-time job: July 10, 2026 at 12:00 PM Central Time
+ * Sends to all users with marketingOptIn=true
+ */
+let vaultUpgradeManualSentAt: Date | null = null;
+
+export const vaultUpgradeJob = new CronJob(
+  '0 12 10 7 *', // 12:00 PM on July 10
+  async () => {
+    console.log('📧 Running Vault Upgrade announcement campaign...');
+    try {
+      const { sent, failed } = await runVaultUpgradeNow();
+      console.log(`✅ Vault Upgrade campaign complete: ${sent} sent, ${failed} failed`);
+      vaultUpgradeJob.stop();
+      console.log('🛑 Vault Upgrade job stopped (one-time campaign complete)');
+    } catch (error) {
+      console.error('❌ Error in Vault Upgrade campaign:', error);
+    }
+  },
+  null,
+  false,
+  'America/Chicago' // Central Time
+);
+
+export async function runVaultUpgradeNow(): Promise<{ sent: number; failed: number }> {
+  const eligibleUsers = await db
+    .select({ id: users.id, email: users.email, displayName: users.displayName })
+    .from(users)
+    .where(and(eq(users.marketingOptIn, true), ne(users.email, '')));
+
+  const { html, text } = vaultUpgradeAnnouncementTemplate();
+  const subject = 'Your Vault Just Got Bigger';
+
+  let sent = 0;
+  let failed = 0;
+
+  console.log(`[VaultUpgrade] Sending to ${eligibleUsers.length} opted-in users`);
+
+  for (const user of eligibleUsers) {
+    if (!user.email) { failed++; continue; }
+    try {
+      await sendResendEmail({
+        to: user.email,
+        subject,
+        html,
+        text,
+        template: 'vault-upgrade-announcement',
+        jobName: 'campaign-vault-upgrade-send',
+      });
+      sent++;
+      await new Promise(resolve => setTimeout(resolve, 500));
+    } catch (err) {
+      failed++;
+      console.error(`[VaultUpgrade] Failed to send to ${user.email}:`, err);
+    }
+  }
+
+  vaultUpgradeManualSentAt = new Date();
+  vaultUpgradeJob.stop();
+  return { sent, failed };
+}
+
+export function getVaultUpgradeStatus() {
+  return {
+    scheduled: '2026-07-10T12:00:00-05:00',
+    jobRunning: vaultUpgradeJob.running || false,
+    manualSentAt: vaultUpgradeManualSentAt,
+  };
+}
+
+/**
  * Initialize and start all cron jobs
  * Can be disabled via EMAIL_CRON_ENABLED environment variable
  */
@@ -461,12 +534,14 @@ export function startEmailCronJobs() {
   googlePlayLaunchJob.start();
   thanks2uBlastJob.start();
   thanks2uFollowUpJob.start();
+  vaultUpgradeJob.start();
   console.log('✅ Email cron jobs started:');
   console.log('  - Monthly nudges: 9:00 AM on the 1st of each month');
   console.log('  - Monthly digest: 9:00 AM on the 1st of each month');
   console.log('  - Google Play Launch: 10:00 AM Central on Jan 10, 2026 (one-time)');
   console.log('  - THANKS2U Coupon Blast: 9:00 AM Central on Jun 10, 2026 (one-time)');
   console.log('  - THANKS2U Follow-Up: 9:00 AM Central on Jun 24, 2026 (one-time)');
+  console.log('  - Vault Upgrade Announcement: 12:00 PM Central on Jul 10, 2026 (one-time)');
 }
 
 /**
@@ -479,6 +554,7 @@ export function stopEmailCronJobs() {
   googlePlayLaunchJob.stop();
   thanks2uBlastJob.stop();
   thanks2uFollowUpJob.stop();
+  vaultUpgradeJob.stop();
 }
 
 /**
@@ -517,6 +593,12 @@ export function getEmailCronStatus() {
         schedule: '0 9 24 6 *',
         running: thanks2uFollowUpJob.running || false,
         description: 'THANKS2U follow-up to users who missed the June 10 blast - Jun 24, 2026 9 AM Central (one-time)'
+      },
+      {
+        name: 'vaultUpgradeJob',
+        schedule: '0 12 10 7 *',
+        running: vaultUpgradeJob.running || false,
+        description: 'Vault Upgrade announcement (500-card limit + PC Binders) - Jul 10, 2026 12 PM Central (one-time)'
       }
     ]
   };

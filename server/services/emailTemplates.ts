@@ -622,7 +622,7 @@ export function vaultUpgradeAnnouncementTemplate(): { html: string; text: string
     <p style="margin: 0 0 12px; font-size: 16px; color: ${TEXT_SECONDARY}; line-height: 1.6;">
       We also rolled out one of our favorite new Super Hero features:
     </p>
-    <div style="background-color: ${DARK_BG}; border-left: 4px solid ${GOLD}; border-radius: 0 8px 8px 0; padding: 20px 24px; margin: 0 0 28px;">
+    <div style="background-color: ${DARK_BG}; border-left: 4px solid ${GOLD}; border-radius: 0 8px 8px 0; padding: 20px 24px; margin: 0 0 20px;">
       <p style="margin: 0 0 4px; font-size: 11px; font-weight: 600; color: ${GOLD}; text-transform: uppercase; letter-spacing: 1.5px;">Super Hero Feature</p>
       <p style="margin: 0 0 10px; font-size: 26px; font-weight: 800; color: ${TEXT_PRIMARY};">PC Binders.</p>
       <p style="margin: 0 0 14px; font-size: 15px; color: ${TEXT_SECONDARY}; line-height: 1.6;">
@@ -632,6 +632,20 @@ export function vaultUpgradeAnnouncementTemplate(): { html: string; text: string
         Building a Spider-Man PC? Chasing Venom cards? Tracking your favorite artist, team, theme, insert run, or personal grail list? Create a PC Binder, add cards you already own, add cards you're still chasing, and track your progress as you build.
       </p>
     </div>
+
+    <!-- PC Binder screenshot -->
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+      <tr>
+        <td style="text-align: center; padding: 0 0 28px;">
+          <img
+            src="https://res.cloudinary.com/dgu7hjfvn/image/upload/v1783696264/marvel-card-vault/email-assets/pc-binder-screenshot.png"
+            alt="PC Binder — Sabretooth PC showing 28 of 500 collected"
+            width="280"
+            style="width: 280px; max-width: 100%; height: auto; border-radius: 16px; display: inline-block; border: 2px solid #334155;"
+          >
+        </td>
+      </tr>
+    </table>
 
     <!-- What's new bullet list -->
     <div style="background-color: ${DARK_BG}; border-radius: 8px; padding: 20px 24px; margin: 0 0 28px;">
