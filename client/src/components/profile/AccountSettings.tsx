@@ -33,6 +33,7 @@ import {
   UserX,
   ImageIcon,
   ExternalLink,
+  Mail,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -303,7 +304,8 @@ export default function AccountSettings() {
     notifications: {
       emailUpdates: true,
       priceAlerts: true,
-      friendActivity: true
+      friendActivity: true,
+      marketingEmails: true
     }
   });
 
@@ -362,7 +364,8 @@ export default function AccountSettings() {
       notifications: {
         emailUpdates: userProfile.emailUpdates ?? true,
         priceAlerts: userProfile.priceAlerts ?? true,
-        friendActivity: userProfile.friendActivity ?? true
+        friendActivity: userProfile.friendActivity ?? true,
+        marketingEmails: userProfile.marketingOptIn ?? true
       }
     }));
   }, [userProfile]);
@@ -962,6 +965,26 @@ export default function AccountSettings() {
                       onClick={() => toggleNotification('emailUpdates')}
                     >
                       {profileData.notifications.emailUpdates ? 'On' : 'Off'}
+                    </Button>
+                  </div>
+
+                  <div className="flex items-start justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                    <div className="flex items-start gap-2 pr-3">
+                      <Mail className="w-4 h-4 text-gray-500 mt-0.5" />
+                      <div>
+                        <span className="text-sm text-gray-700">Marketing &amp; product emails</span>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          New features, card releases, and announcements. Turn off to stop these emails.
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="bg-white text-black border-gray-300 hover:bg-gray-100 rounded-full shrink-0"
+                      onClick={() => toggleNotification('marketingEmails')}
+                    >
+                      {profileData.notifications.marketingEmails ? 'On' : 'Off'}
                     </Button>
                   </div>
 

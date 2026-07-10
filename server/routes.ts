@@ -826,6 +826,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (notifications.emailUpdates !== undefined) updates.emailUpdates = notifications.emailUpdates;
         if (notifications.priceAlerts !== undefined) updates.priceAlerts = notifications.priceAlerts;
         if (notifications.friendActivity !== undefined) updates.friendActivity = notifications.friendActivity;
+        // Marketing/product email opt-out — this is the field all campaigns check
+        if (notifications.marketingEmails !== undefined) updates.marketingOptIn = notifications.marketingEmails;
       }
       
       // Convert address to shippingAddressJson for marketplace compatibility

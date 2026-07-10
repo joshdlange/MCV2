@@ -28,7 +28,7 @@ export function Onboarding() {
   const [heardAbout, setHeardAbout] = useState("");
   const [heardAboutOther, setHeardAboutOther] = useState("");
   const [favoriteSets, setFavoriteSets] = useState("");
-  const [marketingOptIn, setMarketingOptIn] = useState(false);
+  const [marketingOptIn, setMarketingOptIn] = useState(true);
 
   const heardAboutOptions = [
     "Social Media",
