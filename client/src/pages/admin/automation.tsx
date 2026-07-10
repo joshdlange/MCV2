@@ -197,6 +197,7 @@ interface RcAuditUser {
 interface RcAuditResult {
   scanned: number;
   affected: number;
+  errors: number;
   autoFixed: boolean;
   users: RcAuditUser[];
 }
@@ -216,6 +217,8 @@ function RcAuditCard() {
         toast({ title: `✅ Fixed ${data.affected} users`, description: "They've been upgraded to SUPER_HERO." });
       } else if (!fix && data.affected > 0) {
         toast({ title: `⚠️ Found ${data.affected} users needing upgrade`, description: "Click 'Fix All' to upgrade them.", variant: "destructive" });
+      } else if (data.errors > 0) {
+        toast({ title: "Scan incomplete", description: `${data.errors} RC lookups failed — results may be incomplete. Check server logs.`, variant: "destructive" });
       } else {
         toast({ title: "All clear!", description: `Scanned ${data.scanned} users — everyone who paid is upgraded.` });
       }

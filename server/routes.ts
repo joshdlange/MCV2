@@ -6388,6 +6388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const candidates = allUsers.filter(u => u.firebaseUid && u.plan !== 'SUPER_HERO');
 
     const results: any[] = [];
+    let errorCount = 0; // RC lookups that failed (network, non-200, or 200-with-error-body)
     // Check in batches of 5 to avoid hammering RC
     for (let i = 0; i < candidates.length; i += 5) {
       const batch = candidates.slice(i, i + 5);
@@ -6397,14 +6398,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(u.firebaseUid!)}`,
             { headers: { Authorization: `Bearer ${rcSecretKey}`, 'Content-Type': 'application/json' } }
           );
-          if (!rcRes.ok) return;
-          const rcData = await rcRes.json();
+          const rcData = await rcRes.json().catch(() => null);
+          // RC can return HTTP 200 with an error body (e.g. code 7243). Treat any
+          // non-ok status OR a response carrying an error code as a failed check,
+          // so a broken lookup is never counted as "clear".
+          if (!rcRes.ok || !rcData || typeof rcData.code === 'number') {
+            errorCount++;
+            console.warn(`[RC Audit] lookup failed for user ${u.id}: HTTP ${rcRes.status}${rcData?.code ? ` code ${rcData.code}` : ''}`);
+            return;
+          }
           const entitlement = rcData?.subscriber?.entitlements?.super_hero;
           if (!entitlement) return;
           const isActive = !entitlement.expires_date || new Date(entitlement.expires_date) > new Date();
           if (!isActive) return;
 
-          results.push({
+          const record = {
             userId: u.id,
             email: u.email,
             username: u.username,
@@ -6413,14 +6421,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             purchaseDate: entitlement.purchase_date,
             expiresDate: entitlement.expires_date,
             fixed: false,
-          });
+          };
+          results.push(record);
 
           if (autoFix) {
             await storage.updateUser(u.id, { plan: 'SUPER_HERO', subscriptionStatus: 'active' });
-            results[results.length - 1].fixed = true;
+            record.fixed = true;
             console.log(`[RC Audit] Auto-upgraded user ${u.id} (${u.email}) to SUPER_HERO`);
           }
-        } catch (e) { /* skip individual failures */ }
+        } catch (e) {
+          errorCount++;
+          console.warn(`[RC Audit] error checking user ${u.id}:`, e);
+        }
       }));
       // Small delay between batches
       if (i + 5 < candidates.length) await new Promise(r => setTimeout(r, 200));
@@ -6437,7 +6449,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (e) { /* non-fatal */ }
     }
 
-    res.json({ scanned: candidates.length, affected: results.length, autoFixed: autoFix, users: results });
+    res.json({ scanned: candidates.length, affected: results.length, errors: errorCount, autoFixed: autoFix, users: results });
   });
 
   // Create customer portal session for billing management

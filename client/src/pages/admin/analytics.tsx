@@ -2,12 +2,16 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   AreaChart, Area,
   BarChart, Bar,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
-import { Users, CreditCard, TrendingUp, Eye, MousePointer, X, ChevronRight } from "lucide-react";
+import { Users, CreditCard, TrendingUp, Eye, MousePointer, X, ChevronRight, ShieldCheck, RefreshCw, AlertTriangle, CheckCircle2, Apple } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface FunnelStats {
   signups: number;
@@ -31,6 +35,25 @@ interface SignupDay {
   count: number;
 }
 
+interface RcAuditUser {
+  userId: number;
+  email: string;
+  username: string;
+  currentPlan: string;
+  rcProduct: string;
+  purchaseDate: string;
+  expiresDate: string;
+  fixed: boolean;
+}
+
+interface RcAuditResult {
+  scanned: number;
+  affected: number;
+  errors: number;
+  autoFixed: boolean;
+  users: RcAuditUser[];
+}
+
 const FUNNEL_COLORS = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444"];
 
 const MONTHS = [
@@ -52,8 +75,34 @@ const currentYear = new Date().getFullYear();
 const YEARS = Array.from({ length: 4 }, (_, i) => currentYear - i);
 
 export default function AdminAnalytics() {
+  const { toast } = useToast();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+
+  const [rcResults, setRcResults] = useState<RcAuditResult | null>(null);
+  const [rcRunning, setRcRunning] = useState(false);
+
+  const runRcAudit = async (fix: boolean) => {
+    setRcRunning(true);
+    try {
+      const res = await apiRequest("GET", `/api/admin/rc-audit?fix=${fix}`);
+      const data: RcAuditResult = await res.json();
+      setRcResults(data);
+      if (fix && data.affected > 0) {
+        toast({ title: `✅ Fixed ${data.affected} users`, description: "They've been upgraded to SUPER_HERO." });
+      } else if (!fix && data.affected > 0) {
+        toast({ title: `⚠️ ${data.affected} paid users not upgraded`, description: "Click 'Fix All' to upgrade them.", variant: "destructive" });
+      } else if (data.errors > 0) {
+        toast({ title: "Scan incomplete", description: `${data.errors} RC lookups failed — results may be incomplete. Check server logs.`, variant: "destructive" });
+      } else {
+        toast({ title: "All clear!", description: `Scanned ${data.scanned} users — everyone who paid is upgraded.` });
+      }
+    } catch {
+      toast({ title: "Audit failed", description: "Check server logs.", variant: "destructive" });
+    } finally {
+      setRcRunning(false);
+    }
+  };
 
   const { data: funnel, isLoading: funnelLoading } = useQuery<FunnelStats>({
     queryKey: ["/api/admin/funnel-stats"],
@@ -268,6 +317,148 @@ export default function AdminAnalytics() {
             ))}
           </div>
         </>
+      )}
+
+      {/* ── iOS Subscription Health ─────────────────────────────────────────────── */}
+      <div>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Apple className="w-5 h-5 text-gray-700" /> iOS Subscription Health
+            </h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Cross-checks every account against RevenueCat to catch paid users stuck on SIDE_KICK
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-blue-200 text-blue-700 hover:bg-blue-50 bg-white"
+            onClick={() => runRcAudit(false)}
+            disabled={rcRunning}
+          >
+            <RefreshCw className={`h-4 w-4 mr-1.5 ${rcRunning ? "animate-spin" : ""}`} />
+            {rcRunning ? "Scanning…" : "Run Audit"}
+          </Button>
+        </div>
+      </div>
+
+      {rcResults ? (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <Card>
+              <CardContent className="pt-4 pb-3 px-4">
+                <Users className="w-5 h-5 text-gray-400 mb-1" />
+                <p className="text-2xl font-bold text-gray-900">{rcResults.scanned.toLocaleString()}</p>
+                <p className="text-xs font-semibold text-gray-700 mt-1">Accounts Scanned</p>
+                <p className="text-xs text-gray-400 mt-0.5">Non-Super Hero users checked vs RevenueCat</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4 pb-3 px-4">
+                {rcResults.affected > 0 ? (
+                  <AlertTriangle className="w-5 h-5 text-amber-500 mb-1" />
+                ) : (
+                  <CheckCircle2 className="w-5 h-5 text-green-500 mb-1" />
+                )}
+                <p className={`text-2xl font-bold ${rcResults.affected > 0 ? "text-amber-600" : "text-green-600"}`}>
+                  {rcResults.affected.toLocaleString()}
+                </p>
+                <p className="text-xs font-semibold text-gray-700 mt-1">Paid but Not Upgraded</p>
+                <p className="text-xs text-gray-400 mt-0.5">Active iOS entitlement, wrong plan</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4 pb-3 px-4">
+                <ShieldCheck className="w-5 h-5 text-green-500 mb-1" />
+                <p className="text-2xl font-bold text-green-600">
+                  {rcResults.users.filter((u) => u.fixed).length.toLocaleString()}
+                </p>
+                <p className="text-xs font-semibold text-gray-700 mt-1">Fixed This Run</p>
+                <p className="text-xs text-gray-400 mt-0.5">Auto-upgraded to Super Hero</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {rcResults.errors > 0 && (
+            <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+              <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
+              <p className="text-sm text-red-800">
+                {rcResults.errors} RevenueCat {rcResults.errors === 1 ? "lookup" : "lookups"} failed during this scan —
+                results may be incomplete. Check server logs and re-run.
+              </p>
+            </div>
+          )}
+
+          {rcResults.affected > 0 && !rcResults.autoFixed && (
+            <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+              <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+              <p className="text-sm text-amber-800 flex-1">
+                {rcResults.affected} {rcResults.affected === 1 ? "user has" : "users have"} paid on iOS but{" "}
+                {rcResults.affected === 1 ? "is" : "are"} still on SIDE_KICK.
+              </p>
+              <Button
+                size="sm"
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+                onClick={() => runRcAudit(true)}
+                disabled={rcRunning}
+              >
+                <ShieldCheck className="h-4 w-4 mr-1.5" />
+                Fix All ({rcResults.affected})
+              </Button>
+            </div>
+          )}
+
+          {rcResults.users.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle className="text-sm">Affected Accounts</CardTitle></CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="text-left px-4 py-2 text-gray-500 font-medium text-xs">User</th>
+                        <th className="text-left px-4 py-2 text-gray-500 font-medium text-xs">RC Product</th>
+                        <th className="text-left px-4 py-2 text-gray-500 font-medium text-xs">Expires</th>
+                        <th className="text-left px-4 py-2 text-gray-500 font-medium text-xs">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rcResults.users.map((u) => (
+                        <tr key={u.userId} className="border-t border-gray-100">
+                          <td className="px-4 py-2">
+                            <p className="font-medium text-gray-900">{u.username}</p>
+                            <p className="text-gray-400 text-xs">{u.email}</p>
+                          </td>
+                          <td className="px-4 py-2 text-gray-600 font-mono text-xs">{u.rcProduct}</td>
+                          <td className="px-4 py-2 text-gray-600 text-xs">
+                            {new Date(u.expiresDate).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 py-2">
+                            {u.fixed ? (
+                              <Badge className="bg-green-100 text-green-700 text-xs">Fixed ✓</Badge>
+                            ) : (
+                              <Badge className="bg-amber-100 text-amber-700 text-xs flex items-center gap-1 w-fit">
+                                <AlertTriangle className="h-2.5 w-2.5" /> Needs fix
+                              </Badge>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      ) : (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <Apple className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+            <p className="text-sm text-gray-500">Run the audit to check for iOS subscribers who paid but weren't upgraded.</p>
+          </CardContent>
+        </Card>
       )}
 
       {/* ── Upgrade Modal Stats ────────────────────────────────────────────────── */}

@@ -1,16 +1,20 @@
 ---
 name: RevenueCat X-Platform server-side bug
-description: RC v1 REST API rejects secret keys with error 7243 if X-Platform header is included in server-side calls
+description: RC v1 REST API rejects secret keys with error 7243 if X-Platform header is included in server-side calls; also returns 200-with-error-body
 ---
 
-# RevenueCat X-Platform Header Bug
+# RevenueCat Server-Side REST API Pitfalls
 
-## The Rule
-Never include `X-Platform: ios` (or any X-Platform value) in **server-side** RevenueCat REST API calls.
+## Rule 1: Never send X-Platform from the server
+Do not include `X-Platform: ios` (or any X-Platform value) in **server-side** RevenueCat REST API calls. Only send `Authorization` + `Content-Type`.
 
-**Why:** RC v1 REST API uses the `X-Platform` header to determine whether the caller is a mobile client. If present, RC treats the request as a client-side call and rejects secret keys (`sk_...`) with error code 7243 — "Secret API keys should not be used in your app." This breaks server-side subscriber lookups silently (returns 200 with an error body, not a network error).
+**Why:** RC v1 REST API uses `X-Platform` to decide the caller is a mobile client, then rejects secret keys (`sk_...`) with error code 7243 — "Secret API keys should not be used in your app." This silently broke all iOS activations (server returned failure, client didn't check it).
 
-**How to apply:** In `server/routes.ts`, the `/api/revenuecat/activate` endpoint fetches `https://api.revenuecat.com/v1/subscribers/{id}`. Only include `Authorization` and `Content-Type` headers. The fixed endpoint (July 2026) has a comment explaining this. Do not re-add X-Platform in future edits.
+**How to apply:** Any fetch to `api.revenuecat.com/v1/subscribers/...` from `server/` must omit X-Platform.
 
-## RC Audit Tool
-`GET /api/admin/rc-audit?fix=true|false` — scans all users against RC, finds anyone with an active `super_hero` entitlement but wrong DB plan, and optionally upgrades them. UI card in Admin → Automation → "iOS Subscription Audit".
+## Rule 2: RC returns HTTP 200 with an error body
+A failed RC lookup can come back as **HTTP 200** carrying `{ code, message }` (the 7243 case), not a network error. Checking only `res.ok` treats these as success and silently skips the user.
+
+**Why:** An audit/lookup that only inspects `res.ok` will report false "all clear" while every lookup actually failed.
+
+**How to apply:** After `res.json()`, treat `!res.ok || !body || typeof body.code === 'number'` as a failed check and count/surface those errors separately from "no entitlement found."
