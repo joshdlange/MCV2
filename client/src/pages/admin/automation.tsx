@@ -183,6 +183,153 @@ function Thanks2uCampaignCard() {
   );
 }
 
+interface VaultUpgradeDripStatus {
+  dailyLimit: number;
+  totalEligible: number;
+  alreadySent: number;
+  remaining: number;
+  daysLeft: number;
+  jobRunning: boolean;
+  lastRun: { at: string; sent: number; failed: number; remaining: number } | null;
+}
+
+function VaultUpgradeDripCard() {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [confirmed, setConfirmed] = useState(false);
+
+  const { data: status, isLoading } = useQuery<VaultUpgradeDripStatus>({
+    queryKey: ["/api/admin/campaigns/vault-upgrade/drip-status"],
+    refetchInterval: 10000,
+  });
+
+  const dripMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/admin/campaigns/vault-upgrade/drip-now"),
+    onSuccess: (data: any) => {
+      if (data.skipped) {
+        toast({ title: "Already sending", description: "A batch is already in progress. Try again in a moment." });
+      } else {
+        toast({ title: "Batch sent!", description: `${data.sent} sent, ${data.failed} failed, ${data.remaining} still remaining.` });
+      }
+      setConfirmed(false);
+      qc.invalidateQueries({ queryKey: ["/api/admin/campaigns/vault-upgrade/drip-status"] });
+    },
+    onError: () => {
+      toast({ title: "Send failed", description: "Something went wrong. Check the server logs.", variant: "destructive" });
+      setConfirmed(false);
+    },
+  });
+
+  const done = !isLoading && status?.remaining === 0;
+
+  return (
+    <Card className="border-2 border-red-100 dark:border-red-900">
+      <CardHeader className="pb-2 pt-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-red-600">
+              <Mail className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-sm text-gray-900 dark:text-white">"Your Vault Just Got Bigger" — Drip</CardTitle>
+              <p className="text-xs text-gray-500">Finishing the announcement that hit the daily email limit</p>
+            </div>
+          </div>
+          {done ? (
+            <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">
+              <CheckCircle2 className="h-3 w-3 mr-1" /> All Sent
+            </Badge>
+          ) : (
+            <Badge className="bg-red-100 text-red-700 border-red-200 text-xs">
+              <Clock className="h-3 w-3 mr-1" /> {status?.dailyLimit ?? 90}/day · 9 AM CT
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="pb-4 space-y-3">
+        {isLoading ? (
+          <p className="text-xs text-gray-400">Loading…</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-4 gap-2 text-xs">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2">
+                <p className="text-gray-500 mb-0.5">Eligible</p>
+                <p className="font-semibold text-gray-900 dark:text-white">{status?.totalEligible ?? 0}</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2">
+                <p className="text-gray-500 mb-0.5">Already Sent</p>
+                <p className="font-semibold text-green-600">{status?.alreadySent ?? 0}</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2">
+                <p className="text-gray-500 mb-0.5">Remaining</p>
+                <p className="font-semibold text-amber-600">{status?.remaining ?? 0}</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2">
+                <p className="text-gray-500 mb-0.5">Days Left</p>
+                <p className="font-semibold text-gray-900 dark:text-white">{status?.daysLeft ?? 0}</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              Runs automatically every morning at 9 AM Central, sending up to {status?.dailyLimit ?? 90} per day to anyone
+              who hasn't received it yet — nobody gets it twice. It stops on its own once everyone is reached.
+            </p>
+
+            {status?.lastRun && (
+              <p className="text-xs text-gray-500">
+                Last batch: {status.lastRun.sent} sent{status.lastRun.failed ? `, ${status.lastRun.failed} failed` : ""} on{" "}
+                {new Date(status.lastRun.at).toLocaleString()}
+              </p>
+            )}
+
+            {done ? (
+              <p className="text-xs text-green-700 dark:text-green-400">✅ Everyone opted-in has received the announcement.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {!confirmed ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs border-red-200 text-red-700 hover:bg-red-50"
+                    onClick={() => setConfirmed(true)}
+                  >
+                    <Send className="h-3 w-3 mr-1.5" /> Send Today's Batch Now
+                  </Button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-red-700 font-medium">
+                      Send up to {status?.dailyLimit ?? 90} now?
+                    </span>
+                    <Button
+                      size="sm"
+                      className="text-xs bg-red-600 hover:bg-red-700 text-white"
+                      onClick={() => dripMutation.mutate()}
+                      disabled={dripMutation.isPending}
+                    >
+                      {dripMutation.isPending ? "Sending…" : "Yes, Send Now"}
+                    </Button>
+                    <Button size="sm" variant="ghost" className="text-xs" onClick={() => setConfirmed(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                )}
+                <a
+                  href="/api/admin/email-preview?template=vault-upgrade-announcement"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  <ExternalLink className="h-3 w-3" /> Preview Email
+                </a>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 interface RcAuditUser {
   userId: number;
   email: string;
@@ -426,7 +573,10 @@ export default function AdminAutomation() {
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
           <Mail className="h-5 w-5 text-red-500" /> Email Campaigns
         </h2>
-        <Thanks2uCampaignCard />
+        <div className="space-y-3">
+          <VaultUpgradeDripCard />
+          <Thanks2uCampaignCard />
+        </div>
       </div>
 
       <Separator />

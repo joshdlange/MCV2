@@ -38,7 +38,7 @@ import { syncFirebaseUsersToBrevo } from "./contactsSync";
 import { sendResendEmail, sendPasswordResetEmail } from "./services/emailService";
 import * as emailTriggers from "./services/emailTriggers";
 import { vaultUpgradeAnnouncementTemplate } from "./services/emailTemplates";
-import { startEmailCronJobs } from "./jobs/emailCron";
+import { startEmailCronJobs, startVaultUpgradeDripCron, runVaultUpgradeDripNow, getVaultUpgradeDripStatus } from "./jobs/emailCron";
 import { initializeUpcomingSets, syncRSSFeed, expireReleasedSets } from "./services/upcomingSetsSync";
 import { verifyRcEntitlement, reconcileRevenueCatSubscriptions, startRevenueCatReconcileCron, getSubscriberBreakdown, SYSTEM_USER_FIREBASE_UID } from "./services/revenueCatSync";
 import { uploadUserCardImage, uploadMainSetThumbnail, downloadAndUploadToCloudinary, isCloudinaryUrl } from "./cloudinary";
@@ -4129,6 +4129,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Failed to get email cron status",
         error: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  });
+
+  // ── Admin: Vault Upgrade drip status ──────────────────────────────────────────
+  app.get("/api/admin/campaigns/vault-upgrade/drip-status", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const status = await getVaultUpgradeDripStatus();
+      res.json(status);
+    } catch (err) {
+      console.error('[Admin] vault-upgrade drip-status error:', err);
+      res.status(500).json({ message: 'Failed to get drip status' });
+    }
+  });
+
+  // ── Admin: Vault Upgrade drip manual trigger ──────────────────────────────────
+  // Sends today's batch immediately (default 90, override with { "limit": N }).
+  // Self-dedupes off email_logs, so it never re-sends to anyone already reached.
+  app.post("/api/admin/campaigns/vault-upgrade/drip-now", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const rawLimit = Number(req.body?.limit);
+      const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.floor(rawLimit) : undefined;
+      console.log('[Admin] Manual vault-upgrade drip triggered by admin', req.user.id, 'limit:', limit ?? 'default');
+      const result = await runVaultUpgradeDripNow(limit);
+      res.json({ success: true, ...result });
+    } catch (err) {
+      console.error('[Admin] vault-upgrade drip-now error:', err);
+      res.status(500).json({ message: 'Failed to send drip batch' });
     }
   });
 
@@ -10631,6 +10660,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Daily RevenueCat reconciliation safety net (upgrades any stuck iOS payer).
   startRevenueCatReconcileCron();
+
+  // Daily vault-upgrade drip: sends the remainder of the announcement (which hit
+  // the Resend daily limit) at 90/day until every opted-in user is reached.
+  startVaultUpgradeDripCron();
 
   // One-time XP backfill: seed card_added XP from existing collections so
   // long-time collectors don't show 0 card XP. Guarded — only runs if empty.

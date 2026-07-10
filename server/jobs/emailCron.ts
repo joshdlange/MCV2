@@ -5,7 +5,7 @@
 
 import cron from 'cron';
 import { db } from '../db';
-import { users, userCollections, cardSets } from '../../shared/schema';
+import { users, userCollections, cardSets, emailLogs } from '../../shared/schema';
 import { sql, lt, eq, and, ne } from 'drizzle-orm';
 import * as emailTriggers from '../services/emailTriggers';
 import { sendResendEmail } from '../services/emailService';
@@ -515,6 +515,147 @@ export function getVaultUpgradeStatus() {
     scheduled: '2026-07-10T12:00:00-05:00',
     jobRunning: vaultUpgradeJob.running || false,
     manualSentAt: vaultUpgradeManualSentAt,
+  };
+}
+
+/**
+ * Vault Upgrade DRIP campaign
+ * ---------------------------
+ * The one-shot vault-upgrade blast hit the Resend daily send limit partway
+ * through, so this drips the remainder to opted-in users who have NOT yet
+ * received it — a capped batch (default 90) once per day until everyone is
+ * reached. It self-dedupes off the email_logs table (same job name as the
+ * original send), so it never double-emails anyone and auto-stops when done.
+ *
+ * This runs on its own daily schedule wired directly at server startup
+ * (startVaultUpgradeDripCron) so it works even though EMAIL_CRON_ENABLED is off.
+ */
+const VAULT_UPGRADE_JOB_NAME = 'campaign-vault-upgrade-send';
+const VAULT_UPGRADE_DRIP_DAILY_LIMIT = 90;
+let vaultUpgradeDripLastRun: { at: Date; sent: number; failed: number; remaining: number } | null = null;
+// Single-flight guard: prevents the daily cron and a manual trigger (or two
+// manual triggers) from running concurrently and double-sending the same batch.
+let vaultUpgradeDripRunning = false;
+
+async function getRemainingVaultUpgradeRecipients() {
+  return db
+    .select({ id: users.id, email: users.email, displayName: users.displayName })
+    .from(users)
+    .where(
+      and(
+        eq(users.marketingOptIn, true),
+        ne(users.email, ''),
+        sql`NOT EXISTS (SELECT 1 FROM email_logs el WHERE el.job_name = ${VAULT_UPGRADE_JOB_NAME} AND lower(trim(el.email)) = lower(trim(${users.email})))`
+      )
+    );
+}
+
+export async function runVaultUpgradeDripNow(
+  limit: number = VAULT_UPGRADE_DRIP_DAILY_LIMIT
+): Promise<{ sent: number; failed: number; remaining: number; attempted: number; skipped?: boolean }> {
+  if (vaultUpgradeDripRunning) {
+    console.warn('[VaultUpgradeDrip] A drip run is already in progress — skipping this trigger');
+    const remaining = (await getRemainingVaultUpgradeRecipients()).length;
+    return { sent: 0, failed: 0, remaining, attempted: 0, skipped: true };
+  }
+  vaultUpgradeDripRunning = true;
+  try {
+    const pending = await getRemainingVaultUpgradeRecipients();
+    const batch = pending.slice(0, Math.max(0, limit));
+
+    const { html, text } = vaultUpgradeAnnouncementTemplate();
+    const subject = 'Your Vault Just Got Bigger';
+
+    let sent = 0;
+    let failed = 0;
+    console.log(`[VaultUpgradeDrip] ${pending.length} remaining; sending up to ${batch.length} this run`);
+
+    for (const user of batch) {
+      if (!user.email) { failed++; continue; }
+      try {
+        await sendResendEmail({
+          to: user.email,
+          subject,
+          html,
+          text,
+          template: 'vault-upgrade-announcement',
+          jobName: VAULT_UPGRADE_JOB_NAME,
+        });
+        sent++;
+        await new Promise((resolve) => setTimeout(resolve, 500)); // 2/sec — respect Resend rate limit
+      } catch (err) {
+        failed++;
+        console.error(`[VaultUpgradeDrip] Failed to send to ${user.email}:`, err);
+      }
+    }
+
+    const remaining = Math.max(0, pending.length - sent);
+    vaultUpgradeDripLastRun = { at: new Date(), sent, failed, remaining };
+
+    if (remaining === 0) {
+      vaultUpgradeDripJob.stop();
+      console.log('🛑 Vault Upgrade drip complete — every opted-in user has been reached');
+    }
+
+    return { sent, failed, remaining, attempted: batch.length };
+  } finally {
+    vaultUpgradeDripRunning = false;
+  }
+}
+
+export const vaultUpgradeDripJob = new CronJob(
+  '0 9 * * *', // every day at 9:00 AM Central
+  async () => {
+    try {
+      if (!process.env.RESEND_API_KEY) {
+        console.warn('[VaultUpgradeDrip] RESEND_API_KEY not set — skipping daily drip');
+        return;
+      }
+      console.log('📧 Running Vault Upgrade daily drip...');
+      const r = await runVaultUpgradeDripNow();
+      console.log(`✅ Vault Upgrade drip: ${r.sent} sent, ${r.failed} failed, ${r.remaining} remaining`);
+    } catch (error) {
+      console.error('❌ Error in Vault Upgrade drip:', error);
+    }
+  },
+  null,
+  false,
+  'America/Chicago'
+);
+
+let vaultUpgradeDripStarted = false;
+
+/**
+ * Start the daily vault-upgrade drip. Wired directly at server startup so it
+ * runs regardless of EMAIL_CRON_ENABLED. Safe to call more than once.
+ */
+export function startVaultUpgradeDripCron(): void {
+  if (vaultUpgradeDripStarted) return;
+  vaultUpgradeDripStarted = true;
+  vaultUpgradeDripJob.start();
+  console.log(`📧 Vault Upgrade drip cron started (daily 9 AM CT, up to ${VAULT_UPGRADE_DRIP_DAILY_LIMIT}/day until complete)`);
+}
+
+export async function getVaultUpgradeDripStatus() {
+  const remaining = (await getRemainingVaultUpgradeRecipients()).length;
+  const alreadySentRow = await db
+    .select({ count: sql<number>`count(distinct lower(email))` })
+    .from(emailLogs)
+    .where(eq(emailLogs.jobName, VAULT_UPGRADE_JOB_NAME));
+  const alreadySent = Number(alreadySentRow[0]?.count || 0);
+  const totalEligibleRow = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(users)
+    .where(and(eq(users.marketingOptIn, true), ne(users.email, '')));
+  const totalEligible = Number(totalEligibleRow[0]?.count || 0);
+  return {
+    dailyLimit: VAULT_UPGRADE_DRIP_DAILY_LIMIT,
+    totalEligible,
+    alreadySent,
+    remaining,
+    daysLeft: Math.ceil(remaining / VAULT_UPGRADE_DRIP_DAILY_LIMIT),
+    jobRunning: vaultUpgradeDripJob.running || false,
+    lastRun: vaultUpgradeDripLastRun,
   };
 }
 
