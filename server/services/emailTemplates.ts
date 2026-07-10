@@ -13,7 +13,7 @@ const TEXT_SECONDARY = '#94A3B8';
 /**
  * Base template wrapper providing consistent layout and styling
  */
-function baseTemplate({ title, bodyHtml }: { title: string; bodyHtml: string }): string {
+function baseTemplate({ title, bodyHtml, preheader }: { title: string; bodyHtml: string; preheader?: string }): string {
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -23,6 +23,7 @@ function baseTemplate({ title, bodyHtml }: { title: string; bodyHtml: string }):
   <title>${title}</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: ${DARK_BG}; color: ${TEXT_PRIMARY};">
+  ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${preheader}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>` : ''}
   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: ${DARK_BG};">
     <tr>
       <td style="padding: 40px 20px;">
@@ -579,6 +580,164 @@ export function thanks2uCouponTemplate(user: { displayName: string }): string {
     </p>
   `;
   return baseTemplate({ title: '🎉 2 Months Free — Thank You!', bodyHtml });
+}
+
+// =============================================================================
+// PRODUCT ANNOUNCEMENT: YOUR VAULT JUST GOT BIGGER (July 2026)
+// =============================================================================
+
+/**
+ * Vault Upgrade Announcement — Side Kick 500-card limit + PC Binders launch.
+ * Returns both HTML (for email clients) and plain-text (fallback).
+ */
+export function vaultUpgradeAnnouncementTemplate(): { html: string; text: string } {
+  const APP_URL = 'https://www.marvelcardvault.com';
+  const GOLD = '#F59E0B';
+
+  const bodyHtml = `
+    <!-- Hero heading -->
+    <h1 style="margin: 0 0 8px; font-size: 30px; font-weight: 800; color: ${TEXT_PRIMARY}; line-height: 1.2; letter-spacing: -0.5px;">
+      Your Vault Just Got Bigger.
+    </h1>
+    <p style="margin: 0 0 28px; font-size: 16px; color: ${TEXT_SECONDARY}; line-height: 1.6;">
+      Hey collector,
+    </p>
+    <p style="margin: 0 0 28px; font-size: 16px; color: ${TEXT_SECONDARY}; line-height: 1.6;">
+      Your Marvel Card Vault just got a serious upgrade.
+    </p>
+
+    <!-- Section 1: Side Kick 500 cards -->
+    <p style="margin: 0 0 12px; font-size: 14px; color: ${TEXT_SECONDARY}; line-height: 1.6;">
+      First, we made more room for Side Kick members.
+    </p>
+    <div style="background-color: ${DARK_BG}; border-left: 4px solid ${BRAND_RED}; border-radius: 0 8px 8px 0; padding: 20px 24px; margin: 0 0 28px;">
+      <p style="margin: 0 0 4px; font-size: 11px; font-weight: 600; color: ${TEXT_SECONDARY}; text-transform: uppercase; letter-spacing: 1.5px;">Side Kick Update</p>
+      <p style="margin: 0 0 10px; font-size: 22px; font-weight: 700; color: ${TEXT_PRIMARY};">500 Cards — Double the Limit</p>
+      <p style="margin: 0; font-size: 15px; color: ${TEXT_SECONDARY}; line-height: 1.6;">
+        Side Kick now lets you track up to <strong style="color: ${TEXT_PRIMARY};">500 cards</strong> — double the previous 250-card limit. That means more room to build your collection, organize your vault, and keep growing without hitting the wall as quickly.
+      </p>
+    </div>
+
+    <!-- Section 2: PC Binders -->
+    <p style="margin: 0 0 12px; font-size: 16px; color: ${TEXT_SECONDARY}; line-height: 1.6;">
+      We also rolled out one of our favorite new Super Hero features:
+    </p>
+    <div style="background-color: ${DARK_BG}; border-left: 4px solid ${GOLD}; border-radius: 0 8px 8px 0; padding: 20px 24px; margin: 0 0 28px;">
+      <p style="margin: 0 0 4px; font-size: 11px; font-weight: 600; color: ${GOLD}; text-transform: uppercase; letter-spacing: 1.5px;">Super Hero Feature</p>
+      <p style="margin: 0 0 10px; font-size: 26px; font-weight: 800; color: ${TEXT_PRIMARY};">PC Binders.</p>
+      <p style="margin: 0 0 14px; font-size: 15px; color: ${TEXT_SECONDARY}; line-height: 1.6;">
+        PC Binders let you build your own custom private collection binders around the cards that matter most to you.
+      </p>
+      <p style="margin: 0; font-size: 15px; color: ${TEXT_SECONDARY}; line-height: 1.6;">
+        Building a Spider-Man PC? Chasing Venom cards? Tracking your favorite artist, team, theme, insert run, or personal grail list? Create a PC Binder, add cards you already own, add cards you're still chasing, and track your progress as you build.
+      </p>
+    </div>
+
+    <!-- What's new bullet list -->
+    <div style="background-color: ${DARK_BG}; border-radius: 8px; padding: 20px 24px; margin: 0 0 28px;">
+      <p style="margin: 0 0 14px; font-size: 14px; font-weight: 600; color: ${TEXT_PRIMARY}; text-transform: uppercase; letter-spacing: 1px;">What's new</p>
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr><td style="padding: 5px 0;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+            <tr>
+              <td style="padding-right: 10px; vertical-align: top; color: ${BRAND_RED}; font-size: 16px; line-height: 1.5;">&#8594;</td>
+              <td style="font-size: 15px; color: ${TEXT_SECONDARY}; line-height: 1.5;">Side Kick now tracks up to <strong style="color: ${TEXT_PRIMARY};">500 cards</strong></td>
+            </tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding: 5px 0;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+            <tr>
+              <td style="padding-right: 10px; vertical-align: top; color: ${GOLD}; font-size: 16px; line-height: 1.5;">&#8594;</td>
+              <td style="font-size: 15px; color: ${TEXT_SECONDARY}; line-height: 1.5;"><strong style="color: ${TEXT_PRIMARY};">Super Hero members</strong> can now create PC Binders</td>
+            </tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding: 5px 0;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+            <tr>
+              <td style="padding-right: 10px; vertical-align: top; color: ${GOLD}; font-size: 16px; line-height: 1.5;">&#8594;</td>
+              <td style="font-size: 15px; color: ${TEXT_SECONDARY}; line-height: 1.5;">Build custom private binders by character, artist, theme, chase list, or whatever you collect</td>
+            </tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding: 5px 0;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+            <tr>
+              <td style="padding-right: 10px; vertical-align: top; color: ${GOLD}; font-size: 16px; line-height: 1.5;">&#8594;</td>
+              <td style="font-size: 15px; color: ${TEXT_SECONDARY}; line-height: 1.5;">Add both owned cards and cards you're still chasing</td>
+            </tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding: 5px 0;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+            <tr>
+              <td style="padding-right: 10px; vertical-align: top; color: ${GOLD}; font-size: 16px; line-height: 1.5;">&#8594;</td>
+              <td style="font-size: 15px; color: ${TEXT_SECONDARY}; line-height: 1.5;">Track progress toward your personal collecting goals</td>
+            </tr>
+          </table>
+        </td></tr>
+      </table>
+    </div>
+
+    <p style="margin: 0 0 8px; font-size: 16px; color: ${TEXT_SECONDARY}; line-height: 1.6;">
+      PC Binders are available now for Super Hero members.
+    </p>
+    <p style="margin: 0 0 24px; font-size: 16px; color: ${TEXT_SECONDARY}; line-height: 1.6;">
+      Open Marvel Card Vault and start building your PC.
+    </p>
+
+    ${ctaButton('Open Marvel Card Vault', APP_URL)}
+
+    <!-- Disclaimer + unsubscribe -->
+    <p style="margin: 28px 0 0; font-size: 12px; color: ${TEXT_SECONDARY}; line-height: 1.6; text-align: center; border-top: 1px solid #334155; padding-top: 20px;">
+      Marvel Card Vault is not affiliated with Marvel, Disney, Upper Deck, Topps, or any card manufacturer.<br>
+      To update your email preferences, visit your
+      <a href="${APP_URL}/settings" style="color: ${BRAND_RED}; text-decoration: none;">account settings</a>.
+    </p>
+  `;
+
+  const html = baseTemplate({
+    title: 'Your Vault Just Got Bigger',
+    bodyHtml,
+    preheader: 'Side Kick now tracks up to 500 cards, and Super Hero members can build custom PC Binders.',
+  });
+
+  const text = `
+YOUR VAULT JUST GOT BIGGER
+
+Hey collector,
+
+Your Marvel Card Vault just got a serious upgrade.
+
+SIDE KICK UPDATE — 500 CARDS
+
+Side Kick now lets you track up to 500 cards — double the previous 250-card limit. That means more room to build your collection, organize your vault, and keep growing.
+
+SUPER HERO FEATURE — PC BINDERS
+
+PC Binders let you build your own custom private collection binders around the cards that matter most to you. Build around a character, artist, theme, chase list, or whatever you collect.
+
+You can add cards you already own, add cards you're still chasing, and track your progress as you build.
+
+WHAT'S NEW:
+- Side Kick now tracks up to 500 cards
+- Super Hero members can create PC Binders
+- Build custom private binders by character, artist, theme, chase list, or collecting goal
+- Add both owned cards and cards you're still chasing
+- Track progress toward your personal collection goals
+
+PC Binders are available now for Super Hero members.
+
+Open Marvel Card Vault and start building your PC:
+${APP_URL}
+
+---
+Marvel Card Vault is not affiliated with Marvel, Disney, Upper Deck, Topps, or any card manufacturer.
+To update your email preferences, visit: ${APP_URL}/settings
+`.trim();
+
+  return { html, text };
 }
 
 export function googlePlayLaunchTemplate(user: { displayName: string }): string {

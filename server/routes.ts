@@ -37,6 +37,7 @@ import { sendEmail } from "./email";
 import { syncFirebaseUsersToBrevo } from "./contactsSync";
 import { sendResendEmail, sendPasswordResetEmail } from "./services/emailService";
 import * as emailTriggers from "./services/emailTriggers";
+import { vaultUpgradeAnnouncementTemplate } from "./services/emailTemplates";
 import { startEmailCronJobs } from "./jobs/emailCron";
 import { initializeUpcomingSets, syncRSSFeed, expireReleasedSets } from "./services/upcomingSetsSync";
 import { uploadUserCardImage, uploadMainSetThumbnail, downloadAndUploadToCloudinary, isCloudinaryUrl } from "./cloudinary";
@@ -3878,6 +3879,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         message: "Failed to sync contacts to Brevo",
         error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // ========== CAMPAIGN: VAULT UPGRADE ANNOUNCEMENT ==========
+
+  // Admin-only: Send test campaign email to a single address (default: caller's email)
+  app.post("/api/admin/campaigns/vault-upgrade/test", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const to = typeof req.body?.to === 'string' && req.body.to.trim()
+        ? req.body.to.trim()
+        : req.user.email;
+
+      const { html, text } = vaultUpgradeAnnouncementTemplate();
+
+      const messageId = await sendResendEmail({
+        to,
+        subject: 'Your Vault Just Got Bigger',
+        html,
+        text,
+        template: 'vault-upgrade-announcement',
+        jobName: 'campaign-vault-upgrade-test',
+      });
+
+      console.log(`[Campaign] Vault upgrade TEST email sent to ${to} — message ID: ${messageId}`);
+      res.json({ success: true, message: `Test email sent to ${to}`, messageId });
+    } catch (error) {
+      console.error('[Campaign] Vault upgrade test email error:', error);
+      res.status(500).json({
+        message: 'Failed to send test email',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  // Admin-only: Full campaign send to all opted-in users.
+  // Requires { "confirm": "SEND_TO_ALL" } in body to prevent accidental triggers.
+  app.post("/api/admin/campaigns/vault-upgrade/send", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      if (req.body?.confirm !== 'SEND_TO_ALL') {
+        return res.status(400).json({
+          message: 'Include { "confirm": "SEND_TO_ALL" } in the request body to confirm the full campaign send. Do not send until you have approved the test email.',
+        });
+      }
+
+      const eligibleUsers = await db
+        .select({ id: users.id, email: users.email, displayName: users.displayName })
+        .from(users)
+        .where(and(eq(users.marketingOptIn, true), ne(users.email, '')));
+
+      const { html, text } = vaultUpgradeAnnouncementTemplate();
+      const subject = 'Your Vault Just Got Bigger';
+
+      let sent = 0;
+      let failed = 0;
+      const errors: string[] = [];
+
+      console.log(`[Campaign] Starting vault upgrade send to ${eligibleUsers.length} opted-in users`);
+
+      for (const user of eligibleUsers) {
+        if (!user.email) { failed++; continue; }
+        try {
+          await sendResendEmail({
+            to: user.email,
+            subject,
+            html,
+            text,
+            template: 'vault-upgrade-announcement',
+            jobName: 'campaign-vault-upgrade-send',
+          });
+          sent++;
+          // Respect Resend rate limits — 2 emails/second max on free tier
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (err) {
+          failed++;
+          const msg = err instanceof Error ? err.message : 'Unknown error';
+          errors.push(`${user.email}: ${msg}`);
+          console.error(`[Campaign] Failed to send to ${user.email}:`, err);
+        }
+      }
+
+      console.log(`[Campaign] Vault upgrade send complete — sent: ${sent}, failed: ${failed}`);
+      res.json({ success: true, total: eligibleUsers.length, sent, failed, errors: errors.slice(0, 20) });
+    } catch (error) {
+      console.error('[Campaign] Vault upgrade full send error:', error);
+      res.status(500).json({
+        message: 'Campaign send failed',
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   });

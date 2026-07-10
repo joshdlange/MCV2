@@ -1,0 +1,146 @@
+We need to send a Marvel Card Vault product announcement email through Resend.
+
+Context:
+- Resend is now the primary email provider.
+- RESEND_API_KEY is already configured.
+- Password reset and test emails through Resend have worked.
+- Do not use Brevo for sending this email.
+- This is a product announcement email to users.
+- Main announcement:
+  1. Side Kick card tracking limit increased from 250 cards to 500 cards.
+  2. PC Binders are now available for Super Hero members.
+- PC Binders let collectors create custom private collection binders around characters, artists, themes, chase cards, or whatever they personally collect.
+- PC Binders can include cards users own and cards they are still chasing.
+- PC Binders should be presented as a Super Hero feature.
+- We should not over-hype marketplace or trade block yet.
+- Do not claim Marvel Card Vault is affiliated with Marvel, Disney, Upper Deck, Topps, or any card manufacturer.
+
+Goal:
+Create a branded Resend email campaign and send a test email first. Do not send to the full user list until I approve the test.
+
+Must do:
+- Use Resend, not Brevo, for sending.
+- Use the existing server-side email service if possible.
+- Use the verified Marvel Card Vault sender address, ideally:
+  Marvel Card Vault <noreply@marvelcardvault.com>
+- Confirm the FROM address/domain is verified in Resend before sending.
+- Create a polished HTML email that matches Marvel Card Vault branding.
+- Create a plain-text fallback version.
+- Send the first test email to my/admin email only.
+- Do not send to all users until I explicitly approve.
+- Include unsubscribe/footer language if this is a marketing email.
+- Include the standard disclaimer that Marvel Card Vault is not affiliated with Marvel, Disney, Upper Deck, Topps, or any card manufacturer.
+- Include one clear CTA button to open the app.
+- Make sure the CTA URL points to the correct production app URL.
+- Log send success/failure clearly.
+- If there is an existing admin campaign/test-send flow, use it.
+- If not, create a protected admin-only test-send path or script. Do not create a public unprotected email endpoint.
+
+Must not do:
+- Do not send to the full user list yet.
+- Do not send any campaign before test approval.
+- Do not use Brevo for sending.
+- Do not change password reset behavior.
+- Do not change auth, billing, subscriptions, Stripe, RevenueCat, Shippo, marketplace, trade block, PC Binder logic, card limits, or XP.
+- Do not expose RESEND_API_KEY to frontend code.
+- Do not hardcode secrets.
+- Do not create an unprotected public send-email endpoint.
+- Do not claim PC Binders are available to Free or Side Kick users.
+- Do not claim marketplace/trade block is live unless it is already live.
+- Do not claim Marvel/Disney/Upper Deck/Topps affiliation.
+- Do not send to unsubscribed users when the full send is eventually approved.
+
+Preserve:
+- Existing Resend service setup.
+- Existing email unsubscribe/preference logic.
+- Existing app links.
+- Existing user database.
+- Existing no-affiliation language.
+- Existing admin-only protections.
+- Existing production app behavior.
+
+Email details:
+
+Subject:
+Your Vault Just Got Bigger
+
+Preview text:
+Side Kick now tracks up to 500 cards, and Super Hero members can build custom PC Binders.
+
+HTML/email copy:
+
+Hey collector,
+
+Your Marvel Card Vault just got a serious upgrade.
+
+First, we made more room for Side Kick members.
+
+Side Kick now lets you track up to 500 cards — double the previous 250-card limit. That means more room to build your collection, organize your vault, and keep growing without hitting the wall as quickly.
+
+We also rolled out one of our favorite new Super Hero features:
+
+PC Binders.
+
+PC Binders let you build your own custom private collection binders around the cards that matter most to you.
+
+Building a Spider-Man PC? Chasing Venom cards? Tracking your favorite artist, team, theme, insert run, or personal grail list? Create a PC Binder, add cards you already own, add cards you’re still chasing, and track your progress as you build.
+
+What’s new:
+- Side Kick now tracks up to 500 cards
+- Super Hero members can create PC Binders
+- Build custom private binders by character, artist, theme, chase list, or whatever you collect
+- Add both owned cards and chase cards to your PC Binders
+- Track progress toward your personal collecting goals
+
+PC Binders are available now for Super Hero members.
+
+Open Marvel Card Vault and start building your PC.
+
+CTA button:
+Open Marvel Card Vault
+
+Footer/disclaimer:
+Marvel Card Vault is not affiliated with Marvel, Disney, Upper Deck, Topps, or any card manufacturer.
+
+Plain-text version:
+
+Your Vault Just Got Bigger
+
+Hey collector,
+
+Your Marvel Card Vault just got a serious upgrade.
+
+Side Kick now lets you track up to 500 cards — double the previous 250-card limit. That means more room to build your collection, organize your vault, and keep growing.
+
+We also rolled out PC Binders for Super Hero members.
+
+PC Binders let you build your own custom private collection binders around the cards that matter most to you. Build around a character, artist, theme, chase list, or whatever you collect.
+
+You can add cards you already own, add cards you’re still chasing, and track your progress as you build.
+
+What’s new:
+- Side Kick now tracks up to 500 cards
+- Super Hero members can create PC Binders
+- Build custom private binders by character, artist, theme, chase list, or collecting goal
+- Add both owned cards and chase cards
+- Track progress toward your personal collection goals
+
+Open Marvel Card Vault and start building your PC:
+[APP_URL]
+
+Marvel Card Vault is not affiliated with Marvel, Disney, Upper Deck, Topps, or any card manufacturer.
+
+QA:
+- Confirm the test email sends through Resend.
+- Confirm the FROM address is correct and verified.
+- Confirm the subject line is correct.
+- Confirm preview text is correct.
+- Confirm the email renders well on desktop.
+- Confirm the email renders well on mobile.
+- Confirm CTA button opens the production app.
+- Confirm unsubscribe/footer language is present if required.
+- Confirm no false affiliation language.
+- Confirm no campaign/full-list send occurred.
+- Confirm no Brevo send occurred.
+- Confirm no API keys are exposed.
+- After test approval, provide the exact step or command to send to eligible users.
