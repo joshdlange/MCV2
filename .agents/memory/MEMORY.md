@@ -8,3 +8,4 @@
 - [Password reset via Resend](password-reset-resend.md) — Resend=reset emails only, Brevo=rest; check getUserByEmail before generatePasswordResetLink; never 500 on send path.
 - [Mobile safe-area insets](safe-area-insets.md) — env(safe-area-inset-*) is 0 on Android WebView; use the max(env, var) --safe-area-top vars from index.css for all fixed/sticky mobile offsets.
 - [/api/stats field mismatch](stats-field-mismatch.md) — /api/stats returns wishlistCount but the shared CollectionStats type claims wishlistItems; always read both or the value is silently 0.
+- [RevenueCat X-Platform server-side bug](rc-xplatform-bug.md) — never send X-Platform header in server RC calls; RC rejects secret keys with error 7243 if present. RC Audit tool at /api/admin/rc-audit.

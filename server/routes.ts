@@ -6315,7 +6315,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           headers: {
             Authorization: `Bearer ${rcSecretKey}`,
             'Content-Type': 'application/json',
-            'X-Platform': 'ios',
+            // NOTE: Do NOT include X-Platform here — RC v1 REST API treats that
+            // header as a signal that the caller is a mobile client and rejects
+            // secret keys with error 7243. Server-side calls omit it entirely.
           },
         }
       );
@@ -6370,6 +6372,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('[RevenueCat] activate error:', error);
       return res.status(500).json({ success: false, message: 'Failed to activate subscription' });
     }
+  });
+
+  // Admin: audit all users against RevenueCat and fix anyone with an active entitlement but wrong plan.
+  // GET  → dry-run, returns list of affected users
+  // POST → dry-run=false: actually upgrades them
+  app.get("/api/admin/rc-audit", authenticateUser, async (req: any, res) => {
+    if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+
+    const rcSecretKey = process.env.REVENUECAT_SECRET_KEY;
+    if (!rcSecretKey) return res.status(500).json({ message: 'REVENUECAT_SECRET_KEY not configured' });
+
+    const autoFix = req.query.fix === 'true';
+    const allUsers = await storage.getAllUsers();
+    const candidates = allUsers.filter(u => u.firebaseUid && u.plan !== 'SUPER_HERO');
+
+    const results: any[] = [];
+    // Check in batches of 5 to avoid hammering RC
+    for (let i = 0; i < candidates.length; i += 5) {
+      const batch = candidates.slice(i, i + 5);
+      await Promise.all(batch.map(async (u) => {
+        try {
+          const rcRes = await fetch(
+            `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(u.firebaseUid!)}`,
+            { headers: { Authorization: `Bearer ${rcSecretKey}`, 'Content-Type': 'application/json' } }
+          );
+          if (!rcRes.ok) return;
+          const rcData = await rcRes.json();
+          const entitlement = rcData?.subscriber?.entitlements?.super_hero;
+          if (!entitlement) return;
+          const isActive = !entitlement.expires_date || new Date(entitlement.expires_date) > new Date();
+          if (!isActive) return;
+
+          results.push({
+            userId: u.id,
+            email: u.email,
+            username: u.username,
+            currentPlan: u.plan,
+            rcProduct: entitlement.product_identifier,
+            purchaseDate: entitlement.purchase_date,
+            expiresDate: entitlement.expires_date,
+            fixed: false,
+          });
+
+          if (autoFix) {
+            await storage.updateUser(u.id, { plan: 'SUPER_HERO', subscriptionStatus: 'active' });
+            results[results.length - 1].fixed = true;
+            console.log(`[RC Audit] Auto-upgraded user ${u.id} (${u.email}) to SUPER_HERO`);
+          }
+        } catch (e) { /* skip individual failures */ }
+      }));
+      // Small delay between batches
+      if (i + 5 < candidates.length) await new Promise(r => setTimeout(r, 200));
+    }
+
+    if (autoFix && results.length > 0) {
+      try {
+        await sendEmail('josh@marvelcardvault.com', `🔧 RC Audit Auto-Fixed ${results.length} Users`,
+          `<p>The RC audit found and fixed <strong>${results.length}</strong> users with active iOS subscriptions but wrong plan.</p>
+           <table border="1" cellpadding="4"><tr><th>ID</th><th>Email</th><th>Username</th><th>RC Product</th><th>Expires</th></tr>
+           ${results.map(r => `<tr><td>${r.userId}</td><td>${r.email}</td><td>${r.username}</td><td>${r.rcProduct}</td><td>${r.expiresDate}</td></tr>`).join('')}
+           </table>`
+        );
+      } catch (e) { /* non-fatal */ }
+    }
+
+    res.json({ scanned: candidates.length, affected: results.length, autoFixed: autoFix, users: results });
   });
 
   // Create customer portal session for billing management

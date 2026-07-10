@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import BulkImageUpdater from "@/components/admin/bulk-image-updater";
 import SchedulerManager from "@/components/admin/scheduler-manager";
 import { PriceChartingImporter } from "@/components/admin/pricecharting-importer";
-import { Settings, Image, Zap, Download, Mail, ExternalLink, Send, Clock, CheckCircle2 } from "lucide-react";
+import { Settings, Image, Zap, Download, Mail, ExternalLink, Send, Clock, CheckCircle2, ShieldCheck, RefreshCw, AlertTriangle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -183,6 +183,148 @@ function Thanks2uCampaignCard() {
   );
 }
 
+interface RcAuditUser {
+  userId: number;
+  email: string;
+  username: string;
+  currentPlan: string;
+  rcProduct: string;
+  purchaseDate: string;
+  expiresDate: string;
+  fixed: boolean;
+}
+
+interface RcAuditResult {
+  scanned: number;
+  affected: number;
+  autoFixed: boolean;
+  users: RcAuditUser[];
+}
+
+function RcAuditCard() {
+  const { toast } = useToast();
+  const [results, setResults] = useState<RcAuditResult | null>(null);
+  const [running, setRunning] = useState(false);
+
+  const run = async (fix: boolean) => {
+    setRunning(true);
+    try {
+      const res = await apiRequest("GET", `/api/admin/rc-audit?fix=${fix}`);
+      const data: RcAuditResult = await res.json();
+      setResults(data);
+      if (fix && data.affected > 0) {
+        toast({ title: `✅ Fixed ${data.affected} users`, description: "They've been upgraded to SUPER_HERO." });
+      } else if (!fix && data.affected > 0) {
+        toast({ title: `⚠️ Found ${data.affected} users needing upgrade`, description: "Click 'Fix All' to upgrade them.", variant: "destructive" });
+      } else {
+        toast({ title: "All clear!", description: `Scanned ${data.scanned} users — everyone who paid is upgraded.` });
+      }
+    } catch {
+      toast({ title: "Audit failed", description: "Check server logs.", variant: "destructive" });
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  return (
+    <Card className="border-2 border-blue-100 dark:border-blue-900">
+      <CardHeader className="pb-2 pt-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-blue-600">
+              <ShieldCheck className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-sm text-gray-900 dark:text-white">RevenueCat Subscription Audit</CardTitle>
+              <p className="text-xs text-gray-500">Find iOS users who paid but are still on SIDE_KICK</p>
+            </div>
+          </div>
+          <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">iOS Billing</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="pb-4 space-y-3">
+        <p className="text-xs text-gray-600 dark:text-gray-400">
+          Scans every user account against RevenueCat. If someone has an active <code>super_hero</code> entitlement
+          but their account still shows SIDE_KICK (e.g. because the activation call failed), this tool finds
+          and optionally fixes them.
+        </p>
+
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
+            onClick={() => run(false)}
+            disabled={running}
+          >
+            {running ? <RefreshCw className="h-3 w-3 mr-1.5 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1.5" />}
+            Dry Run (Check Only)
+          </Button>
+          {results && results.affected > 0 && !results.autoFixed && (
+            <Button
+              size="sm"
+              className="text-xs bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => run(true)}
+              disabled={running}
+            >
+              <ShieldCheck className="h-3 w-3 mr-1.5" />
+              Fix All ({results.affected})
+            </Button>
+          )}
+        </div>
+
+        {results && (
+          <div className="mt-2 space-y-2">
+            <div className="flex gap-3 text-xs">
+              <span className="text-gray-500">Scanned: <strong className="text-gray-900 dark:text-white">{results.scanned}</strong></span>
+              <span className="text-gray-500">Need upgrade: <strong className={results.affected > 0 ? "text-amber-600" : "text-green-600"}>{results.affected}</strong></span>
+              {results.autoFixed && <span className="text-green-600 font-medium">✅ All fixed</span>}
+            </div>
+
+            {results.users.length > 0 && (
+              <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                      <th className="text-left px-3 py-2 text-gray-500 font-medium">User</th>
+                      <th className="text-left px-3 py-2 text-gray-500 font-medium">RC Product</th>
+                      <th className="text-left px-3 py-2 text-gray-500 font-medium">Expires</th>
+                      <th className="text-left px-3 py-2 text-gray-500 font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {results.users.map(u => (
+                      <tr key={u.userId} className="border-t border-gray-100 dark:border-gray-700">
+                        <td className="px-3 py-2">
+                          <p className="font-medium text-gray-900 dark:text-white">{u.username}</p>
+                          <p className="text-gray-400">{u.email}</p>
+                        </td>
+                        <td className="px-3 py-2 text-gray-600 dark:text-gray-300 font-mono">{u.rcProduct}</td>
+                        <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
+                          {new Date(u.expiresDate).toLocaleDateString()}
+                        </td>
+                        <td className="px-3 py-2">
+                          {u.fixed ? (
+                            <Badge className="bg-green-100 text-green-700 text-xs">Fixed ✓</Badge>
+                          ) : (
+                            <Badge className="bg-amber-100 text-amber-700 text-xs flex items-center gap-1 w-fit">
+                              <AlertTriangle className="h-2.5 w-2.5" /> Needs fix
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AdminAutomation() {
   return (
     <div className="p-6 space-y-6">
@@ -262,6 +404,16 @@ export default function AdminAutomation() {
             </p>
           </CardContent>
         </Card>
+      </div>
+
+      <Separator />
+
+      {/* RevenueCat Subscription Audit */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+          <ShieldCheck className="h-5 w-5 text-blue-600" /> iOS Subscription Audit
+        </h2>
+        <RcAuditCard />
       </div>
 
       <Separator />
