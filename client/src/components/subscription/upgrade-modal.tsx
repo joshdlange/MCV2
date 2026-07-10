@@ -149,9 +149,9 @@ export function UpgradeModal({ isOpen, onClose, currentPlan, trigger, title, des
         const result = await purchaseSuperHero();
 
         if (result.success) {
-          // Sync plan to backend
+          // Sync plan to backend — check response so failures surface instead of silently dropping
           const token = await user.getIdToken();
-          await fetch('/api/revenuecat/activate', {
+          const activateRes = await fetch('/api/revenuecat/activate', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -159,8 +159,20 @@ export function UpgradeModal({ isOpen, onClose, currentPlan, trigger, title, des
             },
           });
 
+          if (!activateRes.ok) {
+            const errData = await activateRes.json().catch(() => ({}));
+            console.error('[RevenueCat] activate failed:', activateRes.status, errData);
+            toast({
+              title: "Payment received — activation issue",
+              description: "Your payment went through but we hit a snag activating your account. Please tap 'Restore Purchases' or contact support and we'll sort it out immediately.",
+              variant: "destructive",
+            });
+            return;
+          }
+
           queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
           queryClient.invalidateQueries({ queryKey: ['/api/subscription/status'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/auth/sync'] });
           const store = useAppStore.getState();
           if (store.currentUser) {
             store.setCurrentUser({ ...store.currentUser, plan: 'SUPER_HERO', subscriptionStatus: 'active' });
@@ -273,12 +285,19 @@ export function UpgradeModal({ isOpen, onClose, currentPlan, trigger, title, des
       const result = await restoreRevenueCatPurchases();
       if (result.entitled) {
         const token = await user?.getIdToken();
-        await fetch('/api/revenuecat/activate', {
+        const activateRes = await fetch('/api/revenuecat/activate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         });
+        if (!activateRes.ok) {
+          const errData = await activateRes.json().catch(() => ({}));
+          console.error('[RevenueCat] restore activate failed:', activateRes.status, errData);
+          toast({ title: "Restore issue", description: "Your purchase was found but we couldn't activate your account. Please contact support.", variant: "destructive" });
+          return;
+        }
         queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
         queryClient.invalidateQueries({ queryKey: ['/api/subscription/status'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/auth/sync'] });
         const store = useAppStore.getState();
         if (store.currentUser) {
           store.setCurrentUser({ ...store.currentUser, plan: 'SUPER_HERO', subscriptionStatus: 'active' });

@@ -4,7 +4,7 @@ import { initializeRevenueCat, isRevenueCatAvailable, REVENUECAT_ENABLED } from 
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
+import { queryClient, apiRequest } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -256,11 +256,31 @@ function App() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
-    const listenerPromise = CapApp.addListener('appUrlOpen', (data) => {
+    const listenerPromise = CapApp.addListener('appUrlOpen', async (data) => {
       if (data.url.includes('subscription-success')) {
-        console.log('[DeepLink] subscription-success received — refreshing subscription');
+        console.log('[DeepLink] subscription-success received — verifying subscription');
+
+        // Extract session_id passed through from the success page deep link
+        try {
+          const urlObj = new URL(data.url.replace('marvelcardvault://', 'https://app.marvelcardvault.com/'));
+          const sessionId = urlObj.searchParams.get('session_id');
+          if (sessionId) {
+            const resp = await apiRequest('POST', '/api/verify-checkout-session', { sessionId });
+            const result = await resp.json();
+            console.log('[DeepLink] verify-checkout-session result:', result);
+          } else {
+            // No session_id — fall back to restore-subscription (checks Stripe by email)
+            const resp = await apiRequest('POST', '/api/restore-subscription');
+            const result = await resp.json();
+            console.log('[DeepLink] restore-subscription result:', result);
+          }
+        } catch (err) {
+          console.error('[DeepLink] Failed to verify/restore subscription:', err);
+        }
+
         queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
         queryClient.invalidateQueries({ queryKey: ['/api/subscription-status'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/auth/sync'] });
         window.location.hash = '/';
       }
     });

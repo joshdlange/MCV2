@@ -6091,6 +6091,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Self-service subscription restore: looks up user's email in Stripe and upgrades if active sub found.
+  // Catches missed webhooks (e.g. Android external-browser flow, server downtime during checkout).
+  app.post("/api/restore-subscription", authenticateUser, async (req: any, res) => {
+    try {
+      const user = req.user;
+
+      if (user.plan === 'SUPER_HERO' && user.subscriptionStatus === 'active') {
+        return res.json({ success: true, message: "Already upgraded", plan: user.plan });
+      }
+
+      const customers = await stripe.customers.list({ email: user.email, limit: 5 });
+
+      if (!customers.data.length) {
+        return res.status(404).json({ message: "No payment account found for this email. If you paid with a different email, contact support." });
+      }
+
+      let activeSub: Stripe.Subscription | null = null;
+      let foundCustomerId: string | null = null;
+
+      for (const statuses of [['active'], ['trialing'], ['past_due']] as const) {
+        for (const customer of customers.data) {
+          const subs = await stripe.subscriptions.list({ customer: customer.id, status: statuses[0] as any, limit: 5 });
+          if (subs.data.length) {
+            activeSub = subs.data[0];
+            foundCustomerId = customer.id;
+            break;
+          }
+        }
+        if (activeSub) break;
+      }
+
+      if (!activeSub || !foundCustomerId) {
+        return res.status(404).json({ message: "No active subscription found for this account. If you believe this is an error, contact support." });
+      }
+
+      const updatedUser = await storage.updateUser(user.id, {
+        plan: 'SUPER_HERO',
+        subscriptionStatus: 'active',
+        stripeCustomerId: foundCustomerId,
+        stripeSubscriptionId: activeSub.id,
+      });
+
+      console.log(`User ${user.id} (${user.email}) restored to Super Hero via restore-subscription (sub: ${activeSub.id})`);
+
+      try {
+        await sendEmail(
+          'josh@marvelcardvault.com',
+          '🔄 Subscription Restored (Missed Webhook)',
+          `<p>A user restored their subscription via the self-service restore button — indicates a missed webhook.</p>
+           <ul>
+             <li><strong>User ID:</strong> ${user.id}</li>
+             <li><strong>Email:</strong> ${user.email}</li>
+             <li><strong>Username:</strong> ${updatedUser?.username || 'Unknown'}</li>
+             <li><strong>Stripe Customer:</strong> ${foundCustomerId}</li>
+             <li><strong>Subscription:</strong> ${activeSub.id}</li>
+             <li><strong>Sub Status:</strong> ${activeSub.status}</li>
+           </ul>`
+        );
+      } catch (notifyErr) {
+        console.error('Failed to send restore notification email:', notifyErr);
+      }
+
+      return res.json({ success: true, message: "Subscription restored successfully!", plan: 'SUPER_HERO' });
+    } catch (error: any) {
+      console.error('Restore subscription error:', error);
+      res.status(500).json({ message: "Failed to restore subscription" });
+    }
+  });
+
   app.post("/api/apple-iap/verify", authenticateUser, async (req: any, res) => {
     try {
       const { receiptData, userId } = req.body;

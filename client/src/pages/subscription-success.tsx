@@ -25,7 +25,12 @@ export default function SubscriptionSuccess() {
 
     // Give Stripe webhook ~1.5 s to process, then attempt deep link
     const deepLinkTimer = setTimeout(() => {
-      window.location.href = 'marvelcardvault://subscription-success';
+      // Pass session_id through so the in-app deep link handler can call verify-checkout-session
+      const sessionId = params.get('session_id');
+      const deepLink = sessionId
+        ? `marvelcardvault://subscription-success?session_id=${encodeURIComponent(sessionId)}`
+        : 'marvelcardvault://subscription-success';
+      window.location.href = deepLink;
 
       // Fallback: if the deep link didn't fire the app within 2 s, show manual button
       const fallbackTimer = setTimeout(() => {

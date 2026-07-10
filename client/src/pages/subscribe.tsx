@@ -1,19 +1,22 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import logoImage from "@assets/Marvelous_Card_Valut_-_Trans_1772678671637.png";
 
 export default function Subscribe() {
   const [, setLocation] = useLocation();
   const { currentUser } = useAppStore();
-  const { loading: authLoading } = useAuth();
+  const { loading: authLoading, refreshUser } = useAuth();
+  const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
+  const [restoring, setRestoring] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -52,6 +55,27 @@ export default function Subscribe() {
     startCheckout();
   }, [currentUser?.id, authLoading]);
 
+  const handleRestore = async () => {
+    setRestoring(true);
+    try {
+      const resp = await apiRequest('POST', '/api/restore-subscription');
+      const data = await resp.json();
+      if (data.success) {
+        await refreshUser();
+        queryClient.invalidateQueries({ queryKey: ['/api/auth/sync'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/subscription-status'] });
+        toast({ title: "Subscription restored!", description: "Welcome to Super Hero! Redirecting you now." });
+        setTimeout(() => setLocation("/"), 1500);
+      } else {
+        toast({ title: "Couldn't restore", description: data.message || "No active subscription found.", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Couldn't restore", description: "No active subscription found for your account. Contact support if you believe this is an error.", variant: "destructive" });
+    } finally {
+      setRestoring(false);
+    }
+  };
+
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-950 flex items-center justify-center p-4">
@@ -62,9 +86,21 @@ export default function Subscribe() {
             <p className="text-gray-300">{error}</p>
             <Button
               onClick={() => { setError(null); window.location.reload(); }}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-red-600 hover:bg-red-700 text-white w-full"
             >
               Try Again
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleRestore}
+              disabled={restoring}
+              className="w-full border-gray-600 text-gray-300 hover:text-white hover:border-gray-400"
+            >
+              {restoring ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Checking...</>
+              ) : (
+                <><RefreshCw className="w-4 h-4 mr-2" />Already paid? Restore subscription</>
+              )}
             </Button>
             <Button
               variant="ghost"
