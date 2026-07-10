@@ -40,6 +40,7 @@ import * as emailTriggers from "./services/emailTriggers";
 import { vaultUpgradeAnnouncementTemplate } from "./services/emailTemplates";
 import { startEmailCronJobs } from "./jobs/emailCron";
 import { initializeUpcomingSets, syncRSSFeed, expireReleasedSets } from "./services/upcomingSetsSync";
+import { verifyRcEntitlement, reconcileRevenueCatSubscriptions, startRevenueCatReconcileCron, SYSTEM_USER_FIREBASE_UID } from "./services/revenueCatSync";
 import { uploadUserCardImage, uploadMainSetThumbnail, downloadAndUploadToCloudinary, isCloudinaryUrl } from "./cloudinary";
 import { registerMarketplaceRoutes } from "./marketplace-routes";
 import { optimizedStorage } from "./optimized-storage";
@@ -669,10 +670,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cardsResult = await db.execute(sql`SELECT COUNT(*) as total FROM cards`);
       const totalCards = parseInt((cardsResult.rows[0] as any).total) || 0;
 
-      // Get paid users (users on SUPER_HERO plan)
+      // Get paid users (users on SUPER_HERO plan). Exclude the internal system
+      // account — it is granted SUPER_HERO for messaging but is not a customer.
       const paidUsersResult = await db.execute(sql`
         SELECT COUNT(*) as total FROM users 
         WHERE plan = 'SUPER_HERO'
+          AND (firebase_uid IS NULL OR firebase_uid != ${SYSTEM_USER_FIREBASE_UID})
       `);
       const paidUsers = parseInt((paidUsersResult.rows[0] as any).total) || 0;
 
@@ -6374,82 +6377,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // RevenueCat server-to-server webhook. This is the primary, client-independent
+  // path that guarantees iOS purchases/renewals upgrade the account even if the
+  // in-app activate call is missed (app closed, network drop, etc.).
+  //
+  // Security: RevenueCat sends the Authorization header value configured in the
+  // dashboard. If REVENUECAT_WEBHOOK_SECRET is set we require it to match. As
+  // defense in depth we ALSO re-verify the entitlement against RevenueCat's REST
+  // API using our secret key before granting — so no caller can self-grant
+  // SUPER_HERO without an actual RevenueCat entitlement.
+  app.post("/api/revenuecat/webhook", async (req: any, res) => {
+    try {
+      const expected = process.env.REVENUECAT_WEBHOOK_SECRET;
+      if (expected) {
+        const auth = req.headers['authorization'];
+        if (auth !== expected && auth !== `Bearer ${expected}`) {
+          console.warn('[RevenueCat Webhook] Rejected: bad Authorization header');
+          return res.status(401).json({ message: 'Unauthorized' });
+        }
+      } else if (process.env.NODE_ENV === 'production') {
+        // Never process billing state changes from an unauthenticated caller in prod.
+        console.error('[RevenueCat Webhook] REVENUECAT_WEBHOOK_SECRET not set — rejecting in production');
+        return res.status(503).json({ message: 'Webhook not configured' });
+      } else {
+        console.warn('[RevenueCat Webhook] REVENUECAT_WEBHOOK_SECRET not set (dev) — relying on REST re-verification only');
+      }
+
+      const event = req.body?.event;
+      if (!event || !event.type) return res.status(200).json({ received: true, note: 'no event' });
+
+      // Collect every id RC might use to reference the buyer.
+      const ids: string[] = [event.app_user_id, event.original_app_user_id, ...(event.aliases || [])]
+        .filter((v: any) => typeof v === 'string' && v && !v.startsWith('$RCAnonymousID:'));
+
+      let user: any = null;
+      for (const id of ids) {
+        user = await storage.getUserByFirebaseUid(id);
+        if (user) break;
+      }
+      if (!user) {
+        console.warn(`[RevenueCat Webhook] ${event.type}: no matching user for ids ${JSON.stringify(ids)}`);
+        return res.status(200).json({ received: true, note: 'no matching user' });
+      }
+
+      const grantTypes = ['INITIAL_PURCHASE', 'NON_RENEWING_PURCHASE', 'RENEWAL', 'PRODUCT_CHANGE', 'UNCANCELLATION', 'SUBSCRIPTION_EXTENDED'];
+      const revokeTypes = ['EXPIRATION', 'SUBSCRIPTION_PAUSED'];
+
+      if (grantTypes.includes(event.type)) {
+        // Re-verify entitlement is actually active before granting.
+        const verify = await verifyRcEntitlement(user.firebaseUid);
+        if (!verify.ok) {
+          // Transient RC failure — return 500 so RC retries later. Never guess.
+          console.error(`[RevenueCat Webhook] ${event.type}: RC lookup failed for user ${user.id} (${verify.error}); asking RC to retry`);
+          return res.status(500).json({ message: 'Verification temporarily unavailable' });
+        }
+        if (verify.entitlement) {
+          if (user.plan !== 'SUPER_HERO' || user.subscriptionStatus !== 'active') {
+            await storage.updateUser(user.id, { plan: 'SUPER_HERO', subscriptionStatus: 'active' });
+            console.log(`[RevenueCat Webhook] ${event.type}: upgraded user ${user.id} to SUPER_HERO`);
+          }
+        } else {
+          console.warn(`[RevenueCat Webhook] ${event.type}: no active entitlement for user ${user.id} — no change`);
+        }
+      } else if (revokeTypes.includes(event.type)) {
+        const verify = await verifyRcEntitlement(user.firebaseUid);
+        if (!verify.ok) {
+          // Transient RC failure — must NOT downgrade on a failed lookup. Retry later.
+          console.error(`[RevenueCat Webhook] ${event.type}: RC lookup failed for user ${user.id} (${verify.error}); asking RC to retry`);
+          return res.status(500).json({ message: 'Verification temporarily unavailable' });
+        }
+        // Only downgrade when RC confirms no active entitlement AND the user isn't on
+        // a Stripe subscription (cross-platform: never let one platform revoke the other).
+        if (!verify.entitlement && !user.stripeSubscriptionId) {
+          if (user.plan === 'SUPER_HERO') {
+            await storage.updateUser(user.id, { plan: 'SIDE_KICK', subscriptionStatus: 'cancelled' });
+            console.log(`[RevenueCat Webhook] ${event.type}: downgraded user ${user.id} to SIDE_KICK`);
+          }
+        } else {
+          console.log(`[RevenueCat Webhook] ${event.type}: kept user ${user.id} (still entitled or has Stripe sub)`);
+        }
+      } else {
+        // CANCELLATION (will not renew but still active), BILLING_ISSUE, TRANSFER, etc. — no plan change here.
+        console.log(`[RevenueCat Webhook] ${event.type}: no plan change for user ${user.id}`);
+      }
+
+      return res.status(200).json({ received: true });
+    } catch (error: any) {
+      console.error('[RevenueCat Webhook] error:', error);
+      // Return 200 so RC doesn't hammer retries on our bugs; the daily reconcile is the safety net.
+      return res.status(200).json({ received: true, error: 'processing error' });
+    }
+  });
+
   // Admin: audit all users against RevenueCat and fix anyone with an active entitlement but wrong plan.
   // GET  → dry-run, returns list of affected users
   // POST → dry-run=false: actually upgrades them
   app.get("/api/admin/rc-audit", authenticateUser, async (req: any, res) => {
     if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+    if (!process.env.REVENUECAT_SECRET_KEY) return res.status(500).json({ message: 'REVENUECAT_SECRET_KEY not configured' });
 
-    const rcSecretKey = process.env.REVENUECAT_SECRET_KEY;
-    if (!rcSecretKey) return res.status(500).json({ message: 'REVENUECAT_SECRET_KEY not configured' });
+    try {
+      const autoFix = req.query.fix === 'true';
+      const result = await reconcileRevenueCatSubscriptions(autoFix);
 
-    const autoFix = req.query.fix === 'true';
-    const allUsers = await storage.getAllUsers();
-    const candidates = allUsers.filter(u => u.firebaseUid && u.plan !== 'SUPER_HERO');
-
-    const results: any[] = [];
-    let errorCount = 0; // RC lookups that failed (network, non-200, or 200-with-error-body)
-    // Check in batches of 5 to avoid hammering RC
-    for (let i = 0; i < candidates.length; i += 5) {
-      const batch = candidates.slice(i, i + 5);
-      await Promise.all(batch.map(async (u) => {
+      if (autoFix && result.affected > 0) {
         try {
-          const rcRes = await fetch(
-            `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(u.firebaseUid!)}`,
-            { headers: { Authorization: `Bearer ${rcSecretKey}`, 'Content-Type': 'application/json' } }
+          await sendEmail('josh@marvelcardvault.com', `🔧 RC Audit Auto-Fixed ${result.affected} Users`,
+            `<p>The RC audit found and fixed <strong>${result.affected}</strong> users with active iOS subscriptions but wrong plan.</p>
+             <table border="1" cellpadding="4"><tr><th>ID</th><th>Email</th><th>Username</th><th>RC Product</th><th>Expires</th></tr>
+             ${result.users.map(r => `<tr><td>${r.userId}</td><td>${r.email}</td><td>${r.username}</td><td>${r.rcProduct}</td><td>${r.expiresDate}</td></tr>`).join('')}
+             </table>`
           );
-          const rcData = await rcRes.json().catch(() => null);
-          // RC can return HTTP 200 with an error body (e.g. code 7243). Treat any
-          // non-ok status OR a response carrying an error code as a failed check,
-          // so a broken lookup is never counted as "clear".
-          if (!rcRes.ok || !rcData || typeof rcData.code === 'number') {
-            errorCount++;
-            console.warn(`[RC Audit] lookup failed for user ${u.id}: HTTP ${rcRes.status}${rcData?.code ? ` code ${rcData.code}` : ''}`);
-            return;
-          }
-          const entitlement = rcData?.subscriber?.entitlements?.super_hero;
-          if (!entitlement) return;
-          const isActive = !entitlement.expires_date || new Date(entitlement.expires_date) > new Date();
-          if (!isActive) return;
+        } catch (e) { /* non-fatal */ }
+      }
 
-          const record = {
-            userId: u.id,
-            email: u.email,
-            username: u.username,
-            currentPlan: u.plan,
-            rcProduct: entitlement.product_identifier,
-            purchaseDate: entitlement.purchase_date,
-            expiresDate: entitlement.expires_date,
-            fixed: false,
-          };
-          results.push(record);
-
-          if (autoFix) {
-            await storage.updateUser(u.id, { plan: 'SUPER_HERO', subscriptionStatus: 'active' });
-            record.fixed = true;
-            console.log(`[RC Audit] Auto-upgraded user ${u.id} (${u.email}) to SUPER_HERO`);
-          }
-        } catch (e) {
-          errorCount++;
-          console.warn(`[RC Audit] error checking user ${u.id}:`, e);
-        }
-      }));
-      // Small delay between batches
-      if (i + 5 < candidates.length) await new Promise(r => setTimeout(r, 200));
+      res.json(result);
+    } catch (error: any) {
+      console.error('[RC Audit] error:', error);
+      res.status(500).json({ message: 'Audit failed' });
     }
-
-    if (autoFix && results.length > 0) {
-      try {
-        await sendEmail('josh@marvelcardvault.com', `🔧 RC Audit Auto-Fixed ${results.length} Users`,
-          `<p>The RC audit found and fixed <strong>${results.length}</strong> users with active iOS subscriptions but wrong plan.</p>
-           <table border="1" cellpadding="4"><tr><th>ID</th><th>Email</th><th>Username</th><th>RC Product</th><th>Expires</th></tr>
-           ${results.map(r => `<tr><td>${r.userId}</td><td>${r.email}</td><td>${r.username}</td><td>${r.rcProduct}</td><td>${r.expiresDate}</td></tr>`).join('')}
-           </table>`
-        );
-      } catch (e) { /* non-fatal */ }
-    }
-
-    res.json({ scanned: candidates.length, affected: results.length, errors: errorCount, autoFixed: autoFix, users: results });
   });
 
   // Create customer portal session for billing management
@@ -10578,6 +10624,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   initializeUpcomingSets().catch(err => {
     console.error('[Upcoming Sets] Initialization error:', err);
   });
+
+  // Daily RevenueCat reconciliation safety net (upgrades any stuck iOS payer).
+  startRevenueCatReconcileCron();
 
   // One-time XP backfill: seed card_added XP from existing collections so
   // long-time collectors don't show 0 card XP. Guarded — only runs if empty.

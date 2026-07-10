@@ -17,4 +17,14 @@ A failed RC lookup can come back as **HTTP 200** carrying `{ code, message }` (t
 
 **Why:** An audit/lookup that only inspects `res.ok` will report false "all clear" while every lookup actually failed.
 
-**How to apply:** After `res.json()`, treat `!res.ok || !body || typeof body.code === 'number'` as a failed check and count/surface those errors separately from "no entitlement found."
+**How to apply:** After `res.json()`, treat `!res.ok || !body || typeof body.code === 'number'` as a failed check and count/surface those errors separately from "no entitlement found." Note RC returns **HTTP 201** (auto-creates an empty subscriber) for UIDs it hasn't seen — treat 201 like 200, not an error.
+
+## Rule 3: Never rely on the client `activate` call alone for iOS upgrades
+iOS upgrades must survive a missed/failed client `POST /api/revenuecat/activate`. The durable path is a **server-to-server RevenueCat webhook** (`POST /api/revenuecat/webhook`) plus a **daily reconcile cron** safety net that scans non-SUPER_HERO users and upgrades anyone with an active `super_hero` entitlement. Shared logic lives in `server/services/revenueCatSync.ts`.
+
+**Why:** The whole "iOS payers stuck on SIDE_KICK" incident happened because activation depended solely on the client. One bug (or a closed app) = silent paid-but-not-upgraded users.
+
+**How to apply:** Webhook must (a) require `REVENUECAT_WEBHOOK_SECRET` in production (reject if unset), (b) re-verify the entitlement via REST before ANY plan change, (c) on revoke, only downgrade when `verify.ok === true && !entitlement` AND the user has no Stripe sub — a failed lookup must return 500 for RC retry, never a downgrade.
+
+## Rule 4: Exclude the system account from paid-user counts
+`SYSTEM_USER_MCV` (firebase_uid) is granted SUPER_HERO for messaging but is NOT a customer. Any "paid users" count (admin stats, funnel `upgraded`) must add `AND (firebase_uid IS NULL OR firebase_uid != 'SYSTEM_USER_MCV')`.

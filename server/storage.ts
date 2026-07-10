@@ -2736,7 +2736,7 @@ export class DatabaseStorage implements IStorage {
     const r1 = await db.execute(sql`SELECT COUNT(*) AS count FROM users`);
     const r2 = await db.execute(sql`SELECT COUNT(DISTINCT user_id) AS count FROM user_collections`);
     const r3 = await db.execute(sql`SELECT COUNT(*) AS count FROM users WHERE total_logins >= 3`);
-    const r4 = await db.execute(sql`SELECT COUNT(*) AS count FROM users WHERE plan = 'SUPER_HERO'`);
+    const r4 = await db.execute(sql`SELECT COUNT(*) AS count FROM users WHERE plan = 'SUPER_HERO' AND (firebase_uid IS NULL OR firebase_uid != 'SYSTEM_USER_MCV')`);
     const r5 = await db.execute(sql`
       SELECT COUNT(*) AS count FROM users WHERE plan = 'SIDE_KICK' AND subscription_status = 'cancelled'
     `);
