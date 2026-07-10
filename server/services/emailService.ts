@@ -1,10 +1,50 @@
 import { Resend } from 'resend';
+import crypto from 'crypto';
 import { db } from '../db';
 import { emailLogs, users } from '../../shared/schema';
 import { eq } from 'drizzle-orm';
 import { passwordResetTemplate } from './emailTemplates';
 
 const DEFAULT_FROM = 'Marvelous Card Vault <no-reply@marvelcardvault.com>';
+const APP_BASE_URL = 'https://www.marvelcardvault.com';
+
+// ============================================================
+// One-click unsubscribe (stateless, HMAC-signed by email).
+// Any email template that includes the literal {{UNSUBSCRIBE_URL}}
+// placeholder is automatically treated as a marketing email:
+// sendResendEmail injects a per-recipient unsubscribe link and the
+// List-Unsubscribe headers so Gmail/Apple Mail show a native unsubscribe.
+// ============================================================
+
+export function unsubscribeToken(email: string): string {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    // Never fall back to a guessable secret — that would make unsubscribe
+    // links (an unauthenticated state change) trivially forgeable.
+    throw new Error('SESSION_SECRET is required to sign unsubscribe tokens');
+  }
+  return crypto
+    .createHmac('sha256', secret)
+    .update(email.trim().toLowerCase())
+    .digest('hex')
+    .slice(0, 32);
+}
+
+export function buildUnsubscribeUrl(email: string): string {
+  const clean = email.trim().toLowerCase();
+  return `${APP_BASE_URL}/api/unsubscribe?e=${encodeURIComponent(clean)}&t=${unsubscribeToken(clean)}`;
+}
+
+export function verifyUnsubscribeToken(email: string, token: string): boolean {
+  if (!email || !token) return false;
+  const expected = unsubscribeToken(email);
+  if (token.length !== expected.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected));
+  } catch {
+    return false;
+  }
+}
 
 // ============================================================
 // Resend client — primary provider for ALL app email.
@@ -118,13 +158,29 @@ export async function sendResendEmail(options: ResendEmailOptions): Promise<stri
   }
 
   try {
+    // Marketing emails carry the {{UNSUBSCRIBE_URL}} placeholder — inject a
+    // per-recipient signed link and List-Unsubscribe headers for one-click opt-out.
+    let finalHtml = html;
+    let finalText = text;
+    let extraHeaders: Record<string, string> | undefined;
+    if (html.includes('{{UNSUBSCRIBE_URL}}')) {
+      const unsubUrl = buildUnsubscribeUrl(to);
+      finalHtml = finalHtml.split('{{UNSUBSCRIBE_URL}}').join(unsubUrl);
+      if (finalText) finalText = finalText.split('{{UNSUBSCRIBE_URL}}').join(unsubUrl);
+      extraHeaders = {
+        'List-Unsubscribe': `<${unsubUrl}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      };
+    }
+
     const { data, error } = await client.emails.send({
       from,
       to,
       subject,
-      html,
-      ...(text ? { text } : {}),
+      html: finalHtml,
+      ...(finalText ? { text: finalText } : {}),
       ...(replyTo ? { replyTo } : {}),
+      ...(extraHeaders ? { headers: extraHeaders } : {}),
     });
 
     if (error) {

@@ -35,7 +35,7 @@ import { ebayBrowseApi } from "./ebay-browse-api";
 import { ebayMarketplaceInsights } from "./ebay-marketplace-insights";
 import { sendEmail } from "./email";
 import { syncFirebaseUsersToBrevo } from "./contactsSync";
-import { sendResendEmail, sendPasswordResetEmail } from "./services/emailService";
+import { sendResendEmail, sendPasswordResetEmail, verifyUnsubscribeToken } from "./services/emailService";
 import * as emailTriggers from "./services/emailTriggers";
 import { vaultUpgradeAnnouncementTemplate } from "./services/emailTemplates";
 import { startEmailCronJobs, startVaultUpgradeDripCron, runVaultUpgradeDripNow, getVaultUpgradeDripStatus } from "./jobs/emailCron";
@@ -852,6 +852,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to update user profile" });
     }
   });
+
+  // PUBLIC one-click unsubscribe from marketing emails (token-signed, no login).
+  // Handles both GET (link click → confirmation page) and POST (RFC 8058 one-click).
+  const renderUnsubPage = (title: string, message: string) =>
+    `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title></head>` +
+    `<body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#f5f7fa;color:#0f172a;">` +
+    `<div style="max-width:520px;margin:60px auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:32px;text-align:center;">` +
+    `<h1 style="font-size:22px;margin:0 0 12px;color:#0f172a;">${title}</h1>` +
+    `<p style="font-size:15px;color:#475569;line-height:1.6;margin:0 0 20px;">${message}</p>` +
+    `<a href="https://www.marvelcardvault.com" style="display:inline-block;background:#dc2626;color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:8px;font-weight:600;">Back to Marvel Card Vault</a>` +
+    `</div></body></html>`;
+
+  const handleUnsubscribe = async (req: any, res: any) => {
+    try {
+      const email = String(req.query.e || req.body?.e || '').trim().toLowerCase();
+      const token = String(req.query.t || req.body?.t || '').trim();
+      if (!email || !verifyUnsubscribeToken(email, token)) {
+        if (req.method === 'POST') return res.status(400).json({ ok: false });
+        return res.status(400).send(renderUnsubPage('Invalid link', 'This unsubscribe link is invalid or has expired. You can manage your email preferences from your account settings.'));
+      }
+      await db.update(users).set({ marketingOptIn: false }).where(sql`lower(trim(${users.email})) = ${email}`);
+      console.log(`📭 Unsubscribed from marketing emails: ${email}`);
+      if (req.method === 'POST') return res.status(200).json({ ok: true });
+      return res.status(200).send(renderUnsubPage("You're unsubscribed", "You won't receive any more marketing or product-update emails. You can turn them back on anytime in your account settings."));
+    } catch (error) {
+      console.error('Unsubscribe error:', error);
+      if (req.method === 'POST') return res.status(500).json({ ok: false });
+      return res.status(500).send(renderUnsubPage('Something went wrong', 'We could not process your request. Please try again from your account settings.'));
+    }
+  };
+  app.get('/api/unsubscribe', handleUnsubscribe);
+  app.post('/api/unsubscribe', handleUnsubscribe);
 
   // Main Sets Routes
   // PUBLIC: Only return CANONICAL main sets that are active and have actual cards
@@ -4160,6 +4192,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error('[Admin] vault-upgrade drip-now error:', err);
       res.status(500).json({ message: 'Failed to send drip batch' });
+    }
+  });
+
+  // ── Admin: One-time opt-in of ALL existing users into marketing emails ─────────
+  // Sets marketing_opt_in = true for everyone with an email who isn't already opted
+  // in. New signups default to opted-in; users can opt out via settings/unsubscribe.
+  app.post("/api/admin/marketing/opt-in-all", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const updated = await db.update(users)
+        .set({ marketingOptIn: true })
+        .where(and(ne(users.email, ''), eq(users.marketingOptIn, false)))
+        .returning({ id: users.id });
+      console.log(`[Admin] Opt-in-all triggered by admin ${req.user.id} — ${updated.length} users opted in`);
+      res.json({ success: true, optedIn: updated.length });
+    } catch (err) {
+      console.error('[Admin] opt-in-all error:', err);
+      res.status(500).json({ message: 'Failed to opt in users' });
     }
   });
 

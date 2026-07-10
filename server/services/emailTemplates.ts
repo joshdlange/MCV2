@@ -706,8 +706,10 @@ export function vaultUpgradeAnnouncementTemplate(): { html: string; text: string
     <!-- Disclaimer + unsubscribe -->
     <p style="margin: 28px 0 0; font-size: 12px; color: ${TEXT_SECONDARY}; line-height: 1.6; text-align: center; border-top: 1px solid #334155; padding-top: 20px;">
       Marvel Card Vault is not affiliated with Marvel, Disney, Upper Deck, Topps, or any card manufacturer.<br>
-      To update your email preferences, visit your
-      <a href="${APP_URL}/settings" style="color: ${BRAND_RED}; text-decoration: none;">account settings</a>.
+      You're receiving this because you have an account at Marvel Card Vault.<br>
+      <a href="{{UNSUBSCRIBE_URL}}" style="color: ${BRAND_RED}; text-decoration: underline;">Unsubscribe from these emails</a>
+      &nbsp;&middot;&nbsp;
+      <a href="${APP_URL}/settings" style="color: ${BRAND_RED}; text-decoration: none;">Manage email preferences</a>
     </p>
   `;
 
@@ -748,7 +750,8 @@ ${APP_URL}
 
 ---
 Marvel Card Vault is not affiliated with Marvel, Disney, Upper Deck, Topps, or any card manufacturer.
-To update your email preferences, visit: ${APP_URL}/settings
+Unsubscribe from these emails: {{UNSUBSCRIBE_URL}}
+Manage email preferences: ${APP_URL}/settings
 `.trim();
 
   return { html, text };

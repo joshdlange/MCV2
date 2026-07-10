@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import BulkImageUpdater from "@/components/admin/bulk-image-updater";
 import SchedulerManager from "@/components/admin/scheduler-manager";
 import { PriceChartingImporter } from "@/components/admin/pricecharting-importer";
-import { Settings, Image, Zap, Download, Mail, ExternalLink, Send, Clock, CheckCircle2, ShieldCheck, RefreshCw, AlertTriangle } from "lucide-react";
+import { Settings, Image, Zap, Download, Mail, ExternalLink, Send, Clock, CheckCircle2, ShieldCheck, RefreshCw, AlertTriangle, Users } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -197,10 +197,24 @@ function VaultUpgradeDripCard() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [confirmed, setConfirmed] = useState(false);
+  const [optInConfirmed, setOptInConfirmed] = useState(false);
 
   const { data: status, isLoading } = useQuery<VaultUpgradeDripStatus>({
     queryKey: ["/api/admin/campaigns/vault-upgrade/drip-status"],
     refetchInterval: 10000,
+  });
+
+  const optInAllMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/admin/marketing/opt-in-all"),
+    onSuccess: (data: any) => {
+      toast({ title: "Everyone opted in", description: `${data.optedIn} existing user${data.optedIn === 1 ? "" : "s"} added to marketing emails. The drip will now reach them.` });
+      setOptInConfirmed(false);
+      qc.invalidateQueries({ queryKey: ["/api/admin/campaigns/vault-upgrade/drip-status"] });
+    },
+    onError: () => {
+      toast({ title: "Failed", description: "Could not opt in users. Check the server logs.", variant: "destructive" });
+      setOptInConfirmed(false);
+    },
   });
 
   const dripMutation = useMutation({
@@ -274,6 +288,37 @@ function VaultUpgradeDripCard() {
               Runs automatically every morning at 9 AM Central, sending up to {status?.dailyLimit ?? 90} per day to anyone
               who hasn't received it yet — nobody gets it twice. It stops on its own once everyone is reached.
             </p>
+
+            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-3 space-y-2">
+              <p className="text-xs text-amber-800 dark:text-amber-300">
+                <strong>One-time:</strong> opt every existing user into marketing emails. New signups are already opted in by default, and anyone can opt out from their settings or the unsubscribe link in each email.
+              </p>
+              {!optInConfirmed ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs border-amber-300 text-amber-800 hover:bg-amber-100"
+                  onClick={() => setOptInConfirmed(true)}
+                >
+                  <Users className="h-3 w-3 mr-1.5" /> Opt In All Existing Users
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs text-amber-800 font-medium">Opt in all users now?</span>
+                  <Button
+                    size="sm"
+                    className="text-xs bg-amber-600 hover:bg-amber-700 text-white"
+                    onClick={() => optInAllMutation.mutate()}
+                    disabled={optInAllMutation.isPending}
+                  >
+                    {optInAllMutation.isPending ? "Working…" : "Yes, Opt In Everyone"}
+                  </Button>
+                  <Button size="sm" variant="ghost" className="text-xs" onClick={() => setOptInConfirmed(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              )}
+            </div>
 
             {status?.lastRun && (
               <p className="text-xs text-gray-500">

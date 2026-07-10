@@ -9,4 +9,5 @@
 - [Mobile safe-area insets](safe-area-insets.md) — env(safe-area-inset-*) is 0 on Android WebView; use the max(env, var) --safe-area-top vars from index.css for all fixed/sticky mobile offsets.
 - [/api/stats field mismatch](stats-field-mismatch.md) — /api/stats returns wishlistCount but the shared CollectionStats type claims wishlistItems; always read both or the value is silently 0.
 - [RevenueCat server-side REST pitfalls](rc-xplatform-bug.md) — never send X-Platform from server (RC 7243); RC also returns 200-with-error-body, so check `body.code` not just res.ok.
+- [Marketing email opt-in & unsubscribe](marketing-email-optin.md) — marketingOptIn gates sends (not emailUpdates); new marketing templates need {{UNSUBSCRIBE_URL}} or they ship with no unsubscribe.
 - [Email cron disabled in prod](email-cron-disabled-in-prod.md) — EMAIL_CRON_ENABLED unset everywhere; scheduled email blasts run manually; wire always-on jobs at startup + dedupe drips via email_logs job_name.
