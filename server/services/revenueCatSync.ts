@@ -127,6 +127,100 @@ export async function reconcileRevenueCatSubscriptions(autoFix: boolean): Promis
   return { scanned: candidates.length, affected: users.length, errors: errorCount, autoFixed: autoFix, users };
 }
 
+export interface SubscriberBreakdown {
+  totalUsers: number;      // every account (incl. system)
+  freeUsers: number;       // SIDE_KICK
+  superHeroMembers: number;// real people on SUPER_HERO (excludes system account)
+  payingStripe: number;    // web/Android payers (have a Stripe subscription)
+  payingApple: number;     // iPhone payers verified active in RevenueCat
+  payingTotal: number;     // payingStripe + payingApple
+  comped: number;          // SUPER_HERO members verified to neither pay via Stripe nor RC (free grants)
+  unknown: number;         // no-Stripe SUPER_HERO members whose RC lookup failed (can't classify yet)
+  systemAccounts: number;  // internal system account(s)
+  rcCheckOk: boolean;      // false if any RevenueCat lookup failed (unknown bucket then non-zero)
+}
+
+let breakdownCache: { data: SubscriberBreakdown; at: number } | null = null;
+let breakdownInFlight: Promise<SubscriberBreakdown> | null = null;
+const BREAKDOWN_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+/**
+ * Produce an exact, reconciling subscriber breakdown for the admin dashboard.
+ * Stripe payers are known instantly from the DB; iPhone (RevenueCat) vs comped
+ * can only be told apart by asking RC, so we only look up the small no-Stripe
+ * SUPER_HERO group and cache the whole result for 10 minutes so dashboard
+ * refreshes never hammer RevenueCat.
+ *
+ * Guarantee: freeUsers + payingTotal + comped + unknown + systemAccounts === totalUsers.
+ */
+export async function getSubscriberBreakdown(forceRefresh = false): Promise<SubscriberBreakdown> {
+  if (!forceRefresh && breakdownCache && Date.now() - breakdownCache.at < BREAKDOWN_TTL_MS) {
+    return breakdownCache.data;
+  }
+  // Coalesce concurrent cache misses so simultaneous admin requests issue one RC batch.
+  if (breakdownInFlight) return breakdownInFlight;
+  breakdownInFlight = computeSubscriberBreakdown().finally(() => { breakdownInFlight = null; });
+  return breakdownInFlight;
+}
+
+async function computeSubscriberBreakdown(): Promise<SubscriberBreakdown> {
+  const all = await storage.getAllUsers();
+  const totalUsers = all.length;
+  const systemAccounts = all.filter((u) => u.firebaseUid === SYSTEM_USER_FIREBASE_UID).length;
+  const freeUsers = all.filter((u) => u.plan !== 'SUPER_HERO').length;
+
+  const superHeroReal = all.filter(
+    (u) => u.plan === 'SUPER_HERO' && u.firebaseUid !== SYSTEM_USER_FIREBASE_UID
+  );
+  const superHeroMembers = superHeroReal.length;
+
+  const hasStripe = (u: { stripeSubscriptionId?: string | null }) =>
+    !!u.stripeSubscriptionId && u.stripeSubscriptionId.trim() !== '';
+
+  const payingStripe = superHeroReal.filter(hasStripe).length;
+  const noStripe = superHeroReal.filter((u) => !hasStripe(u));
+
+  let payingApple = 0;
+  let rcErrors = 0;
+  let rcVerifiedComped = 0; // no-Stripe SUPER_HERO confirmed by RC to have NO entitlement
+  for (let i = 0; i < noStripe.length; i += 5) {
+    const batch = noStripe.slice(i, i + 5);
+    await Promise.all(
+      batch.map(async (u) => {
+        if (!u.firebaseUid) { rcVerifiedComped++; return; } // no RC identity => can't be an iPhone payer
+        const result = await verifyRcEntitlement(u.firebaseUid);
+        if (!result.ok) { rcErrors++; return; }        // lookup failed => unknown, don't guess
+        if (result.entitlement) { payingApple++; return; }
+        rcVerifiedComped++;                              // RC confirms no active entitlement
+      })
+    );
+    if (i + 5 < noStripe.length) await new Promise((r) => setTimeout(r, 200));
+  }
+
+  const payingTotal = payingStripe + payingApple;
+  // Only count as comped what we could positively verify; failed RC lookups go
+  // to `unknown` instead of inflating comped. Buckets still reconcile exactly:
+  // free + payingTotal + comped + unknown + system === total.
+  const comped = rcVerifiedComped;
+  const unknown = superHeroMembers - payingTotal - comped;
+
+  const data: SubscriberBreakdown = {
+    totalUsers,
+    freeUsers,
+    superHeroMembers,
+    payingStripe,
+    payingApple,
+    payingTotal,
+    comped,
+    unknown,
+    systemAccounts,
+    rcCheckOk: rcErrors === 0,
+  };
+
+  breakdownCache = { data, at: Date.now() };
+  return data;
+}
+
 let reconcileCronStarted = false;
 
 /**

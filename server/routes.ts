@@ -40,7 +40,7 @@ import * as emailTriggers from "./services/emailTriggers";
 import { vaultUpgradeAnnouncementTemplate } from "./services/emailTemplates";
 import { startEmailCronJobs } from "./jobs/emailCron";
 import { initializeUpcomingSets, syncRSSFeed, expireReleasedSets } from "./services/upcomingSetsSync";
-import { verifyRcEntitlement, reconcileRevenueCatSubscriptions, startRevenueCatReconcileCron, SYSTEM_USER_FIREBASE_UID } from "./services/revenueCatSync";
+import { verifyRcEntitlement, reconcileRevenueCatSubscriptions, startRevenueCatReconcileCron, getSubscriberBreakdown, SYSTEM_USER_FIREBASE_UID } from "./services/revenueCatSync";
 import { uploadUserCardImage, uploadMainSetThumbnail, downloadAndUploadToCloudinary, isCloudinaryUrl } from "./cloudinary";
 import { registerMarketplaceRoutes } from "./marketplace-routes";
 import { optimizedStorage } from "./optimized-storage";
@@ -691,14 +691,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate MAU percentage
       const mauPercent = totalUsers > 0 ? Math.round((monthlyActiveUsers / totalUsers) * 100) : 0;
 
+      // Exact, reconciling subscriber breakdown (cached; RC only for no-Stripe group)
+      const breakdown = await getSubscriberBreakdown();
+
       res.json({
         totalUsers,
         monthlyActiveUsers,
         mauPercent,
-        paidUsers,
+        paidUsers, // legacy: all real SUPER_HERO members (paying + comped)
         totalSets,
         totalCards,
-        cardsWithoutImages
+        cardsWithoutImages,
+        breakdown,
       });
     } catch (error) {
       console.error('Admin stats error:', error);

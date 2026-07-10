@@ -28,3 +28,13 @@ iOS upgrades must survive a missed/failed client `POST /api/revenuecat/activate`
 
 ## Rule 4: Exclude the system account from paid-user counts
 `SYSTEM_USER_MCV` (firebase_uid) is granted SUPER_HERO for messaging but is NOT a customer. Any "paid users" count (admin stats, funnel `upgraded`) must add `AND (firebase_uid IS NULL OR firebase_uid != 'SYSTEM_USER_MCV')`.
+
+## Rule 5: SUPER_HERO plan ≠ paying customer — three distinct buckets
+A user on the SUPER_HERO plan can be a Stripe payer, an Apple/RevenueCat payer, OR a comped/admin free grant. The DB only records Stripe (`stripe_subscription_id`) directly; there is NO stored column marking Apple-vs-comped, so the only way to tell an iPhone payer from a comped grant is to ask RevenueCat per user.
+
+**Why:** "18 SUPER_HERO" looked like 18 paying customers but was really 1 system + 8 Stripe + 4 Apple + 5 comped. Reporting one "Paid Users" number will always be ambiguous and erode trust.
+
+**How to apply:** For any subscriber breakdown, verify only the small no-Stripe SUPER_HERO subset against RC and **cache it** (dashboards refresh often — never hit RC per request). A failed RC lookup must go to an explicit `unknown` bucket, NOT to `comped` (guessing inflates comped). Keep buckets reconciling exactly: `free + payingStripe + payingApple + comped + unknown + system === totalUsers`.
+
+## Prod vs dev database confusion
+The Replit workspace preview uses the DEV database; the deployed marvelcardvault.com uses the PROD database — they hold different row counts. When an owner says "the numbers changed/fluctuate," first suspect they compared the dev admin against the prod admin, not a real bug. Ground-truth prod counts only via the production DB (read replica), never the dev preview.

@@ -5,6 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, FolderOpen, Edit, PlusCircle, Settings, Calendar, Image, ArrowLeftRight, Copy, TrendingUp, Layers, CreditCard, ImageOff, DollarSign, BarChart2 } from "lucide-react";
 
+interface SubscriberBreakdown {
+  totalUsers: number;
+  freeUsers: number;
+  superHeroMembers: number;
+  payingStripe: number;
+  payingApple: number;
+  payingTotal: number;
+  comped: number;
+  unknown: number;
+  systemAccounts: number;
+  rcCheckOk: boolean;
+}
+
 interface AdminStats {
   totalUsers: number;
   monthlyActiveUsers: number;
@@ -13,6 +26,7 @@ interface AdminStats {
   totalSets: number;
   totalCards: number;
   cardsWithoutImages: number;
+  breakdown?: SubscriberBreakdown;
 }
 
 export default function AdminDashboard() {
@@ -101,8 +115,8 @@ export default function AdminDashboard() {
           <h1 className="text-2xl font-bold">Admin Dashboard</h1>
           <span className="text-xs text-gray-400">Live stats • Auto-refreshing</span>
         </div>
-        {/* Row 1: User Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+        {/* Row 1: Engagement */}
+        <div className="grid grid-cols-3 gap-4 mb-3">
           <div className="flex items-center gap-3">
             <Users className="h-8 w-8 text-blue-400" />
             <div>
@@ -130,17 +144,60 @@ export default function AdminDashboard() {
               <div className="text-xs text-gray-400">MAU (30 days)</div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <DollarSign className="h-8 w-8 text-yellow-400" />
+        </div>
+
+        {/* Row 1b: Subscriber breakdown (every number reconciles to Total Users) */}
+        <div className="rounded-lg bg-black/20 border border-white/10 px-4 py-3 mb-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-300">Subscribers</span>
+            {stats?.breakdown && !stats.breakdown.rcCheckOk && (
+              <span className="text-[10px] text-amber-400">iPhone/comped split approximate (RevenueCat unreachable)</span>
+            )}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <div className="text-2xl font-bold">
-                {statsLoading ? '...' : stats?.paidUsers?.toLocaleString() || '0'}
+              <div className="text-2xl font-bold text-gray-100">
+                {statsLoading ? '...' : (stats?.breakdown?.freeUsers ?? '0').toLocaleString()}
               </div>
-              <div className="text-xs text-gray-400">Paid Users</div>
+              <div className="text-xs text-gray-400">Free (Side Kick)</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-green-400">
+                {statsLoading ? '...' : (stats?.breakdown?.payingTotal ?? '0').toLocaleString()}
+              </div>
+              <div className="text-xs text-gray-400">
+                Paying
+                {stats?.breakdown && (
+                  <span className="text-gray-500"> · {stats.breakdown.payingStripe} web · {stats.breakdown.payingApple} iPhone</span>
+                )}
+              </div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-yellow-400">
+                {statsLoading ? '...' : (stats?.breakdown?.comped ?? '0').toLocaleString()}
+              </div>
+              <div className="text-xs text-gray-400">
+                Comped (free grants)
+                {stats?.breakdown && stats.breakdown.unknown > 0 && (
+                  <span className="text-amber-400"> · {stats.breakdown.unknown} unverified</span>
+                )}
+              </div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-gray-400">
+                {statsLoading ? '...' : (stats?.breakdown?.systemAccounts ?? '0').toLocaleString()}
+              </div>
+              <div className="text-xs text-gray-400">System account</div>
             </div>
           </div>
+          {stats?.breakdown && (
+            <div className="mt-2 text-[11px] text-gray-500">
+              {stats.breakdown.freeUsers.toLocaleString()} free + {stats.breakdown.payingTotal} paying + {stats.breakdown.comped} comped
+              {stats.breakdown.unknown > 0 && ` + ${stats.breakdown.unknown} unverified`} + {stats.breakdown.systemAccounts} system = {stats.breakdown.totalUsers.toLocaleString()} total
+            </div>
+          )}
         </div>
-        
+
         {/* Row 2: Card Stats */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <div className="flex items-center gap-3">
