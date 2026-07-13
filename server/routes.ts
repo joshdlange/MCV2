@@ -10705,6 +10705,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   startEmailCronJobs();
   console.log('Email automation jobs initialized');
 
+  // One-time seed: 2026 CardFun Marvel Rivals - Eternal Glory (idempotent)
+  import('./seeds/seedCardfunEternalGlory').then(m => m.seedCardfunEternalGlory()).catch(err => {
+    console.error('[CardFun Seed] Error:', err);
+  });
+
   // Initialize upcoming sets: seed data + cron jobs (RSS sync + auto-expire)
   initializeUpcomingSets().catch(err => {
     console.error('[Upcoming Sets] Initialization error:', err);
