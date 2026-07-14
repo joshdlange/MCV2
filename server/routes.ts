@@ -10710,6 +10710,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error('[CardFun Seed] Error:', err);
   });
 
+  // One-time data fix: misplaced Kakawow Cosmos cards CM-I-100..108 (idempotent)
+  import('./seeds/fixKakawowCosmosCards').then(m => m.fixKakawowCosmosCards()).catch(err => {
+    console.error('[Kakawow Fix] Error:', err);
+  });
+
   // Initialize upcoming sets: seed data + cron jobs (RSS sync + auto-expire)
   initializeUpcomingSets().catch(err => {
     console.error('[Upcoming Sets] Initialization error:', err);
