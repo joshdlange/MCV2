@@ -4455,26 +4455,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unable to send messages to this user" });
       }
 
-      // For now, save to uploads directory
-      const uploadsDir = path.join(process.cwd(), 'uploads');
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-
-      const fileExtension = path.extname(req.file.originalname);
-      const filename = `${crypto.randomUUID()}${fileExtension}`;
-      const filepath = path.join(uploadsDir, filename);
-
-      fs.writeFileSync(filepath, req.file.buffer);
-
-      // Create message with image
-      const imageUrl = `/uploads/${filename}`;
-      const messageData = {
-        senderId: req.user.id,
-        recipientId,
-        content: `[Image: ${req.file.originalname}]`,
-        imageUrl
-      };
+      // Upload to Cloudinary so the image persists across deploys/instances
+      // (local disk is ephemeral in production — files vanish on every publish)
+      const imageUrl = await uploadImage(req.file.buffer, 'message_images');
 
       const message = await storage.sendMessage(req.user.id, recipientId, `[Image: ${req.file.originalname}]`, imageUrl);
       res.status(201).json({ ...message, imageUrl });

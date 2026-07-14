@@ -1101,10 +1101,12 @@ export default function Social() {
                                   src={(message as any).imageUrl} 
                                   alt="Shared" 
                                   className="rounded-lg max-w-full h-auto mb-2"
-                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                  onError={(e) => { e.currentTarget.outerHTML = '<p class="text-xs italic opacity-70 mb-1">Image no longer available</p>'; }}
                                 />
                               )}
-                              <p className="text-sm leading-relaxed">{message.content}</p>
+                              {!((message as any).imageUrl && /^\[Image:.*\]$/.test(message.content.trim())) && (
+                                <p className="text-sm leading-relaxed">{message.content}</p>
+                              )}
                               <p className={`text-xs mt-1 ${
                                 message.senderId === currentUser?.id ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
                               }`}>
