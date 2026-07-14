@@ -10698,6 +10698,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error('[Kakawow Fix] Error:', err);
   });
 
+  // One-time seed: 2026 Topps Chrome Marvel Comics — 271 subsets, 9,524 cards (idempotent)
+  import('./seeds/seedToppsChromeMarvel2026').then(m => m.seedToppsChromeMarvel2026()).catch(err => {
+    console.error('[Topps Chrome Seed] Error:', err);
+  });
+
   // Initialize upcoming sets: seed data + cron jobs (RSS sync + auto-expire)
   initializeUpcomingSets().catch(err => {
     console.error('[Upcoming Sets] Initialization error:', err);
