@@ -96,11 +96,13 @@ app.use((req, res, next) => {
     // Start the background image processor
     startImageProcessor();
     
-    // Start background pricing auto-fetch service
-    // Temporarily disabled to respect eBay API rate limits
-    // import('./ebay-pricing').then(({ startBackgroundPricingFetch }) => {
-    //   startBackgroundPricingFetch();
-    // });
+    // Nightly pricing backfill: prices cards that have an image but no
+    // pricing data yet — up to 1,000/night at 3 AM CT (see ebay-pricing.ts).
+    import('./ebay-pricing').then(({ startNightlyPricingBackfillCron }) => {
+      startNightlyPricingBackfillCron();
+    }).catch((error) => {
+      console.error('Failed to start nightly pricing backfill cron:', error);
+    });
     
 
   });

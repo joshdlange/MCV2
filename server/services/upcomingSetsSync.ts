@@ -275,7 +275,7 @@ export function startUpcomingSetsCronJobs(): void {
   cronJobsStarted = true;
 
   const rssSyncJob = new CronJob(
-    '0 */6 * * *',
+    '0 5 * * 1', // Weekly: Mondays 5 AM CT
     async () => {
       try {
         await syncRSSFeed();
@@ -304,7 +304,7 @@ export function startUpcomingSetsCronJobs(): void {
   );
   expireJob.start();
 
-  console.log('[Upcoming Sets] Cron jobs started: RSS sync (every 6h), Auto-expire (daily 6 AM CT)');
+  console.log('[Upcoming Sets] Cron jobs started: RSS sync (weekly, Mon 5 AM CT), Auto-expire (daily 6 AM CT)');
 }
 
 export async function initializeUpcomingSets(): Promise<void> {

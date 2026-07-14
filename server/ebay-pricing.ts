@@ -1,7 +1,8 @@
 import { db } from "./db";
 import { cards, cardPriceCache, cardSets } from "../shared/schema";
-import { eq, and, lt, or, isNull } from "drizzle-orm";
+import { eq, and, lt, or, isNull, isNotNull, asc, sql } from "drizzle-orm";
 import { ebayOAuthService } from './ebay-oauth';
+import { CronJob } from 'cron';
 
 interface EbaySoldItem {
   title: string;
@@ -35,7 +36,9 @@ export class EbayPricingService {
   private lastRequestTime: number = 0;
   private readonly minRequestInterval = 3000; // 3 seconds between requests
   private requestCount: number = 0;
+  private totalRequestCount: number = 0; // lifetime counter (never reset) — used for per-run call budgets
   private readonly maxRequestsPerHour = 70; // Increased limit but stay under eBay's limits
+  private hourlyLimitOverride: number | null = null; // Temporarily raised during the nightly backfill window
   private hourlyResetTime: number = Date.now() + (60 * 60 * 1000); // Reset every hour
   private failedRequests: Set<number> = new Set(); // Track failed card IDs for retry
   private lastUsedQueries: string[] = []; // Store queries for verification logging
@@ -62,7 +65,15 @@ export class EbayPricingService {
       console.log('eBay API rate limit counter reset');
     }
     
-    return this.requestCount < this.maxRequestsPerHour;
+    return this.requestCount < (this.hourlyLimitOverride ?? this.maxRequestsPerHour);
+  }
+
+  /**
+   * Temporarily raise (or restore) the hourly request ceiling.
+   * Used only by the nightly backfill, which does its own gentle pacing.
+   */
+  setHourlyLimitOverride(limit: number | null): void {
+    this.hourlyLimitOverride = limit;
   }
 
   /**
@@ -80,6 +91,12 @@ export class EbayPricingService {
     
     this.lastRequestTime = Date.now();
     this.requestCount++;
+    this.totalRequestCount++;
+  }
+
+  /** Lifetime outbound-request counter, for measuring API calls used by a batch run */
+  getTotalRequestCount(): number {
+    return this.totalRequestCount;
   }
 
   /**
@@ -305,6 +322,7 @@ export class EbayPricingService {
       console.log(`🔑 Using OAuth token: ${accessToken.substring(0, 20)}...`);
       console.log(`📋 Request headers:`, JSON.stringify(headers, null, 2));
       
+      this.totalRequestCount++; // count Browse API calls toward the call budget
       const response = await fetch(url, {
         method: 'GET',
         headers: headers,
@@ -387,6 +405,7 @@ export class EbayPricingService {
       const url = `${this.browseApiUrl}/item_summary/search?${params.toString()}`;
       console.log(`🔄 FALLBACK Browse API URL: ${url}`);
       
+      this.totalRequestCount++; // count fallback Browse API calls toward the call budget
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -1106,4 +1125,133 @@ export function startBackgroundPricingFetch() {
       console.error('Background pricing fetch error:', error);
     }
   }, 10 * 60 * 1000); // Every 10 minutes
+}
+
+/**
+ * Nightly pricing backfill: every card that has an image but has NEVER been
+ * run through the eBay pricing API gets fetched once, up to 1,000 cards per
+ * night, paced ~10s apart (≈3 hours total). Cards that error out get a -1
+ * cache row, so they count as "seen" and won't be retried nightly forever.
+ *
+ * Quota safety (eBay allows ~5,000 calls/day):
+ * - Hard budget of 3,500 actual API CALLS per run (each card can trigger
+ *   several query variations). Baseline traffic stays capped at 70/hour
+ *   (~1,470/day worst case), so total stays under 5,000.
+ * - Postgres advisory lock ensures only ONE instance runs the backfill even
+ *   when autoscale boots several instances.
+ */
+const NIGHTLY_BACKFILL_LIMIT = 1000;
+const NIGHTLY_BACKFILL_DELAY_MS = 10_000;
+const NIGHTLY_BACKFILL_CALL_BUDGET = 3500; // hard cap on outbound eBay API calls per run
+const BACKFILL_LOCK_KEY = 'nightly-pricing-backfill';
+let nightlyBackfillRunning = false;
+let nightlyBackfillLastRun: { at: Date; attempted: number; succeeded: number; failed: number; apiCalls: number } | null = null;
+
+export function getNightlyBackfillStatus() {
+  return { running: nightlyBackfillRunning, lastRun: nightlyBackfillLastRun };
+}
+
+export async function runNightlyPricingBackfill(maxCards: number = NIGHTLY_BACKFILL_LIMIT): Promise<void> {
+  if (nightlyBackfillRunning) {
+    console.warn('[PricingBackfill] Previous run still in progress — skipping');
+    return;
+  }
+  nightlyBackfillRunning = true;
+  let succeeded = 0;
+  let failed = 0;
+  let attempted = 0;
+  let callsUsed = 0;
+  let lockAcquired = false;
+
+  try {
+    // Cross-instance guard: only one instance may run the nightly backfill
+    const lockResult = await db.execute(
+      sql`SELECT pg_try_advisory_lock(hashtext(${BACKFILL_LOCK_KEY})) AS locked`
+    );
+    lockAcquired = Boolean((lockResult.rows[0] as any)?.locked);
+    if (!lockAcquired) {
+      console.log('[PricingBackfill] Another instance holds the backfill lock — skipping on this instance');
+      return;
+    }
+
+    const targets = await db
+      .select({ cardId: cards.id })
+      .from(cards)
+      .leftJoin(cardPriceCache, eq(cards.id, cardPriceCache.cardId))
+      .where(and(
+        isNull(cardPriceCache.cardId),      // never priced
+        isNotNull(cards.frontImageUrl)       // only cards that have an image
+      ))
+      .orderBy(asc(cards.id))
+      .limit(maxCards);
+
+    if (targets.length === 0) {
+      console.log('[PricingBackfill] No unpriced cards with images remain — nothing to do');
+      return;
+    }
+
+    console.log(`[PricingBackfill] Starting nightly run: ${targets.length} cards, budget ${NIGHTLY_BACKFILL_CALL_BUDGET} API calls`);
+    // The backfill paces itself (~360 cards/hour); raise the shared hourly
+    // ceiling moderately for the run. The per-run call budget below is the
+    // real quota guard.
+    ebayPricingService.setHourlyLimitOverride(600);
+    const callsAtStart = ebayPricingService.getTotalRequestCount();
+
+    for (const { cardId } of targets) {
+      callsUsed = ebayPricingService.getTotalRequestCount() - callsAtStart;
+      if (callsUsed >= NIGHTLY_BACKFILL_CALL_BUDGET) {
+        console.log(`[PricingBackfill] Call budget reached (${callsUsed} calls after ${attempted} cards) — stopping for tonight`);
+        break;
+      }
+      attempted++;
+      try {
+        const result = await ebayPricingService.fetchAndCacheCardPricing(cardId);
+        if (result && result.avgPrice >= 0) succeeded++;
+        else failed++;
+      } catch (error) {
+        failed++;
+        console.error(`[PricingBackfill] Card ${cardId} failed:`, error);
+      }
+      await new Promise(resolve => setTimeout(resolve, NIGHTLY_BACKFILL_DELAY_MS));
+    }
+
+    callsUsed = ebayPricingService.getTotalRequestCount() - callsAtStart;
+    console.log(`[PricingBackfill] Done: ${succeeded} priced, ${failed} failed of ${attempted} cards (${callsUsed} API calls)`);
+  } catch (error) {
+    console.error('[PricingBackfill] Run aborted:', error);
+  } finally {
+    ebayPricingService.setHourlyLimitOverride(null);
+    nightlyBackfillRunning = false;
+    nightlyBackfillLastRun = { at: new Date(), attempted, succeeded, failed, apiCalls: callsUsed };
+    if (lockAcquired) {
+      try {
+        await db.execute(sql`SELECT pg_advisory_unlock(hashtext(${BACKFILL_LOCK_KEY}))`);
+      } catch (unlockError) {
+        console.error('[PricingBackfill] Failed to release advisory lock:', unlockError);
+      }
+    }
+  }
+}
+
+let nightlyBackfillCronStarted = false;
+
+export function startNightlyPricingBackfillCron(): void {
+  if (nightlyBackfillCronStarted) return;
+  nightlyBackfillCronStarted = true;
+
+  const job = new CronJob(
+    '0 3 * * *', // 3:00 AM daily
+    async () => {
+      try {
+        await runNightlyPricingBackfill();
+      } catch (error) {
+        console.error('[PricingBackfill] Cron error:', error);
+      }
+    },
+    null,
+    false,
+    'America/Chicago'
+  );
+  job.start();
+  console.log(`[PricingBackfill] Cron started: daily 3 AM CT, up to ${NIGHTLY_BACKFILL_LIMIT} unpriced cards/night`);
 }
