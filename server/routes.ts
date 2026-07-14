@@ -18,7 +18,7 @@ import { proxyImage } from "./image-proxy";
 import { uploadImage } from "./cloudinary";
 import { db } from "./db";
 import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userWishlists, badges, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks, blocks, friends, userScanLogs, pcBinders, pcBinderCards, pcBinderShareLinks, PC_BINDER_CATEGORIES, SIDE_KICK_CARD_LIMIT } from "../shared/schema";
-import { imageContributionXp } from "../shared/xp";
+import { imageContributionXp, computeXpProgress } from "../shared/xp";
 import {
   computeUserXp,
   getRecentXpEvents,
@@ -562,22 +562,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Admin access required' });
       }
       
-      const users = await storage.getAllUsers();
-      
-      const cardCountsResult = await db.execute(sql`
-        SELECT user_id, COUNT(*) as card_count 
-        FROM user_collections 
-        GROUP BY user_id
-      `);
+      // All aggregates are set-based (GROUP BY user_id) so this stays fast
+      // regardless of user count — no per-user queries.
+      const [users, cardCountsResult, badgeXpResult, imageCountResult, ledgerXpResult] = await Promise.all([
+        storage.getAllUsers(),
+        db.execute(sql`
+          SELECT user_id, COUNT(*) as card_count 
+          FROM user_collections 
+          GROUP BY user_id
+        `),
+        db.execute(sql`
+          SELECT ub.user_id, SUM(
+            COALESCE(b.points, CASE LOWER(COALESCE(b.rarity, 'bronze'))
+              WHEN 'bronze' THEN 10
+              WHEN 'silver' THEN 25
+              WHEN 'gold' THEN 50
+              WHEN 'platinum' THEN 100
+              WHEN 'special' THEN 250
+              ELSE 10 END)
+          ) as badge_xp
+          FROM user_badges ub
+          JOIN badges b ON ub.badge_id = b.id
+          GROUP BY ub.user_id
+        `),
+        db.execute(sql`
+          SELECT user_id, COUNT(*) as approved_count
+          FROM pending_card_images
+          WHERE status = 'approved'
+          GROUP BY user_id
+        `),
+        db.execute(sql`
+          SELECT user_id, SUM(points) as ledger_xp
+          FROM xp_events
+          WHERE event_type IN ('card_added', 'subset_binder_share_first', 'subset_binder_share_daily')
+          GROUP BY user_id
+        `),
+      ]);
+
       const cardCountMap = new Map<number, number>();
       for (const row of cardCountsResult.rows as any[]) {
         cardCountMap.set(row.user_id, parseInt(row.card_count));
       }
+      const badgeXpMap = new Map<number, number>();
+      for (const row of badgeXpResult.rows as any[]) {
+        badgeXpMap.set(row.user_id, parseInt(row.badge_xp) || 0);
+      }
+      const imageXpMap = new Map<number, number>();
+      for (const row of imageCountResult.rows as any[]) {
+        imageXpMap.set(row.user_id, imageContributionXp(parseInt(row.approved_count) || 0));
+      }
+      const ledgerXpMap = new Map<number, number>();
+      for (const row of ledgerXpResult.rows as any[]) {
+        ledgerXpMap.set(row.user_id, parseInt(row.ledger_xp) || 0);
+      }
       
-      const usersWithCounts = users.map(user => ({
-        ...user,
-        cardsInCollection: cardCountMap.get(user.id) || 0
-      }));
+      const usersWithCounts = users.map(user => {
+        const totalXp = (badgeXpMap.get(user.id) || 0)
+          + (imageXpMap.get(user.id) || 0)
+          + (ledgerXpMap.get(user.id) || 0);
+        return {
+          ...user,
+          cardsInCollection: cardCountMap.get(user.id) || 0,
+          totalXp,
+          collectorLevel: computeXpProgress(totalXp).level,
+        };
+      });
       
       res.json(usersWithCounts);
     } catch (error) {

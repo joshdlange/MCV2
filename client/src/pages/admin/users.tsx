@@ -11,7 +11,7 @@ import { Edit, Trash2, UserPlus, Shield, User, ArrowUp, ArrowDown, ArrowUpDown }
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-type SortField = 'lastLogin' | 'plan' | 'createdAt' | 'cardsInCollection' | null;
+type SortField = 'lastLogin' | 'plan' | 'createdAt' | 'cardsInCollection' | 'collectorLevel' | null;
 type SortDirection = 'asc' | 'desc';
 
 interface User {
@@ -24,6 +24,8 @@ interface User {
   createdAt: string;
   lastLogin?: string;
   cardsInCollection?: number;
+  totalXp?: number;
+  collectorLevel?: number;
 }
 
 export default function AdminUsers() {
@@ -33,6 +35,7 @@ export default function AdminUsers() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<SortField>('lastLogin');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [levelFilter, setLevelFilter] = useState<string>('all');
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -110,10 +113,21 @@ export default function AdminUsers() {
       : <ArrowDown className="w-4 h-4 ml-1" />;
   };
 
+  const matchesLevelFilter = (user: User) => {
+    if (levelFilter === 'all') return true;
+    const lvl = user.collectorLevel || 1;
+    if (levelFilter === '1-4') return lvl >= 1 && lvl <= 4;
+    if (levelFilter === '5-9') return lvl >= 5 && lvl <= 9;
+    if (levelFilter === '10-19') return lvl >= 10 && lvl <= 19;
+    if (levelFilter === '20+') return lvl >= 20;
+    return true;
+  };
+
   const filteredUsers = users
     .filter((user: User) => 
-      user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+      (user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase())) &&
+      matchesLevelFilter(user)
     )
     .sort((a: User, b: User) => {
       if (!sortField) return 0;
@@ -133,6 +147,9 @@ export default function AdminUsers() {
       } else if (sortField === 'cardsInCollection') {
         aValue = a.cardsInCollection || 0;
         bValue = b.cardsInCollection || 0;
+      } else if (sortField === 'collectorLevel') {
+        aValue = a.collectorLevel || 0;
+        bValue = b.collectorLevel || 0;
       }
       
       if (sortDirection === 'asc') {
@@ -176,6 +193,18 @@ export default function AdminUsers() {
             className="bg-white"
           />
         </div>
+        <Select value={levelFilter} onValueChange={setLevelFilter}>
+          <SelectTrigger className="w-44 bg-white">
+            <SelectValue placeholder="Collector Level" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Levels</SelectItem>
+            <SelectItem value="1-4">Level 1–4</SelectItem>
+            <SelectItem value="5-9">Level 5–9</SelectItem>
+            <SelectItem value="10-19">Level 10–19</SelectItem>
+            <SelectItem value="20+">Level 20+</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Users Table */}
@@ -204,6 +233,15 @@ export default function AdminUsers() {
                     {getSortIcon('cardsInCollection')}
                   </div>
                 </th>
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('collectorLevel')}
+                >
+                  <div className="flex items-center">
+                    Level
+                    {getSortIcon('collectorLevel')}
+                  </div>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Onboarding</th>
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
@@ -229,13 +267,13 @@ export default function AdminUsers() {
             <tbody className="bg-white divide-y divide-gray-200">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
                     Loading users...
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
                     No users found
                   </td>
                 </tr>
@@ -270,6 +308,11 @@ export default function AdminUsers() {
                       <span className={`font-medium ${(user.cardsInCollection || 0) > 0 ? 'text-green-700' : 'text-gray-400'}`}>
                         {user.cardsInCollection || 0}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <Badge className="bg-blue-100 text-blue-800 border-blue-300" title={`${user.totalXp ?? 0} XP`}>
+                        Lv {user.collectorLevel || 1}
+                      </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {user.onboardingComplete ? (
