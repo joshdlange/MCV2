@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Star, Edit, Clock, Lock, Hammer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,8 +21,6 @@ interface SetThumbnailProps {
 }
 
 export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminControls, onEdit, mainSetName }: SetThumbnailProps) {
-  const [firstCardImage, setFirstCardImage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [showStillPopulatingModal, setShowStillPopulatingModal] = useState(false);
   const { isAdminMode } = useAppStore();
   const [location] = useLocation();
@@ -46,38 +45,16 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
     return false;
   };
 
-  useEffect(() => {
-    if (isPlaceholderImage(set.imageUrl) && set.id && set.totalCards > 0) {
-      setLoading(true);
-      fetchFirstCardImage();
-    }
-  }, [set.id, set.imageUrl]);
-
-  const fetchFirstCardImage = async () => {
-    try {
-      const response = await fetch(`/api/cards?setId=${set.id}&hasImage=true&pageSize=1`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      const cards = data.items ?? data.cards ?? data;
-      
-      if (Array.isArray(cards) && cards.length > 0) {
-        const cardWithImage = cards.find((card: any) => 
-          card.frontImageUrl && 
-          !isPlaceholderImage(card.frontImageUrl)
-        );
-        
-        if (cardWithImage) {
-          setFirstCardImage(cardWithImage.frontImageUrl);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch first card image:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const needsFirstCardImage = isPlaceholderImage(set.imageUrl) && !!set.id && set.totalCards > 0;
+  const { data: firstCardData, isLoading: loading } = useQuery<{ imageUrl: string | null }>({
+    queryKey: [`/api/card-sets/${set.id}/first-card-image`],
+    enabled: needsFirstCardImage,
+    staleTime: 10 * 60 * 1000,
+  });
+  const firstCardImage =
+    firstCardData?.imageUrl && !isPlaceholderImage(firstCardData.imageUrl)
+      ? firstCardData.imageUrl
+      : null;
 
   const convertGoogleDriveUrl = (url: string) => {
     if (url.includes('drive.google.com')) {

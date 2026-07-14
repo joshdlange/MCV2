@@ -1535,6 +1535,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Lightweight first-card-image lookup for set thumbnails.
+  // Single indexed LIMIT 1 query (no COUNT), cached in memory for 10 minutes —
+  // browse pages fire one of these per placeholder set tile.
+  const firstCardImageCache = new Map<number, { url: string | null; at: number }>();
+  const FIRST_CARD_IMAGE_TTL = 10 * 60 * 1000;
+  app.get("/api/card-sets/:id/first-card-image", async (req, res) => {
+    try {
+      const setId = parseInt(req.params.id);
+      if (isNaN(setId)) {
+        return res.status(400).json({ message: "Invalid set id" });
+      }
+      const cached = firstCardImageCache.get(setId);
+      if (cached && Date.now() - cached.at < FIRST_CARD_IMAGE_TTL) {
+        res.set('Cache-Control', 'public, max-age=600');
+        return res.json({ imageUrl: cached.url });
+      }
+      const [row] = await db
+        .select({ frontImageUrl: cards.frontImageUrl })
+        .from(cards)
+        .where(and(
+          eq(cards.setId, setId),
+          sql`${cards.frontImageUrl} IS NOT NULL AND ${cards.frontImageUrl} != ''`
+        ))
+        .limit(1);
+      const url = row?.frontImageUrl ?? null;
+      firstCardImageCache.set(setId, { url, at: Date.now() });
+      // Keep the cache bounded
+      if (firstCardImageCache.size > 5000) {
+        const oldest = firstCardImageCache.keys().next().value;
+        if (oldest !== undefined) firstCardImageCache.delete(oldest);
+      }
+      res.set('Cache-Control', 'public, max-age=600');
+      res.json({ imageUrl: url });
+    } catch (error) {
+      console.error('First card image error:', error);
+      res.status(500).json({ message: "Failed to fetch first card image" });
+    }
+  });
+
   // Get cards by set ID
   app.get("/api/sets/:setId/cards", async (req, res) => {
     try {

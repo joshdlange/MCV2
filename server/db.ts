@@ -11,7 +11,7 @@ if (!process.env.DATABASE_URL) {
 // Create optimized PostgreSQL connection pool for Replit
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  max: 5,
+  max: 20,
   idleTimeoutMillis: 60000,
   connectionTimeoutMillis: 15000,
   acquireTimeoutMillis: 20000,
