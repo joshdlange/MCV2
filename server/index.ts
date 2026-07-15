@@ -103,6 +103,15 @@ app.use((req, res, next) => {
     }).catch((error) => {
       console.error('Failed to start nightly pricing backfill cron:', error);
     });
+
+    // Nightly COMC → Cloudinary image migration: copies hotlinked COMC images
+    // into our own Cloudinary account — up to 450/night at 1:30 AM CT
+    // (see services/imageMigration.ts).
+    import('./services/imageMigration').then(({ startImageMigrationCron }) => {
+      startImageMigrationCron();
+    }).catch((error) => {
+      console.error('Failed to start image migration cron:', error);
+    });
     
 
   });

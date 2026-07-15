@@ -1584,6 +1584,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: manually trigger / check the COMC → Cloudinary image migration
+  // (normally runs nightly at 1:30 AM CT — see services/imageMigration.ts).
+  app.post("/api/admin/run-image-migration", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      const { runImageMigrationBatch, getImageMigrationStatus } = await import('./services/imageMigration');
+      const status = getImageMigrationStatus();
+      if (status.running) {
+        return res.status(409).json({ message: 'Migration already running', status });
+      }
+      const rawMax = req.body?.maxCards;
+      const maxCards = rawMax === undefined ? 450 : parseInt(rawMax);
+      if (!Number.isInteger(maxCards) || maxCards < 1 || maxCards > 1000) {
+        return res.status(400).json({ message: 'maxCards must be an integer between 1 and 1000' });
+      }
+      // Fire and forget — the run paces itself over many minutes
+      runImageMigrationBatch(maxCards).catch(err =>
+        console.error('[ImageMigration] Manual run failed:', err)
+      );
+      res.json({ message: `Image migration started (up to ${maxCards} cards)` });
+    } catch (error) {
+      console.error('Trigger image migration error:', error);
+      res.status(500).json({ message: 'Failed to start image migration' });
+    }
+  });
+
+  app.get("/api/admin/image-migration-status", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      const { getImageMigrationStatus } = await import('./services/imageMigration');
+      res.json(getImageMigrationStatus());
+    } catch (error) {
+      console.error('Image migration status error:', error);
+      res.status(500).json({ message: 'Failed to get migration status' });
+    }
+  });
+
   // Lightweight first-card-image lookup for set thumbnails.
   // Single indexed LIMIT 1 query (no COUNT), cached in memory for 10 minutes —
   // browse pages fire one of these per placeholder set tile.
