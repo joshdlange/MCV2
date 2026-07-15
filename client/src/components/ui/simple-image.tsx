@@ -24,12 +24,8 @@ function getOptimizedCloudinaryUrl(src: string, width: number): string {
     }
   }
   
-  // Use Cloudinary fetch for COMC images only
-  // Note: eBay blocks Cloudinary's servers (401), so eBay images are served directly
-  if (src.includes('comc.com')) {
-    return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/fetch/w_${width},q_auto,f_auto/${src}`;
-  }
-  
+  // COMC and eBay images are served directly — both return 401 when fetched
+  // through Cloudinary's fetch proxy.
   return src;
 }
 
