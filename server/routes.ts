@@ -169,11 +169,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(200).json(assetLinks);
   });
 
-  // Create admin user endpoint (only for initial setup)
-  app.post("/api/admin/create-user", async (req, res) => {
+  // Create admin user endpoint (legacy initial-setup tool — now admin-only)
+  app.post("/api/admin/create-user", authenticateUser, async (req: any, res) => {
     try {
+      if (!req.user.isAdmin) {
+        console.warn(`[Security] Denied /api/admin/create-user attempt by user ${req.user.id} (not admin)`);
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
       const adminData = {
-        firebaseUid: 'admin-' + Date.now(),
+        firebaseUid: 'admin-system',
         username: 'admin',
         email: 'admin@marvelcardvault.com',
         displayName: 'Admin User',
@@ -181,13 +186,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         plan: 'SUPER_HERO',
         subscriptionStatus: 'active'
       };
-      
-      const existingUser = await storage.getUserByFirebaseUid(adminData.firebaseUid);
+
+      // Idempotent: match by stable email (the old check used a timestamped
+      // firebaseUid that never matched, so every call created a new admin row)
+      const existingUser = await storage.getUserByEmail(adminData.email);
       if (existingUser) {
         return res.json({ message: 'Admin user already exists', user: existingUser });
       }
-      
+
       const user = await storage.createUser(adminData);
+      console.log(`[Security] Admin user created via /api/admin/create-user by user ${req.user.id}`);
       res.json({ message: 'Admin user created', user });
     } catch (error) {
       console.error('Error creating admin user:', error);
@@ -2985,9 +2993,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Find and update card image endpoint
-  app.post("/api/admin/find-card-image/:cardId", async (req, res) => {
+  // Find and update card image endpoint (admin-only)
+  app.post("/api/admin/find-card-image/:cardId", authenticateUser, async (req: any, res) => {
     try {
+      if (!req.user.isAdmin) {
+        console.warn(`[Security] Denied /api/admin/find-card-image attempt by user ${req.user.id} (not admin)`);
+        return res.status(403).json({ message: 'Admin access required' });
+      }
       const cardId = parseInt(req.params.cardId);
       if (isNaN(cardId)) {
         return res.status(400).json({ message: "Invalid card ID" });
@@ -3020,9 +3032,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Test eBay integration with simplified logic
-  app.post("/api/admin/test-ebay-integration", async (req, res) => {
+  // Test eBay integration with simplified logic (admin-only)
+  app.post("/api/admin/test-ebay-integration", authenticateUser, async (req: any, res) => {
     try {
+      if (!req.user.isAdmin) {
+        console.warn(`[Security] Denied /api/admin/test-ebay-integration attempt by user ${req.user.id} (not admin)`);
+        return res.status(403).json({ message: 'Admin access required' });
+      }
       const { testSingleCard, checkConfiguration } = await import('./ebay-image-finder');
       
       // Check configuration first

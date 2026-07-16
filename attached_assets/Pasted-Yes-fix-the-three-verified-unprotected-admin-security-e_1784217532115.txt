@@ -1,0 +1,75 @@
+Yes — fix the three verified unprotected admin/security endpoints immediately.
+
+Context:
+The admin audit found three confirmed unprotected endpoints:
+1. Create admin user
+2. Find card image
+3. Test eBay integration
+
+The most urgent issue is Create admin user:
+- It has no login/admin protection.
+- A bug means every call creates a new admin account in the production database.
+- This must be locked down immediately.
+
+Goal:
+Patch only these security holes with the smallest safe change. Do not do broader admin cleanup yet.
+
+Must do:
+- Add proper authentication and admin-only authorization to the “Create admin user” endpoint.
+- Prevent unauthenticated users from calling it.
+- Prevent non-admin users from calling it.
+- Fix the bug where every call can create a new admin account.
+- Make the endpoint idempotent or safely guarded so it cannot spam admin rows.
+- Add proper authentication and admin-only authorization to the “Find card image” endpoint.
+- Add proper authentication and admin-only authorization to the “Test eBay integration” endpoint.
+- Confirm these endpoints return 401/403 for unauthenticated users.
+- Confirm these endpoints return 403 for authenticated non-admin users.
+- Confirm these endpoints work only for authenticated admin users.
+- Confirm no eBay API calls can be triggered by unauthenticated users.
+- Confirm no card images can be overwritten by unauthenticated or non-admin users.
+- Confirm no admin users can be created by unauthenticated or non-admin users.
+- Add logging where appropriate for denied access attempts, consistent with existing logging patterns.
+- Keep this as a targeted security patch.
+
+Must not do:
+- Do not delete admin pages yet.
+- Do not remove old scripts yet.
+- Do not clean up expired campaigns yet.
+- Do not build Google Drive sync.
+- Do not change normal user-facing app behavior.
+- Do not change PC Binders.
+- Do not change card limits.
+- Do not change Resend/Brevo email behavior.
+- Do not send emails.
+- Do not run imports.
+- Do not touch Android native files.
+- Do not touch iOS native files.
+- Do not broadly refactor admin auth.
+- Do not create new admin tools.
+- Do not change subscription, Stripe, RevenueCat, Shippo, XP, marketplace, or trade behavior.
+
+Preserve:
+- Existing admin auth pattern.
+- Existing admin-only endpoints that are already protected.
+- Existing image approval behavior.
+- Existing eBay integration behavior for authorized admins.
+- Existing card image update behavior for authorized admins.
+- Existing production app behavior.
+
+QA:
+- Unauthenticated request to Create admin user returns 401/403.
+- Authenticated non-admin request to Create admin user returns 403.
+- Authenticated admin request works only as intended.
+- Repeated calls to Create admin user do not create duplicate/spam admin rows.
+- Unauthenticated request to Find card image returns 401/403.
+- Authenticated non-admin request to Find card image returns 403.
+- Authenticated admin request to Find card image works.
+- Unauthenticated request to Test eBay integration returns 401/403.
+- Authenticated non-admin request to Test eBay integration returns 403.
+- Authenticated admin request to Test eBay integration works.
+- No existing protected admin endpoints regressed.
+- No user-facing routes regressed.
+- No emails were sent.
+- No imports were run.
+- Provide changed files and exact endpoint names patched.
+- Confirm this is safe to publish as an urgent security patch.
