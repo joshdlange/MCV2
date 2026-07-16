@@ -1,0 +1,73 @@
+We need a low-friction Google Drive image sync for Marvel Card Vault.
+
+Context:
+- I do not want to set up Google Cloud, service accounts, or Drive API credentials right now.
+- The Google Drive folder is shared as “anyone with the link can view.”
+- Drive folder URL:
+  https://drive.google.com/drive/folders/1gjCeQHzPcW8py46NVKCj-JmkkMsbP4cr?usp=drive_link
+- Folder hierarchy:
+  Main Set Folder
+    → Subset Folder
+      → Card Number Folder
+        → two images inside each card folder
+
+Goal:
+Build an admin-only manual sync/dry-run tool that can read this public/shared Google Drive folder structure, map images to MCV cards, upload only new images to Cloudinary, and avoid duplicates.
+
+Must do:
+- First investigate whether the current Replit/server environment can read the public Google Drive folder contents without OAuth/service-account setup.
+- Try using a safe server-side approach such as a public Drive folder listing package or direct public folder parsing.
+- If public folder scanning is unreliable or blocked, stop and report that clearly.
+- Do not require Google Cloud setup in this version.
+- Use the shared Drive folder URL or root folder ID as config.
+- Parse the hierarchy:
+  - main set folder
+  - subset folder
+  - card number folder
+  - image files
+- Use Drive file IDs or public file URLs as source identifiers for dedupe.
+- Create/import-history tracking so the same image is not uploaded twice.
+- Build dry-run mode first.
+- Default to dry-run.
+- Match existing MCV cards by main set, subset, and card number.
+- Upload matched, new images to Cloudinary only in real-import mode.
+- Do not overwrite existing card images by default.
+- Generate a report:
+  - folders scanned
+  - images found
+  - matched cards
+  - unmatched folders
+  - ambiguous front/back images
+  - skipped duplicates
+  - already imported files
+  - upload successes/failures
+- Make this admin-only.
+- Start as a manual admin action, not a scheduled job.
+
+Must not do:
+- Do not set up Google Cloud.
+- Do not require service account credentials.
+- Do not make this public.
+- Do not upload duplicates.
+- Do not overwrite existing images by default.
+- Do not guess uncertain matches.
+- Do not change card ownership/user collection data.
+- Do not change normal user image upload behavior.
+- Do not touch PC Binders, XP, subscriptions, auth, Android, iOS, Stripe, Shippo, or Resend.
+- Do not send emails.
+
+Preserve:
+- Existing card database.
+- Existing Cloudinary setup.
+- Existing image approval flow.
+- Existing admin permissions.
+
+QA:
+- Run dry-run against the shared folder.
+- Confirm folder names are parsed correctly.
+- Confirm file IDs/source URLs are captured.
+- Confirm duplicate detection works.
+- Confirm unmatched/ambiguous items are reported, not guessed.
+- Run real import only on a tiny sample if dry-run looks correct.
+- Run the same import twice and confirm the second run skips already-imported images.
+- Confirm card pages show imported images.

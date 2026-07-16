@@ -6,3 +6,9 @@ id = "z1a5hiHdU3eO12_t2JBPG"
 uri = "file://attached_assets/cards_missing_images.csv"
 type = "table"
 title = "Cards Missing Images (108,434 rows)"
+
+[[outputs]]
+id = "SSdIaB3fsoQ9Ahcz1fM-l"
+uri = "file://ADMIN_AUDIT.md"
+type = "text"
+title = "Admin Tools Audit & Cleanup Plan"

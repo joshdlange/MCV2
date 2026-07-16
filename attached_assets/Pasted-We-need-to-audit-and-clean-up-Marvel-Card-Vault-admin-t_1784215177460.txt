@@ -1,0 +1,121 @@
+We need to audit and clean up Marvel Card Vault admin tools before adding more admin functionality.
+
+Context:
+Over the last year, several admin tools/pages/routes/scripts have been built. Some are stale, some are no longer used, and some need to be updated so they are actually usable. Before we add any new Google Drive / Cloudinary image sync admin tool, we need to understand and clean up the existing admin surface.
+
+Goal:
+Create a complete inventory and cleanup plan for all admin tools, admin routes, admin API endpoints, admin scripts, and admin cron/jobs. Do not rebuild everything yet. First audit, classify, and recommend what to keep/update/hide/delete.
+
+Must do:
+- Search the full codebase for admin-related pages, routes, APIs, scripts, jobs, utilities, and components.
+- Include anything related to:
+  - admin dashboard
+  - image approvals
+  - card image management
+  - card/set import tools
+  - user management
+  - subscription/admin billing views
+  - email/test email/campaign tools
+  - Resend/Brevo tools
+  - contact sync
+  - XP/events/admin badge tools
+  - PC Binder admin visibility if any exists
+  - marketplace/trade/admin tools if any exist
+  - cron jobs or manual admin scripts
+- For each tool/route/endpoint/script, document:
+  - name
+  - file path(s)
+  - URL/route if applicable
+  - API endpoint if applicable
+  - what it does
+  - whether it is linked in the admin UI
+  - whether it appears actively used
+  - whether it touches production data
+  - whether it sends email
+  - whether it uploads/deletes/modifies images
+  - whether it changes user/card/subscription data
+  - whether it is protected by admin-only auth
+  - whether it has logging/error handling
+  - whether it appears stale/broken/duplicative
+  - recommendation: KEEP, UPDATE, HIDE, DELETE/ARCHIVE, or DANGEROUS/NEEDS GUARDRAILS
+- Identify any admin endpoint that is not properly admin-protected.
+- Identify any admin tool that can modify production data without confirmation/dry-run.
+- Identify duplicate or overlapping tools.
+- Identify stale tools that reference old providers, old limits, old features, or deprecated flows.
+- Identify admin tools that still mention Brevo sending if email sending has moved to Resend.
+- Identify any admin tools that still reference old Side Kick 250-card copy.
+- Identify any admin tools that are likely confusing or unsafe for non-technical admin use.
+- Produce a recommended cleanup roadmap in priority order.
+
+Must not do:
+- Do not delete files yet.
+- Do not remove routes yet.
+- Do not change production behavior yet unless you find a serious security issue and ask first.
+- Do not send emails.
+- Do not run imports.
+- Do not run destructive scripts.
+- Do not change card data.
+- Do not change user data.
+- Do not change subscription data.
+- Do not touch Android native files.
+- Do not touch iOS native files.
+- Do not build the Google Drive image sync yet.
+- Do not broadly refactor admin architecture yet.
+
+Preserve:
+- Existing production app behavior.
+- Existing admin auth protections.
+- Existing image approval flow.
+- Existing Resend password reset behavior.
+- Existing PC Binder functionality.
+- Existing card limit logic.
+- Existing user-facing routes.
+
+Output format:
+Create a clear report with sections:
+
+1. Admin Tool Inventory
+For each tool:
+- Tool name
+- Files
+- Route/API
+- Purpose
+- Protection status
+- Production data risk
+- Current status
+- Recommendation
+
+2. Security / Protection Issues
+List anything not properly admin-only.
+
+3. Dangerous Tools
+List anything that can modify, delete, import, upload, email, or sync data.
+
+4. Stale or Duplicate Tools
+List tools that look outdated or overlapping.
+
+5. Recommended Admin Navigation
+Suggest what should appear in the admin sidebar/nav going forward.
+
+6. Cleanup Roadmap
+Priority 1:
+- Hide/disable dangerous stale tools
+- Fix missing admin protection
+- Remove dead links
+
+Priority 2:
+- Update useful admin tools so they are usable
+- Standardize UI
+- Add confirmations/dry-run/reporting
+
+Priority 3:
+- Add new Google Drive / Cloudinary image sync tool after admin cleanup
+
+7. Final Recommendation
+Tell me exactly where to start and what not to touch yet.
+
+QA:
+- Confirm no production data was modified.
+- Confirm no emails were sent.
+- Confirm no imports were run.
+- Confirm this was audit/report only.
