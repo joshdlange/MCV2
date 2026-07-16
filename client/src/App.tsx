@@ -48,6 +48,8 @@ const AdminImageApprovals = lazy(() => import("@/pages/admin/image-approvals"));
 const AdminMigrationConsole = lazy(() => import("@/pages/admin/migration-console"));
 const AdminBaseSetPopulation = lazy(() => import("@/pages/admin/base-set-population"));
 const AdminAnalytics = lazy(() => import("@/pages/admin/analytics"));
+const AdminNotifications = lazy(() => import("@/pages/admin/notifications"));
+const AdminLegacyTools = lazy(() => import("@/pages/admin/legacy-tools"));
 const CardSearch = lazy(() => import("@/pages/card-search"));
 const MarketTrends = lazy(() => import("@/pages/market-trends"));
 const UpcomingSets = lazy(() => import("@/pages/upcoming-sets"));
@@ -200,6 +202,8 @@ function Router() {
           <Route path="/admin/migration-console" component={AdminMigrationConsole} />
           <Route path="/admin/base-set-population" component={AdminBaseSetPopulation} />
           <Route path="/admin/analytics" component={AdminAnalytics} />
+          <Route path="/admin/notifications" component={AdminNotifications} />
+          <Route path="/admin/legacy-tools" component={AdminLegacyTools} />
           <Route path="/scan" component={ScanToAdd} />
           <Route path="/collectors/:username" component={CollectorProfile} />
           <Route path="/subscribe" component={Subscribe} />

@@ -74,6 +74,9 @@ export function PriceChartingImporter() {
   };
 
   const startImport = async () => {
+    if (!window.confirm("Start the PriceCharting import? This writes pricing data to the live database and can take a long time. Are you sure?")) {
+      return;
+    }
     if (!config?.ready) {
       toast({
         title: "Configuration Error",

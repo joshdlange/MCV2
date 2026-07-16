@@ -1,0 +1,189 @@
+We need to reorganize and clean up the Marvel Card Vault admin area, but we do NOT want to recklessly delete tools.
+
+Context:
+The admin dashboard has grown over time. Some tools are actively used, some are stale, some are duplicates, and some are hidden inside large pages like Data Management or Image Automation. The current experience is confusing because too many unrelated admin tools are grouped together.
+
+We recently completed an ADMIN_AUDIT.md report. Use that audit as reference, but do not blindly delete things.
+
+Goal:
+Create a cleaner, more logical admin structure that groups tools by function, keeps current production tools easy to access, and moves stale/risky/rarely-used tools out of the main admin flow without breaking anything.
+
+Important principle:
+Do not delete tools unless they are clearly dead and safe to remove. Prefer reorganizing, hiding, archiving, or moving tools into an “Advanced / Legacy Tools” area first.
+
+Desired admin organization:
+1. Users
+   - User lookup
+   - User permissions/admin roles
+   - Subscription status
+   - Plan/card limit visibility
+   - Account troubleshooting
+
+2. Cards & Sets
+   - Add/manage cards
+   - Manage main sets
+   - Manage subsets
+   - Unassigned sets
+   - Base set population
+   - Upcoming sets tracker
+   - Card database tools
+
+3. Images
+   - Image approvals
+   - Image automation
+   - Cloudinary tools
+   - Missing image tools
+   - eBay/COMC image lookup tools
+   - Image processing status
+   - Any image migration/import tools
+
+4. Notifications
+   - Email campaign tools
+   - Resend test email tools
+   - Monthly digest/nudge tools
+   - Future in-app notification tools
+   - Notification logs/status
+   - Do not send emails during this cleanup
+
+5. APIs & Integrations
+   - eBay API test/status
+   - Cloudinary API status
+   - Resend status
+   - RevenueCat status/audit
+   - Stripe/Shippo integration status if present
+   - External API diagnostics
+
+6. Data & Migrations
+   - Migration console
+   - Data repair scripts
+   - Bulk update tools
+   - One-time migration tools
+   - Dangerous tools should require confirmation/dry-run
+   - Likely stale/dead tools should be moved here or hidden
+
+7. Advanced / Legacy Tools
+   - Rarely used tools
+   - Old tools that may still be useful later
+   - Tools not ready for normal admin use
+   - Tools that should not be in the main dashboard
+   - Clearly label these as advanced/legacy
+
+Must do:
+- Review ADMIN_AUDIT.md and the existing admin routes/pages/components.
+- Inventory the tools currently exposed on the admin dashboard.
+- Inventory tools hidden inside larger pages like Data Management and Image Automation.
+- Propose and implement a cleaner admin navigation structure based on the sections above.
+- Group tools by function, not by when they were built.
+- Make commonly used tools easier to access.
+- Move stale, dangerous, confusing, duplicate, or rarely used tools out of the main dashboard and into Advanced / Legacy Tools, or hide them from navigation.
+- Do not remove backend code for moved/legacy tools unless clearly safe.
+- Add labels/badges where helpful:
+  - Active
+  - Legacy
+  - Advanced
+  - Dangerous
+  - Needs Review
+  - Coming Soon
+- Dangerous tools should not be one-click actions from the main admin dashboard.
+- Dangerous tools should have clear warning text.
+- Tools that modify production data should require confirmation.
+- Tools that import/migrate/bulk-update data should support dry-run where already available.
+- If dry-run is not available, label the tool as dangerous/needs guardrails.
+- Update admin page copy so it is clear what each tool does.
+- Keep the admin dashboard visually cleaner and less overwhelming.
+- Keep the existing working admin auth/security protections.
+- Make sure all admin routes remain admin-only protected.
+- Update old admin copy that still references Brevo as the email sender if applicable.
+- Update old admin copy that still references Side Kick as 250 cards if applicable.
+- Consolidate duplicate RevenueCat audit/admin visibility if it appears in multiple places.
+- Keep Image Approvals easy to find.
+- Keep user management easy to find.
+- Keep card/set management easy to find.
+- Keep email/notification tools easy to find, but do not trigger sends.
+
+Must not do:
+- Do not delete tools aggressively.
+- Do not delete production data.
+- Do not run migrations.
+- Do not run imports.
+- Do not send emails.
+- Do not trigger email campaigns.
+- Do not build the Google Drive image sync yet.
+- Do not change user-facing app behavior.
+- Do not change PC Binders.
+- Do not change card limits.
+- Do not change Resend sending behavior except copy/labels if needed.
+- Do not change subscription/billing behavior.
+- Do not change Stripe, RevenueCat, Shippo, Cloudinary, or eBay API logic except admin organization/status display.
+- Do not touch Android native files.
+- Do not touch iOS native files.
+- Do not remove backend routes unless they are clearly dead and you confirm first.
+- Do not make dangerous tools easier to accidentally run.
+
+Preserve:
+- Existing admin authentication and authorization.
+- Existing Image Approvals workflow.
+- Existing card/set management behavior.
+- Existing user management behavior.
+- Existing Resend setup.
+- Existing PC Binder gating.
+- Existing Side Kick 500 enforcement.
+- Existing Cloudinary/image behavior.
+- Existing production app behavior.
+- Existing API integrations.
+
+Recommended implementation approach:
+- Create or update a central admin navigation/tool registry if practical.
+- Each admin tool should have metadata:
+  - name
+  - category
+  - description
+  - route
+  - status: active / legacy / advanced / dangerous / needs_review
+  - risk level: low / medium / high
+  - whether it modifies production data
+- Use that registry to render the admin dashboard/cards if practical.
+- If a full registry is too much right now, still reorganize the existing dashboard into clear category sections.
+- Prefer hiding old tools from the main dashboard over deleting them.
+- Put uncertain tools in Advanced / Legacy Tools.
+
+Suggested admin dashboard sections:
+- Users
+- Cards & Sets
+- Images
+- Notifications
+- APIs & Integrations
+- Data & Migrations
+- Advanced / Legacy Tools
+
+QA:
+- Admin dashboard loads.
+- Admin nav/category structure is clearer.
+- Manage Users still works.
+- Manage Main Sets still works.
+- Unassigned Sets still works.
+- Add Cards/admin card import still works.
+- Image Approvals still works.
+- Image Automation/image tools are still reachable under Images.
+- Email/admin notification tools are reachable under Notifications.
+- API status/test tools are reachable under APIs & Integrations.
+- Migration Console, if kept, is moved to Data & Migrations or Advanced / Legacy.
+- Dangerous tools are not presented as casual one-click actions.
+- No email was sent.
+- No import was run.
+- No migration was run.
+- No production data was modified except safe admin UI/navigation changes.
+- Non-admin users cannot access admin routes.
+- Existing user-facing app routes still work.
+- PC Binders still work/gate correctly.
+- Side Kick 500 behavior is unchanged.
+- Resend behavior is unchanged.
+
+Final response:
+- Show the new admin category structure.
+- List which tools moved where.
+- List which tools were hidden or moved to Advanced / Legacy.
+- List any tools that still need guardrails.
+- List any tools you recommend deleting later, but do not delete them yet unless clearly safe.
+- Confirm no production data was changed.
+- Confirm no emails/imports/migrations were run.

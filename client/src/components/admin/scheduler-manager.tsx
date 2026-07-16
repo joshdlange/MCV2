@@ -96,7 +96,7 @@ export default function SchedulerManager() {
   };
 
   const handleSaveConfig = () => {
-    if (localConfig) {
+    if (localConfig && window.confirm("Save these scheduler settings? This changes how the background pricing job runs.")) {
       updateConfig.mutate(localConfig);
     }
   };
@@ -424,7 +424,11 @@ export default function SchedulerManager() {
               Refresh
             </Button>
             <Button
-              onClick={() => stopJobs.mutate()}
+              onClick={() => {
+                if (window.confirm("Stop all scheduled background jobs? Pricing updates will pause until restarted.")) {
+                  stopJobs.mutate();
+                }
+              }}
               variant="destructive"
               size="sm"
               disabled={stopJobs.isPending}

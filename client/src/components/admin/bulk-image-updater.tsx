@@ -81,6 +81,9 @@ export default function BulkImageUpdater() {
   };
 
   const startBulkUpdate = async () => {
+    if (!window.confirm("Start the bulk image update? This runs eBay searches and overwrites card images in the live database. Are you sure?")) {
+      return;
+    }
     if (!missingInfo?.configReady) {
       toast({
         title: "Configuration Error",
