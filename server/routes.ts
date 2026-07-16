@@ -806,13 +806,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/users/:id", authenticateUser, async (req: any, res) => {
     try {
       const userId = parseInt(req.params.id);
-      const updates = req.body;
-      
+
       // Users can only update their own profile, unless they're admin
       if (!req.user.isAdmin && req.user.id !== userId) {
         return res.status(403).json({ message: 'Can only update your own profile' });
       }
-      
+
+      // Allowlist of self-service profile/preference fields. Privileged fields
+      // (isAdmin, trustedUploader, plan, subscriptionStatus, stripe/apple IDs)
+      // can only be changed through the dedicated admin routes.
+      const SELF_SERVICE_FIELDS = [
+        'username', 'displayName', 'photoURL', 'bio', 'location', 'website',
+        'instagramUrl', 'whatnotUrl', 'ebayUrl', 'address',
+        'showEmail', 'showCollection', 'showWishlist', 'showImageAttribution',
+        'emailUpdates', 'priceAlerts', 'friendActivity', 'profileVisibility',
+        'onboardingComplete', 'heardAbout', 'favoriteSets', 'marketingOptIn',
+        'shippingAddressJson',
+      ];
+      const updates: any = {};
+      for (const key of SELF_SERVICE_FIELDS) {
+        if (req.body[key] !== undefined) updates[key] = req.body[key];
+      }
+
       const updatedUser = await storage.updateUser(userId, updates);
       if (!updatedUser) {
         return res.status(404).json({ message: "User not found" });
@@ -6892,8 +6907,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         backImageUrl,
       });
       
-      // Auto-approve for admin users (skip the approval queue)
-      if (req.user.isAdmin) {
+      // Auto-approve for admin and trusted uploader users (skip the approval queue)
+      const skipsQueue = req.user.isAdmin || req.user.trustedUploader;
+      if (skipsQueue) {
         const card = await storage.getCard(cardId);
         if (card) {
           const cardUpdates: any = {};
@@ -6941,9 +6957,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.json({
-        message: req.user.isAdmin ? "Image uploaded and approved automatically." : "Thanks! Your image is pending approval.",
+        message: skipsQueue ? "Image uploaded and approved automatically." : "Thanks! Your image is pending approval.",
         pendingImage,
-        autoApproved: req.user.isAdmin,
+        autoApproved: skipsQueue,
       });
     } catch (error) {
       console.error('Upload card image error:', error);
@@ -7187,7 +7203,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         source: 'scan_to_add',
       } as any);
 
-      res.json({ success: true, pendingImage });
+      // Auto-approve for admin and trusted uploader users (skip the approval queue)
+      const skipsQueue = req.user.isAdmin || req.user.trustedUploader;
+      if (skipsQueue) {
+        await storage.updateCard(cardId, { frontImageUrl: imageUrl });
+        await storage.updatePendingCardImage(pendingImage.id, {
+          status: 'approved',
+          reviewedBy: req.user.id,
+          reviewedAt: new Date(),
+        });
+      }
+
+      res.json({ success: true, pendingImage, autoApproved: skipsQueue });
     } catch (error) {
       console.error('[Scan] submit-scan-image error:', error);
       res.status(500).json({ message: "Failed to submit image for review" });
@@ -7273,6 +7300,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Admin: Bulk-approve pending card images
+  app.post("/api/admin/pending-images/bulk-approve", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const ids: number[] = Array.isArray(req.body?.ids)
+        ? req.body.ids.map((n: any) => parseInt(n)).filter((n: number) => Number.isInteger(n) && n > 0)
+        : [];
+      if (ids.length === 0) {
+        return res.status(400).json({ message: "ids array is required" });
+      }
+      if (ids.length > 100) {
+        return res.status(400).json({ message: "Maximum 100 images per bulk approval" });
+      }
+
+      let approved = 0;
+      const failed: { id: number; reason: string }[] = [];
+
+      for (const imageId of ids) {
+        try {
+          const pendingImage = await storage.getPendingCardImage(imageId);
+          if (!pendingImage) {
+            failed.push({ id: imageId, reason: "Not found" });
+            continue;
+          }
+          if (pendingImage.status !== 'pending') {
+            failed.push({ id: imageId, reason: "Already reviewed" });
+            continue;
+          }
+          const card = await storage.getCard(pendingImage.cardId);
+          if (!card) {
+            failed.push({ id: imageId, reason: "Card not found" });
+            continue;
+          }
+
+          const cardUpdates: any = {};
+          if (pendingImage.frontImageUrl) cardUpdates.frontImageUrl = pendingImage.frontImageUrl;
+          if (pendingImage.backImageUrl) cardUpdates.backImageUrl = pendingImage.backImageUrl;
+          if (Object.keys(cardUpdates).length > 0) {
+            await storage.updateCard(pendingImage.cardId, cardUpdates);
+          }
+
+          await storage.updatePendingCardImage(imageId, {
+            status: 'approved',
+            reviewedBy: req.user.id,
+            reviewedAt: new Date(),
+          });
+
+          // Contributor badge check (3+ approved images)
+          const userApprovedCount = await storage.getUserApprovedImageCount(pendingImage.userId);
+          if (userApprovedCount >= 3) {
+            await badgeService.awardBadge(pendingImage.userId, 'contributor');
+          }
+
+          approved++;
+        } catch (err) {
+          console.error(`Bulk approve failed for image ${imageId}:`, err);
+          failed.push({ id: imageId, reason: "Internal error" });
+        }
+      }
+
+      res.json({ approved, failed });
+    } catch (error) {
+      console.error('Bulk approve images error:', error);
+      res.status(500).json({ message: "Failed to bulk approve images" });
+    }
+  });
+
+  // Admin: List trusted uploaders (users who skip the image approval queue)
+  app.get("/api/admin/trusted-uploaders", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      const result = await db.execute(sql`
+        SELECT id, username, email, photo_url as "photoURL"
+        FROM users
+        WHERE trusted_uploader = true
+        ORDER BY username ASC
+      `);
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Get trusted uploaders error:', error);
+      res.status(500).json({ message: "Failed to fetch trusted uploaders" });
+    }
+  });
+
+  // Admin: Add/remove a trusted uploader (by username or email when adding)
+  app.post("/api/admin/trusted-uploaders", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      const { identifier, userId, trusted } = req.body || {};
+      if (typeof trusted !== 'boolean') {
+        return res.status(400).json({ message: "trusted (true/false) is required" });
+      }
+
+      let user;
+      if (userId) {
+        user = await storage.getUser(parseInt(userId));
+      } else if (identifier && typeof identifier === 'string') {
+        const needle = identifier.trim();
+        user = (await storage.getUserByUsername(needle)) || (await storage.getUserByEmail(needle));
+      }
+      if (!user) {
+        return res.status(404).json({ message: "User not found. Check the username or email." });
+      }
+
+      await storage.updateUser(user.id, { trustedUploader: trusted } as any);
+      console.log(`Admin ${req.user.id} set trustedUploader=${trusted} for user ${user.id} (${user.username})`);
+      res.json({ id: user.id, username: user.username, email: user.email, trustedUploader: trusted });
+    } catch (error) {
+      console.error('Update trusted uploader error:', error);
+      res.status(500).json({ message: "Failed to update trusted uploader" });
+    }
+  });
+
   // Admin: Reject pending card image
   app.post("/api/admin/pending-images/:id/reject", authenticateUser, async (req: any, res) => {
     try {

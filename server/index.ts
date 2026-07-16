@@ -54,7 +54,17 @@ app.use((req, res, next) => {
 
 (async () => {
   await warmPool();
-  
+
+  // Idempotent startup migration: trusted uploader flag (bypasses image approval queue).
+  // Safe to run on every boot in dev and prod; drizzle db:push is blocked by legacy data.
+  try {
+    const { db } = await import('./db');
+    const { sql } = await import('drizzle-orm');
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS trusted_uploader boolean NOT NULL DEFAULT false`);
+  } catch (error) {
+    console.error('Startup migration (trusted_uploader) failed:', error);
+  }
+
   const server = await registerRoutes(app);
 
   // Start background services
