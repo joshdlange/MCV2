@@ -662,6 +662,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── Admin: "How did you hear about us" breakdown (from onboarding) ─────────────
+  app.get("/api/admin/heard-about-stats", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      const { sql } = await import('drizzle-orm');
+      const { db } = await import('./db');
+      const result = await db.execute(sql`
+        SELECT COALESCE(NULLIF(TRIM(heard_about), ''), '(not answered)') AS raw, COUNT(*)::int AS n
+        FROM users GROUP BY 1
+      `);
+      // Normalize free-typed "Other" answers into sensible buckets
+      const normalize = (raw: string): string => {
+        const v = raw.toLowerCase();
+        if (raw === '(not answered)') return 'Not Answered';
+        if (v.includes('chatgpt') || v.includes('chat gpt') || v.includes('hat gpt') || v.includes('gemini') || v.includes('grok') || v.includes('gork') || v.includes('claude') || v.includes('copilot') || v === 'gpt' || v === 'ai' || v.startsWith('ai ')) return 'AI Chatbot';
+        if (v.includes('app store') || v.includes('appstore') || v.includes('play store') || v.includes('playstore') || v.includes('google play') || v.includes('apple store') || v === 'apple' || v === 'app' || v.includes('on play')) return 'App Store';
+        if (v === 'search engine' || v.includes('google') || v === 'online' || v === 'internet' || v === 'web' || v.includes('web search') || v.includes('search')) return 'Search Engine';
+        if (v === 'social media' || v.includes('facebook') || v.includes('instagram') || v.includes('tiktok')) return 'Social Media';
+        if (v === 'reddit/forum' || v.includes('reddit')) return 'Reddit/Forum';
+        if (v === 'friend recommendation' || v.includes('friend')) return 'Friend Recommendation';
+        if (v === 'youtube/streamer' || v.includes('youtube') || v.includes('stream') || v.includes('whatnot')) return 'YouTube/Streamer';
+        return 'Other';
+      };
+      const buckets = new Map<string, number>();
+      for (const row of result.rows as any[]) {
+        const key = normalize(String(row.raw));
+        buckets.set(key, (buckets.get(key) ?? 0) + (Number(row.n) || 0));
+      }
+      const sources = Array.from(buckets.entries())
+        .map(([source, count]) => ({ source, count }))
+        .sort((a, b) => b.count - a.count);
+      res.json({ sources, total: sources.reduce((s, r) => s + r.count, 0) });
+    } catch (err) {
+      console.error('[Admin] heard-about-stats error:', err);
+      res.status(500).json({ message: 'Failed to fetch heard-about stats' });
+    }
+  });
+
   // ── Admin: Funnel stats ───────────────────────────────────────────────────────
   app.get("/api/admin/funnel-stats", authenticateUser, async (req: any, res) => {
     try {

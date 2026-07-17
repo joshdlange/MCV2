@@ -30,6 +30,11 @@ interface ModalStats {
   byTrigger: Array<{ trigger: string; count: string }>;
 }
 
+interface HeardAboutStats {
+  sources: Array<{ source: string; count: number }>;
+  total: number;
+}
+
 interface SignupDay {
   date: string;
   count: number;
@@ -110,6 +115,10 @@ export default function AdminAnalytics() {
 
   const { data: modal, isLoading: modalLoading } = useQuery<ModalStats>({
     queryKey: ["/api/admin/upgrade-modal-stats"],
+  });
+
+  const { data: heardAbout, isLoading: heardAboutLoading } = useQuery<HeardAboutStats>({
+    queryKey: ["/api/admin/heard-about-stats"],
   });
 
   const { data: signups = [], isLoading: signupsLoading } = useQuery<SignupDay[]>({
@@ -317,6 +326,48 @@ export default function AdminAnalytics() {
             ))}
           </div>
         </>
+      )}
+
+      {/* ── How Users Found Us ──────────────────────────────────────────────────── */}
+      <div>
+        <h2 className="text-xl font-bold text-gray-900">How Users Found Us</h2>
+        <p className="text-sm text-gray-500 mt-0.5">From the onboarding question "Where did you hear about us?" — free-typed answers grouped automatically</p>
+      </div>
+
+      {heardAboutLoading ? (
+        <div className="text-center py-8 text-gray-400">Loading source data…</div>
+      ) : !heardAbout || heardAbout.sources.length === 0 ? (
+        <Card>
+          <CardContent className="py-8 text-center text-sm text-gray-500">No answers recorded yet</CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              Signup Sources <span className="text-gray-400 font-normal text-sm">({heardAbout.total.toLocaleString()} users)</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={Math.max(220, heardAbout.sources.length * 34)}>
+              <BarChart data={heardAbout.sources} layout="vertical" margin={{ left: 20, right: 40 }}>
+                <XAxis type="number" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <YAxis dataKey="source" type="category" width={160} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                <Tooltip
+                  formatter={(v: number) => [`${v.toLocaleString()} users (${pct(v, heardAbout.total)})`, "Signups"]}
+                  contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                />
+                <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                  {heardAbout.sources.map((row, i) => (
+                    <Cell
+                      key={i}
+                      fill={row.source === "Not Answered" ? "#d1d5db" : FUNNEL_COLORS[i % FUNNEL_COLORS.length]}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       )}
 
       {/* ── iOS Subscription Health ─────────────────────────────────────────────── */}
