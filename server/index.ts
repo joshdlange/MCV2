@@ -138,6 +138,16 @@ app.use((req, res, next) => {
             console.error('[DriveSync] Dev boot dry-run failed:', error);
           });
         }
+        if (fs.existsSync('/tmp/run_drive_cleanup')) {
+          fs.unlinkSync('/tmp/run_drive_cleanup');
+          import('./services/driveImageSync').then(async ({ buildDriveCleanupReport }) => {
+            const cleanup = await buildDriveCleanupReport();
+            fs.writeFileSync('/tmp/drive_cleanup_report.json', JSON.stringify(cleanup, null, 2));
+            console.log('[DriveSync] Cleanup report written to /tmp/drive_cleanup_report.json');
+          }).catch((error) => {
+            console.error('[DriveSync] Dev boot cleanup report failed:', error);
+          });
+        }
       } catch (e) {
         console.error('[DriveSync] Dev boot trigger check failed:', e);
       }

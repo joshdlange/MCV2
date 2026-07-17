@@ -12,3 +12,27 @@ id = "SSdIaB3fsoQ9Ahcz1fM-l"
 uri = "file://ADMIN_AUDIT.md"
 type = "text"
 title = "Admin Tools Audit & Cleanup Plan"
+
+[[outputs]]
+id = "LbFaf7Q610Zj5jP2t8mrf"
+uri = "file://exports/drive-cleanup-1-unmatched.csv"
+type = "table"
+title = "1. Unmatched folders (81) — with closest DB candidates"
+
+[[outputs]]
+id = "hINKWi9wnHdN-Hji1CSU8"
+uri = "file://exports/drive-cleanup-2-ambiguous-front-back.csv"
+type = "table"
+title = "2. Ambiguous front/back pairs (124) — with proposals"
+
+[[outputs]]
+id = "sUg6vI1bq1FmuGvZqIEjT"
+uri = "file://exports/drive-cleanup-3-wrong-image-count.csv"
+type = "table"
+title = "3. Folders without exactly 2 images (41)"
+
+[[outputs]]
+id = "z9xGTVnMLXx5knHOrGMt9"
+uri = "file://exports/drive-cleanup-4-structure-oddities.csv"
+type = "table"
+title = "4. Structure oddities (11)"

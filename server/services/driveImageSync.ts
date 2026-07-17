@@ -538,3 +538,157 @@ export async function runDriveImageSyncDryRun(): Promise<DriveDryRunReport> {
     running = false;
   }
 }
+
+// ---------- Cleanup report (derived from a completed dry-run; read-only) ----------
+// Builds admin-facing cleanup tables so folder/database mismatches can be fixed
+// BEFORE any real import. Never modifies Drive, DB, or Cloudinary.
+
+interface CleanupCandidate { name: string; score: number; }
+
+export interface DriveCleanupReport {
+  generatedAt: string;
+  sourceRanAt: string;
+  unmatched: Array<{
+    mainSetFolder: string; subsetFolder: string; cardNumberFolder: string;
+    imageCount: number; reason: string; candidates: string[];
+  }>;
+  ambiguousFrontBack: Array<{
+    folderPath: string; image1: string; image2: string;
+    sortOrder: string; proposedFront: string; proposedBack: string; proposalBasis: string;
+  }>;
+  wrongImageCount: Array<{
+    folderPath: string; imageCount: number; nonImageCount: number; matchStatus: string;
+  }>;
+  structureOddities: Array<{ path: string; reason: string; children?: string[] }>;
+  counts: { unmatched: number; ambiguousFrontBack: number; wrongImageCount: number; structureOddities: number };
+}
+
+function tokenSet(s: string): Set<string> {
+  return new Set(normalize(s).replace(/[^a-z0-9' ]/g, ' ').split(/\s+/).filter(t => t.length > 1));
+}
+
+function similarity(a: string, b: string): number {
+  const ta = tokenSet(a); const tb = tokenSet(b);
+  if (ta.size === 0 || tb.size === 0) return 0;
+  let inter = 0;
+  ta.forEach(t => { if (tb.has(t)) inter++; });
+  return inter / Math.max(ta.size, tb.size);
+}
+
+function topCandidates(target: string, pool: string[], max = 3, minScore = 0.5): string[] {
+  const scored: CleanupCandidate[] = pool
+    .map(name => ({ name, score: similarity(target, name) }))
+    .filter(c => c.score >= minScore)
+    .sort((x, y) => y.score - x.score);
+  return scored.slice(0, max).map(c => `${c.name} (${Math.round(c.score * 100)}% similar)`);
+}
+
+const REASON_LABELS: Record<string, string> = {
+  unmatched_main_set: 'Main set folder does not match any main set in the database',
+  unmatched_subset: 'Main set matched, but subset folder name does not match any of its sets',
+  unmatched_card_number: 'Set matched, but card number not found in that set (check O vs 0 typos)',
+};
+
+export async function buildDriveCleanupReport(): Promise<DriveCleanupReport> {
+  let source = lastReport;
+  if (!source) {
+    const fs = await import('fs');
+    if (fs.existsSync('/tmp/drive_dryrun_report.json')) {
+      source = JSON.parse(fs.readFileSync('/tmp/drive_dryrun_report.json', 'utf8'));
+    }
+  }
+  if (!source) throw new Error('No dry-run report available. Run the dry-run first.');
+
+  // Read-only reference data for candidate suggestions (suggestions only — never auto-mapped)
+  const allMainSets = await db.select({ id: mainSets.id, name: mainSets.name }).from(mainSets);
+  const allCardSets = await db.select({ id: cardSets.id, name: cardSets.name, mainSetId: cardSets.mainSetId }).from(cardSets);
+  const mainSetNameById = new Map(allMainSets.map(m => [m.id, m.name]));
+  const mainSetIdByNorm = new Map(allMainSets.map(m => [normalize(m.name), m.id]));
+
+  const report: DriveCleanupReport = {
+    generatedAt: new Date().toISOString(),
+    sourceRanAt: source.ranAt,
+    unmatched: [], ambiguousFrontBack: [], wrongImageCount: [],
+    structureOddities: source.unexpectedStructures.map(u => ({ path: u.path, reason: u.reason, children: u.children })),
+    counts: { unmatched: 0, ambiguousFrontBack: 0, wrongImageCount: 0, structureOddities: source.unexpectedStructures.length },
+  };
+
+  // Group image files by folder for the ambiguous table
+  const filesByFolder = new Map<string, Array<{ fileName: string }>>();
+  for (const f of source.allImageFiles) {
+    const arr = filesByFolder.get(f.parentPath) || [];
+    arr.push({ fileName: f.fileName });
+    filesByFolder.set(f.parentPath, arr);
+  }
+
+  for (const folder of source.allCardFolders) {
+    const status = folder.match.status;
+    if (status !== 'matched') {
+      let candidates: string[] = [];
+      if (status === 'unmatched_main_set') {
+        // Main set folder didn't match: suggest similar MAIN SET names, plus any
+        // card sets anywhere in the DB whose name matches the subset folder.
+        const mainCands = topCandidates(folder.mainSet, allMainSets.map(m => m.name))
+          .map(c => `main set: ${c}`);
+        const subsetCands = topCandidates(folder.subset, allCardSets.map(s => s.name))
+          .map(c => `set (any main set): ${c}`);
+        candidates = [...mainCands, ...subsetCands];
+      } else if (status === 'unmatched_subset') {
+        const mainId = mainSetIdByNorm.get(normalize(folder.mainSet));
+        const pool = allCardSets.filter(s => s.mainSetId === mainId).map(s => s.name);
+        candidates = topCandidates(folder.subset, pool);
+        if (candidates.length === 0) candidates = topCandidates(folder.subset, allCardSets.map(s => s.name));
+      }
+      report.unmatched.push({
+        mainSetFolder: folder.mainSet,
+        subsetFolder: folder.subset,
+        cardNumberFolder: folder.cardNumber,
+        imageCount: folder.imageCount,
+        reason: REASON_LABELS[status] || status,
+        candidates,
+      });
+    }
+    if (folder.frontBackStatus === 'ambiguous') {
+      const files = (filesByFolder.get(folder.path) || []).map(f => f.fileName).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+      // Prefer explicit filename markers: if exactly one file says front (or back),
+      // propose based on that; only fall back to sort order when neither helps.
+      let proposedFront = files[0] || '';
+      let proposedBack = files[1] || '';
+      let proposalBasis = 'sort order (no filename markers)';
+      if (files.length === 2) {
+        const sides = files.map(f => inferSide(f));
+        if (sides[0] === 'front' && sides[1] !== 'front') {
+          proposedFront = files[0]; proposedBack = files[1]; proposalBasis = `"${files[0]}" is marked front`;
+        } else if (sides[1] === 'front' && sides[0] !== 'front') {
+          proposedFront = files[1]; proposedBack = files[0]; proposalBasis = `"${files[1]}" is marked front`;
+        } else if (sides[0] === 'back' && sides[1] !== 'back') {
+          proposedBack = files[0]; proposedFront = files[1]; proposalBasis = `"${files[0]}" is marked back`;
+        } else if (sides[1] === 'back' && sides[0] !== 'back') {
+          proposedBack = files[1]; proposedFront = files[0]; proposalBasis = `"${files[1]}" is marked back`;
+        }
+      }
+      report.ambiguousFrontBack.push({
+        folderPath: folder.path,
+        image1: files[0] || '',
+        image2: files[1] || '',
+        sortOrder: 'alphabetical (numeric-aware)',
+        proposedFront,
+        proposedBack,
+        proposalBasis,
+      });
+    }
+    if (folder.imageCount !== 2) {
+      report.wrongImageCount.push({
+        folderPath: folder.path,
+        imageCount: folder.imageCount,
+        nonImageCount: folder.nonImageCount,
+        matchStatus: status === 'matched' ? 'matched' : 'unmatched',
+      });
+    }
+  }
+
+  report.counts.unmatched = report.unmatched.length;
+  report.counts.ambiguousFrontBack = report.ambiguousFrontBack.length;
+  report.counts.wrongImageCount = report.wrongImageCount.length;
+  return report;
+}

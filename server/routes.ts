@@ -1663,6 +1663,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/drive-sync/cleanup-report", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      const { buildDriveCleanupReport } = await import('./services/driveImageSync');
+      res.json(await buildDriveCleanupReport());
+    } catch (error: any) {
+      console.error('Drive cleanup report error:', error?.message || error);
+      res.status(500).json({ message: error?.message || 'Failed to build cleanup report' });
+    }
+  });
+
   app.get("/api/admin/drive-sync/last-report", authenticateUser, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) {
