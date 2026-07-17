@@ -1213,6 +1213,25 @@ export const userScanLogs = pgTable("user_scan_logs", {
 
 export type UserScanLog = typeof userScanLogs.$inferSelect;
 
+// ── Drive Image Imports (Drive → Cloudinary import history; idempotency ledger) ──
+export const driveImageImports = pgTable("drive_image_imports", {
+  id: serial("id").primaryKey(),
+  driveFileId: text("drive_file_id").notNull(),
+  driveFileName: text("drive_file_name").notNull(),
+  driveModifiedTime: text("drive_modified_time"),
+  driveFolderPath: text("drive_folder_path").notNull(),
+  cardId: integer("card_id").notNull(),
+  imageType: text("image_type").notNull(), // front | back
+  cloudinaryPublicId: text("cloudinary_public_id"),
+  cloudinaryUrl: text("cloudinary_url"),
+  importBatchId: text("import_batch_id").notNull(),
+  status: text("status").notNull(), // uploaded | failed_upload | failed_db_update
+  error: text("error"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type DriveImageImport = typeof driveImageImports.$inferSelect;
+
 // ── Scan Uploads (Scan to Add matching history) ───────────────────────────────
 export const scanUploads = pgTable("scan_uploads", {
   id: serial("id").primaryKey(),

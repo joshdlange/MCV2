@@ -692,3 +692,334 @@ export async function buildDriveCleanupReport(): Promise<DriveCleanupReport> {
   report.counts.wrongImageCount = report.wrongImageCount.length;
   return report;
 }
+
+// ---------- Drive Image Sync v2 — REAL IMPORT (admin-only, explicit confirmation) ----------
+// Uploads ONLY clean, high-confidence matched images to Cloudinary and updates
+// the matched card records. Everything uncertain is skipped and reported.
+// Never modifies Drive, never creates cards, never touches user collections.
+
+import { driveImageImports } from '../../shared/schema';
+import { eq } from 'drizzle-orm';
+import { cloudinary } from '../cloudinary';
+
+const IMPORT_FOLDER = 'marvel-cards/drive-sync';
+const IMPORT_MAX_IMAGE_BYTES = 15 * 1024 * 1024;
+const IMPORT_DOWNLOAD_TIMEOUT_MS = 30_000;
+const IMPORT_UPLOAD_TIMEOUT_MS = 60_000;
+const IMPORT_DELAY_MS = 400; // pause between folders so the server stays responsive
+const IMPORT_LOCK_KEY = 'drive-image-import';
+
+export interface DriveImportReport {
+  batchId: string;
+  ranAt: string;
+  finishedAt?: string;
+  durationMs?: number;
+  status: 'running' | 'completed' | 'failed';
+  options: { maxFolders: number | null; overwrite: boolean };
+  fatalError?: string;
+  summary: {
+    eligibleFolders: number;
+    uploadedImages: number;
+    updatedCardRecords: number;
+    skippedExistingImages: number;
+    skippedAlreadyImported: number;
+    skippedUnmatchedFolders: number;
+    skippedWrongImageCount: number;
+    skippedStructureOddities: number;
+    skippedUnresolvedFrontBack: number;
+    skippedDuplicateDriveFileIds: number;
+    skippedDuplicateCardTargets: number;
+    failedCloudinaryUploads: number;
+    failedDatabaseUpdates: number;
+    foldersProcessed: number;
+    foldersRemainingEligible: number;
+  };
+  uploaded: Array<{ folderPath: string; cardId: number; cardName: string; side: string; fileName: string; cloudinaryUrl: string }>;
+  skippedExisting: Array<{ folderPath: string; cardId: number; side: string }>;
+  failures: Array<{ folderPath: string; cardId: number | null; side: string | null; fileName: string; stage: 'cloudinary_upload' | 'db_update' | 'download'; error: string }>;
+}
+
+let importRunning = false;
+let lastImportReport: DriveImportReport | null = null;
+
+export function getLastDriveImportReport(): DriveImportReport | null {
+  return lastImportReport;
+}
+
+export function isDriveImportRunning(): boolean {
+  return importRunning;
+}
+
+async function downloadDriveFile(fileId: string): Promise<{ buffer: Buffer; contentType: string }> {
+  const token = await getAccessToken();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), IMPORT_DOWNLOAD_TIMEOUT_MS);
+  try {
+    const res = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`,
+      { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal as any },
+    );
+    if (!res.ok) throw new Error(`Drive download failed: HTTP ${res.status}`);
+    const contentType = res.headers.get('content-type') || 'image/jpeg';
+    if (!contentType.startsWith('image/')) throw new Error(`Not an image: ${contentType}`);
+    const buffer = Buffer.from(await res.arrayBuffer());
+    if (buffer.length === 0) throw new Error('Empty file');
+    if (buffer.length > IMPORT_MAX_IMAGE_BYTES) throw new Error(`Image too large: ${buffer.length} bytes`);
+    return { buffer, contentType };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Approved front/back rule: with exactly two images, a file clearly marked
+ * FRONT (or BACK) wins its side, and the unmarked paired file is the opposite
+ * side. Sort order alone is NOT used.
+ */
+function resolveFrontBack(files: DriveItem[]): { front: DriveItem; back: DriveItem } | null {
+  if (files.length !== 2) return null;
+  const [a, b] = files;
+  const sa = inferSide(a.name);
+  const sb = inferSide(b.name);
+  if (sa === 'front' && sb === 'back') return { front: a, back: b };
+  if (sa === 'back' && sb === 'front') return { front: b, back: a };
+  if (sa === 'front' && sb === 'ambiguous') return { front: a, back: b };
+  if (sb === 'front' && sa === 'ambiguous') return { front: b, back: a };
+  if (sa === 'back' && sb === 'ambiguous') return { front: b, back: a };
+  if (sb === 'back' && sa === 'ambiguous') return { front: a, back: b };
+  return null; // both ambiguous or both claim the same side → skip
+}
+
+export async function runDriveImageImport(options: {
+  maxFolders?: number | null;
+  overwrite?: boolean;
+} = {}): Promise<DriveImportReport> {
+  if (importRunning) throw new Error('A Drive image import is already in progress');
+  if (running) throw new Error('A Drive dry-run is in progress — wait for it to finish');
+  importRunning = true;
+  const maxFolders = options.maxFolders ?? null;
+  const overwrite = options.overwrite === true; // disabled by default
+  const batchId = crypto.randomUUID();
+  const startedAt = Date.now();
+
+  const report: DriveImportReport = {
+    batchId,
+    ranAt: new Date().toISOString(),
+    status: 'running',
+    options: { maxFolders, overwrite },
+    summary: {
+      eligibleFolders: 0, uploadedImages: 0, updatedCardRecords: 0,
+      skippedExistingImages: 0, skippedAlreadyImported: 0,
+      skippedUnmatchedFolders: 0, skippedWrongImageCount: 0,
+      skippedStructureOddities: 0, skippedUnresolvedFrontBack: 0,
+      skippedDuplicateDriveFileIds: 0, skippedDuplicateCardTargets: 0,
+      failedCloudinaryUploads: 0, failedDatabaseUpdates: 0,
+      foldersProcessed: 0, foldersRemainingEligible: 0,
+    },
+    uploaded: [], skippedExisting: [], failures: [],
+  };
+  lastImportReport = report;
+
+  const { sql } = await import('drizzle-orm');
+  let lockAcquired = false;
+  try {
+    const lockResult = await db.execute(sql`SELECT pg_try_advisory_lock(hashtext(${IMPORT_LOCK_KEY})) AS locked`);
+    lockAcquired = Boolean((lockResult.rows[0] as any)?.locked);
+    if (!lockAcquired) throw new Error('Another instance is running the Drive import');
+
+    console.log(`[DriveImport] Batch ${batchId} started (maxFolders=${maxFolders ?? 'all'}, overwrite=${overwrite})`);
+
+    // Always run a FRESH read-only scan so eligibility reflects the current
+    // Drive structure and current card data — never a stale report.
+    const scan = await runDriveImageSyncDryRun();
+
+    // Sets of paths/ids that must never import
+    const duplicateFileIds = new Set(scan.duplicateDriveFileIdList.map(d => d.driveFileId));
+    const duplicateCardIds = new Set(scan.duplicateCardMatchList.map(d => d.cardId));
+    const oddityPaths = new Set(scan.unexpectedStructures.map(u => u.path));
+
+    // Prior successful imports (idempotency ledger): fileId → modifiedTime
+    const priorRows = await db
+      .select({
+        driveFileId: driveImageImports.driveFileId,
+        driveModifiedTime: driveImageImports.driveModifiedTime,
+      })
+      .from(driveImageImports)
+      .where(eq(driveImageImports.status, 'uploaded'));
+    const priorByFileId = new Map(priorRows.map(r => [r.driveFileId, r.driveModifiedTime]));
+
+    // Image file details per folder (need Drive file ids + modifiedTime)
+    const filesByFolder = new Map<string, ImageFileReport[]>();
+    for (const f of scan.allImageFiles) {
+      const arr = filesByFolder.get(f.parentPath) || [];
+      arr.push(f);
+      filesByFolder.set(f.parentPath, arr);
+    }
+
+    // Current card image state for matched cards
+    const matchedCardIds = Array.from(new Set(
+      scan.allCardFolders.filter(f => f.match.status === 'matched' && f.match.cardId != null).map(f => f.match.cardId!)
+    ));
+    const cardRows = matchedCardIds.length
+      ? await db.select({ id: cards.id, name: cards.name, frontImageUrl: cards.frontImageUrl, backImageUrl: cards.backImageUrl })
+          .from(cards).where(inArray(cards.id, matchedCardIds))
+      : [];
+    const cardById = new Map(cardRows.map(c => [c.id, c]));
+
+    // Build the eligible list with every exclusion counted
+    interface EligibleFolder { folder: CardFolderReport; front: ImageFileReport; back: ImageFileReport; }
+    const eligible: EligibleFolder[] = [];
+
+    for (const folder of scan.allCardFolders) {
+      if (folder.match.status !== 'matched' || folder.match.cardId == null) {
+        report.summary.skippedUnmatchedFolders++;
+        continue;
+      }
+      if (folder.imageCount !== 2) {
+        report.summary.skippedWrongImageCount++;
+        continue;
+      }
+      if (folder.hasNestedFolders || folder.nonImageCount > 0 || oddityPaths.has(folder.path)) {
+        report.summary.skippedStructureOddities++;
+        continue;
+      }
+      const files = filesByFolder.get(folder.path) || [];
+      if (files.some(f => duplicateFileIds.has(f.driveFileId))) {
+        report.summary.skippedDuplicateDriveFileIds++;
+        continue;
+      }
+      if (duplicateCardIds.has(folder.match.cardId)) {
+        report.summary.skippedDuplicateCardTargets++;
+        continue;
+      }
+      const items: DriveItem[] = files.map(f => ({ id: f.driveFileId, name: f.fileName, mimeType: f.mimeType, modifiedTime: f.modifiedTime }));
+      const resolved = resolveFrontBack(items);
+      if (!resolved) {
+        report.summary.skippedUnresolvedFrontBack++;
+        continue;
+      }
+      const frontFile = files.find(f => f.driveFileId === resolved.front.id)!;
+      const backFile = files.find(f => f.driveFileId === resolved.back.id)!;
+      eligible.push({ folder, front: frontFile, back: backFile });
+    }
+
+    report.summary.eligibleFolders = eligible.length;
+    console.log(`[DriveImport] ${eligible.length} eligible folders out of ${scan.allCardFolders.length} scanned`);
+
+    const toProcess = maxFolders != null ? eligible.slice(0, maxFolders) : eligible;
+    report.summary.foldersRemainingEligible = eligible.length - toProcess.length;
+
+    for (const { folder, front, back } of toProcess) {
+      const cardId = folder.match.cardId!;
+      const card = cardById.get(cardId);
+      if (!card) { report.summary.skippedUnmatchedFolders++; continue; }
+      report.summary.foldersProcessed++;
+
+      const sides: Array<{ side: 'front' | 'back'; file: ImageFileReport; existingUrl: string | null }> = [
+        { side: 'front', file: front, existingUrl: card.frontImageUrl },
+        { side: 'back', file: back, existingUrl: card.backImageUrl },
+      ];
+
+      for (const { side, file, existingUrl } of sides) {
+        // Idempotency: already imported and unchanged → skip
+        if (priorByFileId.has(file.driveFileId) && priorByFileId.get(file.driveFileId) === (file.modifiedTime ?? null)) {
+          report.summary.skippedAlreadyImported++;
+          continue;
+        }
+        // Never overwrite existing card images by default
+        if (existingUrl && !overwrite) {
+          report.summary.skippedExistingImages++;
+          report.skippedExisting.push({ folderPath: folder.path, cardId, side });
+          continue;
+        }
+
+        let cloudinaryUrl = '';
+        let publicId = `card_${cardId}_${side}`;
+        try {
+          const { buffer, contentType } = await downloadDriveFile(file.driveFileId);
+          const result = await cloudinary.uploader.upload(
+            `data:${contentType};base64,${buffer.toString('base64')}`,
+            {
+              folder: IMPORT_FOLDER,
+              public_id: publicId,
+              overwrite: true, // idempotent re-upload to OUR new folder; card URL guarded above
+              resource_type: 'image',
+              timeout: IMPORT_UPLOAD_TIMEOUT_MS,
+              transformation: [
+                { width: 800, height: 1120, crop: 'fit', quality: 'auto' },
+                { format: 'auto' },
+              ],
+            },
+          );
+          if (!result?.secure_url) throw new Error('Cloudinary returned no URL');
+          cloudinaryUrl = result.secure_url;
+        } catch (err: any) {
+          const stage = String(err?.message || '').startsWith('Drive download') || String(err?.message || '').includes('Not an image') ? 'download' : 'cloudinary_upload';
+          report.summary.failedCloudinaryUploads++;
+          report.failures.push({ folderPath: folder.path, cardId, side, fileName: file.fileName, stage, error: String(err?.message || err).slice(0, 300) });
+          await db.insert(driveImageImports).values({
+            driveFileId: file.driveFileId, driveFileName: file.fileName,
+            driveModifiedTime: file.modifiedTime ?? null, driveFolderPath: folder.path,
+            cardId, imageType: side, importBatchId: batchId,
+            status: 'failed_upload', error: String(err?.message || err).slice(0, 500),
+          }).catch(() => {});
+          continue;
+        }
+
+        // Update the card record (only after a confirmed upload). The card URL
+        // swap and the ledger row commit together so resumability stays accurate.
+        try {
+          await db.transaction(async (tx) => {
+            await tx.update(cards)
+              .set(side === 'front' ? { frontImageUrl: cloudinaryUrl } : { backImageUrl: cloudinaryUrl })
+              .where(eq(cards.id, cardId));
+            await tx.insert(driveImageImports).values({
+              driveFileId: file.driveFileId, driveFileName: file.fileName,
+              driveModifiedTime: file.modifiedTime ?? null, driveFolderPath: folder.path,
+              cardId, imageType: side, cloudinaryPublicId: `${IMPORT_FOLDER}/${publicId}`,
+              cloudinaryUrl, importBatchId: batchId, status: 'uploaded',
+            });
+          });
+          report.summary.uploadedImages++;
+          report.uploaded.push({ folderPath: folder.path, cardId, cardName: card.name, side, fileName: file.fileName, cloudinaryUrl });
+          // keep in-memory ledger current so a same-run duplicate can't double-import
+          priorByFileId.set(file.driveFileId, file.modifiedTime ?? null);
+          if (side === 'front') card.frontImageUrl = cloudinaryUrl; else card.backImageUrl = cloudinaryUrl;
+        } catch (err: any) {
+          report.summary.failedDatabaseUpdates++;
+          report.failures.push({ folderPath: folder.path, cardId, side, fileName: file.fileName, stage: 'db_update', error: String(err?.message || err).slice(0, 300) });
+          await db.insert(driveImageImports).values({
+            driveFileId: file.driveFileId, driveFileName: file.fileName,
+            driveModifiedTime: file.modifiedTime ?? null, driveFolderPath: folder.path,
+            cardId, imageType: side, cloudinaryPublicId: `${IMPORT_FOLDER}/${publicId}`,
+            cloudinaryUrl, importBatchId: batchId,
+            status: 'failed_db_update', error: String(err?.message || err).slice(0, 500),
+          }).catch(() => {});
+        }
+      }
+
+      const updatedThisFolder = report.uploaded.filter(u => u.cardId === cardId).length > 0;
+      if (updatedThisFolder) report.summary.updatedCardRecords++;
+
+      await new Promise(r => setTimeout(r, IMPORT_DELAY_MS));
+    }
+
+    report.status = 'completed';
+    report.finishedAt = new Date().toISOString();
+    report.durationMs = Date.now() - startedAt;
+    console.log(`[DriveImport] Batch ${batchId} completed in ${report.durationMs}ms: ${report.summary.uploadedImages} images uploaded, ${report.summary.updatedCardRecords} cards updated, ${report.summary.skippedExistingImages} existing skipped, ${report.summary.skippedAlreadyImported} already-imported skipped, ${report.summary.failedCloudinaryUploads + report.summary.failedDatabaseUpdates} failures`);
+    return report;
+  } catch (err: any) {
+    report.status = 'failed';
+    report.fatalError = String(err?.message || err);
+    report.finishedAt = new Date().toISOString();
+    report.durationMs = Date.now() - startedAt;
+    console.error(`[DriveImport] Batch ${batchId} failed:`, err?.message || err);
+    throw err;
+  } finally {
+    if (lockAcquired) {
+      await db.execute(sql`SELECT pg_advisory_unlock(hashtext(${IMPORT_LOCK_KEY}))`).catch(() => {});
+    }
+    importRunning = false;
+  }
+}

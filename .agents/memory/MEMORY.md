@@ -15,3 +15,4 @@
 - [PUT /api/users allowlist](user-update-allowlist.md) — user self-update route allowlists fields; new privileged users columns must NOT be added to it or they're self-escalatable.
 - [Email cron disabled in prod](email-cron-disabled-in-prod.md) — EMAIL_CRON_ENABLED unset everywhere; scheduled email blasts run manually; wire always-on jobs at startup + dedupe drips via email_logs job_name.
 - [Shell background procs die between calls](replit-shell-background-procs.md) — nohup jobs don't survive across bash tool calls; pgrep self-matches its own poll command.
+- [Drive image import safety](drive-image-import.md) — marked-file-wins front/back rule only (never sort order); transactional ledger gives rerun idempotency; always fresh scan before import.

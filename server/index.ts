@@ -66,6 +66,30 @@ app.use((req, res, next) => {
     console.error('Startup migration (trusted_uploader) failed:', error);
   }
 
+  // Idempotent startup migration: Drive → Cloudinary import history table.
+  try {
+    const { db } = await import('./db');
+    const { sql } = await import('drizzle-orm');
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS drive_image_imports (
+      id serial PRIMARY KEY,
+      drive_file_id text NOT NULL,
+      drive_file_name text NOT NULL,
+      drive_modified_time text,
+      drive_folder_path text NOT NULL,
+      card_id integer NOT NULL,
+      image_type text NOT NULL,
+      cloudinary_public_id text,
+      cloudinary_url text,
+      import_batch_id text NOT NULL,
+      status text NOT NULL,
+      error text,
+      created_at timestamp NOT NULL DEFAULT now()
+    )`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_drive_image_imports_file_id ON drive_image_imports (drive_file_id)`);
+  } catch (error) {
+    console.error('Startup migration (drive_image_imports) failed:', error);
+  }
+
   const server = await registerRoutes(app);
 
   // Start background services
@@ -146,6 +170,16 @@ app.use((req, res, next) => {
             console.log('[DriveSync] Cleanup report written to /tmp/drive_cleanup_report.json');
           }).catch((error) => {
             console.error('[DriveSync] Dev boot cleanup report failed:', error);
+          });
+        }
+        if (fs.existsSync('/tmp/run_drive_import_test')) {
+          fs.unlinkSync('/tmp/run_drive_import_test');
+          import('./services/driveImageSync').then(async ({ runDriveImageImport }) => {
+            const report = await runDriveImageImport({ maxFolders: 5, overwrite: false });
+            fs.writeFileSync('/tmp/drive_import_test_report.json', JSON.stringify(report, null, 2));
+            console.log('[DriveImport] Test import report written to /tmp/drive_import_test_report.json');
+          }).catch((error) => {
+            console.error('[DriveImport] Dev boot test import failed:', error);
           });
         }
       } catch (e) {

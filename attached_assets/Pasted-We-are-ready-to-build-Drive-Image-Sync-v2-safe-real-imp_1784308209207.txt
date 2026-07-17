@@ -1,0 +1,117 @@
+We are ready to build Drive Image Sync v2: safe real import to Cloudinary.
+
+Context:
+The dry-run and cleanup reports are complete.
+Results:
+- 1,030 card folders scanned
+- 2,017 images found
+- 949 exact card matches
+- 81 unmatched
+- 0 duplicate files
+- 0 duplicate card matches
+- 124 front/back ambiguous pairs, but 123 of 124 have one file clearly marked FRONT or BACK and the other file unlabeled
+- 41 folders do not have exactly 2 images
+- 11 structure oddities
+
+Goal:
+Build a safe admin-only real import that uploads only clean, high-confidence matched images from Google Drive to Cloudinary and updates the matching card records. Everything uncertain should be skipped and reported.
+
+Approved front/back rule:
+If a folder has exactly two images and one image filename clearly contains FRONT or BACK, then:
+- marked FRONT file = front
+- marked BACK file = back
+- the unmarked paired image is the opposite side
+This rule is approved.
+Do not rely on sort order alone unless explicitly approved later.
+
+Must do:
+- Keep existing dry-run functionality.
+- Add real import mode as a separate admin-only action.
+- Default to dry-run; real import must require explicit admin confirmation.
+- Import only folders that meet all of these conditions:
+  1. exact matched card record
+  2. exactly 2 image files
+  3. front/back can be confidently determined by filename markers or the approved marked-file-wins rule
+  4. no duplicate Drive file IDs
+  5. no duplicate card target
+- Upload images to Cloudinary.
+- Update the correct existing card record with Cloudinary image URLs.
+- Store import history to prevent duplicates:
+  - Drive file ID
+  - Drive file name
+  - Drive modified time
+  - Drive folder path
+  - matched card ID
+  - image type front/back
+  - Cloudinary public ID
+  - Cloudinary URL
+  - import batch ID
+  - status
+  - error if failed
+- If the same Drive file ID was already imported and unchanged, skip it.
+- Do not overwrite existing approved card images by default.
+- If a card already has front/back images, skip and report as existing images skipped.
+- Add overwrite support only as a disabled-by-default option.
+- Generate an import report with:
+  - eligible matched folders
+  - uploaded images
+  - updated card records
+  - skipped existing images
+  - skipped unmatched folders
+  - skipped wrong image count folders
+  - skipped structure oddities
+  - skipped unresolved front/back ambiguity
+  - failed Cloudinary uploads
+  - failed database updates
+- The import must be resumable/idempotent:
+  running it twice should not duplicate uploads or records.
+- Add clear logs without printing secrets.
+
+Must not do:
+- Do not import unmatched folders.
+- Do not import folders with wrong image count.
+- Do not import structure oddities.
+- Do not import front/back pairs that cannot be determined using approved rules.
+- Do not guess main set/subset/card matches.
+- Do not overwrite existing approved images by default.
+- Do not create new card records.
+- Do not change user collection/ownership data.
+- Do not modify Drive files.
+- Do not send emails.
+- Do not schedule automatic sync.
+- Do not touch PC Binders, XP, subscriptions, auth, Stripe, Shippo, RevenueCat, Android, or iOS.
+- Do not expose Google, Cloudinary, or database credentials.
+- Do not run full import automatically after building.
+
+Preserve:
+- Existing dry-run endpoint/report.
+- Existing admin auth.
+- Existing Cloudinary setup.
+- Existing card display behavior.
+- Existing image approval flow for user-submitted images.
+- Existing admin dashboard organization.
+
+QA:
+- Run dry-run after implementation and confirm counts are unchanged or explained.
+- Run real import only on a tiny test subset first, ideally 5 matched card folders.
+- Confirm images upload to Cloudinary.
+- Confirm correct card records update.
+- Confirm card detail pages show the imported images.
+- Run the same tiny import again and confirm it skips already-imported Drive file IDs.
+- Confirm no unmatched folders import.
+- Confirm no wrong-count folders import.
+- Confirm no structure oddities import.
+- Confirm no existing approved images are overwritten by default.
+- Confirm no emails sent.
+- Confirm no user collection records changed.
+- Confirm admin-only protection works.
+
+Final response:
+- Do not run full import automatically.
+- Provide the test import summary.
+- Provide the final import-ready counts:
+  - eligible folders
+  - skipped folders by reason
+  - already-existing images
+  - unresolved issues
+- Tell me the exact admin action/button/endpoint to use when I approve the full import.

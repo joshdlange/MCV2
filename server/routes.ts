@@ -1689,6 +1689,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Drive Image Sync v2 — REAL IMPORT (admin-only). Requires explicit confirmation.
+  // Uploads only clean, high-confidence matched images to Cloudinary and updates
+  // matched card records; everything uncertain is skipped and reported.
+  app.post("/api/admin/drive-sync/import", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      const { confirm, maxFolders, overwrite } = req.body || {};
+      if (confirm !== 'IMPORT') {
+        return res.status(400).json({ message: 'Real import requires explicit confirmation: send { "confirm": "IMPORT" }' });
+      }
+      let max: number | null = null;
+      if (maxFolders !== undefined && maxFolders !== null) {
+        max = parseInt(String(maxFolders), 10);
+        if (!Number.isFinite(max) || max < 1 || max > 2000) {
+          return res.status(400).json({ message: 'maxFolders must be between 1 and 2000' });
+        }
+      }
+      const { runDriveImageImport, isDriveImportRunning } = await import('./services/driveImageSync');
+      if (isDriveImportRunning()) {
+        return res.status(409).json({ message: 'A Drive import is already in progress' });
+      }
+      // Long-running (fresh scan + paced uploads): run in background, poll import-report.
+      runDriveImageImport({ maxFolders: max, overwrite: overwrite === true }).catch((err) => {
+        console.error('[DriveImport] Background import failed:', err?.message || err);
+      });
+      res.status(202).json({
+        message: `Import started${max != null ? ` (limited to ${max} folders)` : ''}${overwrite === true ? ' with overwrite ENABLED' : ''}. Poll GET /api/admin/drive-sync/import-report for progress.`,
+      });
+    } catch (error: any) {
+      console.error('Drive import error:', error?.message || error);
+      res.status(500).json({ message: error?.message || 'Drive import failed to start' });
+    }
+  });
+
+  app.get("/api/admin/drive-sync/import-report", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      const { getLastDriveImportReport, isDriveImportRunning } = await import('./services/driveImageSync');
+      res.json({ running: isDriveImportRunning(), report: getLastDriveImportReport() });
+    } catch (error) {
+      console.error('Drive import report error:', error);
+      res.status(500).json({ message: 'Failed to get import report' });
+    }
+  });
+
   // Lightweight first-card-image lookup for set thumbnails.
   // Single indexed LIMIT 1 query (no COUNT), cached in memory for 10 minutes —
   // browse pages fire one of these per placeholder set tile.
