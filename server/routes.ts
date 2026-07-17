@@ -515,6 +515,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // "How did you hear about us?" is mandatory
+      if (typeof heardAbout !== 'string' || !heardAbout.trim()) {
+        return res.status(400).json({
+          message: 'Please let us know how you heard about us'
+        });
+      }
+
       // Check if username is taken by another user
       const existingUser = await storage.getUserByUsername(username);
       if (existingUser && existingUser.id !== req.user.id) {
@@ -526,7 +533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update user with onboarding data
       const updatedUser = await storage.updateUser(req.user.id, {
         username,
-        heardAbout,
+        heardAbout: heardAbout.trim().slice(0, 200),
         favoriteSets: favoriteSets ? [favoriteSets] : [],
         marketingOptIn: marketingOptIn || false,
         onboardingComplete: true

@@ -100,7 +100,7 @@ export function Onboarding() {
       });
       return;
     }
-    if (step === 2 && !heardAbout) {
+    if (step === 2 && (!heardAbout || (heardAbout === "Other" && !heardAboutOther.trim()))) {
       toast({
         title: "Required Field",
         description: "Please let us know how you heard about us",
@@ -118,7 +118,7 @@ export function Onboarding() {
   const handleComplete = async () => {
     setIsSubmitting(true);
     try {
-      const heardAboutValue = heardAbout === "Other" ? heardAboutOther : heardAbout;
+      const heardAboutValue = heardAbout === "Other" ? heardAboutOther.trim() : heardAbout;
       
       await apiRequest("POST", "/api/onboarding/complete", {
         username,
@@ -345,7 +345,7 @@ export function Onboarding() {
               className="bg-red-600 hover:bg-red-700"
               disabled={
                 (step === 1 && (!username || usernameValid !== true || checkingUsername)) ||
-                (step === 2 && !heardAbout)
+                (step === 2 && (!heardAbout || (heardAbout === "Other" && !heardAboutOther.trim())))
               }
             >
               Next
