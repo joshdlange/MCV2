@@ -1648,6 +1648,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Drive Image Sync v1 — DRY-RUN ONLY (admin). Read-only: no Cloudinary uploads, no DB writes.
+  app.post("/api/admin/drive-sync/dry-run", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      const { runDriveImageSyncDryRun } = await import('./services/driveImageSync');
+      const report = await runDriveImageSyncDryRun();
+      res.json(report);
+    } catch (error: any) {
+      console.error('Drive sync dry-run error:', error?.message || error);
+      res.status(500).json({ message: error?.message || 'Drive sync dry-run failed' });
+    }
+  });
+
+  app.get("/api/admin/drive-sync/last-report", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      const { getLastDriveDryRunReport, isDriveDryRunRunning } = await import('./services/driveImageSync');
+      res.json({ running: isDriveDryRunRunning(), report: getLastDriveDryRunReport() });
+    } catch (error) {
+      console.error('Drive sync last-report error:', error);
+      res.status(500).json({ message: 'Failed to get drive sync report' });
+    }
+  });
+
   // Lightweight first-card-image lookup for set thumbnails.
   // Single indexed LIMIT 1 query (no COUNT), cached in memory for 10 minutes —
   // browse pages fire one of these per placeholder set tile.

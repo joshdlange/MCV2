@@ -1,0 +1,137 @@
+We are ready to build Drive Image Sync v1 for Marvel Card Vault.
+
+Context:
+- Google Drive API connection test passed.
+- Service account can access the root folder.
+- GOOGLE_SERVICE_ACCOUNT_JSON works.
+- GOOGLE_DRIVE_ROOT_FOLDER_ID works.
+- Root folder is named "Ali Work."
+- First-level folders are visible.
+- Do not upload to Cloudinary yet.
+- Do not update the database yet.
+- This phase is dry-run/reporting only.
+
+Goal:
+Build an admin-only Google Drive image sync dry-run that scans the Drive folder hierarchy, maps folders to existing MCV card records, detects duplicates/ambiguity, and produces a detailed report. No imports yet.
+
+Expected folder hierarchy:
+Root folder
+  → Main Set Folder
+    → Subset Folder
+      → Card Number Folder
+        → two image files
+
+Important:
+Some folders may not match this exact structure. For example, "Marvel Card Images" may be a general container. The sync should report unexpected structures instead of guessing.
+
+Must do:
+- Create a server-side Drive image sync service, preferably:
+  server/services/driveImageSync.ts
+- Use Google Drive API server-side only.
+- Use GOOGLE_SERVICE_ACCOUNT_JSON from Secrets.
+- Use GOOGLE_DRIVE_ROOT_FOLDER_ID from Secrets.
+- Use read-only Drive scope.
+- Add an admin-only dry-run endpoint or admin-only script.
+- Do not make the endpoint public.
+- Recursively scan the folder tree.
+- Parse expected hierarchy:
+  - main set name
+  - subset name
+  - card number
+  - image files
+- For every image file found, capture:
+  - Drive file ID
+  - file name
+  - mime type
+  - modified time
+  - parent folder path
+  - inferred main set
+  - inferred subset
+  - inferred card number
+- Match against existing MCV card records using:
+  - main set name
+  - subset name
+  - card number
+- Use strict matching for automatic classification.
+- If exact match fails, report the item as unmatched.
+- Do not fuzzy-match into an import result yet.
+- Determine likely front/back image type using filename clues:
+  - front
+  - back
+  - obverse
+  - reverse
+  - 1
+  - 2
+- If front/back cannot be confidently determined, mark as ambiguous.
+- Detect folders with:
+  - no images
+  - one image
+  - two images
+  - more than two images
+  - non-image files
+  - unexpected nesting depth
+- Produce a detailed dry-run report:
+  - total first-level folders
+  - total folders scanned
+  - total card folders found
+  - total image files found
+  - matched card folders
+  - unmatched card folders
+  - ambiguous image pairs
+  - folders with unexpected structure
+  - folders with more/less than two images
+  - potential duplicate Drive file IDs
+  - potential duplicate card matches
+- Store the dry-run result only if useful, but do not update card image records.
+- If adding database tables for future import history, keep them unused for now unless needed for reporting.
+- Add clear logs, but do not print credentials or private keys.
+
+Must not do:
+- Do not upload anything to Cloudinary.
+- Do not update card records.
+- Do not create or modify user collection records.
+- Do not overwrite any images.
+- Do not download full image files unless absolutely required for metadata, which should not be needed.
+- Do not send emails.
+- Do not run imports.
+- Do not schedule daily or weekly sync yet.
+- Do not change image approval behavior.
+- Do not touch PC Binders, XP, subscriptions, auth, Stripe, Shippo, RevenueCat, Android, or iOS.
+- Do not expose Google credentials to the frontend.
+- Do not print secrets in logs.
+- Do not guess uncertain matches.
+
+Preserve:
+- Existing admin auth.
+- Existing card database.
+- Existing Cloudinary setup.
+- Existing image approval workflow.
+- Existing user-facing app behavior.
+- Existing admin dashboard organization.
+
+Special handling:
+- Treat "Marvel Card Images" as unknown/general container unless it follows the expected hierarchy under it.
+- Do not skip it entirely; scan and report its structure separately.
+- If a first-level folder is a specific main set, parse normally.
+- If a first-level folder appears to be a container, report it as container/unexpected and show its child folder structure.
+
+QA:
+- Admin-only dry-run endpoint/script works.
+- Non-admin users cannot run dry-run.
+- Dry-run completes without modifying database records.
+- No Cloudinary uploads occur.
+- No emails are sent.
+- Report clearly shows matched vs unmatched card folders.
+- Report clearly shows ambiguous front/back folders.
+- Report clearly shows unexpected structures.
+- Report includes sample rows for matched and unmatched items.
+- Report is understandable enough for a non-engineer admin to review.
+- Running dry-run twice produces no duplicate data or side effects.
+
+Final response:
+- Show the dry-run report summary.
+- Include 10 sample matched rows.
+- Include 10 sample unmatched rows.
+- Include ambiguous folders if any.
+- Include unexpected structure examples.
+- Explain what would be needed before enabling real import.
