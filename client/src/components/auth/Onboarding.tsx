@@ -30,14 +30,21 @@ export function Onboarding() {
   const [favoriteSets, setFavoriteSets] = useState("");
   const [marketingOptIn, setMarketingOptIn] = useState(true);
 
-  const heardAboutOptions = [
-    "Social Media",
-    "Friend Recommendation",
-    "Search Engine",
-    "Reddit/Forum",
-    "YouTube/Streamer",
-    "Other"
-  ];
+  // Randomize option order per user to avoid top-pick bias; "Other" stays last
+  const [heardAboutOptions] = useState(() => {
+    const options = [
+      "Social Media",
+      "Friend Recommendation",
+      "Search Engine",
+      "Reddit/Forum",
+      "YouTube/Streamer"
+    ];
+    for (let i = options.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [options[i], options[j]] = [options[j], options[i]];
+    }
+    return [...options, "Other"];
+  });
 
   useEffect(() => {
     const validateUsername = async () => {
