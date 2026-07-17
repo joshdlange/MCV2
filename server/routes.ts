@@ -1682,7 +1682,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Admin access required' });
       }
       const { getLastDriveDryRunReport, isDriveDryRunRunning } = await import('./services/driveImageSync');
-      res.json({ running: isDriveDryRunRunning(), report: getLastDriveDryRunReport() });
+      const report = getLastDriveDryRunReport();
+      // ?summary=1 → strip the large detail arrays (UI status panels only need the counts)
+      if (req.query.summary && report) {
+        const { allCardFolders, allImageFiles, matchedSamples, unmatchedSamples, ambiguousFolders,
+          unexpectedStructures, containerReports, duplicateDriveFileIdList, duplicateCardMatchList,
+          firstLevelFolders, ...slim } = report as any;
+        // Include how many images have already been imported (from the ledger)
+        const { sql } = await import('drizzle-orm');
+        const { db } = await import('./db');
+        const countRes = await db.execute(sql`SELECT COUNT(*)::int AS n FROM drive_image_imports WHERE status = 'uploaded'`);
+        (slim as any).alreadyImportedImages = (countRes.rows[0] as any)?.n ?? 0;
+        return res.json({ running: isDriveDryRunRunning(), report: slim });
+      }
+      res.json({ running: isDriveDryRunRunning(), report });
     } catch (error) {
       console.error('Drive sync last-report error:', error);
       res.status(500).json({ message: 'Failed to get drive sync report' });

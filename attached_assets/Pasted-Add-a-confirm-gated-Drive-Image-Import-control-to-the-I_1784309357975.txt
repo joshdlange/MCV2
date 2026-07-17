@@ -1,0 +1,59 @@
+Add a confirm-gated Drive Image Import control to the Image Automation admin page.
+
+Goal:
+Let an admin safely view Drive sync status, run dry-run, and trigger the confirmed import from the admin dashboard without using raw API calls.
+
+Must do:
+- Add Drive Image Sync section to Image Automation admin page.
+- Show latest dry-run summary:
+  - total scanned
+  - eligible folders
+  - already imported
+  - unmatched
+  - wrong image count
+  - unresolved front/back
+  - structure oddities
+- Add button: “Run Dry Run”
+- Add button: “Run Import”
+- “Run Import” must require a strong confirmation step.
+- Require the admin to type exactly:
+  IMPORT
+- Show warning:
+  “This uploads eligible Drive images to Cloudinary and updates matching card image records. It will skip unmatched, wrong-count, ambiguous, already-imported, and existing-image records.”
+- Keep overwrite disabled by default.
+- Do not expose overwrite in the UI yet unless clearly marked Dangerous.
+- After import starts, show progress/report via:
+  GET /api/admin/drive-sync/import-report
+- Show recent import batch results:
+  - uploaded images
+  - updated cards
+  - skipped already imported
+  - skipped existing images
+  - skipped unmatched
+  - failures
+- Make the UI admin-only.
+- Do not auto-run import on page load.
+- Do not run full import during development unless explicitly approved.
+
+Must not do:
+- Do not run the full import.
+- Do not enable overwrite by default.
+- Do not import unmatched folders.
+- Do not import wrong image count folders.
+- Do not import structure oddities.
+- Do not guess matches.
+- Do not create new card records.
+- Do not change user collections.
+- Do not send emails.
+- Do not schedule automatic sync.
+- Do not touch PC Binders, XP, subscriptions, auth, Android, or iOS.
+
+QA:
+- Image Automation page loads.
+- Latest dry-run/report displays.
+- Run Dry Run works and does not upload/update anything.
+- Run Import refuses without typed IMPORT confirmation.
+- Import button does not fire on page load.
+- Non-admin users cannot access the page or endpoints.
+- No full import was run during this task.
+- Existing image approval and image automation tools still work.
