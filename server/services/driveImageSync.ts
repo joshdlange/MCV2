@@ -238,6 +238,9 @@ export async function runDriveImageSyncDryRun(): Promise<DriveDryRunReport> {
     const listCounted = async (id: string) => {
       if (folderListings >= MAX_FOLDER_LISTINGS) { truncated = true; return [] as DriveItem[]; }
       folderListings++;
+      if (folderListings % 100 === 0) {
+        console.log(`[DriveSync] Progress: ${folderListings} folder listings so far...`);
+      }
       return listChildren(id);
     };
 
@@ -306,7 +309,12 @@ export async function runDriveImageSyncDryRun(): Promise<DriveDryRunReport> {
         looksLikeHierarchy = probeFolders.length > 0;
       }
 
-      if (!matchedMainSet && !looksLikeHierarchy) {
+      // Wrapper/container detection: a first-level folder that doesn't match a
+      // main set but whose CHILD folders look like set names (match main sets or
+      // resemble the top-level set folders) is a container, even if it has depth.
+      const childrenLookLikeSets = topChildFolders.some(f => mainSetByName.has(normalize(f.name.trim())));
+
+      if (!matchedMainSet && (childrenLookLikeSets || !looksLikeHierarchy)) {
         report.firstLevelFolders.push({ name: topName, id: top.id, classification: 'container_or_unknown' });
         report.containerReports.push({
           name: topName,

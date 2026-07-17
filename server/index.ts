@@ -5,6 +5,7 @@ import { startImageProcessor } from "./image-processor";
 import { startBackgroundPricing } from "./background-pricing";
 import { warmPool } from "./db";
 import path from "path";
+import fs from "fs";
 
 const app = express();
 
@@ -122,6 +123,25 @@ app.use((req, res, next) => {
     }).catch((error) => {
       console.error('Failed to start image migration cron:', error);
     });
+
+    // TEMP (dev-only): run Drive Image Sync dry-run at boot when the flag file
+    // exists. Read-only scan; report written to /tmp. Remove after v1 review.
+    if (process.env.NODE_ENV === 'development') {
+      try {
+        if (fs.existsSync('/tmp/run_drive_dryrun')) {
+          fs.unlinkSync('/tmp/run_drive_dryrun');
+          import('./services/driveImageSync').then(async ({ runDriveImageSyncDryRun }) => {
+            const report = await runDriveImageSyncDryRun();
+            fs.writeFileSync('/tmp/drive_dryrun_report.json', JSON.stringify(report, null, 2));
+            console.log('[DriveSync] Dry-run report written to /tmp/drive_dryrun_report.json');
+          }).catch((error) => {
+            console.error('[DriveSync] Dev boot dry-run failed:', error);
+          });
+        }
+      } catch (e) {
+        console.error('[DriveSync] Dev boot trigger check failed:', e);
+      }
+    }
     
 
   });
