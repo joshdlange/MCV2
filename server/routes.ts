@@ -1798,6 +1798,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AU Duplicate Card Cleanup (admin-only). Preview is read-only; execute is
+  // confirm-gated, transactional, remaps user data to base cards, and audit-logged.
+  app.get("/api/admin/au-duplicates/preview", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      const { previewAuDuplicateCleanup } = await import('./services/auDuplicateCleanup');
+      res.json(await previewAuDuplicateCleanup());
+    } catch (error: any) {
+      console.error('AU duplicate preview error:', error?.message || error);
+      res.status(500).json({ message: error?.message || 'AU duplicate preview failed' });
+    }
+  });
+
+  app.post("/api/admin/au-duplicates/cleanup", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      if (req.body?.confirm !== 'REMOVE') {
+        return res.status(400).json({ message: 'Cleanup requires explicit confirmation: send { "confirm": "REMOVE" }' });
+      }
+      const { runAuDuplicateCleanup } = await import('./services/auDuplicateCleanup');
+      const result = await runAuDuplicateCleanup();
+      await db.insert(adminAuditLogs).values({
+        adminUserId: req.user.id,
+        actionType: 'au_duplicate_cleanup',
+        entityType: 'card',
+        entityId: 0,
+        entityName: 'AU duplicate cards (bulk)',
+        notes: JSON.stringify(result),
+      });
+      res.json(result);
+    } catch (error: any) {
+      console.error('AU duplicate cleanup error:', error?.message || error);
+      res.status(500).json({ message: error?.message || 'AU duplicate cleanup failed' });
+    }
+  });
+
   // Lightweight first-card-image lookup for set thumbnails.
   // Single indexed LIMIT 1 query (no COUNT), cached in memory for 10 minutes —
   // browse pages fire one of these per placeholder set tile.
