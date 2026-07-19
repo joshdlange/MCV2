@@ -20,7 +20,7 @@ import { getCardAuraTier, type AuraTier } from "@/lib/cardAura";
 import type { CardWithSet } from "@shared/schema";
 import { useCardPricing, useRefreshCardPricing } from "@/hooks/useCardPricing";
 import { auth } from "@/lib/firebase";
-import noCardImagePlaceholder from "@assets/no card image 4_1764019444486.png";
+import noCardImagePlaceholder from "@assets/image_1784478496002.png";
 import { formatCardName, formatSetName } from "@/lib/formatTitle";
 
 interface CardDetailModalProps {
@@ -531,7 +531,7 @@ export function CardDetailModal({
                   <div className={`card-aura-container aura-${auraTier}`}>
                     <div className="aspect-[2.5/3.5] w-[280px] relative overflow-hidden rounded-xl shadow-xl">
                       <img
-                        src={showBack ? convertGoogleDriveUrl(card.backImageUrl || '') : convertGoogleDriveUrl(card.frontImageUrl || '')}
+                        src={(showBack ? convertGoogleDriveUrl(card.backImageUrl || '') : convertGoogleDriveUrl(card.frontImageUrl || '')) || noCardImagePlaceholder}
                         alt={showBack ? `${card.name} back` : card.name}
                         className="w-full h-full object-contain bg-gray-900"
                         onError={(e) => {
