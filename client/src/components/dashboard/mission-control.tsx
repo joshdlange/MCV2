@@ -107,7 +107,31 @@ export function MissionCard({
       className="mission-card rounded-xl p-4 sm:p-5 shadow-xl"
       data-testid="card-mission"
     >
-      <div className="mission-card-crosshair hidden sm:block" />
+      <svg
+        className="mission-card-web hidden sm:block"
+        viewBox="0 0 200 200"
+        fill="none"
+        aria-hidden="true"
+      >
+        <g stroke="rgba(239,68,68,0.35)" strokeWidth="1">
+          {/* Radial spokes from corner */}
+          <line x1="200" y1="0" x2="0" y2="0" />
+          <line x1="200" y1="0" x2="0" y2="60" />
+          <line x1="200" y1="0" x2="0" y2="130" />
+          <line x1="200" y1="0" x2="0" y2="200" />
+          <line x1="200" y1="0" x2="70" y2="200" />
+          <line x1="200" y1="0" x2="140" y2="200" />
+          <line x1="200" y1="0" x2="200" y2="200" />
+          {/* Concentric web strands (slightly sagging arcs between spokes) */}
+          <path d="M 165 0 Q 160 12 154 21 Q 146 32 165 35" />
+          <path d="M 130 0 Q 122 24 108 42 Q 90 63 130 70 M 130 70 Q 155 62 200 70" />
+          <path d="M 95 0 Q 84 36 62 63 Q 34 95 95 105 M 95 105 Q 132 94 200 105" />
+          <path d="M 60 0 Q 46 48 16 84 Q -8 112 0 118" />
+          <path d="M 25 0 Q 8 60 0 78" />
+          <path d="M 200 140 Q 128 128 68 158 Q 24 182 25 200" />
+          <path d="M 200 175 Q 150 168 108 184 Q 78 194 75 200" />
+        </g>
+      </svg>
       <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
         <div className="flex-1 min-w-0">
           <div className="inline-flex items-center gap-1.5 mb-1.5 px-2 py-0.5 rounded-full border border-red-500/30 bg-red-600/15">

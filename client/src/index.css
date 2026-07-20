@@ -203,22 +203,18 @@
     z-index: 0;
   }
 
-  .mission-card-crosshair {
+  /* Spiderweb anchored to the card's top-right corner */
+  .mission-card-web {
     position: absolute;
-    top: 50%;
-    right: 20%;
-    transform: translateY(-50%);
-    width: 120px;
-    height: 120px;
-    background-image:
-      linear-gradient(to right, transparent 49%, rgba(239, 68, 68, 0.3) 49%, rgba(239, 68, 68, 0.3) 51%, transparent 51%),
-      linear-gradient(to bottom, transparent 49%, rgba(239, 68, 68, 0.3) 49%, rgba(239, 68, 68, 0.3) 51%, transparent 51%),
-      radial-gradient(circle, transparent 36%, rgba(239, 68, 68, 0.3) 36%, rgba(239, 68, 68, 0.3) 39%, transparent 39%),
-      radial-gradient(circle, transparent 18%, rgba(239, 68, 68, 0.22) 18%, rgba(239, 68, 68, 0.22) 21%, transparent 21%);
-    border-radius: 50%;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: auto;
+    aspect-ratio: 1 / 1;
+    max-width: 40%;
     pointer-events: none;
     z-index: 0;
-    opacity: 0.7;
+    opacity: 0.8;
   }
 
   @keyframes shimmer {
