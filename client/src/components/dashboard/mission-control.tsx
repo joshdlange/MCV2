@@ -117,7 +117,7 @@ export function MissionCard({
             </span>
           </div>
           <h3
-            className="text-white font-extrabold text-lg sm:text-xl leading-tight tracking-tight"
+            className="text-white font-black italic uppercase text-xl sm:text-2xl leading-tight tracking-tight"
             data-testid="text-mission-headline"
           >
             {mission.headline}
