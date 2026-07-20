@@ -159,6 +159,67 @@
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   }
 
+  /* Mission Card Styles */
+  .mission-card {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #111111 0%, #1a1a1a 100%);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.15), inset 0 0 20px rgba(0, 0, 0, 0.5);
+    border-radius: var(--radius);
+  }
+
+  .mission-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 10px,
+      rgba(239, 68, 68, 0.03) 10px,
+      rgba(239, 68, 68, 0.03) 20px
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .mission-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 50%;
+    height: 100%;
+    background: radial-gradient(circle at right center, rgba(239, 68, 68, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .mission-card-crosshair {
+    position: absolute;
+    top: 50%;
+    right: 5%;
+    transform: translateY(-50%);
+    width: 150px;
+    height: 150px;
+    background-image: 
+      linear-gradient(to right, transparent 49%, rgba(239, 68, 68, 0.1) 49%, rgba(239, 68, 68, 0.1) 51%, transparent 51%),
+      linear-gradient(to bottom, transparent 49%, rgba(239, 68, 68, 0.1) 49%, rgba(239, 68, 68, 0.1) 51%, transparent 51%),
+      radial-gradient(circle, transparent 40%, rgba(239, 68, 68, 0.1) 40%, rgba(239, 68, 68, 0.1) 45%, transparent 45%);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
   .admin-toggle {
     background: linear-gradient(135deg, hsl(var(--marvel-red)) 0%, hsl(4 86% 48%) 100%);
   }

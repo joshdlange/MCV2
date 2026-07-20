@@ -1,0 +1,124 @@
+We want to polish the Marvel Card Vault dashboard, specifically the top objective/mission card and collection/vault stats area.
+
+Important:
+This is a dashboard visual polish pass, not a full dashboard redesign.
+
+Goal:
+Make the dashboard feel more premium, game-like, and mission-oriented while preserving the current layout, mobile responsiveness, routes, and behavior.
+
+Focus areas:
+1. The top “Today’s Mission / Build Your Vault” objective card
+2. The Collection Snapshot / Vault Stats cards
+3. The Collector XP progress bar
+
+Design direction:
+- Dark premium MCV style
+- Black/charcoal background
+- Red glow accents
+- Subtle comic/halftone texture
+- Subtle diagonal red energy streaks
+- Slight target/crosshair motif on the right side of the mission card
+- Clean, readable, mobile-first
+- No Marvel/Disney/third-party branding
+- Use MCV branding only
+
+Must do:
+- Keep the existing dashboard structure and functionality.
+- Enhance the top mission card background:
+  - dark gradient base
+  - subtle red diagonal energy/streak effect
+  - faint target/crosshair or mission icon on the right
+  - subtle red border/glow
+  - optional halftone/noise texture if lightweight
+- Keep mission copy readable on desktop and mobile.
+- Make the mission card responsive:
+  - desktop can have text left and CTA right
+  - mobile should stack naturally and keep the CTA easy to tap
+  - background art must not cover or reduce text readability
+- Improve the vault/stat cards visually:
+  - stronger icon badges
+  - subtle glow by stat type
+  - consistent spacing
+  - clearer labels
+  - polished hover/press states on desktop/mobile
+- Preserve current displayed stats:
+  - cards
+  - collection value
+  - wishlist
+  - powers or PC binders, depending on current implementation
+  - collector level/XP
+- Improve the XP progress bar visually without changing XP logic.
+- Keep all existing button destinations and behavior unchanged.
+- Keep Add Cards, Scan to Add, My Collection, Share/PC Binder buttons working exactly as they do now.
+- Keep performance lightweight; use CSS gradients/pseudo-elements where possible instead of heavy images.
+
+Must not do:
+- Do not redesign the entire dashboard.
+- Do not change dashboard data queries.
+- Do not change XP calculations.
+- Do not change card counts.
+- Do not change collection value logic.
+- Do not change Add Cards behavior.
+- Do not change Scan to Add behavior.
+- Do not change PC Binder gating.
+- Do not change subscription logic.
+- Do not add new backend features.
+- Do not introduce whole-collection sharing if it does not already exist.
+- Do not touch Android native files.
+- Do not touch iOS native files.
+- Do not add large image assets unless absolutely necessary.
+- Do not use Marvel/Disney/Upper Deck/Topps branding or affiliation language.
+
+Preserve:
+- Existing dashboard routes.
+- Existing dashboard data.
+- Existing mobile layout.
+- Existing auth/subscription behavior.
+- Existing XP system.
+- Existing Marvel Card Vault branding.
+- Existing app performance.
+
+Suggested mission card copy:
+Badge:
+TODAY’S MISSION
+
+Heading:
+Build Your Vault
+
+Body:
+Add cards, complete binders, earn XP, and help complete the vault.
+
+CTA:
+Add Cards
+
+Optional small hint:
+Earn XP as you build.
+
+Suggested CSS approach:
+- Use pseudo-elements on the mission card:
+  - ::before for diagonal red glow/streaks
+  - ::after for faint target/crosshair graphic or radial glow
+- Use radial-gradient and linear-gradient backgrounds.
+- Add subtle border:
+  border: 1px solid rgba(239, 68, 68, 0.35)
+- Add box-shadow:
+  red glow, but keep it subtle.
+- For stat cards, use per-stat accent colors already present in the app:
+  - red for cards
+  - green for value
+  - pink for wishlist
+  - purple for PC/powers
+  - yellow/gold for XP/level
+
+QA:
+- Dashboard loads for Free, Side Kick, and Super Hero users.
+- Mission card looks good on desktop.
+- Mission card looks good on mobile.
+- Text remains readable over the background.
+- CTA remains easy to tap on mobile.
+- Vault/stat cards look polished and aligned.
+- XP bar displays correctly.
+- Existing dashboard buttons still work.
+- No console errors.
+- No layout overflow on mobile.
+- No user-facing behavior changed beyond visual polish.
