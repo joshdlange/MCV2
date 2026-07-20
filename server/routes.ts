@@ -11146,9 +11146,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // One-time seed: 2026 Topps Finest Fantastic Four: 65th Anniversary — 137 subsets, 4,851 cards (idempotent)
-  import('./seeds/seedToppsFinestFF2026').then(m => m.seedToppsFinestFF2026()).catch(err => {
-    console.error('[Topps Finest FF Seed] Error:', err);
-  });
+  // Then one-time fix: copy 100 base-card images added in dev into prod (empty-only, no overwrites)
+  import('./seeds/seedToppsFinestFF2026').then(m => m.seedToppsFinestFF2026())
+    .then(() => import('./seeds/fixToppsFinestFF2026Images').then(m => m.fixToppsFinestFF2026Images()))
+    .catch(err => {
+      console.error('[Topps Finest FF Seed/Images] Error:', err);
+    });
 
   // One-time cleanup: remove ~1,297 duplicate "AU"-suffixed autograph cards
   // (import artifact — e.g. "WolverineAU," duplicating "Wolverine" in the same
