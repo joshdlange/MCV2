@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Zap, Info } from "lucide-react";
+import { Info } from "lucide-react";
+import { ComicBolt } from "@/components/ui/comic-bolt";
 import {
   Popover,
   PopoverContent,
@@ -74,17 +75,17 @@ export function XpPowerMeter() {
   const progressBar = loading ? (
     <ShimmerBar />
   ) : (
-    <div className="h-2.5 bg-black/60 rounded-full overflow-hidden border border-amber-500/20 shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]">
+    <div className="relative h-2.5 bg-black/60 rounded-full overflow-hidden border border-amber-500/20 shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]">
       <motion.div
-        className="h-full rounded-full bg-gradient-to-r from-amber-500 via-yellow-400 to-yellow-300 relative"
+        className="h-full rounded-full bg-gradient-to-r from-amber-500 via-yellow-400 to-yellow-300"
         style={{ boxShadow: "0 0 15px rgba(251,191,36,0.6)" }}
         initial={{ width: 0 }}
         animate={{ width: `${data!.isMaxLevel ? 100 : data!.progressPct}%` }}
         transition={{ duration: 1, ease: "easeOut" }}
         data-testid="bar-xp-progress"
-      >
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.4)_50%,transparent_100%)] animate-[shimmer_2s_infinite]" />
-      </motion.div>
+      />
+      {/* Full-track glow sweep — spans the whole bar, slow with a pause between passes */}
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.3)_50%,transparent_100%)] animate-[xp-sweep_4.5s_ease-in-out_infinite]" />
     </div>
   );
 
@@ -139,7 +140,7 @@ export function XpPowerMeter() {
             className={`flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 shrink-0${loading ? " animate-pulse" : ""}`}
             style={{ boxShadow: "0 0 12px 1px rgba(251,191,36,0.4)" }}
           >
-            <Zap className="w-3.5 h-3.5 text-black" strokeWidth={2.5} fill="currentColor" />
+            <ComicBolt className="w-4 h-4 text-black" outlined={false} />
           </div>
           <div className="leading-none">
             <div className="text-[9px] font-bold tracking-[0.16em] uppercase text-amber-400/90">

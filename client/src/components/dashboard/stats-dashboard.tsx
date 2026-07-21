@@ -5,7 +5,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Info, Layers, DollarSign, Heart, Plus, ArrowRight, Zap, ScanLine, Share2 } from "lucide-react";
+import { Info, Layers, DollarSign, Heart, Plus, ArrowRight, ScanLine, Share2 } from "lucide-react";
+import { ComicBolt } from "@/components/ui/comic-bolt";
 import type { CollectionStats } from "@shared/schema";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
@@ -48,7 +49,7 @@ const TILES = [
   {
     key: "powers",
     label: "POWERS",
-    icon: Zap,
+    icon: ComicBolt,
     color: "#a855f7",
     colorMuted: "rgba(168,85,247,0.15)",
     gradient: "from-purple-700 to-purple-500",

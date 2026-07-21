@@ -17,6 +17,7 @@ import {
   Package, Edit, Zap, TrendingUp, CheckCircle, Clock, EyeOff, Repeat2,
   Instagram, ExternalLink, Settings, Sparkles, UserCircle
 } from "lucide-react";
+import { ComicBolt } from "@/components/ui/comic-bolt";
 import type { XpProgress } from "@shared/xp";
 import { XP_PER_APPROVED_IMAGE, XP_FIRST_APPROVED_IMAGE_BONUS } from "@shared/xp";
 import BadgeIcon from "@/components/profile/BadgeIcon";
@@ -387,7 +388,7 @@ export default function CollectorProfile() {
           <div className="flex items-center flex-wrap gap-2 mb-1">
             <h1 className="text-2xl font-bold text-gray-900">{displayName}</h1>
             <span className="inline-flex items-center gap-1 bg-gradient-to-r from-red-600 to-red-500 text-white px-2 py-0.5 rounded-full text-xs font-bold shadow-sm">
-              <Sparkles className="w-3 h-3" /> LVL {xp.level}
+              <ComicBolt className="w-3 h-3 text-yellow-300" /> LVL {xp.level}
             </span>
             {isSuperHero && (
               <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-800 border border-yellow-300 px-2 py-0.5 rounded-full text-xs font-bold">
@@ -445,7 +446,7 @@ export default function CollectorProfile() {
           <div className="mt-4 bg-white/10 rounded-xl p-3 backdrop-blur-sm border border-white/20">
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-white font-bold text-sm flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-yellow-300" /> Level {xp.level}
+                <ComicBolt className="w-4 h-4 text-yellow-300" /> Level {xp.level}
                 <span className="text-white/60 font-normal">/ {50}</span>
               </span>
               <span className="text-white/90 text-xs font-medium">

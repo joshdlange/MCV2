@@ -228,6 +228,14 @@
     100% { transform: translateX(100%); }
   }
 
+  /* Full-track sweep for the XP bar: one smooth pass across the whole bar,
+     then a pause before the next sweep (55% travel + 45% rest). */
+  @keyframes xp-sweep {
+    0% { transform: translateX(-100%); }
+    55% { transform: translateX(100%); }
+    100% { transform: translateX(100%); }
+  }
+
   .admin-toggle {
     background: linear-gradient(135deg, hsl(var(--marvel-red)) 0%, hsl(4 86% 48%) 100%);
   }
