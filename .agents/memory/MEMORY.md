@@ -16,4 +16,5 @@
 - [Email cron disabled in prod](email-cron-disabled-in-prod.md) — EMAIL_CRON_ENABLED unset everywhere; scheduled email blasts run manually; wire always-on jobs at startup + dedupe drips via email_logs job_name.
 - [Shell background procs die between calls](replit-shell-background-procs.md) — nohup jobs don't survive across bash tool calls; pgrep self-matches its own poll command.
 - [Card-number natural sort](card-number-sorting.md) — card_number is text; every new ORDER BY on it must reuse the CASE/LPAD numeric pattern or 1,10,11,2 sorting returns.
+- [Drizzle raw sql array params](drizzle-array-params.md) — `${arr}` in sql`` breaks ANY(); use IN with sql.join or inArray.
 - [Drive image import safety](drive-image-import.md) — marked-file-wins front/back rule only (never sort order); transactional ledger gives rerun idempotency; always fresh scan before import.

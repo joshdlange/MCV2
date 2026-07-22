@@ -1,0 +1,402 @@
+[
+ {
+  "num": "1",
+  "name": "Weapon X"
+ },
+ {
+  "num": "2",
+  "name": "Sabretooth"
+ },
+ {
+  "num": "3",
+  "name": "Maverick"
+ },
+ {
+  "num": "4",
+  "name": "Kestrel"
+ },
+ {
+  "num": "5",
+  "name": "Wolverine vs. Shiva"
+ },
+ {
+  "num": "6",
+  "name": "Kane"
+ },
+ {
+  "num": "7",
+  "name": "Deadpool"
+ },
+ {
+  "num": "8",
+  "name": "Silver Fox"
+ },
+ {
+  "num": "9",
+  "name": "Logan & Victor Creed"
+ },
+ {
+  "num": "10",
+  "name": "Wolverine"
+ },
+ {
+  "num": "11",
+  "name": "Snowbird"
+ },
+ {
+  "num": "12",
+  "name": "Shaman"
+ },
+ {
+  "num": "13",
+  "name": "Sasquatch"
+ },
+ {
+  "num": "14",
+  "name": "Wolverine vs. Hulk"
+ },
+ {
+  "num": "15",
+  "name": "Northstar"
+ },
+ {
+  "num": "16",
+  "name": "Aurora"
+ },
+ {
+  "num": "17",
+  "name": "Puck"
+ },
+ {
+  "num": "18",
+  "name": "Wolverine & Weapon Alpha"
+ },
+ {
+  "num": "19",
+  "name": "Wolverine"
+ },
+ {
+  "num": "20",
+  "name": "Banshee"
+ },
+ {
+  "num": "21",
+  "name": "Sunfire"
+ },
+ {
+  "num": "22",
+  "name": "Cyclops"
+ },
+ {
+  "num": "23",
+  "name": "Wolverine vs. Krakoa"
+ },
+ {
+  "num": "24",
+  "name": "Storm"
+ },
+ {
+  "num": "25",
+  "name": "Nightcrawler"
+ },
+ {
+  "num": "26",
+  "name": "Thunderbird"
+ },
+ {
+  "num": "27",
+  "name": "Wolverine & Colossus"
+ },
+ {
+  "num": "28",
+  "name": "Wolverine"
+ },
+ {
+  "num": "29",
+  "name": "Mariko Yashida"
+ },
+ {
+  "num": "30",
+  "name": "Silver Samurai"
+ },
+ {
+  "num": "31",
+  "name": "Ogun"
+ },
+ {
+  "num": "32",
+  "name": "Wolverine vs. Lord Shingen"
+ },
+ {
+  "num": "33",
+  "name": "Lady Deathstrike"
+ },
+ {
+  "num": "34",
+  "name": "Yukio"
+ },
+ {
+  "num": "35",
+  "name": "Madame Hydra"
+ },
+ {
+  "num": "36",
+  "name": "Wolverine & Shadowcat"
+ },
+ {
+  "num": "37",
+  "name": "Wolverine"
+ },
+ {
+  "num": "38",
+  "name": "Venom"
+ },
+ {
+  "num": "39",
+  "name": "Captain America"
+ },
+ {
+  "num": "40",
+  "name": "Nick Fury"
+ },
+ {
+  "num": "41",
+  "name": "Wolverine vs. Thing"
+ },
+ {
+  "num": "42",
+  "name": "Ghost Rider"
+ },
+ {
+  "num": "43",
+  "name": "Punisher"
+ },
+ {
+  "num": "44",
+  "name": "Black Widow"
+ },
+ {
+  "num": "45",
+  "name": "Wolverine & Spider-Man"
+ },
+ {
+  "num": "46",
+  "name": "Wolverine"
+ },
+ {
+  "num": "47",
+  "name": "Tyger Tiger"
+ },
+ {
+  "num": "48",
+  "name": "Psylocke"
+ },
+ {
+  "num": "49",
+  "name": "Razorfist"
+ },
+ {
+  "num": "50",
+  "name": "Wolverine vs. Cyber"
+ },
+ {
+  "num": "51",
+  "name": "Patch"
+ },
+ {
+  "num": "52",
+  "name": "Geist"
+ },
+ {
+  "num": "53",
+  "name": "Roughouse"
+ },
+ {
+  "num": "54",
+  "name": "Wolverine & Hulk"
+ },
+ {
+  "num": "55",
+  "name": "Li’l Wolvie"
+ },
+ {
+  "num": "56",
+  "name": "Mojo"
+ },
+ {
+  "num": "57",
+  "name": "Dazzler"
+ },
+ {
+  "num": "58",
+  "name": "Mystique"
+ },
+ {
+  "num": "59",
+  "name": "Wolverine vs. Spiral"
+ },
+ {
+  "num": "60",
+  "name": "Baby Colossus & Baby Nightcrawler"
+ },
+ {
+  "num": "61",
+  "name": "Baby Storm & Baby Havok"
+ },
+ {
+  "num": "62",
+  "name": "Babies Rogue, Longshot & Dazzler"
+ },
+ {
+  "num": "63",
+  "name": "Wolverine & Longshot"
+ },
+ {
+  "num": "64",
+  "name": "Wolverine"
+ },
+ {
+  "num": "65",
+  "name": "Bloodscream"
+ },
+ {
+  "num": "66",
+  "name": "Donald Pierce"
+ },
+ {
+  "num": "67",
+  "name": "Deathbird"
+ },
+ {
+  "num": "68",
+  "name": "Wolverine vs. Sabretooth"
+ },
+ {
+  "num": "69",
+  "name": "Brood"
+ },
+ {
+  "num": "70",
+  "name": "Albert"
+ },
+ {
+  "num": "71",
+  "name": "Omega Red"
+ },
+ {
+  "num": "72",
+  "name": "Wolverine & Typhoid Mary"
+ },
+ {
+  "num": "73",
+  "name": "Wolverine"
+ },
+ {
+  "num": "74",
+  "name": "Bishop"
+ },
+ {
+  "num": "75",
+  "name": "Gambit"
+ },
+ {
+  "num": "76",
+  "name": "Archangel"
+ },
+ {
+  "num": "77",
+  "name": "Wolverine vs. Magneto"
+ },
+ {
+  "num": "78",
+  "name": "Rogue"
+ },
+ {
+  "num": "79",
+  "name": "Beast"
+ },
+ {
+  "num": "80",
+  "name": "Jean Grey"
+ },
+ {
+  "num": "81",
+  "name": "Wolverine & Jubilee"
+ },
+ {
+  "num": "82",
+  "name": "Weapon X"
+ },
+ {
+  "num": "83",
+  "name": "Sabretooth"
+ },
+ {
+  "num": "84",
+  "name": "Cyclops"
+ },
+ {
+  "num": "85",
+  "name": "Havok"
+ },
+ {
+  "num": "86",
+  "name": "Weapon X vs. Cyclops"
+ },
+ {
+  "num": "87",
+  "name": "Magneto"
+ },
+ {
+  "num": "88",
+  "name": "Pierce"
+ },
+ {
+  "num": "89",
+  "name": "Apocalypse"
+ },
+ {
+  "num": "90",
+  "name": "Weapon X & Jean Grey"
+ },
+ {
+  "num": "91",
+  "name": "Wolverine"
+ },
+ {
+  "num": "92",
+  "name": "Cannonball"
+ },
+ {
+  "num": "93",
+  "name": "Lifeforce"
+ },
+ {
+  "num": "94",
+  "name": "Deadbolt & Dirt Nap"
+ },
+ {
+  "num": "95",
+  "name": "Wolverine vs. Genesis"
+ },
+ {
+  "num": "96",
+  "name": "Hurricane"
+ },
+ {
+  "num": "97",
+  "name": "Expediter"
+ },
+ {
+  "num": "98",
+  "name": "Spyne"
+ },
+ {
+  "num": "99",
+  "name": "Wolverine & Elektra"
+ },
+ {
+  "num": "100",
+  "name": "Checklist"
+ }
+]

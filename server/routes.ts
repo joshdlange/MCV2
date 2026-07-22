@@ -11203,6 +11203,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error('[X-Men AU Set Cleanup] Error:', err);
   });
 
+  // One-time seed: 1996 Ultra X-Men Wolverine base subset — 100 cards (idempotent).
+  // Then one-time removal: two duplicate/incorrect "Marvel 1996 Ultra X-Men"
+  // collections (user-confirmed deletion incl. their user collection entries).
+  // Safe to remove both after the prod run is confirmed (admin_audit_logs
+  // action_type 'ultra_xmen_1996_dupe_removal').
+  import('./seeds/seedUltraWolverine1996Base').then(async (m) => {
+    const seedResult = await m.seedUltraWolverine1996Base();
+    if (seedResult.inserted > 0) {
+      console.log(`[Ultra Wolverine Seed] Inserted ${seedResult.inserted} base cards into set ${seedResult.setId}`);
+    }
+    const rm = await import('./services/ultraXmen1996DupeRemoval');
+    const result = await rm.runUltraXmen1996DupeRemoval();
+    if (result.ran) {
+      console.log('[Ultra X-Men Dupe Removal] Removed duplicate collections:', JSON.stringify(result));
+      await db.insert(adminAuditLogs).values({
+        actionType: 'ultra_xmen_1996_dupe_removal',
+        entityType: 'main_set',
+        entityId: result.removedMainSets[0]?.id ?? 0,
+        entityName: result.removedMainSets.map(m2 => m2.name.trim()).join(' + '),
+        notes: JSON.stringify(result),
+      });
+    } else {
+      console.log('[Ultra X-Men Dupe Removal] No-op: duplicate main sets already gone');
+    }
+  }).catch(err => {
+    console.error('[Ultra Wolverine Seed / Dupe Removal] Error:', err);
+  });
+
   // Initialize upcoming sets: seed data + cron jobs (RSS sync + auto-expire)
   initializeUpcomingSets().catch(err => {
     console.error('[Upcoming Sets] Initialization error:', err);
