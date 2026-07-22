@@ -1,5 +1,4 @@
 import { CronJob } from 'cron';
-import fetch from 'node-fetch';
 import { db } from '../db';
 import { cards } from '../../shared/schema';
 import { sql, eq, or, like, notInArray, and } from 'drizzle-orm';
@@ -30,8 +29,6 @@ import { cloudinary } from '../cloudinary';
 const NIGHTLY_LIMIT = 450;
 const DELAY_MS = 4_000;
 const MAX_CONSECUTIVE_FAILURES = 25;
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-const DOWNLOAD_TIMEOUT_MS = 30_000;
 const UPLOAD_TIMEOUT_MS = 60_000;
 const RUN_CUTOFF_MS = 80 * 60 * 1000; // hard stop after 80 min so we never overlap the 3 AM pricing job
 const LOCK_KEY = 'nightly-image-migration';
@@ -51,33 +48,16 @@ export function getImageMigrationStatus() {
   return { running: migrationRunning, lastRun: migrationLastRun, skippedThisBoot: skipCardIds.size };
 }
 
-/** Download from COMC (which allows direct fetches) and upload the bytes to Cloudinary. */
+/**
+ * Migrate one COMC image by letting Cloudinary fetch the URL directly from its
+ * own servers. COMC put Cloudflare bot protection in front of img.comc.com
+ * (July 2026), so downloads from our server get HTTP 403 — but Cloudinary's
+ * fetchers are not blocked, and browsers still load the images fine.
+ * Cloudinary validates the response is a real image and errors otherwise.
+ */
 async function migrateOneUrl(url: string, cardId: number, side: 'front' | 'back'): Promise<string> {
-  const controller = new AbortController();
-  const downloadTimer = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT_MS);
-  let response;
-  try {
-    response = await fetch(url, {
-      signal: controller.signal as any,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'image/*,*/*;q=0.8',
-      },
-    });
-  } finally {
-    clearTimeout(downloadTimer);
-  }
-  if (!response.ok) throw new Error(`Download failed: HTTP ${response.status}`);
-
-  const contentType = response.headers.get('content-type') || 'image/jpeg';
-  if (!contentType.startsWith('image/')) throw new Error(`Not an image: ${contentType}`);
-
-  const buffer = Buffer.from(await response.arrayBuffer());
-  if (buffer.length === 0) throw new Error('Empty image response');
-  if (buffer.length > MAX_IMAGE_BYTES) throw new Error(`Image too large: ${buffer.length} bytes`);
-
   const result = await cloudinary.uploader.upload(
-    `data:${contentType};base64,${buffer.toString('base64')}`,
+    url,
     {
       folder: 'marvel-cards/comc-migration',
       public_id: `card_${cardId}_${side}`,
