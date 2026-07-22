@@ -11231,6 +11231,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error('[Ultra Wolverine Seed / Dupe Removal] Error:', err);
   });
 
+  // One-time fix: 1993 SkyBox X-Men Series 2 — move the real 100-card base
+  // checklist (with all images and user collection entries) from the legacy
+  // duplicate "Marvel 1993 X-Men Series 2" family into the canonical empty base
+  // subset, then delete the duplicate family (incl. its identical zero-ref twin
+  // subset). Idempotent + advisory-locked; safe to remove after the prod run is
+  // confirmed (admin_audit_logs action_type 'skybox_1993_s2_merge').
+  import('./services/skybox1993S2Merge').then(async (m) => {
+    const result = await m.runSkybox1993S2Merge();
+    if (result.ran) {
+      console.log('[SkyBox 93 S2 Merge] Done:', JSON.stringify(result));
+      await db.insert(adminAuditLogs).values({
+        actionType: 'skybox_1993_s2_merge',
+        entityType: 'main_set',
+        entityId: 0,
+        entityName: '1993 SkyBox X-Men Series 2 base merge + duplicate family removal',
+        notes: JSON.stringify(result),
+      });
+    } else {
+      console.log('[SkyBox 93 S2 Merge] No-op:', result.reason);
+    }
+  }).catch(err => {
+    console.error('[SkyBox 93 S2 Merge] Error:', err);
+  });
+
   // Initialize upcoming sets: seed data + cron jobs (RSS sync + auto-expire)
   initializeUpcomingSets().catch(err => {
     console.error('[Upcoming Sets] Initialization error:', err);
