@@ -7188,7 +7188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             FROM cards
             WHERE set_id = ${setId}
               AND (name ILIKE ${'%' + search + '%'} OR card_number ILIKE ${'%' + search + '%'})
-            ORDER BY card_number
+            ORDER BY CASE WHEN card_number ~ '^[0-9]+$' THEN LPAD(card_number, 10, '0') ELSE card_number END
             LIMIT 100
           `)
         : await db.execute(sql`
@@ -7196,7 +7196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                    variation, is_insert AS "isInsert"
             FROM cards
             WHERE set_id = ${setId}
-            ORDER BY card_number
+            ORDER BY CASE WHEN card_number ~ '^[0-9]+$' THEN LPAD(card_number, 10, '0') ELSE card_number END
             LIMIT 100
           `);
       res.json(result.rows);
@@ -7719,7 +7719,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           estimated_value as "estimatedValue"
         FROM cards
         WHERE set_id = ${setId}
-        ORDER BY card_number ASC
+        ORDER BY CASE WHEN card_number ~ '^[0-9]+$' THEN LPAD(card_number, 10, '0') ELSE card_number END
         LIMIT 12
       `);
 
@@ -8498,7 +8498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           estimated_value as "estimatedValue"
         FROM cards
         WHERE set_id = ${setId}
-        ORDER BY card_number ASC
+        ORDER BY CASE WHEN card_number ~ '^[0-9]+$' THEN LPAD(card_number, 10, '0') ELSE card_number END
         LIMIT ${parseInt(limit as string)}
         OFFSET ${offset}
       `);
@@ -10945,7 +10945,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .from(cards)
         .where(eq(cards.setId, link.cardSetId))
-        .orderBy(cards.cardNumber);
+        .orderBy(sql`
+          CASE
+            WHEN ${cards.cardNumber} ~ '^[0-9]+$' THEN LPAD(${cards.cardNumber}, 10, '0')
+            ELSE ${cards.cardNumber}
+          END
+        `);
 
       // 4) Get owned card IDs for this user in this set
       const ownedRows = await db
@@ -11172,6 +11177,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }).catch(err => {
     console.error('[AU Cleanup] Error:', err);
+  });
+
+  // One-time cleanup: 1991 Comic Images X-Men duplicate AU set — a whole subset
+  // imported twice, once with all-"AU"-suffixed names, duplicating the canonical
+  // base subset cross-set (so the same-set AU cleanup above never caught it).
+  // Remaps user refs to base twins, deletes the 90 AU cards and the emptied set.
+  // Idempotent + advisory-locked; safe to remove after the prod run is confirmed
+  // (admin_audit_logs action_type 'xmen_1991_au_set_cleanup').
+  import('./services/xmenAuSetCleanup').then(async (m) => {
+    const result = await m.runXmenAuSetCleanup();
+    if (result.ran) {
+      console.log('[X-Men AU Set Cleanup] Removed duplicate AU set:', JSON.stringify(result));
+      await db.insert(adminAuditLogs).values({
+        actionType: 'xmen_1991_au_set_cleanup',
+        entityType: 'card_set',
+        entityId: result.auSetId ?? 0,
+        entityName: result.auSetName ?? '1991 Comic Images X-Men AU duplicate set',
+        notes: JSON.stringify(result),
+      });
+    } else {
+      console.log('[X-Men AU Set Cleanup] No-op:', result.reason);
+    }
+  }).catch(err => {
+    console.error('[X-Men AU Set Cleanup] Error:', err);
   });
 
   // Initialize upcoming sets: seed data + cron jobs (RSS sync + auto-expire)

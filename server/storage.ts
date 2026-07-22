@@ -1434,7 +1434,12 @@ export class DatabaseStorage implements IStorage {
         .from(cards)
         .innerJoin(cardSets, eq(cards.setId, cardSets.id))
         .where(eq(cards.setId, setId))
-        .orderBy(cards.cardNumber);
+        .orderBy(sql`
+          CASE
+            WHEN ${cards.cardNumber} ~ '^[0-9]+$' THEN LPAD(${cards.cardNumber}, 10, '0')
+            ELSE ${cards.cardNumber}
+          END
+        `);
 
       console.log(`Found ${allCardsInSet.length} total cards in set ${setId}`);
 
