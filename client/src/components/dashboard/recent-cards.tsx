@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import SimpleImage from "@/components/ui/simple-image";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { CollectionItem } from "@shared/schema";
 
 interface RecentCardItem {
@@ -23,9 +25,26 @@ import { useLocation } from "wouter";
 export function RecentCards() {
   const [selectedCard, setSelectedCard] = useState<RecentCardItem | null>(null);
   const [, setLocation] = useLocation();
-  
+  const { toast } = useToast();
+
   const { data: recentCards, isLoading } = useQuery<RecentCardItem[]>({
     queryKey: ["/api/recent-cards"],
+  });
+
+  const removeFromCollectionMutation = useMutation({
+    mutationFn: async (collectionItemId: number) => {
+      return apiRequest("DELETE", `/api/collection/${collectionItemId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/recent-cards"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collection"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({ title: "Card removed from collection" });
+      setSelectedCard(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to remove card from collection", variant: "destructive" });
+    },
   });
 
   if (isLoading) {
@@ -172,6 +191,12 @@ export function RecentCards() {
         onClose={() => setSelectedCard(null)}
         isInCollection={true}
         isInWishlist={false}
+        collectionItemId={selectedCard?.id}
+        onRemoveFromCollection={() => {
+          if (selectedCard && !removeFromCollectionMutation.isPending) {
+            removeFromCollectionMutation.mutate(selectedCard.id);
+          }
+        }}
       />
     </Card>
   );
