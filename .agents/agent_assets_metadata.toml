@@ -36,3 +36,9 @@ id = "z9xGTVnMLXx5knHOrGMt9"
 uri = "file://exports/drive-cleanup-4-structure-oddities.csv"
 type = "table"
 title = "4. Structure oddities (11)"
+
+[[outputs]]
+id = "JpnDoW_FoziUWc0SSpZyb"
+uri = "file://exports/duplicate_card_numbers_by_subset.csv"
+type = "table"
+title = "Duplicate card numbers by subset (production scan)"
