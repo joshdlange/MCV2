@@ -1,0 +1,44 @@
+Before publishing the new Data Quality — Duplicate Numbers tool, please run one final verification pass.
+
+The tool sounds good overall, but I want to confirm the duplicate prevention guardrail is scoped correctly.
+
+Must verify:
+- The new duplicate prevention guardrail only blocks duplicate card numbers within the same exact subset/card set.
+- The same card_number across different subsets/parallels is still allowed.
+- Valid parallel structures are not broken.
+
+Examples that must remain allowed:
+- Base Set / #45
+- Blue Parallel / #45
+- Purple Parallel / #45
+- Gold Parallel / #45
+
+Example that should be blocked or require explicit admin override:
+- Same exact subset / #45 / Wiccan
+- Same exact subset / #45 / Spider-Man
+
+Also confirm:
+- No cleanup/fix/merge actions run automatically.
+- Data Quality analysis remains read-only until explicitly confirmed.
+- Dry runs write nothing.
+- Fixes and merges require explicit “Yes, apply for real” confirmation.
+- Merges archive duplicate records instead of hard deleting them.
+- Existing user collections, wishlists, and PC Binder references are preserved/reassigned correctly only during an approved merge.
+- Add Cards/admin manual add still works for valid new cards.
+- CSV imports still work for valid parallel cards.
+- Drive Sync imports are unaffected, since they update images and should not create duplicate card records.
+- PC Binders, wishlist, user collections, image approvals, XP, subscriptions, Resend, and public app behavior are unchanged.
+- Non-admin users cannot access the Data Quality tool or correction endpoints.
+
+Must not do:
+- Do not run any real cleanup/fix/merge actions.
+- Do not modify production data.
+- Do not publish yet unless all checks pass.
+- Do not change unrelated app behavior.
+
+Final response:
+- Confirm whether the duplicate prevention guardrail is correctly scoped.
+- Confirm whether valid parallels still work.
+- Confirm whether manual add and CSV import still work for valid cases.
+- Confirm no data was modified.
+- Confirm whether this is safe to publish.
