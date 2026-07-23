@@ -632,7 +632,7 @@ export class DatabaseStorage implements IStorage {
         .from(cards)
         .innerJoin(cardSets, eq(cards.setId, cardSets.id));
 
-      const conditions = [];
+      const conditions: any[] = [sql`${cards.archivedAt} IS NULL`];
 
       if (filters?.setId) {
         conditions.push(eq(cards.setId, filters.setId));
@@ -780,7 +780,7 @@ export class DatabaseStorage implements IStorage {
         })
         .from(cards)
         .leftJoin(cardSets, eq(cards.setId, cardSets.id))
-        .where(eq(cards.setId, setId));
+        .where(and(eq(cards.setId, setId), sql`${cards.archivedAt} IS NULL`));
       
       // Transform the result to match CardWithSet structure
       return result.map(row => ({

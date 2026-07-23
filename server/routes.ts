@@ -1931,6 +1931,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const validatedData = insertCardSchema.parse(req.body);
+
+      // Data quality guard: warn when this subset already has a card with the
+      // same number but a different name. Requires explicit override to proceed.
+      const allowDuplicateNumber = req.body?.allowDuplicateNumber === true;
+      if (!allowDuplicateNumber && validatedData.setId && validatedData.cardNumber) {
+        const existing = await db
+          .select({ id: cards.id, name: cards.name })
+          .from(cards)
+          .where(and(
+            eq(cards.setId, validatedData.setId),
+            eq(cards.cardNumber, validatedData.cardNumber),
+            isNull(cards.archivedAt),
+          ))
+          .limit(5);
+        const conflict = existing.find(c => c.name.trim().toLowerCase() !== validatedData.name.trim().toLowerCase());
+        if (conflict) {
+          return res.status(409).json({
+            message: `A different card ("${conflict.name}", id ${conflict.id}) already uses number "${validatedData.cardNumber}" in this subset. Pass allowDuplicateNumber: true to override (e.g. for parallels).`,
+            code: "DUPLICATE_CARD_NUMBER",
+            existing,
+          });
+        }
+      }
+
       const card = await storage.createCard(validatedData);
       
       res.status(201).json(card);
@@ -11157,6 +11181,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     .catch(err => {
       console.error('[Topps Finest FF Seed/Images] Error:', err);
     });
+
+  // ======================================================================
+  // Admin Data Quality: duplicate card number audit & remediation
+  // Read-only analysis; all fixes default to dry-run and require confirm=true.
+  // Merges soft-archive duplicates (cards.archived_at) — never hard delete.
+  // ======================================================================
+  app.get("/api/admin/data-quality/duplicates", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: "Admin access required" });
+      const { analyzeDuplicateGroups } = await import('./services/dataQualityAudit');
+      const result = await analyzeDuplicateGroups();
+      res.json(result);
+    } catch (error) {
+      console.error('Data quality analysis error:', error);
+      res.status(500).json({ message: "Failed to analyze duplicate card numbers" });
+    }
+  });
+
+  app.get("/api/admin/data-quality/duplicates/export", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: "Admin access required" });
+      const { analyzeDuplicateGroups, groupsToCsv } = await import('./services/dataQualityAudit');
+      const { groups } = await analyzeDuplicateGroups();
+      const classification = req.query.classification as string | undefined;
+      const filtered = classification ? groups.filter(g => g.classification === classification) : groups;
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="duplicate_card_audit${classification ? '_' + classification.toLowerCase() : ''}.csv"`);
+      res.send(groupsToCsv(filtered));
+    } catch (error) {
+      console.error('Data quality export error:', error);
+      res.status(500).json({ message: "Failed to export duplicate audit CSV" });
+    }
+  });
+
+  app.post("/api/admin/data-quality/impact", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: "Admin access required" });
+      const schema = z.object({ cardIds: z.array(z.number().int().positive()).min(1).max(500) });
+      const { cardIds } = schema.parse(req.body);
+      const { getImpactCounts } = await import('./services/dataQualityAudit');
+      res.json(await getImpactCounts(cardIds));
+    } catch (error) {
+      if (error instanceof z.ZodError) return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      console.error('Data quality impact error:', error);
+      res.status(500).json({ message: "Failed to compute impact counts" });
+    }
+  });
+
+  app.post("/api/admin/data-quality/fix-card-numbers", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: "Admin access required" });
+      const schema = z.object({
+        fixes: z.array(z.object({
+          cardId: z.number().int().positive(),
+          expectedCurrentNumber: z.string(),
+          newCardNumber: z.string().min(1).max(30),
+        })).min(1).max(500),
+        confirm: z.boolean().default(false),
+      });
+      const { fixes, confirm } = schema.parse(req.body);
+      const { applyCardNumberFixes } = await import('./services/dataQualityAudit');
+      const result = await applyCardNumberFixes(req.user.id, fixes, confirm);
+      res.json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      console.error('Data quality fix error:', error);
+      res.status(500).json({ message: "Failed to apply card number fixes" });
+    }
+  });
+
+  app.post("/api/admin/data-quality/merge-duplicates", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: "Admin access required" });
+      const schema = z.object({
+        survivorCardId: z.number().int().positive(),
+        duplicateCardIds: z.array(z.number().int().positive()).min(1).max(100),
+        confirm: z.boolean().default(false),
+      });
+      const { survivorCardId, duplicateCardIds, confirm } = schema.parse(req.body);
+      const { mergeDuplicateCards } = await import('./services/dataQualityAudit');
+      const result = await mergeDuplicateCards(req.user.id, survivorCardId, duplicateCardIds, confirm);
+      res.json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      console.error('Data quality merge error:', error);
+      res.status(500).json({ message: (error as Error).message || "Failed to merge duplicate cards" });
+    }
+  });
 
   // One-time cleanup: remove ~1,297 duplicate "AU"-suffixed autograph cards
   // (import artifact — e.g. "WolverineAU," duplicating "Wolverine" in the same

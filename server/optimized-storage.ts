@@ -75,8 +75,8 @@ export class OptimizedStorage {
       pageSize = Math.min(pageSize, 100);
       const offset = (page - 1) * pageSize;
 
-      // Build conditions array
-      const conditions = [];
+      // Build conditions array (archived/merged duplicates are always hidden)
+      const conditions: any[] = [sql`${cards.archivedAt} IS NULL`];
 
       if (filters.setId) {
         conditions.push(eq(cards.setId, filters.setId));
@@ -410,6 +410,7 @@ export class OptimizedStorage {
         .innerJoin(cardSets, eq(cards.setId, cardSets.id));
 
       const conditions = [
+        sql`${cards.archivedAt} IS NULL`,
         or(
           ilike(cards.name, `%${query}%`),
           ilike(cardSets.name, `%${query}%`),

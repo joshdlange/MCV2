@@ -109,6 +109,8 @@ export const cards = pgTable("cards", {
   rarity: text("rarity").notNull(),
   estimatedValue: decimal("estimated_value", { precision: 10, scale: 2 }),
   lastImageSearchAttempt: timestamp("last_image_search_attempt"),
+  archivedAt: timestamp("archived_at"),
+  archiveReason: text("archive_reason"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

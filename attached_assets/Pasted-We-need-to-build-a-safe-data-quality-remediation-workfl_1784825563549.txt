@@ -1,0 +1,159 @@
+We need to build a safe data-quality remediation workflow for Marvel Card Vault card records.
+
+Context:
+We discovered duplicate card numbers within the same set/subset. Some are expected parallel/variant situations, but others are clear database errors where the same subset/card_number points to completely different cards.
+
+A CSV audit has been generated:
+duplicate_card_numbers_by_subset.csv
+
+Columns:
+- main_set
+- subset
+- card_number
+- copies_of_this_number
+- card_name
+- card_id
+
+Important examples:
+- Some duplicates are likely acceptable parallels or variants.
+- Some are clearly wrong, such as autograph subsets where hundreds of different cards all have card_number = 1.
+- Some card_names appear to contain the real card number at the end, like “Character Name #AA-AST”, while the card_number field is incorrectly set to 1.
+- Some older sets may have card_number = 0 for many unrelated cards.
+
+Goal:
+Build a safe admin-only data quality audit and remediation workflow. Do not directly mutate production data until dry-run reports are reviewed and approved.
+
+Must do:
+- Ingest/analyze the duplicate card number report.
+- Build or extend an admin-only Data Quality section under Admin → Data & Migrations or Admin → Cards & Sets.
+- Identify duplicate groups by:
+  - main_set
+  - subset
+  - card_number
+- Classify each duplicate group into one of:
+  - OK_PARALLEL
+  - NEEDS_CARD_NUMBER_FIX
+  - NEEDS_SUBSET_SPLIT
+  - TRUE_DUPLICATE_RECORD
+  - NEEDS_MANUAL_REVIEW
+  - KNOWN_EXCEPTION
+- Generate proposed fixes where confidence is high.
+- For card names that contain a trailing card code after #, propose updating card_number from that code.
+  Example:
+  card_name: “Aaron Stanford as Pyro #AA-AST”
+  current card_number: “1”
+  proposed card_number: “AA-AST”
+- Detect suspicious groups where:
+  - card_number is 0 or 1 across many unrelated cards
+  - same subset/card_number has many different base card names
+  - card_name includes a more specific card number/code than the card_number field
+- Detect likely acceptable parallel groups where:
+  - same card_number
+  - same base card name
+  - variants are only bracketed/color differences
+- Detect true duplicate records where:
+  - same subset
+  - same card_number
+  - same normalized card name
+  - same or duplicate image/source metadata
+- For every proposed fix, show:
+  - card_id
+  - current main set
+  - current subset
+  - current card_number
+  - current card_name
+  - proposed card_number or proposed action
+  - confidence
+  - reason
+  - risk level
+- Before any real correction, show impact counts:
+  - user collection records referencing the card
+  - wishlist records referencing the card
+  - PC Binder records referencing the card
+  - image records / Cloudinary images
+  - market data records if any
+  - trade/marketplace records if any
+- Add dry-run mode first.
+- Default to dry-run.
+- Any real fix must require explicit admin confirmation.
+- Use soft-delete/archive for duplicate card records instead of hard delete.
+- If merging duplicate cards, reassign references from duplicate card IDs to the survivor card ID safely.
+- Keep an audit log of every data correction:
+  - old values
+  - new values
+  - admin user
+  - timestamp
+  - reason
+  - affected records
+- Add rollback information where practical.
+
+Must not do:
+- Do not automatically modify production card data.
+- Do not hard delete card records.
+- Do not guess ambiguous fixes.
+- Do not merge cards without showing affected references first.
+- Do not move cards between sets/subsets without review.
+- Do not change user collections unless part of an approved merge.
+- Do not change PC Binders unless part of an approved merge.
+- Do not change wishlist data unless part of an approved merge.
+- Do not run Drive image import against duplicate/ambiguous target groups.
+- Do not send emails.
+- Do not touch Android or iOS native files.
+- Do not change subscriptions, Stripe, RevenueCat, Shippo, XP, auth, or Resend.
+- Do not break existing card detail URLs if possible.
+
+Preserve:
+- Existing card IDs where possible.
+- Existing user collection ownership.
+- Existing wishlist records.
+- Existing PC Binder records.
+- Existing image records.
+- Existing market data.
+- Existing admin auth/security.
+- Existing card search and display behavior.
+- Existing Drive Sync/import history.
+
+Implementation guidance:
+- Start with a read-only duplicate analysis report.
+- Produce summary counts:
+  - total duplicate groups
+  - likely OK parallels
+  - likely card_number fixes
+  - likely subset split needed
+  - likely true duplicates
+  - needs manual review
+- Add filters in the admin UI:
+  - by main set
+  - by subset
+  - by duplicate count
+  - by classification
+  - by confidence
+- Add export CSV buttons for review.
+- Add a “Do not import images for this group” flag or at minimum ensure Drive Sync refuses duplicate target matches.
+- Add validation to future card imports/admin card creation:
+  - warn if same subset + card_number already exists with a different card name
+  - require explicit override/admin note if allowed
+- Consider adding normalized_card_number and normalized_card_name helpers for comparison.
+
+QA:
+- Duplicate audit runs read-only.
+- No production data is modified during audit.
+- Report correctly identifies huge suspicious groups such as card_number 1 with many unrelated autographs.
+- Report correctly identifies likely parallel variants.
+- Report proposes card_number fixes when card_name contains a trailing #code.
+- Report does not propose unsafe fixes for ambiguous groups.
+- Admin UI is admin-only.
+- Non-admin users cannot access the tool.
+- Dry-run corrections do not modify data.
+- Real correction actions require explicit confirmation.
+- Any merge flow shows affected references before applying.
+- Drive Sync refuses or skips duplicate/ambiguous target card groups.
+- App card search/details still work.
+- No emails/imports/migrations are run automatically.
+
+Final response:
+- Provide summary counts by classification.
+- Provide the top 20 highest-risk duplicate groups.
+- Provide sample proposed fixes.
+- Provide a recommended cleanup order.
+- Confirm no production data was changed.

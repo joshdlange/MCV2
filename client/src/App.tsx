@@ -50,6 +50,7 @@ const AdminBaseSetPopulation = lazy(() => import("@/pages/admin/base-set-populat
 const AdminAnalytics = lazy(() => import("@/pages/admin/analytics"));
 const AdminNotifications = lazy(() => import("@/pages/admin/notifications"));
 const AdminLegacyTools = lazy(() => import("@/pages/admin/legacy-tools"));
+const AdminDataQuality = lazy(() => import("@/pages/admin/data-quality"));
 const CardSearch = lazy(() => import("@/pages/card-search"));
 const MarketTrends = lazy(() => import("@/pages/market-trends"));
 const UpcomingSets = lazy(() => import("@/pages/upcoming-sets"));
@@ -204,6 +205,7 @@ function Router() {
           <Route path="/admin/analytics" component={AdminAnalytics} />
           <Route path="/admin/notifications" component={AdminNotifications} />
           <Route path="/admin/legacy-tools" component={AdminLegacyTools} />
+          <Route path="/admin/data-quality" component={AdminDataQuality} />
           <Route path="/scan" component={ScanToAdd} />
           <Route path="/collectors/:username" component={CollectorProfile} />
           <Route path="/subscribe" component={Subscribe} />

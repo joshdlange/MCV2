@@ -211,6 +211,15 @@ const ADMIN_SECTIONS: AdminSection[] = [
         status: ["active", "dangerous"],
         warning: "Modifies production card data. Always run the preview first — it has full dry-run support.",
       },
+      {
+        title: "Data Quality — Duplicate Numbers",
+        description: "Audit cards sharing the same number in a subset, classify them, and apply dry-run-first fixes and merges with audit logs",
+        href: "/admin/data-quality",
+        icon: Database,
+        color: "bg-rose-600",
+        status: ["active", "dangerous"],
+        warning: "Analysis is read-only. Fixes/merges require explicit confirmation and are audit-logged; duplicates are archived, never deleted.",
+      },
     ],
   },
   {

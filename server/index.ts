@@ -90,6 +90,17 @@ app.use((req, res, next) => {
     console.error('Startup migration (drive_image_imports) failed:', error);
   }
 
+  // Idempotent startup migration: soft-archive columns for duplicate card cleanup.
+  try {
+    const { db } = await import('./db');
+    const { sql } = await import('drizzle-orm');
+    await db.execute(sql`ALTER TABLE cards ADD COLUMN IF NOT EXISTS archived_at timestamp`);
+    await db.execute(sql`ALTER TABLE cards ADD COLUMN IF NOT EXISTS archive_reason text`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_cards_archived_at ON cards (archived_at) WHERE archived_at IS NOT NULL`);
+  } catch (error) {
+    console.error('Startup migration (cards archive columns) failed:', error);
+  }
+
   const server = await registerRoutes(app);
 
   // Start background services
