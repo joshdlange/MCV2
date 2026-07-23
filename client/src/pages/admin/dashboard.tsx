@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Users, FolderOpen, Edit, PlusCircle, Settings, Calendar, Image, ArrowLeftRight,
   Copy, TrendingUp, Layers, CreditCard, ImageOff, BarChart2, Mail, Plug, Database,
-  Archive, AlertTriangle, LucideIcon
+  Archive, AlertTriangle, ChevronDown, ChevronUp, LucideIcon
 } from "lucide-react";
 
 interface SubscriberBreakdown {
@@ -283,6 +283,8 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/stats'],
     refetchInterval: 60000, // Refresh every minute
   });
+  const [showSubscribers, setShowSubscribers] = useState(false);
+  const [showCardStats, setShowCardStats] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -325,13 +327,27 @@ export default function AdminDashboard() {
 
         {/* Row 1b: Subscriber breakdown (every number reconciles to Total Users) */}
         <div className="rounded-lg bg-black/20 border border-white/10 px-4 py-3 mb-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-gray-300">Subscribers</span>
-            {stats?.breakdown && !stats.breakdown.rcCheckOk && (
-              <span className="text-[10px] text-amber-400">iPhone/comped split approximate (RevenueCat unreachable)</span>
-            )}
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <button
+            type="button"
+            className="w-full flex items-center justify-between gap-2 text-left"
+            onClick={() => setShowSubscribers(!showSubscribers)}
+            data-testid="button-toggle-subscribers"
+          >
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-300 flex items-center gap-2">
+              Subscribers
+              <span className="text-sm font-bold normal-case tracking-normal text-green-400">
+                {statsLoading ? '...' : (stats?.breakdown?.payingTotal ?? 0).toLocaleString()} paying
+              </span>
+            </span>
+            <span className="flex items-center gap-2 shrink-0">
+              {stats?.breakdown && !stats.breakdown.rcCheckOk && showSubscribers && (
+                <span className="text-[10px] text-amber-400 hidden sm:inline">iPhone/comped split approximate (RevenueCat unreachable)</span>
+              )}
+              {showSubscribers ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
+            </span>
+          </button>
+          {showSubscribers && (<>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
             <div>
               <div className="text-2xl font-bold text-gray-100">
                 {statsLoading ? '...' : (stats?.breakdown?.freeUsers ?? '0').toLocaleString()}
@@ -373,37 +389,56 @@ export default function AdminDashboard() {
               {stats.breakdown.unknown > 0 && ` + ${stats.breakdown.unknown} unverified`} + {stats.breakdown.systemAccounts} system = {stats.breakdown.totalUsers.toLocaleString()} total
             </div>
           )}
+          </>)}
         </div>
 
-        {/* Row 2: Card Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <div className="flex items-center gap-3">
-            <Layers className="h-8 w-8 text-orange-400" />
-            <div>
-              <div className="text-2xl font-bold">
-                {statsLoading ? '...' : stats?.totalSets?.toLocaleString() || '0'}
+        {/* Row 2: Card Stats (collapsible) */}
+        <div className="rounded-lg bg-black/20 border border-white/10 px-4 py-3">
+          <button
+            type="button"
+            className="w-full flex items-center justify-between gap-2 text-left"
+            onClick={() => setShowCardStats(!showCardStats)}
+            data-testid="button-toggle-card-stats"
+          >
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-300 flex items-center gap-2">
+              Card Stats
+              <span className="text-sm font-bold normal-case tracking-normal text-gray-100">
+                {statsLoading ? '...' : (stats?.totalCards ?? 0).toLocaleString()} cards
+              </span>
+            </span>
+            {showCardStats ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
+          </button>
+          {showCardStats && (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2">
+            <div className="flex items-center gap-3">
+              <Layers className="h-8 w-8 text-orange-400" />
+              <div>
+                <div className="text-2xl font-bold">
+                  {statsLoading ? '...' : stats?.totalSets?.toLocaleString() || '0'}
+                </div>
+                <div className="text-xs text-gray-400">Total Sets</div>
               </div>
-              <div className="text-xs text-gray-400">Total Sets</div>
+            </div>
+            <div className="flex items-center gap-3">
+              <CreditCard className="h-8 w-8 text-red-400" />
+              <div>
+                <div className="text-2xl font-bold">
+                  {statsLoading ? '...' : stats?.totalCards?.toLocaleString() || '0'}
+                </div>
+                <div className="text-xs text-gray-400">Total Cards</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <ImageOff className="h-8 w-8 text-gray-400" />
+              <div>
+                <div className="text-2xl font-bold">
+                  {statsLoading ? '...' : stats?.cardsWithoutImages?.toLocaleString() || '0'}
+                </div>
+                <div className="text-xs text-gray-400">Missing Images</div>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <CreditCard className="h-8 w-8 text-red-400" />
-            <div>
-              <div className="text-2xl font-bold">
-                {statsLoading ? '...' : stats?.totalCards?.toLocaleString() || '0'}
-              </div>
-              <div className="text-xs text-gray-400">Total Cards</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <ImageOff className="h-8 w-8 text-gray-400" />
-            <div>
-              <div className="text-2xl font-bold">
-                {statsLoading ? '...' : stats?.cardsWithoutImages?.toLocaleString() || '0'}
-              </div>
-              <div className="text-xs text-gray-400">Missing Images</div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
