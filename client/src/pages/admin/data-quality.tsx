@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   ShieldAlert, Download, RefreshCw, ChevronDown, ChevronRight, Loader2, AlertTriangle, CheckCircle2, Search,
 } from "lucide-react";
