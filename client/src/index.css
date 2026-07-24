@@ -162,6 +162,7 @@
   /* Mission Card Styles */
   .mission-card {
     position: relative;
+    isolation: isolate;
     overflow: hidden;
     background: #0d0d0f;
     border: 1px solid rgba(239, 68, 68, 0.35);
