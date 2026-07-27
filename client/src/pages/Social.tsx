@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -409,6 +409,18 @@ export default function Social() {
     },
     enabled: !!selectedFriendId && !!user,
   });
+
+  // Auto-scroll message areas to the newest message when a conversation
+  // opens or new messages arrive (desktop + mobile containers).
+  const desktopMessagesRef = useRef<HTMLDivElement>(null);
+  const mobileMessagesRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    for (const ref of [desktopMessagesRef, mobileMessagesRef]) {
+      if (ref.current) {
+        ref.current.scrollTop = ref.current.scrollHeight;
+      }
+    }
+  }, [messages, selectedFriendId]);
 
   // Respond to friend request
   const respondToFriendRequest = useMutation({
@@ -1075,7 +1087,7 @@ export default function Social() {
                   })()}
                   
                   {/* Messages Area */}
-                  <div className="flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-900">
+                  <div ref={desktopMessagesRef} className="flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-900">
                     {messages.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full text-center">
                         <MessageCircle className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" />
@@ -1324,7 +1336,7 @@ export default function Social() {
                     })()}
                     
                     {/* Messages */}
-                    <div className="flex-1 overflow-y-auto p-4">
+                    <div ref={mobileMessagesRef} className="flex-1 overflow-y-auto p-4">
                       {messages.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-center">
                           <MessageCircle className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" />
