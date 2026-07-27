@@ -11367,6 +11367,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error('[SkyBox 93 S2 Merge] Error:', err);
   });
 
+  // One-time fix: 1992 Comic Images Spider-Man reorg — move mis-filed McFarlane
+  // Era cards out of the 30th Anniversary set, merge duplicate subsets, and seed
+  // the real 30th Anniversary base checklist. Idempotent + advisory-locked; safe
+  // to remove after the prod run is confirmed (admin_audit_logs action_type
+  // 'spiderman_1992_reorg').
+  import('./services/spiderman1992Reorg').then(async (m) => {
+    const result = await m.runSpiderman1992Reorg();
+    if (result.ran) {
+      console.log('[Spider-Man 92 Reorg] Done:', JSON.stringify(result));
+      await db.insert(adminAuditLogs).values({
+        actionType: 'spiderman_1992_reorg',
+        entityType: 'main_set',
+        entityId: 0,
+        entityName: '1992 Comic Images Spider-Man 30thA/McFarlane reorg',
+        notes: JSON.stringify(result),
+      });
+    } else {
+      console.log('[Spider-Man 92 Reorg] No-op:', result.reason);
+    }
+  }).catch(err => {
+    console.error('[Spider-Man 92 Reorg] Error:', err);
+  });
+
   // Initialize upcoming sets: seed data + cron jobs (RSS sync + auto-expire)
   initializeUpcomingSets().catch(err => {
     console.error('[Upcoming Sets] Initialization error:', err);
