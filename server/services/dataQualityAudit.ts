@@ -60,6 +60,7 @@ export interface DupGroup {
   mainSet: string;
   subset: string;
   setId: number;
+  mainSetId: number | null;
   cardNumber: string;
   copies: number;
   classification: DupClassification;
@@ -116,13 +117,14 @@ interface RawRow {
   front_image_url: string | null;
   subset: string;
   main_set: string | null;
+  main_set_id: number | null;
 }
 
 export async function analyzeDuplicateGroups(): Promise<{ summary: DupSummary; groups: DupGroup[] }> {
   const result = await db.execute(sql`
     SELECT c.id AS card_id, c.set_id, c.card_number, c.name AS card_name,
            c.variation, c.front_image_url,
-           cs.name AS subset, ms.name AS main_set
+           cs.name AS subset, ms.name AS main_set, ms.id AS main_set_id
     FROM cards c
     JOIN card_sets cs ON cs.id = c.set_id
     LEFT JOIN main_sets ms ON ms.id = cs.main_set_id
@@ -190,6 +192,7 @@ function classifyGroup(key: string, rows: RawRow[]): DupGroup {
     mainSet: first.main_set || "(unassigned)",
     subset: first.subset,
     setId: first.set_id,
+    mainSetId: first.main_set_id ?? null,
     cardNumber: first.card_number,
     copies: rows.length,
     cards: cardsOut,
@@ -537,6 +540,156 @@ export async function mergeDuplicateCards(
   });
 
   return { dryRun: false, impact, merged: dups.length, details: { survivor: { id: survivor.id, name: survivor.name }, duplicates: dups.map((d) => ({ id: d.id, name: d.name })) } };
+}
+
+// ---------- Parallel subset cross-reference (READ ONLY) ----------
+
+/** Extract variant text from a card name, e.g. "Wolverine (Gold)" -> "Gold". */
+export function extractVariantText(name: string): string | null {
+  const matches = [...(name || "").matchAll(/[\[(]([^\])]+)[\])]/g)].map((m) => m[1].trim()).filter(Boolean);
+  if (matches.length === 0) return null;
+  return matches.join(" ");
+}
+
+export interface ParallelSubsetRow {
+  mainSet: string;
+  subset: string;
+  cardNumber: string;
+  variant: string; // "" = base card (no bracket text)
+  cardCount: number;
+  cardIds: number[];
+  matchedSubsetId: number | null;
+  matchedSubsetName: string | null;
+  suggestion: string;
+}
+
+/**
+ * For every OK_PARALLEL group: which variant texts appear, and does a sibling
+ * subset in the same main set already exist whose name matches the variant
+ * (e.g. "(Gold)" cards while a "... - Gold" subset exists)? Read-only report —
+ * proposes, never moves.
+ */
+export async function buildParallelSubsetReport(groups?: DupGroup[]): Promise<ParallelSubsetRow[]> {
+  const all = groups ?? (await analyzeDuplicateGroups()).groups;
+  const parallels = all.filter((g) => g.classification === "OK_PARALLEL");
+
+  // Load all active subsets for the involved main sets
+  const mainSetIds = [...new Set(parallels.map((g) => g.mainSetId).filter((x): x is number => x != null))];
+  const siblingSets: Array<{ id: number; main_set_id: number; name: string }> = mainSetIds.length
+    ? ((await db.execute(sql`
+        SELECT id, main_set_id, name FROM card_sets
+        WHERE main_set_id IN (${sql.join(mainSetIds.map((id) => sql`${id}`), sql`, `)})
+          AND is_active = true
+      `)).rows as any[])
+    : [];
+  const tokens = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(/\s+/).filter(Boolean);
+  // Trailing descriptor of a subset name, split on " - " BEFORE punctuation
+  // stripping (e.g. "2021 Metal Universe - Precious Metal Gems Red" -> "precious metal gems red").
+  const trailingSegment = (name: string) => {
+    const parts = name.split(" - ");
+    return parts.length > 1 ? parts[parts.length - 1].toLowerCase().trim() : "";
+  };
+  const tokenSubset = (needle: string[], hay: string[]) => needle.length > 0 && needle.every((t) => hay.includes(t));
+
+  const rows: ParallelSubsetRow[] = [];
+  for (const g of parallels) {
+    // Bucket the group's cards by variant text
+    const byVariant = new Map<string, DupCard[]>();
+    for (const c of g.cards) {
+      const v = extractVariantText(c.cardName) ?? "";
+      if (!byVariant.has(v)) byVariant.set(v, []);
+      byVariant.get(v)!.push(c);
+    }
+    const siblings = siblingSets.filter((s) => s.main_set_id === g.mainSetId && s.id !== g.setId);
+
+    for (const [variant, vc] of byVariant) {
+      if (variant === "") continue; // base cards stay put
+      // Deterministic match tiers (whole-token comparisons only — no raw
+      // substring matching, so "Red" can't match inside "Sacred"):
+      //   1. variant tokens == subset trailing-segment tokens (exact phrase)
+      //   2. variant tokens ⊆ trailing-segment tokens
+      //   3. variant tokens ⊆ full subset-name tokens
+      const vTok = tokens(variant);
+      const match =
+        siblings.find((s) => {
+          const seg = tokens(trailingSegment(s.name));
+          return seg.length > 0 && seg.length === vTok.length && tokenSubset(vTok, seg);
+        }) ??
+        siblings.find((s) => tokenSubset(vTok, tokens(trailingSegment(s.name)))) ??
+        siblings.find((s) => tokenSubset(vTok, tokens(s.name))) ??
+        null;
+      rows.push({
+        mainSet: g.mainSet,
+        subset: g.subset,
+        cardNumber: g.cardNumber,
+        variant,
+        cardCount: vc.length,
+        cardIds: vc.map((c) => c.cardId),
+        matchedSubsetId: match?.id ?? null,
+        matchedSubsetName: match?.name ?? null,
+        suggestion: match
+          ? `Move to existing subset "${match.name}" (id ${match.id})`
+          : `No matching subset — create one or confirm these belong in "${g.subset}"`,
+      });
+    }
+  }
+  // Matched first (actionable), then by main set
+  rows.sort((a, b) => Number(b.matchedSubsetId != null) - Number(a.matchedSubsetId != null) || a.mainSet.localeCompare(b.mainSet) || a.subset.localeCompare(b.subset));
+  return rows;
+}
+
+export function parallelReportToCsv(rows: ParallelSubsetRow[]): string {
+  const esc = (v: any) => {
+    const s = String(v ?? "");
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const lines = ["main_set,current_subset,card_number,variant,card_count,card_ids,matched_subset,suggestion"];
+  for (const r of rows) {
+    lines.push([r.mainSet, r.subset, r.cardNumber, r.variant, r.cardCount, r.cardIds.join(" "), r.matchedSubsetName ?? "NONE", r.suggestion].map(esc).join(","));
+  }
+  return lines.join("\n");
+}
+
+// ---------- Manual-review worklist (READ ONLY) ----------
+
+export interface ManualReviewWorklistRow {
+  mainSet: string;
+  subset: string;
+  setId: number;
+  groups: number;
+  cards: number;
+  sampleCardNumbers: string;
+}
+
+/** NEEDS_MANUAL_REVIEW groups aggregated per subset, worst offenders first. */
+export function buildManualReviewWorklist(groups: DupGroup[]): ManualReviewWorklistRow[] {
+  const bySet = new Map<number, { mainSet: string; subset: string; setId: number; groups: DupGroup[] }>();
+  for (const g of groups.filter((x) => x.classification === "NEEDS_MANUAL_REVIEW")) {
+    if (!bySet.has(g.setId)) bySet.set(g.setId, { mainSet: g.mainSet, subset: g.subset, setId: g.setId, groups: [] });
+    bySet.get(g.setId)!.groups.push(g);
+  }
+  const rows = [...bySet.values()].map((e) => ({
+    mainSet: e.mainSet,
+    subset: e.subset,
+    setId: e.setId,
+    groups: e.groups.length,
+    cards: e.groups.reduce((s, g) => s + g.copies, 0),
+    sampleCardNumbers: e.groups.slice(0, 10).map((g) => g.cardNumber).join(" "),
+  }));
+  rows.sort((a, b) => b.groups - a.groups || b.cards - a.cards);
+  return rows;
+}
+
+export function manualReviewWorklistToCsv(rows: ManualReviewWorklistRow[]): string {
+  const esc = (v: any) => {
+    const s = String(v ?? "");
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const lines = ["rank,main_set,subset,set_id,duplicate_groups,cards_involved,sample_card_numbers"];
+  rows.forEach((r, i) => {
+    lines.push([i + 1, r.mainSet, r.subset, r.setId, r.groups, r.cards, r.sampleCardNumbers].map(esc).join(","));
+  });
+  return lines.join("\n");
 }
 
 // ---------- CSV export ----------

@@ -48,3 +48,15 @@ id = "cGAZOsrGPyag0tiJ-D8tY"
 uri = "file://exports/cards_missing_images_2026-07-28.csv"
 type = "table"
 title = "Missing Images Export — Live Sets Only (July 28, 2026)"
+
+[[outputs]]
+id = "GeAD5d0rdh2l0QWKamFU8"
+uri = "file://exports/parallel_subset_check_2026-07-28.csv"
+type = "table"
+title = "Parallels vs Existing Subsets — Cross-Reference (July 28, corrected)"
+
+[[outputs]]
+id = "p_AfNelfZIpxidGjKLht8"
+uri = "file://exports/manual_review_worklist_2026-07-28.csv"
+type = "table"
+title = "Manual Review Worklist — Ranked by Subset (July 28)"

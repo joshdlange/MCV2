@@ -11269,6 +11269,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Parallels vs existing subsets: for each "(Gold)"-style parallel group, does a
+  // matching sibling subset already exist? Read-only CSV report.
+  app.get("/api/admin/data-quality/parallels/export", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: "Admin access required" });
+      const { buildParallelSubsetReport, parallelReportToCsv } = await import('./services/dataQualityAudit');
+      const rows = await buildParallelSubsetReport();
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="parallel_subset_check.csv"');
+      res.send(parallelReportToCsv(rows));
+    } catch (error) {
+      console.error('Data quality parallels export error:', error);
+      res.status(500).json({ message: "Failed to export parallel subset report" });
+    }
+  });
+
+  // Manual-review duplicates aggregated per subset, worst offenders first (CSV).
+  app.get("/api/admin/data-quality/manual-review-worklist/export", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: "Admin access required" });
+      const { analyzeDuplicateGroups, buildManualReviewWorklist, manualReviewWorklistToCsv } = await import('./services/dataQualityAudit');
+      const { groups } = await analyzeDuplicateGroups();
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="manual_review_worklist.csv"');
+      res.send(manualReviewWorklistToCsv(buildManualReviewWorklist(groups)));
+    } catch (error) {
+      console.error('Data quality worklist export error:', error);
+      res.status(500).json({ message: "Failed to export manual review worklist" });
+    }
+  });
+
   app.post("/api/admin/data-quality/impact", authenticateUser, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) return res.status(403).json({ message: "Admin access required" });
