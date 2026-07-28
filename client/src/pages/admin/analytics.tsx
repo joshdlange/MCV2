@@ -30,6 +30,16 @@ interface ModalStats {
   byTrigger: Array<{ trigger: string; count: string }>;
 }
 
+type PlatformUsageStats = Record<string, { users: number; upgraded: number }>;
+
+const PLATFORM_BUCKETS: Array<{ key: string; label: string; color: string }> = [
+  { key: "web", label: "Web only", color: "#3b82f6" },
+  { key: "ios", label: "iOS only", color: "#8b5cf6" },
+  { key: "android", label: "Android only", color: "#10b981" },
+  { key: "multiple", label: "Multiple platforms", color: "#f59e0b" },
+  { key: "unknown", label: "No data yet", color: "#9ca3af" },
+];
+
 interface HeardAboutStats {
   sources: Array<{ source: string; count: number }>;
   total: number;
@@ -112,6 +122,15 @@ export default function AdminAnalytics() {
   const { data: funnel, isLoading: funnelLoading } = useQuery<FunnelStats>({
     queryKey: ["/api/admin/funnel-stats"],
   });
+
+  const { data: platformUsage, isLoading: platformUsageLoading } = useQuery<PlatformUsageStats>({
+    queryKey: ["/api/admin/platform-usage-stats"],
+  });
+
+  const platformRows = PLATFORM_BUCKETS.map((b) => {
+    const d = platformUsage?.[b.key] ?? { users: 0, upgraded: 0 };
+    return { ...b, users: d.users, upgraded: d.upgraded };
+  }).filter((r) => r.users > 0 || r.key !== "unknown");
 
   const { data: modal, isLoading: modalLoading } = useQuery<ModalStats>({
     queryKey: ["/api/admin/upgrade-modal-stats"],
@@ -301,6 +320,56 @@ export default function AdminAnalytics() {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Platform Usage</CardTitle>
+              <p className="text-xs text-gray-400 font-normal">
+                Which platforms your users are on — and how each group converts to Super Hero.
+                Data builds up as users open the app (tracked automatically per request).
+              </p>
+            </CardHeader>
+            <CardContent>
+              {platformUsageLoading ? (
+                <div className="h-40 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
+              ) : (
+                <>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={platformRows} layout="vertical" margin={{ left: 20, right: 20 }}>
+                      <XAxis type="number" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <YAxis dataKey="label" type="category" width={150} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <Tooltip
+                        formatter={(v: number, _n, item: any) => [
+                          `${v.toLocaleString()} users · ${item?.payload?.upgraded ?? 0} upgraded (${pct(item?.payload?.upgraded ?? 0, v)})`,
+                          "Users",
+                        ]}
+                        contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                      />
+                      <Bar dataKey="users" radius={[0, 4, 4, 0]}>
+                        {platformRows.map((r) => (
+                          <Cell key={r.key} fill={r.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4">
+                    {platformRows.map((r) => (
+                      <div key={r.key} className="rounded-lg border px-3 py-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: r.color }} />
+                          <p className="text-xs font-semibold text-gray-700 leading-tight">{r.label}</p>
+                        </div>
+                        <p className="text-lg font-bold text-gray-900 mt-1">{r.users.toLocaleString()}</p>
+                        <p className="text-xs mt-0.5" style={{ color: r.color }}>
+                          {r.key === "unknown" ? "awaiting first visit" : `${pct(r.upgraded, r.users)} upgraded (${r.upgraded})`}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 

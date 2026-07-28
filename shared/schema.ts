@@ -1206,6 +1206,26 @@ export const analyticsEvents = pgTable("analytics_events", {
 export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
 export type InsertAnalyticsEvent = typeof analyticsEvents.$inferInsert;
 
+// ── User Platforms (which app surface each user has been seen on) ────────────
+// One row per (user, platform). Populated automatically from the x-app-platform
+// request header on authenticated requests; lets us segment web vs ios vs
+// android vs multi-platform users in the admin funnel.
+export const userPlatforms = pgTable(
+  "user_platforms",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    platform: text("platform").notNull(), // web | ios | android
+    firstSeenAt: timestamp("first_seen_at").defaultNow().notNull(),
+    lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    userPlatformUnique: uniqueIndex("user_platforms_user_platform_idx").on(t.userId, t.platform),
+  }),
+);
+
+export type UserPlatform = typeof userPlatforms.$inferSelect;
+
 // ── Scan Usage Logs ───────────────────────────────────────────────────────────
 export const userScanLogs = pgTable("user_scan_logs", {
   id: serial("id").primaryKey(),

@@ -2737,6 +2737,54 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async recordUserPlatform(userId: number, platform: string): Promise<void> {
+    if (!["web", "ios", "android"].includes(platform)) return;
+    try {
+      await db.execute(sql`
+        INSERT INTO user_platforms (user_id, platform)
+        VALUES (${userId}, ${platform})
+        ON CONFLICT (user_id, platform) DO UPDATE SET last_seen_at = NOW()
+      `);
+    } catch (err) {
+      console.error("[Platforms] Failed to record user platform:", err);
+    }
+  }
+
+  async getPlatformUsageStats(): Promise<any> {
+    // Bucket each user into web-only / ios-only / android-only / multiple /
+    // unknown (no platform data yet), with upgrade counts per bucket.
+    const result = await db.execute(sql`
+      WITH per_user AS (
+        SELECT u.id,
+               u.plan,
+               COUNT(DISTINCT up.platform) AS n_platforms,
+               BOOL_OR(up.platform = 'web') AS has_web,
+               BOOL_OR(up.platform = 'ios') AS has_ios,
+               BOOL_OR(up.platform = 'android') AS has_android
+        FROM users u
+        LEFT JOIN user_platforms up ON up.user_id = u.id
+        WHERE u.firebase_uid IS NULL OR u.firebase_uid != 'SYSTEM_USER_MCV'
+        GROUP BY u.id, u.plan
+      )
+      SELECT CASE
+               WHEN n_platforms = 0 THEN 'unknown'
+               WHEN n_platforms > 1 THEN 'multiple'
+               WHEN has_web THEN 'web'
+               WHEN has_ios THEN 'ios'
+               ELSE 'android'
+             END AS bucket,
+             COUNT(*) AS users,
+             COUNT(*) FILTER (WHERE plan = 'SUPER_HERO') AS upgraded
+      FROM per_user
+      GROUP BY bucket
+    `);
+    const buckets: Record<string, { users: number; upgraded: number }> = {};
+    for (const r of result.rows as any[]) {
+      buckets[r.bucket] = { users: parseInt(r.users) || 0, upgraded: parseInt(r.upgraded) || 0 };
+    }
+    return buckets;
+  }
+
   async getAdminFunnelStats(): Promise<any> {
     const r1 = await db.execute(sql`SELECT COUNT(*) AS count FROM users`);
     const r2 = await db.execute(sql`SELECT COUNT(DISTINCT user_id) AS count FROM user_collections`);

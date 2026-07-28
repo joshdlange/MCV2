@@ -102,6 +102,78 @@ async function getFolderMeta(folderId: string): Promise<DriveItem> {
   return driveFetch(url);
 }
 
+// ---------- Readiness check (fast pre-flight, no scan) ----------
+
+export interface DriveSyncReadiness {
+  ok: boolean;
+  checks: Array<{ name: string; ok: boolean; detail: string }>;
+}
+
+export async function checkDriveSyncReadiness(): Promise<DriveSyncReadiness> {
+  const checks: DriveSyncReadiness['checks'] = [];
+
+  // 1. Service account JSON present + parseable
+  try {
+    const sa = loadServiceAccount();
+    checks.push({ name: 'Google service account', ok: true, detail: `Configured (${sa.client_email})` });
+  } catch (err: any) {
+    checks.push({ name: 'Google service account', ok: false, detail: err?.message || 'Not configured' });
+  }
+
+  // 2. Root folder configured
+  const rootId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
+  checks.push(rootId
+    ? { name: 'Root folder ID', ok: true, detail: 'GOOGLE_DRIVE_ROOT_FOLDER_ID is set' }
+    : { name: 'Root folder ID', ok: false, detail: 'GOOGLE_DRIVE_ROOT_FOLDER_ID is not configured' });
+
+  // 3. Drive API auth + root folder access (only if 1 & 2 passed)
+  if (checks.every(c => c.ok) && rootId) {
+    try {
+      const meta = await getFolderMeta(rootId);
+      if (meta.mimeType !== FOLDER_MIME) {
+        checks.push({ name: 'Drive API access', ok: false, detail: `Root ID resolves to "${meta.name}" but it is not a folder` });
+      } else {
+        const children = await listChildren(rootId);
+        const folders = children.filter(c => c.mimeType === FOLDER_MIME).length;
+        checks.push({
+          name: 'Drive API access',
+          ok: true,
+          detail: `Root folder "${meta.name}" reachable — ${folders} set folder${folders === 1 ? '' : 's'} visible`,
+        });
+      }
+    } catch (err: any) {
+      checks.push({ name: 'Drive API access', ok: false, detail: err?.message || 'Drive API request failed' });
+    }
+  } else {
+    checks.push({ name: 'Drive API access', ok: false, detail: 'Skipped — fix the checks above first' });
+  }
+
+  // 4. Cloudinary (needed for real import, not dry run)
+  try {
+    const { cloudinary } = await import('../cloudinary');
+    const cfg = cloudinary.config();
+    if (!cfg.cloud_name || !cfg.api_key) {
+      checks.push({ name: 'Cloudinary (for import)', ok: false, detail: 'Cloudinary credentials are not configured' });
+    } else {
+      await (cloudinary as any).api.ping();
+      checks.push({ name: 'Cloudinary (for import)', ok: true, detail: `Connected (cloud: ${cfg.cloud_name})` });
+    }
+  } catch (err: any) {
+    checks.push({ name: 'Cloudinary (for import)', ok: false, detail: err?.error?.message || err?.message || 'Cloudinary ping failed' });
+  }
+
+  // 5. Import ledger table
+  try {
+    const res = await db.execute((await import('drizzle-orm')).sql`SELECT COUNT(*)::int AS n FROM drive_image_imports WHERE status = 'uploaded'`);
+    const n = (res.rows[0] as any)?.n ?? 0;
+    checks.push({ name: 'Import ledger (database)', ok: true, detail: `Ready — ${n} image${n === 1 ? '' : 's'} previously imported` });
+  } catch (err: any) {
+    checks.push({ name: 'Import ledger (database)', ok: false, detail: err?.message || 'Could not query drive_image_imports' });
+  }
+
+  return { ok: checks.every(c => c.ok), checks };
+}
+
 // ---------- Matching helpers ----------
 
 function normalize(s: string): string {

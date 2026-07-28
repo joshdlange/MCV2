@@ -1,6 +1,17 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { auth } from "./firebase";
 import type { Auth } from "firebase/auth";
+import { Capacitor } from "@capacitor/core";
+
+// web | ios | android — computed once; sent on every request so the server
+// can track which platforms each user actually uses.
+const APP_PLATFORM = (() => {
+  try {
+    return Capacitor.isNativePlatform() ? Capacitor.getPlatform() : "web";
+  } catch {
+    return "web";
+  }
+})();
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -12,6 +23,7 @@ async function throwIfResNotOk(res: Response) {
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    "x-app-platform": APP_PLATFORM,
   };
 
   try {

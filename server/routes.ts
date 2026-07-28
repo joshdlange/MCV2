@@ -75,6 +75,16 @@ if (!process.env.STRIPE_SECRET_KEY) {
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Middleware to authenticate Firebase users
+// Throttle user-platform writes to at most once per user+platform per hour.
+// Swept periodically so it can't grow unbounded in a long-lived process.
+const platformSeenCache = new Map<string, number>();
+setInterval(() => {
+  const cutoff = Date.now() - 60 * 60 * 1000;
+  for (const [key, ts] of platformSeenCache) {
+    if (ts < cutoff) platformSeenCache.delete(key);
+  }
+}, 30 * 60 * 1000).unref();
+
 const authenticateUser = async (req: any, res: any, next: any) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -93,6 +103,22 @@ const authenticateUser = async (req: any, res: any, next: any) => {
     }
     
     req.user = user;
+
+    // Record which platform this user is on (fire-and-forget, throttled).
+    const platform = req.headers["x-app-platform"];
+    if (typeof platform === "string" && ["web", "ios", "android"].includes(platform)) {
+      const key = `${user.id}:${platform}`;
+      const now = Date.now();
+      const last = platformSeenCache.get(key);
+      if (!last || now - last > 60 * 60 * 1000) {
+        platformSeenCache.set(key, now);
+        storage.recordUserPlatform(user.id, platform).catch(() => {
+          // Failed write (e.g. table not ready yet at boot) — allow retry on next request.
+          platformSeenCache.delete(key);
+        });
+      }
+    }
+
     next();
   } catch (error) {
     console.error('Token verification failed');
@@ -718,6 +744,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error('[Admin] funnel-stats error:', err);
       res.status(500).json({ message: 'Failed to fetch funnel stats' });
+    }
+  });
+
+  // ── Admin: Platform usage stats (web vs ios vs android vs multiple) ──────────
+  app.get("/api/admin/platform-usage-stats", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const stats = await storage.getPlatformUsageStats();
+      res.json(stats);
+    } catch (err) {
+      console.error('[Admin] platform-usage-stats error:', err);
+      res.status(500).json({ message: 'Failed to fetch platform usage stats' });
     }
   });
 
@@ -1692,6 +1730,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Image migration status error:', error);
       res.status(500).json({ message: 'Failed to get migration status' });
+    }
+  });
+
+  // Drive Image Sync — fast readiness/pre-flight check (admin). Verifies Google
+  // service account, root folder access, Cloudinary, and the import ledger in
+  // seconds — without running the multi-minute Drive scan.
+  app.get("/api/admin/drive-sync/readiness", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      const { checkDriveSyncReadiness } = await import('./services/driveImageSync');
+      res.json(await checkDriveSyncReadiness());
+    } catch (error: any) {
+      console.error('Drive sync readiness error:', error?.message || error);
+      res.status(500).json({ message: error?.message || 'Readiness check failed' });
     }
   });
 
@@ -11389,6 +11443,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }).catch(err => {
     console.error('[Spider-Man 92 Reorg] Error:', err);
   });
+
+  // Ensure user_platforms table exists + one-time backfill from analytics_events.
+  import('./services/userPlatformsSetup').then(m => m.ensureUserPlatformsTable())
+    .then(() => console.log('[Platforms] user_platforms table ready'))
+    .catch(err => console.error('[Platforms] Setup error:', err));
 
   // Initialize upcoming sets: seed data + cron jobs (RSS sync + auto-expire)
   initializeUpcomingSets().catch(err => {

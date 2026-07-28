@@ -207,6 +207,24 @@ function DriveSyncCard() {
   const qc = useQueryClient();
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
+  const [readiness, setReadiness] = useState<{ ok: boolean; checks: Array<{ name: string; ok: boolean; detail: string }> } | null>(null);
+
+  const readinessMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/drive-sync/readiness");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setReadiness(data);
+      toast(data.ok
+        ? { title: "All systems go", description: "Google Drive, Cloudinary, and the database are all reachable." }
+        : { title: "Something's not ready", description: "See the check results below.", variant: "destructive" });
+    },
+    onError: (err: any) => {
+      setReadiness(null);
+      toast({ title: "Connection test failed", description: String(err?.message || "Check the server logs."), variant: "destructive" });
+    },
+  });
 
   const { data: dryRun, isLoading: dryRunLoading } = useQuery<DryRunSummaryResponse>({
     queryKey: ["/api/admin/drive-sync/last-report?summary=1"],
@@ -357,8 +375,40 @@ function DriveSyncCard() {
           </div>
         )}
 
+        {/* Readiness check results */}
+        {readiness && (
+          <div className={`rounded-lg border p-3 max-w-2xl ${readiness.ok ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"}`}>
+            <p className={`text-xs font-semibold mb-1.5 ${readiness.ok ? "text-green-800" : "text-amber-800"}`}>
+              {readiness.ok ? "✓ Ready — everything is connected" : "Not ready — fix the items marked below"}
+            </p>
+            <div className="space-y-1">
+              {readiness.checks.map((c) => (
+                <div key={c.name} className="flex items-start gap-1.5 text-xs">
+                  {c.ok ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0 mt-px" />
+                  ) : (
+                    <AlertTriangle className="h-3.5 w-3.5 text-red-600 shrink-0 mt-px" />
+                  )}
+                  <span className="font-medium text-gray-800">{c.name}:</span>
+                  <span className={c.ok ? "text-gray-600" : "text-red-700"}>{c.detail}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs"
+            onClick={() => readinessMutation.mutate()}
+            disabled={readinessMutation.isPending}
+          >
+            <RefreshCw className={`h-3 w-3 mr-1.5 ${readinessMutation.isPending ? "animate-spin" : ""}`} />
+            {readinessMutation.isPending ? "Testing…" : "Test Connection"}
+          </Button>
           <Button
             size="sm"
             variant="outline"
