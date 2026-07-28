@@ -11269,6 +11269,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Parallels vs existing subsets — JSON report for the admin UI.
+  app.get("/api/admin/data-quality/parallels", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: "Admin access required" });
+      const { buildParallelSubsetReport } = await import('./services/dataQualityAudit');
+      res.json({ rows: await buildParallelSubsetReport() });
+    } catch (error) {
+      console.error('Data quality parallels error:', error);
+      res.status(500).json({ message: "Failed to build parallel subset report" });
+    }
+  });
+
+  // Apply parallel moves (dry-run by default; confirm=true to write).
+  app.post("/api/admin/data-quality/parallels/apply", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: "Admin access required" });
+      const schema = z.object({
+        moves: z.array(z.object({
+          cardId: z.number().int().positive(),
+          targetSetId: z.number().int().positive(),
+          expectedCurrentSetId: z.number().int().positive(),
+        })).min(1).max(3000),
+        confirm: z.boolean().optional().default(false),
+      });
+      const { moves, confirm } = schema.parse(req.body);
+      const { moveParallelCards } = await import('./services/dataQualityAudit');
+      const result = await moveParallelCards(req.user.id, moves, confirm);
+      res.json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      console.error('Data quality parallel move error:', error);
+      res.status(500).json({ message: "Failed to move parallel cards" });
+    }
+  });
+
   // Parallels vs existing subsets: for each "(Gold)"-style parallel group, does a
   // matching sibling subset already exist? Read-only CSV report.
   app.get("/api/admin/data-quality/parallels/export", authenticateUser, async (req: any, res) => {

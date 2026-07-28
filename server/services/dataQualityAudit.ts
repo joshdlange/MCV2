@@ -554,12 +554,14 @@ export function extractVariantText(name: string): string | null {
 export interface ParallelSubsetRow {
   mainSet: string;
   subset: string;
+  currentSetId: number;
   cardNumber: string;
   variant: string; // "" = base card (no bracket text)
   cardCount: number;
   cardIds: number[];
   matchedSubsetId: number | null;
   matchedSubsetName: string | null;
+  matchTier: "exact" | "partial" | null; // exact = variant == subset trailing name; partial = variant words ⊆ trailing name
   suggestion: string;
 }
 
@@ -610,23 +612,26 @@ export async function buildParallelSubsetReport(groups?: DupGroup[]): Promise<Pa
       //   2. variant tokens ⊆ trailing-segment tokens
       //   3. variant tokens ⊆ full subset-name tokens
       const vTok = tokens(variant);
-      const match =
-        siblings.find((s) => {
-          const seg = tokens(trailingSegment(s.name));
-          return seg.length > 0 && seg.length === vTok.length && tokenSubset(vTok, seg);
-        }) ??
-        siblings.find((s) => tokenSubset(vTok, tokens(trailingSegment(s.name)))) ??
-        siblings.find((s) => tokenSubset(vTok, tokens(s.name))) ??
-        null;
+      const exactMatch = siblings.find((s) => {
+        const seg = tokens(trailingSegment(s.name));
+        return seg.length > 0 && seg.length === vTok.length && tokenSubset(vTok, seg);
+      });
+      const partialMatch = exactMatch ? undefined
+        : (siblings.find((s) => tokenSubset(vTok, tokens(trailingSegment(s.name))))
+          ?? siblings.find((s) => tokenSubset(vTok, tokens(s.name))));
+      const match = exactMatch ?? partialMatch ?? null;
+      const matchTier: "exact" | "partial" | null = exactMatch ? "exact" : partialMatch ? "partial" : null;
       rows.push({
         mainSet: g.mainSet,
         subset: g.subset,
+        currentSetId: g.setId,
         cardNumber: g.cardNumber,
         variant,
         cardCount: vc.length,
         cardIds: vc.map((c) => c.cardId),
         matchedSubsetId: match?.id ?? null,
         matchedSubsetName: match?.name ?? null,
+        matchTier,
         suggestion: match
           ? `Move to existing subset "${match.name}" (id ${match.id})`
           : `No matching subset — create one or confirm these belong in "${g.subset}"`,
@@ -643,11 +648,146 @@ export function parallelReportToCsv(rows: ParallelSubsetRow[]): string {
     const s = String(v ?? "");
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  const lines = ["main_set,current_subset,card_number,variant,card_count,card_ids,matched_subset,suggestion"];
+  const lines = ["main_set,current_subset,card_number,variant,card_count,card_ids,matched_subset,match_tier,suggestion"];
   for (const r of rows) {
-    lines.push([r.mainSet, r.subset, r.cardNumber, r.variant, r.cardCount, r.cardIds.join(" "), r.matchedSubsetName ?? "NONE", r.suggestion].map(esc).join(","));
+    lines.push([r.mainSet, r.subset, r.cardNumber, r.variant, r.cardCount, r.cardIds.join(" "), r.matchedSubsetName ?? "NONE", r.matchTier ?? "none", r.suggestion].map(esc).join(","));
   }
   return lines.join("\n");
+}
+
+// ---------- Remediation: move parallel cards into their matching subset ----------
+
+export interface ParallelMoveRequest {
+  cardId: number;
+  targetSetId: number;
+  expectedCurrentSetId: number; // guard against stale analysis
+}
+
+export async function moveParallelCards(
+  adminUserId: number,
+  moves: ParallelMoveRequest[],
+  confirm: boolean
+): Promise<{
+  dryRun: boolean;
+  applied: number;
+  skipped: Array<{ cardId: number; reason: string }>;
+  preview: Array<{ cardId: number; cardName: string; cardNumber: string; fromSetId: number; fromSet: string; toSetId: number; toSet: string }>;
+}> {
+  // Validation runs against a snapshot; for confirmed applies it re-runs INSIDE
+  // the transaction (under an advisory lock) so concurrent applies can't defeat
+  // the collision guard or move stale rows.
+  type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+  const validate = async (ex: Executor) => {
+    const skipped: Array<{ cardId: number; reason: string }> = [];
+    const valid: Array<{ card: typeof cards.$inferSelect; targetSetId: number }> = [];
+
+    const cardRows = await ex.select().from(cards).where(inArray(cards.id, moves.map((m) => m.cardId)));
+    const byId = new Map(cardRows.map((c) => [c.id, c]));
+
+    const setIds = [...new Set([...moves.map((m) => m.targetSetId), ...cardRows.map((c) => c.setId)])];
+    const setRows = setIds.length ? await ex.select().from(cardSets).where(inArray(cardSets.id, setIds)) : [];
+    const setById = new Map(setRows.map((s) => [s.id, s]));
+
+    // Active card numbers in each target set for collision checks
+    const targetIds = [...new Set(moves.map((m) => m.targetSetId))];
+    const existing = targetIds.length
+      ? ((await ex.execute(sql`
+          SELECT set_id, card_number FROM cards
+          WHERE set_id IN (${sql.join(targetIds.map((id) => sql`${id}`), sql`, `)}) AND archived_at IS NULL
+        `)).rows as any[])
+      : [];
+    const takenNumbers = new Set(existing.map((r) => `${r.set_id}::${normalizeCardNumber(r.card_number)}`));
+
+    for (const m of moves) {
+      const card = byId.get(m.cardId);
+      if (!card) { skipped.push({ cardId: m.cardId, reason: "Card not found" }); continue; }
+      if (card.archivedAt) { skipped.push({ cardId: m.cardId, reason: "Card is archived" }); continue; }
+      if (card.setId !== m.expectedCurrentSetId) {
+        skipped.push({ cardId: m.cardId, reason: `Card moved since analysis (now in set ${card.setId})` });
+        continue;
+      }
+      const target = setById.get(m.targetSetId);
+      const source = setById.get(card.setId);
+      if (!target) { skipped.push({ cardId: m.cardId, reason: `Target subset ${m.targetSetId} not found` }); continue; }
+      if (!target.isActive) { skipped.push({ cardId: m.cardId, reason: `Target subset "${target.name}" is not active` }); continue; }
+      if (target.id === card.setId) { skipped.push({ cardId: m.cardId, reason: "Card is already in the target subset" }); continue; }
+      if (!source || source.mainSetId == null || target.mainSetId !== source.mainSetId) {
+        skipped.push({ cardId: m.cardId, reason: "Target subset belongs to a different master set — refusing cross-set move" });
+        continue;
+      }
+      // Collision guard: target already has an active card with this number
+      const key = `${target.id}::${normalizeCardNumber(card.cardNumber)}`;
+      if (takenNumbers.has(key)) {
+        skipped.push({ cardId: m.cardId, reason: `Target subset already has an active card #${card.cardNumber} — would create a new duplicate` });
+        continue;
+      }
+      takenNumbers.add(key); // intra-batch guard
+      valid.push({ card, targetSetId: target.id });
+    }
+    return { skipped, valid, setById };
+  };
+
+  const toPreview = (valid: Array<{ card: typeof cards.$inferSelect; targetSetId: number }>, setById: Map<number, typeof cardSets.$inferSelect>) =>
+    valid.map((v) => ({
+      cardId: v.card.id,
+      cardName: v.card.name,
+      cardNumber: v.card.cardNumber,
+      fromSetId: v.card.setId,
+      fromSet: setById.get(v.card.setId)?.name ?? String(v.card.setId),
+      toSetId: v.targetSetId,
+      toSet: setById.get(v.targetSetId)?.name ?? String(v.targetSetId),
+    }));
+
+  if (!confirm) {
+    const { skipped, valid, setById } = await validate(db);
+    return { dryRun: true, applied: 0, skipped, preview: toPreview(valid, setById) };
+  }
+
+  let applied = 0;
+  let finalSkipped: Array<{ cardId: number; reason: string }> = [];
+  let finalPreview: ReturnType<typeof toPreview> = [];
+  await db.transaction(async (tx) => {
+    // Serialize concurrent parallel-move applies; validation below then sees committed state.
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('data_quality_parallel_moves'))`);
+    const { skipped, valid, setById } = await validate(tx);
+    finalSkipped = skipped;
+    finalPreview = toPreview(valid, setById);
+    for (const v of valid) {
+      // Conditional update: if the row changed after validation, skip instead of moving a stale row.
+      const upd = await tx.execute(sql`
+        UPDATE cards SET set_id = ${v.targetSetId}
+        WHERE id = ${v.card.id} AND set_id = ${v.card.setId} AND archived_at IS NULL
+      `);
+      if ((upd as any).rowCount === 0) {
+        finalSkipped.push({ cardId: v.card.id, reason: "Card changed during apply — skipped" });
+        finalPreview = finalPreview.filter((p) => p.cardId !== v.card.id);
+        continue;
+      }
+      await tx.insert(adminAuditLogs).values({
+        adminUserId,
+        actionType: "data_quality_parallel_move",
+        entityType: "card",
+        entityId: v.card.id,
+        entityName: v.card.name,
+        notes: JSON.stringify({
+          old: { setId: v.card.setId },
+          new: { setId: v.targetSetId },
+          cardNumber: v.card.cardNumber,
+          reason: "Parallel card moved to its matching parallel subset",
+        }),
+      });
+      applied++;
+    }
+    // Keep card_sets.total_cards in sync for every affected subset
+    const touched = [...new Set(valid.flatMap((v) => [v.card.setId, v.targetSetId]))];
+    for (const sid of touched) {
+      await tx.execute(sql`
+        UPDATE card_sets SET total_cards = (SELECT COUNT(*) FROM cards WHERE set_id = ${sid} AND archived_at IS NULL)
+        WHERE id = ${sid}
+      `);
+    }
+  });
+  return { dryRun: false, applied, skipped: finalSkipped, preview: finalPreview };
 }
 
 // ---------- Manual-review worklist (READ ONLY) ----------

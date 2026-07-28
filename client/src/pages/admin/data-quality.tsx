@@ -362,6 +362,213 @@ function GroupRow({ group }: { group: DupGroup }) {
   );
 }
 
+// ── Parallel Moves: bulk-move "(Gold)"-style parallels into their matching subset ──
+
+interface ParallelRow {
+  mainSet: string;
+  subset: string;
+  currentSetId: number;
+  cardNumber: string;
+  variant: string;
+  cardCount: number;
+  cardIds: number[];
+  matchedSubsetId: number | null;
+  matchedSubsetName: string | null;
+  matchTier: "exact" | "partial" | null;
+  suggestion: string;
+}
+
+interface MoveResult {
+  dryRun: boolean;
+  applied: number;
+  skipped: Array<{ cardId: number; reason: string }>;
+  preview: Array<{ cardId: number; cardName: string; cardNumber: string; fromSet: string; toSet: string }>;
+}
+
+function ParallelMovesCard() {
+  const { toast } = useToast();
+  const [tier, setTier] = useState<"exact" | "partial">("exact");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [dryRunResult, setDryRunResult] = useState<MoveResult | null>(null);
+  const [shownRows, setShownRows] = useState(100);
+
+  const { data, isLoading, refetch, isFetching } = useQuery<{ rows: ParallelRow[] }>({
+    queryKey: ["/api/admin/data-quality/parallels"],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const rowKey = (r: ParallelRow) => `${r.currentSetId}::${r.cardNumber}::${r.variant}`;
+  const tierRows = useMemo(
+    () => (data?.rows ?? []).filter((r) => r.matchTier === tier),
+    [data, tier]
+  );
+  const selectedRows = tierRows.filter((r) => selected.has(rowKey(r)));
+  const selectedCards = selectedRows.reduce((s, r) => s + r.cardCount, 0);
+
+  const buildMoves = () =>
+    selectedRows.flatMap((r) =>
+      r.cardIds.map((cardId) => ({ cardId, targetSetId: r.matchedSubsetId!, expectedCurrentSetId: r.currentSetId }))
+    );
+
+  const applyMutation = useMutation({
+    mutationFn: async (confirm: boolean) => {
+      const res = await apiRequest("POST", "/api/admin/data-quality/parallels/apply", { moves: buildMoves(), confirm });
+      return res.json() as Promise<MoveResult>;
+    },
+    onSuccess: (result, confirm) => {
+      if (!confirm) {
+        setDryRunResult(result);
+        setPreviewOpen(true);
+      } else {
+        setPreviewOpen(false);
+        setDryRunResult(null);
+        setSelected(new Set());
+        toast({
+          title: `Moved ${result.applied} cards`,
+          description: result.skipped.length ? `${result.skipped.length} skipped — see analysis for details.` : "All selected cards moved to their parallel subsets.",
+        });
+        refetch();
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/data-quality/duplicates"] });
+      }
+    },
+    onError: (err: any) => {
+      toast({ title: "Move failed", description: String(err?.message || "Check server logs."), variant: "destructive" });
+    },
+  });
+
+  const toggleAll = () => {
+    if (selectedRows.length === tierRows.length) setSelected(new Set());
+    else setSelected(new Set(tierRows.map(rowKey)));
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <CardTitle className="text-sm">Parallel Moves — send parallels to their matching subset</CardTitle>
+            <p className="text-xs text-gray-500 mt-0.5 max-w-2xl">
+              Cards like "Wolverine (Gold)" sitting in a base subset while a matching Gold subset exists.
+              Exact = variant matches the subset name word-for-word. Partial = close match, review the destination before applying.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant={tier === "exact" ? "default" : "outline"} onClick={() => { setTier("exact"); setSelected(new Set()); setShownRows(100); }} data-testid="tab-exact">
+              Exact ({(data?.rows ?? []).filter((r) => r.matchTier === "exact").length})
+            </Button>
+            <Button size="sm" variant={tier === "partial" ? "default" : "outline"} onClick={() => { setTier("partial"); setSelected(new Set()); setShownRows(100); }} data-testid="tab-partial">
+              Partial ({(data?.rows ?? []).filter((r) => r.matchTier === "partial").length})
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading || isFetching ? (
+          <div className="py-8 text-center text-gray-400 text-sm"><Loader2 className="h-5 w-5 mx-auto animate-spin mb-2" />Building parallel report…</div>
+        ) : tierRows.length === 0 ? (
+          <p className="text-sm text-gray-500 py-4">No {tier} matches remaining. 🎉</p>
+        ) : (
+          <>
+            <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={toggleAll} data-testid="button-select-all">
+                {selectedRows.length === tierRows.length ? "Deselect all" : `Select all ${tierRows.length}`}
+              </Button>
+              <Button
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                disabled={selectedRows.length === 0 || applyMutation.isPending}
+                onClick={() => applyMutation.mutate(false)}
+                data-testid="button-preview-moves"
+              >
+                {applyMutation.isPending ? "Working…" : `Preview move (${selectedRows.length} groups · ${selectedCards} cards)`}
+              </Button>
+            </div>
+            <div className="border rounded-lg divide-y max-h-96 overflow-y-auto">
+              {tierRows.slice(0, shownRows).map((r) => {
+                const k = rowKey(r);
+                return (
+                  <label key={k} className="flex items-start gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5"
+                      checked={selected.has(k)}
+                      onChange={(e) => {
+                        const next = new Set(selected);
+                        e.target.checked ? next.add(k) : next.delete(k);
+                        setSelected(next);
+                      }}
+                    />
+                    <span className="flex-1 min-w-0">
+                      <span className="font-medium text-gray-900">{r.mainSet}</span>
+                      <span className="text-gray-500"> · #{r.cardNumber} · </span>
+                      <span className="text-purple-700 font-medium">({r.variant})</span>
+                      <span className="text-gray-500"> · {r.cardCount} card{r.cardCount === 1 ? "" : "s"}</span>
+                      <span className="block text-gray-500 truncate">
+                        {r.subset} → <span className="text-emerald-700 font-medium">{r.matchedSubsetName}</span>
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            {tierRows.length > shownRows && (
+              <div className="text-center mt-2">
+                <Button size="sm" variant="ghost" onClick={() => setShownRows(shownRows + 200)}>Show more ({tierRows.length - shownRows} remaining)</Button>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Dry-run preview → confirm */}
+        <Dialog open={previewOpen} onOpenChange={(o) => { setPreviewOpen(o); if (!o) setDryRunResult(null); }}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Confirm Parallel Moves</DialogTitle>
+              <DialogDescription>
+                Dry run: {dryRunResult?.preview.length ?? 0} cards will move
+                {dryRunResult && dryRunResult.skipped.length > 0 ? `, ${dryRunResult.skipped.length} will be skipped` : ""}.
+                Moves are audit-logged and reversible.
+              </DialogDescription>
+            </DialogHeader>
+            {dryRunResult && (
+              <div className="max-h-64 overflow-y-auto text-xs space-y-1">
+                {dryRunResult.preview.slice(0, 50).map((p) => (
+                  <p key={p.cardId} className="truncate">
+                    <span className="font-medium">#{p.cardNumber} {p.cardName}</span>
+                    <span className="text-gray-500"> → {p.toSet}</span>
+                  </p>
+                ))}
+                {dryRunResult.preview.length > 50 && <p className="text-gray-400">…and {dryRunResult.preview.length - 50} more</p>}
+                {dryRunResult.skipped.length > 0 && (
+                  <div className="mt-2 bg-amber-50 border border-amber-200 rounded p-2">
+                    {dryRunResult.skipped.slice(0, 10).map((s) => (
+                      <p key={s.cardId} className="text-amber-800">Card {s.cardId}: {s.reason}</p>
+                    ))}
+                    {dryRunResult.skipped.length > 10 && <p className="text-amber-600">…and {dryRunResult.skipped.length - 10} more</p>}
+                  </div>
+                )}
+              </div>
+            )}
+            <DialogFooter className="gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setPreviewOpen(false)}>Cancel</Button>
+              <Button
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                disabled={applyMutation.isPending || (dryRunResult?.preview.length ?? 0) === 0}
+                onClick={() => applyMutation.mutate(true)}
+                data-testid="button-confirm-moves"
+              >
+                {applyMutation.isPending ? "Moving…" : `Move ${dryRunResult?.preview.length ?? 0} cards`}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AdminDataQuality() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -457,6 +664,8 @@ export default function AdminDataQuality() {
               </Card>
             ))}
           </div>
+
+          <ParallelMovesCard />
 
           <Card>
             <CardHeader className="pb-3">

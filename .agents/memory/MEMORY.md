@@ -17,4 +17,5 @@
 - [Shell background procs die between calls](replit-shell-background-procs.md) — nohup jobs don't survive across bash tool calls; pgrep self-matches its own poll command.
 - [Card-number natural sort](card-number-sorting.md) — card_number is text; every new ORDER BY on it must reuse the CASE/LPAD numeric pattern or 1,10,11,2 sorting returns.
 - [Drizzle raw sql array params](drizzle-array-params.md) — `${arr}` in sql`` breaks ANY(); use IN with sql.join or inArray.
+- [Parallel duplicates remediation](parallel-duplicates-remediation.md) — ~1/3 of "(Gold)" parallels already exist in the target subset; collision-guard blocks mean "merge needed," not bug.
 - [Drive image import safety](drive-image-import.md) — marked-file-wins front/back rule only (never sort order); transactional ledger gives rerun idempotency; always fresh scan before import.
