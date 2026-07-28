@@ -42,3 +42,9 @@ id = "JpnDoW_FoziUWc0SSpZyb"
 uri = "file://exports/duplicate_card_numbers_by_subset.csv"
 type = "table"
 title = "Duplicate card numbers within subsets (one row per card)"
+
+[[outputs]]
+id = "cGAZOsrGPyag0tiJ-D8tY"
+uri = "file://exports/cards_missing_images_2026-07-28.csv"
+type = "table"
+title = "Missing Images Export — Live Sets Only (July 28, 2026)"
