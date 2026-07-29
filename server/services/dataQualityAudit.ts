@@ -332,7 +332,7 @@ export interface ImpactCounts {
   xpEventRecords: number;
 }
 
-export async function getImpactCounts(cardIds: number[]): Promise<ImpactCounts> {
+export async function getImpactCounts(cardIds: number[], ex: { execute: typeof db.execute } = db): Promise<ImpactCounts> {
   if (cardIds.length === 0) {
     return {
       cardIds,
@@ -347,7 +347,7 @@ export async function getImpactCounts(cardIds: number[]): Promise<ImpactCounts> 
     };
   }
   const ids = sql.join(cardIds.map((id) => sql`${id}`), sql`, `);
-  const q = async (query: any) => Number(((await db.execute(query)).rows[0] as any)?.n || 0);
+  const q = async (query: any) => Number(((await ex.execute(query)).rows[0] as any)?.n || 0);
   const [collectionRecords, collectionUsers, wishlistRecords, pcBinderRecords, pendingImageRecords, marketplaceListings, priceCacheRecords, xpEventRecords] =
     await Promise.all([
       q(sql`SELECT COUNT(*) n FROM user_collections WHERE card_id IN (${ids})`),
@@ -444,6 +444,72 @@ export async function applyCardNumberFixes(
 
 // ---------- Remediation: merge true duplicates (soft-archive) ----------
 
+type TxExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * Transfer every user-facing reference from `dup` onto `survivor`, then
+ * soft-archive `dup`. Collections/wishlists/binders dedupe against rows the
+ * user already has for the survivor (quantities merge for collections).
+ */
+async function transferReferencesAndArchive(
+  tx: TxExecutor,
+  survivor: typeof cards.$inferSelect,
+  dup: typeof cards.$inferSelect,
+  archiveReason: string
+): Promise<void> {
+  // user_collections: unique (user_id, card_id) — merge quantities when user already owns survivor
+  await tx.execute(sql`
+    UPDATE user_collections uc SET quantity = uc.quantity + d.quantity
+    FROM user_collections d
+    WHERE uc.card_id = ${survivor.id} AND d.card_id = ${dup.id} AND uc.user_id = d.user_id
+  `);
+  await tx.execute(sql`
+    DELETE FROM user_collections d
+    WHERE d.card_id = ${dup.id}
+      AND EXISTS (SELECT 1 FROM user_collections uc WHERE uc.card_id = ${survivor.id} AND uc.user_id = d.user_id)
+  `);
+  await tx.update(userCollections).set({ cardId: survivor.id }).where(eq(userCollections.cardId, dup.id));
+
+  // user_wishlists: unique (user_id, card_id) — drop dup row when survivor already wishlisted
+  await tx.execute(sql`
+    DELETE FROM user_wishlists d
+    WHERE d.card_id = ${dup.id}
+      AND EXISTS (SELECT 1 FROM user_wishlists w WHERE w.card_id = ${survivor.id} AND w.user_id = d.user_id)
+  `);
+  await tx.update(userWishlists).set({ cardId: survivor.id }).where(eq(userWishlists.cardId, dup.id));
+
+  // pc_binder_cards: unique (binder_id, card_id)
+  await tx.execute(sql`
+    DELETE FROM pc_binder_cards d
+    WHERE d.card_id = ${dup.id}
+      AND EXISTS (SELECT 1 FROM pc_binder_cards b WHERE b.card_id = ${survivor.id} AND b.binder_id = d.binder_id)
+  `);
+  await tx.update(pcBinderCards).set({ cardId: survivor.id }).where(eq(pcBinderCards.cardId, dup.id));
+
+  // Other references
+  await tx.update(pendingCardImages).set({ cardId: survivor.id }).where(eq(pendingCardImages.cardId, dup.id));
+  await tx.update(listings).set({ cardId: survivor.id }).where(eq(listings.cardId, dup.id));
+  await tx.update(xpEvents).set({ cardId: survivor.id }).where(eq(xpEvents.cardId, dup.id));
+  await tx.execute(sql`UPDATE scan_uploads SET top_match_card_id = ${survivor.id} WHERE top_match_card_id = ${dup.id}`);
+  await tx.execute(sql`UPDATE scan_feedback SET selected_card_id = ${survivor.id} WHERE selected_card_id = ${dup.id}`);
+  // price cache: survivor keeps its own row; drop dup's
+  await tx.delete(cardPriceCache).where(eq(cardPriceCache.cardId, dup.id));
+
+  // Carry over images if survivor is missing them
+  if (!survivor.frontImageUrl && dup.frontImageUrl) {
+    await tx.update(cards).set({ frontImageUrl: dup.frontImageUrl }).where(eq(cards.id, survivor.id));
+  }
+  if (!survivor.backImageUrl && dup.backImageUrl) {
+    await tx.update(cards).set({ backImageUrl: dup.backImageUrl }).where(eq(cards.id, survivor.id));
+  }
+
+  // Soft-archive the duplicate (NO hard delete)
+  await tx
+    .update(cards)
+    .set({ archivedAt: new Date(), archiveReason })
+    .where(eq(cards.id, dup.id));
+}
+
 export async function mergeDuplicateCards(
   adminUserId: number,
   survivorCardId: number,
@@ -471,57 +537,7 @@ export async function mergeDuplicateCards(
 
   await db.transaction(async (tx) => {
     for (const dup of dups) {
-      // user_collections: unique (user_id, card_id) — merge quantities when user already owns survivor
-      await tx.execute(sql`
-        UPDATE user_collections uc SET quantity = uc.quantity + d.quantity
-        FROM user_collections d
-        WHERE uc.card_id = ${survivor.id} AND d.card_id = ${dup.id} AND uc.user_id = d.user_id
-      `);
-      await tx.execute(sql`
-        DELETE FROM user_collections d
-        WHERE d.card_id = ${dup.id}
-          AND EXISTS (SELECT 1 FROM user_collections uc WHERE uc.card_id = ${survivor.id} AND uc.user_id = d.user_id)
-      `);
-      await tx.update(userCollections).set({ cardId: survivor.id }).where(eq(userCollections.cardId, dup.id));
-
-      // user_wishlists: unique (user_id, card_id) — drop dup row when survivor already wishlisted
-      await tx.execute(sql`
-        DELETE FROM user_wishlists d
-        WHERE d.card_id = ${dup.id}
-          AND EXISTS (SELECT 1 FROM user_wishlists w WHERE w.card_id = ${survivor.id} AND w.user_id = d.user_id)
-      `);
-      await tx.update(userWishlists).set({ cardId: survivor.id }).where(eq(userWishlists.cardId, dup.id));
-
-      // pc_binder_cards: unique (binder_id, card_id)
-      await tx.execute(sql`
-        DELETE FROM pc_binder_cards d
-        WHERE d.card_id = ${dup.id}
-          AND EXISTS (SELECT 1 FROM pc_binder_cards b WHERE b.card_id = ${survivor.id} AND b.binder_id = d.binder_id)
-      `);
-      await tx.update(pcBinderCards).set({ cardId: survivor.id }).where(eq(pcBinderCards.cardId, dup.id));
-
-      // Other references
-      await tx.update(pendingCardImages).set({ cardId: survivor.id }).where(eq(pendingCardImages.cardId, dup.id));
-      await tx.update(listings).set({ cardId: survivor.id }).where(eq(listings.cardId, dup.id));
-      await tx.update(xpEvents).set({ cardId: survivor.id }).where(eq(xpEvents.cardId, dup.id));
-      await tx.execute(sql`UPDATE scan_uploads SET top_match_card_id = ${survivor.id} WHERE top_match_card_id = ${dup.id}`);
-      await tx.execute(sql`UPDATE scan_feedback SET selected_card_id = ${survivor.id} WHERE selected_card_id = ${dup.id}`);
-      // price cache: survivor keeps its own row; drop dup's
-      await tx.delete(cardPriceCache).where(eq(cardPriceCache.cardId, dup.id));
-
-      // Carry over images if survivor is missing them
-      if (!survivor.frontImageUrl && dup.frontImageUrl) {
-        await tx.update(cards).set({ frontImageUrl: dup.frontImageUrl }).where(eq(cards.id, survivor.id));
-      }
-      if (!survivor.backImageUrl && dup.backImageUrl) {
-        await tx.update(cards).set({ backImageUrl: dup.backImageUrl }).where(eq(cards.id, survivor.id));
-      }
-
-      // Soft-archive the duplicate (NO hard delete)
-      await tx
-        .update(cards)
-        .set({ archivedAt: new Date(), archiveReason: `Merged into card ${survivor.id} (duplicate card number cleanup)` })
-        .where(eq(cards.id, dup.id));
+      await transferReferencesAndArchive(tx, survivor, dup, `Merged into card ${survivor.id} (duplicate card number cleanup)`);
 
       await tx.insert(adminAuditLogs).values({
         adminUserId,
@@ -827,6 +843,143 @@ export async function moveParallelCards(
     }
   });
   return { dryRun: false, applied, skipped: finalSkipped, preview: finalPreview };
+}
+
+// ---------- Remediation: merge redundant parallel copies (cross-subset) ----------
+
+export interface RedundantMergeRequest {
+  dupCardId: number; // the stray copy in the wrong subset
+  targetSetId: number; // the parallel subset where the real card already lives
+  expectedCurrentSetId: number; // guard against stale analysis
+}
+
+/**
+ * For "already_in_target" parallel groups: the same card exists both in a base
+ * subset (as e.g. "Wolverine (Gold)") and in its parallel subset. Merge the
+ * stray copy into the existing target card: transfer collections/wishlists/
+ * binders/etc., then soft-archive the stray. Survivor is located by matching
+ * card number + normalized name in the target subset — refuses anything else.
+ */
+export async function mergeRedundantParallels(
+  adminUserId: number,
+  merges: RedundantMergeRequest[],
+  confirm: boolean
+): Promise<{
+  dryRun: boolean;
+  applied: number;
+  skipped: Array<{ cardId: number; reason: string }>;
+  preview: Array<{ cardId: number; cardName: string; cardNumber: string; fromSet: string; survivorCardId: number; survivorName: string; targetSet: string }>;
+  impact: ImpactCounts | null;
+}> {
+  type Executor = typeof db | TxExecutor;
+  const validate = async (ex: Executor) => {
+    const skipped: Array<{ cardId: number; reason: string }> = [];
+    const valid: Array<{ dup: typeof cards.$inferSelect; survivor: typeof cards.$inferSelect }> = [];
+
+    const dupRows = merges.length ? await ex.select().from(cards).where(inArray(cards.id, merges.map((m) => m.dupCardId))) : [];
+    const byId = new Map(dupRows.map((c) => [c.id, c]));
+
+    const setIds = [...new Set([...merges.map((m) => m.targetSetId), ...dupRows.map((c) => c.setId)])];
+    const setRows = setIds.length ? await ex.select().from(cardSets).where(inArray(cardSets.id, setIds)) : [];
+    const setById = new Map(setRows.map((s) => [s.id, s]));
+
+    // Active cards in target subsets (survivor candidates)
+    const targetIds = [...new Set(merges.map((m) => m.targetSetId))];
+    const candidates = targetIds.length
+      ? await ex.select().from(cards).where(and(inArray(cards.setId, targetIds), sql`${cards.archivedAt} IS NULL`))
+      : [];
+    const candByKey = new Map<string, Array<typeof cards.$inferSelect>>();
+    for (const c of candidates) {
+      const k = `${c.setId}::${normalizeCardNumber(c.cardNumber)}`;
+      if (!candByKey.has(k)) candByKey.set(k, []);
+      candByKey.get(k)!.push(c);
+    }
+
+    const claimedSurvivors = new Set<number>();
+    for (const m of merges) {
+      const dup = byId.get(m.dupCardId);
+      if (!dup) { skipped.push({ cardId: m.dupCardId, reason: "Card not found" }); continue; }
+      if (dup.archivedAt) { skipped.push({ cardId: m.dupCardId, reason: "Card is already archived" }); continue; }
+      if (dup.setId !== m.expectedCurrentSetId) { skipped.push({ cardId: m.dupCardId, reason: `Card moved since analysis (now in set ${dup.setId})` }); continue; }
+      const target = setById.get(m.targetSetId);
+      const source = setById.get(dup.setId);
+      if (!target) { skipped.push({ cardId: m.dupCardId, reason: `Target subset ${m.targetSetId} not found` }); continue; }
+      if (!target.isActive) { skipped.push({ cardId: m.dupCardId, reason: `Target subset "${target.name}" is not active` }); continue; }
+      if (target.id === dup.setId) { skipped.push({ cardId: m.dupCardId, reason: "Card is already in the target subset" }); continue; }
+      if (!source || source.mainSetId == null || target.mainSetId !== source.mainSetId) {
+        skipped.push({ cardId: m.dupCardId, reason: "Target subset belongs to a different master set — refusing cross-set merge" });
+        continue;
+      }
+      // Locate the survivor: same number AND same normalized name in the target subset
+      const occupants = candByKey.get(`${target.id}::${normalizeCardNumber(dup.cardNumber)}`) ?? [];
+      const dupBase = normalizeCardName(dup.name);
+      const survivor = occupants.find((o) => normalizeCardName(o.name) === dupBase && o.id !== dup.id);
+      if (!survivor) {
+        skipped.push({ cardId: m.dupCardId, reason: occupants.length ? `#${dup.cardNumber} in "${target.name}" is a different card — needs manual review` : `No card #${dup.cardNumber} exists in "${target.name}" — use Move instead of Merge` });
+        continue;
+      }
+      if (claimedSurvivors.has(survivor.id)) { skipped.push({ cardId: m.dupCardId, reason: `Another merge in this batch already targets survivor card ${survivor.id}` }); continue; }
+      claimedSurvivors.add(survivor.id);
+      valid.push({ dup, survivor });
+    }
+    return { skipped, valid, setById };
+  };
+
+  const toPreview = (valid: Array<{ dup: typeof cards.$inferSelect; survivor: typeof cards.$inferSelect }>, setById: Map<number, typeof cardSets.$inferSelect>) =>
+    valid.map((v) => ({
+      cardId: v.dup.id,
+      cardName: v.dup.name,
+      cardNumber: v.dup.cardNumber,
+      fromSet: setById.get(v.dup.setId)?.name ?? String(v.dup.setId),
+      survivorCardId: v.survivor.id,
+      survivorName: v.survivor.name,
+      targetSet: setById.get(v.survivor.setId)?.name ?? String(v.survivor.setId),
+    }));
+
+  if (!confirm) {
+    const { skipped, valid, setById } = await validate(db);
+    const impact = valid.length ? await getImpactCounts(valid.map((v) => v.dup.id)) : null;
+    return { dryRun: true, applied: 0, skipped, preview: toPreview(valid, setById), impact };
+  }
+
+  let applied = 0;
+  let finalSkipped: Array<{ cardId: number; reason: string }> = [];
+  let finalPreview: ReturnType<typeof toPreview> = [];
+  let impact: ImpactCounts | null = null;
+  await db.transaction(async (tx) => {
+    // Same lock as parallel moves — the two tools touch the same rows
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('data_quality_parallel_moves'))`);
+    const { skipped, valid, setById } = await validate(tx);
+    finalSkipped = skipped;
+    finalPreview = toPreview(valid, setById);
+    impact = valid.length ? await getImpactCounts(valid.map((v) => v.dup.id), tx) : null;
+    for (const v of valid) {
+      await transferReferencesAndArchive(tx, v.survivor, v.dup, `Merged into card ${v.survivor.id} (redundant parallel copy cleanup)`);
+      await tx.insert(adminAuditLogs).values({
+        adminUserId,
+        actionType: "data_quality_redundant_parallel_merge",
+        entityType: "card",
+        entityId: v.dup.id,
+        entityName: v.dup.name,
+        notes: JSON.stringify({
+          old: { cardId: v.dup.id, cardNumber: v.dup.cardNumber, name: v.dup.name, setId: v.dup.setId, archived: false },
+          new: { mergedInto: v.survivor.id, survivorSetId: v.survivor.setId, archived: true },
+          rollback: "Un-archive card (clear archived_at/archive_reason); reassigned references cannot be auto-split back",
+          reason: "Redundant parallel copy — same card already existed in the parallel subset",
+        }),
+      });
+      applied++;
+    }
+    // Archiving strays changes source-subset counts
+    const touched = [...new Set(valid.map((v) => v.dup.setId))];
+    for (const sid of touched) {
+      await tx.execute(sql`
+        UPDATE card_sets SET total_cards = (SELECT COUNT(*) FROM cards WHERE set_id = ${sid} AND archived_at IS NULL)
+        WHERE id = ${sid}
+      `);
+    }
+  });
+  return { dryRun: false, applied, skipped: finalSkipped, preview: finalPreview, impact };
 }
 
 // ---------- Manual-review worklist (READ ONLY) ----------
