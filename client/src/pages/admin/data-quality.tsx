@@ -375,6 +375,7 @@ interface ParallelRow {
   matchedSubsetId: number | null;
   matchedSubsetName: string | null;
   matchTier: "exact" | "partial" | null;
+  moveStatus: "ready" | "already_in_target" | "target_occupied" | null;
   suggestion: string;
 }
 
@@ -399,10 +400,18 @@ function ParallelMovesCard() {
   });
 
   const rowKey = (r: ParallelRow) => `${r.currentSetId}::${r.cardNumber}::${r.variant}`;
+  // Only rows that will actually move are shown/selectable; blocked buckets are summarized below.
   const tierRows = useMemo(
-    () => (data?.rows ?? []).filter((r) => r.matchTier === tier),
+    () => (data?.rows ?? []).filter((r) => r.matchTier === tier && r.moveStatus === "ready"),
     [data, tier]
   );
+  const blockedCounts = useMemo(() => {
+    const all = (data?.rows ?? []).filter((r) => r.matchTier === tier);
+    return {
+      redundant: all.filter((r) => r.moveStatus === "already_in_target").length,
+      occupied: all.filter((r) => r.moveStatus === "target_occupied").length,
+    };
+  }, [data, tier]);
   const selectedRows = tierRows.filter((r) => selected.has(rowKey(r)));
   const selectedCards = selectedRows.reduce((s, r) => s + r.cardCount, 0);
 
@@ -455,10 +464,10 @@ function ParallelMovesCard() {
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant={tier === "exact" ? "default" : "outline"} onClick={() => { setTier("exact"); setSelected(new Set()); setShownRows(100); }} data-testid="tab-exact">
-              Exact ({(data?.rows ?? []).filter((r) => r.matchTier === "exact").length})
+              Exact ({(data?.rows ?? []).filter((r) => r.matchTier === "exact" && r.moveStatus === "ready").length})
             </Button>
             <Button size="sm" variant={tier === "partial" ? "default" : "outline"} onClick={() => { setTier("partial"); setSelected(new Set()); setShownRows(100); }} data-testid="tab-partial">
-              Partial ({(data?.rows ?? []).filter((r) => r.matchTier === "partial").length})
+              Partial ({(data?.rows ?? []).filter((r) => r.matchTier === "partial" && r.moveStatus === "ready").length})
             </Button>
           </div>
         </div>
@@ -467,7 +476,14 @@ function ParallelMovesCard() {
         {isLoading || isFetching ? (
           <div className="py-8 text-center text-gray-400 text-sm"><Loader2 className="h-5 w-5 mx-auto animate-spin mb-2" />Building parallel report…</div>
         ) : tierRows.length === 0 ? (
-          <p className="text-sm text-gray-500 py-4">No {tier} matches remaining. 🎉</p>
+          <>
+            <p className="text-sm text-gray-500 py-4">No {tier}-match groups are ready to move. 🎉</p>
+            {(blockedCounts.redundant > 0 || blockedCounts.occupied > 0) && (
+              <p className="text-xs text-gray-400">
+                Hidden: {blockedCounts.redundant} redundant copies (card already exists in the target — needs merge) · {blockedCounts.occupied} with the number taken by a different card (manual review).
+              </p>
+            )}
+          </>
         ) : (
           <>
             <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
@@ -516,6 +532,12 @@ function ParallelMovesCard() {
               <div className="text-center mt-2">
                 <Button size="sm" variant="ghost" onClick={() => setShownRows(shownRows + 200)}>Show more ({tierRows.length - shownRows} remaining)</Button>
               </div>
+            )}
+            {(blockedCounts.redundant > 0 || blockedCounts.occupied > 0) && (
+              <p className="text-xs text-gray-400 mt-2">
+                Not shown: {blockedCounts.redundant} groups where the card already exists in the target subset (redundant copy — needs a merge, not a move)
+                and {blockedCounts.occupied} where the number is taken by a different card (manual review). Only rows guaranteed to move cleanly are listed.
+              </p>
             )}
           </>
         )}

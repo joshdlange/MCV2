@@ -562,6 +562,12 @@ export interface ParallelSubsetRow {
   matchedSubsetId: number | null;
   matchedSubsetName: string | null;
   matchTier: "exact" | "partial" | null; // exact = variant == subset trailing name; partial = variant words ⊆ trailing name
+  /**
+   * ready            = target number free, move will succeed
+   * already_in_target = same card already exists in target (redundant copy — needs merge, not move)
+   * target_occupied  = a DIFFERENT card holds that number in target (needs manual review)
+   */
+  moveStatus: "ready" | "already_in_target" | "target_occupied" | null;
   suggestion: string;
 }
 
@@ -594,6 +600,7 @@ export async function buildParallelSubsetReport(groups?: DupGroup[]): Promise<Pa
   const tokenSubset = (needle: string[], hay: string[]) => needle.length > 0 && needle.every((t) => hay.includes(t));
 
   const rows: ParallelSubsetRow[] = [];
+  const rowBaseNames = new Map<ParallelSubsetRow, string>();
   for (const g of parallels) {
     // Bucket the group's cards by variant text
     const byVariant = new Map<string, DupCard[]>();
@@ -632,12 +639,44 @@ export async function buildParallelSubsetReport(groups?: DupGroup[]): Promise<Pa
         matchedSubsetId: match?.id ?? null,
         matchedSubsetName: match?.name ?? null,
         matchTier,
+        moveStatus: null, // annotated below
         suggestion: match
           ? `Move to existing subset "${match.name}" (id ${match.id})`
           : `No matching subset — create one or confirm these belong in "${g.subset}"`,
       });
+      rowBaseNames.set(rows[rows.length - 1], vc[0]?.normalizedName ?? "");
     }
   }
+
+  // Annotate moveStatus: check whether the target subset already has an active
+  // card with this number (and whether it's the same card).
+  const matchedIds = [...new Set(rows.filter((r) => r.matchedSubsetId != null).map((r) => r.matchedSubsetId!))];
+  if (matchedIds.length > 0) {
+    const occ = (await db.execute(sql`
+      SELECT set_id, card_number, name FROM cards
+      WHERE archived_at IS NULL AND set_id IN (${sql.join(matchedIds.map((id) => sql`${id}`), sql`, `)})
+    `)).rows as any[];
+    const occByKey = new Map<string, string[]>();
+    for (const o of occ) {
+      const k = `${o.set_id}::${normalizeCardNumber(o.card_number)}`;
+      if (!occByKey.has(k)) occByKey.set(k, []);
+      occByKey.get(k)!.push(normalizeCardName(o.name));
+    }
+    for (const r of rows) {
+      if (r.matchedSubsetId == null) continue;
+      const occupants = occByKey.get(`${r.matchedSubsetId}::${normalizeCardNumber(r.cardNumber)}`);
+      if (!occupants) {
+        r.moveStatus = "ready";
+      } else if (occupants.includes(rowBaseNames.get(r) ?? "")) {
+        r.moveStatus = "already_in_target";
+        r.suggestion = `Same card already exists in "${r.matchedSubsetName}" — this copy is redundant and needs a merge, not a move`;
+      } else {
+        r.moveStatus = "target_occupied";
+        r.suggestion = `#${r.cardNumber} in "${r.matchedSubsetName}" is held by a different card — needs manual review`;
+      }
+    }
+  }
+
   // Matched first (actionable), then by main set
   rows.sort((a, b) => Number(b.matchedSubsetId != null) - Number(a.matchedSubsetId != null) || a.mainSet.localeCompare(b.mainSet) || a.subset.localeCompare(b.subset));
   return rows;
@@ -648,9 +687,9 @@ export function parallelReportToCsv(rows: ParallelSubsetRow[]): string {
     const s = String(v ?? "");
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  const lines = ["main_set,current_subset,card_number,variant,card_count,card_ids,matched_subset,match_tier,suggestion"];
+  const lines = ["main_set,current_subset,card_number,variant,card_count,card_ids,matched_subset,match_tier,move_status,suggestion"];
   for (const r of rows) {
-    lines.push([r.mainSet, r.subset, r.cardNumber, r.variant, r.cardCount, r.cardIds.join(" "), r.matchedSubsetName ?? "NONE", r.matchTier ?? "none", r.suggestion].map(esc).join(","));
+    lines.push([r.mainSet, r.subset, r.cardNumber, r.variant, r.cardCount, r.cardIds.join(" "), r.matchedSubsetName ?? "NONE", r.matchTier ?? "none", r.moveStatus ?? "none", r.suggestion].map(esc).join(","));
   }
   return lines.join("\n");
 }
