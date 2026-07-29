@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAppStore } from "@/lib/store";
 import {
   ShieldAlert, Download, RefreshCw, ChevronDown, ChevronRight, Loader2, AlertTriangle, CheckCircle2, Search,
 } from "lucide-react";
@@ -570,7 +570,7 @@ function ParallelMovesCard() {
 }
 
 export default function AdminDataQuality() {
-  const { user } = useAuth();
+  const { currentUser: user } = useAppStore();
   const { toast } = useToast();
   const [classification, setClassification] = useState<string>("all");
   const [mainSetFilter, setMainSetFilter] = useState("");
