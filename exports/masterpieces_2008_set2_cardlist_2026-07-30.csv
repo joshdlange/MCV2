@@ -1,0 +1,181 @@
+id,card_number,name,variation,has_image,collections,wishlists
+22719,1,Ahab,,no,1,0
+22720,1,Masterpieces,,yes,2,0
+22741,2,Annihilus,,yes,1,0
+22742,2,Archangel,,yes,1,0
+22763,3,Baron Zemo,,yes,1,0
+22764,3,The Beast,,yes,1,0
+22785,4,Black Tom,,yes,1,0
+22786,4,The Beetle,,yes,2,0
+22807,5,Black Queen,,yes,1,0
+22808,5,Blastaar,,no,1,0
+22829,6,Bullseye,,yes,2,0
+22830,6,The Blob,,yes,2,0
+22851,7,Cannonball,,yes,1,0
+22852,7,Dark Phoenix,,yes,1,0
+22873,8,Captain America,,yes,1,0
+22874,8,Death-Stalker,,no,1,0
+22895,9,Captain Marvel,,yes,2,0
+22896,9,Dormammu & Umar,,yes,1,0
+22721,10,Cloak,,yes,1,0
+22722,10,Dr. Doom,,yes,1,0
+22723,11,Colossus,,yes,1,0
+22724,11,Egghead,,yes,1,0
+22725,12,Crimson Commando,,no,1,0
+22726,12,Elektra,,yes,1,0
+22727,13,Cyclops,,yes,1,0
+22728,13,Enchantress,,yes,1,0
+22729,14,Daredevil,,yes,2,0
+22730,14,Fin Fang Foom,,yes,1,0
+22731,15,Green Goblin,,yes,1,0
+22732,15,Dazzler,,yes,2,0
+22733,16,Dead Girl,,yes,1,0
+22734,16,Grey Gargoyle,,no,1,0
+22735,17,Destiny,,no,1,0
+22736,17,Hobgoblin,,yes,1,0
+22737,18,Dr. Doom,,yes,1,0
+22738,18,Jack O'Lantern,,yes,1,0
+22739,19,Dr. Octopus,,yes,1,0
+22740,19,Juggernaut,,yes,1,0
+22743,20,Dr. Spectrum,,yes,1,0
+22744,20,Kang,,yes,1,0
+22745,21,Dr. Strange,,yes,1,0
+22746,21,The Kingpin,,yes,1,0
+22747,22,Egghead,,no,1,0
+22748,22,Klaw,,no,1,0
+22749,23,Elektra,,yes,1,0
+22750,23,Kraven The Hunter,,yes,1,0
+22751,24,Emma Frost,,yes,2,0
+22752,24,Magneto,,no,1,0
+22753,25,Enchantress,,yes,1,0
+22754,25,Master Mold,,yes,1,0
+22755,26,Firestar,,yes,1,0
+22756,26,Maximus,,no,1,0
+22757,27,Galactus,,yes,1,0
+22758,27,Mephisto,,yes,1,0
+22759,28,Ghost Rider,,yes,1,0
+22760,28,Mister Hyde,,yes,1,0
+22761,29,Green Goblin,,yes,1,0
+22762,29,Mister Sinister,,yes,1,0
+22765,30,Hammerhead: Tombstone,,no,1,0
+22766,30,Nightmare,,yes,1,0
+22767,31,Hellcat,,yes,1,0
+22768,31,Nimrod,,yes,1,0
+22769,32,Hellstorm,,yes,2,0
+22770,32,Onslaught,,yes,1,0
+22771,33,Howard the Duck,,yes,1,0
+22772,33,Quagmire,,no,1,0
+22773,34,Radioactive Man,,yes,1,0
+22774,34,The Hulk,,yes,1,0
+22775,35,Human Torch,,yes,2,0
+22776,35,Sabretooth,,yes,1,0
+22777,36,Iceman,,yes,1,0
+22778,36,Sentinels,,yes,1,0
+22779,37,Invisible Woman,,yes,1,0
+22780,37,Skrull,,yes,1,0
+22781,38,Iron Man,,yes,1,1
+22782,38,Spiral,,yes,1,0
+22783,39,J. Jonah Jameson,,yes,2,0
+22784,39,Super-Skrull,,yes,1,0
+22787,40,Jean Grey: Moira McTaggert,,no,1,0
+22788,40,Terrax The Tamer,,no,1,0
+22789,41,Jubilee,,yes,1,0
+22790,41,The Tinkerer,,no,1,0
+22791,42,Kang,,yes,1,0
+22792,42,Titania,,yes,1,0
+22793,43,Ka-Zar,,yes,1,0
+22794,43,Typhoid Mary,,yes,1,0
+22795,44,Kingpin,,yes,1,0
+22796,44,Venom,,yes,1,0
+22797,45,Kraven the Hunter,,yes,1,0
+22798,45,The Wrecking Crew,,no,1,0
+22799,46,Adamantium Extraction,,yes,1,0
+22800,46,Lady Deathstrike: Rogue,,yes,1,0
+22801,47,Archenemies,,yes,1,0
+22802,47,Machine Man,,no,1,0
+22803,48,Bloody Battle,,yes,1,0
+22804,48,Magneto,,yes,1,0
+22805,49,Caught!,,yes,1,0
+22806,49,Medusa,,yes,1,0
+22809,50,Caught in a Whirlwind,,yes,1,0
+22810,50,Mimic,,yes,1,0
+22811,51,Combat for a Kingdom,,no,1,0
+22812,51,Mr. Fantastic,,yes,1,0
+22813,52,Cosmic Chess Game,,yes,1,0
+22814,52,Mole Man,,yes,1,0
+22815,53,Death of Elektra,,yes,1,0
+22816,53,Moondragon,,yes,2,0
+22817,54,Defeated by The Kingpin,,yes,1,0
+22818,54,Morbius,,yes,1,0
+22819,55,Destroy All Vampires!,,no,1,0
+22820,55,Mystique,,yes,2,0
+22821,56,Fight for Freedom,,yes,1,0
+22822,56,Nick Fury: Punisher,,no,1,0
+22823,57,For the Power Cosmic,,yes,1,0
+22824,57,Nightcrawler,,yes,1,0
+22825,58,Invasion of Avengers Mansion,,no,1,0
+22826,58,Northstar,,yes,1,0
+22827,59,Life,,yes,1,0
+22828,59,Nova,,yes,1,0
+22831,60,Magneto Strikes,,yes,1,0
+22832,60,Professor X,,no,1,0
+22833,61,Psylocke,,yes,2,0
+22834,61,The Mandarin Strikes,,no,1,0
+22835,62,Metal on Metal,,yes,1,0
+22836,62,The Punisher,,yes,1,0
+22837,63,Namor Takes His Bride,,no,1,0
+22838,63,Pyro,,yes,1,0
+22839,64,Quasar,,yes,1,0
+22840,64,Rise of The Sinister Six,,yes,1,0
+22841,65,Quicksilver,,yes,1,0
+22842,65,Sound and Fury,,no,1,0
+22843,66,Red Queen,,yes,2,0
+22844,66,Spider-Man vs. The Green Goblin,,no,1,0
+22845,67,Red Skull,,yes,1,0
+22846,67,Stop the War,,no,1,0
+22847,68,Rocket Racer,,yes,1,0
+22848,68,To Court Death,,yes,1,0
+22849,69,Rogue,,yes,1,0
+22850,69,To Rule the Morlocks,,yes,1,0
+22853,70,Sabretooth,,yes,2,0
+22854,70,To Save the Earth,,yes,1,0
+22855,71,Sandman,,no,1,0
+22856,71,Ultimate Battle,,no,1,0
+22857,72,Scarlet Witch,,yes,1,0
+22858,72,Under Ultron's Control,,yes,1,0
+22859,73,Doc Ock Captured,,yes,1,0
+22860,73,The Scorpion,,yes,1,0
+22861,74,Doc Ock Mug Shot 1,,yes,1,0
+22862,74,Sebastian Shaw,,yes,1,0
+22863,75,Doc Ock Mug Shot 2,,no,1,0
+22864,75,The Sentinel,,yes,1,0
+22865,76,Electro Captured,,yes,1,0
+22866,76,Shadowcat,,yes,1,0
+22867,77,Electro Mug Shot 1,,no,1,0
+22868,77,Shanna,,yes,1,0
+22869,78,Electro Mug Shot 2,,no,1,0
+22870,78,Shocker,,yes,1,0
+22871,79,Kraven Captured,,yes,1,0
+22872,79,Silver Surfer,,yes,1,0
+22875,80,Kraven Mug Shot 1,,no,1,0
+22876,80,Spider-Man,,yes,1,0
+22877,81,Kraven Mug Shot 2,,yes,1,0
+22878,81,Spider-Woman,,yes,2,0
+22879,82,Mysterio Captured,,yes,1,0
+22880,82,Storm,,yes,2,0
+22881,83,Mysterio Mug Shot 1,,no,1,0
+22882,83,Sub-Mariner,,yes,1,0
+22883,84,Mysterio Mug Shot 2,,no,1,0
+22884,84,The Thing,,yes,2,0
+22885,85,Sandman Captured,,yes,1,0
+22886,85,Thor,,yes,2,0
+22887,86,Sandman Mug Shot 1,,no,1,0
+22888,86,Valkyrie,,yes,1,0
+22889,87,Sandman Mug Shot 2,,yes,1,0
+22890,87,Venom,,yes,1,0
+22891,88,The Vulture,,no,2,0
+22892,88,Vulture Captured,,yes,1,0
+22893,89,The Watcher,,yes,1,0
+22894,89,Vulture Mug Shot 1,,no,1,0
+22897,90,Vulture Mug Shot 2,,no,1,0
+22898,90,Wolverine,,yes,1,0
