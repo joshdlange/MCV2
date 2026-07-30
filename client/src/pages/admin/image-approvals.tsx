@@ -236,7 +236,7 @@ export default function AdminImageApprovals() {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/pending-images'] });
       toast({ 
         title: "Image rejected",
-        description: "The submitter has been notified."
+        description: "The submission was removed. No notification is sent to the submitter."
       });
     },
     onError: (error: any) => {
