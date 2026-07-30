@@ -9,6 +9,7 @@ Marvelous Card Vault (formerly Marvel Card Vault) is a comprehensive web applica
 Preferred communication style: Simple, everyday language.
 **IMPORTANT**: This is a live production app at marvelcardvault.com. All changes must be published to take effect - there's no need for dev-only changes.
 **ONE-TIME FIXES**: For data cleanups/corrections, ASK the user whether they want a reusable admin tool or a one-time fix before building. Default to a one-time idempotent startup cleanup (removable after it runs in prod) — the admin portal is already overgrown with single-use tools.
+**IMAGE REVIEW NOTIFICATIONS**: Do NOT send any email or notification when a user-submitted card image is approved or rejected. The unused email triggers (`onCardImageApproved`/`onCardImageRejected` in `server/services/emailTriggers.ts`) must stay unwired.
 **UI RULE**: NO black backgrounds in text input fields anywhere in the app. All inputs, textareas, and selects must have white/light backgrounds with dark text for visibility. This applies to all existing and future features.
 
 ## System Architecture
