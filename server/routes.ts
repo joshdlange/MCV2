@@ -43,7 +43,7 @@ import { initializeUpcomingSets, syncRSSFeed, expireReleasedSets } from "./servi
 import { verifyRcEntitlement, reconcileRevenueCatSubscriptions, startRevenueCatReconcileCron, getSubscriberBreakdown, SYSTEM_USER_FIREBASE_UID } from "./services/revenueCatSync";
 import { uploadUserCardImage, uploadMainSetThumbnail, downloadAndUploadToCloudinary, isCloudinaryUrl } from "./cloudinary";
 import { registerMarketplaceRoutes } from "./marketplace-routes";
-import { optimizedStorage } from "./optimized-storage";
+import { optimizedStorage, tokenizeSearch } from "./optimized-storage";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10705,9 +10705,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Bulk-add every card whose NAME matches a search term (user-facing "Add All").
-  // Matches card name only (NOT set name — /api/cards search matches both, so
-  // its totalCount must never drive this flow; use dryRun here instead).
+  // Bulk-add every card matching a search term (user-facing "Add All").
+  // Uses the SAME tokenized matching as /api/cards search (every word must
+  // appear in card name, set name, or variation) so the visible results,
+  // the dryRun preview count, and the inserted rows always agree.
   // Excludes archived sets and cards already in the binder BEFORE applying the
   // remaining-capacity cap, so no-op conflicts can't burn capacity slots.
   app.post("/api/pc-binders/:id/cards/bulk", authenticateUser, requirePcBinderAccess, async (req: any, res) => {
@@ -10721,7 +10722,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Search term must be at least 2 characters" });
       }
       const dryRun = req.body?.dryRun === true;
-      const pattern = `%${search}%`;
+      const tokens = tokenizeSearch(search);
+      if (tokens.length === 0) {
+        return res.status(400).json({ message: "Search term must contain letters or numbers" });
+      }
+      // One AND-ed fragment per token, each matching name OR set name OR variation
+      const tokenFragments = tokens.map(
+        (t) =>
+          sql`(c.name ILIKE ${`%${t}%`} OR cs.name ILIKE ${`%${t}%`} OR COALESCE(c.variation, '') ILIKE ${`%${t}%`})`
+      );
+      const tokenMatchSql = sql.join(tokenFragments, sql` AND `);
 
       // Optional: exclude cards already in other binders the caller owns.
       // Powers the "Vol. 2" overflow flow — a continuation binder receives the
@@ -10753,10 +10763,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(eq(pcBinderCards.binderId, binderId));
         const remaining = Math.max(0, MAX_CARDS_PER_PC_BINDER - Number(currentCount));
 
-        // Cards matching by name, in active (non-archived) sets, not already in the binder
+        // Cards matching every token (name/set name/variation), in active
+        // (non-archived) sets, not already in the binder
         const matchConditions = [
-          ilike(cards.name, pattern),
+          ...tokens.map(
+            (t) =>
+              or(
+                ilike(cards.name, `%${t}%`),
+                ilike(cardSets.name, `%${t}%`),
+                sql`COALESCE(${cards.variation}, '') ILIKE ${`%${t}%`}`
+              )!
+          ),
           eq(cardSets.isActive, true),
+          sql`${cards.archivedAt} IS NULL`,
           sql`NOT EXISTS (SELECT 1 FROM pc_binder_cards pbc WHERE pbc.binder_id = ${binderId} AND pbc.card_id = ${cards.id})`,
         ];
         if (excludeIds.length > 0) {
@@ -10785,8 +10804,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           SELECT ${binderId}, c.id
           FROM cards c
           JOIN card_sets cs ON cs.id = c.set_id
-          WHERE c.name ILIKE ${pattern}
+          WHERE ${tokenMatchSql}
             AND cs.is_active = true
+            AND c.archived_at IS NULL
             AND NOT EXISTS (
               SELECT 1 FROM pc_binder_cards pbc
               WHERE pbc.binder_id = ${binderId} AND pbc.card_id = c.id

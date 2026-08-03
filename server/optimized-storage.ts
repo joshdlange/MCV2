@@ -27,6 +27,20 @@ export interface LightweightCard {
 const userStatsCache = new Map<number, { data: any; timestamp: number }>();
 const USER_STATS_CACHE_TTL = 30_000;
 
+/**
+ * Split a search query into lowercase word tokens for AND-matching.
+ * Drops punctuation-only tokens (e.g. a lone "-") so queries copied from
+ * set names like "2016 UD Masterpieces - Epic Purple" behave sensibly.
+ * Capped at 8 tokens to bound query cost.
+ */
+export function tokenizeSearch(search: string): string[] {
+  return search
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter((t) => /[a-z0-9]/i.test(t))
+    .slice(0, 8);
+}
+
 interface CardFilters {
   setId?: number;
   rarity?: string;
@@ -63,6 +77,7 @@ export class OptimizedStorage {
   /**
    * Get paginated cards with lightweight payload - OPTIMIZED
    */
+  // (search tokenization lives in tokenizeSearch, exported below)
   async getCardsPaginated(
     page: number = 1,
     pageSize: number = 50,
@@ -99,12 +114,25 @@ export class OptimizedStorage {
       }
 
       if (filters.search && filters.search.length >= 2) {
-        conditions.push(
-          or(
-            ilike(cards.name, `%${filters.search}%`),
-            ilike(cardSets.name, `%${filters.search}%`)
-          )
-        );
+        // Tokenized AND search: every word must appear somewhere in the card
+        // name, set name, or variation (any order). Punctuation-only tokens
+        // (e.g. a lone "-") are ignored so queries copied from set names work.
+        const tokens = tokenizeSearch(filters.search);
+        if (tokens.length === 0) {
+          // Punctuation-only query: match nothing rather than everything
+          conditions.push(sql`false`);
+        }
+        // Searches only surface cards from active sets (parity with binder bulk-add)
+        conditions.push(eq(cardSets.isActive, true));
+        for (const t of tokens) {
+          conditions.push(
+            or(
+              ilike(cards.name, `%${t}%`),
+              ilike(cardSets.name, `%${t}%`),
+              sql`COALESCE(${cards.variation}, '') ILIKE ${`%${t}%`}`
+            )
+          );
+        }
       }
 
       // Build the where condition

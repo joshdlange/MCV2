@@ -210,10 +210,10 @@ function AddCardsDialog({
     enabled: open && debounced.length >= 2,
   });
 
-  // Dry-run of the bulk endpoint: how many cards match this term BY NAME
-  // (excluding ones already in the binder). This is the number "Add All"
-  // will actually add — never use /api/cards totalCount, which also
-  // matches set names.
+  // Dry-run of the bulk endpoint: how many cards match this term (same
+  // tokenized name/set/variation matching as the visible search) excluding
+  // ones already in the binder. This is the number "Add All" will actually
+  // add — /api/cards totalCount doesn't exclude already-added cards.
   const { data: bulkPreview } = useQuery<BulkResult>({
     queryKey: ["/api/pc-binders", String(binderId), "bulk-preview", debounced],
     queryFn: async () => {
