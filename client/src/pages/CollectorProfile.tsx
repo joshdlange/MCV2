@@ -177,6 +177,18 @@ export default function CollectorProfile() {
     enabled: !!username && !!currentUser,
   });
 
+  const { data: badgeUnlockStats } = useQuery<Record<number, { earnedCount: number; percent: number }>>({
+    queryKey: ["/api/badges/unlock-stats"],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/badges/unlock-stats`, { headers });
+      if (!res.ok) return {};
+      return res.json();
+    },
+    enabled: !!currentUser,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const { data: bindersData, isLoading: bindersLoading } = useQuery<{ binders: PcBinderSummary[]; private: boolean }>({
     queryKey: ["/api/collectors", username, "pc-binders"],
     queryFn: async () => {
@@ -953,6 +965,15 @@ export default function CollectorProfile() {
                     <p className="text-gray-700 text-base leading-relaxed">{description}</p>
                   </div>
                 )}
+                {(() => {
+                  const badgeId = selectedBadge.badge?.id ?? selectedBadge.badgeId;
+                  const stat = badgeUnlockStats?.[badgeId];
+                  return stat ? (
+                    <div className="mb-4 text-sm text-gray-500" data-testid="badge-unlock-percent">
+                      Unlocked by {stat.percent}% of collectors
+                    </div>
+                  ) : null;
+                })()}
                 <div className="bg-green-50 rounded-xl p-4 border border-green-200">
                   <div className="flex items-center justify-center gap-2 text-green-600">
                     <Award className="w-5 h-5" />

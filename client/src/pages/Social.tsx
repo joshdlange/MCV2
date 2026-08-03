@@ -112,6 +112,12 @@ export default function Social() {
 
   // Badge detail modal state
   const [selectedBadge, setSelectedBadge] = useState<{ badge: any; earnedAt?: string; isLocked?: boolean } | null>(null);
+
+  // Per-badge unlock stats (% of users who earned each badge)
+  const { data: badgeUnlockStats } = useQuery<Record<number, { earnedCount: number; percent: number }>>({
+    queryKey: ["/api/badges/unlock-stats"],
+    staleTime: 5 * 60 * 1000,
+  });
   
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -2024,6 +2030,15 @@ export default function Social() {
                   {selectedBadge.badge.description || 'No description available.'}
                 </p>
               </div>
+
+              {/* Rarity stat: % of collectors who have unlocked this badge */}
+              {badgeUnlockStats?.[selectedBadge.badge.id] && (
+                <div className="mb-4 text-sm text-gray-500 dark:text-gray-400" data-testid="badge-unlock-percent">
+                  {badgeUnlockStats[selectedBadge.badge.id].percent <= 0
+                    ? "No collector has unlocked this yet — be the first!"
+                    : `Unlocked by ${badgeUnlockStats[selectedBadge.badge.id].percent}% of collectors`}
+                </div>
+              )}
 
               {/* Unlock Hint (for locked badges) or Earned Date (for earned badges) */}
               {selectedBadge.isLocked ? (

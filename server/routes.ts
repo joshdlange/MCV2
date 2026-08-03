@@ -5335,6 +5335,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/badges/unlock-stats — % of users who earned each badge (for badge detail modals)
+  app.get("/api/badges/unlock-stats", authenticateUser, async (_req: any, res) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT b.id AS badge_id,
+               COUNT(DISTINCT ub.user_id)::int AS earned_count,
+               (SELECT COUNT(*)::int FROM users) AS total_users
+        FROM badges b
+        LEFT JOIN user_badges ub ON ub.badge_id = b.id
+        WHERE b.is_active = true
+        GROUP BY b.id
+      `);
+      const stats: Record<number, { earnedCount: number; percent: number }> = {};
+      for (const row of result.rows as any[]) {
+        const total = Number(row.total_users) || 1;
+        stats[Number(row.badge_id)] = {
+          earnedCount: Number(row.earned_count),
+          percent: Math.round((Number(row.earned_count) / total) * 1000) / 10,
+        };
+      }
+      res.json(stats);
+    } catch (error) {
+      console.error('[Badges] unlock-stats error:', error);
+      res.status(500).json({ message: "Failed to fetch badge stats" });
+    }
+  });
+
   // GET /api/collectors/:username/pc-binders — personal collections (PC binders) on public profile.
   // Owner always sees their own; other viewers respect the showCollection privacy flag.
   app.get("/api/collectors/:username/pc-binders", authenticateUser, async (req: any, res) => {
@@ -10537,6 +10564,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           category: parsed.data.category || "Other",
         })
         .returning();
+
+      // Award binder badges in the background (never blocks the response)
+      badgeService.checkBadgesOnBinderChange(userId).catch(err =>
+        console.error('Binder badge check failed:', err)
+      );
+
       res.status(201).json(binder);
     } catch (error) {
       console.error("Error creating PC binder:", error);

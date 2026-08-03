@@ -401,6 +401,29 @@ export class BadgeService {
     }
   }
 
+  // Binder Builder (1 PC binder) + Binder Boss (5 PC binders)
+  async checkBinderBadges(userId: number): Promise<void> {
+    const builder = await this.getBadgeByName('Binder Builder');
+    const boss = await this.getBadgeByName('Binder Boss');
+    const needsBuilder = builder && !(await this.hasUserEarnedBadge(userId, builder.id));
+    const needsBoss = boss && !(await this.hasUserEarnedBadge(userId, boss.id));
+    if (!needsBuilder && !needsBoss) return;
+
+    const result = await db.execute(sql`SELECT COUNT(*)::int AS n FROM pc_binders WHERE user_id = ${userId}`);
+    const binderCount = Number((result.rows[0] as any)?.n ?? 0);
+
+    if (needsBuilder && binderCount >= 1) {
+      await this.awardBadge(userId, builder.id);
+    }
+    if (needsBoss && binderCount >= 5) {
+      await this.awardBadge(userId, boss.id);
+    }
+  }
+
+  async checkBadgesOnBinderChange(userId: number): Promise<void> {
+    await this.checkBinderBadges(userId);
+  }
+
   // Run all retroactive badge checks for a user
   async runRetroactiveBadgeChecks(userId: number): Promise<void> {
     // Collection badges
@@ -414,6 +437,7 @@ export class BadgeService {
     await this.checkSpeedCollector(userId);
     await this.checkCurator(userId);
     await this.checkHistorian(userId);
+    await this.checkBinderBadges(userId);
     // Friend badges
     await this.checkFriendlyFace(userId);
     await this.checkSquadAssembled(userId);

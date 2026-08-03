@@ -20,6 +20,7 @@ async function main() {
       await badgeService.checkSpeedCollector(id);
       await badgeService.checkCurator(id);
       await badgeService.checkHistorian(id);
+      await badgeService.checkBinderBadges(id);
       done++;
     } catch (e: any) {
       failed++;
