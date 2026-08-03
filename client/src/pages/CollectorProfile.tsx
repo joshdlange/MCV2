@@ -92,6 +92,16 @@ interface EarnedBadge {
   iconUrl?: string;
 }
 
+interface PcBinderSummary {
+  id: number;
+  name: string;
+  description?: string | null;
+  category?: string | null;
+  createdAt: string;
+  totalCards: number;
+  coverImageUrl?: string | null;
+}
+
 function StatPill({ value, label, icon }: { value: string | number; label: string; icon?: JSX.Element }) {
   return (
     <div className="flex flex-col items-center px-4 py-2 bg-white/10 rounded-xl backdrop-blur-sm border border-white/20 min-w-[70px]">
@@ -123,6 +133,7 @@ export default function CollectorProfile() {
   const [reportReason, setReportReason] = useState<string | null>(null);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [showOverflowMenu, setShowOverflowMenu] = useState(false);
+  const [selectedBadge, setSelectedBadge] = useState<EarnedBadge | null>(null);
 
   const getAuthHeaders = async (): Promise<Record<string, string>> => {
     if (!currentUser) return {};
@@ -161,6 +172,17 @@ export default function CollectorProfile() {
       const headers = await getAuthHeaders();
       const res = await fetch(`/api/collectors/${username}/wishlist`, { headers });
       if (!res.ok) return { cards: [], private: false };
+      return res.json();
+    },
+    enabled: !!username && !!currentUser,
+  });
+
+  const { data: bindersData, isLoading: bindersLoading } = useQuery<{ binders: PcBinderSummary[]; private: boolean }>({
+    queryKey: ["/api/collectors", username, "pc-binders"],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/collectors/${username}/pc-binders`, { headers });
+      if (!res.ok) return { binders: [], private: false };
       return res.json();
     },
     enabled: !!username && !!currentUser,
@@ -695,13 +717,53 @@ export default function CollectorProfile() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <EmptyState
-                  icon={<ShoppingBag className="w-14 h-14" />}
-                  title="Personal Collections coming soon."
-                  subtitle={isSuperHero || user.plan === "SUPER_HERO"
-                    ? "Custom personal collections are coming soon for SUPER HERO collectors."
-                    : "Personal Collections are a SUPER HERO feature — coming soon!"}
-                />
+                {bindersLoading ? (
+                  <div className="flex justify-center py-16">
+                    <div className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : bindersData?.private ? (
+                  <EmptyState
+                    icon={<EyeOff className="w-14 h-14" />}
+                    title="Personal Collections are private."
+                    subtitle={`${displayName} has chosen to keep their collections private.`}
+                  />
+                ) : !bindersData?.binders?.length ? (
+                  <EmptyState
+                    icon={<ShoppingBag className="w-14 h-14" />}
+                    title="No Personal Collections yet."
+                    subtitle={isOwnProfile
+                      ? "Create a Personal Collection to organize your favorite cards."
+                      : `${displayName} hasn't created any Personal Collections yet.`}
+                  />
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+                    {bindersData.binders.map((binder) => (
+                      <div
+                        key={binder.id}
+                        role={isOwnProfile ? "button" : undefined}
+                        onClick={isOwnProfile ? () => setLocation(`/pc-binders/${binder.id}`) : undefined}
+                        className={`rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden ${isOwnProfile ? "cursor-pointer hover:shadow-md transition-shadow" : ""}`}
+                        data-testid={`binder-card-${binder.id}`}
+                      >
+                        <div className="h-32 bg-gradient-to-br from-purple-100 to-red-100 flex items-center justify-center overflow-hidden">
+                          {binder.coverImageUrl ? (
+                            <img src={binder.coverImageUrl} alt={binder.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <ShoppingBag className="w-10 h-10 text-purple-300" />
+                          )}
+                        </div>
+                        <div className="p-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-semibold text-sm text-gray-800 truncate">{binder.name}</p>
+                            <span className="text-xs text-gray-400 whitespace-nowrap">{binder.totalCards} cards</span>
+                          </div>
+                          {binder.category && <p className="text-xs text-purple-500 mt-0.5 capitalize">{binder.category}</p>}
+                          {binder.description && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{binder.description}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -735,7 +797,13 @@ export default function CollectorProfile() {
                       const iconUrl = b.badge?.iconUrl ?? b.iconUrl;
                       const points = b.badge?.points ?? b.points ?? 0;
                       return (
-                        <div key={b.id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-white shadow-sm">
+                        <div
+                          key={b.id}
+                          role="button"
+                          onClick={() => setSelectedBadge(b)}
+                          data-testid={`badge-item-${b.id}`}
+                          className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-white shadow-sm cursor-pointer hover:shadow-md hover:border-yellow-300 transition-all"
+                        >
                           <BadgeIcon name={badgeName} iconUrl={iconUrl} rarity={rarity} size="md" glow className="flex-shrink-0" />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
@@ -859,6 +927,51 @@ export default function CollectorProfile() {
       </Dialog>
 
       {/* Report Modal */}
+      {/* Badge Detail Modal */}
+      <Dialog open={!!selectedBadge} onOpenChange={(open) => !open && setSelectedBadge(null)}>
+        <DialogContent className="max-w-md mx-auto" data-testid="badge-detail-modal">
+          {selectedBadge && (() => {
+            const badgeName = selectedBadge.badge?.name ?? selectedBadge.name ?? "Badge";
+            const description = selectedBadge.badge?.description ?? selectedBadge.description ?? "";
+            const rarity = selectedBadge.badge?.rarity ?? selectedBadge.rarity ?? "bronze";
+            const iconUrl = selectedBadge.badge?.iconUrl ?? selectedBadge.iconUrl;
+            const category = selectedBadge.badge?.category ?? selectedBadge.category ?? "Achievement";
+            return (
+              <div className="text-center">
+                <div className="flex justify-center mb-6">
+                  <BadgeIcon name={badgeName} iconUrl={iconUrl} rarity={rarity} size="lg" glow />
+                </div>
+                <DialogHeader className="mb-4">
+                  <DialogTitle className="text-2xl font-bold text-gray-900 text-center">{badgeName}</DialogTitle>
+                </DialogHeader>
+                <div className="flex justify-center gap-2 mb-4">
+                  <span className="text-sm px-3 py-1 rounded-full bg-purple-100 text-purple-700">{category}</span>
+                  <span className="text-sm px-3 py-1 rounded-full bg-gray-100 text-gray-700 capitalize">{rarity}</span>
+                </div>
+                {description && (
+                  <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                    <p className="text-gray-700 text-base leading-relaxed">{description}</p>
+                  </div>
+                )}
+                <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                  <div className="flex items-center justify-center gap-2 text-green-600">
+                    <Award className="w-5 h-5" />
+                    <span className="font-medium">
+                      Earned on {selectedBadge.earnedAt
+                        ? new Date(selectedBadge.earnedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                        : 'Unknown'}
+                    </span>
+                  </div>
+                </div>
+                <Button variant="outline" className="mt-6 w-full" onClick={() => setSelectedBadge(null)} data-testid="button-close-badge-modal">
+                  Close
+                </Button>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showReportModal} onOpenChange={setShowReportModal}>
         <DialogContent className="max-w-sm">
           <DialogHeader>

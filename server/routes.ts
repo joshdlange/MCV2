@@ -5335,6 +5335,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/collectors/:username/pc-binders — personal collections (PC binders) on public profile.
+  // Owner always sees their own; other viewers respect the showCollection privacy flag.
+  app.get("/api/collectors/:username/pc-binders", authenticateUser, async (req: any, res) => {
+    try {
+      const { username } = req.params;
+      const callerId: number | undefined = req.user?.id;
+
+      const access = await resolveCollectorAccess(username, callerId);
+      if (!access.ok) return res.status(access.status).json({ message: access.message });
+      const { targetUser, isOwnProfile } = access;
+
+      if (!targetUser.showCollection && !isOwnProfile) {
+        return res.json({ binders: [], private: true });
+      }
+
+      const binders = await db
+        .select({
+          id: pcBinders.id,
+          name: pcBinders.name,
+          description: pcBinders.description,
+          category: pcBinders.category,
+          createdAt: pcBinders.createdAt,
+          totalCards: sql<number>`count(${pcBinderCards.id})::int`,
+          coverImageUrl: sql<string | null>`(
+            SELECT c.front_image_url FROM pc_binder_cards pbc
+            JOIN cards c ON c.id = pbc.card_id
+            WHERE pbc.binder_id = ${pcBinders.id}
+              AND c.front_image_url IS NOT NULL
+              AND c.front_image_url != ''
+              AND c.front_image_url != 'https://res.cloudinary.com/dlwfuryyz/image/upload/v1748442577/card-placeholder_ysozlo.png'
+            ORDER BY pbc.added_at, pbc.id
+            LIMIT 1
+          )`,
+        })
+        .from(pcBinders)
+        .leftJoin(pcBinderCards, eq(pcBinderCards.binderId, pcBinders.id))
+        .where(eq(pcBinders.userId, targetUser.id))
+        .groupBy(pcBinders.id)
+        .orderBy(desc(pcBinders.createdAt));
+
+      res.json({ binders, private: false });
+    } catch (error) {
+      console.error('[Collectors] pc-binders error:', error);
+      res.status(500).json({ message: "Failed to fetch personal collections" });
+    }
+  });
+
   // GET /api/collectors/:username/contributions — image contribution stats (approved only)
   app.get("/api/collectors/:username/contributions", authenticateUser, async (req: any, res) => {
     try {

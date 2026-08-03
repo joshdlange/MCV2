@@ -91,7 +91,9 @@ export class BadgeService {
       .where(eq(users.id, userId))
       .limit(1);
 
-    if (user[0] && user[0].subscriptionStatus === 'active') {
+    // Loyalist = paying subscriber for 2+ months. Free-tier (SIDE_KICK) accounts
+    // also carry subscriptionStatus 'active', so the plan check is required.
+    if (user[0] && user[0].plan === 'SUPER_HERO' && user[0].subscriptionStatus === 'active') {
       const accountAge = new Date().getTime() - new Date(user[0].createdAt).getTime();
       const twoMonthsMs = 2 * 30 * 24 * 60 * 60 * 1000;
       
@@ -290,6 +292,115 @@ export class BadgeService {
     }
   }
 
+  // Count fully-completed sets for a user (distinct owned cards >= set's totalCards, totalCards > 0)
+  private async countCompletedSets(userId: number): Promise<number> {
+    const result = await db.execute(sql`
+      SELECT COUNT(*)::int AS completed FROM (
+        SELECT c.set_id
+        FROM user_collections uc
+        JOIN cards c ON c.id = uc.card_id
+        JOIN card_sets cs ON cs.id = c.set_id
+        WHERE uc.user_id = ${userId} AND cs.total_cards > 0
+        GROUP BY c.set_id, cs.total_cards
+        HAVING COUNT(DISTINCT uc.card_id) >= cs.total_cards
+      ) t
+    `);
+    return Number((result.rows[0] as any)?.completed ?? 0);
+  }
+
+  // Insert Hunter - Collected 10 insert cards
+  async checkInsertHunter(userId: number): Promise<void> {
+    const badge = await this.getBadgeByName('Insert Hunter');
+    if (!badge) return;
+    if (await this.hasUserEarnedBadge(userId, badge.id)) return;
+
+    const insertCount = await db.select({ count: count() })
+      .from(userCollections)
+      .innerJoin(cards, eq(userCollections.cardId, cards.id))
+      .where(and(eq(userCollections.userId, userId), eq(cards.isInsert, true)));
+
+    if (Number(insertCount[0].count) >= 10) {
+      await this.awardBadge(userId, badge.id);
+    }
+  }
+
+  // Set Completer (1 full set) + Master Collector (5 full sets) — computed
+  // together so the completed-sets query runs at most once per check cycle.
+  async checkSetCompletionBadges(userId: number): Promise<void> {
+    const setCompleter = await this.getBadgeByName('Set Completer');
+    const masterCollector = await this.getBadgeByName('Master Collector');
+    const needsSetCompleter = setCompleter && !(await this.hasUserEarnedBadge(userId, setCompleter.id));
+    const needsMasterCollector = masterCollector && !(await this.hasUserEarnedBadge(userId, masterCollector.id));
+    if (!needsSetCompleter && !needsMasterCollector) return;
+
+    const completed = await this.countCompletedSets(userId);
+    if (needsSetCompleter && completed >= 1) {
+      await this.awardBadge(userId, setCompleter.id);
+    }
+    if (needsMasterCollector && completed >= 5) {
+      await this.awardBadge(userId, masterCollector.id);
+    }
+  }
+
+  // Speed Collector - Added 50 cards in a single day
+  async checkSpeedCollector(userId: number): Promise<void> {
+    const badge = await this.getBadgeByName('Speed Collector');
+    if (!badge) return;
+    if (await this.hasUserEarnedBadge(userId, badge.id)) return;
+
+    const result = await db.execute(sql`
+      SELECT COALESCE(MAX(cnt), 0)::int AS max_day FROM (
+        SELECT COUNT(*) AS cnt FROM user_collections
+        WHERE user_id = ${userId}
+        GROUP BY acquired_date::date
+      ) t
+    `);
+    if (Number((result.rows[0] as any)?.max_day ?? 0) >= 50) {
+      await this.awardBadge(userId, badge.id);
+    }
+  }
+
+  // Curator - Added personal notes to 50 cards
+  async checkCurator(userId: number): Promise<void> {
+    const badge = await this.getBadgeByName('Curator');
+    if (!badge) return;
+    if (await this.hasUserEarnedBadge(userId, badge.id)) return;
+
+    const result = await db.execute(sql`
+      SELECT COUNT(*)::int AS noted FROM user_collections
+      WHERE user_id = ${userId} AND notes IS NOT NULL AND btrim(notes) != ''
+    `);
+    if (Number((result.rows[0] as any)?.noted ?? 0) >= 50) {
+      await this.awardBadge(userId, badge.id);
+    }
+  }
+
+  // Historian - Documented details for 100 cards
+  async checkHistorian(userId: number): Promise<void> {
+    const badge = await this.getBadgeByName('Historian');
+    if (!badge) return;
+    if (await this.hasUserEarnedBadge(userId, badge.id)) return;
+
+    const result = await db.execute(sql`
+      SELECT COUNT(*)::int AS noted FROM user_collections
+      WHERE user_id = ${userId} AND notes IS NOT NULL AND btrim(notes) != ''
+    `);
+    if (Number((result.rows[0] as any)?.noted ?? 0) >= 100) {
+      await this.awardBadge(userId, badge.id);
+    }
+  }
+
+  // Night Owl - Active between midnight and 6 AM (US Eastern, the app's home timezone)
+  async checkNightOwl(userId: number): Promise<void> {
+    const badge = await this.getBadgeByName('Night Owl');
+    if (!badge) return;
+
+    const hour = Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/New_York' }).format(new Date()));
+    if (hour >= 0 && hour < 6) {
+      await this.awardBadge(userId, badge.id);
+    }
+  }
+
   // Run all retroactive badge checks for a user
   async runRetroactiveBadgeChecks(userId: number): Promise<void> {
     // Collection badges
@@ -298,6 +409,11 @@ export class BadgeService {
     await this.checkVaultGuardian(userId);
     await this.checkCompletionist(userId);
     await this.checkHallOfFame(userId);
+    await this.checkInsertHunter(userId);
+    await this.checkSetCompletionBadges(userId);
+    await this.checkSpeedCollector(userId);
+    await this.checkCurator(userId);
+    await this.checkHistorian(userId);
     // Friend badges
     await this.checkFriendlyFace(userId);
     await this.checkSquadAssembled(userId);
@@ -322,6 +438,7 @@ export class BadgeService {
     await this.checkWelcomeBack(userId);
     await this.checkNightcrawler(userId);
     await this.check7DayStreak(userId);
+    await this.checkNightOwl(userId);
   }
 
   async checkBadgesOnPriceRefresh(userId: number): Promise<void> {
@@ -350,6 +467,11 @@ export class BadgeService {
           await this.checkVaultGuardian(userId);
           await this.checkCompletionist(userId);
           await this.checkHallOfFame(userId);
+          await this.checkInsertHunter(userId);
+          await this.checkSetCompletionBadges(userId);
+          await this.checkSpeedCollector(userId);
+          await this.checkCurator(userId);
+          await this.checkHistorian(userId);
         } finally {
           activeBadgeChecks--;
           resolve();
