@@ -3,14 +3,17 @@
 // Master Collector, Speed Collector, Curator, Historian) only trigger on
 // future activity — existing users need one retroactive pass.
 // Usage: npx tsx scripts/backfill-badges.ts
+// Optional: START_ID=<n> to resume from a given user id (inclusive).
 import { db } from "../server/db";
 import { sql } from "drizzle-orm";
 import { badgeService } from "../server/badge-service";
 
 async function main() {
-  const users = await db.execute(sql`SELECT id FROM users ORDER BY id`);
-  let done = 0, failed = 0;
+  const startId = Number(process.env.START_ID ?? 0);
+  const users = await db.execute(sql`SELECT id FROM users WHERE id >= ${startId} ORDER BY id`);
+  let done = 0, failed = 0, lastId = 0;
   for (const row of users.rows as any[]) {
+    lastId = Number(row.id);
     try {
       // Only the newly wired data-derived checkers — NOT the full retroactive
       // suite (which includes time-of-day-sensitive checks like Night Owl).
@@ -26,9 +29,9 @@ async function main() {
       failed++;
       console.error(`user ${row.id} failed: ${e.message}`);
     }
-    if (done % 100 === 0) console.log(`...${done}/${users.rows.length}`);
+    if (done % 25 === 0) console.log(`...${done}/${users.rows.length} (last id ${lastId})`);
   }
-  console.log(`Backfill complete: ${done} users processed, ${failed} failed`);
+  console.log(`Backfill complete: ${done} users processed, ${failed} failed (last id ${lastId})`);
   process.exit(failed ? 1 : 0);
 }
 main();
