@@ -11308,6 +11308,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error('[Topps Chrome Seed] Error:', err);
   });
 
+  // One-time data fix: merge legacy duplicate sets into canonical ones (idempotent)
+  import('./seeds/mergeDuplicateLegacySets').then(m => m.mergeDuplicateLegacySets()).catch(err => {
+    console.error('[Legacy Set Merge] Error:', err);
+  });
+
   // One-time seed: 2026 Topps Mint Marvel — 10 subsets, 480 cards (idempotent)
   import('./seeds/seedToppsMintMarvel2026').then(m => m.seedToppsMintMarvel2026()).catch(err => {
     console.error('[Topps Mint Seed] Error:', err);

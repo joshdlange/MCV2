@@ -18,4 +18,5 @@
 - [Card-number natural sort](card-number-sorting.md) — card_number is text; every new ORDER BY on it must reuse the CASE/LPAD numeric pattern or 1,10,11,2 sorting returns.
 - [Drizzle raw sql array params](drizzle-array-params.md) — `${arr}` in sql`` breaks ANY(); use IN with sql.join or inArray.
 - [Parallel duplicates remediation](parallel-duplicates-remediation.md) — ~1/3 of "(Gold)" parallels already exist in the target subset; collision-guard blocks mean "merge needed," not bug.
+- [Legacy duplicate-set merges](legacy-set-merge.md) — set-based merge_pairs pattern; prefer Base subset on ambiguity; xp_events & listings FK traps; resolve by slug for prod.
 - [Drive image import safety](drive-image-import.md) — marked-file-wins front/back rule only (never sort order); transactional ledger gives rerun idempotency; always fresh scan before import.

@@ -451,7 +451,7 @@ type TxExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0];
  * soft-archive `dup`. Collections/wishlists/binders dedupe against rows the
  * user already has for the survivor (quantities merge for collections).
  */
-async function transferReferencesAndArchive(
+export async function transferReferencesAndArchive(
   tx: TxExecutor,
   survivor: typeof cards.$inferSelect,
   dup: typeof cards.$inferSelect,
