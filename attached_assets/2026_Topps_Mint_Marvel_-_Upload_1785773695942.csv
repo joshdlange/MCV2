@@ -1,0 +1,481 @@
+Main Set,Subset,Card Number,Card Name,Is insert
+2026 Topps Mint Marvel ,Base,1,The Thing,FALSE
+2026 Topps Mint Marvel ,Base,2,Eternity,FALSE
+2026 Topps Mint Marvel,Base,3,Colossus,FALSE
+2026 Topps Mint Marvel,Base,4,Baron Zemo,FALSE
+2026 Topps Mint Marvel,Base,5,Groot,FALSE
+2026 Topps Mint Marvel,Base,6,Elektra,FALSE
+2026 Topps Mint Marvel,Base,7,Man-Thing,FALSE
+2026 Topps Mint Marvel,Base,8,Squirrel Girl,FALSE
+2026 Topps Mint Marvel,Base,9,Nick Fury,FALSE
+2026 Topps Mint Marvel,Base,10,Thena,FALSE
+2026 Topps Mint Marvel,Base,11,Corruption,FALSE
+2026 Topps Mint Marvel,Base,12,Lockjaw,FALSE
+2026 Topps Mint Marvel,Base,13,Ghost-Spider,FALSE
+2026 Topps Mint Marvel,Base,14,Phoenix,FALSE
+2026 Topps Mint Marvel,Base,15,Dormammu,FALSE
+2026 Topps Mint Marvel,Base,16,Bishop,FALSE
+2026 Topps Mint Marvel,Base,17,Winter Soldier,FALSE
+2026 Topps Mint Marvel,Base,18,Mr. Sinister,FALSE
+2026 Topps Mint Marvel,Base,19,Spider-Ham,FALSE
+2026 Topps Mint Marvel,Base,20,Scarlet Witch,FALSE
+2026 Topps Mint Marvel,Base,21,Black Knight,FALSE
+2026 Topps Mint Marvel,Base,22,Kraven the Hunter,FALSE
+2026 Topps Mint Marvel,Base,23,Red Hulk,FALSE
+2026 Topps Mint Marvel,Base,24,Enchantress,FALSE
+2026 Topps Mint Marvel,Base,25,Spider-Man 2099,FALSE
+2026 Topps Mint Marvel,Base,26,Infinity,FALSE
+2026 Topps Mint Marvel,Base,27,Luke Cage,FALSE
+2026 Topps Mint Marvel,Base,28,Scarlet Spider,FALSE
+2026 Topps Mint Marvel,Base,29,Drax,FALSE
+2026 Topps Mint Marvel,Base,30,Green Goblin,FALSE
+2026 Topps Mint Marvel,Base,31,Mysterio,FALSE
+2026 Topps Mint Marvel,Base,32,Dazzler,FALSE
+2026 Topps Mint Marvel,Base,33,Wiccan,FALSE
+2026 Topps Mint Marvel,Base,34,Beta Ray Bill,FALSE
+2026 Topps Mint Marvel,Base,35,Carnage,FALSE
+2026 Topps Mint Marvel,Base,36,Spider-Punk,FALSE
+2026 Topps Mint Marvel,Base,37,Juggernaut,FALSE
+2026 Topps Mint Marvel,Base,38,Cable,FALSE
+2026 Topps Mint Marvel,Base,39,Doomasaur,FALSE
+2026 Topps Mint Marvel,Base,40,Ant-Man,FALSE
+2026 Topps Mint Marvel,Base,41,Mephisto,FALSE
+2026 Topps Mint Marvel,Base,42,Wasp,FALSE
+2026 Topps Mint Marvel,Base,43,Hobgoblin,FALSE
+2026 Topps Mint Marvel,Base,44,Rocket Raccoon,FALSE
+2026 Topps Mint Marvel,Base,45,Black Winter,FALSE
+2026 Topps Mint Marvel,Base,46,Iron Fist,FALSE
+2026 Topps Mint Marvel,Base,47,Jubilee,FALSE
+2026 Topps Mint Marvel,Base,48,Gwenpool,FALSE
+2026 Topps Mint Marvel,Base,49,Ms. Marvel,FALSE
+2026 Topps Mint Marvel,Base,50,She-Hulk,FALSE
+2026 Topps Mint Marvel,Base,51,Blue Marvel,FALSE
+2026 Topps Mint Marvel,Base,52,Cloak & Dagger,FALSE
+2026 Topps Mint Marvel,Base,53,Major League Venom,FALSE
+2026 Topps Mint Marvel,Base,54,Mighty Thor,FALSE
+2026 Topps Mint Marvel,Base,55,The Prowler,FALSE
+2026 Topps Mint Marvel,Base,56,Blade,FALSE
+2026 Topps Mint Marvel,Base,57,Emma Frost,FALSE
+2026 Topps Mint Marvel,Base,58,Black Bolt,FALSE
+2026 Topps Mint Marvel,Base,59,Gambit,FALSE
+2026 Topps Mint Marvel,Base,60,Vision,FALSE
+2026 Topps Mint Marvel,Base,61,Iceman,FALSE
+2026 Topps Mint Marvel,Base,62,Taskmaster,FALSE
+2026 Topps Mint Marvel,Base,63,Magik,FALSE
+2026 Topps Mint Marvel,Base,64,Silver Sable,FALSE
+2026 Topps Mint Marvel,Base,65,Ultron,FALSE
+2026 Topps Mint Marvel,Base,66,Black Widow,FALSE
+2026 Topps Mint Marvel,Base,67,Spider-Man Noir,FALSE
+2026 Topps Mint Marvel,Base,68,Black Cat,FALSE
+2026 Topps Mint Marvel,Base,69,Mister Fantastic,FALSE
+2026 Topps Mint Marvel,Base,70,Kate Bishop,FALSE
+2026 Topps Mint Marvel,Base,71,Phantom Rider,FALSE
+2026 Topps Mint Marvel,Base,72,Hawkeye,FALSE
+2026 Topps Mint Marvel,Base,73,Spider-Girl,FALSE
+2026 Topps Mint Marvel,Base,74,Invisible Woman,FALSE
+2026 Topps Mint Marvel,Base,75,Captain America (Sam Wilson),FALSE
+2026 Topps Mint Marvel,Base,76,Daredevil,TRUE
+2026 Topps Mint Marvel,Base,77,Shang-Chi,TRUE
+2026 Topps Mint Marvel,Base,78,Bullseye,TRUE
+2026 Topps Mint Marvel,Base,79,Sentry,TRUE
+2026 Topps Mint Marvel,Base,80,Howard the Duck,TRUE
+2026 Topps Mint Marvel,Base,81,Beast,TRUE
+2026 Topps Mint Marvel,Base,82,Iron Patriot,TRUE
+2026 Topps Mint Marvel,Base,83,Gamora,TRUE
+2026 Topps Mint Marvel,Base,84,Killmonger,TRUE
+2026 Topps Mint Marvel,Base,85,Rogue,TRUE
+2026 Topps Mint Marvel,Base,86,Wonder Man,TRUE
+2026 Topps Mint Marvel,Base,87,Human Torch,TRUE
+2026 Topps Mint Marvel,Base,88,Kitty Pryde,TRUE
+2026 Topps Mint Marvel,Base,89,Nova,TRUE
+2026 Topps Mint Marvel,Base,90,Doctor Strange,TRUE
+2026 Topps Mint Marvel,Base,91,Adam Warlock,TRUE
+2026 Topps Mint Marvel,Base,92,Doctor Octopus,TRUE
+2026 Topps Mint Marvel,Base,93,Kingpin,TRUE
+2026 Topps Mint Marvel,Base,94,Captain Marvel,TRUE
+2026 Topps Mint Marvel,Base,95,Odin,TRUE
+2026 Topps Mint Marvel,Base,96,Star-Lord,TRUE
+2026 Topps Mint Marvel,Base,97,Nightcrawler,TRUE
+2026 Topps Mint Marvel,Base,98,Annihilus,TRUE
+2026 Topps Mint Marvel,Base,99,Ghost Rider,TRUE
+2026 Topps Mint Marvel,Base,100,Electro,TRUE
+2026 Topps Mint Marvel,Base,101,Black Panther,TRUE
+2026 Topps Mint Marvel,Base,102,Venom,TRUE
+2026 Topps Mint Marvel,Base,103,Spider-Man,TRUE
+2026 Topps Mint Marvel,Base,104,Cyclops,TRUE
+2026 Topps Mint Marvel,Base,105,Sabretooth,TRUE
+2026 Topps Mint Marvel,Base,106,Loki,TRUE
+2026 Topps Mint Marvel,Base,107,Storm,TRUE
+2026 Topps Mint Marvel,Base,108,Jean Grey,TRUE
+2026 Topps Mint Marvel,Base,109,Silver Surfer,TRUE
+2026 Topps Mint Marvel,Base,110,Captain America,TRUE
+2026 Topps Mint Marvel,Base,111,Miles Morales,TRUE
+2026 Topps Mint Marvel,Base,112,Hulk,TRUE
+2026 Topps Mint Marvel,Base,113,Thor,TRUE
+2026 Topps Mint Marvel,Base,114,Apocalypse,TRUE
+2026 Topps Mint Marvel,Base,115,Moon Knight,TRUE
+2026 Topps Mint Marvel,Base,116,Galactus,TRUE
+2026 Topps Mint Marvel,Base,117,Thanos,TRUE
+2026 Topps Mint Marvel,Base,118,Iron Man,TRUE
+2026 Topps Mint Marvel,Base,119,Namor,TRUE
+2026 Topps Mint Marvel,Base,120,Spider-Woman,TRUE
+2026 Topps Mint Marvel,Base,121,Wolverine,TRUE
+2026 Topps Mint Marvel,Base,122,Doctor Doom,TRUE
+2026 Topps Mint Marvel,Base,123,Jeff the Land Shark,TRUE
+2026 Topps Mint Marvel,Base,124,Professor X,TRUE
+2026 Topps Mint Marvel,Base,125,Magneto,TRUE
+2026 Topps Mint Marvel,Chrome Variation,1,The Thing,TRUE
+2026 Topps Mint Marvel,Chrome Variation,2,Eternity,TRUE
+2026 Topps Mint Marvel,Chrome Variation,3,Colossus,TRUE
+2026 Topps Mint Marvel,Chrome Variation,4,Baron Zemo,TRUE
+2026 Topps Mint Marvel,Chrome Variation,5,Groot,TRUE
+2026 Topps Mint Marvel,Chrome Variation,6,Elektra,TRUE
+2026 Topps Mint Marvel,Chrome Variation,7,Man-Thing,TRUE
+2026 Topps Mint Marvel,Chrome Variation,8,Squirrel Girl,TRUE
+2026 Topps Mint Marvel,Chrome Variation,9,Nick Fury,TRUE
+2026 Topps Mint Marvel,Chrome Variation,10,Thena,TRUE
+2026 Topps Mint Marvel,Chrome Variation,11,Corruption,TRUE
+2026 Topps Mint Marvel,Chrome Variation,12,Lockjaw,TRUE
+2026 Topps Mint Marvel,Chrome Variation,13,Ghost-Spider,TRUE
+2026 Topps Mint Marvel,Chrome Variation,14,Phoenix,TRUE
+2026 Topps Mint Marvel,Chrome Variation,15,Dormammu,TRUE
+2026 Topps Mint Marvel,Chrome Variation,16,Bishop,TRUE
+2026 Topps Mint Marvel,Chrome Variation,17,Winter Soldier,TRUE
+2026 Topps Mint Marvel,Chrome Variation,18,Mr. Sinister,TRUE
+2026 Topps Mint Marvel,Chrome Variation,19,Spider-Ham,TRUE
+2026 Topps Mint Marvel,Chrome Variation,20,Scarlet Witch,TRUE
+2026 Topps Mint Marvel,Chrome Variation,21,Black Knight,TRUE
+2026 Topps Mint Marvel,Chrome Variation,22,Kraven the Hunter,TRUE
+2026 Topps Mint Marvel,Chrome Variation,23,Red Hulk,TRUE
+2026 Topps Mint Marvel,Chrome Variation,24,Enchantress,TRUE
+2026 Topps Mint Marvel,Chrome Variation,25,Spider-Man 2099,TRUE
+2026 Topps Mint Marvel,Chrome Variation,26,Infinity,TRUE
+2026 Topps Mint Marvel,Chrome Variation,27,Luke Cage,TRUE
+2026 Topps Mint Marvel,Chrome Variation,28,Scarlet Spider,TRUE
+2026 Topps Mint Marvel,Chrome Variation,29,Drax,TRUE
+2026 Topps Mint Marvel,Chrome Variation,30,Green Goblin,TRUE
+2026 Topps Mint Marvel,Chrome Variation,31,Mysterio,TRUE
+2026 Topps Mint Marvel,Chrome Variation,32,Dazzler,TRUE
+2026 Topps Mint Marvel,Chrome Variation,33,Wiccan,TRUE
+2026 Topps Mint Marvel,Chrome Variation,34,Beta Ray Bill,TRUE
+2026 Topps Mint Marvel,Chrome Variation,35,Carnage,TRUE
+2026 Topps Mint Marvel,Chrome Variation,36,Spider-Punk,TRUE
+2026 Topps Mint Marvel,Chrome Variation,37,Juggernaut,TRUE
+2026 Topps Mint Marvel,Chrome Variation,38,Cable,TRUE
+2026 Topps Mint Marvel,Chrome Variation,39,Doomasaur,TRUE
+2026 Topps Mint Marvel,Chrome Variation,40,Ant-Man,TRUE
+2026 Topps Mint Marvel,Chrome Variation,41,Mephisto,TRUE
+2026 Topps Mint Marvel,Chrome Variation,42,Wasp,TRUE
+2026 Topps Mint Marvel,Chrome Variation,43,Hobgoblin,TRUE
+2026 Topps Mint Marvel,Chrome Variation,44,Rocket Raccoon,TRUE
+2026 Topps Mint Marvel,Chrome Variation,45,Black Winter,TRUE
+2026 Topps Mint Marvel,Chrome Variation,46,Iron Fist,TRUE
+2026 Topps Mint Marvel,Chrome Variation,47,Jubilee,TRUE
+2026 Topps Mint Marvel,Chrome Variation,48,Gwenpool,TRUE
+2026 Topps Mint Marvel,Chrome Variation,49,Ms. Marvel,TRUE
+2026 Topps Mint Marvel,Chrome Variation,50,She-Hulk,TRUE
+2026 Topps Mint Marvel,Chrome Variation,51,Blue Marvel,TRUE
+2026 Topps Mint Marvel,Chrome Variation,52,Cloak & Dagger,TRUE
+2026 Topps Mint Marvel,Chrome Variation,53,Major League Venom,TRUE
+2026 Topps Mint Marvel,Chrome Variation,54,Mighty Thor,TRUE
+2026 Topps Mint Marvel,Chrome Variation,55,The Prowler,TRUE
+2026 Topps Mint Marvel,Chrome Variation,56,Blade,TRUE
+2026 Topps Mint Marvel,Chrome Variation,57,Emma Frost,TRUE
+2026 Topps Mint Marvel,Chrome Variation,58,Black Bolt,TRUE
+2026 Topps Mint Marvel,Chrome Variation,59,Gambit,TRUE
+2026 Topps Mint Marvel,Chrome Variation,60,Vision,TRUE
+2026 Topps Mint Marvel,Chrome Variation,61,Iceman,TRUE
+2026 Topps Mint Marvel,Chrome Variation,62,Taskmaster,TRUE
+2026 Topps Mint Marvel,Chrome Variation,63,Magik,TRUE
+2026 Topps Mint Marvel,Chrome Variation,64,Silver Sable,TRUE
+2026 Topps Mint Marvel,Chrome Variation,65,Ultron,TRUE
+2026 Topps Mint Marvel,Chrome Variation,66,Black Widow,TRUE
+2026 Topps Mint Marvel,Chrome Variation,67,Spider-Man Noir,TRUE
+2026 Topps Mint Marvel,Chrome Variation,68,Black Cat,TRUE
+2026 Topps Mint Marvel,Chrome Variation,69,Mister Fantastic,TRUE
+2026 Topps Mint Marvel,Chrome Variation,70,Kate Bishop,TRUE
+2026 Topps Mint Marvel,Chrome Variation,71,Phantom Rider,TRUE
+2026 Topps Mint Marvel,Chrome Variation,72,Hawkeye,TRUE
+2026 Topps Mint Marvel,Chrome Variation,73,Spider-Girl,TRUE
+2026 Topps Mint Marvel,Chrome Variation,74,Invisible Woman,TRUE
+2026 Topps Mint Marvel,Chrome Variation,75,Captain America (Sam Wilson),TRUE
+2026 Topps Mint Marvel,Chrome Variation,76,Daredevil,TRUE
+2026 Topps Mint Marvel,Chrome Variation,77,Shang-Chi,TRUE
+2026 Topps Mint Marvel,Chrome Variation,78,Bullseye,TRUE
+2026 Topps Mint Marvel,Chrome Variation,79,Sentry,TRUE
+2026 Topps Mint Marvel,Chrome Variation,80,Howard the Duck,TRUE
+2026 Topps Mint Marvel,Chrome Variation,81,Beast,TRUE
+2026 Topps Mint Marvel,Chrome Variation,82,Iron Patriot,TRUE
+2026 Topps Mint Marvel,Chrome Variation,83,Gamora,TRUE
+2026 Topps Mint Marvel,Chrome Variation,84,Killmonger,TRUE
+2026 Topps Mint Marvel,Chrome Variation,85,Rogue,TRUE
+2026 Topps Mint Marvel,Chrome Variation,86,Wonder Man,TRUE
+2026 Topps Mint Marvel,Chrome Variation,87,Human Torch,TRUE
+2026 Topps Mint Marvel,Chrome Variation,88,Kitty Pryde,TRUE
+2026 Topps Mint Marvel,Chrome Variation,89,Nova,TRUE
+2026 Topps Mint Marvel,Chrome Variation,90,Doctor Strange,TRUE
+2026 Topps Mint Marvel,Chrome Variation,91,Adam Warlock,TRUE
+2026 Topps Mint Marvel,Chrome Variation,92,Doctor Octopus,TRUE
+2026 Topps Mint Marvel,Chrome Variation,93,Kingpin,TRUE
+2026 Topps Mint Marvel,Chrome Variation,94,Captain Marvel,TRUE
+2026 Topps Mint Marvel,Chrome Variation,95,Odin,TRUE
+2026 Topps Mint Marvel,Chrome Variation,96,Star-Lord,TRUE
+2026 Topps Mint Marvel,Chrome Variation,97,Nightcrawler,TRUE
+2026 Topps Mint Marvel,Chrome Variation,98,Annihilus,TRUE
+2026 Topps Mint Marvel,Chrome Variation,99,Ghost Rider,TRUE
+2026 Topps Mint Marvel,Chrome Variation,100,Electro,TRUE
+2026 Topps Mint Marvel,Chrome Variation,101,Black Panther,TRUE
+2026 Topps Mint Marvel,Chrome Variation,102,Venom,TRUE
+2026 Topps Mint Marvel,Chrome Variation,103,Spider-Man,TRUE
+2026 Topps Mint Marvel,Chrome Variation,104,Cyclops,TRUE
+2026 Topps Mint Marvel,Chrome Variation,105,Sabretooth,TRUE
+2026 Topps Mint Marvel,Chrome Variation,106,Loki,TRUE
+2026 Topps Mint Marvel,Chrome Variation,107,Storm,TRUE
+2026 Topps Mint Marvel,Chrome Variation,108,Jean Grey,TRUE
+2026 Topps Mint Marvel,Chrome Variation,109,Silver Surfer,TRUE
+2026 Topps Mint Marvel,Chrome Variation,110,Captain America,TRUE
+2026 Topps Mint Marvel,Chrome Variation,111,Miles Morales,TRUE
+2026 Topps Mint Marvel,Chrome Variation,112,Hulk,TRUE
+2026 Topps Mint Marvel,Chrome Variation,113,Thor,TRUE
+2026 Topps Mint Marvel,Chrome Variation,114,Apocalypse,TRUE
+2026 Topps Mint Marvel,Chrome Variation,115,Moon Knight,TRUE
+2026 Topps Mint Marvel,Chrome Variation,116,Galactus,TRUE
+2026 Topps Mint Marvel,Chrome Variation,117,Thanos,TRUE
+2026 Topps Mint Marvel,Chrome Variation,118,Iron Man,TRUE
+2026 Topps Mint Marvel,Chrome Variation,119,Namor,TRUE
+2026 Topps Mint Marvel,Chrome Variation,120,Spider-Woman,TRUE
+2026 Topps Mint Marvel,Chrome Variation,121,Wolverine,TRUE
+2026 Topps Mint Marvel,Chrome Variation,122,Doctor Doom,TRUE
+2026 Topps Mint Marvel,Chrome Variation,123,Jeff the Land Shark,TRUE
+2026 Topps Mint Marvel,Chrome Variation,124,Professor X,TRUE
+2026 Topps Mint Marvel,Chrome Variation,125,Magneto,TRUE
+2026 Topps Mint Marvel,SDCC EXCLUSIVE,SDCC-S,Spider-Man,TRUE
+2026 Topps Mint Marvel,SDCC EXCLUSIVE,SDCC-H,Hulk,TRUE
+2026 Topps Mint Marvel,SDCC EXCLUSIVE,SDCC-P,Punisher,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-1,Knull,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-2,Venom,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-3,Major League Venom,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-4,Scorpion,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-5,Riot,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-6,Carnage,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-7,Agent Venom,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-8,Mania,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-9,Scream,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-10,She-Venom,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-11,Symbiote Spider-Man 2099,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-12,Silence,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-13,Venom 2099,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-14,Agony,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-15,Jeff the Venomized Land Shark,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-16,Phage,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-17,Sleeper,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-18,Scorn,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-19,Grendel,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-20,Wolverine,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-21,Lasher,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-22,Toxin,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-23,Anti-Venom,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-24,Red Goblin,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-25,Spider-Man,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-26,Mary Jane,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-27,Misery,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-28,Black Cat,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-29,Widow,TRUE
+2026 Topps Mint Marvel,Mass Symbiiote Take Over,MS-30,Loki,TRUE
+2026 Topps Mint Marvel,Cerebro,1,Professor X,TRUE
+2026 Topps Mint Marvel,Cerebro,2,Quicksilver,TRUE
+2026 Topps Mint Marvel,Cerebro,3,Hulk,TRUE
+2026 Topps Mint Marvel,Cerebro,4,Doctor Doom,TRUE
+2026 Topps Mint Marvel,Cerebro,5,Wolverine,TRUE
+2026 Topps Mint Marvel,Cerebro,6,Blade,TRUE
+2026 Topps Mint Marvel,Cerebro,7,Scarlet Witch,TRUE
+2026 Topps Mint Marvel,Cerebro,8,Havok,TRUE
+2026 Topps Mint Marvel,Cerebro,9,Doctor Strange,TRUE
+2026 Topps Mint Marvel,Cerebro,10,Storm,TRUE
+2026 Topps Mint Marvel,Cerebro,11,Cable,TRUE
+2026 Topps Mint Marvel,Cerebro,12,The Thing,TRUE
+2026 Topps Mint Marvel,Cerebro,13,Rogue,TRUE
+2026 Topps Mint Marvel,Cerebro,14,Moon Knight,TRUE
+2026 Topps Mint Marvel,Cerebro,15,Magneto,TRUE
+2026 Topps Mint Marvel,Cerebro,16,Kitty Pryde,TRUE
+2026 Topps Mint Marvel,Cerebro,17,Ghost Rider,TRUE
+2026 Topps Mint Marvel,Cerebro,18,Iceman,TRUE
+2026 Topps Mint Marvel,Cerebro,19,Jean Grey,TRUE
+2026 Topps Mint Marvel,Cerebro,20,Miles Morales,TRUE
+2026 Topps Mint Marvel,Cerebro,21,Forge,TRUE
+2026 Topps Mint Marvel,Cerebro,22,Mister Fantastic,TRUE
+2026 Topps Mint Marvel,Cerebro,23,Cyclops,TRUE
+2026 Topps Mint Marvel,Cerebro,24,Angel,TRUE
+2026 Topps Mint Marvel,Cerebro,25,Captain America,TRUE
+2026 Topps Mint Marvel,Cerebro,26,Thanos,TRUE
+2026 Topps Mint Marvel,Cerebro,27,Nightcrawler,TRUE
+2026 Topps Mint Marvel,Cerebro,28,Beast,TRUE
+2026 Topps Mint Marvel,Cerebro,29,Mystique,TRUE
+2026 Topps Mint Marvel,Cerebro,30,Hope Summers,TRUE
+2026 Topps Mint Marvel,Cerebro,31,X-23,TRUE
+2026 Topps Mint Marvel,Cerebro,32,Apocalypse,TRUE
+2026 Topps Mint Marvel,Cerebro,33,Colossus,TRUE
+2026 Topps Mint Marvel,Cerebro,34,Sabretooth,TRUE
+2026 Topps Mint Marvel,Cerebro,35,Legion,TRUE
+2026 Topps Mint Marvel,Cerebro,36,Gambit,TRUE
+2026 Topps Mint Marvel,Cerebro,37,Human Torch,TRUE
+2026 Topps Mint Marvel,Cerebro,38,Polaris,TRUE
+2026 Topps Mint Marvel,Cerebro,39,Domino,TRUE
+2026 Topps Mint Marvel,Cerebro,40,Phoenix,TRUE
+2026 Topps Mint Marvel,Cerebro,41,Daredevil,TRUE
+2026 Topps Mint Marvel,Cerebro,42,Rachel Summers,TRUE
+2026 Topps Mint Marvel,Cerebro,43,Thor,TRUE
+2026 Topps Mint Marvel,Cerebro,44,Magik,TRUE
+2026 Topps Mint Marvel,Cerebro,45,Jubilee,TRUE
+2026 Topps Mint Marvel,Cerebro,46,Emma Frost,TRUE
+2026 Topps Mint Marvel,Cerebro,47,Psylocke,TRUE
+2026 Topps Mint Marvel,Cerebro,48,Bishop,TRUE
+2026 Topps Mint Marvel,Cerebro,49,Juggernaut,TRUE
+2026 Topps Mint Marvel,Cerebro,50,Spider-Man,TRUE
+2026 Topps Mint Marvel,Cerebro,51,Black Widow,TRUE
+2026 Topps Mint Marvel,Cerebro,52,Venom,TRUE
+2026 Topps Mint Marvel,Cerebro,53,Onslaught,TRUE
+2026 Topps Mint Marvel,Cerebro,54,Invisible Woman,TRUE
+2026 Topps Mint Marvel,Cerebro,55,Black Panther,TRUE
+2026 Topps Mint Marvel,Marvel Cut Signature,CS-SL,Stan Lee,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-AK,Adam Kubert,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-AG,Adi Granov,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-ANK,Andy Kubert,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-AAD,Arthur Adams,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-BS,Bill Sienkiewicz,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-CY,Christopher Yost,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-CK,Craig Kyle,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-DCT,Donny Cates,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-FM,Frank Miller,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-GC,Greg Capullo,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-JAA,Jason Aaron,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-JH,Jonathan Hickman,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-JC,Joshua Cassara,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-LP,Lucio Parrillo,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-MS,Marc Silvestri,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-MB,Mark Brooks,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-MBA,Mark Bagley,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-MZ,Mike Zeck,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-PM,Paco Medina,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-RRS,Rod Reis,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-RO,Ryan Ottley,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-RS,Ryan Stegman,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-SW,Scott Williams,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-SM,Steve McNiven,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-TD,Tony Daniel,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-WP,Whilce Portacio,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Comic Creators,CA-ZW,Zeb Wells,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Marvel Studios,CA-BC,Bradley Cooper - Rocket - Guardians of the Galaxy Vol. 2,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Marvel Studios,CA-HS,Hailee Steinfeld - Kate Bishop - Hawkeye,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Marvel Studios,CA-HJ,Hugh Jackman - Wolverine - Deadpool & Wolverine,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Marvel Studios,CA-OI,Oscar Isaac - Moon Knight - Moon Knight,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Marvel Studios,CA-SLJ,Samuel L. Jackson - Nick Fury - Marvel's The Avengers,TRUE
+2026 Topps Mint Marvel,Chrome Autographs - Marvel Studios,CA-VDO,Vincent D'Onofrio - Mayor Wilson Fisk - Daredevil: Born Again,TRUE
+2026 Topps Mint Marvel,Spider-Man Comic Cuts,CC-ASM5,The Amazing Spider-Man (1963) #5,TRUE
+2026 Topps Mint Marvel,Spider-Man Comic Cuts,CC-ASM16,The Amazing Spider-Man (1963) #16,TRUE
+2026 Topps Mint Marvel,Spider-Man Comic Cuts,CC-ASM20,The Amazing Spider-Man (1963) #20,TRUE
+2026 Topps Mint Marvel,Spider-Man Comic Cuts,CC-DD16,Daredevil (1964) #16,TRUE
+2026 Topps Mint Marvel,Spider-Man Comic Cuts,CC-UXM35,Uncanny X-Men (1963) #35,TRUE
+2026 Topps Mint Marvel,Spider-Man Comic Cuts,CC-ASM100,The Amazing Spider-Man (1963) #100,TRUE
+2026 Topps Mint Marvel,Spider-Man Comic Cuts,CC-ASM101,The Amazing Spider-Man (1963) #101,TRUE
+2026 Topps Mint Marvel,Spider-Man Comic Cuts,CC-ASM134,The Amazing Spider-Man (1963) #134,TRUE
+2026 Topps Mint Marvel,Spider-Man Comic Cuts,CC-MTU27,Marvel Team-Up (1972) #27,TRUE
+2026 Topps Mint Marvel,Spider-Man Comic Cuts,CC-MTUA1,Marvel Team-Up Annual (1976) #1,TRUE
+2026 Topps Mint Marvel,Spider-Man Comic Cuts,CC-MTU43,Marvel Team-Up (1972) #43,TRUE
+2026 Topps Mint Marvel,Spider-Man Comic Cuts,CC-MTU53,Marvel Team-Up (1972) #53,TRUE
+2026 Topps Mint Marvel,Spider-Man Comic Cuts,CC-MTU54,Marvel Team-Up (1972) #54,TRUE
+2026 Topps Mint Marvel,Spider-Man Comic Cuts,CC-MTU150,Marvel Team-Up (1972) #150,TRUE
+2026 Topps Mint Marvel,Spider-Man Comic Cuts,CC-ASM345,The Amazing Spider-Man (1963) #345,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Adam Fields,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Adam Harris,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Aditya Chandra,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Al Stefano,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Alcione Silva,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Alessandro Micelli,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Allen Serrano,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Andy Tiu,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Angelo De Capua,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Ariel Aguire,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Brent Ragland,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Carlo Allen Victoria,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Charlie Cody,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Chris Botterill,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Chris Meeks,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Christoffer Allen Victoria,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Christopher Foreman,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Cisco Rivera,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Daniel M Chavez,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Daniel Riveron,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Danishson Borgonos,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Darrin Pepe,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Débora Centeio,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Dexter Wee,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Don Mark Noceda,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Dove Mchargue,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Duke,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,DYJ,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Dylan Riley,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Elisa Raffaelli,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Elisabete Silva,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Elvin Hernandez,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,"Emmanuel Villafaña ""Emmvill""",Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Eric Lehtonen,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Ernest Romero,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Fabio Ramacci,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Frank A. Kadar,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Franklim Teixeira,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Gener Pedrina,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,George Vega,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Gilbert Perez,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Greg Treize,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Hector Barros,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Honeybee Federeso,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Ian Quirante,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Ian Sateikis,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Isiah Bradley,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Jason Queen,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Jason Christner,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Jason Rodriguez,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Jason Saldajeno,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Jason Sobol,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Jessica Court,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Jessica Hickman,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Jezreel Rojales,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,"Jiaxin ""Yinshan"" Sun",Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Jim O'riley,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,John Pleak,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,John Paul Howard,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Johnruzel Jimenez,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,José David Lima Da Silva,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Joshua Nunez,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Lauro Santiago,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Lee Lightfoot,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Leon Braojos,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Lucas Ackerman,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Marcelino Servicio,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Marcia Dye,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Marlo Martos,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Matt Stewart,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Michael Mastermaker,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Mirko Di Noia,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Mohammad Jilani,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Nathan Nelson,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Nick Gribbon,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Noval Hernawan,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Patricio Carrasco,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Percival Kholoma,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Rich Hennemann,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Richard Valbuena,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Robert Blancas,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Robert Demers,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Roberto Mamani,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Ronel Gravo,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Rustico Limosinero Jr.,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Sherwin Santiago,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Stephane Leonardi,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Steve Alce,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Sturdy,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Tim Shinn,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Toma,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Uko Smith,Sketch Cards - Spidy Villains,TRUE
+2026 Topps Mint Marvel,Sketch Cards - Spidy Villains,Vincenzo D'ippolito,Sketch Cards - Spidy Villains,TRUE

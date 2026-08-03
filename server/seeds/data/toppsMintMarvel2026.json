@@ -1,0 +1,2462 @@
+[
+ {
+  "name": "Base",
+  "isInsert": false,
+  "cards": [
+   {
+    "num": "1",
+    "name": "The Thing",
+    "isInsert": false
+   },
+   {
+    "num": "2",
+    "name": "Eternity",
+    "isInsert": false
+   },
+   {
+    "num": "3",
+    "name": "Colossus",
+    "isInsert": false
+   },
+   {
+    "num": "4",
+    "name": "Baron Zemo",
+    "isInsert": false
+   },
+   {
+    "num": "5",
+    "name": "Groot",
+    "isInsert": false
+   },
+   {
+    "num": "6",
+    "name": "Elektra",
+    "isInsert": false
+   },
+   {
+    "num": "7",
+    "name": "Man-Thing",
+    "isInsert": false
+   },
+   {
+    "num": "8",
+    "name": "Squirrel Girl",
+    "isInsert": false
+   },
+   {
+    "num": "9",
+    "name": "Nick Fury",
+    "isInsert": false
+   },
+   {
+    "num": "10",
+    "name": "Thena",
+    "isInsert": false
+   },
+   {
+    "num": "11",
+    "name": "Corruption",
+    "isInsert": false
+   },
+   {
+    "num": "12",
+    "name": "Lockjaw",
+    "isInsert": false
+   },
+   {
+    "num": "13",
+    "name": "Ghost-Spider",
+    "isInsert": false
+   },
+   {
+    "num": "14",
+    "name": "Phoenix",
+    "isInsert": false
+   },
+   {
+    "num": "15",
+    "name": "Dormammu",
+    "isInsert": false
+   },
+   {
+    "num": "16",
+    "name": "Bishop",
+    "isInsert": false
+   },
+   {
+    "num": "17",
+    "name": "Winter Soldier",
+    "isInsert": false
+   },
+   {
+    "num": "18",
+    "name": "Mr. Sinister",
+    "isInsert": false
+   },
+   {
+    "num": "19",
+    "name": "Spider-Ham",
+    "isInsert": false
+   },
+   {
+    "num": "20",
+    "name": "Scarlet Witch",
+    "isInsert": false
+   },
+   {
+    "num": "21",
+    "name": "Black Knight",
+    "isInsert": false
+   },
+   {
+    "num": "22",
+    "name": "Kraven the Hunter",
+    "isInsert": false
+   },
+   {
+    "num": "23",
+    "name": "Red Hulk",
+    "isInsert": false
+   },
+   {
+    "num": "24",
+    "name": "Enchantress",
+    "isInsert": false
+   },
+   {
+    "num": "25",
+    "name": "Spider-Man 2099",
+    "isInsert": false
+   },
+   {
+    "num": "26",
+    "name": "Infinity",
+    "isInsert": false
+   },
+   {
+    "num": "27",
+    "name": "Luke Cage",
+    "isInsert": false
+   },
+   {
+    "num": "28",
+    "name": "Scarlet Spider",
+    "isInsert": false
+   },
+   {
+    "num": "29",
+    "name": "Drax",
+    "isInsert": false
+   },
+   {
+    "num": "30",
+    "name": "Green Goblin",
+    "isInsert": false
+   },
+   {
+    "num": "31",
+    "name": "Mysterio",
+    "isInsert": false
+   },
+   {
+    "num": "32",
+    "name": "Dazzler",
+    "isInsert": false
+   },
+   {
+    "num": "33",
+    "name": "Wiccan",
+    "isInsert": false
+   },
+   {
+    "num": "34",
+    "name": "Beta Ray Bill",
+    "isInsert": false
+   },
+   {
+    "num": "35",
+    "name": "Carnage",
+    "isInsert": false
+   },
+   {
+    "num": "36",
+    "name": "Spider-Punk",
+    "isInsert": false
+   },
+   {
+    "num": "37",
+    "name": "Juggernaut",
+    "isInsert": false
+   },
+   {
+    "num": "38",
+    "name": "Cable",
+    "isInsert": false
+   },
+   {
+    "num": "39",
+    "name": "Doomasaur",
+    "isInsert": false
+   },
+   {
+    "num": "40",
+    "name": "Ant-Man",
+    "isInsert": false
+   },
+   {
+    "num": "41",
+    "name": "Mephisto",
+    "isInsert": false
+   },
+   {
+    "num": "42",
+    "name": "Wasp",
+    "isInsert": false
+   },
+   {
+    "num": "43",
+    "name": "Hobgoblin",
+    "isInsert": false
+   },
+   {
+    "num": "44",
+    "name": "Rocket Raccoon",
+    "isInsert": false
+   },
+   {
+    "num": "45",
+    "name": "Black Winter",
+    "isInsert": false
+   },
+   {
+    "num": "46",
+    "name": "Iron Fist",
+    "isInsert": false
+   },
+   {
+    "num": "47",
+    "name": "Jubilee",
+    "isInsert": false
+   },
+   {
+    "num": "48",
+    "name": "Gwenpool",
+    "isInsert": false
+   },
+   {
+    "num": "49",
+    "name": "Ms. Marvel",
+    "isInsert": false
+   },
+   {
+    "num": "50",
+    "name": "She-Hulk",
+    "isInsert": false
+   },
+   {
+    "num": "51",
+    "name": "Blue Marvel",
+    "isInsert": false
+   },
+   {
+    "num": "52",
+    "name": "Cloak & Dagger",
+    "isInsert": false
+   },
+   {
+    "num": "53",
+    "name": "Major League Venom",
+    "isInsert": false
+   },
+   {
+    "num": "54",
+    "name": "Mighty Thor",
+    "isInsert": false
+   },
+   {
+    "num": "55",
+    "name": "The Prowler",
+    "isInsert": false
+   },
+   {
+    "num": "56",
+    "name": "Blade",
+    "isInsert": false
+   },
+   {
+    "num": "57",
+    "name": "Emma Frost",
+    "isInsert": false
+   },
+   {
+    "num": "58",
+    "name": "Black Bolt",
+    "isInsert": false
+   },
+   {
+    "num": "59",
+    "name": "Gambit",
+    "isInsert": false
+   },
+   {
+    "num": "60",
+    "name": "Vision",
+    "isInsert": false
+   },
+   {
+    "num": "61",
+    "name": "Iceman",
+    "isInsert": false
+   },
+   {
+    "num": "62",
+    "name": "Taskmaster",
+    "isInsert": false
+   },
+   {
+    "num": "63",
+    "name": "Magik",
+    "isInsert": false
+   },
+   {
+    "num": "64",
+    "name": "Silver Sable",
+    "isInsert": false
+   },
+   {
+    "num": "65",
+    "name": "Ultron",
+    "isInsert": false
+   },
+   {
+    "num": "66",
+    "name": "Black Widow",
+    "isInsert": false
+   },
+   {
+    "num": "67",
+    "name": "Spider-Man Noir",
+    "isInsert": false
+   },
+   {
+    "num": "68",
+    "name": "Black Cat",
+    "isInsert": false
+   },
+   {
+    "num": "69",
+    "name": "Mister Fantastic",
+    "isInsert": false
+   },
+   {
+    "num": "70",
+    "name": "Kate Bishop",
+    "isInsert": false
+   },
+   {
+    "num": "71",
+    "name": "Phantom Rider",
+    "isInsert": false
+   },
+   {
+    "num": "72",
+    "name": "Hawkeye",
+    "isInsert": false
+   },
+   {
+    "num": "73",
+    "name": "Spider-Girl",
+    "isInsert": false
+   },
+   {
+    "num": "74",
+    "name": "Invisible Woman",
+    "isInsert": false
+   },
+   {
+    "num": "75",
+    "name": "Captain America (Sam Wilson)",
+    "isInsert": false
+   },
+   {
+    "num": "76",
+    "name": "Daredevil",
+    "isInsert": true
+   },
+   {
+    "num": "77",
+    "name": "Shang-Chi",
+    "isInsert": true
+   },
+   {
+    "num": "78",
+    "name": "Bullseye",
+    "isInsert": true
+   },
+   {
+    "num": "79",
+    "name": "Sentry",
+    "isInsert": true
+   },
+   {
+    "num": "80",
+    "name": "Howard the Duck",
+    "isInsert": true
+   },
+   {
+    "num": "81",
+    "name": "Beast",
+    "isInsert": true
+   },
+   {
+    "num": "82",
+    "name": "Iron Patriot",
+    "isInsert": true
+   },
+   {
+    "num": "83",
+    "name": "Gamora",
+    "isInsert": true
+   },
+   {
+    "num": "84",
+    "name": "Killmonger",
+    "isInsert": true
+   },
+   {
+    "num": "85",
+    "name": "Rogue",
+    "isInsert": true
+   },
+   {
+    "num": "86",
+    "name": "Wonder Man",
+    "isInsert": true
+   },
+   {
+    "num": "87",
+    "name": "Human Torch",
+    "isInsert": true
+   },
+   {
+    "num": "88",
+    "name": "Kitty Pryde",
+    "isInsert": true
+   },
+   {
+    "num": "89",
+    "name": "Nova",
+    "isInsert": true
+   },
+   {
+    "num": "90",
+    "name": "Doctor Strange",
+    "isInsert": true
+   },
+   {
+    "num": "91",
+    "name": "Adam Warlock",
+    "isInsert": true
+   },
+   {
+    "num": "92",
+    "name": "Doctor Octopus",
+    "isInsert": true
+   },
+   {
+    "num": "93",
+    "name": "Kingpin",
+    "isInsert": true
+   },
+   {
+    "num": "94",
+    "name": "Captain Marvel",
+    "isInsert": true
+   },
+   {
+    "num": "95",
+    "name": "Odin",
+    "isInsert": true
+   },
+   {
+    "num": "96",
+    "name": "Star-Lord",
+    "isInsert": true
+   },
+   {
+    "num": "97",
+    "name": "Nightcrawler",
+    "isInsert": true
+   },
+   {
+    "num": "98",
+    "name": "Annihilus",
+    "isInsert": true
+   },
+   {
+    "num": "99",
+    "name": "Ghost Rider",
+    "isInsert": true
+   },
+   {
+    "num": "100",
+    "name": "Electro",
+    "isInsert": true
+   },
+   {
+    "num": "101",
+    "name": "Black Panther",
+    "isInsert": true
+   },
+   {
+    "num": "102",
+    "name": "Venom",
+    "isInsert": true
+   },
+   {
+    "num": "103",
+    "name": "Spider-Man",
+    "isInsert": true
+   },
+   {
+    "num": "104",
+    "name": "Cyclops",
+    "isInsert": true
+   },
+   {
+    "num": "105",
+    "name": "Sabretooth",
+    "isInsert": true
+   },
+   {
+    "num": "106",
+    "name": "Loki",
+    "isInsert": true
+   },
+   {
+    "num": "107",
+    "name": "Storm",
+    "isInsert": true
+   },
+   {
+    "num": "108",
+    "name": "Jean Grey",
+    "isInsert": true
+   },
+   {
+    "num": "109",
+    "name": "Silver Surfer",
+    "isInsert": true
+   },
+   {
+    "num": "110",
+    "name": "Captain America",
+    "isInsert": true
+   },
+   {
+    "num": "111",
+    "name": "Miles Morales",
+    "isInsert": true
+   },
+   {
+    "num": "112",
+    "name": "Hulk",
+    "isInsert": true
+   },
+   {
+    "num": "113",
+    "name": "Thor",
+    "isInsert": true
+   },
+   {
+    "num": "114",
+    "name": "Apocalypse",
+    "isInsert": true
+   },
+   {
+    "num": "115",
+    "name": "Moon Knight",
+    "isInsert": true
+   },
+   {
+    "num": "116",
+    "name": "Galactus",
+    "isInsert": true
+   },
+   {
+    "num": "117",
+    "name": "Thanos",
+    "isInsert": true
+   },
+   {
+    "num": "118",
+    "name": "Iron Man",
+    "isInsert": true
+   },
+   {
+    "num": "119",
+    "name": "Namor",
+    "isInsert": true
+   },
+   {
+    "num": "120",
+    "name": "Spider-Woman",
+    "isInsert": true
+   },
+   {
+    "num": "121",
+    "name": "Wolverine",
+    "isInsert": true
+   },
+   {
+    "num": "122",
+    "name": "Doctor Doom",
+    "isInsert": true
+   },
+   {
+    "num": "123",
+    "name": "Jeff the Land Shark",
+    "isInsert": true
+   },
+   {
+    "num": "124",
+    "name": "Professor X",
+    "isInsert": true
+   },
+   {
+    "num": "125",
+    "name": "Magneto",
+    "isInsert": true
+   }
+  ]
+ },
+ {
+  "name": "Chrome Variation",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "1",
+    "name": "The Thing",
+    "isInsert": true
+   },
+   {
+    "num": "2",
+    "name": "Eternity",
+    "isInsert": true
+   },
+   {
+    "num": "3",
+    "name": "Colossus",
+    "isInsert": true
+   },
+   {
+    "num": "4",
+    "name": "Baron Zemo",
+    "isInsert": true
+   },
+   {
+    "num": "5",
+    "name": "Groot",
+    "isInsert": true
+   },
+   {
+    "num": "6",
+    "name": "Elektra",
+    "isInsert": true
+   },
+   {
+    "num": "7",
+    "name": "Man-Thing",
+    "isInsert": true
+   },
+   {
+    "num": "8",
+    "name": "Squirrel Girl",
+    "isInsert": true
+   },
+   {
+    "num": "9",
+    "name": "Nick Fury",
+    "isInsert": true
+   },
+   {
+    "num": "10",
+    "name": "Thena",
+    "isInsert": true
+   },
+   {
+    "num": "11",
+    "name": "Corruption",
+    "isInsert": true
+   },
+   {
+    "num": "12",
+    "name": "Lockjaw",
+    "isInsert": true
+   },
+   {
+    "num": "13",
+    "name": "Ghost-Spider",
+    "isInsert": true
+   },
+   {
+    "num": "14",
+    "name": "Phoenix",
+    "isInsert": true
+   },
+   {
+    "num": "15",
+    "name": "Dormammu",
+    "isInsert": true
+   },
+   {
+    "num": "16",
+    "name": "Bishop",
+    "isInsert": true
+   },
+   {
+    "num": "17",
+    "name": "Winter Soldier",
+    "isInsert": true
+   },
+   {
+    "num": "18",
+    "name": "Mr. Sinister",
+    "isInsert": true
+   },
+   {
+    "num": "19",
+    "name": "Spider-Ham",
+    "isInsert": true
+   },
+   {
+    "num": "20",
+    "name": "Scarlet Witch",
+    "isInsert": true
+   },
+   {
+    "num": "21",
+    "name": "Black Knight",
+    "isInsert": true
+   },
+   {
+    "num": "22",
+    "name": "Kraven the Hunter",
+    "isInsert": true
+   },
+   {
+    "num": "23",
+    "name": "Red Hulk",
+    "isInsert": true
+   },
+   {
+    "num": "24",
+    "name": "Enchantress",
+    "isInsert": true
+   },
+   {
+    "num": "25",
+    "name": "Spider-Man 2099",
+    "isInsert": true
+   },
+   {
+    "num": "26",
+    "name": "Infinity",
+    "isInsert": true
+   },
+   {
+    "num": "27",
+    "name": "Luke Cage",
+    "isInsert": true
+   },
+   {
+    "num": "28",
+    "name": "Scarlet Spider",
+    "isInsert": true
+   },
+   {
+    "num": "29",
+    "name": "Drax",
+    "isInsert": true
+   },
+   {
+    "num": "30",
+    "name": "Green Goblin",
+    "isInsert": true
+   },
+   {
+    "num": "31",
+    "name": "Mysterio",
+    "isInsert": true
+   },
+   {
+    "num": "32",
+    "name": "Dazzler",
+    "isInsert": true
+   },
+   {
+    "num": "33",
+    "name": "Wiccan",
+    "isInsert": true
+   },
+   {
+    "num": "34",
+    "name": "Beta Ray Bill",
+    "isInsert": true
+   },
+   {
+    "num": "35",
+    "name": "Carnage",
+    "isInsert": true
+   },
+   {
+    "num": "36",
+    "name": "Spider-Punk",
+    "isInsert": true
+   },
+   {
+    "num": "37",
+    "name": "Juggernaut",
+    "isInsert": true
+   },
+   {
+    "num": "38",
+    "name": "Cable",
+    "isInsert": true
+   },
+   {
+    "num": "39",
+    "name": "Doomasaur",
+    "isInsert": true
+   },
+   {
+    "num": "40",
+    "name": "Ant-Man",
+    "isInsert": true
+   },
+   {
+    "num": "41",
+    "name": "Mephisto",
+    "isInsert": true
+   },
+   {
+    "num": "42",
+    "name": "Wasp",
+    "isInsert": true
+   },
+   {
+    "num": "43",
+    "name": "Hobgoblin",
+    "isInsert": true
+   },
+   {
+    "num": "44",
+    "name": "Rocket Raccoon",
+    "isInsert": true
+   },
+   {
+    "num": "45",
+    "name": "Black Winter",
+    "isInsert": true
+   },
+   {
+    "num": "46",
+    "name": "Iron Fist",
+    "isInsert": true
+   },
+   {
+    "num": "47",
+    "name": "Jubilee",
+    "isInsert": true
+   },
+   {
+    "num": "48",
+    "name": "Gwenpool",
+    "isInsert": true
+   },
+   {
+    "num": "49",
+    "name": "Ms. Marvel",
+    "isInsert": true
+   },
+   {
+    "num": "50",
+    "name": "She-Hulk",
+    "isInsert": true
+   },
+   {
+    "num": "51",
+    "name": "Blue Marvel",
+    "isInsert": true
+   },
+   {
+    "num": "52",
+    "name": "Cloak & Dagger",
+    "isInsert": true
+   },
+   {
+    "num": "53",
+    "name": "Major League Venom",
+    "isInsert": true
+   },
+   {
+    "num": "54",
+    "name": "Mighty Thor",
+    "isInsert": true
+   },
+   {
+    "num": "55",
+    "name": "The Prowler",
+    "isInsert": true
+   },
+   {
+    "num": "56",
+    "name": "Blade",
+    "isInsert": true
+   },
+   {
+    "num": "57",
+    "name": "Emma Frost",
+    "isInsert": true
+   },
+   {
+    "num": "58",
+    "name": "Black Bolt",
+    "isInsert": true
+   },
+   {
+    "num": "59",
+    "name": "Gambit",
+    "isInsert": true
+   },
+   {
+    "num": "60",
+    "name": "Vision",
+    "isInsert": true
+   },
+   {
+    "num": "61",
+    "name": "Iceman",
+    "isInsert": true
+   },
+   {
+    "num": "62",
+    "name": "Taskmaster",
+    "isInsert": true
+   },
+   {
+    "num": "63",
+    "name": "Magik",
+    "isInsert": true
+   },
+   {
+    "num": "64",
+    "name": "Silver Sable",
+    "isInsert": true
+   },
+   {
+    "num": "65",
+    "name": "Ultron",
+    "isInsert": true
+   },
+   {
+    "num": "66",
+    "name": "Black Widow",
+    "isInsert": true
+   },
+   {
+    "num": "67",
+    "name": "Spider-Man Noir",
+    "isInsert": true
+   },
+   {
+    "num": "68",
+    "name": "Black Cat",
+    "isInsert": true
+   },
+   {
+    "num": "69",
+    "name": "Mister Fantastic",
+    "isInsert": true
+   },
+   {
+    "num": "70",
+    "name": "Kate Bishop",
+    "isInsert": true
+   },
+   {
+    "num": "71",
+    "name": "Phantom Rider",
+    "isInsert": true
+   },
+   {
+    "num": "72",
+    "name": "Hawkeye",
+    "isInsert": true
+   },
+   {
+    "num": "73",
+    "name": "Spider-Girl",
+    "isInsert": true
+   },
+   {
+    "num": "74",
+    "name": "Invisible Woman",
+    "isInsert": true
+   },
+   {
+    "num": "75",
+    "name": "Captain America (Sam Wilson)",
+    "isInsert": true
+   },
+   {
+    "num": "76",
+    "name": "Daredevil",
+    "isInsert": true
+   },
+   {
+    "num": "77",
+    "name": "Shang-Chi",
+    "isInsert": true
+   },
+   {
+    "num": "78",
+    "name": "Bullseye",
+    "isInsert": true
+   },
+   {
+    "num": "79",
+    "name": "Sentry",
+    "isInsert": true
+   },
+   {
+    "num": "80",
+    "name": "Howard the Duck",
+    "isInsert": true
+   },
+   {
+    "num": "81",
+    "name": "Beast",
+    "isInsert": true
+   },
+   {
+    "num": "82",
+    "name": "Iron Patriot",
+    "isInsert": true
+   },
+   {
+    "num": "83",
+    "name": "Gamora",
+    "isInsert": true
+   },
+   {
+    "num": "84",
+    "name": "Killmonger",
+    "isInsert": true
+   },
+   {
+    "num": "85",
+    "name": "Rogue",
+    "isInsert": true
+   },
+   {
+    "num": "86",
+    "name": "Wonder Man",
+    "isInsert": true
+   },
+   {
+    "num": "87",
+    "name": "Human Torch",
+    "isInsert": true
+   },
+   {
+    "num": "88",
+    "name": "Kitty Pryde",
+    "isInsert": true
+   },
+   {
+    "num": "89",
+    "name": "Nova",
+    "isInsert": true
+   },
+   {
+    "num": "90",
+    "name": "Doctor Strange",
+    "isInsert": true
+   },
+   {
+    "num": "91",
+    "name": "Adam Warlock",
+    "isInsert": true
+   },
+   {
+    "num": "92",
+    "name": "Doctor Octopus",
+    "isInsert": true
+   },
+   {
+    "num": "93",
+    "name": "Kingpin",
+    "isInsert": true
+   },
+   {
+    "num": "94",
+    "name": "Captain Marvel",
+    "isInsert": true
+   },
+   {
+    "num": "95",
+    "name": "Odin",
+    "isInsert": true
+   },
+   {
+    "num": "96",
+    "name": "Star-Lord",
+    "isInsert": true
+   },
+   {
+    "num": "97",
+    "name": "Nightcrawler",
+    "isInsert": true
+   },
+   {
+    "num": "98",
+    "name": "Annihilus",
+    "isInsert": true
+   },
+   {
+    "num": "99",
+    "name": "Ghost Rider",
+    "isInsert": true
+   },
+   {
+    "num": "100",
+    "name": "Electro",
+    "isInsert": true
+   },
+   {
+    "num": "101",
+    "name": "Black Panther",
+    "isInsert": true
+   },
+   {
+    "num": "102",
+    "name": "Venom",
+    "isInsert": true
+   },
+   {
+    "num": "103",
+    "name": "Spider-Man",
+    "isInsert": true
+   },
+   {
+    "num": "104",
+    "name": "Cyclops",
+    "isInsert": true
+   },
+   {
+    "num": "105",
+    "name": "Sabretooth",
+    "isInsert": true
+   },
+   {
+    "num": "106",
+    "name": "Loki",
+    "isInsert": true
+   },
+   {
+    "num": "107",
+    "name": "Storm",
+    "isInsert": true
+   },
+   {
+    "num": "108",
+    "name": "Jean Grey",
+    "isInsert": true
+   },
+   {
+    "num": "109",
+    "name": "Silver Surfer",
+    "isInsert": true
+   },
+   {
+    "num": "110",
+    "name": "Captain America",
+    "isInsert": true
+   },
+   {
+    "num": "111",
+    "name": "Miles Morales",
+    "isInsert": true
+   },
+   {
+    "num": "112",
+    "name": "Hulk",
+    "isInsert": true
+   },
+   {
+    "num": "113",
+    "name": "Thor",
+    "isInsert": true
+   },
+   {
+    "num": "114",
+    "name": "Apocalypse",
+    "isInsert": true
+   },
+   {
+    "num": "115",
+    "name": "Moon Knight",
+    "isInsert": true
+   },
+   {
+    "num": "116",
+    "name": "Galactus",
+    "isInsert": true
+   },
+   {
+    "num": "117",
+    "name": "Thanos",
+    "isInsert": true
+   },
+   {
+    "num": "118",
+    "name": "Iron Man",
+    "isInsert": true
+   },
+   {
+    "num": "119",
+    "name": "Namor",
+    "isInsert": true
+   },
+   {
+    "num": "120",
+    "name": "Spider-Woman",
+    "isInsert": true
+   },
+   {
+    "num": "121",
+    "name": "Wolverine",
+    "isInsert": true
+   },
+   {
+    "num": "122",
+    "name": "Doctor Doom",
+    "isInsert": true
+   },
+   {
+    "num": "123",
+    "name": "Jeff the Land Shark",
+    "isInsert": true
+   },
+   {
+    "num": "124",
+    "name": "Professor X",
+    "isInsert": true
+   },
+   {
+    "num": "125",
+    "name": "Magneto",
+    "isInsert": true
+   }
+  ]
+ },
+ {
+  "name": "SDCC EXCLUSIVE",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "SDCC-S",
+    "name": "Spider-Man",
+    "isInsert": true
+   },
+   {
+    "num": "SDCC-H",
+    "name": "Hulk",
+    "isInsert": true
+   },
+   {
+    "num": "SDCC-P",
+    "name": "Punisher",
+    "isInsert": true
+   }
+  ]
+ },
+ {
+  "name": "Mass Symbiiote Take Over",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "MS-1",
+    "name": "Knull",
+    "isInsert": true
+   },
+   {
+    "num": "MS-2",
+    "name": "Venom",
+    "isInsert": true
+   },
+   {
+    "num": "MS-3",
+    "name": "Major League Venom",
+    "isInsert": true
+   },
+   {
+    "num": "MS-4",
+    "name": "Scorpion",
+    "isInsert": true
+   },
+   {
+    "num": "MS-5",
+    "name": "Riot",
+    "isInsert": true
+   },
+   {
+    "num": "MS-6",
+    "name": "Carnage",
+    "isInsert": true
+   },
+   {
+    "num": "MS-7",
+    "name": "Agent Venom",
+    "isInsert": true
+   },
+   {
+    "num": "MS-8",
+    "name": "Mania",
+    "isInsert": true
+   },
+   {
+    "num": "MS-9",
+    "name": "Scream",
+    "isInsert": true
+   },
+   {
+    "num": "MS-10",
+    "name": "She-Venom",
+    "isInsert": true
+   },
+   {
+    "num": "MS-11",
+    "name": "Symbiote Spider-Man 2099",
+    "isInsert": true
+   },
+   {
+    "num": "MS-12",
+    "name": "Silence",
+    "isInsert": true
+   },
+   {
+    "num": "MS-13",
+    "name": "Venom 2099",
+    "isInsert": true
+   },
+   {
+    "num": "MS-14",
+    "name": "Agony",
+    "isInsert": true
+   },
+   {
+    "num": "MS-15",
+    "name": "Jeff the Venomized Land Shark",
+    "isInsert": true
+   },
+   {
+    "num": "MS-16",
+    "name": "Phage",
+    "isInsert": true
+   },
+   {
+    "num": "MS-17",
+    "name": "Sleeper",
+    "isInsert": true
+   },
+   {
+    "num": "MS-18",
+    "name": "Scorn",
+    "isInsert": true
+   },
+   {
+    "num": "MS-19",
+    "name": "Grendel",
+    "isInsert": true
+   },
+   {
+    "num": "MS-20",
+    "name": "Wolverine",
+    "isInsert": true
+   },
+   {
+    "num": "MS-21",
+    "name": "Lasher",
+    "isInsert": true
+   },
+   {
+    "num": "MS-22",
+    "name": "Toxin",
+    "isInsert": true
+   },
+   {
+    "num": "MS-23",
+    "name": "Anti-Venom",
+    "isInsert": true
+   },
+   {
+    "num": "MS-24",
+    "name": "Red Goblin",
+    "isInsert": true
+   },
+   {
+    "num": "MS-25",
+    "name": "Spider-Man",
+    "isInsert": true
+   },
+   {
+    "num": "MS-26",
+    "name": "Mary Jane",
+    "isInsert": true
+   },
+   {
+    "num": "MS-27",
+    "name": "Misery",
+    "isInsert": true
+   },
+   {
+    "num": "MS-28",
+    "name": "Black Cat",
+    "isInsert": true
+   },
+   {
+    "num": "MS-29",
+    "name": "Widow",
+    "isInsert": true
+   },
+   {
+    "num": "MS-30",
+    "name": "Loki",
+    "isInsert": true
+   }
+  ]
+ },
+ {
+  "name": "Cerebro",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "1",
+    "name": "Professor X",
+    "isInsert": true
+   },
+   {
+    "num": "2",
+    "name": "Quicksilver",
+    "isInsert": true
+   },
+   {
+    "num": "3",
+    "name": "Hulk",
+    "isInsert": true
+   },
+   {
+    "num": "4",
+    "name": "Doctor Doom",
+    "isInsert": true
+   },
+   {
+    "num": "5",
+    "name": "Wolverine",
+    "isInsert": true
+   },
+   {
+    "num": "6",
+    "name": "Blade",
+    "isInsert": true
+   },
+   {
+    "num": "7",
+    "name": "Scarlet Witch",
+    "isInsert": true
+   },
+   {
+    "num": "8",
+    "name": "Havok",
+    "isInsert": true
+   },
+   {
+    "num": "9",
+    "name": "Doctor Strange",
+    "isInsert": true
+   },
+   {
+    "num": "10",
+    "name": "Storm",
+    "isInsert": true
+   },
+   {
+    "num": "11",
+    "name": "Cable",
+    "isInsert": true
+   },
+   {
+    "num": "12",
+    "name": "The Thing",
+    "isInsert": true
+   },
+   {
+    "num": "13",
+    "name": "Rogue",
+    "isInsert": true
+   },
+   {
+    "num": "14",
+    "name": "Moon Knight",
+    "isInsert": true
+   },
+   {
+    "num": "15",
+    "name": "Magneto",
+    "isInsert": true
+   },
+   {
+    "num": "16",
+    "name": "Kitty Pryde",
+    "isInsert": true
+   },
+   {
+    "num": "17",
+    "name": "Ghost Rider",
+    "isInsert": true
+   },
+   {
+    "num": "18",
+    "name": "Iceman",
+    "isInsert": true
+   },
+   {
+    "num": "19",
+    "name": "Jean Grey",
+    "isInsert": true
+   },
+   {
+    "num": "20",
+    "name": "Miles Morales",
+    "isInsert": true
+   },
+   {
+    "num": "21",
+    "name": "Forge",
+    "isInsert": true
+   },
+   {
+    "num": "22",
+    "name": "Mister Fantastic",
+    "isInsert": true
+   },
+   {
+    "num": "23",
+    "name": "Cyclops",
+    "isInsert": true
+   },
+   {
+    "num": "24",
+    "name": "Angel",
+    "isInsert": true
+   },
+   {
+    "num": "25",
+    "name": "Captain America",
+    "isInsert": true
+   },
+   {
+    "num": "26",
+    "name": "Thanos",
+    "isInsert": true
+   },
+   {
+    "num": "27",
+    "name": "Nightcrawler",
+    "isInsert": true
+   },
+   {
+    "num": "28",
+    "name": "Beast",
+    "isInsert": true
+   },
+   {
+    "num": "29",
+    "name": "Mystique",
+    "isInsert": true
+   },
+   {
+    "num": "30",
+    "name": "Hope Summers",
+    "isInsert": true
+   },
+   {
+    "num": "31",
+    "name": "X-23",
+    "isInsert": true
+   },
+   {
+    "num": "32",
+    "name": "Apocalypse",
+    "isInsert": true
+   },
+   {
+    "num": "33",
+    "name": "Colossus",
+    "isInsert": true
+   },
+   {
+    "num": "34",
+    "name": "Sabretooth",
+    "isInsert": true
+   },
+   {
+    "num": "35",
+    "name": "Legion",
+    "isInsert": true
+   },
+   {
+    "num": "36",
+    "name": "Gambit",
+    "isInsert": true
+   },
+   {
+    "num": "37",
+    "name": "Human Torch",
+    "isInsert": true
+   },
+   {
+    "num": "38",
+    "name": "Polaris",
+    "isInsert": true
+   },
+   {
+    "num": "39",
+    "name": "Domino",
+    "isInsert": true
+   },
+   {
+    "num": "40",
+    "name": "Phoenix",
+    "isInsert": true
+   },
+   {
+    "num": "41",
+    "name": "Daredevil",
+    "isInsert": true
+   },
+   {
+    "num": "42",
+    "name": "Rachel Summers",
+    "isInsert": true
+   },
+   {
+    "num": "43",
+    "name": "Thor",
+    "isInsert": true
+   },
+   {
+    "num": "44",
+    "name": "Magik",
+    "isInsert": true
+   },
+   {
+    "num": "45",
+    "name": "Jubilee",
+    "isInsert": true
+   },
+   {
+    "num": "46",
+    "name": "Emma Frost",
+    "isInsert": true
+   },
+   {
+    "num": "47",
+    "name": "Psylocke",
+    "isInsert": true
+   },
+   {
+    "num": "48",
+    "name": "Bishop",
+    "isInsert": true
+   },
+   {
+    "num": "49",
+    "name": "Juggernaut",
+    "isInsert": true
+   },
+   {
+    "num": "50",
+    "name": "Spider-Man",
+    "isInsert": true
+   },
+   {
+    "num": "51",
+    "name": "Black Widow",
+    "isInsert": true
+   },
+   {
+    "num": "52",
+    "name": "Venom",
+    "isInsert": true
+   },
+   {
+    "num": "53",
+    "name": "Onslaught",
+    "isInsert": true
+   },
+   {
+    "num": "54",
+    "name": "Invisible Woman",
+    "isInsert": true
+   },
+   {
+    "num": "55",
+    "name": "Black Panther",
+    "isInsert": true
+   }
+  ]
+ },
+ {
+  "name": "Marvel Cut Signature",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "CS-SL",
+    "name": "Stan Lee",
+    "isInsert": true
+   }
+  ]
+ },
+ {
+  "name": "Chrome Autographs - Comic Creators",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "CA-AK",
+    "name": "Adam Kubert",
+    "isInsert": true
+   },
+   {
+    "num": "CA-AG",
+    "name": "Adi Granov",
+    "isInsert": true
+   },
+   {
+    "num": "CA-ANK",
+    "name": "Andy Kubert",
+    "isInsert": true
+   },
+   {
+    "num": "CA-AAD",
+    "name": "Arthur Adams",
+    "isInsert": true
+   },
+   {
+    "num": "CA-BS",
+    "name": "Bill Sienkiewicz",
+    "isInsert": true
+   },
+   {
+    "num": "CA-CY",
+    "name": "Christopher Yost",
+    "isInsert": true
+   },
+   {
+    "num": "CA-CK",
+    "name": "Craig Kyle",
+    "isInsert": true
+   },
+   {
+    "num": "CA-DCT",
+    "name": "Donny Cates",
+    "isInsert": true
+   },
+   {
+    "num": "CA-FM",
+    "name": "Frank Miller",
+    "isInsert": true
+   },
+   {
+    "num": "CA-GC",
+    "name": "Greg Capullo",
+    "isInsert": true
+   },
+   {
+    "num": "CA-JAA",
+    "name": "Jason Aaron",
+    "isInsert": true
+   },
+   {
+    "num": "CA-JH",
+    "name": "Jonathan Hickman",
+    "isInsert": true
+   },
+   {
+    "num": "CA-JC",
+    "name": "Joshua Cassara",
+    "isInsert": true
+   },
+   {
+    "num": "CA-LP",
+    "name": "Lucio Parrillo",
+    "isInsert": true
+   },
+   {
+    "num": "CA-MS",
+    "name": "Marc Silvestri",
+    "isInsert": true
+   },
+   {
+    "num": "CA-MB",
+    "name": "Mark Brooks",
+    "isInsert": true
+   },
+   {
+    "num": "CA-MBA",
+    "name": "Mark Bagley",
+    "isInsert": true
+   },
+   {
+    "num": "CA-MZ",
+    "name": "Mike Zeck",
+    "isInsert": true
+   },
+   {
+    "num": "CA-PM",
+    "name": "Paco Medina",
+    "isInsert": true
+   },
+   {
+    "num": "CA-RRS",
+    "name": "Rod Reis",
+    "isInsert": true
+   },
+   {
+    "num": "CA-RO",
+    "name": "Ryan Ottley",
+    "isInsert": true
+   },
+   {
+    "num": "CA-RS",
+    "name": "Ryan Stegman",
+    "isInsert": true
+   },
+   {
+    "num": "CA-SW",
+    "name": "Scott Williams",
+    "isInsert": true
+   },
+   {
+    "num": "CA-SM",
+    "name": "Steve McNiven",
+    "isInsert": true
+   },
+   {
+    "num": "CA-TD",
+    "name": "Tony Daniel",
+    "isInsert": true
+   },
+   {
+    "num": "CA-WP",
+    "name": "Whilce Portacio",
+    "isInsert": true
+   },
+   {
+    "num": "CA-ZW",
+    "name": "Zeb Wells",
+    "isInsert": true
+   }
+  ]
+ },
+ {
+  "name": "Chrome Autographs - Marvel Studios",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "CA-BC",
+    "name": "Bradley Cooper - Rocket - Guardians of the Galaxy Vol. 2",
+    "isInsert": true
+   },
+   {
+    "num": "CA-HS",
+    "name": "Hailee Steinfeld - Kate Bishop - Hawkeye",
+    "isInsert": true
+   },
+   {
+    "num": "CA-HJ",
+    "name": "Hugh Jackman - Wolverine - Deadpool & Wolverine",
+    "isInsert": true
+   },
+   {
+    "num": "CA-OI",
+    "name": "Oscar Isaac - Moon Knight - Moon Knight",
+    "isInsert": true
+   },
+   {
+    "num": "CA-SLJ",
+    "name": "Samuel L. Jackson - Nick Fury - Marvel's The Avengers",
+    "isInsert": true
+   },
+   {
+    "num": "CA-VDO",
+    "name": "Vincent D'Onofrio - Mayor Wilson Fisk - Daredevil: Born Again",
+    "isInsert": true
+   }
+  ]
+ },
+ {
+  "name": "Spider-Man Comic Cuts",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "CC-ASM5",
+    "name": "The Amazing Spider-Man (1963) #5",
+    "isInsert": true
+   },
+   {
+    "num": "CC-ASM16",
+    "name": "The Amazing Spider-Man (1963) #16",
+    "isInsert": true
+   },
+   {
+    "num": "CC-ASM20",
+    "name": "The Amazing Spider-Man (1963) #20",
+    "isInsert": true
+   },
+   {
+    "num": "CC-DD16",
+    "name": "Daredevil (1964) #16",
+    "isInsert": true
+   },
+   {
+    "num": "CC-UXM35",
+    "name": "Uncanny X-Men (1963) #35",
+    "isInsert": true
+   },
+   {
+    "num": "CC-ASM100",
+    "name": "The Amazing Spider-Man (1963) #100",
+    "isInsert": true
+   },
+   {
+    "num": "CC-ASM101",
+    "name": "The Amazing Spider-Man (1963) #101",
+    "isInsert": true
+   },
+   {
+    "num": "CC-ASM134",
+    "name": "The Amazing Spider-Man (1963) #134",
+    "isInsert": true
+   },
+   {
+    "num": "CC-MTU27",
+    "name": "Marvel Team-Up (1972) #27",
+    "isInsert": true
+   },
+   {
+    "num": "CC-MTUA1",
+    "name": "Marvel Team-Up Annual (1976) #1",
+    "isInsert": true
+   },
+   {
+    "num": "CC-MTU43",
+    "name": "Marvel Team-Up (1972) #43",
+    "isInsert": true
+   },
+   {
+    "num": "CC-MTU53",
+    "name": "Marvel Team-Up (1972) #53",
+    "isInsert": true
+   },
+   {
+    "num": "CC-MTU54",
+    "name": "Marvel Team-Up (1972) #54",
+    "isInsert": true
+   },
+   {
+    "num": "CC-MTU150",
+    "name": "Marvel Team-Up (1972) #150",
+    "isInsert": true
+   },
+   {
+    "num": "CC-ASM345",
+    "name": "The Amazing Spider-Man (1963) #345",
+    "isInsert": true
+   }
+  ]
+ },
+ {
+  "name": "Sketch Cards - Spidy Villains",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "Adam Fields",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Adam Harris",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Aditya Chandra",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Al Stefano",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Alcione Silva",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Alessandro Micelli",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Allen Serrano",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Andy Tiu",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Angelo De Capua",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Ariel Aguire",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Brent Ragland",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Carlo Allen Victoria",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Charlie Cody",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Chris Botterill",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Chris Meeks",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Christoffer Allen Victoria",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Christopher Foreman",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Cisco Rivera",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Daniel M Chavez",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Daniel Riveron",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Danishson Borgonos",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Darrin Pepe",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Débora Centeio",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Dexter Wee",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Don Mark Noceda",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Dove Mchargue",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Duke",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "DYJ",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Dylan Riley",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Elisa Raffaelli",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Elisabete Silva",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Elvin Hernandez",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Emmanuel Villafaña \"Emmvill\"",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Eric Lehtonen",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Ernest Romero",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Fabio Ramacci",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Frank A. Kadar",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Franklim Teixeira",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Gener Pedrina",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "George Vega",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Gilbert Perez",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Greg Treize",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Hector Barros",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Honeybee Federeso",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Ian Quirante",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Ian Sateikis",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Isiah Bradley",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Jason Queen",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Jason Christner",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Jason Rodriguez",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Jason Saldajeno",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Jason Sobol",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Jessica Court",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Jessica Hickman",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Jezreel Rojales",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Jiaxin \"Yinshan\" Sun",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Jim O'riley",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "John Pleak",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "John Paul Howard",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Johnruzel Jimenez",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "José David Lima Da Silva",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Joshua Nunez",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Lauro Santiago",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Lee Lightfoot",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Leon Braojos",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Lucas Ackerman",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Marcelino Servicio",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Marcia Dye",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Marlo Martos",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Matt Stewart",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Michael Mastermaker",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Mirko Di Noia",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Mohammad Jilani",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Nathan Nelson",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Nick Gribbon",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Noval Hernawan",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Patricio Carrasco",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Percival Kholoma",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Rich Hennemann",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Richard Valbuena",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Robert Blancas",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Robert Demers",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Roberto Mamani",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Ronel Gravo",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Rustico Limosinero Jr.",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Sherwin Santiago",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Stephane Leonardi",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Steve Alce",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Sturdy",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Tim Shinn",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Toma",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Uko Smith",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   },
+   {
+    "num": "Vincenzo D'ippolito",
+    "name": "Sketch Cards - Spidy Villains",
+    "isInsert": true
+   }
+  ]
+ }
+]
