@@ -1,3 +1,4 @@
+import { optimizedImageUrl } from "@/lib/utils";
 import { useState } from "react";
 import { SIDE_KICK_CARD_LIMIT } from "@shared/schema";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -453,10 +454,11 @@ export function CardGrid({
                   <div className="w-14 h-20 bg-gray-100 rounded overflow-hidden flex-shrink-0">
                     {card.frontImageUrl ? (
                       <img
-                        src={card.frontImageUrl}
+                        src={optimizedImageUrl(card.frontImageUrl, 56)}
                         alt={card.name}
                         className="w-full h-full object-cover"
                         loading="lazy"
+                        decoding="async"
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">

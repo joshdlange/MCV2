@@ -1,3 +1,4 @@
+import { optimizedImageUrl } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link, useParams, useSearch, useLocation } from "wouter";
@@ -383,10 +384,11 @@ function AddCardsDialog({
                     <div className="w-9 h-12 rounded bg-gray-100 overflow-hidden shrink-0">
                       {card.frontImageUrl ? (
                         <img
-                          src={card.frontImageUrl}
+                          src={optimizedImageUrl(card.frontImageUrl, 48)}
                           alt={card.name}
                           className="w-full h-full object-cover"
                           loading="lazy"
+                          decoding="async"
                         />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200" />
@@ -962,9 +964,10 @@ export default function PcBinderDetail() {
                 <div className="relative aspect-[2.5/3.5] bg-gray-100 overflow-hidden">
                   {card.frontImageUrl ? (
                     <img
-                      src={card.frontImageUrl}
+                      src={optimizedImageUrl(card.frontImageUrl, 300)}
                       alt={card.name}
                       loading="lazy"
+                      decoding="async"
                       className={`w-full h-full object-cover transition-transform duration-200 group-hover:scale-105 ${
                         card.owned ? "" : "grayscale opacity-60"
                       }`}

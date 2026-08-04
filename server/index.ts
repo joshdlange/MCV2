@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import compression from "compression";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startImageProcessor } from "./image-processor";
@@ -14,6 +15,9 @@ const app = express();
 // Support both URL patterns: /api/stripe-webhook and /api/stripe/webhook
 app.use('/api/stripe-webhook', express.raw({ type: 'application/json' }));
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
+
+// Compress API/JSON and other compressible responses (skips images automatically)
+app.use(compression());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -38,7 +42,8 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
+      // Serializing full response bodies is CPU overhead; skip in production
+      if (capturedJsonResponse && process.env.NODE_ENV !== "production") {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
 

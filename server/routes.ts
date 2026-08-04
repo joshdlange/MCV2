@@ -2,6 +2,7 @@ import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { getCachedUser, setCachedUser } from "./user-cache";
 import { insertCardSetSchema, insertCardSchema, insertUserCollectionSchema, insertUserWishlistSchema, insertUserSchema, insertMainSetSchema, insertFriendSchema, insertMessageSchema, insertBadgeSchema, insertUserBadgeSchema } from "../shared/schema";
 import { z } from "zod";
 import multer from "multer";
@@ -95,9 +96,15 @@ const authenticateUser = async (req: any, res: any, next: any) => {
   
   try {
     const decodedToken = await admin.auth().verifyIdToken(token);
-    
-    const user = await storage.getUserByFirebaseUid(decodedToken.uid);
-    
+
+    // Short-lived cache (30s) avoids a DB round trip on every authenticated request;
+    // invalidated in storage.updateUser/deleteUser so plan/admin changes stay fresh.
+    let user = getCachedUser(decodedToken.uid);
+    if (!user) {
+      user = await storage.getUserByFirebaseUid(decodedToken.uid);
+      if (user) setCachedUser(decodedToken.uid, user);
+    }
+
     if (!user) {
       return res.status(404).json({ message: 'User not found in database' });
     }

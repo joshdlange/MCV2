@@ -1,3 +1,4 @@
+import { optimizedImageUrl } from "@/lib/utils";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
@@ -456,9 +457,11 @@ export default function PcBinders() {
                     <div className="relative h-40 bg-gray-100 rounded-t-lg overflow-hidden">
                       {binder.coverImageUrl ? (
                         <img
-                          src={binder.coverImageUrl}
+                          src={optimizedImageUrl(binder.coverImageUrl, 400)}
                           alt={binder.name}
                           className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-200"
+                          loading="lazy"
+                          decoding="async"
                         />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">

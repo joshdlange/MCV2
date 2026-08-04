@@ -1,3 +1,4 @@
+import { invalidateUserById } from "./user-cache";
 import { 
   users, 
   mainSets,
@@ -350,6 +351,7 @@ export class DatabaseStorage implements IStorage {
         .set(insertUser)
         .where(eq(users.id, id))
         .returning();
+      invalidateUserById(id);
       return user || undefined;
     } catch (error) {
       console.error('Error updating user:', error);
@@ -359,6 +361,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteUser(id: number): Promise<void> {
     try {
+      invalidateUserById(id);
       await db.delete(users).where(eq(users.id, id));
     } catch (error) {
       console.error('Error deleting user:', error);

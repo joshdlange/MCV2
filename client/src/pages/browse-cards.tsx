@@ -1,3 +1,4 @@
+import { optimizedImageUrl } from "@/lib/utils";
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -934,9 +935,11 @@ export default function BrowseCards() {
                       <div className="aspect-[2.5/3.5] bg-gray-100 rounded-t-lg overflow-hidden">
                         {card.frontImageUrl ? (
                           <img
-                            src={convertGoogleDriveUrl(card.frontImageUrl)}
+                            src={optimizedImageUrl(card.frontImageUrl, 300)}
                             alt={card.name}
                             className="w-full h-full object-cover"
+                            loading="lazy"
+                            decoding="async"
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-gray-400">

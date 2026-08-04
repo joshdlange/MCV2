@@ -1,3 +1,4 @@
+import { optimizedImageUrl } from "@/lib/utils";
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
@@ -62,10 +63,11 @@ function BinderSlot({ card, slotIndex, onClick, isPageComplete }: BinderSlotProp
       {isOwned && imageUrl ? (
         <div className="relative w-full h-full">
           <img
-            src={imageUrl}
+            src={optimizedImageUrl(imageUrl, 250)}
             alt={cardName}
             className="w-full h-full object-cover"
             loading="lazy"
+            decoding="async"
           />
           {isInsert && (
             <div className="absolute bottom-1 left-1 bg-purple-600/90 text-white rounded-full w-5 h-5 flex items-center justify-center shadow-lg">
