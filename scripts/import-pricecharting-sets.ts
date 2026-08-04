@@ -1,8 +1,48 @@
 import { db } from '../server/db';
 import { cardSets, cards } from '../shared/schema';
 import { eq, and } from 'drizzle-orm';
+import { cloudinary } from '../server/cloudinary';
 
 const PLACEHOLDER_IMAGE = 'https://res.cloudinary.com/dlwfuryyz/image/upload/v1748442577/card-placeholder_ysozlo.png';
+
+/**
+ * Re-host a PriceCharting image on Cloudinary at import time so we never
+ * store external URLs. Tries larger renditions (1600 → 500) before the URL's
+ * own size. Falls back to the placeholder if the image can't be fetched —
+ * the background migration worker is NOT expected to fix imports anymore.
+ */
+async function rehostOnCloudinary(externalUrl: string | undefined): Promise<string> {
+  if (!externalUrl) return PLACEHOLDER_IMAGE;
+  if (externalUrl.includes('cloudinary.com')) return externalUrl;
+
+  const candidates: string[] = [];
+  const m = externalUrl.match(/^(https?:\/\/storage\.googleapis\.com\/images\.pricecharting\.com\/.*\/)(\d+)(\.jpg)$/);
+  if (m) {
+    for (const size of ['1600', '500']) {
+      if (size !== m[2]) candidates.push(`${m[1]}${size}${m[3]}`);
+    }
+  }
+  candidates.push(externalUrl);
+
+  for (const candidate of candidates) {
+    try {
+      const result = await cloudinary.uploader.upload(candidate, {
+        folder: 'marvel-cards/pricecharting-import',
+        resource_type: 'image',
+        timeout: 60_000,
+        transformation: [
+          { width: 800, height: 1120, crop: 'fit', quality: 'auto' },
+          { format: 'auto' },
+        ],
+      });
+      if (result?.secure_url) return result.secure_url;
+    } catch {
+      // try next candidate
+    }
+  }
+  console.warn(`  ⚠️ Could not re-host image, using placeholder: ${externalUrl}`);
+  return PLACEHOLDER_IMAGE;
+}
 
 interface PriceChartingProduct {
   id: string;
@@ -179,7 +219,7 @@ async function importSet(setName: string, stats: ImportStats): Promise<void> {
       stats.setsSkipped++;
     } else {
       const firstProductWithImage = setProducts.find(p => p.image);
-      const setImage = firstProductWithImage?.image || PLACEHOLDER_IMAGE;
+      const setImage = await rehostOnCloudinary(firstProductWithImage?.image);
       
       const [newSet] = await db.insert(cardSets).values({
         name: actualSetName,
@@ -221,7 +261,7 @@ async function importSet(setName: string, stats: ImportStats): Promise<void> {
         name: cardName,
         variation: null,
         isInsert: false,
-        frontImageUrl: product.image || PLACEHOLDER_IMAGE,
+        frontImageUrl: await rehostOnCloudinary(product.image),
         backImageUrl: null,
         alternateImages: [],
         description: product['product-name'],

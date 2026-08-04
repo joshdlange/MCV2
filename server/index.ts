@@ -2,7 +2,6 @@ import express, { type Request, Response, NextFunction } from "express";
 import compression from "compression";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { startImageProcessor } from "./image-processor";
 import { startBackgroundPricing } from "./background-pricing";
 import { warmPool } from "./db";
 import path from "path";
@@ -110,9 +109,6 @@ app.use((req, res, next) => {
 
   // Start background services
   console.log('Starting background services...');
-  // Image processor disabled to prevent automatic mass processing
-  // Only run when explicitly needed via admin interface
-  // startImageProcessor();
   // Background pricing disabled to conserve eBay API calls
   // Only run when explicitly needed via admin interface
   // startBackgroundPricing();
@@ -143,10 +139,8 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
-    
-    // Start the background image processor
-    startImageProcessor();
-    
+
+
     // Nightly pricing backfill: prices cards that have an image but no
     // pricing data yet — up to 1,000/night at 3 AM CT (see ebay-pricing.ts).
     import('./ebay-pricing').then(({ startNightlyPricingBackfillCron }) => {
@@ -155,11 +149,11 @@ app.use((req, res, next) => {
       console.error('Failed to start nightly pricing backfill cron:', error);
     });
 
-    // Nightly COMC → Cloudinary image migration: copies hotlinked COMC images
-    // into our own Cloudinary account — up to 450/night at 1:30 AM CT
-    // (see services/imageMigration.ts).
-    import('./services/imageMigration').then(({ startImageMigrationCron }) => {
-      startImageMigrationCron();
+    // External → Cloudinary image migration worker: continuously (paced)
+    // copies all externally-hosted card images (PriceCharting, COMC, eBay, …)
+    // into our Cloudinary account until none remain (see services/imageMigration.ts).
+    import('./services/imageMigration').then(({ startImageMigrationWorker }) => {
+      startImageMigrationWorker();
     }).catch((error) => {
       console.error('Failed to start image migration cron:', error);
     });

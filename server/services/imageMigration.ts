@@ -1,176 +1,246 @@
-import { CronJob } from 'cron';
 import { db } from '../db';
 import { cards } from '../../shared/schema';
-import { sql, eq, or, like, notInArray, and } from 'drizzle-orm';
+import { sql, eq } from 'drizzle-orm';
 import { cloudinary } from '../cloudinary';
 
 /**
- * Nightly COMC → Cloudinary image migration.
+ * External → Cloudinary card image migration (all hosts, one pipeline).
  *
- * ~10.8k cards still hotlink images from img.comc.com. If COMC ever changes or
- * removes those URLs we lose the images, so this job gradually copies each one
- * into our own Cloudinary account and swaps the card's URL to the Cloudinary
- * copy. The URL swap happens ONLY after Cloudinary confirms a successful
- * upload, so a failed night can never break an image that works today.
+ * Any active card whose front/back image URL points at an external host
+ * (PriceCharting/googleapis, COMC, eBay, etc.) gets its image copied into our
+ * Cloudinary account and the card row updated to the Cloudinary URL. The URL
+ * swap happens ONLY after Cloudinary confirms a successful upload, so a failed
+ * attempt can never break an image that works today.
  *
- * Load safety (per user requirement: must not slow anything down):
- * - Runs at 1:30 AM CT, before the 3 AM pricing backfill, so the two nightly
- *   jobs never stack.
- * - Paced 4s per card (~450 cards in 30 min) — one small download + one
- *   Cloudinary upload at a time, never parallel.
- * - Postgres advisory lock so only one autoscale instance runs it.
- * - Aborts the run after 25 consecutive failures (e.g. COMC or Cloudinary
- *   outage) instead of hammering a broken service all night.
- * - Cards that fail are remembered in-process and skipped on later runs, so a
- *   handful of dead URLs can't block the queue (memory resets on redeploy,
- *   which gives dead URLs an occasional retry — intentional).
+ * Host specifics:
+ * - PriceCharting (storage.googleapis.com/images.pricecharting.com/…/240.jpg):
+ *   we try larger renditions (1600 → 500) before falling back to the stored
+ *   size, so migrated images are sharper than what we hotlink today.
+ * - COMC (img.comc.com): Cloudflare bot protection 403s our server (July 2026),
+ *   but Cloudinary's remote fetcher is not blocked — so ALL uploads go through
+ *   Cloudinary's remote fetch rather than downloading ourselves.
+ *
+ * Permanent failures: attempts are persisted in image_migration_failures.
+ * After MAX_ATTEMPTS failed attempts (spread across runs/boots) the dead URL
+ * is cleared to NULL ("no image") and recorded as status='cleared', so binders
+ * show the name placeholder instead of a broken frame. The ledger doubles as
+ * the report of what was cleared.
+ *
+ * Safety / resumability:
+ * - Postgres advisory lock so only one instance migrates at a time.
+ * - Progress is derived from the cards table itself (non-Cloudinary URL =
+ *   still pending), so the job is idempotent and resumes after any restart.
+ * - Paced (DELAY_MS between cards) and processes one card at a time.
+ * - Aborts after MAX_CONSECUTIVE_FAILURES (service outage) instead of hammering.
+ * - Worker starts shortly after boot and keeps going until nothing remains.
  */
 
-const NIGHTLY_LIMIT = 450;
-const DELAY_MS = 4_000;
+const DELAY_MS = parseInt(
+  process.env.IMAGE_MIGRATION_DELAY_MS ||
+  (process.env.NODE_ENV === 'development' ? '250' : '750'),
+);
 const MAX_CONSECUTIVE_FAILURES = 25;
 const UPLOAD_TIMEOUT_MS = 60_000;
-const RUN_CUTOFF_MS = 80 * 60 * 1000; // hard stop after 80 min so we never overlap the 3 AM pricing job
-const LOCK_KEY = 'nightly-image-migration';
-const COMC_MATCH = '%comc.com%';
+const MAX_ATTEMPTS = 3; // per URL before it's declared dead and cleared
+const BATCH_SIZE = 200;
+const LOCK_KEY = 'external-image-migration';
 
-let migrationRunning = false;
-let migrationLastRun: {
-  at: Date;
-  attempted: number;
-  migrated: number;
-  failed: number;
-  remaining: number;
-} | null = null;
-const skipCardIds = new Set<number>();
+// External-URL predicate shared by the picker query and the remaining count.
+const EXTERNAL_FRONT = sql`(front_image_url IS NOT NULL AND front_image_url != '' AND front_image_url NOT LIKE '%cloudinary.com%' AND front_image_url NOT LIKE '/uploads/%')`;
+const EXTERNAL_BACK = sql`(back_image_url IS NOT NULL AND back_image_url != '' AND back_image_url NOT LIKE '%cloudinary.com%' AND back_image_url NOT LIKE '/uploads/%')`;
+const PENDING_WHERE = sql`archived_at IS NULL AND (${EXTERNAL_FRONT} OR ${EXTERNAL_BACK})`;
+
+let running = false;
+let stopRequested = false;
+let bootStats = { attempted: 0, migrated: 0, failed: 0, cleared: 0 };
+let lastRun: { at: Date; attempted: number; migrated: number; failed: number; cleared: number; remaining: number } | null = null;
 
 export function getImageMigrationStatus() {
-  return { running: migrationRunning, lastRun: migrationLastRun, skippedThisBoot: skipCardIds.size };
+  return { running, thisBoot: bootStats, lastRun };
+}
+
+export function requestImageMigrationStop() {
+  stopRequested = true;
+}
+
+async function ensureLedgerTable(): Promise<void> {
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS image_migration_failures (
+    card_id integer NOT NULL,
+    side text NOT NULL,
+    url text NOT NULL,
+    attempts integer NOT NULL DEFAULT 0,
+    status text NOT NULL DEFAULT 'retrying',
+    last_error text,
+    updated_at timestamp NOT NULL DEFAULT now(),
+    PRIMARY KEY (card_id, side)
+  )`);
+}
+
+/** For PriceCharting images, candidate URLs from sharpest to stored size. */
+function candidateUrls(url: string): string[] {
+  const m = url.match(/^(https?:\/\/storage\.googleapis\.com\/images\.pricecharting\.com\/.*\/)(\d+)(\.jpg)$/);
+  if (m) {
+    const sizes = ['1600', '500'];
+    const list = sizes.filter((s) => s !== m[2]).map((s) => `${m[1]}${s}${m[3]}`);
+    list.push(url);
+    return list;
+  }
+  return [url];
+}
+
+/** Upload one external URL via Cloudinary remote fetch; returns secure_url. */
+async function uploadOne(url: string, cardId: number, side: 'front' | 'back'): Promise<string> {
+  let lastError: unknown;
+  for (const candidate of candidateUrls(url)) {
+    try {
+      const result = await cloudinary.uploader.upload(candidate, {
+        folder: 'marvel-cards/external-migration',
+        public_id: `card_${cardId}_${side}`,
+        overwrite: true,
+        resource_type: 'image',
+        timeout: UPLOAD_TIMEOUT_MS,
+        transformation: [
+          { width: 800, height: 1120, crop: 'fit', quality: 'auto' },
+          { format: 'auto' },
+        ],
+      });
+      if (!result?.secure_url) throw new Error('Cloudinary returned no URL');
+      return result.secure_url;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
 /**
- * Migrate one COMC image by letting Cloudinary fetch the URL directly from its
- * own servers. COMC put Cloudflare bot protection in front of img.comc.com
- * (July 2026), so downloads from our server get HTTP 403 — but Cloudinary's
- * fetchers are not blocked, and browsers still load the images fine.
- * Cloudinary validates the response is a real image and errors otherwise.
+ * Only definitive "this URL is dead" failures may ever lead to clearing an
+ * image. Timeouts, 5xx, rate limits, and network errors are transient — they
+ * update the cooldown timestamp but never increment the permanent counter,
+ * so an upstream/Cloudinary outage can never erase healthy URLs.
  */
-async function migrateOneUrl(url: string, cardId: number, side: 'front' | 'back'): Promise<string> {
-  const result = await cloudinary.uploader.upload(
-    url,
-    {
-      folder: 'marvel-cards/comc-migration',
-      public_id: `card_${cardId}_${side}`,
-      overwrite: true,
-      resource_type: 'image',
-      timeout: UPLOAD_TIMEOUT_MS,
-      transformation: [
-        { width: 800, height: 1120, crop: 'fit', quality: 'auto' },
-        { format: 'auto' },
-      ],
-    },
-  );
-  if (!result?.secure_url) throw new Error('Cloudinary returned no URL');
-  return result.secure_url;
+function isPermanentFailure(message: string): boolean {
+  return /\b(404|410)\b|not\s*found|resource not found|invalid image file|unsupported.*format/i.test(message);
 }
 
-export async function runImageMigrationBatch(maxCards: number = NIGHTLY_LIMIT): Promise<void> {
-  if (migrationRunning) {
-    console.warn('[ImageMigration] Previous run still in progress — skipping');
+async function recordFailure(cardId: number, side: 'front' | 'back', url: string, error: string, permanent: boolean): Promise<number> {
+  const increment = permanent ? 1 : 0;
+  const res = await db.execute(sql`
+    INSERT INTO image_migration_failures (card_id, side, url, attempts, status, last_error, updated_at)
+    VALUES (${cardId}, ${side}, ${url}, ${increment}, 'retrying', ${error.slice(0, 500)}, now())
+    ON CONFLICT (card_id, side) DO UPDATE
+      SET attempts = image_migration_failures.attempts + ${increment},
+          url = EXCLUDED.url,
+          last_error = EXCLUDED.last_error,
+          updated_at = now()
+    RETURNING attempts
+  `);
+  return parseInt((res.rows[0] as any)?.attempts ?? '0');
+}
+
+/** Migrate one card's external front/back images. Returns per-card outcome. */
+async function migrateCard(card: { id: number; frontImageUrl: string | null; backImageUrl: string | null }): Promise<'migrated' | 'failed' | 'cleared'> {
+  let outcome: 'migrated' | 'failed' | 'cleared' = 'migrated';
+  for (const side of ['front', 'back'] as const) {
+    const url = side === 'front' ? card.frontImageUrl : card.backImageUrl;
+    if (!url || url.includes('cloudinary.com') || url.startsWith('/uploads/')) continue;
+    const column = side === 'front' ? 'frontImageUrl' : 'backImageUrl';
+    try {
+      const secureUrl = await uploadOne(url, card.id, side);
+      await db.update(cards).set({ [column]: secureUrl }).where(eq(cards.id, card.id));
+      await db.execute(sql`DELETE FROM image_migration_failures WHERE card_id = ${card.id} AND side = ${side}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const permanent = isPermanentFailure(message);
+      const attempts = await recordFailure(card.id, side, url, message, permanent);
+      if (permanent && attempts >= MAX_ATTEMPTS) {
+        // Confirmed dead: clear to "no image" instead of leaving a broken URL.
+        await db.update(cards).set({ [column]: null }).where(eq(cards.id, card.id));
+        await db.execute(sql`UPDATE image_migration_failures SET status = 'cleared', updated_at = now() WHERE card_id = ${card.id} AND side = ${side}`);
+        console.warn(`[ImageMigration] Card ${card.id} ${side} cleared after ${attempts} failed attempts: ${url}`);
+        if (outcome !== 'failed') outcome = 'cleared';
+      } else {
+        console.error(`[ImageMigration] Card ${card.id} ${side} failed (attempt ${attempts}): ${message}`);
+        outcome = 'failed';
+      }
+    }
+  }
+  return outcome;
+}
+
+async function countRemaining(): Promise<number> {
+  const res = await db.execute(sql`SELECT COUNT(*) AS remaining FROM cards WHERE ${PENDING_WHERE}`);
+  return parseInt((res.rows[0] as any)?.remaining ?? '-1');
+}
+
+/**
+ * Run the migration until done (maxCards = Infinity) or up to maxCards cards.
+ * Resumable: derives its worklist live from the cards table each batch.
+ */
+export async function runImageMigrationBatch(maxCards: number = Number.POSITIVE_INFINITY): Promise<void> {
+  if (running) {
+    console.warn('[ImageMigration] Already running — skipping');
     return;
   }
-  migrationRunning = true;
-  let attempted = 0;
-  let migrated = 0;
-  let failed = 0;
-  let remaining = -1;
+  running = true;
+  stopRequested = false;
+  let attempted = 0, migrated = 0, failed = 0, cleared = 0;
   let lockAcquired = false;
 
   try {
-    const lockResult = await db.execute(
-      sql`SELECT pg_try_advisory_lock(hashtext(${LOCK_KEY})) AS locked`,
-    );
+    await ensureLedgerTable();
+
+    const lockResult = await db.execute(sql`SELECT pg_try_advisory_lock(hashtext(${LOCK_KEY})) AS locked`);
     lockAcquired = Boolean((lockResult.rows[0] as any)?.locked);
     if (!lockAcquired) {
       console.log('[ImageMigration] Another instance holds the lock — skipping on this instance');
       return;
     }
 
-    const comcCondition = or(
-      like(cards.frontImageUrl, COMC_MATCH),
-      like(cards.backImageUrl, COMC_MATCH),
-    );
-
-    // Exclude cards that already failed since this boot (cap the NOT IN list
-    // to keep the query sane — random ordering below makes stragglers harmless).
-    const skipIds = Array.from(skipCardIds).slice(0, 5000);
-    const whereClause = skipIds.length > 0
-      ? and(comcCondition, notInArray(cards.id, skipIds))
-      : comcCondition;
-
-    // Random order guarantees forward progress: a cluster of permanently-bad
-    // URLs at low ids can never monopolize every night's batch.
-    const targets = await db
-      .select({ id: cards.id, frontImageUrl: cards.frontImageUrl, backImageUrl: cards.backImageUrl })
-      .from(cards)
-      .where(whereClause)
-      .orderBy(sql`random()`)
-      .limit(maxCards);
-
-    if (targets.length === 0) {
-      console.log('[ImageMigration] No COMC-hosted images remain — migration complete');
-      remaining = 0;
-      return;
-    }
-
-    console.log(`[ImageMigration] Starting batch: ${targets.length} cards`);
     let consecutiveFailures = 0;
-    const runStartedAt = Date.now();
 
-    for (const card of targets) {
-      if (Date.now() - runStartedAt > RUN_CUTOFF_MS) {
-        console.log(`[ImageMigration] Run cutoff (${RUN_CUTOFF_MS / 60000} min) reached after ${attempted} cards — stopping for tonight`);
-        break;
-      }
-      if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-        console.error(`[ImageMigration] ${consecutiveFailures} consecutive failures — aborting run (likely COMC/Cloudinary outage)`);
-        break;
-      }
-      attempted++;
-      try {
-        const updates: Partial<{ frontImageUrl: string; backImageUrl: string }> = {};
-        if (card.frontImageUrl?.includes('comc.com')) {
-          updates.frontImageUrl = await migrateOneUrl(card.frontImageUrl, card.id, 'front');
+    outer: while (attempted < maxCards && !stopRequested) {
+      // Skip URLs still cooling down: rows with a 'retrying' ledger entry
+      // updated in the last 6h wait for a later pass, so a cluster of flaky
+      // URLs can't stall the queue; random order spreads load across hosts.
+      const batch = await db.execute(sql`
+        SELECT c.id, c.front_image_url AS "frontImageUrl", c.back_image_url AS "backImageUrl"
+        FROM cards c
+        WHERE ${PENDING_WHERE}
+          AND NOT EXISTS (
+            SELECT 1 FROM image_migration_failures f
+            WHERE f.card_id = c.id AND f.status = 'retrying' AND f.updated_at > now() - interval '6 hours'
+          )
+        ORDER BY random()
+        LIMIT ${Math.min(BATCH_SIZE, maxCards - attempted)}
+      `);
+      const targets = batch.rows as any[];
+      if (targets.length === 0) break;
+
+      for (const card of targets) {
+        if (stopRequested || attempted >= maxCards) break outer;
+        if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+          console.error(`[ImageMigration] ${consecutiveFailures} consecutive failures — aborting run (likely outage)`);
+          break outer;
         }
-        if (card.backImageUrl?.includes('comc.com')) {
-          updates.backImageUrl = await migrateOneUrl(card.backImageUrl, card.id, 'back');
-        }
-        if (Object.keys(updates).length > 0) {
-          await db.update(cards).set(updates).where(eq(cards.id, card.id));
-        }
-        migrated++;
-        consecutiveFailures = 0;
-      } catch (error) {
-        failed++;
-        consecutiveFailures++;
-        skipCardIds.add(card.id);
-        console.error(`[ImageMigration] Card ${card.id} failed:`, error instanceof Error ? error.message : error);
+        attempted++;
+        bootStats.attempted++;
+        const outcome = await migrateCard(card);
+        if (outcome === 'migrated') { migrated++; bootStats.migrated++; consecutiveFailures = 0; }
+        else if (outcome === 'cleared') { cleared++; bootStats.cleared++; consecutiveFailures = 0; }
+        else { failed++; bootStats.failed++; consecutiveFailures++; }
+        await new Promise((resolve) => setTimeout(resolve, DELAY_MS));
       }
-      await new Promise((resolve) => setTimeout(resolve, DELAY_MS));
     }
 
-    const remainingResult = await db.execute(sql`
-      SELECT COUNT(*) AS remaining FROM cards
-      WHERE front_image_url LIKE ${COMC_MATCH} OR back_image_url LIKE ${COMC_MATCH}
-    `);
-    remaining = parseInt((remainingResult.rows[0] as any)?.remaining ?? '-1');
-
-    console.log(`[ImageMigration] Done: ${migrated} migrated, ${failed} failed of ${attempted} attempted. ${remaining} COMC images remain.`);
+    const remaining = await countRemaining();
+    lastRun = { at: new Date(), attempted, migrated, failed, cleared, remaining };
+    console.log(`[ImageMigration] Run finished: ${migrated} migrated, ${cleared} cleared, ${failed} failed of ${attempted} attempted. ${remaining} cards with external images remain.`);
   } catch (error) {
     console.error('[ImageMigration] Run aborted:', error);
+    lastRun = { at: new Date(), attempted, migrated, failed, cleared, remaining: -1 };
   } finally {
-    migrationRunning = false;
-    migrationLastRun = { at: new Date(), attempted, migrated, failed, remaining };
+    running = false;
     if (lockAcquired) {
       try {
         await db.execute(sql`SELECT pg_advisory_unlock(hashtext(${LOCK_KEY}))`);
@@ -181,25 +251,21 @@ export async function runImageMigrationBatch(maxCards: number = NIGHTLY_LIMIT): 
   }
 }
 
-let migrationCronStarted = false;
+let workerStarted = false;
 
-export function startImageMigrationCron(): void {
-  if (migrationCronStarted) return;
-  migrationCronStarted = true;
+/**
+ * Start the background worker: waits 60s after boot, then migrates
+ * continuously (paced) until no external image URLs remain. Re-checks every
+ * 6h so retry-cooldown URLs get their later attempts without a redeploy.
+ */
+export function startImageMigrationWorker(): void {
+  if (workerStarted) return;
+  workerStarted = true;
 
-  const job = new CronJob(
-    '30 1 * * *', // 1:30 AM CT daily — finishes well before the 3 AM pricing backfill
-    async () => {
-      try {
-        await runImageMigrationBatch();
-      } catch (error) {
-        console.error('[ImageMigration] Cron error:', error);
-      }
-    },
-    null,
-    false,
-    'America/Chicago',
-  );
-  job.start();
-  console.log(`[ImageMigration] Cron started: daily 1:30 AM CT, up to ${NIGHTLY_LIMIT} COMC images/night`);
+  const kick = () => {
+    runImageMigrationBatch().catch((error) => console.error('[ImageMigration] Worker error:', error));
+  };
+  setTimeout(kick, 60_000);
+  setInterval(kick, 6 * 60 * 60 * 1000).unref();
+  console.log(`[ImageMigration] Worker scheduled: starts 60s after boot, paced ${DELAY_MS}ms/card, until all external card images are on Cloudinary`);
 }

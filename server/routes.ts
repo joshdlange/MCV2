@@ -1699,8 +1699,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin: manually trigger / check the COMC → Cloudinary image migration
-  // (normally runs nightly at 1:30 AM CT — see services/imageMigration.ts).
+  // Admin: manually trigger / check the external → Cloudinary image migration
+  // (a background worker also runs it automatically — see services/imageMigration.ts).
   app.post("/api/admin/run-image-migration", authenticateUser, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) {
@@ -1712,15 +1712,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(409).json({ message: 'Migration already running', status });
       }
       const rawMax = req.body?.maxCards;
-      const maxCards = rawMax === undefined ? 450 : parseInt(rawMax);
-      if (!Number.isInteger(maxCards) || maxCards < 1 || maxCards > 1000) {
-        return res.status(400).json({ message: 'maxCards must be an integer between 1 and 1000' });
+      const maxCards = rawMax === undefined ? Number.POSITIVE_INFINITY : parseInt(rawMax);
+      if (rawMax !== undefined && (!Number.isInteger(maxCards) || maxCards < 1)) {
+        return res.status(400).json({ message: 'maxCards must be a positive integer (omit to run to completion)' });
       }
       // Fire and forget — the run paces itself over many minutes
       runImageMigrationBatch(maxCards).catch(err =>
         console.error('[ImageMigration] Manual run failed:', err)
       );
-      res.json({ message: `Image migration started (up to ${maxCards} cards)` });
+      res.json({ message: Number.isFinite(maxCards) ? `Image migration started (up to ${maxCards} cards)` : 'Image migration started (runs to completion)' });
     } catch (error) {
       console.error('Trigger image migration error:', error);
       res.status(500).json({ message: 'Failed to start image migration' });
