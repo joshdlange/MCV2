@@ -105,6 +105,20 @@ app.use((req, res, next) => {
     console.error('Startup migration (cards archive columns) failed:', error);
   }
 
+  // Idempotent startup migration: fast text-search (trigram) support.
+  // Ensures pg_trgm + the search indexes exist in any environment so publish
+  // schema diffs never try to create them on a DB without the extension.
+  try {
+    const { db } = await import('./db');
+    const { sql } = await import('drizzle-orm');
+    await db.execute(sql`CREATE EXTENSION IF NOT EXISTS pg_trgm`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS cards_name_trgm_idx ON cards USING gin (name gin_trgm_ops)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS cards_variation_trgm_idx ON cards USING gin (variation gin_trgm_ops)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS card_sets_name_trgm_idx ON card_sets USING gin (name gin_trgm_ops)`);
+  } catch (error) {
+    console.error('Startup migration (pg_trgm search indexes) failed:', error);
+  }
+
   const server = await registerRoutes(app);
 
   // Start background services
