@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { Check, Heart, Star, RotateCcw, Edit, Trash2, Save, X, RefreshCw, Extern
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { buildInputFromCard, openEbaySearch } from "@/lib/ebayAffiliate";
 import { useAppStore } from "@/lib/store";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
@@ -68,9 +68,25 @@ export function CardDetailModal({
   const [showMarketplace, setShowMarketplace] = useState(false);
   const [showAdminTools, setShowAdminTools] = useState(false);
   
-  const { isAdminMode } = useAppStore();
+  const { isAdminMode, currentUser } = useAppStore();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [showQuantityControls, setShowQuantityControls] = useState(false);
+  useEffect(() => { setShowQuantityControls(false); }, [card?.id, isOpen]);
+
+  // Self-sufficient ownership lookup: shares the app-wide collection cache so
+  // every entry point (browse, binders, search, …) gets quantity for free.
+  // Props remain as an override for pages that already resolved the item.
+  const { data: ownCollection } = useQuery<any[]>({
+    queryKey: ['/api/collection'],
+    enabled: !!currentUser && isOpen,
+  });
+  const ownedItem = card
+    ? ownCollection?.find((item: any) => (item.card?.id ?? item.cardId) === card.id)
+    : undefined;
+  const effectiveItemId = collectionItemId ?? ownedItem?.id;
+  const effectiveQuantity = collectionQuantity ?? ownedItem?.quantity;
+  const showAsOwned = isInCollection || !!ownedItem;
   
   // eBay pricing hooks - enable autoFetch to display cached pricing data
   const { data: pricing, isLoading: isPricingLoading } = useCardPricing(card?.id || 0, true);
@@ -79,8 +95,8 @@ export function CardDetailModal({
   // Owner quantity update (min 1; removal stays a separate action)
   const updateQuantityMutation = useMutation({
     mutationFn: async (quantity: number) => {
-      if (!collectionItemId) throw new Error('No collection item');
-      return apiRequest('PATCH', `/api/collection/${collectionItemId}`, { quantity });
+      if (!effectiveItemId) throw new Error('No collection item');
+      return apiRequest('PATCH', `/api/collection/${effectiveItemId}`, { quantity });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
@@ -609,53 +625,34 @@ export function CardDetailModal({
               </div>
             )}
 
-            {/* Owned quantity - visible when the card is in the collection and we know the item */}
-            {!isEditing && isInCollection && collectionItemId != null && collectionQuantity != null && (
-              <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 px-3 py-2" data-testid="quantity-editor">
-                <span className="text-sm text-green-800 font-medium">
-                  You own {collectionQuantity} {collectionQuantity === 1 ? 'copy' : 'copies'}
-                </span>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    disabled={collectionQuantity <= 1 || updateQuantityMutation.isPending}
-                    onClick={() => updateQuantityMutation.mutate(collectionQuantity - 1)}
-                    data-testid="button-quantity-decrease"
-                  >
-                    −
-                  </Button>
-                  <span className="w-6 text-center text-sm font-semibold" data-testid="text-quantity">{collectionQuantity}</span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    disabled={updateQuantityMutation.isPending}
-                    onClick={() => updateQuantityMutation.mutate(collectionQuantity + 1)}
-                    data-testid="button-quantity-increase"
-                  >
-                    +
-                  </Button>
-                </div>
-              </div>
-            )}
-
             {/* Collection/Wishlist Actions - Always Visible */}
             {!isEditing && (
               <div className="grid grid-cols-2 gap-2">
-                {isInCollection ? (
-                  <Button 
-                    variant="outline" 
-                    onClick={() => onRemoveFromCollection?.()}
-                    data-testid="button-remove-from-collection"
-                    className="h-12 text-sm border-green-200 text-green-700 hover:bg-green-50"
-                  >
-                    <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-2">
-                      <Check className="w-3 h-3 text-white" />
-                    </div>
-                    In Collection
-                  </Button>
+                {showAsOwned ? (
+                  <div className="relative">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => onRemoveFromCollection?.()}
+                      data-testid="button-remove-from-collection"
+                      className="h-12 w-full text-sm border-green-200 text-green-700 hover:bg-green-50"
+                    >
+                      <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-2">
+                        <Check className="w-3 h-3 text-white" />
+                      </div>
+                      In Collection
+                    </Button>
+                    {effectiveItemId != null && effectiveQuantity != null && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setShowQuantityControls(v => !v); }}
+                        className="absolute -top-2 -right-2 min-w-[1.5rem] h-6 px-1.5 rounded-full bg-gray-100 border border-gray-300 text-gray-600 text-xs font-medium hover:bg-gray-200"
+                        title="Copies owned — tap to adjust"
+                        data-testid="button-quantity-toggle"
+                      >
+                        ×{effectiveQuantity}
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <Button 
                     onClick={() => onAddToCollection?.()}
@@ -687,6 +684,34 @@ export function CardDetailModal({
                     Add to Wishlist
                   </Button>
                 )}
+              </div>
+            )}
+
+            {/* Compact quantity stepper — revealed only via the ×N chip */}
+            {!isEditing && showAsOwned && showQuantityControls && effectiveItemId != null && effectiveQuantity != null && (
+              <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground" data-testid="quantity-editor">
+                <span>Copies owned:</span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7"
+                  disabled={effectiveQuantity <= 1 || updateQuantityMutation.isPending}
+                  onClick={() => updateQuantityMutation.mutate(effectiveQuantity - 1)}
+                  data-testid="button-quantity-decrease"
+                >
+                  −
+                </Button>
+                <span className="w-5 text-center font-medium text-foreground" data-testid="text-quantity">{effectiveQuantity}</span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7"
+                  disabled={updateQuantityMutation.isPending}
+                  onClick={() => updateQuantityMutation.mutate(effectiveQuantity + 1)}
+                  data-testid="button-quantity-increase"
+                >
+                  +
+                </Button>
               </div>
             )}
 
