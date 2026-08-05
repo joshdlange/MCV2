@@ -30,6 +30,7 @@ interface CardDetailModalProps {
   isInCollection?: boolean;
   isInWishlist?: boolean;
   collectionItemId?: number;
+  collectionQuantity?: number;
   onAddToCollection?: () => void;
   onAddToWishlist?: () => void;
   onRemoveFromCollection?: () => void;
@@ -44,6 +45,7 @@ export function CardDetailModal({
   isInCollection = false,
   isInWishlist = false,
   collectionItemId,
+  collectionQuantity,
   onAddToCollection,
   onAddToWishlist,
   onRemoveFromCollection,
@@ -73,6 +75,21 @@ export function CardDetailModal({
   // eBay pricing hooks - enable autoFetch to display cached pricing data
   const { data: pricing, isLoading: isPricingLoading } = useCardPricing(card?.id || 0, true);
   const refreshPricing = useRefreshCardPricing();
+
+  // Owner quantity update (min 1; removal stays a separate action)
+  const updateQuantityMutation = useMutation({
+    mutationFn: async (quantity: number) => {
+      if (!collectionItemId) throw new Error('No collection item');
+      return apiRequest('PATCH', `/api/collection/${collectionItemId}`, { quantity });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+    },
+    onError: () => {
+      toast({ title: "Failed to update quantity", variant: "destructive" });
+    }
+  });
 
   // Admin mutations
   const updateCardMutation = useMutation({
@@ -589,6 +606,38 @@ export function CardDetailModal({
                 {card.description && (
                   <p className="text-xs text-gray-400 mt-2 px-2">{card.description}</p>
                 )}
+              </div>
+            )}
+
+            {/* Owned quantity - visible when the card is in the collection and we know the item */}
+            {!isEditing && isInCollection && collectionItemId != null && collectionQuantity != null && (
+              <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 px-3 py-2" data-testid="quantity-editor">
+                <span className="text-sm text-green-800 font-medium">
+                  You own {collectionQuantity} {collectionQuantity === 1 ? 'copy' : 'copies'}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={collectionQuantity <= 1 || updateQuantityMutation.isPending}
+                    onClick={() => updateQuantityMutation.mutate(collectionQuantity - 1)}
+                    data-testid="button-quantity-decrease"
+                  >
+                    −
+                  </Button>
+                  <span className="w-6 text-center text-sm font-semibold" data-testid="text-quantity">{collectionQuantity}</span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={updateQuantityMutation.isPending}
+                    onClick={() => updateQuantityMutation.mutate(collectionQuantity + 1)}
+                    data-testid="button-quantity-increase"
+                  >
+                    +
+                  </Button>
+                </div>
               </div>
             )}
 

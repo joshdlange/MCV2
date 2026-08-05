@@ -1212,6 +1212,7 @@ export default function MyCollection() {
         }}
         isInCollection={selectedCard ? !!collection?.find(item => item.card.id === selectedCard.id) : false}
         collectionItemId={selectedCard ? collection?.find(item => item.card.id === selectedCard.id)?.id : undefined}
+        collectionQuantity={selectedCard ? collection?.find(item => item.card.id === selectedCard.id)?.quantity : undefined}
         onAddToCollection={() => {
           if (selectedCard) {
             if (currentUser?.plan !== 'SUPER_HERO' && (collection?.length || 0) >= COLLECTION_LIMIT) {

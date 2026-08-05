@@ -2729,12 +2729,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Shared guard for collection item updates: ownership + quantity validation.
+  // Returns null if OK, otherwise sends the error response and returns res.
+  async function guardCollectionUpdate(req: any, res: any, id: number, updates: any) {
+    if (isNaN(id)) {
+      res.status(400).json({ message: "Invalid collection item id" });
+      return res;
+    }
+    const [existing] = await db.select({ userId: userCollections.userId })
+      .from(userCollections).where(eq(userCollections.id, id)).limit(1);
+    if (!existing) {
+      res.status(404).json({ message: "Collection item not found" });
+      return res;
+    }
+    if (existing.userId !== req.user.id && !req.user.isAdmin) {
+      res.status(403).json({ message: "You can only update your own collection items" });
+      return res;
+    }
+    if ('quantity' in updates) {
+      const q = updates.quantity;
+      if (typeof q !== 'number' || !Number.isInteger(q) || q < 1 || q > 9999) {
+        res.status(400).json({ message: "Quantity must be a whole number of at least 1" });
+        return res;
+      }
+    }
+    return null;
+  }
+
   app.patch("/api/collection/:id", authenticateUser, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const updates = req.body;
       
       console.log('PATCH /api/collection/:id - updating collection item:', id, 'with:', updates);
+      if (await guardCollectionUpdate(req, res, id, updates)) return;
       
       // Check if user is trying to list for sale - require shipping address
       if (updates.isForSale === true) {
@@ -2773,6 +2801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const updates = req.body;
+      if (await guardCollectionUpdate(req, res, id, updates)) return;
       
       // Check if user is trying to list for sale - require shipping address
       if (updates.isForSale === true) {
