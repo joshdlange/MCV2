@@ -76,6 +76,25 @@ async function ensureLedgerTable(): Promise<void> {
   )`);
 }
 
+/**
+ * Cloudinary rejects uploads with plain error OBJECTS (e.g. { message,
+ * http_code }), not Error instances — String(error) yields "[object Object]",
+ * which hid every 404 from isPermanentFailure() and blocked clearing. Extract
+ * a real message (including the HTTP code) from whatever shape we get.
+ */
+function toErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  const e = error as any;
+  const msg = e?.message ?? e?.error?.message;
+  const code = e?.http_code ?? e?.error?.http_code;
+  if (msg || code) return [msg, code ? `(HTTP ${code})` : null].filter(Boolean).join(' ');
+  try {
+    return JSON.stringify(error).slice(0, 500);
+  } catch {
+    return String(error);
+  }
+}
+
 /** For PriceCharting images, candidate URLs from sharpest to stored size. */
 function candidateUrls(url: string): string[] {
   const m = url.match(/^(https?:\/\/storage\.googleapis\.com\/images\.pricecharting\.com\/.*\/)(\d+)(\.jpg)$/);
@@ -110,7 +129,7 @@ async function uploadOne(url: string, cardId: number, side: 'front' | 'back'): P
       lastError = error;
     }
   }
-  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+  throw lastError instanceof Error ? lastError : new Error(toErrorMessage(lastError));
 }
 
 /**
@@ -150,7 +169,7 @@ async function migrateCard(card: { id: number; frontImageUrl: string | null; bac
       await db.update(cards).set({ [column]: secureUrl }).where(eq(cards.id, card.id));
       await db.execute(sql`DELETE FROM image_migration_failures WHERE card_id = ${card.id} AND side = ${side}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = toErrorMessage(error);
       const permanent = isPermanentFailure(message);
       const attempts = await recordFailure(card.id, side, url, message, permanent);
       if (permanent && attempts >= MAX_ATTEMPTS) {

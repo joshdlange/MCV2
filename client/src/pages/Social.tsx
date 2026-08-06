@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppStore } from "@/lib/store";
+import whatnotLogo from "@/assets/whatnot-logo.png";
 
 interface Friend {
   id: number;
@@ -664,9 +665,22 @@ export default function Social() {
   return (
     <div className="container mx-auto p-6 max-w-6xl">
       {/* Clean minimal header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Social Hub</h1>
-        <p className="text-gray-500 text-sm mt-1">Connect with friends and share your collection</p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Social Hub</h1>
+          <p className="text-gray-500 text-sm mt-1">Connect with friends and share your collection</p>
+        </div>
+        {/* Unobtrusive Whatnot referral link */}
+        <a
+          href="https://www.whatnot.com/invite/joshdlange045"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 shrink-0 px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors"
+          title="Join us on Whatnot"
+        >
+          <img src={whatnotLogo} alt="Whatnot" className="w-4 h-4 rounded-sm object-contain" />
+          <span className="hidden sm:inline">Find us on Whatnot</span>
+        </a>
       </div>
 
       {/* Modern segmented pill tabs */}
