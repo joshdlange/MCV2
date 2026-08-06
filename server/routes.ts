@@ -38,6 +38,7 @@ import { sendEmail } from "./email";
 import { syncFirebaseUsersToBrevo } from "./contactsSync";
 import { sendResendEmail, sendPasswordResetEmail, verifyUnsubscribeToken } from "./services/emailService";
 import * as emailTriggers from "./services/emailTriggers";
+import { rehostCardImagesNow } from "./services/imageMigration";
 import { vaultUpgradeAnnouncementTemplate } from "./services/emailTemplates";
 import { startEmailCronJobs, startVaultUpgradeDripCron, runVaultUpgradeDripNow, getVaultUpgradeDripStatus } from "./jobs/emailCron";
 import { initializeUpcomingSets, syncRSSFeed, expireReleasedSets } from "./services/upcomingSetsSync";
@@ -2605,7 +2606,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!updatedCard) {
         return res.status(404).json({ message: "Card not found" });
       }
-      
+
+      // Same immediate re-host as the PATCH route: pasted external image
+      // links are copied to Cloudinary before they can expire. Best-effort.
+      if (validatedData.frontImageUrl || validatedData.backImageUrl) {
+        try {
+          const rehosted = await rehostCardImagesNow(id);
+          if (rehosted) {
+            updatedCard.frontImageUrl = rehosted.frontImageUrl;
+            updatedCard.backImageUrl = rehosted.backImageUrl;
+          }
+        } catch (rehostError) {
+          console.error('Immediate image re-host failed (save is intact):', rehostError);
+        }
+      }
+
       res.json(updatedCard);
     } catch (error) {
       console.error('Update card error:', error);
@@ -2633,7 +2648,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!updatedCard) {
         return res.status(404).json({ message: "Card not found" });
       }
-      
+
+      // If the admin pasted an external image link (eBay, COMC, ...), re-host
+      // it to Cloudinary immediately so the card never depends on a link that
+      // can expire. Best-effort: any failure keeps the saved URL (worker retries)
+      // and never turns the already-persisted save into an error.
+      const imageChanged = ['frontImageUrl', 'backImageUrl'].some((f) => f in req.body && req.body[f]);
+      if (imageChanged) {
+        try {
+          const rehosted = await rehostCardImagesNow(id);
+          if (rehosted) {
+            updatedCard.frontImageUrl = rehosted.frontImageUrl;
+            updatedCard.backImageUrl = rehosted.backImageUrl;
+          }
+        } catch (rehostError) {
+          console.error('Immediate image re-host failed (save is intact):', rehostError);
+        }
+      }
+
       res.json(updatedCard);
     } catch (error) {
       console.error('Patch card error:', error);

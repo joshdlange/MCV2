@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { cards } from '../../shared/schema';
-import { sql, eq } from 'drizzle-orm';
+import { sql, eq, and } from 'drizzle-orm';
 import { cloudinary } from '../cloudinary';
 
 /**
@@ -108,7 +108,7 @@ function candidateUrls(url: string): string[] {
 }
 
 /** Upload one external URL via Cloudinary remote fetch; returns secure_url. */
-async function uploadOne(url: string, cardId: number, side: 'front' | 'back'): Promise<string> {
+async function uploadOne(url: string, cardId: number, side: 'front' | 'back', timeoutMs: number = UPLOAD_TIMEOUT_MS): Promise<string> {
   let lastError: unknown;
   for (const candidate of candidateUrls(url)) {
     try {
@@ -117,7 +117,7 @@ async function uploadOne(url: string, cardId: number, side: 'front' | 'back'): P
         public_id: `card_${cardId}_${side}`,
         overwrite: true,
         resource_type: 'image',
-        timeout: UPLOAD_TIMEOUT_MS,
+        timeout: timeoutMs,
         transformation: [
           { width: 800, height: 1120, crop: 'fit', quality: 'auto' },
           { format: 'auto' },
@@ -166,7 +166,10 @@ async function migrateCard(card: { id: number; frontImageUrl: string | null; bac
     const column = side === 'front' ? 'frontImageUrl' : 'backImageUrl';
     try {
       const secureUrl = await uploadOne(url, card.id, side);
-      await db.update(cards).set({ [column]: secureUrl }).where(eq(cards.id, card.id));
+      // Guarded write: only swap the URL if the card still holds the exact
+      // URL we uploaded from — an admin may have saved a new image meanwhile.
+      await db.update(cards).set({ [column]: secureUrl })
+        .where(and(eq(cards.id, card.id), eq(side === 'front' ? cards.frontImageUrl : cards.backImageUrl, url)));
       await db.execute(sql`DELETE FROM image_migration_failures WHERE card_id = ${card.id} AND side = ${side}`);
     } catch (error) {
       const message = toErrorMessage(error);
@@ -174,7 +177,9 @@ async function migrateCard(card: { id: number; frontImageUrl: string | null; bac
       const attempts = await recordFailure(card.id, side, url, message, permanent);
       if (permanent && attempts >= MAX_ATTEMPTS) {
         // Confirmed dead: clear to "no image" instead of leaving a broken URL.
-        await db.update(cards).set({ [column]: null }).where(eq(cards.id, card.id));
+        // Guarded: only clear if the card still holds the dead URL.
+        await db.update(cards).set({ [column]: null })
+          .where(and(eq(cards.id, card.id), eq(side === 'front' ? cards.frontImageUrl : cards.backImageUrl, url)));
         await db.execute(sql`UPDATE image_migration_failures SET status = 'cleared', updated_at = now() WHERE card_id = ${card.id} AND side = ${side}`);
         console.warn(`[ImageMigration] Card ${card.id} ${side} cleared after ${attempts} failed attempts: ${url}`);
         if (outcome !== 'failed') outcome = 'cleared';
@@ -185,6 +190,41 @@ async function migrateCard(card: { id: number; frontImageUrl: string | null; bac
     }
   }
   return outcome;
+}
+
+/**
+ * Immediately re-host a card's external image URLs to Cloudinary right after
+ * an admin save, instead of waiting for the 6-hourly background worker.
+ * Best-effort: on failure the external URL is kept (the worker retries later)
+ * and the save itself is never blocked or reverted.
+ * Returns the card's final front/back URLs (Cloudinary if re-hosted).
+ */
+const REHOST_NOW_TIMEOUT_MS = 15_000; // keep admin saves snappy; worker retries slow ones
+
+export async function rehostCardImagesNow(cardId: number): Promise<{ frontImageUrl: string | null; backImageUrl: string | null } | null> {
+  const [card] = await db.select({ id: cards.id, frontImageUrl: cards.frontImageUrl, backImageUrl: cards.backImageUrl })
+    .from(cards).where(eq(cards.id, cardId));
+  if (!card) return null;
+  for (const side of ['front', 'back'] as const) {
+    const url = side === 'front' ? card.frontImageUrl : card.backImageUrl;
+    if (!url || url.includes('cloudinary.com') || url.startsWith('/uploads/')) continue;
+    const column = side === 'front' ? 'frontImageUrl' : 'backImageUrl';
+    try {
+      const secureUrl = await uploadOne(url, card.id, side, REHOST_NOW_TIMEOUT_MS);
+      // Guarded write: only swap if the card still holds the URL we uploaded
+      // from — a concurrent save/worker run may have changed it meanwhile.
+      await db.update(cards).set({ [column]: secureUrl })
+        .where(and(eq(cards.id, card.id), eq(side === 'front' ? cards.frontImageUrl : cards.backImageUrl, url)));
+      console.log(`[ImageRehost] Card ${card.id} ${side} re-hosted on save: ${url} -> ${secureUrl}`);
+    } catch (error) {
+      // Keep the external URL; the background worker will retry within 6h.
+      console.error(`[ImageRehost] Card ${card.id} ${side} immediate re-host failed (worker will retry): ${toErrorMessage(error)}`);
+    }
+  }
+  // Re-read so the caller returns the true final state, not a stale merge.
+  const [fresh] = await db.select({ frontImageUrl: cards.frontImageUrl, backImageUrl: cards.backImageUrl })
+    .from(cards).where(eq(cards.id, cardId));
+  return fresh ?? null;
 }
 
 async function countRemaining(): Promise<number> {
