@@ -48,6 +48,12 @@ function normName(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+/** Curated (hand-picked) image paths: direct card uploads, user uploads, Drive set imports. */
+function isCuratedImage(url: string | null | undefined): boolean {
+  if (!url) return false;
+  return /\/marvel-cards\/card_|\/user_uploads\/|\/mcv\/sets\//.test(url);
+}
+
 // Applied only as a fallback when the exact normalized name does not match.
 const NAME_ALIASES: Record<string, string> = {
   johnnyblaze: 'blaze',                       // 1992 #2 official checklist name
@@ -256,15 +262,25 @@ async function applyPairBatch(tx: Tx, archiveReason: string): Promise<void> {
   await tx.execute(sql`UPDATE scan_feedback d SET selected_card_id = p.surv_id FROM merge_pairs p WHERE d.selected_card_id = p.dup_id`);
   await tx.execute(sql`DELETE FROM card_price_cache d USING merge_pairs p WHERE d.card_id = p.dup_id`);
 
-  // Carry over images when the survivor is missing them
+  // Carry over images when the survivor is missing them, and prefer the dup's
+  // image when it is curated (hand-picked upload/import) and the survivor's
+  // is not — curated images must never be discarded by a merge.
+  const curated = (col: string) => sql.raw(`(
+    ${col} LIKE '%/marvel-cards/card\\_%' OR
+    ${col} LIKE '%/user_uploads/%' OR
+    ${col} LIKE '%/mcv/sets/%')`);
   await tx.execute(sql`
     UPDATE cards s SET front_image_url = d.front_image_url
     FROM merge_pairs p JOIN cards d ON d.id = p.dup_id
-    WHERE s.id = p.surv_id AND s.front_image_url IS NULL AND d.front_image_url IS NOT NULL`);
+    WHERE s.id = p.surv_id AND d.front_image_url IS NOT NULL
+      AND (s.front_image_url IS NULL
+           OR (${curated('d.front_image_url')} AND NOT ${curated('s.front_image_url')}))`);
   await tx.execute(sql`
     UPDATE cards s SET back_image_url = d.back_image_url
     FROM merge_pairs p JOIN cards d ON d.id = p.dup_id
-    WHERE s.id = p.surv_id AND s.back_image_url IS NULL AND d.back_image_url IS NOT NULL`);
+    WHERE s.id = p.surv_id AND d.back_image_url IS NOT NULL
+      AND (s.back_image_url IS NULL
+           OR (${curated('d.back_image_url')} AND NOT ${curated('s.back_image_url')}))`);
 
   // Soft-archive the duplicates (never hard-delete)
   await tx.execute(sql`
@@ -318,8 +334,9 @@ async function mergeGroup(tx: Tx, group: MergeGroup): Promise<void> {
 
   // The canonical subsets themselves occasionally contain identical twin
   // rows (same subset + number + normalized name). Fold twins into one
-  // survivor (prefer the one with an image, then lowest id) so matching is
-  // unambiguous and the canonical set comes out clean.
+  // survivor (prefer a curated image, then any image, then the most recently
+  // updated, then lowest id) so matching is unambiguous, the canonical set
+  // comes out clean, and curated images are never discarded.
   const twinGroups = new Map<string, CardRow[]>();
   for (const c of targetCards) {
     const k = `${c.setId}|${(c.cardNumber ?? '').trim()}|${normName(c.name)}|${normName(c.variation ?? '')}`;
@@ -327,7 +344,11 @@ async function mergeGroup(tx: Tx, group: MergeGroup): Promise<void> {
   }
   const dedupedTargets: CardRow[] = [];
   for (const grp of twinGroups.values()) {
-    grp.sort((a, b) => (b.frontImageUrl ? 1 : 0) - (a.frontImageUrl ? 1 : 0) || a.id - b.id);
+    grp.sort((a, b) =>
+      (isCuratedImage(b.frontImageUrl) ? 1 : 0) - (isCuratedImage(a.frontImageUrl) ? 1 : 0) ||
+      (b.frontImageUrl ? 1 : 0) - (a.frontImageUrl ? 1 : 0) ||
+      (b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0) ||
+      a.id - b.id);
     dedupedTargets.push(grp[0]);
     for (const twin of grp.slice(1)) {
       pairs.push({ dup: twin.id, surv: grp[0].id });

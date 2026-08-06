@@ -119,6 +119,16 @@ app.use((req, res, next) => {
     console.error('Startup migration (pg_trgm search indexes) failed:', error);
   }
 
+  // Idempotent startup repair: restore curated card images that the Aug 4
+  // legacy duplicate-set merge left on the archived twin (ledger-guarded,
+  // never re-touches a card an admin fixed by hand).
+  try {
+    const { restoreTwinMergeImages } = await import('./seeds/restoreTwinMergeImages');
+    await restoreTwinMergeImages();
+  } catch (error) {
+    console.error('Startup repair (merge image restore) failed:', error);
+  }
+
   const server = await registerRoutes(app);
 
   // Start background services
