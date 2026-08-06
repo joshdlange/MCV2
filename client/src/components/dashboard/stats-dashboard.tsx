@@ -145,11 +145,26 @@ function PowerTile({
           className={`relative w-11 h-11 rounded-full flex items-center justify-center bg-gradient-to-br ${tile.gradient} shadow-lg`}
           style={{ boxShadow: `0 0 16px 2px ${tile.color}44` }}
         >
-          <tile.icon
-            className="w-5 h-5 text-white"
-            strokeWidth={2.5}
-            fill={tile.fill ? "currentColor" : "none"}
-          />
+          <span className="relative w-5 h-5 flex items-center justify-center">
+            {/* Dark back outline (matches the ComicBolt look): a thicker dark
+                copy of the icon rendered behind the white one. ComicBolt
+                already has its own built-in outline. */}
+            {tile.key !== "powers" && (
+              <tile.icon
+                className="absolute inset-0 w-5 h-5"
+                strokeWidth={5.5}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                style={{ color: "rgba(0,0,0,0.75)" }}
+                fill={tile.fill ? "rgba(0,0,0,0.75)" : "none"}
+              />
+            )}
+            <tile.icon
+              className="relative w-5 h-5 text-white"
+              strokeWidth={2.5}
+              fill={tile.fill ? "currentColor" : "none"}
+            />
+          </span>
         </div>
       </div>
 
