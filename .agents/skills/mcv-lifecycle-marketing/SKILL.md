@@ -9,6 +9,9 @@ description: Guides all Marvel Card Vault email, notification, onboarding, and n
 Help Marvel Card Vault create smarter lifecycle messaging based on user behavior, not generic monthly blasts. Every message exists because something happened or did not happen for a specific user.
 
 ## Current state (Aug 2026)
+- **Lifecycle system v1 is live** in `server/jobs/lifecycleEmails.ts`: ACTIVE = welcome (event-triggered at onboarding, new signups after 2026-08-08 only, never retroactive) + 24h first-card nudge (hourly cron, zero-card users only). The 10 journey emails (empty vault, momentum, PC Binder prompt/upsell, missing image, share binder, wishlist, reactivation, new set, image-approved XP) exist as DRAFT templates with eligibility counts, `active: false` — flip ONE at a time after admin preview/test.
+- **Global frequency cap: max 1 lifecycle/marketing email per user per 14 days** (welcome exempt; transactional exempt). Enforced via `email_logs` job_name namespaces `lifecycle-%` / `campaign-%`; `-test` sends excluded. The vault-upgrade drip also respects the cap.
+- Admin tools: `GET /api/admin/lifecycle/status` (registry + eligible counts), `GET /api/admin/lifecycle/preview?key=`, `POST /api/admin/lifecycle/test` (sends to admin only), `POST /api/admin/lifecycle/first-card-nudge/run`.
 - Automatic monthly nudges + digest are DISABLED in `server/jobs/emailCron.ts` (`startEmailCronJobs` no longer starts any scheduled marketing jobs). The job code and templates are preserved for reuse.
 - The four legacy "one-time" campaign jobs are also not started: their cron patterns repeat annually and would re-send past campaigns.
 - Provider: Resend for password reset emails, Brevo for the rest (do not change providers). Password reset, transactional emails, and admin test tools are untouched and must stay working.

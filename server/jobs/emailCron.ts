@@ -545,7 +545,18 @@ async function getRemainingVaultUpgradeRecipients() {
       and(
         eq(users.marketingOptIn, true),
         ne(users.email, ''),
-        sql`NOT EXISTS (SELECT 1 FROM email_logs el WHERE el.job_name = ${VAULT_UPGRADE_JOB_NAME} AND lower(trim(el.email)) = lower(trim(${users.email})))`
+        sql`NOT EXISTS (SELECT 1 FROM email_logs el WHERE el.job_name = ${VAULT_UPGRADE_JOB_NAME} AND lower(trim(el.email)) = lower(trim(${users.email})))`,
+        // Global 14-day lifecycle/marketing frequency cap (see lifecycleEmails.ts):
+        // skip anyone who got a lifecycle/campaign email in the last 14 days —
+        // they stay pending and get picked up by a later drip run.
+        sql`NOT EXISTS (
+          SELECT 1 FROM email_logs el2
+          WHERE lower(trim(el2.email)) = lower(trim(${users.email}))
+            AND el2.sent_at > now() - interval '14 days'
+            AND (el2.job_name LIKE 'lifecycle-%' OR el2.job_name LIKE 'campaign-%')
+            AND el2.job_name <> 'lifecycle-welcome'
+            AND el2.job_name NOT LIKE '%-test'
+        )`
       )
     );
 }

@@ -1,0 +1,375 @@
+Build Marvel Card Vault lifecycle email system v1: Welcome, 24-hour first-card nudge, and journey-based nurture foundation.
+
+Context:
+- Generic monthly marketing emails are now disabled.
+- Legacy one-time campaigns are disabled.
+- Resend is the primary email provider.
+- The new lifecycle marketing skill exists at:
+  .agents/skills/mcv-lifecycle-marketing/SKILL.md
+- Use that skill’s voice/tone, lifecycle rules, batching rules, and QA structure.
+- We want lifecycle messaging based on user actions and inactions, not generic calendar blasts.
+- We do not want to retroactively send the welcome/24-hour signup sequence to all existing users.
+- We also want a broader ongoing nurture system, but not too often.
+- No user should receive more than one lifecycle/marketing email every 14 days.
+- Transactional emails must remain unaffected.
+
+Goal:
+Create lifecycle email v1 with:
+1. Welcome email for new signups going forward.
+2. First-card nudge 24 hours after signup only if the user has not added any cards.
+3. A scalable journey-based nurture framework for future lifecycle emails.
+4. A global lifecycle/marketing email frequency cap of no more than 1 email per user every 14 days.
+5. Admin preview/test tools.
+6. No full-user campaign sends during this task.
+
+Must do:
+- Use Resend for all sends.
+- Use the existing centralized email service.
+- Preserve password reset and transactional email behavior.
+- Read and follow:
+  .agents/skills/mcv-lifecycle-marketing/SKILL.md
+
+Welcome email:
+- Trigger welcome email only for new signups going forward.
+- Do not retroactively send the welcome email to existing users.
+- Send after successful signup/account creation.
+- Make sure the welcome email does not break signup if Resend fails.
+- Log send success/failure.
+
+24-hour first-card nudge:
+- Add a 24-hour first-card nudge that sends only when:
+  - user signed up at least 24 hours ago
+  - user has zero cards in their collection
+  - user has not already received this first-card nudge
+  - user has not unsubscribed or opted out of marketing/lifecycle emails, if preferences exist
+  - user has not received another lifecycle/marketing email within the last 14 days, unless we intentionally exempt the welcome email from the cap
+- Make the nudge job safe and idempotent.
+- Add tracking/logging so the first-card nudge cannot send repeatedly.
+- Do not send the 24-hour nudge to all existing users.
+- Apply it only to new users going forward unless a separate explicit campaign/backfill is approved later.
+
+Lifecycle frequency cap:
+- Add or reuse a lifecycle email tracking mechanism.
+- Track:
+  - user_id
+  - email_type
+  - lifecycle_stage
+  - sent_at
+  - status
+  - provider_message_id if available
+  - error if failed
+- Enforce no more than 1 lifecycle/marketing email per user every 14 days.
+- Transactional emails are exempt from this cap.
+- Password reset must be exempt.
+- Billing/subscription/payment emails must be exempt.
+- Image approval/rejection emails can be treated as transactional/product notifications and should not be blocked unless existing preferences say otherwise.
+- Badge/XP/product nudges should follow the lifecycle frequency cap unless explicitly marked transactional.
+- Make this cap reusable for future lifecycle emails.
+
+Journey-based nurture foundation:
+Create the framework, types, templates, and eligibility logic for additional lifecycle emails, but do not activate all of them yet unless explicitly safe and admin-controlled.
+
+Add draft/template support for these future journey-based lifecycle emails:
+
+1. Empty Vault Nudge
+Audience:
+- signed up
+- zero cards
+- did not respond to first-card nudge
+- inactive for at least 7 days
+CTA:
+Add Your First Card
+
+2. Collection Momentum Nudge
+Audience:
+- has 1 to 9 cards
+- has not added a card in 7+ days
+CTA:
+Add More Cards
+
+3. PC Binder Prompt
+Audience:
+- Super Hero user
+- has cards in collection
+- has not created a PC Binder
+CTA:
+Create a PC Binder
+
+4. PC Binder Upgrade Nudge
+Audience:
+- Free or Side Kick user
+- clicked PC Binders or viewed a Super Hero-only PC Binder prompt
+CTA:
+Upgrade to Super Hero
+
+5. Missing Image Contribution Nudge
+Audience:
+- owns cards that are missing images
+- has not uploaded an image recently
+CTA:
+Help Complete the Vault
+
+6. Share Binder Nudge
+Audience:
+- has completed or meaningfully built a binder/subset/PC Binder
+- has not shared it
+CTA:
+Share Your Binder
+
+7. Wishlist / Chase List Nudge
+Audience:
+- has cards in collection
+- has not added wishlist/chase cards
+CTA:
+Build Your Chase List
+
+8. Reactivation Email
+Audience:
+- inactive 30+ days
+- has prior collection activity
+CTA:
+Return to Your Vault
+
+9. New Set Specific Announcement
+Audience:
+- users who collect or have viewed related set/year/brand/category
+- should be specific to actual new set data, not generic
+CTA:
+View New Set
+
+10. Image Approved XP Email
+Audience:
+- user submitted image
+- image was approved
+CTA:
+View Your Contribution
+
+Important:
+- These 10 journey emails should be available as templates/previewable candidates, but not all should start sending automatically immediately.
+- Activate only the welcome email and 24-hour first-card nudge unless you determine another one is already safely implemented and explicitly gated off by default.
+- For the rest, build them as draft templates and eligibility functions behind admin-controlled disabled flags.
+- The admin should be able to see what would be eligible before enabling anything.
+
+Admin tools:
+- Add admin-only preview/test capability if practical:
+  - preview welcome email
+  - send welcome test to admin only
+  - preview first-card nudge
+  - send first-card nudge test to admin only
+  - preview the future journey templates
+  - show estimated eligible user counts for each future lifecycle email
+- Do not send to eligible users from the admin page unless there is an explicit confirmation flow.
+- Any future send-all/batch campaign must require separate explicit approval.
+
+Suggested email copy:
+
+Welcome email:
+
+Subject:
+Welcome to Marvel Card Vault
+
+Preview text:
+Your vault is ready. Start building your collection and earning XP.
+
+Body:
+Hey collector,
+
+Welcome to Marvel Card Vault.
+
+Your vault is ready, and the best place to start is simple: add your first card.
+
+Once your collection starts taking shape, you can track your cards, build custom PC Binders, earn Collector XP, and share your favorite binders with other collectors.
+
+Start with one card today and build from there.
+
+CTA:
+Add Your First Card
+
+Footer:
+Marvel Card Vault is not affiliated with Marvel, Disney, Upper Deck, Topps, or any card manufacturer.
+
+24-hour first-card nudge:
+
+Subject:
+Your vault is waiting
+
+Preview text:
+Add your first card and start earning Collector XP.
+
+Body:
+Hey collector,
+
+Your Marvel Card Vault is set up, but it looks like your collection is still empty.
+
+Add your first card to start building your vault, unlock progress, and begin earning Collector XP.
+
+It only takes a minute to get started.
+
+CTA:
+Add Your First Card
+
+Footer:
+Marvel Card Vault is not affiliated with Marvel, Disney, Upper Deck, Topps, or any card manufacturer.
+
+Draft copy guidance for future journey emails:
+
+Empty Vault Nudge:
+Subject:
+Still empty? Let’s fix that
+
+Preview text:
+Add one card and bring your vault to life.
+
+CTA:
+Add Your First Card
+
+Collection Momentum Nudge:
+Subject:
+Your collection is off to a good start
+
+Preview text:
+Add a few more cards and keep your vault moving.
+
+CTA:
+Add More Cards
+
+PC Binder Prompt:
+Subject:
+Build a binder around your favorites
+
+Preview text:
+Create a custom PC Binder for a character, artist, set, or chase list.
+
+CTA:
+Create a PC Binder
+
+PC Binder Upgrade Nudge:
+Subject:
+PC Binders are waiting
+
+Preview text:
+Upgrade to Super Hero to build custom binders around the cards you care about most.
+
+CTA:
+Unlock PC Binders
+
+Missing Image Contribution Nudge:
+Subject:
+Help complete the vault
+
+Preview text:
+Some of your cards are missing images. Upload one and earn XP after approval.
+
+CTA:
+Upload an Image
+
+Share Binder Nudge:
+Subject:
+Show off your vault
+
+Preview text:
+Share a binder with other collectors and earn XP.
+
+CTA:
+Share Your Binder
+
+Wishlist / Chase List Nudge:
+Subject:
+What are you chasing next?
+
+Preview text:
+Add cards to your wishlist so your next target is easy to track.
+
+CTA:
+Build Your Chase List
+
+Reactivation Email:
+Subject:
+Your vault has been waiting
+
+Preview text:
+New cards, images, and progress are ready when you are.
+
+CTA:
+Return to Your Vault
+
+New Set Specific Announcement:
+Subject:
+New cards added: [Set Name]
+
+Preview text:
+Browse the newest cards added to Marvel Card Vault.
+
+CTA:
+View New Set
+
+Image Approved XP Email:
+Subject:
+Your image was approved
+
+Preview text:
+Thanks for helping complete the vault. XP has been added to your account.
+
+CTA:
+View Your Contribution
+
+Must not do:
+- Do not re-enable generic monthly emails.
+- Do not re-enable old one-time campaigns.
+- Do not send to all users.
+- Do not send the welcome/first-card sequence retroactively to all existing users.
+- Do not activate all future journey emails automatically.
+- Do not send any production campaign during this task.
+- Do not change password reset behavior.
+- Do not change auth/session behavior.
+- Do not change subscriptions, Stripe, RevenueCat, Shippo, PC Binders, XP rules, card limits, Drive Sync, card data, or image approval logic.
+- Do not expose RESEND_API_KEY.
+- Do not hardcode secrets.
+- Do not create public/unprotected email endpoints.
+- Do not touch Android or iOS native files.
+- Do not create a noisy email system that can hit the same user repeatedly.
+- Do not exceed one lifecycle/marketing email per user every 14 days.
+
+Preserve:
+- Existing Resend setup.
+- Existing unsubscribe/preference logic.
+- Existing transactional email behavior.
+- Existing user database.
+- Existing app routes.
+- Existing admin-only email tools.
+- Existing lifecycle marketing skill.
+- Existing disabled monthly/legacy campaign state.
+- Existing app behavior.
+
+QA:
+- New signup triggers welcome email through Resend.
+- Welcome email does not break signup if email sending fails.
+- Welcome email does not send retroactively to existing users.
+- First-card nudge sends only after 24 hours.
+- First-card nudge sends only to users with zero cards.
+- First-card nudge does not send to users who already added cards.
+- First-card nudge does not send more than once.
+- First-card nudge does not send to unsubscribed/opted-out users if preferences exist.
+- Lifecycle/marketing frequency cap prevents more than one lifecycle/marketing email every 14 days per user.
+- Transactional emails are not blocked by the lifecycle cap.
+- Admin preview/test sends work only for admin.
+- Future journey templates are previewable but disabled by default.
+- Future journey eligibility counts can be reviewed without sending.
+- No full-user campaign is sent.
+- Generic monthly emails remain disabled.
+- Old one-time campaigns remain disabled.
+- Password reset still works.
+- No Brevo send occurs.
+- No API keys are exposed.
+- App builds/runs cleanly.
+
+Final response:
+- List changed files.
+- Explain exactly when the welcome email sends.
+- Explain exactly when the 24-hour nudge sends.
+- Explain how duplicate sends are prevented.
+- Explain how the 14-day lifecycle frequency cap works.
+- List the future lifecycle templates created.
+- Confirm which emails are active now and which are draft/disabled.
+- Confirm no emails were sent to the full user base.
+- Confirm this is safe to publish.

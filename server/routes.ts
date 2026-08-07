@@ -41,6 +41,7 @@ import * as emailTriggers from "./services/emailTriggers";
 import { rehostCardImagesNow } from "./services/imageMigration";
 import { vaultUpgradeAnnouncementTemplate } from "./services/emailTemplates";
 import { startEmailCronJobs, startVaultUpgradeDripCron, runVaultUpgradeDripNow, getVaultUpgradeDripStatus } from "./jobs/emailCron";
+import { LIFECYCLE_EMAILS, getLifecycleEmail, getLifecycleStatus, sendLifecycleWelcome, runFirstCardNudgeNow, startLifecycleEmailCron } from "./jobs/lifecycleEmails";
 import { initializeUpcomingSets, syncRSSFeed, expireReleasedSets } from "./services/upcomingSetsSync";
 import { verifyRcEntitlement, reconcileRevenueCatSubscriptions, startRevenueCatReconcileCron, getSubscriberBreakdown, SYSTEM_USER_FIREBASE_UID } from "./services/revenueCatSync";
 import { uploadUserCardImage, uploadMainSetThumbnail, downloadAndUploadToCloudinary, isCloudinaryUrl } from "./cloudinary";
@@ -573,11 +574,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         onboardingComplete: true
       });
       
-      // Send welcome email now that we have their actual username
-      emailTriggers.onUserSignup({
+      // Send lifecycle welcome email (fire-and-forget: never blocks signup,
+      // launch-date-gated so existing users are never emailed retroactively,
+      // deduped via email_logs so it can never send twice).
+      sendLifecycleWelcome({
+        id: req.user.id,
         email: req.user.email,
-        displayName: updatedUser.displayName || username,
-        username: username
+        createdAt: req.user.createdAt || updatedUser.createdAt,
       }).catch(error => {
         console.error('Failed to send welcome email:', error);
       });
@@ -4585,6 +4588,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Failed to generate email preview",
         error: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  });
+
+  // ============================================================
+  // LIFECYCLE EMAIL SYSTEM v1 — admin tools (see server/jobs/lifecycleEmails.ts)
+  // Active: welcome + 24h first-card nudge. Everything else is DRAFT.
+  // These endpoints NEVER send to real users — preview, admin-only test
+  // sends, and eligibility counts only. Any real campaign send requires a
+  // separate explicit build with its own confirmation flow.
+  // ============================================================
+
+  // Status: every lifecycle email, active/draft, eligible-user counts, cap info
+  app.get("/api/admin/lifecycle/status", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      res.json(await getLifecycleStatus());
+    } catch (error) {
+      console.error('Lifecycle status error:', error);
+      res.status(500).json({ message: "Failed to load lifecycle status" });
+    }
+  });
+
+  // HTML preview of any lifecycle template (active or draft)
+  app.get("/api/admin/lifecycle/preview", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      const def = getLifecycleEmail(String(req.query.key || ''));
+      if (!def) {
+        return res.status(404).json({
+          message: `Unknown lifecycle email. Valid keys: ${LIFECYCLE_EMAILS.map(e => e.key).join(', ')}`
+        });
+      }
+      const { html } = def.render({ displayName: req.user.displayName });
+      res.setHeader('Content-Type', 'text/html');
+      // Show the unsubscribe link target in previews without a real token
+      res.send(html.split('{{UNSUBSCRIBE_URL}}').join('#unsubscribe-link-injected-at-send'));
+    } catch (error) {
+      console.error('Lifecycle preview error:', error);
+      res.status(500).json({ message: "Failed to render lifecycle preview" });
+    }
+  });
+
+  // Test send — ALWAYS to the requesting admin's own email, never to users.
+  app.post("/api/admin/lifecycle/test", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      const def = getLifecycleEmail(String(req.body?.key || ''));
+      if (!def) {
+        return res.status(404).json({
+          message: `Unknown lifecycle email. Valid keys: ${LIFECYCLE_EMAILS.map(e => e.key).join(', ')}`
+        });
+      }
+      const to = req.user.email; // hard-locked to the admin — no override
+      const { html, text } = def.render({ displayName: req.user.displayName });
+      const messageId = await sendResendEmail({
+        to,
+        subject: `[TEST] ${def.subject}`,
+        html,
+        text,
+        template: `${def.jobName}-test`,
+        jobName: `${def.jobName}-test`, // '-test' suffix: excluded from cap + dedupe
+      });
+      res.json({ success: true, sentTo: to, key: def.key, messageId });
+    } catch (error) {
+      console.error('Lifecycle test send error:', error);
+      res.status(500).json({
+        message: "Failed to send lifecycle test email",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Manual trigger of the first-card nudge batch (same logic as the hourly cron)
+  app.post("/api/admin/lifecycle/first-card-nudge/run", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      const result = await runFirstCardNudgeNow();
+      res.json(result);
+    } catch (error) {
+      console.error('First-card nudge manual run error:', error);
+      res.status(500).json({ message: "Failed to run first-card nudge" });
     }
   });
 
@@ -11801,6 +11893,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Daily vault-upgrade drip: sends the remainder of the announcement (which hit
   // the Resend daily limit) at 90/day until every opted-in user is reached.
   startVaultUpgradeDripCron();
+
+  // Lifecycle emails v1: hourly first-card nudge cron (welcome is event-
+  // triggered at onboarding). All other journey emails are draft/disabled.
+  startLifecycleEmailCron();
 
   // One-time XP backfill: seed card_added XP from existing collections so
   // long-time collectors don't show 0 card XP. Guarded — only runs if empty.

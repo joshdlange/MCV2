@@ -113,6 +113,9 @@ export interface ResendEmailOptions {
   replyTo?: string;
   template?: string;
   jobName?: string;
+  /** Skip the automatic email_logs insert — for callers (lifecycle system)
+   * that pre-claim their own log row and update it after the send. */
+  skipLog?: boolean;
 }
 
 /**
@@ -147,6 +150,7 @@ export async function sendResendEmail(options: ResendEmailOptions): Promise<stri
     replyTo,
     template = 'unknown',
     jobName,
+    skipLog = false,
   } = options;
 
   let client: Resend;
@@ -187,7 +191,7 @@ export async function sendResendEmail(options: ResendEmailOptions): Promise<stri
       throw new Error(`Resend API error: ${error.name || 'unknown'} — ${error.message || JSON.stringify(error)}`);
     }
 
-    await logEmailToDb(to, subject, template, jobName);
+    if (!skipLog) await logEmailToDb(to, subject, template, jobName);
     console.log(`✅ [Resend] Email sent to ${to} | Template: ${template} | Job: ${jobName || 'immediate'} | Message ID: ${data?.id}`);
     return data?.id;
   } catch (error) {

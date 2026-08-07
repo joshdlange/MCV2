@@ -11,6 +11,7 @@
 - [RevenueCat server-side REST pitfalls](rc-xplatform-bug.md) — never send X-Platform from server (RC 7243); RC also returns 200-with-error-body, so check `body.code` not just res.ok.
 - [Prod data fixes via startup seeds](prod-data-fix-seeds.md) — prod DB is read-only from dev; ship idempotent startup seeds under pg_advisory_xact_lock, match by slug not ID, rehearse in dev.
 - [Marketing email opt-in & unsubscribe](marketing-email-optin.md) — marketingOptIn gates sends (not emailUpdates); new marketing templates need {{UNSUBSCRIBE_URL}} or they ship with no unsubscribe.
+- [Lifecycle email system v1](lifecycle-email-system.md) — claim-then-send via partial unique index; 14-day cap; launch-date gate; new lifecycle emails MUST go through claimAndSend.
 - [eBay API quota accounting](ebay-quota-accounting.md) — Browse API paths bypass the rate limiter; budget bulk pricing jobs by API calls (not cards) via getTotalRequestCount deltas.
 - [PUT /api/users allowlist](user-update-allowlist.md) — user self-update route allowlists fields; new privileged users columns must NOT be added to it or they're self-escalatable.
 - [Email cron disabled in prod](email-cron-disabled-in-prod.md) — EMAIL_CRON_ENABLED unset everywhere; scheduled email blasts run manually; wire always-on jobs at startup + dedupe drips via email_logs job_name.

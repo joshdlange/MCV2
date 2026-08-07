@@ -62,6 +62,15 @@ export const emailLogs = pgTable("email_logs", {
   template: text("template").notNull(),
   subject: text("subject").notNull(),
   jobName: text("job_name"),
+  // Lifecycle email tracking (Aug 2026): status lifecycle for claim-then-send
+  // ('sending' → 'sent' | 'failed'), provider message id, and failure detail.
+  // Legacy rows default to 'sent'. A partial unique index on
+  // (job_name, lower(trim(email))) WHERE job_name LIKE 'lifecycle-%' makes
+  // lifecycle sends duplicate-proof at the database level.
+  status: text("status").default("sent").notNull(),
+  lifecycleStage: text("lifecycle_stage"),
+  providerMessageId: text("provider_message_id"),
+  error: text("error"),
   sentAt: timestamp("sent_at").defaultNow().notNull(),
 });
 
