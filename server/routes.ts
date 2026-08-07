@@ -6354,6 +6354,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User already has an active subscription" });
       }
 
+      // Guard against double-charging: if this email already has an active Stripe
+      // subscription that just never got linked (missed webhook), link it and
+      // upgrade instead of letting them pay a second time (July 2026 duplicate cluster).
+      try {
+        const existingCustomers = await stripe.customers.list({ email: user.email, limit: 5 });
+        for (const customer of existingCustomers.data) {
+          const subs = await stripe.subscriptions.list({ customer: customer.id, status: 'active', limit: 5 });
+          if (subs.data.length) {
+            await storage.updateUser(user.id, {
+              plan: 'SUPER_HERO',
+              subscriptionStatus: 'active',
+              stripeCustomerId: customer.id,
+              stripeSubscriptionId: subs.data[0].id,
+            });
+            console.log(`Checkout blocked: user ${user.id} already had active sub ${subs.data[0].id}; linked instead of re-charging`);
+            return res.status(409).json({
+              alreadySubscribed: true,
+              message: "You already have an active subscription — your account has been upgraded. No new charge was made.",
+            });
+          }
+        }
+      } catch (guardErr) {
+        // Never block checkout on a guard failure; worst case is the old behavior.
+        console.error('Pre-checkout duplicate-subscription guard failed:', guardErr);
+      }
+
       // Use the actual Stripe Price ID for Super Hero Plan ($5/month)
       const SUPER_HERO_PRICE_ID = 'price_1ShZCvHUwjq8stIzSBgrMa10';
       
@@ -6369,9 +6395,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         allow_promotion_codes: true, // Enable promo codes at checkout
         success_url: `https://app.marvelcardvault.com/subscription-success?from_ios=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${req.headers.origin}/subscription-cancelled`,
+        // Redundant identification so the webhook can always link the payment:
+        // session metadata, client_reference_id, AND metadata on the subscription
+        // object itself (survives even if the checkout session is lost).
+        client_reference_id: user.id.toString(),
         metadata: {
           userId: user.id.toString(),
           userEmail: user.email,
+        },
+        subscription_data: {
+          metadata: {
+            userId: user.id.toString(),
+            userEmail: user.email,
+          },
         },
       });
 
@@ -6394,12 +6430,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Stripe webhook endpoint to handle successful payments.
-  // Registered on BOTH paths: Stripe's dashboard endpoint historically pointed
-  // at /api/stripe/webhook (slash) while only /api/stripe-webhook (dash)
-  // existed — every webhook 404'd and subscriptions silently failed to link
-  // to accounts. Answering both spellings makes that mismatch impossible.
+  // Registered under BOTH paths: the Stripe dashboard has historically pointed at
+  // /api/stripe/webhook, which only had a GET diagnostic — POSTs 404'd and payments
+  // completed without the user ever being upgraded (July 2026 unlinked-sub cluster).
   app.post(['/api/stripe-webhook', '/api/stripe/webhook'], async (req, res) => {
-    console.log('🔔 Stripe webhook received at /api/stripe-webhook');
+    console.log(`🔔 Stripe webhook received at ${req.path}`);
     const sig = req.headers['stripe-signature'];
     let event;
 
@@ -6430,104 +6465,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Check if this is a marketplace purchase
           if (session.metadata?.type === 'marketplace_purchase') {
             // Handle marketplace payment confirmation directly (no HTTP call for reliability)
-            // IDEMPOTENT fulfillment: Stripe retries webhook deliveries, so
-            // this block must be safe to run multiple times for one session.
-            // Step 1 atomically "claims" the order (only one delivery wins);
-            // retries find nothing to claim and no-op — they can never reach
-            // the refund branch for an already-fulfilled order.
-            // Errors are rethrown so Stripe sees a 500 and retries later.
-            const { orders, listings, userCollections, notifications } = await import('../shared/schema');
-            const { eq, and, ne } = await import('drizzle-orm');
-
-            // Step 1: claim the order — only transitions if not already processed.
-            const claimed = await db.update(orders).set({
-              status: 'needs_shipping',
-              paymentStatus: 'succeeded',
-              stripePaymentIntentId: session.payment_intent as string,
-              updatedAt: new Date(),
-            }).where(and(
-              eq(orders.stripeCheckoutSessionId, session.id),
-              ne(orders.paymentStatus, 'succeeded'),
-              ne(orders.status, 'cancelled'),
-            )).returning();
-
-            if (claimed.length) {
-              const order = claimed[0];
-
-              // Persist the shipping address from Stripe if provided.
-              if (session.shipping_details?.address) {
-                const addr = session.shipping_details.address;
-                await db.update(orders).set({
-                  shippingAddress: JSON.stringify({
-                    name: session.shipping_details.name || '',
-                    street1: addr.line1 || '',
-                    street2: addr.line2 || '',
-                    city: addr.city || '',
-                    state: addr.state || '',
-                    zip: addr.postal_code || '',
-                    country: addr.country || 'US',
-                  }),
-                }).where(eq(orders.id, order.id));
-              }
-
-              // Step 2: claim the listing. If another order already sold it,
-              // this is a genuine buyer race — refund THIS order only.
-              const soldNow = await db.update(listings)
-                .set({ quantityAvailable: 0, status: 'sold', updatedAt: new Date() })
-                .where(and(eq(listings.id, order.listingId), ne(listings.status, 'sold')))
-                .returning();
-
-              if (soldNow.length) {
-                if (soldNow[0].userCollectionId) {
-                  await db.update(userCollections).set({ isForSale: false }).where(eq(userCollections.id, soldNow[0].userCollectionId));
+            try {
+              const { orders, listings, userCollections, notifications } = await import('../shared/schema');
+              const { eq } = await import('drizzle-orm');
+              
+              const order = await db.select().from(orders)
+                .where(eq(orders.stripeCheckoutSessionId, session.id))
+                .limit(1);
+              
+              if (order.length) {
+                // Race condition protection: check if item already sold
+                const listing = await db.select().from(listings).where(eq(listings.id, order[0].listingId)).limit(1);
+                if (listing.length && listing[0].status === 'sold') {
+                  console.log(`Race condition: Item already sold, refunding order ${order[0].orderNumber}`);
+                  if (session.payment_intent) {
+                    try {
+                      await stripe.refunds.create({ payment_intent: session.payment_intent as string });
+                      console.log(`Refund issued for payment intent ${session.payment_intent}`);
+                    } catch (refundErr) {
+                      console.error('Failed to issue refund:', refundErr);
+                    }
+                  }
+                  await db.update(orders).set({
+                    status: 'cancelled',
+                    paymentStatus: 'refunded',
+                    updatedAt: new Date(),
+                  }).where(eq(orders.id, order[0].id));
+                } else {
+                  // Normal flow: update order and mark as sold
+                  let shippingAddress = order[0].shippingAddress;
+                  if (session.shipping_details?.address) {
+                    const addr = session.shipping_details.address;
+                    shippingAddress = JSON.stringify({
+                      name: session.shipping_details.name || '',
+                      street1: addr.line1 || '',
+                      street2: addr.line2 || '',
+                      city: addr.city || '',
+                      state: addr.state || '',
+                      zip: addr.postal_code || '',
+                      country: addr.country || 'US',
+                    });
+                  }
+                  
+                  await db.update(orders).set({
+                    status: 'needs_shipping',
+                    paymentStatus: 'succeeded',
+                    stripePaymentIntentId: session.payment_intent as string,
+                    shippingAddress,
+                    updatedAt: new Date(),
+                  }).where(eq(orders.id, order[0].id));
+                  
+                  if (listing.length) {
+                    await db.update(listings).set({ quantityAvailable: 0, status: 'sold', updatedAt: new Date() }).where(eq(listings.id, order[0].listingId));
+                    if (listing[0].userCollectionId) {
+                      await db.update(userCollections).set({ isForSale: false }).where(eq(userCollections.id, listing[0].userCollectionId));
+                    }
+                  }
+                  
+                  await db.insert(notifications).values({
+                    userId: order[0].sellerId,
+                    type: 'sale_made',
+                    title: 'You made a sale!',
+                    message: `Order #${order[0].orderNumber} is ready to ship.`,
+                    data: JSON.stringify({ orderId: order[0].id, orderNumber: order[0].orderNumber, total: order[0].total }),
+                    isRead: false,
+                  });
+                  console.log(`✅ Marketplace payment confirmed for order ${order[0].orderNumber}`);
                 }
-                await db.insert(notifications).values({
-                  userId: order.sellerId,
-                  type: 'sale_made',
-                  title: 'You made a sale!',
-                  message: `Order #${order.orderNumber} is ready to ship.`,
-                  data: JSON.stringify({ orderId: order.id, orderNumber: order.orderNumber, total: order.total }),
-                  isRead: false,
-                });
-                console.log(`✅ Marketplace payment confirmed for order ${order.orderNumber}`);
-              } else {
-                console.log(`Race condition: item already sold by another order, refunding order ${order.orderNumber}`);
-                if (session.payment_intent) {
-                  await stripe.refunds.create({ payment_intent: session.payment_intent as string });
-                  console.log(`Refund issued for payment intent ${session.payment_intent}`);
-                }
-                await db.update(orders).set({
-                  status: 'cancelled',
-                  paymentStatus: 'refunded',
-                  updatedAt: new Date(),
-                }).where(eq(orders.id, order.id));
               }
-            } else {
-              console.log(`Marketplace webhook no-op: order for session ${session.id} already processed or not found`);
+            } catch (err) {
+              console.error('Failed to confirm marketplace payment:', err);
             }
-          } else if (userId && session.subscription) {
-            // Idempotency: on webhook retries the plan write is convergent,
-            // but skip the admin notification email if this exact subscription
-            // is already linked (i.e. we've processed this session before).
-            const existingUser = await storage.getUser(userId);
-            const alreadyLinked = existingUser?.stripeSubscriptionId === (session.subscription as string)
-              && existingUser?.plan === 'SUPER_HERO';
+          } else if (session.mode === 'subscription' && session.subscription) {
+            // Resolve the user robustly: metadata userId → client_reference_id → customer email.
+            // A completed subscription payment must NEVER be silently dropped.
+            let resolvedUserId = userId || parseInt(session.client_reference_id || '0');
+            let resolvedVia = userId ? 'metadata' : (resolvedUserId ? 'client_reference_id' : '');
+            if (!resolvedUserId) {
+              const email = session.customer_details?.email || session.metadata?.userEmail;
+              if (email) {
+                const byEmail = await storage.getUserByEmail(email);
+                if (byEmail) {
+                  resolvedUserId = byEmail.id;
+                  resolvedVia = `email match (${email})`;
+                }
+              }
+            }
+            if (!resolvedUserId) {
+              console.error(`❌ Stripe subscription ${session.subscription} completed but could not be linked to any user (customer ${session.customer}, email ${session.customer_details?.email})`);
+              try {
+                await sendEmail(
+                  'josh@marvelcardvault.com',
+                  '🚨 Stripe payment completed but NOT linked to any account',
+                  `<p>A subscription checkout completed but no user account could be identified. This payer is stuck on the free plan until fixed.</p>
+                   <ul>
+                     <li><strong>Subscription:</strong> ${session.subscription}</li>
+                     <li><strong>Stripe Customer:</strong> ${session.customer}</li>
+                     <li><strong>Checkout email:</strong> ${session.customer_details?.email || 'unknown'}</li>
+                     <li><strong>Session:</strong> ${session.id}</li>
+                   </ul>
+                   <p>The daily Stripe reconciliation will also keep flagging this until it is linked.</p>`
+                );
+              } catch (notifyErr) {
+                console.error('Failed to send unlinked-subscription alert:', notifyErr);
+              }
+              break;
+            }
+            const linkUserId = resolvedUserId;
+            console.log(`Linking subscription ${session.subscription} to user ${linkUserId} via ${resolvedVia}`);
             // Update user to Super Hero plan
-            await storage.updateUser(userId, {
+            await storage.updateUser(linkUserId, {
               plan: 'SUPER_HERO',
               subscriptionStatus: 'active',
               stripeCustomerId: session.customer as string,
               stripeSubscriptionId: session.subscription as string
             });
-            console.log(`User ${userId} upgraded to Super Hero plan`);
-            if (!alreadyLinked) try {
-              const upgradedUser = await storage.getUser(userId);
+            console.log(`User ${linkUserId} upgraded to Super Hero plan`);
+            try {
+              const upgradedUser = await storage.getUser(linkUserId);
               await sendEmail(
                 'josh@marvelcardvault.com',
                 '🎉 New Super Hero Subscriber!',
                 `<p>A user just upgraded to Super Hero via <strong>Stripe (web/Android)</strong>.</p>
                  <ul>
-                   <li><strong>User ID:</strong> ${userId}</li>
+                   <li><strong>User ID:</strong> ${linkUserId}${resolvedVia !== 'metadata' ? ` (linked via ${resolvedVia})` : ''}</li>
                    <li><strong>Name:</strong> ${upgradedUser?.displayName || upgradedUser?.username || 'Unknown'}</li>
                    <li><strong>Email:</strong> ${upgradedUser?.email || 'Unknown'}</li>
                    <li><strong>Stripe Customer:</strong> ${session.customer}</li>
@@ -11714,6 +11775,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Daily RevenueCat reconciliation safety net (upgrades any stuck iOS payer).
   startRevenueCatReconcileCron();
+  try {
+    const { startStripeReconcileCron } = await import('./services/stripeReconcile');
+    startStripeReconcileCron();
+  } catch (error) {
+    console.error('Failed to start Stripe reconciliation cron:', error);
+  }
 
   // Daily vault-upgrade drip: sends the remainder of the announcement (which hit
   // the Resend daily limit) at 90/day until every opted-in user is reached.
