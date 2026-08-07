@@ -50,6 +50,21 @@ interface SignupDay {
   count: number;
 }
 
+interface ActivityBucket {
+  label: string;
+  count: number;
+  users: number;
+}
+
+type ActivityRange = "day" | "month" | "year" | "total";
+
+const ACTIVITY_RANGES: Array<{ key: ActivityRange; label: string }> = [
+  { key: "day", label: "Day" },
+  { key: "month", label: "Month" },
+  { key: "year", label: "Year" },
+  { key: "total", label: "Total" },
+];
+
 interface RcAuditUser {
   userId: number;
   email: string;
@@ -122,6 +137,13 @@ export default function AdminAnalytics() {
   const { data: funnel, isLoading: funnelLoading } = useQuery<FunnelStats>({
     queryKey: ["/api/admin/funnel-stats"],
   });
+
+  const [activityRange, setActivityRange] = useState<ActivityRange>("month");
+  const { data: activity = [], isLoading: activityLoading } = useQuery<ActivityBucket[]>({
+    queryKey: [`/api/admin/activity-stats?range=${activityRange}`],
+  });
+  const totalActivity = activity.reduce((s, b) => s + b.count, 0);
+  const peakBucket = activity.reduce((max, b) => (b.count > max.count ? b : max), { label: "", count: 0, users: 0 });
 
   const { data: platformUsage, isLoading: platformUsageLoading } = useQuery<PlatformUsageStats>({
     queryKey: ["/api/admin/platform-usage-stats"],
@@ -272,6 +294,71 @@ export default function AdminAnalytics() {
         <h2 className="text-xl font-bold text-gray-900">Conversion Funnel</h2>
         <p className="text-sm text-gray-500 mt-0.5">All-time: how users move from signup to Super Hero</p>
       </div>
+
+      {/* ── User Activity ─────────────────────────────────────────────────────── */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <CardTitle className="text-base">User Activity</CardTitle>
+              <p className="text-xs text-gray-400 font-normal mt-0.5">
+                Card adds, scans &amp; upgrade events — times shown in Central Time. Use to spot busy vs quiet hours.
+              </p>
+            </div>
+            <div className="flex rounded-lg border bg-gray-50 p-0.5">
+              {ACTIVITY_RANGES.map((r) => (
+                <button
+                  key={r.key}
+                  onClick={() => setActivityRange(r.key)}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                    activityRange === r.key ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex gap-4 mt-2">
+            <span className="text-xs text-gray-500"><span className="font-bold text-gray-800">{totalActivity.toLocaleString()}</span> actions</span>
+            {peakBucket.label && (
+              <span className="text-xs text-gray-500">peak: <span className="font-bold text-gray-800">{peakBucket.label}</span> ({peakBucket.count.toLocaleString()})</span>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="pt-2 pb-2">
+          {activityLoading ? (
+            <div className="h-52 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
+          ) : activity.length === 0 ? (
+            <div className="h-52 flex items-center justify-center text-gray-400 text-sm">No activity recorded yet</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={activity} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="activityGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 11, fill: "#6b7280" }}
+                  axisLine={false}
+                  tickLine={false}
+                  interval={activity.length > 24 ? Math.floor(activity.length / 15) : activity.length > 12 ? 1 : 0}
+                />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} width={32} />
+                <Tooltip
+                  formatter={(v: number, name: string) => [v.toLocaleString(), name === "count" ? "Actions" : "Active users"]}
+                  contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                />
+                <Area type="monotone" dataKey="count" stroke="#8b5cf6" strokeWidth={2} fill="url(#activityGrad)" dot={false} activeDot={{ r: 4 }} />
+                <Area type="monotone" dataKey="users" stroke="#10b981" strokeWidth={1.5} fill="none" dot={false} activeDot={{ r: 4 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
 
       {funnelLoading ? (
         <div className="text-center py-12 text-gray-400">Loading funnel data…</div>

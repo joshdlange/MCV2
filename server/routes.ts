@@ -755,6 +755,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── Admin: User activity over time (day/month/year/total) ────────────────────
+  app.get("/api/admin/activity-stats", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const range = String(req.query.range || 'month');
+      if (!['day', 'month', 'year', 'total'].includes(range)) {
+        return res.status(400).json({ message: 'range must be day, month, year, or total' });
+      }
+      const data = await storage.getActivityStats(range as any);
+      res.json(data);
+    } catch (err) {
+      console.error('[Admin] activity-stats error:', err);
+      res.status(500).json({ message: 'Failed to fetch activity stats' });
+    }
+  });
+
   // ── Admin: Platform usage stats (web vs ios vs android vs multiple) ──────────
   app.get("/api/admin/platform-usage-stats", authenticateUser, async (req: any, res) => {
     try {

@@ -2818,6 +2818,75 @@ export class DatabaseStorage implements IStorage {
     return result.rows.map((r: any) => ({ date: r.date as string, count: parseInt(r.count) || 0 }));
   }
 
+  async getActivityStats(range: 'day' | 'month' | 'year' | 'total'): Promise<Array<{ label: string; count: number; users: number }>> {
+    // "Activity" = timestamped user actions we already record: card adds
+    // (user_collections.acquired_date), card scans (user_scan_logs), and
+    // upgrade-modal analytics events. Buckets are zero-filled and rendered
+    // in America/Chicago local time.
+    const events = (cutoff: string) => sql`
+      SELECT acquired_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago' AS ts, user_id
+        FROM user_collections WHERE acquired_date >= NOW() - ${sql.raw(`INTERVAL '${cutoff}'`)}
+      UNION ALL
+      SELECT created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago', user_id
+        FROM user_scan_logs WHERE created_at >= NOW() - ${sql.raw(`INTERVAL '${cutoff}'`)}
+      UNION ALL
+      SELECT created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Chicago', user_id
+        FROM analytics_events WHERE created_at >= NOW() - ${sql.raw(`INTERVAL '${cutoff}'`)}
+    `;
+
+    let result;
+    if (range === 'day') {
+      result = await db.execute(sql`
+        WITH events AS (${events('24 hours')}),
+        buckets AS (
+          SELECT generate_series(
+            date_trunc('hour', NOW() AT TIME ZONE 'America/Chicago') - INTERVAL '23 hours',
+            date_trunc('hour', NOW() AT TIME ZONE 'America/Chicago'), INTERVAL '1 hour') AS bucket)
+        SELECT to_char(b.bucket, 'FMHH12AM') AS label,
+               COUNT(e.ts) AS count, COUNT(DISTINCT e.user_id) AS users
+        FROM buckets b LEFT JOIN events e ON date_trunc('hour', e.ts) = b.bucket
+        GROUP BY b.bucket ORDER BY b.bucket
+      `);
+    } else if (range === 'month') {
+      result = await db.execute(sql`
+        WITH events AS (${events('30 days')}),
+        buckets AS (
+          SELECT generate_series(
+            date_trunc('day', NOW() AT TIME ZONE 'America/Chicago') - INTERVAL '29 days',
+            date_trunc('day', NOW() AT TIME ZONE 'America/Chicago'), INTERVAL '1 day') AS bucket)
+        SELECT to_char(b.bucket, 'FMMM/FMDD') AS label,
+               COUNT(e.ts) AS count, COUNT(DISTINCT e.user_id) AS users
+        FROM buckets b LEFT JOIN events e ON date_trunc('day', e.ts) = b.bucket
+        GROUP BY b.bucket ORDER BY b.bucket
+      `);
+    } else if (range === 'year') {
+      result = await db.execute(sql`
+        WITH events AS (${events('12 months')}),
+        buckets AS (
+          SELECT generate_series(
+            date_trunc('month', NOW() AT TIME ZONE 'America/Chicago') - INTERVAL '11 months',
+            date_trunc('month', NOW() AT TIME ZONE 'America/Chicago'), INTERVAL '1 month') AS bucket)
+        SELECT to_char(b.bucket, 'Mon') AS label,
+               COUNT(e.ts) AS count, COUNT(DISTINCT e.user_id) AS users
+        FROM buckets b LEFT JOIN events e ON date_trunc('month', e.ts) = b.bucket
+        GROUP BY b.bucket ORDER BY b.bucket
+      `);
+    } else {
+      result = await db.execute(sql`
+        WITH events AS (${events('100 years')})
+        SELECT to_char(date_trunc('month', ts), 'Mon YYYY') AS label,
+               COUNT(ts) AS count, COUNT(DISTINCT user_id) AS users
+        FROM events
+        GROUP BY date_trunc('month', ts) ORDER BY date_trunc('month', ts)
+      `);
+    }
+    return (result.rows as any[]).map((r) => ({
+      label: r.label as string,
+      count: parseInt(r.count) || 0,
+      users: parseInt(r.users) || 0,
+    }));
+  }
+
   async getUpgradeModalStats(): Promise<any> {
     const r1 = await db.execute(sql`SELECT COUNT(*) AS count FROM analytics_events WHERE event_type = 'upgrade_modal_shown'`);
     const r2 = await db.execute(sql`SELECT COUNT(*) AS count FROM analytics_events WHERE event_type = 'upgrade_clicked'`);
