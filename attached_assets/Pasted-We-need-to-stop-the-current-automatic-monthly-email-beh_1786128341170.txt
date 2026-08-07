@@ -1,0 +1,144 @@
+We need to stop the current automatic monthly email behavior and create a reusable Replit Agent Skill for Marvel Card Vault lifecycle marketing.
+
+Context:
+The current automatic monthly emails are not useful enough. They are generic, not populated with the newest app changes, not specific to new features or new sets, and feel like a wasted touch point.
+
+Also, Resend free plan limits are too low for sending the entire user base in one day. Before upgrading Resend and sending broader campaigns, we need a better lifecycle marketing strategy based on user actions and inactions.
+
+Goal:
+1. Disable the current automatic monthly email send behavior.
+2. Preserve the underlying email templates/code if useful, but prevent automatic monthly sends from going out.
+3. Create a reusable Replit Agent Skill called “MCV Lifecycle Marketing” that guides future email, notification, onboarding, and nurture work.
+
+Must do:
+- Locate the current monthly email / digest / nudge cron or scheduled job.
+- Disable the automatic monthly send.
+- Do not delete the email code unless clearly dead and safe.
+- Add a clear comment explaining that monthly generic sends are disabled until lifecycle strategy is rebuilt.
+- Confirm no monthly email will send automatically on the next schedule.
+- Preserve Resend as the email provider.
+- Preserve password reset and transactional emails.
+- Preserve admin test email tools.
+- Create a Replit Agent Skill at:
+  /.agents/skills/mcv-lifecycle-marketing/SKILL.md
+- The skill should guide future lifecycle marketing work for Marvel Card Vault.
+
+Must not do:
+- Do not send any emails.
+- Do not trigger any campaign.
+- Do not delete user email preferences.
+- Do not change password reset emails.
+- Do not change transactional emails unless necessary.
+- Do not change Resend configuration.
+- Do not change billing, subscriptions, XP, PC Binders, Drive Sync, card data, auth, Android, or iOS.
+- Do not create a new campaign send yet.
+- Do not upgrade or change Resend account settings from code.
+
+Preserve:
+- Existing Resend setup.
+- Existing email service.
+- Existing password reset flow.
+- Existing admin-only email test tools.
+- Existing user database and email preference logic.
+- Existing unsubscribe logic if present.
+- Existing app behavior.
+
+Skill content requirements:
+The “MCV Lifecycle Marketing” skill should include:
+
+Purpose:
+Help Marvel Card Vault create smarter lifecycle messaging based on user behavior, not generic monthly blasts.
+
+Voice and tone:
+- Collector-first
+- Fun, clear, and useful
+- Comic-inspired but not cheesy
+- Short, punchy CTAs
+- No em dashes
+- No false affiliation language
+- Do not claim affiliation with Marvel, Disney, Upper Deck, Topps, or card manufacturers
+
+Marketing principles:
+- Send because something happened or did not happen.
+- Every email should have a specific reason.
+- Every email should have one primary CTA.
+- Avoid generic “monthly update” emails unless they are truly personalized and content-rich.
+- Prefer behavior-based triggers over calendar-based blasts.
+- Respect unsubscribe/preferences.
+- Avoid over-emailing users.
+- Batch large sends to respect Resend limits.
+- Test to admin before any production campaign.
+
+Lifecycle stages to support:
+1. Activation
+   - signup completed but no cards added
+   - first card added
+   - collection started but stalled
+2. Engagement
+   - user adds cards
+   - user creates PC Binder
+   - user adds wishlist/chase cards
+   - user shares binder/PC/profile
+3. Contribution
+   - user views missing image
+   - user owns cards missing images
+   - image uploaded
+   - image approved/rejected
+   - XP earned for approved image
+4. Upgrade
+   - user nears Side Kick 500-card limit
+   - user clicks Super Hero-only feature
+   - user creates/wants PC Binder
+   - user wants Market Trends or Scan to Add
+5. Retention
+   - inactive 7 days
+   - inactive 14 days
+   - inactive 30 days
+   - new sets/images added since last visit
+6. Referral/sharing
+   - binder shared
+   - public link viewed
+   - signup from shared link
+   - XP/badge earned for sharing
+7. Community
+   - leaderboard placement
+   - badge unlocked
+   - set completed
+   - contribution milestone
+
+Example lifecycle triggers:
+- Welcome email after signup
+- First-card nudge if no card added within 24 hours
+- Add-more-cards nudge after first card
+- Create-PC-Binder prompt for Super Hero users
+- PC Binder upsell for Free/Side Kick users
+- Missing-image contribution prompt
+- Image-approved XP email
+- Binder-share prompt
+- Referral/signup credit email
+- Inactive-user reactivation email
+- New-set-specific announcement
+- New-image-coverage update
+
+Rules for future email builds:
+- Always include Must do / Must not do / Preserve / QA.
+- Never send a campaign without admin test approval.
+- Never send to all users without explicit approval.
+- Segment users when possible.
+- Include unsubscribe/footer for marketing emails.
+- Use production app links only after confirmation.
+- Log sends and failures.
+- Rate limit or batch sends to stay within Resend plan limits.
+- Do not expose API keys.
+- Do not hardcode secrets.
+
+QA:
+- Confirm monthly automatic emails are disabled.
+- Confirm password reset email still works.
+- Confirm transactional email service still works.
+- Confirm no emails were sent during this task.
+- Confirm the new skill file exists.
+- Confirm the skill is documented and ready to use.
+- Provide changed files.
+- Provide the name/location of the disabled monthly job.
+- Provide recommendation for the first lifecycle email sequence to build next.

@@ -669,20 +669,23 @@ export function startEmailCronJobs() {
     return;
   }
   
-  console.log('📅 Starting email cron jobs...');
-  monthlyNudgesJob.start();
-  monthlyDigestJob.start();
-  googlePlayLaunchJob.start();
-  thanks2uBlastJob.start();
-  thanks2uFollowUpJob.start();
-  vaultUpgradeJob.start();
-  console.log('✅ Email cron jobs started:');
-  console.log('  - Monthly nudges: 9:00 AM on the 1st of each month');
-  console.log('  - Monthly digest: 9:00 AM on the 1st of each month');
-  console.log('  - Google Play Launch: 10:00 AM Central on Jan 10, 2026 (one-time)');
-  console.log('  - THANKS2U Coupon Blast: 9:00 AM Central on Jun 10, 2026 (one-time)');
-  console.log('  - THANKS2U Follow-Up: 9:00 AM Central on Jun 24, 2026 (one-time)');
-  console.log('  - Vault Upgrade Announcement: 12:00 PM Central on Jul 10, 2026 (one-time)');
+  // ⛔ AUTOMATIC MARKETING SENDS DISABLED (Aug 2026)
+  // Generic monthly blasts (nudges + digest) are paused until the lifecycle
+  // marketing strategy is rebuilt — see .agents/skills/mcv-lifecycle-marketing/SKILL.md.
+  // They were generic, not populated with new features/sets, and Resend free-plan
+  // limits can't cover the whole user base in a day anyway.
+  //
+  // ALSO deliberately not starting the four "one-time" campaign jobs
+  // (googlePlayLaunchJob, thanks2uBlastJob, thanks2uFollowUpJob, vaultUpgradeJob):
+  // their cron patterns like '0 9 10 6 *' repeat ANNUALLY, so starting them
+  // would re-send those past campaigns every year on the same date.
+  //
+  // The job code is intentionally preserved (templates/segments are reusable).
+  // To re-enable a job, add its .start() back here — do not rely on
+  // EMAIL_CRON_ENABLED alone, since that would resurrect all of them at once.
+  // Transactional emails (password reset via Resend, receipts, admin test
+  // tools) are unaffected — they don't run through this scheduler.
+  console.log('📅 Email cron scheduler: automatic marketing sends are DISABLED (monthly nudges/digest + legacy one-time campaigns). Transactional email unaffected.');
 }
 
 /**
