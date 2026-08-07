@@ -6393,8 +6393,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: 'ok', message: 'Stripe webhook route is reachable', timestamp: new Date().toISOString() });
   });
 
-  // Stripe webhook endpoint to handle successful payments
-  app.post('/api/stripe-webhook', async (req, res) => {
+  // Stripe webhook endpoint to handle successful payments.
+  // Registered on BOTH paths: Stripe's dashboard endpoint historically pointed
+  // at /api/stripe/webhook (slash) while only /api/stripe-webhook (dash)
+  // existed — every webhook 404'd and subscriptions silently failed to link
+  // to accounts. Answering both spellings makes that mismatch impossible.
+  app.post(['/api/stripe-webhook', '/api/stripe/webhook'], async (req, res) => {
     console.log('🔔 Stripe webhook received at /api/stripe-webhook');
     const sig = req.headers['stripe-signature'];
     let event;
@@ -6426,78 +6430,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Check if this is a marketplace purchase
           if (session.metadata?.type === 'marketplace_purchase') {
             // Handle marketplace payment confirmation directly (no HTTP call for reliability)
-            try {
-              const { orders, listings, userCollections, notifications } = await import('../shared/schema');
-              const { eq } = await import('drizzle-orm');
-              
-              const order = await db.select().from(orders)
-                .where(eq(orders.stripeCheckoutSessionId, session.id))
-                .limit(1);
-              
-              if (order.length) {
-                // Race condition protection: check if item already sold
-                const listing = await db.select().from(listings).where(eq(listings.id, order[0].listingId)).limit(1);
-                if (listing.length && listing[0].status === 'sold') {
-                  console.log(`Race condition: Item already sold, refunding order ${order[0].orderNumber}`);
-                  if (session.payment_intent) {
-                    try {
-                      await stripe.refunds.create({ payment_intent: session.payment_intent as string });
-                      console.log(`Refund issued for payment intent ${session.payment_intent}`);
-                    } catch (refundErr) {
-                      console.error('Failed to issue refund:', refundErr);
-                    }
-                  }
-                  await db.update(orders).set({
-                    status: 'cancelled',
-                    paymentStatus: 'refunded',
-                    updatedAt: new Date(),
-                  }).where(eq(orders.id, order[0].id));
-                } else {
-                  // Normal flow: update order and mark as sold
-                  let shippingAddress = order[0].shippingAddress;
-                  if (session.shipping_details?.address) {
-                    const addr = session.shipping_details.address;
-                    shippingAddress = JSON.stringify({
-                      name: session.shipping_details.name || '',
-                      street1: addr.line1 || '',
-                      street2: addr.line2 || '',
-                      city: addr.city || '',
-                      state: addr.state || '',
-                      zip: addr.postal_code || '',
-                      country: addr.country || 'US',
-                    });
-                  }
-                  
-                  await db.update(orders).set({
-                    status: 'needs_shipping',
-                    paymentStatus: 'succeeded',
-                    stripePaymentIntentId: session.payment_intent as string,
-                    shippingAddress,
-                    updatedAt: new Date(),
-                  }).where(eq(orders.id, order[0].id));
-                  
-                  if (listing.length) {
-                    await db.update(listings).set({ quantityAvailable: 0, status: 'sold', updatedAt: new Date() }).where(eq(listings.id, order[0].listingId));
-                    if (listing[0].userCollectionId) {
-                      await db.update(userCollections).set({ isForSale: false }).where(eq(userCollections.id, listing[0].userCollectionId));
-                    }
-                  }
-                  
-                  await db.insert(notifications).values({
-                    userId: order[0].sellerId,
-                    type: 'sale_made',
-                    title: 'You made a sale!',
-                    message: `Order #${order[0].orderNumber} is ready to ship.`,
-                    data: JSON.stringify({ orderId: order[0].id, orderNumber: order[0].orderNumber, total: order[0].total }),
-                    isRead: false,
-                  });
-                  console.log(`✅ Marketplace payment confirmed for order ${order[0].orderNumber}`);
-                }
+            // IDEMPOTENT fulfillment: Stripe retries webhook deliveries, so
+            // this block must be safe to run multiple times for one session.
+            // Step 1 atomically "claims" the order (only one delivery wins);
+            // retries find nothing to claim and no-op — they can never reach
+            // the refund branch for an already-fulfilled order.
+            // Errors are rethrown so Stripe sees a 500 and retries later.
+            const { orders, listings, userCollections, notifications } = await import('../shared/schema');
+            const { eq, and, ne } = await import('drizzle-orm');
+
+            // Step 1: claim the order — only transitions if not already processed.
+            const claimed = await db.update(orders).set({
+              status: 'needs_shipping',
+              paymentStatus: 'succeeded',
+              stripePaymentIntentId: session.payment_intent as string,
+              updatedAt: new Date(),
+            }).where(and(
+              eq(orders.stripeCheckoutSessionId, session.id),
+              ne(orders.paymentStatus, 'succeeded'),
+              ne(orders.status, 'cancelled'),
+            )).returning();
+
+            if (claimed.length) {
+              const order = claimed[0];
+
+              // Persist the shipping address from Stripe if provided.
+              if (session.shipping_details?.address) {
+                const addr = session.shipping_details.address;
+                await db.update(orders).set({
+                  shippingAddress: JSON.stringify({
+                    name: session.shipping_details.name || '',
+                    street1: addr.line1 || '',
+                    street2: addr.line2 || '',
+                    city: addr.city || '',
+                    state: addr.state || '',
+                    zip: addr.postal_code || '',
+                    country: addr.country || 'US',
+                  }),
+                }).where(eq(orders.id, order.id));
               }
-            } catch (err) {
-              console.error('Failed to confirm marketplace payment:', err);
+
+              // Step 2: claim the listing. If another order already sold it,
+              // this is a genuine buyer race — refund THIS order only.
+              const soldNow = await db.update(listings)
+                .set({ quantityAvailable: 0, status: 'sold', updatedAt: new Date() })
+                .where(and(eq(listings.id, order.listingId), ne(listings.status, 'sold')))
+                .returning();
+
+              if (soldNow.length) {
+                if (soldNow[0].userCollectionId) {
+                  await db.update(userCollections).set({ isForSale: false }).where(eq(userCollections.id, soldNow[0].userCollectionId));
+                }
+                await db.insert(notifications).values({
+                  userId: order.sellerId,
+                  type: 'sale_made',
+                  title: 'You made a sale!',
+                  message: `Order #${order.orderNumber} is ready to ship.`,
+                  data: JSON.stringify({ orderId: order.id, orderNumber: order.orderNumber, total: order.total }),
+                  isRead: false,
+                });
+                console.log(`✅ Marketplace payment confirmed for order ${order.orderNumber}`);
+              } else {
+                console.log(`Race condition: item already sold by another order, refunding order ${order.orderNumber}`);
+                if (session.payment_intent) {
+                  await stripe.refunds.create({ payment_intent: session.payment_intent as string });
+                  console.log(`Refund issued for payment intent ${session.payment_intent}`);
+                }
+                await db.update(orders).set({
+                  status: 'cancelled',
+                  paymentStatus: 'refunded',
+                  updatedAt: new Date(),
+                }).where(eq(orders.id, order.id));
+              }
+            } else {
+              console.log(`Marketplace webhook no-op: order for session ${session.id} already processed or not found`);
             }
           } else if (userId && session.subscription) {
+            // Idempotency: on webhook retries the plan write is convergent,
+            // but skip the admin notification email if this exact subscription
+            // is already linked (i.e. we've processed this session before).
+            const existingUser = await storage.getUser(userId);
+            const alreadyLinked = existingUser?.stripeSubscriptionId === (session.subscription as string)
+              && existingUser?.plan === 'SUPER_HERO';
             // Update user to Super Hero plan
             await storage.updateUser(userId, {
               plan: 'SUPER_HERO',
@@ -6506,7 +6520,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               stripeSubscriptionId: session.subscription as string
             });
             console.log(`User ${userId} upgraded to Super Hero plan`);
-            try {
+            if (!alreadyLinked) try {
               const upgradedUser = await storage.getUser(userId);
               await sendEmail(
                 'josh@marvelcardvault.com',
