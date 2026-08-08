@@ -126,6 +126,11 @@ export default function LifecycleIntelligence() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Conversion Journey</CardTitle>
+          <p className="text-xs text-gray-400 font-normal">
+            Cumulative: each bar counts every user who has ever reached that milestone, so one user
+            appears in multiple bars. This differs from Lifecycle Stages above, where each user
+            counts in exactly one (their highest) stage.
+          </p>
         </CardHeader>
         <CardContent>
           {ovLoading || !overview ? (
