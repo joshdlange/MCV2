@@ -11881,22 +11881,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error('[Upcoming Sets] Initialization error:', err);
   });
 
-  // Daily RevenueCat reconciliation safety net (upgrades any stuck iOS payer).
-  startRevenueCatReconcileCron();
-  try {
-    const { startStripeReconcileCron } = await import('./services/stripeReconcile');
-    startStripeReconcileCron();
-  } catch (error) {
-    console.error('Failed to start Stripe reconciliation cron:', error);
+  // Email/reconcile crons run ONLY in the production deployment. The dev
+  // workspace runs the same code against a stale copy of the database, so
+  // letting it schedule these produced duplicate/incorrect admin alert emails
+  // (e.g. two Stripe reconcile emails on Aug 8, 2026, one full of dev-only
+  // "unlinked" noise) and risked double-sending user emails, since dev and
+  // prod keep separate email_logs dedupe ledgers.
+  if (process.env.REPLIT_DEPLOYMENT) {
+    // Daily RevenueCat reconciliation safety net (upgrades any stuck iOS payer).
+    startRevenueCatReconcileCron();
+    try {
+      const { startStripeReconcileCron } = await import('./services/stripeReconcile');
+      startStripeReconcileCron();
+    } catch (error) {
+      console.error('Failed to start Stripe reconciliation cron:', error);
+    }
+
+    // Daily vault-upgrade drip: sends the remainder of the announcement (which hit
+    // the Resend daily limit) at 90/day until every opted-in user is reached.
+    startVaultUpgradeDripCron();
+
+    // Lifecycle emails v1: hourly first-card nudge cron (welcome is event-
+    // triggered at onboarding). All other journey emails are draft/disabled.
+    startLifecycleEmailCron();
+  } else {
+    console.log('📧 Scheduled email/reconcile crons SKIPPED (dev workspace — production deployment only)');
   }
-
-  // Daily vault-upgrade drip: sends the remainder of the announcement (which hit
-  // the Resend daily limit) at 90/day until every opted-in user is reached.
-  startVaultUpgradeDripCron();
-
-  // Lifecycle emails v1: hourly first-card nudge cron (welcome is event-
-  // triggered at onboarding). All other journey emails are draft/disabled.
-  startLifecycleEmailCron();
 
   // One-time XP backfill: seed card_added XP from existing collections so
   // long-time collectors don't show 0 card XP. Guarded — only runs if empty.

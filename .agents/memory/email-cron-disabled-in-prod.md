@@ -31,3 +31,8 @@ the cron. Don't assume a dated CronJob ran just because its date passed.
   manual "send now" trigger can't overlap and double-send.
 - Resend free tier has a **daily** send cap shared with transactional mail; keep the
   daily batch (e.g. 90) below the cap with headroom.
+
+## Crons are production-only (Aug 2026)
+All scheduled email/reconcile crons (RevenueCat + Stripe reconcile, vault drip, lifecycle) only start when `REPLIT_DEPLOYMENT` is set.
+**Why:** the dev workspace ran the same crons against a stale dev DB copy — Josh got duplicate Stripe-reconcile alert emails (one full of dev-only "unlinked" noise), and dev/prod keep separate email_logs dedupe ledgers, risking double-sends to users.
+**How to apply:** any new scheduled job that sends email or mutates billing state must go inside the `REPLIT_DEPLOYMENT` gate in routes.ts startup; test in dev via the manual admin endpoints instead.
