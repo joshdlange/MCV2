@@ -616,7 +616,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // All aggregates are set-based (GROUP BY user_id) so this stays fast
       // regardless of user count — no per-user queries.
-      const [users, cardCountsResult, badgeXpResult, imageCountResult, ledgerXpResult] = await Promise.all([
+      const { getLifecycleUserRows } = await import('./services/lifecycleIntelligence');
+      const [users, cardCountsResult, badgeXpResult, imageCountResult, ledgerXpResult, lifecycleMap] = await Promise.all([
         storage.getAllUsers(),
         db.execute(sql`
           SELECT user_id, COUNT(*) as card_count 
@@ -649,6 +650,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           WHERE event_type IN ('card_added', 'subset_binder_share_first', 'subset_binder_share_daily')
           GROUP BY user_id
         `),
+        getLifecycleUserRows(),
       ]);
 
       const cardCountMap = new Map<number, number>();
@@ -672,11 +674,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const totalXp = (badgeXpMap.get(user.id) || 0)
           + (imageXpMap.get(user.id) || 0)
           + (ledgerXpMap.get(user.id) || 0);
+        const lc = lifecycleMap.get(user.id);
         return {
           ...user,
           cardsInCollection: cardCountMap.get(user.id) || 0,
           totalXp,
           collectorLevel: computeXpProgress(totalXp).level,
+          lifecycleStage: lc?.stage || null,
+          pcBinderCount: lc?.pcBinderCount || 0,
+          wishlistCount: lc?.wishlistCount || 0,
+          imagesUploaded: lc?.imagesUploaded || 0,
+          sharedBinders: lc?.sharedBinders || 0,
+          platforms: lc?.platforms || [],
+          platformFirstSeen: lc?.platformFirstSeen || null,
         };
       });
       
@@ -684,6 +694,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get admin users error:', error);
       res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // ── Lifecycle Intelligence v1 (admin-only, read-only, calculated) ──────────
+  app.get("/api/admin/lifecycle-overview", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const { getLifecycleOverview } = await import('./services/lifecycleIntelligence');
+      res.json(await getLifecycleOverview());
+    } catch (error) {
+      console.error('Lifecycle overview error:', error);
+      res.status(500).json({ message: "Failed to compute lifecycle overview" });
+    }
+  });
+
+  app.get("/api/admin/activity-heatmap", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const weeks = Math.min(Math.max(parseInt(req.query.weeks as string) || 8, 1), 52);
+      const { getActivityHeatmap } = await import('./services/lifecycleIntelligence');
+      res.json(await getActivityHeatmap(weeks));
+    } catch (error) {
+      console.error('Activity heatmap error:', error);
+      res.status(500).json({ message: "Failed to compute activity heatmap" });
     }
   });
 

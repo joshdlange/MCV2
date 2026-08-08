@@ -12,6 +12,7 @@ import {
 import { Users, CreditCard, TrendingUp, Eye, MousePointer, X, ChevronRight, ShieldCheck, RefreshCw, AlertTriangle, CheckCircle2, Apple } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import LifecycleIntelligence from "@/components/admin/LifecycleIntelligence";
 
 interface FunnelStats {
   signups: number;
@@ -409,6 +410,9 @@ export default function AdminAnalytics() {
               </ResponsiveContainer>
             </CardContent>
           </Card>
+
+          {/* Lifecycle Intelligence v1: stages, conversion journey, activity heatmap */}
+          <LifecycleIntelligence />
 
           <Card>
             <CardHeader>

@@ -1,0 +1,145 @@
+We need to improve Marvel Card Vault’s admin user activity and lifecycle tracking before building more emails or social feed features.
+
+Context:
+The current User Activity chart does not fully answer what we need. We are trying to understand how users move through the conversion journey, when they use the app, which platforms they use, where they drop off, and which behaviors correlate with upgrades.
+
+We also want this lifecycle data to support future lifecycle emails, public profiles, follow/friends, and feed features.
+
+Goal:
+Build User Activity / Lifecycle Intelligence v1 in the admin area.
+
+Must do:
+- Improve admin user analytics so we can understand user behavior and conversion stages.
+- Add lifecycle labels/stages for users.
+- Add platform usage tracking/summary where data exists.
+- Improve activity timing visibility so we know when users are active and when it is safest to publish.
+- Preserve existing user data and app behavior.
+- Do not send emails.
+- Do not build the social feed yet.
+- Do not build follow/friends yet.
+
+Lifecycle stages:
+Create or calculate clear user lifecycle labels such as:
+- Signed Up
+- Onboarding Complete
+- Empty Vault
+- Collector Started
+- Returning Collector
+- Engaged Collector
+- Power Collector
+- Super Hero
+- Cancelled
+- Dormant
+
+Suggested definitions:
+- Signed Up: account exists
+- Onboarding Complete: signup/onboarding completed
+- Empty Vault: onboarding complete but zero cards
+- Collector Started: added at least one card
+- Returning Collector: logged in 3+ times or active on 3+ days
+- Engaged Collector: meaningful activity such as 10+ cards, PC Binder, wishlist, image upload, or share
+- Power Collector: high collection/activity threshold such as 100+ cards or repeated sessions
+- Super Hero: active paid subscriber
+- Cancelled: was Super Hero and now cancelled
+- Dormant: no activity in 30+ days
+
+These definitions can be adjusted based on existing data structure, but document the exact rules used.
+
+Admin user table:
+Add useful columns/filters if practical:
+- lifecycle stage
+- plan
+- signup date
+- onboarding completed date if available
+- last active
+- login count or active days if available
+- card count
+- PC Binder count
+- wishlist/chase count
+- images uploaded
+- shared binders count
+- platform first seen
+- platforms used
+- upgraded at
+- cancelled at
+- email lifecycle status if available
+
+Analytics dashboard:
+Add or improve visual summaries for:
+- funnel conversion:
+  Signed Up → Onboarding Complete → Added First Card → Returning → Engaged → Upgraded → Cancelled
+- users by lifecycle stage
+- platform usage:
+  Web only
+  iOS only
+  Android only
+  Multiple platforms
+  No platform data
+- upgrade rate by platform group
+- activity by hour/day in Central Time
+- quietest usage windows for safer publishing
+- most active hours/days
+- new signups by platform if available
+- first-card conversion rate
+- upgrade conversion rate
+
+Important:
+The activity chart should help answer:
+- When are users most active?
+- When are users least active?
+- What is the safest publish window?
+- How many users are actually active in a given time range?
+- Which user segments are most likely to upgrade?
+- Which users need lifecycle nudges?
+
+Data handling:
+- Prefer calculated labels if safer than adding permanent fields.
+- If persistent labels are added, include a safe backfill/dry-run first.
+- Do not overwrite existing user data.
+- Do not create destructive migrations.
+- Add indexes only if needed and safe.
+- Make schema changes additive only.
+
+Must not do:
+- Do not send emails.
+- Do not activate new lifecycle emails.
+- Do not change subscription logic.
+- Do not change Stripe, RevenueCat, Shippo, Resend, password reset, XP rules, PC Binders, Drive Sync, image approvals, card data, Android, or iOS.
+- Do not build Feed yet.
+- Do not build Follow/Friends yet.
+- Do not expose private user data publicly.
+- Do not make user profiles public.
+- Do not change public app behavior.
+
+Preserve:
+- Existing admin dashboard.
+- Existing user table behavior.
+- Existing lifecycle email system.
+- Existing disabled monthly campaigns.
+- Existing auth/security.
+- Existing user privacy.
+- Existing app routes.
+
+QA:
+- Admin-only access verified.
+- Non-admin users cannot access user analytics.
+- Lifecycle labels calculate correctly for sample users.
+- Existing users are not modified unless an approved additive backfill is used.
+- Charts load without errors.
+- User table filters work.
+- Activity timing uses Central Time as currently shown.
+- Quietest publish windows are clearly visible.
+- Platform upgrade rates match underlying data.
+- No emails are sent.
+- No public-facing behavior changes.
+- App builds/runs cleanly.
+
+Final response:
+- List changed files.
+- Explain lifecycle stage definitions.
+- Show funnel counts.
+- Show platform conversion counts.
+- Explain how to identify safest publish windows.
+- Confirm no emails were sent.
+- Confirm no user-facing behavior changed.
+- Confirm whether this is safe to publish.

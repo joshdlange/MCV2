@@ -14,6 +14,25 @@ import { useToast } from "@/hooks/use-toast";
 type SortField = 'lastLogin' | 'plan' | 'createdAt' | 'cardsInCollection' | 'collectorLevel' | null;
 type SortDirection = 'asc' | 'desc';
 
+const LIFECYCLE_STAGES = [
+  "Signed Up", "Onboarding Complete", "Empty Vault", "Collector Started",
+  "Returning Collector", "Engaged Collector", "Power Collector",
+  "Super Hero", "Cancelled", "Dormant",
+];
+
+const STAGE_BADGE: Record<string, string> = {
+  "Signed Up": "bg-gray-100 text-gray-700 border-gray-300",
+  "Onboarding Complete": "bg-blue-100 text-blue-800 border-blue-300",
+  "Empty Vault": "bg-yellow-100 text-yellow-800 border-yellow-300",
+  "Collector Started": "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "Returning Collector": "bg-emerald-100 text-emerald-800 border-emerald-300",
+  "Engaged Collector": "bg-green-100 text-green-800 border-green-300",
+  "Power Collector": "bg-purple-100 text-purple-800 border-purple-300",
+  "Super Hero": "bg-green-600 text-white border-green-600",
+  "Cancelled": "bg-red-100 text-red-800 border-red-300",
+  "Dormant": "bg-gray-200 text-gray-600 border-gray-300",
+};
+
 interface User {
   id: number;
   username: string;
@@ -26,6 +45,13 @@ interface User {
   cardsInCollection?: number;
   totalXp?: number;
   collectorLevel?: number;
+  lifecycleStage?: string | null;
+  pcBinderCount?: number;
+  wishlistCount?: number;
+  imagesUploaded?: number;
+  sharedBinders?: number;
+  platforms?: string[];
+  totalLogins?: number;
 }
 
 export default function AdminUsers() {
@@ -36,6 +62,7 @@ export default function AdminUsers() {
   const [sortField, setSortField] = useState<SortField>('lastLogin');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [levelFilter, setLevelFilter] = useState<string>('all');
+  const [stageFilter, setStageFilter] = useState<string>('all');
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -127,7 +154,8 @@ export default function AdminUsers() {
     .filter((user: User) => 
       (user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase())) &&
-      matchesLevelFilter(user)
+      matchesLevelFilter(user) &&
+      (stageFilter === 'all' || user.lifecycleStage === stageFilter)
     )
     .sort((a: User, b: User) => {
       if (!sortField) return 0;
@@ -205,6 +233,17 @@ export default function AdminUsers() {
             <SelectItem value="20+">Level 20+</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={stageFilter} onValueChange={setStageFilter}>
+          <SelectTrigger className="w-52 bg-white">
+            <SelectValue placeholder="Lifecycle Stage" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Stages</SelectItem>
+            {LIFECYCLE_STAGES.map(s => (
+              <SelectItem key={s} value={s}>{s}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Users Table */}
@@ -242,6 +281,9 @@ export default function AdminUsers() {
                     {getSortIcon('collectorLevel')}
                   </div>
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stage</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Platforms</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Activity</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Onboarding</th>
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
@@ -267,13 +309,13 @@ export default function AdminUsers() {
             <tbody className="bg-white divide-y divide-gray-200">
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={12} className="px-6 py-4 text-center text-gray-500">
                     Loading users...
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={12} className="px-6 py-4 text-center text-gray-500">
                     No users found
                   </td>
                 </tr>
@@ -313,6 +355,25 @@ export default function AdminUsers() {
                       <Badge className="bg-blue-100 text-blue-800 border-blue-300" title={`${user.totalXp ?? 0} XP`}>
                         Lv {user.collectorLevel || 1}
                       </Badge>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {user.lifecycleStage ? (
+                        <Badge className={STAGE_BADGE[user.lifecycleStage] || "bg-gray-100 text-gray-700 border-gray-300"}>
+                          {user.lifecycleStage}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {user.platforms && user.platforms.length > 0 ? user.platforms.join(", ") : "—"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500" title="PC Binders · Wishlist · Images uploaded · Shared binders">
+                      {(user.pcBinderCount || 0) > 0 && <span className="mr-2">📁 {user.pcBinderCount}</span>}
+                      {(user.wishlistCount || 0) > 0 && <span className="mr-2">⭐ {user.wishlistCount}</span>}
+                      {(user.imagesUploaded || 0) > 0 && <span className="mr-2">🖼 {user.imagesUploaded}</span>}
+                      {(user.sharedBinders || 0) > 0 && <span>🔗 {user.sharedBinders}</span>}
+                      {!(user.pcBinderCount || user.wishlistCount || user.imagesUploaded || user.sharedBinders) && "—"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {user.onboardingComplete ? (
