@@ -124,6 +124,14 @@ const ADMIN_SECTIONS: AdminSection[] = [
         status: ["active"],
       },
       {
+        title: "Upcoming Set Intelligence",
+        description: "Multi-source detection of new Marvel releases with review workflow",
+        href: "/admin/set-intelligence",
+        icon: Calendar,
+        color: "bg-indigo-500",
+        status: ["active"],
+      },
+      {
         title: "Base Set Population",
         description: "Clone card data from a variant set into an empty base set",
         href: "/admin/base-set-population",

@@ -511,6 +511,42 @@ export const insertUpcomingSetSchema = createInsertSchema(upcomingSets).omit({
   interestCount: true,
 });
 
+// Upcoming Set Intelligence: admin-only detection candidates. Rows here are
+// NEVER user-facing — an admin must approve a candidate into upcoming_sets.
+export const upcomingSetCandidates = pgTable("upcoming_set_candidates", {
+  id: serial("id").primaryKey(),
+  detectedSetName: text("detected_set_name").notNull(),
+  normalizedName: text("normalized_name").notNull(),
+  manufacturer: text("manufacturer"),
+  year: integer("year"),
+  estimatedReleaseDate: timestamp("estimated_release_date"),
+  sourceName: text("source_name").notNull(),
+  sourceUrl: text("source_url").notNull(),
+  sourceType: text("source_type").notNull(), // rss | shop | blog | checklist
+  confidence: integer("confidence").notNull(), // 0-100
+  checklistUrl: text("checklist_url"),
+  imageUrl: text("image_url"),
+  description: text("description"),
+  possibleDuplicateOf: text("possible_duplicate_of"), // matched existing upcoming set / card set name
+  status: text("status", { enum: ['pending', 'approved', 'ignored', 'duplicate', 'needs_review'] }).default('pending').notNull(),
+  adminNotes: text("admin_notes"),
+  approvedUpcomingSetId: integer("approved_upcoming_set_id"),
+  detectedAt: timestamp("detected_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("upcoming_set_candidates_normalized_name_idx").on(table.normalizedName),
+]);
+
+export const setIntelScanLogs = pgTable("set_intel_scan_logs", {
+  id: serial("id").primaryKey(),
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  finishedAt: timestamp("finished_at"),
+  trigger: text("trigger").default('manual').notNull(),
+  sourceResults: text("source_results"), // JSON: per-source {source, ok, itemsSeen, marvelMatches, created, error}
+  candidatesCreated: integer("candidates_created").default(0).notNull(),
+  sourceFailures: integer("source_failures").default(0).notNull(),
+});
+
 export const upcomingSetInterests = pgTable("upcoming_set_interests", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id).notNull(),

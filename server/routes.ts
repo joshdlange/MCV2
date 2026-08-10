@@ -18,7 +18,7 @@ import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
 import { uploadImage } from "./cloudinary";
 import { db } from "./db";
-import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userWishlists, badges, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks, blocks, friends, userScanLogs, pcBinders, pcBinderCards, pcBinderShareLinks, PC_BINDER_CATEGORIES, SIDE_KICK_CARD_LIMIT } from "../shared/schema";
+import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userWishlists, badges, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks, blocks, friends, userScanLogs, pcBinders, pcBinderCards, pcBinderShareLinks, PC_BINDER_CATEGORIES, SIDE_KICK_CARD_LIMIT, upcomingSetCandidates, upcomingSets as upcomingSetsTable } from "../shared/schema";
 import { imageContributionXp, computeXpProgress } from "../shared/xp";
 import {
   computeUserXp,
@@ -6518,6 +6518,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // =========================================================================
+  // Upcoming Set Intelligence (admin-only): multi-source detection of upcoming
+  // Marvel card releases into pending candidates. Candidates are NEVER
+  // user-facing — approval copies them into upcoming_sets after admin review.
+  // =========================================================================
+
+  app.get("/api/admin/set-intel/candidates", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const status = typeof req.query.status === 'string' ? req.query.status : null;
+      const rows = await db.select().from(upcomingSetCandidates)
+        .where(status ? eq(upcomingSetCandidates.status, status as any) : undefined)
+        .orderBy(desc(upcomingSetCandidates.confidence), desc(upcomingSetCandidates.detectedAt))
+        .limit(300);
+      res.json(rows);
+    } catch (error) {
+      console.error('Set intel candidates error:', error);
+      res.status(500).json({ message: 'Failed to load candidates' });
+    }
+  });
+
+  app.get("/api/admin/set-intel/stats", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const { getSetIntelStats } = await import('./services/setIntelligence');
+      res.json(await getSetIntelStats());
+    } catch (error) {
+      console.error('Set intel stats error:', error);
+      res.status(500).json({ message: 'Failed to load stats' });
+    }
+  });
+
+  // Manual "Run scan now" — body { dryRun?: boolean }. Dry-run writes nothing.
+  app.post("/api/admin/set-intel/scan", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const dryRun = req.body?.dryRun === true;
+      const { runSetIntelScan } = await import('./services/setIntelligence');
+      const report = await runSetIntelScan({ dryRun, trigger: 'manual' });
+      res.json(report);
+    } catch (error: any) {
+      console.error('Set intel scan error:', error);
+      res.status(500).json({ message: error?.message || 'Scan failed' });
+    }
+  });
+
+  // Review actions: update status (ignored/duplicate/needs_review/pending) and notes
+  app.patch("/api/admin/set-intel/candidates/:id", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const id = parseInt(req.params.id);
+      const allowedStatuses = ['pending', 'ignored', 'duplicate', 'needs_review'];
+      const updates: any = { updatedAt: new Date() };
+      if (req.body.status !== undefined) {
+        if (!allowedStatuses.includes(req.body.status)) {
+          return res.status(400).json({ message: `Status must be one of ${allowedStatuses.join(', ')} (use the approve endpoint to approve)` });
+        }
+        updates.status = req.body.status;
+      }
+      if (req.body.adminNotes !== undefined) updates.adminNotes = String(req.body.adminNotes).slice(0, 2000);
+      const [row] = await db.update(upcomingSetCandidates).set(updates)
+        .where(eq(upcomingSetCandidates.id, id)).returning();
+      if (!row) return res.status(404).json({ message: 'Candidate not found' });
+      res.json(row);
+    } catch (error) {
+      console.error('Set intel update error:', error);
+      res.status(500).json({ message: 'Failed to update candidate' });
+    }
+  });
+
+  // Approve a candidate into Upcoming Sets (with optional edits applied first)
+  app.post("/api/admin/set-intel/candidates/:id/approve", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const id = parseInt(req.params.id);
+      // Atomic approval: claim the candidate (conditional status transition),
+      // create the upcoming set, and record its ID all in ONE transaction —
+      // two concurrent approvals cannot create duplicate upcoming sets, and a
+      // failure after creation rolls the claim back too.
+      const result = await db.transaction(async (tx) => {
+        const [claimed] = await tx.update(upcomingSetCandidates)
+          .set({ status: 'approved', adminNotes: req.body.adminNotes ?? undefined, updatedAt: new Date() })
+          .where(and(eq(upcomingSetCandidates.id, id), ne(upcomingSetCandidates.status, 'approved')))
+          .returning();
+        if (!claimed) return null;
+
+        const setName = String(req.body.setName || claimed.detectedSetName).trim();
+        if (!setName) throw new Error('Set name cannot be empty');
+        const [created] = await tx.insert(upcomingSetsTable).values({
+          setName,
+          manufacturer: req.body.manufacturer ?? claimed.manufacturer,
+          releaseDateEstimated: req.body.releaseDateEstimated ? new Date(req.body.releaseDateEstimated) : claimed.estimatedReleaseDate,
+          dateConfidence: req.body.dateConfidence === 'confirmed' ? 'confirmed' : 'estimated',
+          keyHighlights: req.body.keyHighlights ?? claimed.description,
+          checklistUrl: claimed.checklistUrl,
+          sourceUrl: claimed.sourceUrl,
+          thumbnailUrl: claimed.imageUrl,
+          status: 'upcoming',
+          isActive: true,
+        }).returning();
+        const [updated] = await tx.update(upcomingSetCandidates)
+          .set({ approvedUpcomingSetId: created.id })
+          .where(eq(upcomingSetCandidates.id, id)).returning();
+        return { candidate: updated, upcomingSet: created };
+      });
+      if (!result) {
+        const [existing] = await db.select().from(upcomingSetCandidates).where(eq(upcomingSetCandidates.id, id));
+        return res.status(existing ? 400 : 404).json({ message: existing ? 'Already approved' : 'Candidate not found' });
+      }
+      res.json(result);
+    } catch (error) {
+      console.error('Set intel approve error:', error);
+      res.status(500).json({ message: 'Failed to approve candidate' });
+    }
+  });
+
   // Stripe Subscription Routes
   app.post("/api/create-checkout-session", authenticateUser, async (req: any, res) => {
     try {
@@ -11653,6 +11769,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // One-time seed: 2026 Topps Mint Marvel — 10 subsets, 480 cards (idempotent)
   import('./seeds/seedToppsMintMarvel2026').then(m => m.seedToppsMintMarvel2026()).catch(err => {
     console.error('[Topps Mint Seed] Error:', err);
+  });
+
+  // Upcoming Set Intelligence: ensure candidate/scan-log tables exist (idempotent)
+  import('./services/setIntelligence').then(m => m.ensureSetIntelTables()).catch(err => {
+    console.error('[Set Intel] Table setup error:', err);
   });
 
   // One-time seed: 2026 Topps Chrome Sapphire Edition — 29 subsets, 1,738 cards (idempotent)

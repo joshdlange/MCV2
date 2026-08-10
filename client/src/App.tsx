@@ -44,6 +44,7 @@ const AdminUnassignedSets = lazy(() => import("@/pages/admin/unassigned-sets"));
 const AdminDashboard = lazy(() => import("@/pages/admin/dashboard"));
 const AdminAutomation = lazy(() => import("@/pages/admin/automation"));
 const AdminUpcomingSets = lazy(() => import("@/pages/admin/upcoming-sets"));
+const AdminSetIntelligence = lazy(() => import("@/pages/admin/set-intelligence"));
 const AdminImageApprovals = lazy(() => import("@/pages/admin/image-approvals"));
 const AdminMigrationConsole = lazy(() => import("@/pages/admin/migration-console"));
 const AdminBaseSetPopulation = lazy(() => import("@/pages/admin/base-set-population"));
@@ -199,6 +200,7 @@ function Router() {
           <Route path="/admin/main-sets" component={AdminMainSets} />
           <Route path="/admin/unassigned-sets" component={AdminUnassignedSets} />
           <Route path="/admin/upcoming-sets" component={AdminUpcomingSets} />
+          <Route path="/admin/set-intelligence" component={AdminSetIntelligence} />
           <Route path="/admin/image-approvals" component={AdminImageApprovals} />
           <Route path="/admin/migration-console" component={AdminMigrationConsole} />
           <Route path="/admin/base-set-population" component={AdminBaseSetPopulation} />
