@@ -65,8 +65,8 @@ title = "Manual Review Worklist — Ranked by Subset (July 28)"
 id = "MVOQEid2HrOSMQExYQw0J"
 uri = "file://exports/missing_images_prioritized_2026-08-10.csv"
 type = "table"
-title = "Missing Card Images — Prioritized (full list)"
-description = "117,265 cards without a front image, sorted by set demand (collection adds in last 90 days). Excludes archived/duplicate cards and hidden/inactive sets."
+title = "Missing Card Images — Main Set / Subset / Card Number / Card Name"
+description = "117,034 cards without a front image, exactly four columns as requested, sorted so the most in-demand sets (by collection adds in the last 90 days) come first."
 
 [[outputs]]
 id = "P9sKdg1fGWlYqgvsbWhDk"
