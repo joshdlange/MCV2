@@ -1,0 +1,51 @@
+Add a manual quick-add workflow to Upcoming Set Intelligence.
+
+Context:
+Upcoming Set Intelligence v1 is working, but several high-value sources are blocked from server-side scans, including Topps, Ripped by Topps, and Blowout. We need a fast admin fallback so new sets can still be captured when I find them manually.
+
+Must do:
+- Add an admin-only “Add Candidate Manually” or “Quick Add from Source” button.
+- Allow admin to paste a source URL.
+- Allow admin to manually enter or edit:
+  - set name
+  - manufacturer/brand
+  - year
+  - estimated release date
+  - source name
+  - source URL
+  - checklist URL if available
+  - image URL if available
+  - description/snippet
+  - notes
+- Save it as a pending candidate, not directly as a public upcoming set.
+- Run duplicate detection against existing candidates, upcoming sets, and card sets.
+- If possible, attempt to fetch metadata from the URL, but do not require scraping to succeed.
+- If fetch fails due to bot protection, still allow the manually entered candidate to be saved.
+- Keep approval flow exactly the same as scanned candidates.
+- Add source type: manual_url or manual_entry.
+- Show manual candidates in the same review queue.
+- Preserve dry-run/approval safety.
+
+Must not do:
+- Do not automatically publish manual candidates.
+- Do not send emails or notifications.
+- Do not scrape aggressively.
+- Do not bypass duplicate detection.
+- Do not change lifecycle emails.
+- Do not change subscriptions, XP, PC Binders, Drive Sync, image approvals, card data, Android, or iOS.
+
+QA:
+- Admin can manually create a pending candidate.
+- Manual candidate does not appear publicly until approved.
+- Duplicate warnings work.
+- Bot-protected URLs do not block manual entry.
+- Approval still uses the atomic approval flow.
+- Non-admin users cannot access it.
+- No emails or notifications are sent.
+
+Final response:
+- List changed files.
+- Confirm manual candidate creation works.
+- Confirm public Upcoming Sets remain approval-only.
+- Confirm duplicate detection works.
+- Confirm safe to publish.

@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, RefreshCw, Radar, ExternalLink, CheckCircle, XCircle, Copy, FlaskConical, AlertTriangle } from "lucide-react";
+import { Loader2, RefreshCw, Radar, ExternalLink, CheckCircle, XCircle, Copy, FlaskConical, AlertTriangle, Plus, Download } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -59,6 +59,10 @@ export default function AdminSetIntelligence() {
   const [scanning, setScanning] = useState<null | 'live' | 'dry'>(null);
   const [dryRunReport, setDryRunReport] = useState<any>(null);
   const [approveTarget, setApproveTarget] = useState<Candidate | null>(null);
+  const emptyManual = { sourceUrl: "", detectedSetName: "", sourceName: "", manufacturer: "", year: "", estimatedReleaseDate: "", checklistUrl: "", imageUrl: "", description: "", adminNotes: "", usedUrlMetadata: false };
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [manual, setManual] = useState({ ...emptyManual });
+  const [fetchingMeta, setFetchingMeta] = useState(false);
   const [approveForm, setApproveForm] = useState({ setName: "", releaseDateEstimated: "", keyHighlights: "", adminNotes: "" });
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -118,6 +122,29 @@ export default function AdminSetIntelligence() {
     onError: () => toast({ title: "Approve failed", variant: "destructive" }),
   });
 
+  const createManualMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/admin/set-intel/candidates', {
+        ...manual,
+        year: manual.year || undefined,
+        estimatedReleaseDate: manual.estimatedReleaseDate || undefined,
+      });
+      return res.json();
+    },
+    onSuccess: (created: Candidate) => {
+      toast({
+        title: "Candidate saved",
+        description: created.possibleDuplicateOf
+          ? `Marked Needs Review — possible duplicate of ${created.possibleDuplicateOf}`
+          : "Saved as pending. Approve it to publish to Upcoming Sets.",
+      });
+      setQuickAddOpen(false);
+      setManual({ ...emptyManual });
+      refresh();
+    },
+    onError: (e: any) => toast({ title: "Could not save candidate", description: e?.message, variant: "destructive" }),
+  });
+
   const filtered = candidates.filter(c =>
     statusFilter === 'all' ? true :
     statusFilter === 'review' ? (c.status === 'pending' || c.status === 'needs_review') :
@@ -142,6 +169,9 @@ export default function AdminSetIntelligence() {
           <p className="text-sm text-muted-foreground">Multi-source detection of upcoming Marvel releases. Nothing is shown to collectors until you approve it.</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setQuickAddOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" /> Add Candidate Manually
+          </Button>
           <Button variant="outline" onClick={() => runScan(true)} disabled={!!scanning}>
             {scanning === 'dry' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FlaskConical className="w-4 h-4 mr-2" />}
             Dry Run
@@ -273,6 +303,101 @@ export default function AdminSetIntelligence() {
           ))}
         </div>
       )}
+
+      {/* Manual quick-add dialog */}
+      <Dialog open={quickAddOpen} onOpenChange={(o) => { setQuickAddOpen(o); if (!o) setManual({ ...emptyManual }); }}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Add Candidate Manually</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">For sources the scanner cannot reach (Topps, Blowout, etc.). Saved as a pending candidate for review — never published directly.</p>
+            <div>
+              <Label>Source URL *</Label>
+              <div className="flex gap-2">
+                <Input placeholder="https://..." value={manual.sourceUrl} onChange={e => setManual(m => ({ ...m, sourceUrl: e.target.value }))} />
+                <Button
+                  variant="outline"
+                  disabled={fetchingMeta || !/^https?:\/\//i.test(manual.sourceUrl)}
+                  onClick={async () => {
+                    setFetchingMeta(true);
+                    try {
+                      const res = await apiRequest('POST', '/api/admin/set-intel/fetch-metadata', { url: manual.sourceUrl });
+                      const meta = await res.json();
+                      if (meta.ok) {
+                        setManual(m => ({
+                          ...m,
+                          detectedSetName: m.detectedSetName || meta.title || "",
+                          description: m.description || meta.description || "",
+                          imageUrl: m.imageUrl || meta.imageUrl || "",
+                          usedUrlMetadata: true,
+                        }));
+                        toast({ title: "Details fetched", description: "Review and edit before saving." });
+                      } else {
+                        toast({ title: "Could not fetch details", description: `${meta.error || 'Page blocked'}. You can still enter everything manually.` });
+                      }
+                    } catch {
+                      toast({ title: "Could not fetch details", description: "You can still enter everything manually." });
+                    } finally {
+                      setFetchingMeta(false);
+                    }
+                  }}
+                >
+                  {fetchingMeta ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+            <div>
+              <Label>Set name *</Label>
+              <Input value={manual.detectedSetName} onChange={e => setManual(m => ({ ...m, detectedSetName: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Manufacturer / brand</Label>
+                <Input placeholder="Topps" value={manual.manufacturer} onChange={e => setManual(m => ({ ...m, manufacturer: e.target.value }))} />
+              </div>
+              <div>
+                <Label>Year</Label>
+                <Input type="number" placeholder="2026" value={manual.year} onChange={e => setManual(m => ({ ...m, year: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Estimated release date</Label>
+                <Input type="date" value={manual.estimatedReleaseDate} onChange={e => setManual(m => ({ ...m, estimatedReleaseDate: e.target.value }))} />
+              </div>
+              <div>
+                <Label>Source name</Label>
+                <Input placeholder="Topps Shop" value={manual.sourceName} onChange={e => setManual(m => ({ ...m, sourceName: e.target.value }))} />
+              </div>
+            </div>
+            <div>
+              <Label>Checklist URL</Label>
+              <Input placeholder="https://..." value={manual.checklistUrl} onChange={e => setManual(m => ({ ...m, checklistUrl: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Image URL</Label>
+              <Input placeholder="https://..." value={manual.imageUrl} onChange={e => setManual(m => ({ ...m, imageUrl: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Description / snippet</Label>
+              <Textarea rows={3} value={manual.description} onChange={e => setManual(m => ({ ...m, description: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Notes (admin only)</Label>
+              <Textarea rows={2} value={manual.adminNotes} onChange={e => setManual(m => ({ ...m, adminNotes: e.target.value }))} />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setQuickAddOpen(false)}>Cancel</Button>
+              <Button
+                disabled={createManualMutation.isPending || !manual.detectedSetName.trim() || !/^https?:\/\//i.test(manual.sourceUrl)}
+                onClick={() => createManualMutation.mutate()}
+              >
+                {createManualMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Save as Pending Candidate
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Approve dialog (edit before approval) */}
       <Dialog open={!!approveTarget} onOpenChange={(o) => !o && setApproveTarget(null)}>

@@ -305,6 +305,160 @@ function findLooseMatch(normalized: string, known: Map<string, string>): string 
 }
 
 // ---------------------------------------------------------------------------
+// Manual quick-add (admin fallback for bot-protected sources)
+// ---------------------------------------------------------------------------
+
+/**
+ * SSRF guard: only allow fetches to public internet hosts. Blocks loopback,
+ * RFC1918/link-local/CGNAT ranges, cloud metadata endpoints, and non-http(s)
+ * schemes. Resolves DNS so hostnames pointing at internal IPs are also blocked.
+ */
+async function assertPublicHttpUrl(rawUrl: string): Promise<URL> {
+  const parsed = new URL(rawUrl);
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') throw new Error('Only http/https URLs are allowed');
+  const host = parsed.hostname.toLowerCase();
+  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.internal') || host.endsWith('.local')) {
+    throw new Error('URL host is not allowed');
+  }
+  const dns = await import('node:dns/promises');
+  const net = await import('node:net');
+  const addrs = net.isIP(host) ? [{ address: host }] : await dns.lookup(host, { all: true });
+  const isPrivate = (ip: string): boolean => {
+    if (ip.includes(':')) {
+      const v6 = ip.toLowerCase();
+      if (v6 === '::1' || v6.startsWith('fe80:') || v6.startsWith('fc') || v6.startsWith('fd') || v6 === '::') return true;
+      if (v6.startsWith('::ffff:')) return isPrivate(v6.slice(7));
+      return false;
+    }
+    const p = ip.split('.').map(Number);
+    if (p.length !== 4 || p.some(isNaN)) return true;
+    return p[0] === 0 || p[0] === 127 || p[0] === 10
+      || (p[0] === 172 && p[1] >= 16 && p[1] <= 31)
+      || (p[0] === 192 && p[1] === 168)
+      || (p[0] === 169 && p[1] === 254) // link-local incl. 169.254.169.254 metadata
+      || (p[0] === 100 && p[1] >= 64 && p[1] <= 127); // CGNAT
+  };
+  if (addrs.length === 0 || addrs.some(a => isPrivate(a.address))) throw new Error('URL host is not allowed');
+  return parsed;
+}
+
+/**
+ * Best-effort metadata fetch for a pasted URL. Bot protection or any failure
+ * returns { ok: false } — it must NEVER block manual entry. Single polite
+ * request per hop, max 3 redirects, every hop re-validated against the SSRF
+ * guard (no unvalidated redirect following).
+ */
+export async function fetchUrlMetadata(url: string): Promise<{ ok: boolean; title?: string; description?: string; imageUrl?: string; error?: string }> {
+  try {
+    let current = (await assertPublicHttpUrl(url)).toString();
+    let res: Response | null = null;
+    for (let hop = 0; hop < 4; hop++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+      try {
+        res = await fetch(current, {
+          redirect: 'manual',
+          signal: controller.signal,
+          headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36', 'Accept': 'text/html' },
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+      if (res.status >= 300 && res.status < 400) {
+        const loc = res.headers.get('location');
+        if (!loc) break;
+        current = (await assertPublicHttpUrl(new URL(loc, current).toString())).toString();
+        continue;
+      }
+      break;
+    }
+    if (!res || !res.ok) return { ok: false, error: `HTTP ${res?.status ?? 'error'} (page may be bot-protected)` };
+    const html = (await res.text()).slice(0, 500_000);
+    const og = (prop: string): string | undefined => {
+      const m = html.match(new RegExp(`<meta[^>]+(?:property|name)=["']${prop}["'][^>]+content=["']([^"']+)["']`, 'i'))
+        || html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${prop}["']`, 'i'));
+      return m?.[1];
+    };
+    const title = og('og:title') || html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim();
+    const description = og('og:description') || og('description');
+    const imageUrl = og('og:image');
+    if (!title && !description && !imageUrl) return { ok: false, error: 'No metadata found (page may be bot-protected)' };
+    return { ok: true, title: title ? stripHtml(title).slice(0, 300) : undefined, description: description ? stripHtml(description).slice(0, 500) : undefined, imageUrl };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || 'Fetch failed' };
+  }
+}
+
+export interface ManualCandidateInput {
+  detectedSetName: string;
+  sourceUrl: string;
+  sourceName?: string;
+  manufacturer?: string | null;
+  year?: number | null;
+  estimatedReleaseDate?: string | null;
+  checklistUrl?: string | null;
+  imageUrl?: string | null;
+  description?: string | null;
+  adminNotes?: string | null;
+  usedUrlMetadata?: boolean;
+}
+
+/**
+ * Save a manually entered candidate. Runs the SAME duplicate detection as the
+ * scanner (existing candidates via unique normalized_name, plus loose matching
+ * against upcoming sets, main sets, and card sets). Always saved as a pending/
+ * needs_review candidate — never published directly.
+ */
+export async function createManualCandidate(input: ManualCandidateInput) {
+  const name = String(input.detectedSetName || '').trim();
+  const sourceUrl = String(input.sourceUrl || '').trim();
+  if (!name) throw new Error('Set name is required');
+  if (!/^https?:\/\//i.test(sourceUrl)) throw new Error('A valid source URL (http/https) is required');
+
+  const normalizedName = normalizeSetName(name);
+  if (!normalizedName) throw new Error('Set name is required');
+
+  // Duplicate detection — candidates (any status)
+  const [existingCandidate] = await db.select({ id: upcomingSetCandidates.id, name: upcomingSetCandidates.detectedSetName, status: upcomingSetCandidates.status })
+    .from(upcomingSetCandidates).where(eq(upcomingSetCandidates.normalizedName, normalizedName));
+  if (existingCandidate) {
+    throw new Error(`A candidate with this name already exists (“${existingCandidate.name}”, status: ${existingCandidate.status})`);
+  }
+
+  // Loose matching vs upcoming sets, main sets, and card sets
+  const { upcoming, existing } = await loadKnownNames();
+  const subsetRows = await db.select({ name: cardSets.name }).from(cardSets);
+  const subsets = new Map<string, string>();
+  for (const s of subsetRows) subsets.set(normalizeSetName(s.name), s.name);
+
+  const matchUpcoming = findLooseMatch(normalizedName, upcoming);
+  const matchExisting = findLooseMatch(normalizedName, existing);
+  const matchSubset = matchUpcoming || matchExisting ? null : findLooseMatch(normalizedName, subsets);
+  const possibleDuplicateOf = matchUpcoming ? `Upcoming Set: ${matchUpcoming}`
+    : matchExisting ? `Existing Set: ${matchExisting}`
+    : matchSubset ? `Existing Card Set: ${matchSubset}` : null;
+
+  const [created] = await db.insert(upcomingSetCandidates).values({
+    detectedSetName: name,
+    normalizedName,
+    manufacturer: input.manufacturer?.trim() || inferManufacturer(name),
+    year: input.year ?? extractYear(name),
+    estimatedReleaseDate: input.estimatedReleaseDate ? new Date(input.estimatedReleaseDate) : null,
+    sourceName: input.sourceName?.trim() || 'Manual entry',
+    sourceUrl,
+    sourceType: input.usedUrlMetadata ? 'manual_url' : 'manual_entry',
+    confidence: 90, // admin-entered — high confidence
+    checklistUrl: input.checklistUrl?.trim() || null,
+    imageUrl: input.imageUrl?.trim() || null,
+    description: input.description?.trim().slice(0, 1000) || null,
+    possibleDuplicateOf,
+    status: possibleDuplicateOf ? 'needs_review' : 'pending',
+    adminNotes: input.adminNotes?.trim() || null,
+  }).returning();
+  return created;
+}
+
+// ---------------------------------------------------------------------------
 // Scan
 // ---------------------------------------------------------------------------
 

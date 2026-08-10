@@ -6564,6 +6564,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual quick-add: best-effort metadata fetch for a pasted URL (never required)
+  app.post("/api/admin/set-intel/fetch-metadata", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const url = String(req.body?.url || '').trim();
+      if (!/^https?:\/\//i.test(url)) return res.status(400).json({ message: 'A valid http/https URL is required' });
+      const { fetchUrlMetadata } = await import('./services/setIntelligence');
+      res.json(await fetchUrlMetadata(url));
+    } catch (error) {
+      console.error('Set intel metadata fetch error:', error);
+      res.json({ ok: false, error: 'Fetch failed' });
+    }
+  });
+
+  // Manual quick-add: save an admin-entered candidate (pending only, same dedupe as scans)
+  app.post("/api/admin/set-intel/candidates", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const { createManualCandidate } = await import('./services/setIntelligence');
+      const created = await createManualCandidate({
+        detectedSetName: req.body.detectedSetName,
+        sourceUrl: req.body.sourceUrl,
+        sourceName: req.body.sourceName,
+        manufacturer: req.body.manufacturer,
+        year: req.body.year ? parseInt(req.body.year) : null,
+        estimatedReleaseDate: req.body.estimatedReleaseDate || null,
+        checklistUrl: req.body.checklistUrl,
+        imageUrl: req.body.imageUrl,
+        description: req.body.description,
+        adminNotes: req.body.adminNotes,
+        usedUrlMetadata: req.body.usedUrlMetadata === true,
+      });
+      res.status(201).json(created);
+    } catch (error: any) {
+      const msg = error?.message || 'Failed to create candidate';
+      const isValidation = /required|already exists/i.test(msg);
+      if (!isValidation) console.error('Set intel manual create error:', error);
+      res.status(isValidation ? 400 : 500).json({ message: msg });
+    }
+  });
+
   // Review actions: update status (ignored/duplicate/needs_review/pending) and notes
   app.patch("/api/admin/set-intel/candidates/:id", authenticateUser, async (req: any, res) => {
     try {
