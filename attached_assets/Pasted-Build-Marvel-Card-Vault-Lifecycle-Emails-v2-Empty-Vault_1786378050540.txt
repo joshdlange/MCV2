@@ -1,0 +1,158 @@
+Build Marvel Card Vault Lifecycle Emails v2: Empty Vault Follow-Up and Collection Momentum Nudge.
+
+Context:
+The lifecycle email system v1 is built.
+Active emails:
+- Welcome
+- 24-hour First-Card Nudge
+
+The following are already in place:
+- Resend
+- lifecycle email logs
+- claim-before-send duplicate protection
+- 14-day lifecycle/marketing frequency cap
+- admin lifecycle status
+- preview/test tools
+- future draft templates
+- lifecycle intelligence dashboard
+
+The biggest conversion drop-off is onboarding complete → first card added. Current production data showed hundreds of users completed onboarding but never added a card.
+
+Goal:
+Activate two additional behavior-based lifecycle emails:
+1. Empty Vault Follow-Up
+2. Collection Momentum Nudge
+
+These should be careful, capped, and not retroactively blasted to everyone.
+
+Must do:
+- Use the existing lifecycle email system.
+- Use Resend.
+- Use the existing claim-before-send log protection.
+- Respect the 14-day lifecycle/marketing email cap.
+- Respect unsubscribe/preference logic.
+- Keep transactional emails exempt.
+- Keep monthly and legacy campaign sends disabled.
+- Add admin preview/test support if not already present.
+- Add admin estimated eligible counts.
+- Add clear enabled/disabled status in admin lifecycle status.
+- Do not send during the build.
+
+Email 1: Empty Vault Follow-Up
+Audience:
+- onboarding complete
+- zero cards
+- account age at least 7 days
+- received Welcome or First-Card Nudge already, or is eligible under lifecycle rules
+- has not already received Empty Vault Follow-Up
+- has not received another lifecycle/marketing email in the last 14 days
+- opted into marketing/lifecycle emails if preferences exist
+
+Important:
+- Do not send this retroactively to the entire existing empty-vault user base on publish.
+- Add a launch gate similar to the v1 launch gate, so only users eligible after this feature launch can receive it.
+- If there is an admin backfill/send option, keep it disabled and require explicit approval.
+
+Suggested copy:
+Subject:
+Still empty? Let’s fix that
+
+Preview text:
+Add one card and bring your vault to life.
+
+Body:
+Hey collector,
+
+Your vault is set up, but it is still waiting for its first card.
+
+Start with one card. Once it is in your vault, you can track your collection, build progress, earn Collector XP, and start organizing the cards that matter most to you.
+
+No pressure to build everything today. Just add one and get moving.
+
+CTA:
+Add Your First Card
+
+Footer:
+Marvel Card Vault is not affiliated with Marvel, Disney, Upper Deck, Topps, or any card manufacturer.
+
+Email 2: Collection Momentum Nudge
+Audience:
+- has added at least 1 card
+- has fewer than 10 cards
+- has not added a card in 7+ days
+- has not already received Collection Momentum Nudge
+- has not received another lifecycle/marketing email in the last 14 days
+- opted into marketing/lifecycle emails if preferences exist
+
+Important:
+- Do not send this retroactively to every existing stalled low-card user on publish.
+- Add a launch gate so only users eligible after this feature launch can receive it.
+- Admin preview/counts only unless explicitly approved later.
+
+Suggested copy:
+Subject:
+Your collection is off to a good start
+
+Preview text:
+Add a few more cards and keep your vault moving.
+
+Body:
+Hey collector,
+
+You started your vault. Nice.
+
+The next step is simple: add a few more cards so your collection starts to take shape. The more you add, the easier it becomes to track progress, organize your favorites, and build toward completed sets.
+
+Keep building from where you left off.
+
+CTA:
+Add More Cards
+
+Footer:
+Marvel Card Vault is not affiliated with Marvel, Disney, Upper Deck, Topps, or any card manufacturer.
+
+Must not do:
+- Do not send any production emails during this task.
+- Do not send to all users.
+- Do not retroactively blast existing users.
+- Do not activate all lifecycle templates.
+- Do not re-enable monthly emails.
+- Do not re-enable legacy one-time campaigns.
+- Do not change password reset.
+- Do not change transactional emails.
+- Do not change subscriptions, Stripe, RevenueCat, Shippo, XP rules, PC Binders, Drive Sync, image approvals, card data, Android, or iOS.
+- Do not expose secrets.
+
+Preserve:
+- Existing lifecycle email system.
+- Existing welcome and first-card nudge.
+- Existing 14-day cap.
+- Existing email logs.
+- Existing admin lifecycle preview/test tools.
+- Existing lifecycle intelligence dashboard.
+- Existing user privacy and unsubscribe logic.
+
+QA:
+- Empty Vault Follow-Up is active only after the new launch gate.
+- Collection Momentum Nudge is active only after the new launch gate.
+- Neither email sends during build.
+- Neither email sends retroactively to all existing users.
+- Each email sends at most once per user.
+- 14-day lifecycle cap is respected.
+- Unsubscribed users are excluded.
+- Admin preview works.
+- Admin test send goes only to admin email.
+- Eligible counts display.
+- Welcome and First-Card Nudge still work.
+- Monthly and legacy campaigns remain disabled.
+- Password reset still works.
+- No Brevo send occurs.
+- No API keys exposed.
+
+Final response:
+- List changed files.
+- Confirm which lifecycle emails are now active.
+- Explain exact eligibility for both new emails.
+- Explain how retroactive blasts are prevented.
+- Confirm no emails were sent during build.
+- Confirm safe to publish.

@@ -13,3 +13,9 @@ description: How MCV lifecycle emails work — claim-then-send dedupe, 14-day ca
 - LIFECYCLE_LAUNCH_DATE (2026-08-08) gates welcome/nudge — users created before it are never emailed retroactively. Do not move it backwards.
 - email_logs gained status / lifecycle_stage / provider_message_id / error columns (added directly in dev AND prod, additive).
 - Admin tools: GET /api/admin/lifecycle/status (+ eligible counts), /preview?key=, POST /test (locked to requesting admin), POST /first-card-nudge/run.
+
+## v2 additions (Aug 10, 2026)
+- empty-vault + collection-momentum ACTIVE. Launch gates prevent retroactive blasts: empty-vault requires created_at >= v1 launch; momentum requires the user's most recent card add >= LIFECYCLE_V2_LAUNCH_DATE (stall must BEGIN post-launch).
+- 14-day cap is now enforced ATOMICALLY inside claimAndSend: per-email pg_advisory_xact_lock + cap recheck + claim insert in one transaction; claim rows get sent_at=now() so they count against the cap immediately; status='failed' rows are excluded from the cap but still block their own journey.
+- ALL batch runners (nudge + v2 journeys) hard-guard on REPLIT_DEPLOYMENT — dev cannot send real recipient emails even via admin endpoints. Preview/test/counts work everywhere.
+- New journeys must be added to BATCH_JOURNEYS map to be cron/admin runnable; POST /api/admin/lifecycle/run/:key runs any active batch journey.

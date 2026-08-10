@@ -4714,6 +4714,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual trigger of any ACTIVE v2 batch journey (empty-vault, collection-momentum).
+  // Same eligibility, launch gates, cap, and claim-then-send dedupe as the hourly cron.
+  app.post("/api/admin/lifecycle/run/:key", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      const { runLifecycleJourneyNow } = await import('./jobs/lifecycleEmails');
+      const result = await runLifecycleJourneyNow(req.params.key);
+      res.json(result);
+    } catch (error) {
+      console.error('Lifecycle journey manual run error:', error);
+      res.status(500).json({ message: "Failed to run lifecycle journey" });
+    }
+  });
+
   // Admin-only: Email cron status and statistics
   app.get("/api/admin/email-cron-status", authenticateUser, async (req: any, res) => {
     try {

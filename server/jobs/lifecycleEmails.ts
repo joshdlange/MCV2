@@ -5,12 +5,14 @@
  * .agents/skills/mcv-lifecycle-marketing/SKILL.md.
  *
  * ACTIVE now:
- *   - lifecycle-welcome            (sent at onboarding completion, new signups only)
- *   - lifecycle-first-card-nudge   (hourly cron; 24h after signup, zero cards)
+ *   - lifecycle-welcome              (sent at onboarding completion, new signups only)
+ *   - lifecycle-first-card-nudge     (hourly cron; 24h after signup, zero cards)
+ *   - lifecycle-empty-vault          (v2; hourly cron; onboarded 7+ days, zero cards, post-v1-launch signups only)
+ *   - lifecycle-collection-momentum  (v2; hourly cron; 1-9 cards, stalled 7+ days, stall began after v2 launch)
  *
  * DRAFT (templates + eligibility counts only, active:false — flip one at a
  * time AFTER admin preview/test, never all at once):
- *   - the 10 journey emails defined in LIFECYCLE_EMAILS below.
+ *   - the remaining 8 journey emails defined in LIFECYCLE_EMAILS below.
  *
  * Hard rules enforced here:
  *   - GLOBAL FREQUENCY CAP: no user receives more than ONE lifecycle/marketing
@@ -35,6 +37,12 @@ import { sendResendEmail } from '../services/emailService';
 // Users created before this date never receive the welcome/nudge sequence.
 // Set to the date this system shipped — do not move it backwards.
 export const LIFECYCLE_LAUNCH_DATE = new Date('2026-08-08T00:00:00Z');
+
+// v2 journeys (empty-vault follow-up, collection momentum) launched this date.
+// Prevents retroactive blasts: momentum only fires for stalls that BEGIN after
+// this date (last card add >= v2 launch); empty-vault only targets post-v1-launch
+// signups (who received welcome/nudge). Do not move backwards.
+export const LIFECYCLE_V2_LAUNCH_DATE = new Date('2026-08-10T00:00:00Z');
 
 export const LIFECYCLE_CAP_DAYS = 14;
 const NUDGE_BATCH_LIMIT = 50; // per hourly run — well under Resend limits
@@ -196,12 +204,12 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     eligibilityNote: 'Signed up 24h+ ago (after launch date only), zero cards, opted in, not already nudged.',
   },
 
-  // ------------------------- DRAFTS (disabled) -----------------------------
+  // ---------------------- v2 ACTIVE journeys -------------------------------
   {
     key: 'empty-vault',
     jobName: 'lifecycle-empty-vault',
     stage: 'Activation',
-    active: false,
+    active: true,
     subject: "Still empty? Let's fix that",
     preheader: 'Add one card and bring your vault to life.',
     ctaLabel: 'Add Your First Card',
@@ -217,20 +225,14 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
       ctaLabel: 'Add Your First Card',
       ctaUrl: `${APP_URL}/browse`,
     }),
-    eligibleCount: async () => countUsers(and(
-      optedIn(),
-      ZERO_CARDS,
-      sql`EXISTS (SELECT 1 FROM email_logs el WHERE el.job_name = 'lifecycle-first-card-nudge' AND lower(trim(el.email)) = lower(trim(${users.email})) AND el.sent_at <= now() - interval '7 days')`,
-      sql`(${users.lastLogin} IS NULL OR ${users.lastLogin} <= now() - interval '7 days')`,
-      notAlreadySent('lifecycle-empty-vault'),
-    )),
-    eligibilityNote: 'Zero cards, got the first-card nudge 7+ days ago with no response, inactive 7+ days.',
+    eligibleCount: async () => countUsers(EMPTY_VAULT_WHERE()),
+    eligibilityNote: 'Onboarded, zero cards, account 7+ days old, created after v1 launch (received welcome/nudge era — never retroactive), opted in, not already sent, under 14-day cap.',
   },
   {
     key: 'collection-momentum',
     jobName: 'lifecycle-collection-momentum',
     stage: 'Engagement',
-    active: false,
+    active: true,
     subject: 'Your collection is off to a good start',
     preheader: 'Add a few more cards and keep your vault moving.',
     ctaLabel: 'Add More Cards',
@@ -246,14 +248,11 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
       ctaLabel: 'Add More Cards',
       ctaUrl: `${APP_URL}/browse`,
     }),
-    eligibleCount: async () => countUsers(and(
-      optedIn(),
-      sql`(SELECT count(*) FROM user_collections uc WHERE uc.user_id = ${users.id}) BETWEEN 1 AND 9`,
-      sql`NOT EXISTS (SELECT 1 FROM user_collections uc WHERE uc.user_id = ${users.id} AND uc.acquired_date > now() - interval '7 days')`,
-      notAlreadySent('lifecycle-collection-momentum'),
-    )),
-    eligibilityNote: '1-9 cards, no card added in 7+ days.',
+    eligibleCount: async () => countUsers(COLLECTION_MOMENTUM_WHERE()),
+    eligibilityNote: '1-9 cards, no card added in 7+ days, most recent add AFTER v2 launch (stall began post-launch — never retroactive), opted in, not already sent, under 14-day cap.',
   },
+
+  // ------------------------- DRAFTS (disabled) -----------------------------
   {
     key: 'pc-binder-prompt',
     jobName: 'lifecycle-pc-binder-prompt',
@@ -478,6 +477,101 @@ function notAlreadySent(jobName: string) {
   return sql`NOT EXISTS (SELECT 1 FROM email_logs el WHERE el.job_name = ${jobName} AND lower(trim(el.email)) = lower(trim(${users.email})))`;
 }
 
+// ---------------------------------------------------------------------------
+// v2 journey eligibility (shared by eligibleCount, batch runner, admin counts)
+// ---------------------------------------------------------------------------
+
+/**
+ * Empty Vault Follow-Up: onboarded, zero cards, account 7+ days old.
+ * LAUNCH GATE: created after v1 launch (2026-08-08) — these users went through
+ * the welcome/first-card-nudge sequence; the pre-launch empty-vault backlog
+ * (hundreds of users) is never targeted.
+ */
+function EMPTY_VAULT_WHERE() {
+  return and(
+    optedIn(),
+    eq(users.onboardingComplete, true),
+    ZERO_CARDS,
+    sql`${users.createdAt} >= ${LIFECYCLE_LAUNCH_DATE}`,
+    sql`${users.createdAt} <= now() - interval '7 days'`,
+    notAlreadySent('lifecycle-empty-vault'),
+    UNDER_CAP,
+  );
+}
+
+/**
+ * Collection Momentum Nudge: 1-9 cards, stalled 7+ days.
+ * LAUNCH GATE: the user's MOST RECENT card add must be on/after the v2 launch
+ * date — the stall must begin after launch. Users who stalled months ago are
+ * never targeted; first possible send is launch + 7 days.
+ */
+function COLLECTION_MOMENTUM_WHERE() {
+  return and(
+    optedIn(),
+    sql`(SELECT count(*) FROM user_collections uc WHERE uc.user_id = ${users.id}) BETWEEN 1 AND 9`,
+    sql`NOT EXISTS (SELECT 1 FROM user_collections uc WHERE uc.user_id = ${users.id} AND uc.acquired_date > now() - interval '7 days')`,
+    sql`EXISTS (SELECT 1 FROM user_collections uc WHERE uc.user_id = ${users.id} AND uc.acquired_date >= ${LIFECYCLE_V2_LAUNCH_DATE})`,
+    notAlreadySent('lifecycle-collection-momentum'),
+    UNDER_CAP,
+  );
+}
+
+/** Batch-runnable journeys (key -> eligibility WHERE). Welcome is event-only. */
+const BATCH_JOURNEYS: Record<string, () => ReturnType<typeof and>> = {
+  'empty-vault': EMPTY_VAULT_WHERE,
+  'collection-momentum': COLLECTION_MOMENTUM_WHERE,
+};
+
+const journeyRunning: Record<string, boolean> = {};
+const journeyLastRun: Record<string, { at: Date; sent: number; failed: number; eligible: number }> = {};
+
+/**
+ * Run one v2 batch journey now (admin endpoint + hourly cron). Same
+ * guarantees as the first-card nudge: claim-then-send dedupe, 14-day cap,
+ * launch gates, opt-in recheck at send time, batch limit, single-flight.
+ */
+export async function runLifecycleJourneyNow(
+  key: string,
+  limit: number = NUDGE_BATCH_LIMIT
+): Promise<{ sent: number; failed: number; eligible: number; skipped?: boolean; error?: string }> {
+  // HARD GUARD: batch sends only ever run in the production deployment.
+  // Dev/workspace can preview, test (admin-only), and see eligible counts,
+  // but can never trigger real recipient sends — not even via the admin API.
+  if (!process.env.REPLIT_DEPLOYMENT) {
+    return { sent: 0, failed: 0, eligible: 0, skipped: true, error: 'Batch lifecycle sends only run in the production deployment' };
+  }
+  const def = getLifecycleEmail(key);
+  const whereFn = BATCH_JOURNEYS[key];
+  if (!def || !whereFn) return { sent: 0, failed: 0, eligible: 0, skipped: true, error: `Not a batch journey: ${key}` };
+  if (!def.active) return { sent: 0, failed: 0, eligible: 0, skipped: true, error: `${key} is not active` };
+  if (journeyRunning[key]) return { sent: 0, failed: 0, eligible: 0, skipped: true };
+  journeyRunning[key] = true;
+  try {
+    const batch = await db
+      .select({ id: users.id, email: users.email, displayName: users.displayName })
+      .from(users)
+      .where(whereFn())
+      .orderBy(users.createdAt)
+      .limit(limit);
+    let sent = 0, failed = 0;
+    if (batch.length > 0) console.log(`[Lifecycle] ${key}: ${batch.length} eligible this run`);
+    for (const u of batch) {
+      const result = await claimAndSend(def, u);
+      if (result === 'sent') {
+        sent++;
+        await new Promise(r => setTimeout(r, 500)); // respect Resend rate limit
+      } else if (result === 'failed') {
+        failed++;
+        console.error(`[Lifecycle] ${key} failed for user ${u.id} (see email_logs)`);
+      }
+    }
+    journeyLastRun[key] = { at: new Date(), sent, failed, eligible: batch.length };
+    return { sent, failed, eligible: batch.length };
+  } finally {
+    journeyRunning[key] = false;
+  }
+}
+
 export function getLifecycleEmail(key: string): LifecycleEmailDef | undefined {
   return LIFECYCLE_EMAILS.find(e => e.key === key);
 }
@@ -500,6 +594,7 @@ const UNDER_CAP = sql`NOT EXISTS (
     AND (el.job_name LIKE 'lifecycle-%' OR el.job_name LIKE 'campaign-%')
     AND el.job_name <> 'lifecycle-welcome'
     AND el.job_name NOT LIKE '%-test'
+    AND (el.status IS NULL OR el.status <> 'failed')
 )`;
 
 /** Standalone cap check for a single email address (same rules as UNDER_CAP). */
@@ -536,15 +631,40 @@ async function claimAndSend(
     if (!u[0]?.optIn) return 'skipped';
   }
 
-  // Atomic claim — the unique index guarantees at most one row per (job, email).
-  const claim: any = await db.execute(sql`
-    INSERT INTO email_logs (user_id, email, template, subject, job_name, status, lifecycle_stage)
-    VALUES (${user.id}, ${user.email}, ${def.jobName}, ${def.subject}, ${def.jobName}, 'sending', ${def.stage})
-    ON CONFLICT (job_name, lower(trim(email))) WHERE job_name LIKE 'lifecycle-%' AND job_name NOT LIKE '%-test'
-    DO NOTHING
-    RETURNING id
-  `);
-  const rows = claim.rows ?? claim;
+  // Atomic claim. Two guarantees inside ONE transaction under a per-email
+  // advisory lock (serializes concurrent lifecycle jobs for the same user):
+  //   1. per-journey dedupe — the partial unique index on (job_name, email)
+  //   2. GLOBAL 14-day cap — rechecked at claim time, so two DIFFERENT
+  //      journeys (e.g. nudge cron + admin empty-vault run) can never both
+  //      claim the same user inside the cap window.
+  // The claim row gets sent_at=now() immediately so it counts against the cap
+  // for any concurrent claim the moment it exists; failed sends are excluded
+  // from the cap (status='failed') but still block their own journey forever.
+  const rows: any[] = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(lower(trim(${user.email}))))`);
+    if (!def.exemptFromCap) {
+      const cap: any = await tx.execute(sql`
+        SELECT 1 FROM email_logs el
+        WHERE lower(trim(el.email)) = lower(trim(${user.email}))
+          AND el.sent_at > now() - make_interval(days => ${LIFECYCLE_CAP_DAYS})
+          AND (el.job_name LIKE 'lifecycle-%' OR el.job_name LIKE 'campaign-%')
+          AND el.job_name <> 'lifecycle-welcome'
+          AND el.job_name NOT LIKE '%-test'
+          AND (el.status IS NULL OR el.status <> 'failed')
+        LIMIT 1
+      `);
+      const capRows = cap.rows ?? cap;
+      if (capRows && capRows.length > 0) return [];
+    }
+    const claim: any = await tx.execute(sql`
+      INSERT INTO email_logs (user_id, email, template, subject, job_name, status, lifecycle_stage, sent_at)
+      VALUES (${user.id}, ${user.email}, ${def.jobName}, ${def.subject}, ${def.jobName}, 'sending', ${def.stage}, now())
+      ON CONFLICT (job_name, lower(trim(email))) WHERE job_name LIKE 'lifecycle-%' AND job_name NOT LIKE '%-test'
+      DO NOTHING
+      RETURNING id
+    `);
+    return claim.rows ?? claim;
+  });
   if (!rows || rows.length === 0) return 'skipped'; // already claimed/sent
 
   const claimId = rows[0].id;
@@ -632,6 +752,11 @@ async function getFirstCardNudgeRecipients(limit: number) {
 export async function runFirstCardNudgeNow(
   limit: number = NUDGE_BATCH_LIMIT
 ): Promise<{ sent: number; failed: number; eligible: number; skipped?: boolean }> {
+  // Same production-only hard guard as the v2 batch journeys.
+  if (!process.env.REPLIT_DEPLOYMENT) {
+    console.warn('[Lifecycle] First-card nudge blocked: not in production deployment');
+    return { sent: 0, failed: 0, eligible: 0, skipped: true };
+  }
   if (nudgeRunning) {
     console.warn('[Lifecycle] First-card nudge already running — skipping this trigger');
     return { sent: 0, failed: 0, eligible: 0, skipped: true };
@@ -673,6 +798,13 @@ const firstCardNudgeJob = new CronJob(
       if (r.eligible > 0) {
         console.log(`[Lifecycle] First-card nudge run: ${r.sent} sent, ${r.failed} failed`);
       }
+      // v2 active batch journeys (empty-vault, collection-momentum)
+      for (const key of Object.keys(BATCH_JOURNEYS)) {
+        const jr = await runLifecycleJourneyNow(key);
+        if (jr.eligible > 0) {
+          console.log(`[Lifecycle] ${key} run: ${jr.sent} sent, ${jr.failed} failed`);
+        }
+      }
     } catch (error) {
       console.error('[Lifecycle] Error in first-card nudge cron:', error);
     }
@@ -694,7 +826,7 @@ export function startLifecycleEmailCron(): void {
   if (lifecycleCronStarted) return;
   lifecycleCronStarted = true;
   firstCardNudgeJob.start();
-  console.log('📧 Lifecycle email cron started (hourly first-card nudge; welcome is event-triggered; all other journeys DRAFT/disabled)');
+  console.log('📧 Lifecycle email cron started (hourly: first-card nudge + empty-vault + collection-momentum; welcome is event-triggered; remaining journeys DRAFT/disabled)');
 }
 
 // ---------------------------------------------------------------------------
@@ -733,6 +865,8 @@ export async function getLifecycleStatus() {
     launchDate: LIFECYCLE_LAUNCH_DATE.toISOString(),
     nudgeCronRunning: firstCardNudgeJob.running || false,
     nudgeLastRun,
+    v2LaunchDate: LIFECYCLE_V2_LAUNCH_DATE.toISOString(),
+    journeyLastRun,
     totalsSent: Object.fromEntries(sentRows.map(r => [r.jobName || 'unknown', Number(r.count)])),
     emails,
   };
