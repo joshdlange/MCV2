@@ -1,0 +1,7128 @@
+[
+ {
+  "name": "Base",
+  "isInsert": false,
+  "cards": [
+   {
+    "num": "1",
+    "name": "Abomination"
+   },
+   {
+    "num": "2",
+    "name": "Adam Warlock"
+   },
+   {
+    "num": "3",
+    "name": "Agatha Harkness"
+   },
+   {
+    "num": "4",
+    "name": "Amaranth"
+   },
+   {
+    "num": "5",
+    "name": "America Chavez"
+   },
+   {
+    "num": "6",
+    "name": "Ant-Man"
+   },
+   {
+    "num": "7",
+    "name": "Apocalypse"
+   },
+   {
+    "num": "8",
+    "name": "Ares"
+   },
+   {
+    "num": "9",
+    "name": "Baron Zemo"
+   },
+   {
+    "num": "10",
+    "name": "Beast"
+   },
+   {
+    "num": "11",
+    "name": "Beta Ray Bill"
+   },
+   {
+    "num": "12",
+    "name": "Black Bolt"
+   },
+   {
+    "num": "13",
+    "name": "Black Cat"
+   },
+   {
+    "num": "14",
+    "name": "Black Knight"
+   },
+   {
+    "num": "15",
+    "name": "Black Panther"
+   },
+   {
+    "num": "16",
+    "name": "Black Widow"
+   },
+   {
+    "num": "17",
+    "name": "Blade"
+   },
+   {
+    "num": "18",
+    "name": "Blink"
+   },
+   {
+    "num": "19",
+    "name": "Captain America"
+   },
+   {
+    "num": "20",
+    "name": "Captain Britain"
+   },
+   {
+    "num": "21",
+    "name": "Captain Marvel"
+   },
+   {
+    "num": "22",
+    "name": "Carnage"
+   },
+   {
+    "num": "23",
+    "name": "Colossus"
+   },
+   {
+    "num": "24",
+    "name": "Cyclops"
+   },
+   {
+    "num": "25",
+    "name": "Daredevil"
+   },
+   {
+    "num": "26",
+    "name": "Dazzler"
+   },
+   {
+    "num": "27",
+    "name": "Dark Gwenpool"
+   },
+   {
+    "num": "28",
+    "name": "Doctor Doom"
+   },
+   {
+    "num": "29",
+    "name": "Doctor Octopus"
+   },
+   {
+    "num": "30",
+    "name": "Domino"
+   },
+   {
+    "num": "31",
+    "name": "Doomasaur"
+   },
+   {
+    "num": "32",
+    "name": "Dormammu"
+   },
+   {
+    "num": "33",
+    "name": "Dragonfire"
+   },
+   {
+    "num": "34",
+    "name": "Emma Frost"
+   },
+   {
+    "num": "35",
+    "name": "Enchantress"
+   },
+   {
+    "num": "36",
+    "name": "Eternity"
+   },
+   {
+    "num": "37",
+    "name": "Forge"
+   },
+   {
+    "num": "38",
+    "name": "Galactus"
+   },
+   {
+    "num": "39",
+    "name": "Gambit"
+   },
+   {
+    "num": "40",
+    "name": "Gamora"
+   },
+   {
+    "num": "41",
+    "name": "Ghost Rider"
+   },
+   {
+    "num": "42",
+    "name": "Ghost-Spider"
+   },
+   {
+    "num": "43",
+    "name": "Glob"
+   },
+   {
+    "num": "44",
+    "name": "Goblin Queen"
+   },
+   {
+    "num": "45",
+    "name": "Green Goblin"
+   },
+   {
+    "num": "46",
+    "name": "Groot"
+   },
+   {
+    "num": "47",
+    "name": "Hawkeye"
+   },
+   {
+    "num": "48",
+    "name": "Hercules"
+   },
+   {
+    "num": "49",
+    "name": "Hope Summers"
+   },
+   {
+    "num": "50",
+    "name": "Hulk"
+   },
+   {
+    "num": "51",
+    "name": "Human Torch"
+   },
+   {
+    "num": "52",
+    "name": "Iceman"
+   },
+   {
+    "num": "53",
+    "name": "Ikaris"
+   },
+   {
+    "num": "54",
+    "name": "Infernal Hulk"
+   },
+   {
+    "num": "55",
+    "name": "Invisible Woman"
+   },
+   {
+    "num": "56",
+    "name": "Iron Fist"
+   },
+   {
+    "num": "57",
+    "name": "Iron Man"
+   },
+   {
+    "num": "58",
+    "name": "Ironheart"
+   },
+   {
+    "num": "59",
+    "name": "Jean Grey"
+   },
+   {
+    "num": "60",
+    "name": "Jef the Land Shark"
+   },
+   {
+    "num": "61",
+    "name": "Jubilee"
+   },
+   {
+    "num": "62",
+    "name": "Juggernaut"
+   },
+   {
+    "num": "63",
+    "name": "Kate Bishop"
+   },
+   {
+    "num": "64",
+    "name": "Kid Juggernaut"
+   },
+   {
+    "num": "65",
+    "name": "Kingpin"
+   },
+   {
+    "num": "66",
+    "name": "Kitty Pryde"
+   },
+   {
+    "num": "67",
+    "name": "Kraven the Hunter"
+   },
+   {
+    "num": "68",
+    "name": "Leader"
+   },
+   {
+    "num": "69",
+    "name": "Lizard"
+   },
+   {
+    "num": "70",
+    "name": "Lockjaw"
+   },
+   {
+    "num": "71",
+    "name": "Longshot"
+   },
+   {
+    "num": "72",
+    "name": "Luke Cage"
+   },
+   {
+    "num": "73",
+    "name": "M.O.D.O.K."
+   },
+   {
+    "num": "74",
+    "name": "Magneto"
+   },
+   {
+    "num": "75",
+    "name": "Man-Thing"
+   },
+   {
+    "num": "76",
+    "name": "Mantis"
+   },
+   {
+    "num": "77",
+    "name": "Mephisto"
+   },
+   {
+    "num": "78",
+    "name": "Miles Morales"
+   },
+   {
+    "num": "79",
+    "name": "Mister Fantastic"
+   },
+   {
+    "num": "80",
+    "name": "Mister Sinister"
+   },
+   {
+    "num": "81",
+    "name": "Moon Knight"
+   },
+   {
+    "num": "82",
+    "name": "Moonstar"
+   },
+   {
+    "num": "83",
+    "name": "Ms. Marvel"
+   },
+   {
+    "num": "84",
+    "name": "Mutina"
+   },
+   {
+    "num": "85",
+    "name": "Mysterio"
+   },
+   {
+    "num": "86",
+    "name": "Mystique"
+   },
+   {
+    "num": "87",
+    "name": "Nightcrawler"
+   },
+   {
+    "num": "88",
+    "name": "Nightdrifter"
+   },
+   {
+    "num": "89",
+    "name": "Nova"
+   },
+   {
+    "num": "90",
+    "name": "Omega Red"
+   },
+   {
+    "num": "91",
+    "name": "Professor X"
+   },
+   {
+    "num": "92",
+    "name": "Psylocke"
+   },
+   {
+    "num": "93",
+    "name": "Quicksilver"
+   },
+   {
+    "num": "94",
+    "name": "Rasputin IV"
+   },
+   {
+    "num": "95",
+    "name": "Rek-Rap"
+   },
+   {
+    "num": "96",
+    "name": "Revelation"
+   },
+   {
+    "num": "97",
+    "name": "Rhino"
+   },
+   {
+    "num": "98",
+    "name": "Rocket Raccoon"
+   },
+   {
+    "num": "99",
+    "name": "Rogue"
+   },
+   {
+    "num": "100",
+    "name": "Sleeper Agent"
+   },
+   {
+    "num": "101",
+    "name": "Angela"
+   },
+   {
+    "num": "102",
+    "name": "Anti-Venom"
+   },
+   {
+    "num": "103",
+    "name": "Arachnix"
+   },
+   {
+    "num": "104",
+    "name": "Arcade"
+   },
+   {
+    "num": "105",
+    "name": "Archangel"
+   },
+   {
+    "num": "106",
+    "name": "Chameleon"
+   },
+   {
+    "num": "107",
+    "name": "Clea"
+   },
+   {
+    "num": "108",
+    "name": "Cosmic Ghost Rider"
+   },
+   {
+    "num": "109",
+    "name": "Deathlok"
+   },
+   {
+    "num": "110",
+    "name": "Devil Dinosaur"
+   },
+   {
+    "num": "111",
+    "name": "Doctor Strange"
+   },
+   {
+    "num": "112",
+    "name": "Doom 2099"
+   },
+   {
+    "num": "113",
+    "name": "Doyle Dormammu"
+   },
+   {
+    "num": "114",
+    "name": "Elbecca Voss"
+   },
+   {
+    "num": "115",
+    "name": "Electro"
+   },
+   {
+    "num": "116",
+    "name": "Elektra"
+   },
+   {
+    "num": "117",
+    "name": "Evangeline"
+   },
+   {
+    "num": "118",
+    "name": "Exodus"
+   },
+   {
+    "num": "119",
+    "name": "Glitch"
+   },
+   {
+    "num": "120",
+    "name": "Grandmaster"
+   },
+   {
+    "num": "121",
+    "name": "Gwenpool"
+   },
+   {
+    "num": "122",
+    "name": "Hallows' Eve"
+   },
+   {
+    "num": "123",
+    "name": "Hellcat"
+   },
+   {
+    "num": "124",
+    "name": "Hellgate"
+   },
+   {
+    "num": "125",
+    "name": "Hellverine"
+   },
+   {
+    "num": "126",
+    "name": "Hobgoblin"
+   },
+   {
+    "num": "127",
+    "name": "Iron Cat"
+   },
+   {
+    "num": "128",
+    "name": "Kid Venom"
+   },
+   {
+    "num": "129",
+    "name": "Knull"
+   },
+   {
+    "num": "130",
+    "name": "Lady Henrietta"
+   },
+   {
+    "num": "131",
+    "name": "Loki"
+   },
+   {
+    "num": "132",
+    "name": "Luna Snow"
+   },
+   {
+    "num": "133",
+    "name": "Maestro"
+   },
+   {
+    "num": "134",
+    "name": "Magik"
+   },
+   {
+    "num": "135",
+    "name": "Mar-Vell"
+   },
+   {
+    "num": "136",
+    "name": "Mary Jane"
+   },
+   {
+    "num": "137",
+    "name": "Misery"
+   },
+   {
+    "num": "138",
+    "name": "Moon Girl"
+   },
+   {
+    "num": "139",
+    "name": "Nimrod"
+   },
+   {
+    "num": "140",
+    "name": "SP//dr"
+   },
+   {
+    "num": "141",
+    "name": "Rachel Summers"
+   },
+   {
+    "num": "142",
+    "name": "Raelith"
+   },
+   {
+    "num": "143",
+    "name": "Rapid"
+   },
+   {
+    "num": "144",
+    "name": "Sabretooth"
+   },
+   {
+    "num": "145",
+    "name": "Scarlet Witch"
+   },
+   {
+    "num": "146",
+    "name": "Scarlet Spider"
+   },
+   {
+    "num": "147",
+    "name": "Scorpion"
+   },
+   {
+    "num": "148",
+    "name": "Scream"
+   },
+   {
+    "num": "149",
+    "name": "Sentry"
+   },
+   {
+    "num": "150",
+    "name": "Shang-Chi"
+   },
+   {
+    "num": "151",
+    "name": "She-Hulk"
+   },
+   {
+    "num": "152",
+    "name": "She-Venom"
+   },
+   {
+    "num": "153",
+    "name": "Shocker"
+   },
+   {
+    "num": "154",
+    "name": "Shuri"
+   },
+   {
+    "num": "155",
+    "name": "Silence"
+   },
+   {
+    "num": "156",
+    "name": "Silk"
+   },
+   {
+    "num": "157",
+    "name": "Silver Surfer"
+   },
+   {
+    "num": "158",
+    "name": "Silver Sable"
+   },
+   {
+    "num": "159",
+    "name": "Sister Sorrow"
+   },
+   {
+    "num": "160",
+    "name": "Spider-Boy"
+   },
+   {
+    "num": "161",
+    "name": "Spider-Girl"
+   },
+   {
+    "num": "162",
+    "name": "Spider-Ham"
+   },
+   {
+    "num": "163",
+    "name": "Spider-Man"
+   },
+   {
+    "num": "164",
+    "name": "Spider-Man 2099"
+   },
+   {
+    "num": "165",
+    "name": "Spider-Man Noir"
+   },
+   {
+    "num": "166",
+    "name": "Spider-Punk"
+   },
+   {
+    "num": "167",
+    "name": "Spider-Woman"
+   },
+   {
+    "num": "168",
+    "name": "Star-Lord"
+   },
+   {
+    "num": "169",
+    "name": "Storm"
+   },
+   {
+    "num": "170",
+    "name": "Strong Guy"
+   },
+   {
+    "num": "171",
+    "name": "Stryfe"
+   },
+   {
+    "num": "172",
+    "name": "Sunspot"
+   },
+   {
+    "num": "173",
+    "name": "Taskmaster"
+   },
+   {
+    "num": "174",
+    "name": "Thanos"
+   },
+   {
+    "num": "175",
+    "name": "The Thing"
+   },
+   {
+    "num": "176",
+    "name": "Thena"
+   },
+   {
+    "num": "177",
+    "name": "Thor"
+   },
+   {
+    "num": "178",
+    "name": "Throg"
+   },
+   {
+    "num": "179",
+    "name": "Tigra"
+   },
+   {
+    "num": "180",
+    "name": "Tombstone"
+   },
+   {
+    "num": "181",
+    "name": "Toxin"
+   },
+   {
+    "num": "182",
+    "name": "U.S. Agent"
+   },
+   {
+    "num": "183",
+    "name": "Ultimate Daredevil"
+   },
+   {
+    "num": "184",
+    "name": "Ultimate Wolverine"
+   },
+   {
+    "num": "185",
+    "name": "Ultron"
+   },
+   {
+    "num": "186",
+    "name": "Valeria Richards"
+   },
+   {
+    "num": "187",
+    "name": "Venom"
+   },
+   {
+    "num": "188",
+    "name": "Venomizer"
+   },
+   {
+    "num": "189",
+    "name": "Venomouse"
+   },
+   {
+    "num": "190",
+    "name": "Vision"
+   },
+   {
+    "num": "191",
+    "name": "Vulcan"
+   },
+   {
+    "num": "192",
+    "name": "Vulture"
+   },
+   {
+    "num": "193",
+    "name": "War Machine"
+   },
+   {
+    "num": "194",
+    "name": "Wasp"
+   },
+   {
+    "num": "195",
+    "name": "Werewolf by Night"
+   },
+   {
+    "num": "196",
+    "name": "White Fox"
+   },
+   {
+    "num": "197",
+    "name": "White Tiger"
+   },
+   {
+    "num": "198",
+    "name": "Wiccan"
+   },
+   {
+    "num": "199",
+    "name": "Wolverine"
+   },
+   {
+    "num": "200",
+    "name": "X-23"
+   }
+  ]
+ },
+ {
+  "name": "Green",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "1",
+    "name": "Abomination"
+   },
+   {
+    "num": "2",
+    "name": "Adam Warlock"
+   },
+   {
+    "num": "3",
+    "name": "Agatha Harkness"
+   },
+   {
+    "num": "4",
+    "name": "Amaranth"
+   },
+   {
+    "num": "5",
+    "name": "America Chavez"
+   },
+   {
+    "num": "6",
+    "name": "Ant-Man"
+   },
+   {
+    "num": "7",
+    "name": "Apocalypse"
+   },
+   {
+    "num": "8",
+    "name": "Ares"
+   },
+   {
+    "num": "9",
+    "name": "Baron Zemo"
+   },
+   {
+    "num": "10",
+    "name": "Beast"
+   },
+   {
+    "num": "11",
+    "name": "Beta Ray Bill"
+   },
+   {
+    "num": "12",
+    "name": "Black Bolt"
+   },
+   {
+    "num": "13",
+    "name": "Black Cat"
+   },
+   {
+    "num": "14",
+    "name": "Black Knight"
+   },
+   {
+    "num": "15",
+    "name": "Black Panther"
+   },
+   {
+    "num": "16",
+    "name": "Black Widow"
+   },
+   {
+    "num": "17",
+    "name": "Blade"
+   },
+   {
+    "num": "18",
+    "name": "Blink"
+   },
+   {
+    "num": "19",
+    "name": "Captain America"
+   },
+   {
+    "num": "20",
+    "name": "Captain Britain"
+   },
+   {
+    "num": "21",
+    "name": "Captain Marvel"
+   },
+   {
+    "num": "22",
+    "name": "Carnage"
+   },
+   {
+    "num": "23",
+    "name": "Colossus"
+   },
+   {
+    "num": "24",
+    "name": "Cyclops"
+   },
+   {
+    "num": "25",
+    "name": "Daredevil"
+   },
+   {
+    "num": "26",
+    "name": "Dazzler"
+   },
+   {
+    "num": "27",
+    "name": "Dark Gwenpool"
+   },
+   {
+    "num": "28",
+    "name": "Doctor Doom"
+   },
+   {
+    "num": "29",
+    "name": "Doctor Octopus"
+   },
+   {
+    "num": "30",
+    "name": "Domino"
+   },
+   {
+    "num": "31",
+    "name": "Doomasaur"
+   },
+   {
+    "num": "32",
+    "name": "Dormammu"
+   },
+   {
+    "num": "33",
+    "name": "Dragonfire"
+   },
+   {
+    "num": "34",
+    "name": "Emma Frost"
+   },
+   {
+    "num": "35",
+    "name": "Enchantress"
+   },
+   {
+    "num": "36",
+    "name": "Eternity"
+   },
+   {
+    "num": "37",
+    "name": "Forge"
+   },
+   {
+    "num": "38",
+    "name": "Galactus"
+   },
+   {
+    "num": "39",
+    "name": "Gambit"
+   },
+   {
+    "num": "40",
+    "name": "Gamora"
+   },
+   {
+    "num": "41",
+    "name": "Ghost Rider"
+   },
+   {
+    "num": "42",
+    "name": "Ghost-Spider"
+   },
+   {
+    "num": "43",
+    "name": "Glob"
+   },
+   {
+    "num": "44",
+    "name": "Goblin Queen"
+   },
+   {
+    "num": "45",
+    "name": "Green Goblin"
+   },
+   {
+    "num": "46",
+    "name": "Groot"
+   },
+   {
+    "num": "47",
+    "name": "Hawkeye"
+   },
+   {
+    "num": "48",
+    "name": "Hercules"
+   },
+   {
+    "num": "49",
+    "name": "Hope Summers"
+   },
+   {
+    "num": "50",
+    "name": "Hulk"
+   },
+   {
+    "num": "51",
+    "name": "Human Torch"
+   },
+   {
+    "num": "52",
+    "name": "Iceman"
+   },
+   {
+    "num": "53",
+    "name": "Ikaris"
+   },
+   {
+    "num": "54",
+    "name": "Infernal Hulk"
+   },
+   {
+    "num": "55",
+    "name": "Invisible Woman"
+   },
+   {
+    "num": "56",
+    "name": "Iron Fist"
+   },
+   {
+    "num": "57",
+    "name": "Iron Man"
+   },
+   {
+    "num": "58",
+    "name": "Ironheart"
+   },
+   {
+    "num": "59",
+    "name": "Jean Grey"
+   },
+   {
+    "num": "60",
+    "name": "Jef the Land Shark"
+   },
+   {
+    "num": "61",
+    "name": "Jubilee"
+   },
+   {
+    "num": "62",
+    "name": "Juggernaut"
+   },
+   {
+    "num": "63",
+    "name": "Kate Bishop"
+   },
+   {
+    "num": "64",
+    "name": "Kid Juggernaut"
+   },
+   {
+    "num": "65",
+    "name": "Kingpin"
+   },
+   {
+    "num": "66",
+    "name": "Kitty Pryde"
+   },
+   {
+    "num": "67",
+    "name": "Kraven the Hunter"
+   },
+   {
+    "num": "68",
+    "name": "Leader"
+   },
+   {
+    "num": "69",
+    "name": "Lizard"
+   },
+   {
+    "num": "70",
+    "name": "Lockjaw"
+   },
+   {
+    "num": "71",
+    "name": "Longshot"
+   },
+   {
+    "num": "72",
+    "name": "Luke Cage"
+   },
+   {
+    "num": "73",
+    "name": "M.O.D.O.K."
+   },
+   {
+    "num": "74",
+    "name": "Magneto"
+   },
+   {
+    "num": "75",
+    "name": "Man-Thing"
+   },
+   {
+    "num": "76",
+    "name": "Mantis"
+   },
+   {
+    "num": "77",
+    "name": "Mephisto"
+   },
+   {
+    "num": "78",
+    "name": "Miles Morales"
+   },
+   {
+    "num": "79",
+    "name": "Mister Fantastic"
+   },
+   {
+    "num": "80",
+    "name": "Mister Sinister"
+   },
+   {
+    "num": "81",
+    "name": "Moon Knight"
+   },
+   {
+    "num": "82",
+    "name": "Moonstar"
+   },
+   {
+    "num": "83",
+    "name": "Ms. Marvel"
+   },
+   {
+    "num": "84",
+    "name": "Mutina"
+   },
+   {
+    "num": "85",
+    "name": "Mysterio"
+   },
+   {
+    "num": "86",
+    "name": "Mystique"
+   },
+   {
+    "num": "87",
+    "name": "Nightcrawler"
+   },
+   {
+    "num": "88",
+    "name": "Nightdrifter"
+   },
+   {
+    "num": "89",
+    "name": "Nova"
+   },
+   {
+    "num": "90",
+    "name": "Omega Red"
+   },
+   {
+    "num": "91",
+    "name": "Professor X"
+   },
+   {
+    "num": "92",
+    "name": "Psylocke"
+   },
+   {
+    "num": "93",
+    "name": "Quicksilver"
+   },
+   {
+    "num": "94",
+    "name": "Rasputin IV"
+   },
+   {
+    "num": "95",
+    "name": "Rek-Rap"
+   },
+   {
+    "num": "96",
+    "name": "Revelation"
+   },
+   {
+    "num": "97",
+    "name": "Rhino"
+   },
+   {
+    "num": "98",
+    "name": "Rocket Raccoon"
+   },
+   {
+    "num": "99",
+    "name": "Rogue"
+   },
+   {
+    "num": "100",
+    "name": "Sleeper Agent"
+   },
+   {
+    "num": "101",
+    "name": "Angela"
+   },
+   {
+    "num": "102",
+    "name": "Anti-Venom"
+   },
+   {
+    "num": "103",
+    "name": "Arachnix"
+   },
+   {
+    "num": "104",
+    "name": "Arcade"
+   },
+   {
+    "num": "105",
+    "name": "Archangel"
+   },
+   {
+    "num": "106",
+    "name": "Chameleon"
+   },
+   {
+    "num": "107",
+    "name": "Clea"
+   },
+   {
+    "num": "108",
+    "name": "Cosmic Ghost Rider"
+   },
+   {
+    "num": "109",
+    "name": "Deathlok"
+   },
+   {
+    "num": "110",
+    "name": "Devil Dinosaur"
+   },
+   {
+    "num": "111",
+    "name": "Doctor Strange"
+   },
+   {
+    "num": "112",
+    "name": "Doom 2099"
+   },
+   {
+    "num": "113",
+    "name": "Doyle Dormammu"
+   },
+   {
+    "num": "114",
+    "name": "Elbecca Voss"
+   },
+   {
+    "num": "115",
+    "name": "Electro"
+   },
+   {
+    "num": "116",
+    "name": "Elektra"
+   },
+   {
+    "num": "117",
+    "name": "Evangeline"
+   },
+   {
+    "num": "118",
+    "name": "Exodus"
+   },
+   {
+    "num": "119",
+    "name": "Glitch"
+   },
+   {
+    "num": "120",
+    "name": "Grandmaster"
+   },
+   {
+    "num": "121",
+    "name": "Gwenpool"
+   },
+   {
+    "num": "122",
+    "name": "Hallows' Eve"
+   },
+   {
+    "num": "123",
+    "name": "Hellcat"
+   },
+   {
+    "num": "124",
+    "name": "Hellgate"
+   },
+   {
+    "num": "125",
+    "name": "Hellverine"
+   },
+   {
+    "num": "126",
+    "name": "Hobgoblin"
+   },
+   {
+    "num": "127",
+    "name": "Iron Cat"
+   },
+   {
+    "num": "128",
+    "name": "Kid Venom"
+   },
+   {
+    "num": "129",
+    "name": "Knull"
+   },
+   {
+    "num": "130",
+    "name": "Lady Henrietta"
+   },
+   {
+    "num": "131",
+    "name": "Loki"
+   },
+   {
+    "num": "132",
+    "name": "Luna Snow"
+   },
+   {
+    "num": "133",
+    "name": "Maestro"
+   },
+   {
+    "num": "134",
+    "name": "Magik"
+   },
+   {
+    "num": "135",
+    "name": "Mar-Vell"
+   },
+   {
+    "num": "136",
+    "name": "Mary Jane"
+   },
+   {
+    "num": "137",
+    "name": "Misery"
+   },
+   {
+    "num": "138",
+    "name": "Moon Girl"
+   },
+   {
+    "num": "139",
+    "name": "Nimrod"
+   },
+   {
+    "num": "140",
+    "name": "SP//dr"
+   },
+   {
+    "num": "141",
+    "name": "Rachel Summers"
+   },
+   {
+    "num": "142",
+    "name": "Raelith"
+   },
+   {
+    "num": "143",
+    "name": "Rapid"
+   },
+   {
+    "num": "144",
+    "name": "Sabretooth"
+   },
+   {
+    "num": "145",
+    "name": "Scarlet Witch"
+   },
+   {
+    "num": "146",
+    "name": "Scarlet Spider"
+   },
+   {
+    "num": "147",
+    "name": "Scorpion"
+   },
+   {
+    "num": "148",
+    "name": "Scream"
+   },
+   {
+    "num": "149",
+    "name": "Sentry"
+   },
+   {
+    "num": "150",
+    "name": "Shang-Chi"
+   },
+   {
+    "num": "151",
+    "name": "She-Hulk"
+   },
+   {
+    "num": "152",
+    "name": "She-Venom"
+   },
+   {
+    "num": "153",
+    "name": "Shocker"
+   },
+   {
+    "num": "154",
+    "name": "Shuri"
+   },
+   {
+    "num": "155",
+    "name": "Silence"
+   },
+   {
+    "num": "156",
+    "name": "Silk"
+   },
+   {
+    "num": "157",
+    "name": "Silver Surfer"
+   },
+   {
+    "num": "158",
+    "name": "Silver Sable"
+   },
+   {
+    "num": "159",
+    "name": "Sister Sorrow"
+   },
+   {
+    "num": "160",
+    "name": "Spider-Boy"
+   },
+   {
+    "num": "161",
+    "name": "Spider-Girl"
+   },
+   {
+    "num": "162",
+    "name": "Spider-Ham"
+   },
+   {
+    "num": "163",
+    "name": "Spider-Man"
+   },
+   {
+    "num": "164",
+    "name": "Spider-Man 2099"
+   },
+   {
+    "num": "165",
+    "name": "Spider-Man Noir"
+   },
+   {
+    "num": "166",
+    "name": "Spider-Punk"
+   },
+   {
+    "num": "167",
+    "name": "Spider-Woman"
+   },
+   {
+    "num": "168",
+    "name": "Star-Lord"
+   },
+   {
+    "num": "169",
+    "name": "Storm"
+   },
+   {
+    "num": "170",
+    "name": "Strong Guy"
+   },
+   {
+    "num": "171",
+    "name": "Stryfe"
+   },
+   {
+    "num": "172",
+    "name": "Sunspot"
+   },
+   {
+    "num": "173",
+    "name": "Taskmaster"
+   },
+   {
+    "num": "174",
+    "name": "Thanos"
+   },
+   {
+    "num": "175",
+    "name": "The Thing"
+   },
+   {
+    "num": "176",
+    "name": "Thena"
+   },
+   {
+    "num": "177",
+    "name": "Thor"
+   },
+   {
+    "num": "178",
+    "name": "Throg"
+   },
+   {
+    "num": "179",
+    "name": "Tigra"
+   },
+   {
+    "num": "180",
+    "name": "Tombstone"
+   },
+   {
+    "num": "181",
+    "name": "Toxin"
+   },
+   {
+    "num": "182",
+    "name": "U.S. Agent"
+   },
+   {
+    "num": "183",
+    "name": "Ultimate Daredevil"
+   },
+   {
+    "num": "184",
+    "name": "Ultimate Wolverine"
+   },
+   {
+    "num": "185",
+    "name": "Ultron"
+   },
+   {
+    "num": "186",
+    "name": "Valeria Richards"
+   },
+   {
+    "num": "187",
+    "name": "Venom"
+   },
+   {
+    "num": "188",
+    "name": "Venomizer"
+   },
+   {
+    "num": "189",
+    "name": "Venomouse"
+   },
+   {
+    "num": "190",
+    "name": "Vision"
+   },
+   {
+    "num": "191",
+    "name": "Vulcan"
+   },
+   {
+    "num": "192",
+    "name": "Vulture"
+   },
+   {
+    "num": "193",
+    "name": "War Machine"
+   },
+   {
+    "num": "194",
+    "name": "Wasp"
+   },
+   {
+    "num": "195",
+    "name": "Werewolf by Night"
+   },
+   {
+    "num": "196",
+    "name": "White Fox"
+   },
+   {
+    "num": "197",
+    "name": "White Tiger"
+   },
+   {
+    "num": "198",
+    "name": "Wiccan"
+   },
+   {
+    "num": "199",
+    "name": "Wolverine"
+   },
+   {
+    "num": "200",
+    "name": "X-23"
+   }
+  ]
+ },
+ {
+  "name": "Purple",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "1",
+    "name": "Abomination"
+   },
+   {
+    "num": "2",
+    "name": "Adam Warlock"
+   },
+   {
+    "num": "3",
+    "name": "Agatha Harkness"
+   },
+   {
+    "num": "4",
+    "name": "Amaranth"
+   },
+   {
+    "num": "5",
+    "name": "America Chavez"
+   },
+   {
+    "num": "6",
+    "name": "Ant-Man"
+   },
+   {
+    "num": "7",
+    "name": "Apocalypse"
+   },
+   {
+    "num": "8",
+    "name": "Ares"
+   },
+   {
+    "num": "9",
+    "name": "Baron Zemo"
+   },
+   {
+    "num": "10",
+    "name": "Beast"
+   },
+   {
+    "num": "11",
+    "name": "Beta Ray Bill"
+   },
+   {
+    "num": "12",
+    "name": "Black Bolt"
+   },
+   {
+    "num": "13",
+    "name": "Black Cat"
+   },
+   {
+    "num": "14",
+    "name": "Black Knight"
+   },
+   {
+    "num": "15",
+    "name": "Black Panther"
+   },
+   {
+    "num": "16",
+    "name": "Black Widow"
+   },
+   {
+    "num": "17",
+    "name": "Blade"
+   },
+   {
+    "num": "18",
+    "name": "Blink"
+   },
+   {
+    "num": "19",
+    "name": "Captain America"
+   },
+   {
+    "num": "20",
+    "name": "Captain Britain"
+   },
+   {
+    "num": "21",
+    "name": "Captain Marvel"
+   },
+   {
+    "num": "22",
+    "name": "Carnage"
+   },
+   {
+    "num": "23",
+    "name": "Colossus"
+   },
+   {
+    "num": "24",
+    "name": "Cyclops"
+   },
+   {
+    "num": "25",
+    "name": "Daredevil"
+   },
+   {
+    "num": "26",
+    "name": "Dazzler"
+   },
+   {
+    "num": "27",
+    "name": "Dark Gwenpool"
+   },
+   {
+    "num": "28",
+    "name": "Doctor Doom"
+   },
+   {
+    "num": "29",
+    "name": "Doctor Octopus"
+   },
+   {
+    "num": "30",
+    "name": "Domino"
+   },
+   {
+    "num": "31",
+    "name": "Doomasaur"
+   },
+   {
+    "num": "32",
+    "name": "Dormammu"
+   },
+   {
+    "num": "33",
+    "name": "Dragonfire"
+   },
+   {
+    "num": "34",
+    "name": "Emma Frost"
+   },
+   {
+    "num": "35",
+    "name": "Enchantress"
+   },
+   {
+    "num": "36",
+    "name": "Eternity"
+   },
+   {
+    "num": "37",
+    "name": "Forge"
+   },
+   {
+    "num": "38",
+    "name": "Galactus"
+   },
+   {
+    "num": "39",
+    "name": "Gambit"
+   },
+   {
+    "num": "40",
+    "name": "Gamora"
+   },
+   {
+    "num": "41",
+    "name": "Ghost Rider"
+   },
+   {
+    "num": "42",
+    "name": "Ghost-Spider"
+   },
+   {
+    "num": "43",
+    "name": "Glob"
+   },
+   {
+    "num": "44",
+    "name": "Goblin Queen"
+   },
+   {
+    "num": "45",
+    "name": "Green Goblin"
+   },
+   {
+    "num": "46",
+    "name": "Groot"
+   },
+   {
+    "num": "47",
+    "name": "Hawkeye"
+   },
+   {
+    "num": "48",
+    "name": "Hercules"
+   },
+   {
+    "num": "49",
+    "name": "Hope Summers"
+   },
+   {
+    "num": "50",
+    "name": "Hulk"
+   },
+   {
+    "num": "51",
+    "name": "Human Torch"
+   },
+   {
+    "num": "52",
+    "name": "Iceman"
+   },
+   {
+    "num": "53",
+    "name": "Ikaris"
+   },
+   {
+    "num": "54",
+    "name": "Infernal Hulk"
+   },
+   {
+    "num": "55",
+    "name": "Invisible Woman"
+   },
+   {
+    "num": "56",
+    "name": "Iron Fist"
+   },
+   {
+    "num": "57",
+    "name": "Iron Man"
+   },
+   {
+    "num": "58",
+    "name": "Ironheart"
+   },
+   {
+    "num": "59",
+    "name": "Jean Grey"
+   },
+   {
+    "num": "60",
+    "name": "Jef the Land Shark"
+   },
+   {
+    "num": "61",
+    "name": "Jubilee"
+   },
+   {
+    "num": "62",
+    "name": "Juggernaut"
+   },
+   {
+    "num": "63",
+    "name": "Kate Bishop"
+   },
+   {
+    "num": "64",
+    "name": "Kid Juggernaut"
+   },
+   {
+    "num": "65",
+    "name": "Kingpin"
+   },
+   {
+    "num": "66",
+    "name": "Kitty Pryde"
+   },
+   {
+    "num": "67",
+    "name": "Kraven the Hunter"
+   },
+   {
+    "num": "68",
+    "name": "Leader"
+   },
+   {
+    "num": "69",
+    "name": "Lizard"
+   },
+   {
+    "num": "70",
+    "name": "Lockjaw"
+   },
+   {
+    "num": "71",
+    "name": "Longshot"
+   },
+   {
+    "num": "72",
+    "name": "Luke Cage"
+   },
+   {
+    "num": "73",
+    "name": "M.O.D.O.K."
+   },
+   {
+    "num": "74",
+    "name": "Magneto"
+   },
+   {
+    "num": "75",
+    "name": "Man-Thing"
+   },
+   {
+    "num": "76",
+    "name": "Mantis"
+   },
+   {
+    "num": "77",
+    "name": "Mephisto"
+   },
+   {
+    "num": "78",
+    "name": "Miles Morales"
+   },
+   {
+    "num": "79",
+    "name": "Mister Fantastic"
+   },
+   {
+    "num": "80",
+    "name": "Mister Sinister"
+   },
+   {
+    "num": "81",
+    "name": "Moon Knight"
+   },
+   {
+    "num": "82",
+    "name": "Moonstar"
+   },
+   {
+    "num": "83",
+    "name": "Ms. Marvel"
+   },
+   {
+    "num": "84",
+    "name": "Mutina"
+   },
+   {
+    "num": "85",
+    "name": "Mysterio"
+   },
+   {
+    "num": "86",
+    "name": "Mystique"
+   },
+   {
+    "num": "87",
+    "name": "Nightcrawler"
+   },
+   {
+    "num": "88",
+    "name": "Nightdrifter"
+   },
+   {
+    "num": "89",
+    "name": "Nova"
+   },
+   {
+    "num": "90",
+    "name": "Omega Red"
+   },
+   {
+    "num": "91",
+    "name": "Professor X"
+   },
+   {
+    "num": "92",
+    "name": "Psylocke"
+   },
+   {
+    "num": "93",
+    "name": "Quicksilver"
+   },
+   {
+    "num": "94",
+    "name": "Rasputin IV"
+   },
+   {
+    "num": "95",
+    "name": "Rek-Rap"
+   },
+   {
+    "num": "96",
+    "name": "Revelation"
+   },
+   {
+    "num": "97",
+    "name": "Rhino"
+   },
+   {
+    "num": "98",
+    "name": "Rocket Raccoon"
+   },
+   {
+    "num": "99",
+    "name": "Rogue"
+   },
+   {
+    "num": "100",
+    "name": "Sleeper Agent"
+   },
+   {
+    "num": "101",
+    "name": "Angela"
+   },
+   {
+    "num": "102",
+    "name": "Anti-Venom"
+   },
+   {
+    "num": "103",
+    "name": "Arachnix"
+   },
+   {
+    "num": "104",
+    "name": "Arcade"
+   },
+   {
+    "num": "105",
+    "name": "Archangel"
+   },
+   {
+    "num": "106",
+    "name": "Chameleon"
+   },
+   {
+    "num": "107",
+    "name": "Clea"
+   },
+   {
+    "num": "108",
+    "name": "Cosmic Ghost Rider"
+   },
+   {
+    "num": "109",
+    "name": "Deathlok"
+   },
+   {
+    "num": "110",
+    "name": "Devil Dinosaur"
+   },
+   {
+    "num": "111",
+    "name": "Doctor Strange"
+   },
+   {
+    "num": "112",
+    "name": "Doom 2099"
+   },
+   {
+    "num": "113",
+    "name": "Doyle Dormammu"
+   },
+   {
+    "num": "114",
+    "name": "Elbecca Voss"
+   },
+   {
+    "num": "115",
+    "name": "Electro"
+   },
+   {
+    "num": "116",
+    "name": "Elektra"
+   },
+   {
+    "num": "117",
+    "name": "Evangeline"
+   },
+   {
+    "num": "118",
+    "name": "Exodus"
+   },
+   {
+    "num": "119",
+    "name": "Glitch"
+   },
+   {
+    "num": "120",
+    "name": "Grandmaster"
+   },
+   {
+    "num": "121",
+    "name": "Gwenpool"
+   },
+   {
+    "num": "122",
+    "name": "Hallows' Eve"
+   },
+   {
+    "num": "123",
+    "name": "Hellcat"
+   },
+   {
+    "num": "124",
+    "name": "Hellgate"
+   },
+   {
+    "num": "125",
+    "name": "Hellverine"
+   },
+   {
+    "num": "126",
+    "name": "Hobgoblin"
+   },
+   {
+    "num": "127",
+    "name": "Iron Cat"
+   },
+   {
+    "num": "128",
+    "name": "Kid Venom"
+   },
+   {
+    "num": "129",
+    "name": "Knull"
+   },
+   {
+    "num": "130",
+    "name": "Lady Henrietta"
+   },
+   {
+    "num": "131",
+    "name": "Loki"
+   },
+   {
+    "num": "132",
+    "name": "Luna Snow"
+   },
+   {
+    "num": "133",
+    "name": "Maestro"
+   },
+   {
+    "num": "134",
+    "name": "Magik"
+   },
+   {
+    "num": "135",
+    "name": "Mar-Vell"
+   },
+   {
+    "num": "136",
+    "name": "Mary Jane"
+   },
+   {
+    "num": "137",
+    "name": "Misery"
+   },
+   {
+    "num": "138",
+    "name": "Moon Girl"
+   },
+   {
+    "num": "139",
+    "name": "Nimrod"
+   },
+   {
+    "num": "140",
+    "name": "SP//dr"
+   },
+   {
+    "num": "141",
+    "name": "Rachel Summers"
+   },
+   {
+    "num": "142",
+    "name": "Raelith"
+   },
+   {
+    "num": "143",
+    "name": "Rapid"
+   },
+   {
+    "num": "144",
+    "name": "Sabretooth"
+   },
+   {
+    "num": "145",
+    "name": "Scarlet Witch"
+   },
+   {
+    "num": "146",
+    "name": "Scarlet Spider"
+   },
+   {
+    "num": "147",
+    "name": "Scorpion"
+   },
+   {
+    "num": "148",
+    "name": "Scream"
+   },
+   {
+    "num": "149",
+    "name": "Sentry"
+   },
+   {
+    "num": "150",
+    "name": "Shang-Chi"
+   },
+   {
+    "num": "151",
+    "name": "She-Hulk"
+   },
+   {
+    "num": "152",
+    "name": "She-Venom"
+   },
+   {
+    "num": "153",
+    "name": "Shocker"
+   },
+   {
+    "num": "154",
+    "name": "Shuri"
+   },
+   {
+    "num": "155",
+    "name": "Silence"
+   },
+   {
+    "num": "156",
+    "name": "Silk"
+   },
+   {
+    "num": "157",
+    "name": "Silver Surfer"
+   },
+   {
+    "num": "158",
+    "name": "Silver Sable"
+   },
+   {
+    "num": "159",
+    "name": "Sister Sorrow"
+   },
+   {
+    "num": "160",
+    "name": "Spider-Boy"
+   },
+   {
+    "num": "161",
+    "name": "Spider-Girl"
+   },
+   {
+    "num": "162",
+    "name": "Spider-Ham"
+   },
+   {
+    "num": "163",
+    "name": "Spider-Man"
+   },
+   {
+    "num": "164",
+    "name": "Spider-Man 2099"
+   },
+   {
+    "num": "165",
+    "name": "Spider-Man Noir"
+   },
+   {
+    "num": "166",
+    "name": "Spider-Punk"
+   },
+   {
+    "num": "167",
+    "name": "Spider-Woman"
+   },
+   {
+    "num": "168",
+    "name": "Star-Lord"
+   },
+   {
+    "num": "169",
+    "name": "Storm"
+   },
+   {
+    "num": "170",
+    "name": "Strong Guy"
+   },
+   {
+    "num": "171",
+    "name": "Stryfe"
+   },
+   {
+    "num": "172",
+    "name": "Sunspot"
+   },
+   {
+    "num": "173",
+    "name": "Taskmaster"
+   },
+   {
+    "num": "174",
+    "name": "Thanos"
+   },
+   {
+    "num": "175",
+    "name": "The Thing"
+   },
+   {
+    "num": "176",
+    "name": "Thena"
+   },
+   {
+    "num": "177",
+    "name": "Thor"
+   },
+   {
+    "num": "178",
+    "name": "Throg"
+   },
+   {
+    "num": "179",
+    "name": "Tigra"
+   },
+   {
+    "num": "180",
+    "name": "Tombstone"
+   },
+   {
+    "num": "181",
+    "name": "Toxin"
+   },
+   {
+    "num": "182",
+    "name": "U.S. Agent"
+   },
+   {
+    "num": "183",
+    "name": "Ultimate Daredevil"
+   },
+   {
+    "num": "184",
+    "name": "Ultimate Wolverine"
+   },
+   {
+    "num": "185",
+    "name": "Ultron"
+   },
+   {
+    "num": "186",
+    "name": "Valeria Richards"
+   },
+   {
+    "num": "187",
+    "name": "Venom"
+   },
+   {
+    "num": "188",
+    "name": "Venomizer"
+   },
+   {
+    "num": "189",
+    "name": "Venomouse"
+   },
+   {
+    "num": "190",
+    "name": "Vision"
+   },
+   {
+    "num": "191",
+    "name": "Vulcan"
+   },
+   {
+    "num": "192",
+    "name": "Vulture"
+   },
+   {
+    "num": "193",
+    "name": "War Machine"
+   },
+   {
+    "num": "194",
+    "name": "Wasp"
+   },
+   {
+    "num": "195",
+    "name": "Werewolf by Night"
+   },
+   {
+    "num": "196",
+    "name": "White Fox"
+   },
+   {
+    "num": "197",
+    "name": "White Tiger"
+   },
+   {
+    "num": "198",
+    "name": "Wiccan"
+   },
+   {
+    "num": "199",
+    "name": "Wolverine"
+   },
+   {
+    "num": "200",
+    "name": "X-23"
+   }
+  ]
+ },
+ {
+  "name": "Gold",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "1",
+    "name": "Abomination"
+   },
+   {
+    "num": "2",
+    "name": "Adam Warlock"
+   },
+   {
+    "num": "3",
+    "name": "Agatha Harkness"
+   },
+   {
+    "num": "4",
+    "name": "Amaranth"
+   },
+   {
+    "num": "5",
+    "name": "America Chavez"
+   },
+   {
+    "num": "6",
+    "name": "Ant-Man"
+   },
+   {
+    "num": "7",
+    "name": "Apocalypse"
+   },
+   {
+    "num": "8",
+    "name": "Ares"
+   },
+   {
+    "num": "9",
+    "name": "Baron Zemo"
+   },
+   {
+    "num": "10",
+    "name": "Beast"
+   },
+   {
+    "num": "11",
+    "name": "Beta Ray Bill"
+   },
+   {
+    "num": "12",
+    "name": "Black Bolt"
+   },
+   {
+    "num": "13",
+    "name": "Black Cat"
+   },
+   {
+    "num": "14",
+    "name": "Black Knight"
+   },
+   {
+    "num": "15",
+    "name": "Black Panther"
+   },
+   {
+    "num": "16",
+    "name": "Black Widow"
+   },
+   {
+    "num": "17",
+    "name": "Blade"
+   },
+   {
+    "num": "18",
+    "name": "Blink"
+   },
+   {
+    "num": "19",
+    "name": "Captain America"
+   },
+   {
+    "num": "20",
+    "name": "Captain Britain"
+   },
+   {
+    "num": "21",
+    "name": "Captain Marvel"
+   },
+   {
+    "num": "22",
+    "name": "Carnage"
+   },
+   {
+    "num": "23",
+    "name": "Colossus"
+   },
+   {
+    "num": "24",
+    "name": "Cyclops"
+   },
+   {
+    "num": "25",
+    "name": "Daredevil"
+   },
+   {
+    "num": "26",
+    "name": "Dazzler"
+   },
+   {
+    "num": "27",
+    "name": "Dark Gwenpool"
+   },
+   {
+    "num": "28",
+    "name": "Doctor Doom"
+   },
+   {
+    "num": "29",
+    "name": "Doctor Octopus"
+   },
+   {
+    "num": "30",
+    "name": "Domino"
+   },
+   {
+    "num": "31",
+    "name": "Doomasaur"
+   },
+   {
+    "num": "32",
+    "name": "Dormammu"
+   },
+   {
+    "num": "33",
+    "name": "Dragonfire"
+   },
+   {
+    "num": "34",
+    "name": "Emma Frost"
+   },
+   {
+    "num": "35",
+    "name": "Enchantress"
+   },
+   {
+    "num": "36",
+    "name": "Eternity"
+   },
+   {
+    "num": "37",
+    "name": "Forge"
+   },
+   {
+    "num": "38",
+    "name": "Galactus"
+   },
+   {
+    "num": "39",
+    "name": "Gambit"
+   },
+   {
+    "num": "40",
+    "name": "Gamora"
+   },
+   {
+    "num": "41",
+    "name": "Ghost Rider"
+   },
+   {
+    "num": "42",
+    "name": "Ghost-Spider"
+   },
+   {
+    "num": "43",
+    "name": "Glob"
+   },
+   {
+    "num": "44",
+    "name": "Goblin Queen"
+   },
+   {
+    "num": "45",
+    "name": "Green Goblin"
+   },
+   {
+    "num": "46",
+    "name": "Groot"
+   },
+   {
+    "num": "47",
+    "name": "Hawkeye"
+   },
+   {
+    "num": "48",
+    "name": "Hercules"
+   },
+   {
+    "num": "49",
+    "name": "Hope Summers"
+   },
+   {
+    "num": "50",
+    "name": "Hulk"
+   },
+   {
+    "num": "51",
+    "name": "Human Torch"
+   },
+   {
+    "num": "52",
+    "name": "Iceman"
+   },
+   {
+    "num": "53",
+    "name": "Ikaris"
+   },
+   {
+    "num": "54",
+    "name": "Infernal Hulk"
+   },
+   {
+    "num": "55",
+    "name": "Invisible Woman"
+   },
+   {
+    "num": "56",
+    "name": "Iron Fist"
+   },
+   {
+    "num": "57",
+    "name": "Iron Man"
+   },
+   {
+    "num": "58",
+    "name": "Ironheart"
+   },
+   {
+    "num": "59",
+    "name": "Jean Grey"
+   },
+   {
+    "num": "60",
+    "name": "Jef the Land Shark"
+   },
+   {
+    "num": "61",
+    "name": "Jubilee"
+   },
+   {
+    "num": "62",
+    "name": "Juggernaut"
+   },
+   {
+    "num": "63",
+    "name": "Kate Bishop"
+   },
+   {
+    "num": "64",
+    "name": "Kid Juggernaut"
+   },
+   {
+    "num": "65",
+    "name": "Kingpin"
+   },
+   {
+    "num": "66",
+    "name": "Kitty Pryde"
+   },
+   {
+    "num": "67",
+    "name": "Kraven the Hunter"
+   },
+   {
+    "num": "68",
+    "name": "Leader"
+   },
+   {
+    "num": "69",
+    "name": "Lizard"
+   },
+   {
+    "num": "70",
+    "name": "Lockjaw"
+   },
+   {
+    "num": "71",
+    "name": "Longshot"
+   },
+   {
+    "num": "72",
+    "name": "Luke Cage"
+   },
+   {
+    "num": "73",
+    "name": "M.O.D.O.K."
+   },
+   {
+    "num": "74",
+    "name": "Magneto"
+   },
+   {
+    "num": "75",
+    "name": "Man-Thing"
+   },
+   {
+    "num": "76",
+    "name": "Mantis"
+   },
+   {
+    "num": "77",
+    "name": "Mephisto"
+   },
+   {
+    "num": "78",
+    "name": "Miles Morales"
+   },
+   {
+    "num": "79",
+    "name": "Mister Fantastic"
+   },
+   {
+    "num": "80",
+    "name": "Mister Sinister"
+   },
+   {
+    "num": "81",
+    "name": "Moon Knight"
+   },
+   {
+    "num": "82",
+    "name": "Moonstar"
+   },
+   {
+    "num": "83",
+    "name": "Ms. Marvel"
+   },
+   {
+    "num": "84",
+    "name": "Mutina"
+   },
+   {
+    "num": "85",
+    "name": "Mysterio"
+   },
+   {
+    "num": "86",
+    "name": "Mystique"
+   },
+   {
+    "num": "87",
+    "name": "Nightcrawler"
+   },
+   {
+    "num": "88",
+    "name": "Nightdrifter"
+   },
+   {
+    "num": "89",
+    "name": "Nova"
+   },
+   {
+    "num": "90",
+    "name": "Omega Red"
+   },
+   {
+    "num": "91",
+    "name": "Professor X"
+   },
+   {
+    "num": "92",
+    "name": "Psylocke"
+   },
+   {
+    "num": "93",
+    "name": "Quicksilver"
+   },
+   {
+    "num": "94",
+    "name": "Rasputin IV"
+   },
+   {
+    "num": "95",
+    "name": "Rek-Rap"
+   },
+   {
+    "num": "96",
+    "name": "Revelation"
+   },
+   {
+    "num": "97",
+    "name": "Rhino"
+   },
+   {
+    "num": "98",
+    "name": "Rocket Raccoon"
+   },
+   {
+    "num": "99",
+    "name": "Rogue"
+   },
+   {
+    "num": "100",
+    "name": "Sleeper Agent"
+   },
+   {
+    "num": "101",
+    "name": "Angela"
+   },
+   {
+    "num": "102",
+    "name": "Anti-Venom"
+   },
+   {
+    "num": "103",
+    "name": "Arachnix"
+   },
+   {
+    "num": "104",
+    "name": "Arcade"
+   },
+   {
+    "num": "105",
+    "name": "Archangel"
+   },
+   {
+    "num": "106",
+    "name": "Chameleon"
+   },
+   {
+    "num": "107",
+    "name": "Clea"
+   },
+   {
+    "num": "108",
+    "name": "Cosmic Ghost Rider"
+   },
+   {
+    "num": "109",
+    "name": "Deathlok"
+   },
+   {
+    "num": "110",
+    "name": "Devil Dinosaur"
+   },
+   {
+    "num": "111",
+    "name": "Doctor Strange"
+   },
+   {
+    "num": "112",
+    "name": "Doom 2099"
+   },
+   {
+    "num": "113",
+    "name": "Doyle Dormammu"
+   },
+   {
+    "num": "114",
+    "name": "Elbecca Voss"
+   },
+   {
+    "num": "115",
+    "name": "Electro"
+   },
+   {
+    "num": "116",
+    "name": "Elektra"
+   },
+   {
+    "num": "117",
+    "name": "Evangeline"
+   },
+   {
+    "num": "118",
+    "name": "Exodus"
+   },
+   {
+    "num": "119",
+    "name": "Glitch"
+   },
+   {
+    "num": "120",
+    "name": "Grandmaster"
+   },
+   {
+    "num": "121",
+    "name": "Gwenpool"
+   },
+   {
+    "num": "122",
+    "name": "Hallows' Eve"
+   },
+   {
+    "num": "123",
+    "name": "Hellcat"
+   },
+   {
+    "num": "124",
+    "name": "Hellgate"
+   },
+   {
+    "num": "125",
+    "name": "Hellverine"
+   },
+   {
+    "num": "126",
+    "name": "Hobgoblin"
+   },
+   {
+    "num": "127",
+    "name": "Iron Cat"
+   },
+   {
+    "num": "128",
+    "name": "Kid Venom"
+   },
+   {
+    "num": "129",
+    "name": "Knull"
+   },
+   {
+    "num": "130",
+    "name": "Lady Henrietta"
+   },
+   {
+    "num": "131",
+    "name": "Loki"
+   },
+   {
+    "num": "132",
+    "name": "Luna Snow"
+   },
+   {
+    "num": "133",
+    "name": "Maestro"
+   },
+   {
+    "num": "134",
+    "name": "Magik"
+   },
+   {
+    "num": "135",
+    "name": "Mar-Vell"
+   },
+   {
+    "num": "136",
+    "name": "Mary Jane"
+   },
+   {
+    "num": "137",
+    "name": "Misery"
+   },
+   {
+    "num": "138",
+    "name": "Moon Girl"
+   },
+   {
+    "num": "139",
+    "name": "Nimrod"
+   },
+   {
+    "num": "140",
+    "name": "SP//dr"
+   },
+   {
+    "num": "141",
+    "name": "Rachel Summers"
+   },
+   {
+    "num": "142",
+    "name": "Raelith"
+   },
+   {
+    "num": "143",
+    "name": "Rapid"
+   },
+   {
+    "num": "144",
+    "name": "Sabretooth"
+   },
+   {
+    "num": "145",
+    "name": "Scarlet Witch"
+   },
+   {
+    "num": "146",
+    "name": "Scarlet Spider"
+   },
+   {
+    "num": "147",
+    "name": "Scorpion"
+   },
+   {
+    "num": "148",
+    "name": "Scream"
+   },
+   {
+    "num": "149",
+    "name": "Sentry"
+   },
+   {
+    "num": "150",
+    "name": "Shang-Chi"
+   },
+   {
+    "num": "151",
+    "name": "She-Hulk"
+   },
+   {
+    "num": "152",
+    "name": "She-Venom"
+   },
+   {
+    "num": "153",
+    "name": "Shocker"
+   },
+   {
+    "num": "154",
+    "name": "Shuri"
+   },
+   {
+    "num": "155",
+    "name": "Silence"
+   },
+   {
+    "num": "156",
+    "name": "Silk"
+   },
+   {
+    "num": "157",
+    "name": "Silver Surfer"
+   },
+   {
+    "num": "158",
+    "name": "Silver Sable"
+   },
+   {
+    "num": "159",
+    "name": "Sister Sorrow"
+   },
+   {
+    "num": "160",
+    "name": "Spider-Boy"
+   },
+   {
+    "num": "161",
+    "name": "Spider-Girl"
+   },
+   {
+    "num": "162",
+    "name": "Spider-Ham"
+   },
+   {
+    "num": "163",
+    "name": "Spider-Man"
+   },
+   {
+    "num": "164",
+    "name": "Spider-Man 2099"
+   },
+   {
+    "num": "165",
+    "name": "Spider-Man Noir"
+   },
+   {
+    "num": "166",
+    "name": "Spider-Punk"
+   },
+   {
+    "num": "167",
+    "name": "Spider-Woman"
+   },
+   {
+    "num": "168",
+    "name": "Star-Lord"
+   },
+   {
+    "num": "169",
+    "name": "Storm"
+   },
+   {
+    "num": "170",
+    "name": "Strong Guy"
+   },
+   {
+    "num": "171",
+    "name": "Stryfe"
+   },
+   {
+    "num": "172",
+    "name": "Sunspot"
+   },
+   {
+    "num": "173",
+    "name": "Taskmaster"
+   },
+   {
+    "num": "174",
+    "name": "Thanos"
+   },
+   {
+    "num": "175",
+    "name": "The Thing"
+   },
+   {
+    "num": "176",
+    "name": "Thena"
+   },
+   {
+    "num": "177",
+    "name": "Thor"
+   },
+   {
+    "num": "178",
+    "name": "Throg"
+   },
+   {
+    "num": "179",
+    "name": "Tigra"
+   },
+   {
+    "num": "180",
+    "name": "Tombstone"
+   },
+   {
+    "num": "181",
+    "name": "Toxin"
+   },
+   {
+    "num": "182",
+    "name": "U.S. Agent"
+   },
+   {
+    "num": "183",
+    "name": "Ultimate Daredevil"
+   },
+   {
+    "num": "184",
+    "name": "Ultimate Wolverine"
+   },
+   {
+    "num": "185",
+    "name": "Ultron"
+   },
+   {
+    "num": "186",
+    "name": "Valeria Richards"
+   },
+   {
+    "num": "187",
+    "name": "Venom"
+   },
+   {
+    "num": "188",
+    "name": "Venomizer"
+   },
+   {
+    "num": "189",
+    "name": "Venomouse"
+   },
+   {
+    "num": "190",
+    "name": "Vision"
+   },
+   {
+    "num": "191",
+    "name": "Vulcan"
+   },
+   {
+    "num": "192",
+    "name": "Vulture"
+   },
+   {
+    "num": "193",
+    "name": "War Machine"
+   },
+   {
+    "num": "194",
+    "name": "Wasp"
+   },
+   {
+    "num": "195",
+    "name": "Werewolf by Night"
+   },
+   {
+    "num": "196",
+    "name": "White Fox"
+   },
+   {
+    "num": "197",
+    "name": "White Tiger"
+   },
+   {
+    "num": "198",
+    "name": "Wiccan"
+   },
+   {
+    "num": "199",
+    "name": "Wolverine"
+   },
+   {
+    "num": "200",
+    "name": "X-23"
+   }
+  ]
+ },
+ {
+  "name": "Orange",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "1",
+    "name": "Abomination"
+   },
+   {
+    "num": "2",
+    "name": "Adam Warlock"
+   },
+   {
+    "num": "3",
+    "name": "Agatha Harkness"
+   },
+   {
+    "num": "4",
+    "name": "Amaranth"
+   },
+   {
+    "num": "5",
+    "name": "America Chavez"
+   },
+   {
+    "num": "6",
+    "name": "Ant-Man"
+   },
+   {
+    "num": "7",
+    "name": "Apocalypse"
+   },
+   {
+    "num": "8",
+    "name": "Ares"
+   },
+   {
+    "num": "9",
+    "name": "Baron Zemo"
+   },
+   {
+    "num": "10",
+    "name": "Beast"
+   },
+   {
+    "num": "11",
+    "name": "Beta Ray Bill"
+   },
+   {
+    "num": "12",
+    "name": "Black Bolt"
+   },
+   {
+    "num": "13",
+    "name": "Black Cat"
+   },
+   {
+    "num": "14",
+    "name": "Black Knight"
+   },
+   {
+    "num": "15",
+    "name": "Black Panther"
+   },
+   {
+    "num": "16",
+    "name": "Black Widow"
+   },
+   {
+    "num": "17",
+    "name": "Blade"
+   },
+   {
+    "num": "18",
+    "name": "Blink"
+   },
+   {
+    "num": "19",
+    "name": "Captain America"
+   },
+   {
+    "num": "20",
+    "name": "Captain Britain"
+   },
+   {
+    "num": "21",
+    "name": "Captain Marvel"
+   },
+   {
+    "num": "22",
+    "name": "Carnage"
+   },
+   {
+    "num": "23",
+    "name": "Colossus"
+   },
+   {
+    "num": "24",
+    "name": "Cyclops"
+   },
+   {
+    "num": "25",
+    "name": "Daredevil"
+   },
+   {
+    "num": "26",
+    "name": "Dazzler"
+   },
+   {
+    "num": "27",
+    "name": "Dark Gwenpool"
+   },
+   {
+    "num": "28",
+    "name": "Doctor Doom"
+   },
+   {
+    "num": "29",
+    "name": "Doctor Octopus"
+   },
+   {
+    "num": "30",
+    "name": "Domino"
+   },
+   {
+    "num": "31",
+    "name": "Doomasaur"
+   },
+   {
+    "num": "32",
+    "name": "Dormammu"
+   },
+   {
+    "num": "33",
+    "name": "Dragonfire"
+   },
+   {
+    "num": "34",
+    "name": "Emma Frost"
+   },
+   {
+    "num": "35",
+    "name": "Enchantress"
+   },
+   {
+    "num": "36",
+    "name": "Eternity"
+   },
+   {
+    "num": "37",
+    "name": "Forge"
+   },
+   {
+    "num": "38",
+    "name": "Galactus"
+   },
+   {
+    "num": "39",
+    "name": "Gambit"
+   },
+   {
+    "num": "40",
+    "name": "Gamora"
+   },
+   {
+    "num": "41",
+    "name": "Ghost Rider"
+   },
+   {
+    "num": "42",
+    "name": "Ghost-Spider"
+   },
+   {
+    "num": "43",
+    "name": "Glob"
+   },
+   {
+    "num": "44",
+    "name": "Goblin Queen"
+   },
+   {
+    "num": "45",
+    "name": "Green Goblin"
+   },
+   {
+    "num": "46",
+    "name": "Groot"
+   },
+   {
+    "num": "47",
+    "name": "Hawkeye"
+   },
+   {
+    "num": "48",
+    "name": "Hercules"
+   },
+   {
+    "num": "49",
+    "name": "Hope Summers"
+   },
+   {
+    "num": "50",
+    "name": "Hulk"
+   },
+   {
+    "num": "51",
+    "name": "Human Torch"
+   },
+   {
+    "num": "52",
+    "name": "Iceman"
+   },
+   {
+    "num": "53",
+    "name": "Ikaris"
+   },
+   {
+    "num": "54",
+    "name": "Infernal Hulk"
+   },
+   {
+    "num": "55",
+    "name": "Invisible Woman"
+   },
+   {
+    "num": "56",
+    "name": "Iron Fist"
+   },
+   {
+    "num": "57",
+    "name": "Iron Man"
+   },
+   {
+    "num": "58",
+    "name": "Ironheart"
+   },
+   {
+    "num": "59",
+    "name": "Jean Grey"
+   },
+   {
+    "num": "60",
+    "name": "Jef the Land Shark"
+   },
+   {
+    "num": "61",
+    "name": "Jubilee"
+   },
+   {
+    "num": "62",
+    "name": "Juggernaut"
+   },
+   {
+    "num": "63",
+    "name": "Kate Bishop"
+   },
+   {
+    "num": "64",
+    "name": "Kid Juggernaut"
+   },
+   {
+    "num": "65",
+    "name": "Kingpin"
+   },
+   {
+    "num": "66",
+    "name": "Kitty Pryde"
+   },
+   {
+    "num": "67",
+    "name": "Kraven the Hunter"
+   },
+   {
+    "num": "68",
+    "name": "Leader"
+   },
+   {
+    "num": "69",
+    "name": "Lizard"
+   },
+   {
+    "num": "70",
+    "name": "Lockjaw"
+   },
+   {
+    "num": "71",
+    "name": "Longshot"
+   },
+   {
+    "num": "72",
+    "name": "Luke Cage"
+   },
+   {
+    "num": "73",
+    "name": "M.O.D.O.K."
+   },
+   {
+    "num": "74",
+    "name": "Magneto"
+   },
+   {
+    "num": "75",
+    "name": "Man-Thing"
+   },
+   {
+    "num": "76",
+    "name": "Mantis"
+   },
+   {
+    "num": "77",
+    "name": "Mephisto"
+   },
+   {
+    "num": "78",
+    "name": "Miles Morales"
+   },
+   {
+    "num": "79",
+    "name": "Mister Fantastic"
+   },
+   {
+    "num": "80",
+    "name": "Mister Sinister"
+   },
+   {
+    "num": "81",
+    "name": "Moon Knight"
+   },
+   {
+    "num": "82",
+    "name": "Moonstar"
+   },
+   {
+    "num": "83",
+    "name": "Ms. Marvel"
+   },
+   {
+    "num": "84",
+    "name": "Mutina"
+   },
+   {
+    "num": "85",
+    "name": "Mysterio"
+   },
+   {
+    "num": "86",
+    "name": "Mystique"
+   },
+   {
+    "num": "87",
+    "name": "Nightcrawler"
+   },
+   {
+    "num": "88",
+    "name": "Nightdrifter"
+   },
+   {
+    "num": "89",
+    "name": "Nova"
+   },
+   {
+    "num": "90",
+    "name": "Omega Red"
+   },
+   {
+    "num": "91",
+    "name": "Professor X"
+   },
+   {
+    "num": "92",
+    "name": "Psylocke"
+   },
+   {
+    "num": "93",
+    "name": "Quicksilver"
+   },
+   {
+    "num": "94",
+    "name": "Rasputin IV"
+   },
+   {
+    "num": "95",
+    "name": "Rek-Rap"
+   },
+   {
+    "num": "96",
+    "name": "Revelation"
+   },
+   {
+    "num": "97",
+    "name": "Rhino"
+   },
+   {
+    "num": "98",
+    "name": "Rocket Raccoon"
+   },
+   {
+    "num": "99",
+    "name": "Rogue"
+   },
+   {
+    "num": "100",
+    "name": "Sleeper Agent"
+   },
+   {
+    "num": "101",
+    "name": "Angela"
+   },
+   {
+    "num": "102",
+    "name": "Anti-Venom"
+   },
+   {
+    "num": "103",
+    "name": "Arachnix"
+   },
+   {
+    "num": "104",
+    "name": "Arcade"
+   },
+   {
+    "num": "105",
+    "name": "Archangel"
+   },
+   {
+    "num": "106",
+    "name": "Chameleon"
+   },
+   {
+    "num": "107",
+    "name": "Clea"
+   },
+   {
+    "num": "108",
+    "name": "Cosmic Ghost Rider"
+   },
+   {
+    "num": "109",
+    "name": "Deathlok"
+   },
+   {
+    "num": "110",
+    "name": "Devil Dinosaur"
+   },
+   {
+    "num": "111",
+    "name": "Doctor Strange"
+   },
+   {
+    "num": "112",
+    "name": "Doom 2099"
+   },
+   {
+    "num": "113",
+    "name": "Doyle Dormammu"
+   },
+   {
+    "num": "114",
+    "name": "Elbecca Voss"
+   },
+   {
+    "num": "115",
+    "name": "Electro"
+   },
+   {
+    "num": "116",
+    "name": "Elektra"
+   },
+   {
+    "num": "117",
+    "name": "Evangeline"
+   },
+   {
+    "num": "118",
+    "name": "Exodus"
+   },
+   {
+    "num": "119",
+    "name": "Glitch"
+   },
+   {
+    "num": "120",
+    "name": "Grandmaster"
+   },
+   {
+    "num": "121",
+    "name": "Gwenpool"
+   },
+   {
+    "num": "122",
+    "name": "Hallows' Eve"
+   },
+   {
+    "num": "123",
+    "name": "Hellcat"
+   },
+   {
+    "num": "124",
+    "name": "Hellgate"
+   },
+   {
+    "num": "125",
+    "name": "Hellverine"
+   },
+   {
+    "num": "126",
+    "name": "Hobgoblin"
+   },
+   {
+    "num": "127",
+    "name": "Iron Cat"
+   },
+   {
+    "num": "128",
+    "name": "Kid Venom"
+   },
+   {
+    "num": "129",
+    "name": "Knull"
+   },
+   {
+    "num": "130",
+    "name": "Lady Henrietta"
+   },
+   {
+    "num": "131",
+    "name": "Loki"
+   },
+   {
+    "num": "132",
+    "name": "Luna Snow"
+   },
+   {
+    "num": "133",
+    "name": "Maestro"
+   },
+   {
+    "num": "134",
+    "name": "Magik"
+   },
+   {
+    "num": "135",
+    "name": "Mar-Vell"
+   },
+   {
+    "num": "136",
+    "name": "Mary Jane"
+   },
+   {
+    "num": "137",
+    "name": "Misery"
+   },
+   {
+    "num": "138",
+    "name": "Moon Girl"
+   },
+   {
+    "num": "139",
+    "name": "Nimrod"
+   },
+   {
+    "num": "140",
+    "name": "SP//dr"
+   },
+   {
+    "num": "141",
+    "name": "Rachel Summers"
+   },
+   {
+    "num": "142",
+    "name": "Raelith"
+   },
+   {
+    "num": "143",
+    "name": "Rapid"
+   },
+   {
+    "num": "144",
+    "name": "Sabretooth"
+   },
+   {
+    "num": "145",
+    "name": "Scarlet Witch"
+   },
+   {
+    "num": "146",
+    "name": "Scarlet Spider"
+   },
+   {
+    "num": "147",
+    "name": "Scorpion"
+   },
+   {
+    "num": "148",
+    "name": "Scream"
+   },
+   {
+    "num": "149",
+    "name": "Sentry"
+   },
+   {
+    "num": "150",
+    "name": "Shang-Chi"
+   },
+   {
+    "num": "151",
+    "name": "She-Hulk"
+   },
+   {
+    "num": "152",
+    "name": "She-Venom"
+   },
+   {
+    "num": "153",
+    "name": "Shocker"
+   },
+   {
+    "num": "154",
+    "name": "Shuri"
+   },
+   {
+    "num": "155",
+    "name": "Silence"
+   },
+   {
+    "num": "156",
+    "name": "Silk"
+   },
+   {
+    "num": "157",
+    "name": "Silver Surfer"
+   },
+   {
+    "num": "158",
+    "name": "Silver Sable"
+   },
+   {
+    "num": "159",
+    "name": "Sister Sorrow"
+   },
+   {
+    "num": "160",
+    "name": "Spider-Boy"
+   },
+   {
+    "num": "161",
+    "name": "Spider-Girl"
+   },
+   {
+    "num": "162",
+    "name": "Spider-Ham"
+   },
+   {
+    "num": "163",
+    "name": "Spider-Man"
+   },
+   {
+    "num": "164",
+    "name": "Spider-Man 2099"
+   },
+   {
+    "num": "165",
+    "name": "Spider-Man Noir"
+   },
+   {
+    "num": "166",
+    "name": "Spider-Punk"
+   },
+   {
+    "num": "167",
+    "name": "Spider-Woman"
+   },
+   {
+    "num": "168",
+    "name": "Star-Lord"
+   },
+   {
+    "num": "169",
+    "name": "Storm"
+   },
+   {
+    "num": "170",
+    "name": "Strong Guy"
+   },
+   {
+    "num": "171",
+    "name": "Stryfe"
+   },
+   {
+    "num": "172",
+    "name": "Sunspot"
+   },
+   {
+    "num": "173",
+    "name": "Taskmaster"
+   },
+   {
+    "num": "174",
+    "name": "Thanos"
+   },
+   {
+    "num": "175",
+    "name": "The Thing"
+   },
+   {
+    "num": "176",
+    "name": "Thena"
+   },
+   {
+    "num": "177",
+    "name": "Thor"
+   },
+   {
+    "num": "178",
+    "name": "Throg"
+   },
+   {
+    "num": "179",
+    "name": "Tigra"
+   },
+   {
+    "num": "180",
+    "name": "Tombstone"
+   },
+   {
+    "num": "181",
+    "name": "Toxin"
+   },
+   {
+    "num": "182",
+    "name": "U.S. Agent"
+   },
+   {
+    "num": "183",
+    "name": "Ultimate Daredevil"
+   },
+   {
+    "num": "184",
+    "name": "Ultimate Wolverine"
+   },
+   {
+    "num": "185",
+    "name": "Ultron"
+   },
+   {
+    "num": "186",
+    "name": "Valeria Richards"
+   },
+   {
+    "num": "187",
+    "name": "Venom"
+   },
+   {
+    "num": "188",
+    "name": "Venomizer"
+   },
+   {
+    "num": "189",
+    "name": "Venomouse"
+   },
+   {
+    "num": "190",
+    "name": "Vision"
+   },
+   {
+    "num": "191",
+    "name": "Vulcan"
+   },
+   {
+    "num": "192",
+    "name": "Vulture"
+   },
+   {
+    "num": "193",
+    "name": "War Machine"
+   },
+   {
+    "num": "194",
+    "name": "Wasp"
+   },
+   {
+    "num": "195",
+    "name": "Werewolf by Night"
+   },
+   {
+    "num": "196",
+    "name": "White Fox"
+   },
+   {
+    "num": "197",
+    "name": "White Tiger"
+   },
+   {
+    "num": "198",
+    "name": "Wiccan"
+   },
+   {
+    "num": "199",
+    "name": "Wolverine"
+   },
+   {
+    "num": "200",
+    "name": "X-23"
+   }
+  ]
+ },
+ {
+  "name": "Black",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "1",
+    "name": "Abomination"
+   },
+   {
+    "num": "2",
+    "name": "Adam Warlock"
+   },
+   {
+    "num": "3",
+    "name": "Agatha Harkness"
+   },
+   {
+    "num": "4",
+    "name": "Amaranth"
+   },
+   {
+    "num": "5",
+    "name": "America Chavez"
+   },
+   {
+    "num": "6",
+    "name": "Ant-Man"
+   },
+   {
+    "num": "7",
+    "name": "Apocalypse"
+   },
+   {
+    "num": "8",
+    "name": "Ares"
+   },
+   {
+    "num": "9",
+    "name": "Baron Zemo"
+   },
+   {
+    "num": "10",
+    "name": "Beast"
+   },
+   {
+    "num": "11",
+    "name": "Beta Ray Bill"
+   },
+   {
+    "num": "12",
+    "name": "Black Bolt"
+   },
+   {
+    "num": "13",
+    "name": "Black Cat"
+   },
+   {
+    "num": "14",
+    "name": "Black Knight"
+   },
+   {
+    "num": "15",
+    "name": "Black Panther"
+   },
+   {
+    "num": "16",
+    "name": "Black Widow"
+   },
+   {
+    "num": "17",
+    "name": "Blade"
+   },
+   {
+    "num": "18",
+    "name": "Blink"
+   },
+   {
+    "num": "19",
+    "name": "Captain America"
+   },
+   {
+    "num": "20",
+    "name": "Captain Britain"
+   },
+   {
+    "num": "21",
+    "name": "Captain Marvel"
+   },
+   {
+    "num": "22",
+    "name": "Carnage"
+   },
+   {
+    "num": "23",
+    "name": "Colossus"
+   },
+   {
+    "num": "24",
+    "name": "Cyclops"
+   },
+   {
+    "num": "25",
+    "name": "Daredevil"
+   },
+   {
+    "num": "26",
+    "name": "Dazzler"
+   },
+   {
+    "num": "27",
+    "name": "Dark Gwenpool"
+   },
+   {
+    "num": "28",
+    "name": "Doctor Doom"
+   },
+   {
+    "num": "29",
+    "name": "Doctor Octopus"
+   },
+   {
+    "num": "30",
+    "name": "Domino"
+   },
+   {
+    "num": "31",
+    "name": "Doomasaur"
+   },
+   {
+    "num": "32",
+    "name": "Dormammu"
+   },
+   {
+    "num": "33",
+    "name": "Dragonfire"
+   },
+   {
+    "num": "34",
+    "name": "Emma Frost"
+   },
+   {
+    "num": "35",
+    "name": "Enchantress"
+   },
+   {
+    "num": "36",
+    "name": "Eternity"
+   },
+   {
+    "num": "37",
+    "name": "Forge"
+   },
+   {
+    "num": "38",
+    "name": "Galactus"
+   },
+   {
+    "num": "39",
+    "name": "Gambit"
+   },
+   {
+    "num": "40",
+    "name": "Gamora"
+   },
+   {
+    "num": "41",
+    "name": "Ghost Rider"
+   },
+   {
+    "num": "42",
+    "name": "Ghost-Spider"
+   },
+   {
+    "num": "43",
+    "name": "Glob"
+   },
+   {
+    "num": "44",
+    "name": "Goblin Queen"
+   },
+   {
+    "num": "45",
+    "name": "Green Goblin"
+   },
+   {
+    "num": "46",
+    "name": "Groot"
+   },
+   {
+    "num": "47",
+    "name": "Hawkeye"
+   },
+   {
+    "num": "48",
+    "name": "Hercules"
+   },
+   {
+    "num": "49",
+    "name": "Hope Summers"
+   },
+   {
+    "num": "50",
+    "name": "Hulk"
+   },
+   {
+    "num": "51",
+    "name": "Human Torch"
+   },
+   {
+    "num": "52",
+    "name": "Iceman"
+   },
+   {
+    "num": "53",
+    "name": "Ikaris"
+   },
+   {
+    "num": "54",
+    "name": "Infernal Hulk"
+   },
+   {
+    "num": "55",
+    "name": "Invisible Woman"
+   },
+   {
+    "num": "56",
+    "name": "Iron Fist"
+   },
+   {
+    "num": "57",
+    "name": "Iron Man"
+   },
+   {
+    "num": "58",
+    "name": "Ironheart"
+   },
+   {
+    "num": "59",
+    "name": "Jean Grey"
+   },
+   {
+    "num": "60",
+    "name": "Jef the Land Shark"
+   },
+   {
+    "num": "61",
+    "name": "Jubilee"
+   },
+   {
+    "num": "62",
+    "name": "Juggernaut"
+   },
+   {
+    "num": "63",
+    "name": "Kate Bishop"
+   },
+   {
+    "num": "64",
+    "name": "Kid Juggernaut"
+   },
+   {
+    "num": "65",
+    "name": "Kingpin"
+   },
+   {
+    "num": "66",
+    "name": "Kitty Pryde"
+   },
+   {
+    "num": "67",
+    "name": "Kraven the Hunter"
+   },
+   {
+    "num": "68",
+    "name": "Leader"
+   },
+   {
+    "num": "69",
+    "name": "Lizard"
+   },
+   {
+    "num": "70",
+    "name": "Lockjaw"
+   },
+   {
+    "num": "71",
+    "name": "Longshot"
+   },
+   {
+    "num": "72",
+    "name": "Luke Cage"
+   },
+   {
+    "num": "73",
+    "name": "M.O.D.O.K."
+   },
+   {
+    "num": "74",
+    "name": "Magneto"
+   },
+   {
+    "num": "75",
+    "name": "Man-Thing"
+   },
+   {
+    "num": "76",
+    "name": "Mantis"
+   },
+   {
+    "num": "77",
+    "name": "Mephisto"
+   },
+   {
+    "num": "78",
+    "name": "Miles Morales"
+   },
+   {
+    "num": "79",
+    "name": "Mister Fantastic"
+   },
+   {
+    "num": "80",
+    "name": "Mister Sinister"
+   },
+   {
+    "num": "81",
+    "name": "Moon Knight"
+   },
+   {
+    "num": "82",
+    "name": "Moonstar"
+   },
+   {
+    "num": "83",
+    "name": "Ms. Marvel"
+   },
+   {
+    "num": "84",
+    "name": "Mutina"
+   },
+   {
+    "num": "85",
+    "name": "Mysterio"
+   },
+   {
+    "num": "86",
+    "name": "Mystique"
+   },
+   {
+    "num": "87",
+    "name": "Nightcrawler"
+   },
+   {
+    "num": "88",
+    "name": "Nightdrifter"
+   },
+   {
+    "num": "89",
+    "name": "Nova"
+   },
+   {
+    "num": "90",
+    "name": "Omega Red"
+   },
+   {
+    "num": "91",
+    "name": "Professor X"
+   },
+   {
+    "num": "92",
+    "name": "Psylocke"
+   },
+   {
+    "num": "93",
+    "name": "Quicksilver"
+   },
+   {
+    "num": "94",
+    "name": "Rasputin IV"
+   },
+   {
+    "num": "95",
+    "name": "Rek-Rap"
+   },
+   {
+    "num": "96",
+    "name": "Revelation"
+   },
+   {
+    "num": "97",
+    "name": "Rhino"
+   },
+   {
+    "num": "98",
+    "name": "Rocket Raccoon"
+   },
+   {
+    "num": "99",
+    "name": "Rogue"
+   },
+   {
+    "num": "100",
+    "name": "Sleeper Agent"
+   },
+   {
+    "num": "101",
+    "name": "Angela"
+   },
+   {
+    "num": "102",
+    "name": "Anti-Venom"
+   },
+   {
+    "num": "103",
+    "name": "Arachnix"
+   },
+   {
+    "num": "104",
+    "name": "Arcade"
+   },
+   {
+    "num": "105",
+    "name": "Archangel"
+   },
+   {
+    "num": "106",
+    "name": "Chameleon"
+   },
+   {
+    "num": "107",
+    "name": "Clea"
+   },
+   {
+    "num": "108",
+    "name": "Cosmic Ghost Rider"
+   },
+   {
+    "num": "109",
+    "name": "Deathlok"
+   },
+   {
+    "num": "110",
+    "name": "Devil Dinosaur"
+   },
+   {
+    "num": "111",
+    "name": "Doctor Strange"
+   },
+   {
+    "num": "112",
+    "name": "Doom 2099"
+   },
+   {
+    "num": "113",
+    "name": "Doyle Dormammu"
+   },
+   {
+    "num": "114",
+    "name": "Elbecca Voss"
+   },
+   {
+    "num": "115",
+    "name": "Electro"
+   },
+   {
+    "num": "116",
+    "name": "Elektra"
+   },
+   {
+    "num": "117",
+    "name": "Evangeline"
+   },
+   {
+    "num": "118",
+    "name": "Exodus"
+   },
+   {
+    "num": "119",
+    "name": "Glitch"
+   },
+   {
+    "num": "120",
+    "name": "Grandmaster"
+   },
+   {
+    "num": "121",
+    "name": "Gwenpool"
+   },
+   {
+    "num": "122",
+    "name": "Hallows' Eve"
+   },
+   {
+    "num": "123",
+    "name": "Hellcat"
+   },
+   {
+    "num": "124",
+    "name": "Hellgate"
+   },
+   {
+    "num": "125",
+    "name": "Hellverine"
+   },
+   {
+    "num": "126",
+    "name": "Hobgoblin"
+   },
+   {
+    "num": "127",
+    "name": "Iron Cat"
+   },
+   {
+    "num": "128",
+    "name": "Kid Venom"
+   },
+   {
+    "num": "129",
+    "name": "Knull"
+   },
+   {
+    "num": "130",
+    "name": "Lady Henrietta"
+   },
+   {
+    "num": "131",
+    "name": "Loki"
+   },
+   {
+    "num": "132",
+    "name": "Luna Snow"
+   },
+   {
+    "num": "133",
+    "name": "Maestro"
+   },
+   {
+    "num": "134",
+    "name": "Magik"
+   },
+   {
+    "num": "135",
+    "name": "Mar-Vell"
+   },
+   {
+    "num": "136",
+    "name": "Mary Jane"
+   },
+   {
+    "num": "137",
+    "name": "Misery"
+   },
+   {
+    "num": "138",
+    "name": "Moon Girl"
+   },
+   {
+    "num": "139",
+    "name": "Nimrod"
+   },
+   {
+    "num": "140",
+    "name": "SP//dr"
+   },
+   {
+    "num": "141",
+    "name": "Rachel Summers"
+   },
+   {
+    "num": "142",
+    "name": "Raelith"
+   },
+   {
+    "num": "143",
+    "name": "Rapid"
+   },
+   {
+    "num": "144",
+    "name": "Sabretooth"
+   },
+   {
+    "num": "145",
+    "name": "Scarlet Witch"
+   },
+   {
+    "num": "146",
+    "name": "Scarlet Spider"
+   },
+   {
+    "num": "147",
+    "name": "Scorpion"
+   },
+   {
+    "num": "148",
+    "name": "Scream"
+   },
+   {
+    "num": "149",
+    "name": "Sentry"
+   },
+   {
+    "num": "150",
+    "name": "Shang-Chi"
+   },
+   {
+    "num": "151",
+    "name": "She-Hulk"
+   },
+   {
+    "num": "152",
+    "name": "She-Venom"
+   },
+   {
+    "num": "153",
+    "name": "Shocker"
+   },
+   {
+    "num": "154",
+    "name": "Shuri"
+   },
+   {
+    "num": "155",
+    "name": "Silence"
+   },
+   {
+    "num": "156",
+    "name": "Silk"
+   },
+   {
+    "num": "157",
+    "name": "Silver Surfer"
+   },
+   {
+    "num": "158",
+    "name": "Silver Sable"
+   },
+   {
+    "num": "159",
+    "name": "Sister Sorrow"
+   },
+   {
+    "num": "160",
+    "name": "Spider-Boy"
+   },
+   {
+    "num": "161",
+    "name": "Spider-Girl"
+   },
+   {
+    "num": "162",
+    "name": "Spider-Ham"
+   },
+   {
+    "num": "163",
+    "name": "Spider-Man"
+   },
+   {
+    "num": "164",
+    "name": "Spider-Man 2099"
+   },
+   {
+    "num": "165",
+    "name": "Spider-Man Noir"
+   },
+   {
+    "num": "166",
+    "name": "Spider-Punk"
+   },
+   {
+    "num": "167",
+    "name": "Spider-Woman"
+   },
+   {
+    "num": "168",
+    "name": "Star-Lord"
+   },
+   {
+    "num": "169",
+    "name": "Storm"
+   },
+   {
+    "num": "170",
+    "name": "Strong Guy"
+   },
+   {
+    "num": "171",
+    "name": "Stryfe"
+   },
+   {
+    "num": "172",
+    "name": "Sunspot"
+   },
+   {
+    "num": "173",
+    "name": "Taskmaster"
+   },
+   {
+    "num": "174",
+    "name": "Thanos"
+   },
+   {
+    "num": "175",
+    "name": "The Thing"
+   },
+   {
+    "num": "176",
+    "name": "Thena"
+   },
+   {
+    "num": "177",
+    "name": "Thor"
+   },
+   {
+    "num": "178",
+    "name": "Throg"
+   },
+   {
+    "num": "179",
+    "name": "Tigra"
+   },
+   {
+    "num": "180",
+    "name": "Tombstone"
+   },
+   {
+    "num": "181",
+    "name": "Toxin"
+   },
+   {
+    "num": "182",
+    "name": "U.S. Agent"
+   },
+   {
+    "num": "183",
+    "name": "Ultimate Daredevil"
+   },
+   {
+    "num": "184",
+    "name": "Ultimate Wolverine"
+   },
+   {
+    "num": "185",
+    "name": "Ultron"
+   },
+   {
+    "num": "186",
+    "name": "Valeria Richards"
+   },
+   {
+    "num": "187",
+    "name": "Venom"
+   },
+   {
+    "num": "188",
+    "name": "Venomizer"
+   },
+   {
+    "num": "189",
+    "name": "Venomouse"
+   },
+   {
+    "num": "190",
+    "name": "Vision"
+   },
+   {
+    "num": "191",
+    "name": "Vulcan"
+   },
+   {
+    "num": "192",
+    "name": "Vulture"
+   },
+   {
+    "num": "193",
+    "name": "War Machine"
+   },
+   {
+    "num": "194",
+    "name": "Wasp"
+   },
+   {
+    "num": "195",
+    "name": "Werewolf by Night"
+   },
+   {
+    "num": "196",
+    "name": "White Fox"
+   },
+   {
+    "num": "197",
+    "name": "White Tiger"
+   },
+   {
+    "num": "198",
+    "name": "Wiccan"
+   },
+   {
+    "num": "199",
+    "name": "Wolverine"
+   },
+   {
+    "num": "200",
+    "name": "X-23"
+   }
+  ]
+ },
+ {
+  "name": "Red",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "1",
+    "name": "Abomination"
+   },
+   {
+    "num": "2",
+    "name": "Adam Warlock"
+   },
+   {
+    "num": "3",
+    "name": "Agatha Harkness"
+   },
+   {
+    "num": "4",
+    "name": "Amaranth"
+   },
+   {
+    "num": "5",
+    "name": "America Chavez"
+   },
+   {
+    "num": "6",
+    "name": "Ant-Man"
+   },
+   {
+    "num": "7",
+    "name": "Apocalypse"
+   },
+   {
+    "num": "8",
+    "name": "Ares"
+   },
+   {
+    "num": "9",
+    "name": "Baron Zemo"
+   },
+   {
+    "num": "10",
+    "name": "Beast"
+   },
+   {
+    "num": "11",
+    "name": "Beta Ray Bill"
+   },
+   {
+    "num": "12",
+    "name": "Black Bolt"
+   },
+   {
+    "num": "13",
+    "name": "Black Cat"
+   },
+   {
+    "num": "14",
+    "name": "Black Knight"
+   },
+   {
+    "num": "15",
+    "name": "Black Panther"
+   },
+   {
+    "num": "16",
+    "name": "Black Widow"
+   },
+   {
+    "num": "17",
+    "name": "Blade"
+   },
+   {
+    "num": "18",
+    "name": "Blink"
+   },
+   {
+    "num": "19",
+    "name": "Captain America"
+   },
+   {
+    "num": "20",
+    "name": "Captain Britain"
+   },
+   {
+    "num": "21",
+    "name": "Captain Marvel"
+   },
+   {
+    "num": "22",
+    "name": "Carnage"
+   },
+   {
+    "num": "23",
+    "name": "Colossus"
+   },
+   {
+    "num": "24",
+    "name": "Cyclops"
+   },
+   {
+    "num": "25",
+    "name": "Daredevil"
+   },
+   {
+    "num": "26",
+    "name": "Dazzler"
+   },
+   {
+    "num": "27",
+    "name": "Dark Gwenpool"
+   },
+   {
+    "num": "28",
+    "name": "Doctor Doom"
+   },
+   {
+    "num": "29",
+    "name": "Doctor Octopus"
+   },
+   {
+    "num": "30",
+    "name": "Domino"
+   },
+   {
+    "num": "31",
+    "name": "Doomasaur"
+   },
+   {
+    "num": "32",
+    "name": "Dormammu"
+   },
+   {
+    "num": "33",
+    "name": "Dragonfire"
+   },
+   {
+    "num": "34",
+    "name": "Emma Frost"
+   },
+   {
+    "num": "35",
+    "name": "Enchantress"
+   },
+   {
+    "num": "36",
+    "name": "Eternity"
+   },
+   {
+    "num": "37",
+    "name": "Forge"
+   },
+   {
+    "num": "38",
+    "name": "Galactus"
+   },
+   {
+    "num": "39",
+    "name": "Gambit"
+   },
+   {
+    "num": "40",
+    "name": "Gamora"
+   },
+   {
+    "num": "41",
+    "name": "Ghost Rider"
+   },
+   {
+    "num": "42",
+    "name": "Ghost-Spider"
+   },
+   {
+    "num": "43",
+    "name": "Glob"
+   },
+   {
+    "num": "44",
+    "name": "Goblin Queen"
+   },
+   {
+    "num": "45",
+    "name": "Green Goblin"
+   },
+   {
+    "num": "46",
+    "name": "Groot"
+   },
+   {
+    "num": "47",
+    "name": "Hawkeye"
+   },
+   {
+    "num": "48",
+    "name": "Hercules"
+   },
+   {
+    "num": "49",
+    "name": "Hope Summers"
+   },
+   {
+    "num": "50",
+    "name": "Hulk"
+   },
+   {
+    "num": "51",
+    "name": "Human Torch"
+   },
+   {
+    "num": "52",
+    "name": "Iceman"
+   },
+   {
+    "num": "53",
+    "name": "Ikaris"
+   },
+   {
+    "num": "54",
+    "name": "Infernal Hulk"
+   },
+   {
+    "num": "55",
+    "name": "Invisible Woman"
+   },
+   {
+    "num": "56",
+    "name": "Iron Fist"
+   },
+   {
+    "num": "57",
+    "name": "Iron Man"
+   },
+   {
+    "num": "58",
+    "name": "Ironheart"
+   },
+   {
+    "num": "59",
+    "name": "Jean Grey"
+   },
+   {
+    "num": "60",
+    "name": "Jef the Land Shark"
+   },
+   {
+    "num": "61",
+    "name": "Jubilee"
+   },
+   {
+    "num": "62",
+    "name": "Juggernaut"
+   },
+   {
+    "num": "63",
+    "name": "Kate Bishop"
+   },
+   {
+    "num": "64",
+    "name": "Kid Juggernaut"
+   },
+   {
+    "num": "65",
+    "name": "Kingpin"
+   },
+   {
+    "num": "66",
+    "name": "Kitty Pryde"
+   },
+   {
+    "num": "67",
+    "name": "Kraven the Hunter"
+   },
+   {
+    "num": "68",
+    "name": "Leader"
+   },
+   {
+    "num": "69",
+    "name": "Lizard"
+   },
+   {
+    "num": "70",
+    "name": "Lockjaw"
+   },
+   {
+    "num": "71",
+    "name": "Longshot"
+   },
+   {
+    "num": "72",
+    "name": "Luke Cage"
+   },
+   {
+    "num": "73",
+    "name": "M.O.D.O.K."
+   },
+   {
+    "num": "74",
+    "name": "Magneto"
+   },
+   {
+    "num": "75",
+    "name": "Man-Thing"
+   },
+   {
+    "num": "76",
+    "name": "Mantis"
+   },
+   {
+    "num": "77",
+    "name": "Mephisto"
+   },
+   {
+    "num": "78",
+    "name": "Miles Morales"
+   },
+   {
+    "num": "79",
+    "name": "Mister Fantastic"
+   },
+   {
+    "num": "80",
+    "name": "Mister Sinister"
+   },
+   {
+    "num": "81",
+    "name": "Moon Knight"
+   },
+   {
+    "num": "82",
+    "name": "Moonstar"
+   },
+   {
+    "num": "83",
+    "name": "Ms. Marvel"
+   },
+   {
+    "num": "84",
+    "name": "Mutina"
+   },
+   {
+    "num": "85",
+    "name": "Mysterio"
+   },
+   {
+    "num": "86",
+    "name": "Mystique"
+   },
+   {
+    "num": "87",
+    "name": "Nightcrawler"
+   },
+   {
+    "num": "88",
+    "name": "Nightdrifter"
+   },
+   {
+    "num": "89",
+    "name": "Nova"
+   },
+   {
+    "num": "90",
+    "name": "Omega Red"
+   },
+   {
+    "num": "91",
+    "name": "Professor X"
+   },
+   {
+    "num": "92",
+    "name": "Psylocke"
+   },
+   {
+    "num": "93",
+    "name": "Quicksilver"
+   },
+   {
+    "num": "94",
+    "name": "Rasputin IV"
+   },
+   {
+    "num": "95",
+    "name": "Rek-Rap"
+   },
+   {
+    "num": "96",
+    "name": "Revelation"
+   },
+   {
+    "num": "97",
+    "name": "Rhino"
+   },
+   {
+    "num": "98",
+    "name": "Rocket Raccoon"
+   },
+   {
+    "num": "99",
+    "name": "Rogue"
+   },
+   {
+    "num": "100",
+    "name": "Sleeper Agent"
+   },
+   {
+    "num": "101",
+    "name": "Angela"
+   },
+   {
+    "num": "102",
+    "name": "Anti-Venom"
+   },
+   {
+    "num": "103",
+    "name": "Arachnix"
+   },
+   {
+    "num": "104",
+    "name": "Arcade"
+   },
+   {
+    "num": "105",
+    "name": "Archangel"
+   },
+   {
+    "num": "106",
+    "name": "Chameleon"
+   },
+   {
+    "num": "107",
+    "name": "Clea"
+   },
+   {
+    "num": "108",
+    "name": "Cosmic Ghost Rider"
+   },
+   {
+    "num": "109",
+    "name": "Deathlok"
+   },
+   {
+    "num": "110",
+    "name": "Devil Dinosaur"
+   },
+   {
+    "num": "111",
+    "name": "Doctor Strange"
+   },
+   {
+    "num": "112",
+    "name": "Doom 2099"
+   },
+   {
+    "num": "113",
+    "name": "Doyle Dormammu"
+   },
+   {
+    "num": "114",
+    "name": "Elbecca Voss"
+   },
+   {
+    "num": "115",
+    "name": "Electro"
+   },
+   {
+    "num": "116",
+    "name": "Elektra"
+   },
+   {
+    "num": "117",
+    "name": "Evangeline"
+   },
+   {
+    "num": "118",
+    "name": "Exodus"
+   },
+   {
+    "num": "119",
+    "name": "Glitch"
+   },
+   {
+    "num": "120",
+    "name": "Grandmaster"
+   },
+   {
+    "num": "121",
+    "name": "Gwenpool"
+   },
+   {
+    "num": "122",
+    "name": "Hallows' Eve"
+   },
+   {
+    "num": "123",
+    "name": "Hellcat"
+   },
+   {
+    "num": "124",
+    "name": "Hellgate"
+   },
+   {
+    "num": "125",
+    "name": "Hellverine"
+   },
+   {
+    "num": "126",
+    "name": "Hobgoblin"
+   },
+   {
+    "num": "127",
+    "name": "Iron Cat"
+   },
+   {
+    "num": "128",
+    "name": "Kid Venom"
+   },
+   {
+    "num": "129",
+    "name": "Knull"
+   },
+   {
+    "num": "130",
+    "name": "Lady Henrietta"
+   },
+   {
+    "num": "131",
+    "name": "Loki"
+   },
+   {
+    "num": "132",
+    "name": "Luna Snow"
+   },
+   {
+    "num": "133",
+    "name": "Maestro"
+   },
+   {
+    "num": "134",
+    "name": "Magik"
+   },
+   {
+    "num": "135",
+    "name": "Mar-Vell"
+   },
+   {
+    "num": "136",
+    "name": "Mary Jane"
+   },
+   {
+    "num": "137",
+    "name": "Misery"
+   },
+   {
+    "num": "138",
+    "name": "Moon Girl"
+   },
+   {
+    "num": "139",
+    "name": "Nimrod"
+   },
+   {
+    "num": "140",
+    "name": "SP//dr"
+   },
+   {
+    "num": "141",
+    "name": "Rachel Summers"
+   },
+   {
+    "num": "142",
+    "name": "Raelith"
+   },
+   {
+    "num": "143",
+    "name": "Rapid"
+   },
+   {
+    "num": "144",
+    "name": "Sabretooth"
+   },
+   {
+    "num": "145",
+    "name": "Scarlet Witch"
+   },
+   {
+    "num": "146",
+    "name": "Scarlet Spider"
+   },
+   {
+    "num": "147",
+    "name": "Scorpion"
+   },
+   {
+    "num": "148",
+    "name": "Scream"
+   },
+   {
+    "num": "149",
+    "name": "Sentry"
+   },
+   {
+    "num": "150",
+    "name": "Shang-Chi"
+   },
+   {
+    "num": "151",
+    "name": "She-Hulk"
+   },
+   {
+    "num": "152",
+    "name": "She-Venom"
+   },
+   {
+    "num": "153",
+    "name": "Shocker"
+   },
+   {
+    "num": "154",
+    "name": "Shuri"
+   },
+   {
+    "num": "155",
+    "name": "Silence"
+   },
+   {
+    "num": "156",
+    "name": "Silk"
+   },
+   {
+    "num": "157",
+    "name": "Silver Surfer"
+   },
+   {
+    "num": "158",
+    "name": "Silver Sable"
+   },
+   {
+    "num": "159",
+    "name": "Sister Sorrow"
+   },
+   {
+    "num": "160",
+    "name": "Spider-Boy"
+   },
+   {
+    "num": "161",
+    "name": "Spider-Girl"
+   },
+   {
+    "num": "162",
+    "name": "Spider-Ham"
+   },
+   {
+    "num": "163",
+    "name": "Spider-Man"
+   },
+   {
+    "num": "164",
+    "name": "Spider-Man 2099"
+   },
+   {
+    "num": "165",
+    "name": "Spider-Man Noir"
+   },
+   {
+    "num": "166",
+    "name": "Spider-Punk"
+   },
+   {
+    "num": "167",
+    "name": "Spider-Woman"
+   },
+   {
+    "num": "168",
+    "name": "Star-Lord"
+   },
+   {
+    "num": "169",
+    "name": "Storm"
+   },
+   {
+    "num": "170",
+    "name": "Strong Guy"
+   },
+   {
+    "num": "171",
+    "name": "Stryfe"
+   },
+   {
+    "num": "172",
+    "name": "Sunspot"
+   },
+   {
+    "num": "173",
+    "name": "Taskmaster"
+   },
+   {
+    "num": "174",
+    "name": "Thanos"
+   },
+   {
+    "num": "175",
+    "name": "The Thing"
+   },
+   {
+    "num": "176",
+    "name": "Thena"
+   },
+   {
+    "num": "177",
+    "name": "Thor"
+   },
+   {
+    "num": "178",
+    "name": "Throg"
+   },
+   {
+    "num": "179",
+    "name": "Tigra"
+   },
+   {
+    "num": "180",
+    "name": "Tombstone"
+   },
+   {
+    "num": "181",
+    "name": "Toxin"
+   },
+   {
+    "num": "182",
+    "name": "U.S. Agent"
+   },
+   {
+    "num": "183",
+    "name": "Ultimate Daredevil"
+   },
+   {
+    "num": "184",
+    "name": "Ultimate Wolverine"
+   },
+   {
+    "num": "185",
+    "name": "Ultron"
+   },
+   {
+    "num": "186",
+    "name": "Valeria Richards"
+   },
+   {
+    "num": "187",
+    "name": "Venom"
+   },
+   {
+    "num": "188",
+    "name": "Venomizer"
+   },
+   {
+    "num": "189",
+    "name": "Venomouse"
+   },
+   {
+    "num": "190",
+    "name": "Vision"
+   },
+   {
+    "num": "191",
+    "name": "Vulcan"
+   },
+   {
+    "num": "192",
+    "name": "Vulture"
+   },
+   {
+    "num": "193",
+    "name": "War Machine"
+   },
+   {
+    "num": "194",
+    "name": "Wasp"
+   },
+   {
+    "num": "195",
+    "name": "Werewolf by Night"
+   },
+   {
+    "num": "196",
+    "name": "White Fox"
+   },
+   {
+    "num": "197",
+    "name": "White Tiger"
+   },
+   {
+    "num": "198",
+    "name": "Wiccan"
+   },
+   {
+    "num": "199",
+    "name": "Wolverine"
+   },
+   {
+    "num": "200",
+    "name": "X-23"
+   }
+  ]
+ },
+ {
+  "name": "Padparadscha",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "1",
+    "name": "Abomination"
+   },
+   {
+    "num": "2",
+    "name": "Adam Warlock"
+   },
+   {
+    "num": "3",
+    "name": "Agatha Harkness"
+   },
+   {
+    "num": "4",
+    "name": "Amaranth"
+   },
+   {
+    "num": "5",
+    "name": "America Chavez"
+   },
+   {
+    "num": "6",
+    "name": "Ant-Man"
+   },
+   {
+    "num": "7",
+    "name": "Apocalypse"
+   },
+   {
+    "num": "8",
+    "name": "Ares"
+   },
+   {
+    "num": "9",
+    "name": "Baron Zemo"
+   },
+   {
+    "num": "10",
+    "name": "Beast"
+   },
+   {
+    "num": "11",
+    "name": "Beta Ray Bill"
+   },
+   {
+    "num": "12",
+    "name": "Black Bolt"
+   },
+   {
+    "num": "13",
+    "name": "Black Cat"
+   },
+   {
+    "num": "14",
+    "name": "Black Knight"
+   },
+   {
+    "num": "15",
+    "name": "Black Panther"
+   },
+   {
+    "num": "16",
+    "name": "Black Widow"
+   },
+   {
+    "num": "17",
+    "name": "Blade"
+   },
+   {
+    "num": "18",
+    "name": "Blink"
+   },
+   {
+    "num": "19",
+    "name": "Captain America"
+   },
+   {
+    "num": "20",
+    "name": "Captain Britain"
+   },
+   {
+    "num": "21",
+    "name": "Captain Marvel"
+   },
+   {
+    "num": "22",
+    "name": "Carnage"
+   },
+   {
+    "num": "23",
+    "name": "Colossus"
+   },
+   {
+    "num": "24",
+    "name": "Cyclops"
+   },
+   {
+    "num": "25",
+    "name": "Daredevil"
+   },
+   {
+    "num": "26",
+    "name": "Dazzler"
+   },
+   {
+    "num": "27",
+    "name": "Dark Gwenpool"
+   },
+   {
+    "num": "28",
+    "name": "Doctor Doom"
+   },
+   {
+    "num": "29",
+    "name": "Doctor Octopus"
+   },
+   {
+    "num": "30",
+    "name": "Domino"
+   },
+   {
+    "num": "31",
+    "name": "Doomasaur"
+   },
+   {
+    "num": "32",
+    "name": "Dormammu"
+   },
+   {
+    "num": "33",
+    "name": "Dragonfire"
+   },
+   {
+    "num": "34",
+    "name": "Emma Frost"
+   },
+   {
+    "num": "35",
+    "name": "Enchantress"
+   },
+   {
+    "num": "36",
+    "name": "Eternity"
+   },
+   {
+    "num": "37",
+    "name": "Forge"
+   },
+   {
+    "num": "38",
+    "name": "Galactus"
+   },
+   {
+    "num": "39",
+    "name": "Gambit"
+   },
+   {
+    "num": "40",
+    "name": "Gamora"
+   },
+   {
+    "num": "41",
+    "name": "Ghost Rider"
+   },
+   {
+    "num": "42",
+    "name": "Ghost-Spider"
+   },
+   {
+    "num": "43",
+    "name": "Glob"
+   },
+   {
+    "num": "44",
+    "name": "Goblin Queen"
+   },
+   {
+    "num": "45",
+    "name": "Green Goblin"
+   },
+   {
+    "num": "46",
+    "name": "Groot"
+   },
+   {
+    "num": "47",
+    "name": "Hawkeye"
+   },
+   {
+    "num": "48",
+    "name": "Hercules"
+   },
+   {
+    "num": "49",
+    "name": "Hope Summers"
+   },
+   {
+    "num": "50",
+    "name": "Hulk"
+   },
+   {
+    "num": "51",
+    "name": "Human Torch"
+   },
+   {
+    "num": "52",
+    "name": "Iceman"
+   },
+   {
+    "num": "53",
+    "name": "Ikaris"
+   },
+   {
+    "num": "54",
+    "name": "Infernal Hulk"
+   },
+   {
+    "num": "55",
+    "name": "Invisible Woman"
+   },
+   {
+    "num": "56",
+    "name": "Iron Fist"
+   },
+   {
+    "num": "57",
+    "name": "Iron Man"
+   },
+   {
+    "num": "58",
+    "name": "Ironheart"
+   },
+   {
+    "num": "59",
+    "name": "Jean Grey"
+   },
+   {
+    "num": "60",
+    "name": "Jef the Land Shark"
+   },
+   {
+    "num": "61",
+    "name": "Jubilee"
+   },
+   {
+    "num": "62",
+    "name": "Juggernaut"
+   },
+   {
+    "num": "63",
+    "name": "Kate Bishop"
+   },
+   {
+    "num": "64",
+    "name": "Kid Juggernaut"
+   },
+   {
+    "num": "65",
+    "name": "Kingpin"
+   },
+   {
+    "num": "66",
+    "name": "Kitty Pryde"
+   },
+   {
+    "num": "67",
+    "name": "Kraven the Hunter"
+   },
+   {
+    "num": "68",
+    "name": "Leader"
+   },
+   {
+    "num": "69",
+    "name": "Lizard"
+   },
+   {
+    "num": "70",
+    "name": "Lockjaw"
+   },
+   {
+    "num": "71",
+    "name": "Longshot"
+   },
+   {
+    "num": "72",
+    "name": "Luke Cage"
+   },
+   {
+    "num": "73",
+    "name": "M.O.D.O.K."
+   },
+   {
+    "num": "74",
+    "name": "Magneto"
+   },
+   {
+    "num": "75",
+    "name": "Man-Thing"
+   },
+   {
+    "num": "76",
+    "name": "Mantis"
+   },
+   {
+    "num": "77",
+    "name": "Mephisto"
+   },
+   {
+    "num": "78",
+    "name": "Miles Morales"
+   },
+   {
+    "num": "79",
+    "name": "Mister Fantastic"
+   },
+   {
+    "num": "80",
+    "name": "Mister Sinister"
+   },
+   {
+    "num": "81",
+    "name": "Moon Knight"
+   },
+   {
+    "num": "82",
+    "name": "Moonstar"
+   },
+   {
+    "num": "83",
+    "name": "Ms. Marvel"
+   },
+   {
+    "num": "84",
+    "name": "Mutina"
+   },
+   {
+    "num": "85",
+    "name": "Mysterio"
+   },
+   {
+    "num": "86",
+    "name": "Mystique"
+   },
+   {
+    "num": "87",
+    "name": "Nightcrawler"
+   },
+   {
+    "num": "88",
+    "name": "Nightdrifter"
+   },
+   {
+    "num": "89",
+    "name": "Nova"
+   },
+   {
+    "num": "90",
+    "name": "Omega Red"
+   },
+   {
+    "num": "91",
+    "name": "Professor X"
+   },
+   {
+    "num": "92",
+    "name": "Psylocke"
+   },
+   {
+    "num": "93",
+    "name": "Quicksilver"
+   },
+   {
+    "num": "94",
+    "name": "Rasputin IV"
+   },
+   {
+    "num": "95",
+    "name": "Rek-Rap"
+   },
+   {
+    "num": "96",
+    "name": "Revelation"
+   },
+   {
+    "num": "97",
+    "name": "Rhino"
+   },
+   {
+    "num": "98",
+    "name": "Rocket Raccoon"
+   },
+   {
+    "num": "99",
+    "name": "Rogue"
+   },
+   {
+    "num": "100",
+    "name": "Sleeper Agent"
+   },
+   {
+    "num": "101",
+    "name": "Angela"
+   },
+   {
+    "num": "102",
+    "name": "Anti-Venom"
+   },
+   {
+    "num": "103",
+    "name": "Arachnix"
+   },
+   {
+    "num": "104",
+    "name": "Arcade"
+   },
+   {
+    "num": "105",
+    "name": "Archangel"
+   },
+   {
+    "num": "106",
+    "name": "Chameleon"
+   },
+   {
+    "num": "107",
+    "name": "Clea"
+   },
+   {
+    "num": "108",
+    "name": "Cosmic Ghost Rider"
+   },
+   {
+    "num": "109",
+    "name": "Deathlok"
+   },
+   {
+    "num": "110",
+    "name": "Devil Dinosaur"
+   },
+   {
+    "num": "111",
+    "name": "Doctor Strange"
+   },
+   {
+    "num": "112",
+    "name": "Doom 2099"
+   },
+   {
+    "num": "113",
+    "name": "Doyle Dormammu"
+   },
+   {
+    "num": "114",
+    "name": "Elbecca Voss"
+   },
+   {
+    "num": "115",
+    "name": "Electro"
+   },
+   {
+    "num": "116",
+    "name": "Elektra"
+   },
+   {
+    "num": "117",
+    "name": "Evangeline"
+   },
+   {
+    "num": "118",
+    "name": "Exodus"
+   },
+   {
+    "num": "119",
+    "name": "Glitch"
+   },
+   {
+    "num": "120",
+    "name": "Grandmaster"
+   },
+   {
+    "num": "121",
+    "name": "Gwenpool"
+   },
+   {
+    "num": "122",
+    "name": "Hallows' Eve"
+   },
+   {
+    "num": "123",
+    "name": "Hellcat"
+   },
+   {
+    "num": "124",
+    "name": "Hellgate"
+   },
+   {
+    "num": "125",
+    "name": "Hellverine"
+   },
+   {
+    "num": "126",
+    "name": "Hobgoblin"
+   },
+   {
+    "num": "127",
+    "name": "Iron Cat"
+   },
+   {
+    "num": "128",
+    "name": "Kid Venom"
+   },
+   {
+    "num": "129",
+    "name": "Knull"
+   },
+   {
+    "num": "130",
+    "name": "Lady Henrietta"
+   },
+   {
+    "num": "131",
+    "name": "Loki"
+   },
+   {
+    "num": "132",
+    "name": "Luna Snow"
+   },
+   {
+    "num": "133",
+    "name": "Maestro"
+   },
+   {
+    "num": "134",
+    "name": "Magik"
+   },
+   {
+    "num": "135",
+    "name": "Mar-Vell"
+   },
+   {
+    "num": "136",
+    "name": "Mary Jane"
+   },
+   {
+    "num": "137",
+    "name": "Misery"
+   },
+   {
+    "num": "138",
+    "name": "Moon Girl"
+   },
+   {
+    "num": "139",
+    "name": "Nimrod"
+   },
+   {
+    "num": "140",
+    "name": "SP//dr"
+   },
+   {
+    "num": "141",
+    "name": "Rachel Summers"
+   },
+   {
+    "num": "142",
+    "name": "Raelith"
+   },
+   {
+    "num": "143",
+    "name": "Rapid"
+   },
+   {
+    "num": "144",
+    "name": "Sabretooth"
+   },
+   {
+    "num": "145",
+    "name": "Scarlet Witch"
+   },
+   {
+    "num": "146",
+    "name": "Scarlet Spider"
+   },
+   {
+    "num": "147",
+    "name": "Scorpion"
+   },
+   {
+    "num": "148",
+    "name": "Scream"
+   },
+   {
+    "num": "149",
+    "name": "Sentry"
+   },
+   {
+    "num": "150",
+    "name": "Shang-Chi"
+   },
+   {
+    "num": "151",
+    "name": "She-Hulk"
+   },
+   {
+    "num": "152",
+    "name": "She-Venom"
+   },
+   {
+    "num": "153",
+    "name": "Shocker"
+   },
+   {
+    "num": "154",
+    "name": "Shuri"
+   },
+   {
+    "num": "155",
+    "name": "Silence"
+   },
+   {
+    "num": "156",
+    "name": "Silk"
+   },
+   {
+    "num": "157",
+    "name": "Silver Surfer"
+   },
+   {
+    "num": "158",
+    "name": "Silver Sable"
+   },
+   {
+    "num": "159",
+    "name": "Sister Sorrow"
+   },
+   {
+    "num": "160",
+    "name": "Spider-Boy"
+   },
+   {
+    "num": "161",
+    "name": "Spider-Girl"
+   },
+   {
+    "num": "162",
+    "name": "Spider-Ham"
+   },
+   {
+    "num": "163",
+    "name": "Spider-Man"
+   },
+   {
+    "num": "164",
+    "name": "Spider-Man 2099"
+   },
+   {
+    "num": "165",
+    "name": "Spider-Man Noir"
+   },
+   {
+    "num": "166",
+    "name": "Spider-Punk"
+   },
+   {
+    "num": "167",
+    "name": "Spider-Woman"
+   },
+   {
+    "num": "168",
+    "name": "Star-Lord"
+   },
+   {
+    "num": "169",
+    "name": "Storm"
+   },
+   {
+    "num": "170",
+    "name": "Strong Guy"
+   },
+   {
+    "num": "171",
+    "name": "Stryfe"
+   },
+   {
+    "num": "172",
+    "name": "Sunspot"
+   },
+   {
+    "num": "173",
+    "name": "Taskmaster"
+   },
+   {
+    "num": "174",
+    "name": "Thanos"
+   },
+   {
+    "num": "175",
+    "name": "The Thing"
+   },
+   {
+    "num": "176",
+    "name": "Thena"
+   },
+   {
+    "num": "177",
+    "name": "Thor"
+   },
+   {
+    "num": "178",
+    "name": "Throg"
+   },
+   {
+    "num": "179",
+    "name": "Tigra"
+   },
+   {
+    "num": "180",
+    "name": "Tombstone"
+   },
+   {
+    "num": "181",
+    "name": "Toxin"
+   },
+   {
+    "num": "182",
+    "name": "U.S. Agent"
+   },
+   {
+    "num": "183",
+    "name": "Ultimate Daredevil"
+   },
+   {
+    "num": "184",
+    "name": "Ultimate Wolverine"
+   },
+   {
+    "num": "185",
+    "name": "Ultron"
+   },
+   {
+    "num": "186",
+    "name": "Valeria Richards"
+   },
+   {
+    "num": "187",
+    "name": "Venom"
+   },
+   {
+    "num": "188",
+    "name": "Venomizer"
+   },
+   {
+    "num": "189",
+    "name": "Venomouse"
+   },
+   {
+    "num": "190",
+    "name": "Vision"
+   },
+   {
+    "num": "191",
+    "name": "Vulcan"
+   },
+   {
+    "num": "192",
+    "name": "Vulture"
+   },
+   {
+    "num": "193",
+    "name": "War Machine"
+   },
+   {
+    "num": "194",
+    "name": "Wasp"
+   },
+   {
+    "num": "195",
+    "name": "Werewolf by Night"
+   },
+   {
+    "num": "196",
+    "name": "White Fox"
+   },
+   {
+    "num": "197",
+    "name": "White Tiger"
+   },
+   {
+    "num": "198",
+    "name": "Wiccan"
+   },
+   {
+    "num": "199",
+    "name": "Wolverine"
+   },
+   {
+    "num": "200",
+    "name": "X-23"
+   }
+  ]
+ },
+ {
+  "name": "Hidden Gems",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "HG-01",
+    "name": "Carnage"
+   },
+   {
+    "num": "HG-02",
+    "name": "Jef the Land Shark"
+   },
+   {
+    "num": "HG-03",
+    "name": "Magik"
+   },
+   {
+    "num": "HG-04",
+    "name": "Rogue"
+   },
+   {
+    "num": "HG-05",
+    "name": "Spider-Man"
+   }
+  ]
+ },
+ {
+  "name": "Hidden Gems - Onyx",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "HG-01",
+    "name": "Carnage"
+   },
+   {
+    "num": "HG-02",
+    "name": "Jef the Land Shark"
+   },
+   {
+    "num": "HG-03",
+    "name": "Magik"
+   },
+   {
+    "num": "HG-04",
+    "name": "Rogue"
+   },
+   {
+    "num": "HG-05",
+    "name": "Spider-Man"
+   }
+  ]
+ },
+ {
+  "name": "Hidden Gems - Ruby",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "HG-01",
+    "name": "Carnage"
+   },
+   {
+    "num": "HG-02",
+    "name": "Jef the Land Shark"
+   },
+   {
+    "num": "HG-03",
+    "name": "Magik"
+   },
+   {
+    "num": "HG-04",
+    "name": "Rogue"
+   },
+   {
+    "num": "HG-05",
+    "name": "Spider-Man"
+   }
+  ]
+ },
+ {
+  "name": "Hidden Gems - Padparadscha",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "HG-01",
+    "name": "Carnage"
+   },
+   {
+    "num": "HG-02",
+    "name": "Jef the Land Shark"
+   },
+   {
+    "num": "HG-03",
+    "name": "Magik"
+   },
+   {
+    "num": "HG-04",
+    "name": "Rogue"
+   },
+   {
+    "num": "HG-05",
+    "name": "Spider-Man"
+   }
+  ]
+ },
+ {
+  "name": "Marvel Facsimile Autographs",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "MF-BB",
+    "name": "Captain Britain"
+   },
+   {
+    "num": "MF-CY",
+    "name": "Cyclops"
+   },
+   {
+    "num": "MF-DO",
+    "name": "Doctor Octopus"
+   },
+   {
+    "num": "MF-GA",
+    "name": "Galactus"
+   },
+   {
+    "num": "MF-GG",
+    "name": "Green Goblin"
+   },
+   {
+    "num": "MF-GR",
+    "name": "Ghost Rider"
+   },
+   {
+    "num": "MF-JU",
+    "name": "Juggernaut"
+   },
+   {
+    "num": "MF-MJ",
+    "name": "Mary Jane"
+   },
+   {
+    "num": "MF-NA",
+    "name": "Namor"
+   },
+   {
+    "num": "MF-NF",
+    "name": "Nick Fury"
+   },
+   {
+    "num": "MF-NI",
+    "name": "Nightcrawler"
+   },
+   {
+    "num": "MF-ST",
+    "name": "Storm"
+   },
+   {
+    "num": "MF-VE",
+    "name": "Venom"
+   },
+   {
+    "num": "MF-VI",
+    "name": "Vision"
+   },
+   {
+    "num": "MF-WM",
+    "name": "War Machine"
+   }
+  ]
+ },
+ {
+  "name": "Marvel Facsimile Autographs - Black",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "MF-BB",
+    "name": "Captain Britain"
+   },
+   {
+    "num": "MF-CY",
+    "name": "Cyclops"
+   },
+   {
+    "num": "MF-DO",
+    "name": "Doctor Octopus"
+   },
+   {
+    "num": "MF-GA",
+    "name": "Galactus"
+   },
+   {
+    "num": "MF-GG",
+    "name": "Green Goblin"
+   },
+   {
+    "num": "MF-GR",
+    "name": "Ghost Rider"
+   },
+   {
+    "num": "MF-JU",
+    "name": "Juggernaut"
+   },
+   {
+    "num": "MF-MJ",
+    "name": "Mary Jane"
+   },
+   {
+    "num": "MF-NA",
+    "name": "Namor"
+   },
+   {
+    "num": "MF-NF",
+    "name": "Nick Fury"
+   },
+   {
+    "num": "MF-NI",
+    "name": "Nightcrawler"
+   },
+   {
+    "num": "MF-ST",
+    "name": "Storm"
+   },
+   {
+    "num": "MF-VE",
+    "name": "Venom"
+   },
+   {
+    "num": "MF-VI",
+    "name": "Vision"
+   },
+   {
+    "num": "MF-WM",
+    "name": "War Machine"
+   }
+  ]
+ },
+ {
+  "name": "Marvel Facsimile Autographs - Red",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "MF-BB",
+    "name": "Captain Britain"
+   },
+   {
+    "num": "MF-CY",
+    "name": "Cyclops"
+   },
+   {
+    "num": "MF-DO",
+    "name": "Doctor Octopus"
+   },
+   {
+    "num": "MF-GA",
+    "name": "Galactus"
+   },
+   {
+    "num": "MF-GG",
+    "name": "Green Goblin"
+   },
+   {
+    "num": "MF-GR",
+    "name": "Ghost Rider"
+   },
+   {
+    "num": "MF-JU",
+    "name": "Juggernaut"
+   },
+   {
+    "num": "MF-MJ",
+    "name": "Mary Jane"
+   },
+   {
+    "num": "MF-NA",
+    "name": "Namor"
+   },
+   {
+    "num": "MF-NF",
+    "name": "Nick Fury"
+   },
+   {
+    "num": "MF-NI",
+    "name": "Nightcrawler"
+   },
+   {
+    "num": "MF-ST",
+    "name": "Storm"
+   },
+   {
+    "num": "MF-VE",
+    "name": "Venom"
+   },
+   {
+    "num": "MF-VI",
+    "name": "Vision"
+   },
+   {
+    "num": "MF-WM",
+    "name": "War Machine"
+   }
+  ]
+ },
+ {
+  "name": "Marvel Facsimile Autographs - Padparadscha",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "MF-BB",
+    "name": "Captain Britain"
+   },
+   {
+    "num": "MF-CY",
+    "name": "Cyclops"
+   },
+   {
+    "num": "MF-DO",
+    "name": "Doctor Octopus"
+   },
+   {
+    "num": "MF-GA",
+    "name": "Galactus"
+   },
+   {
+    "num": "MF-GG",
+    "name": "Green Goblin"
+   },
+   {
+    "num": "MF-GR",
+    "name": "Ghost Rider"
+   },
+   {
+    "num": "MF-JU",
+    "name": "Juggernaut"
+   },
+   {
+    "num": "MF-MJ",
+    "name": "Mary Jane"
+   },
+   {
+    "num": "MF-NA",
+    "name": "Namor"
+   },
+   {
+    "num": "MF-NF",
+    "name": "Nick Fury"
+   },
+   {
+    "num": "MF-NI",
+    "name": "Nightcrawler"
+   },
+   {
+    "num": "MF-ST",
+    "name": "Storm"
+   },
+   {
+    "num": "MF-VE",
+    "name": "Venom"
+   },
+   {
+    "num": "MF-VI",
+    "name": "Vision"
+   },
+   {
+    "num": "MF-WM",
+    "name": "War Machine"
+   }
+  ]
+ },
+ {
+  "name": "Marvel Facsimile Dual Autographs",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "MFD-BP",
+    "name": "Psylocke/Captain Britain"
+   },
+   {
+    "num": "MFD-GH",
+    "name": "Green Goblin/Harry Osborn"
+   },
+   {
+    "num": "MFD-MG",
+    "name": "Gwen Stacy/Mary Jane"
+   },
+   {
+    "num": "MFD-VS",
+    "name": "Spider-Man/Venom"
+   },
+   {
+    "num": "MFD-VW",
+    "name": "Scarlet Witch/Vision"
+   },
+   {
+    "num": "MFD-WI",
+    "name": "Iron Man/War Machine"
+   }
+  ]
+ },
+ {
+  "name": "Marvel Facsimile Dual Autographs - Black",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "MFD-BP",
+    "name": "Psylocke/Captain Britain"
+   },
+   {
+    "num": "MFD-GH",
+    "name": "Green Goblin/Harry Osborn"
+   },
+   {
+    "num": "MFD-MG",
+    "name": "Gwen Stacy/Mary Jane"
+   },
+   {
+    "num": "MFD-VS",
+    "name": "Spider-Man/Venom"
+   },
+   {
+    "num": "MFD-VW",
+    "name": "Scarlet Witch/Vision"
+   },
+   {
+    "num": "MFD-WI",
+    "name": "Iron Man/War Machine"
+   }
+  ]
+ },
+ {
+  "name": "Marvel Facsimile Dual Autographs - Red",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "MFD-BP",
+    "name": "Psylocke/Captain Britain"
+   },
+   {
+    "num": "MFD-GH",
+    "name": "Green Goblin/Harry Osborn"
+   },
+   {
+    "num": "MFD-MG",
+    "name": "Gwen Stacy/Mary Jane"
+   },
+   {
+    "num": "MFD-VS",
+    "name": "Spider-Man/Venom"
+   },
+   {
+    "num": "MFD-VW",
+    "name": "Scarlet Witch/Vision"
+   },
+   {
+    "num": "MFD-WI",
+    "name": "Iron Man/War Machine"
+   }
+  ]
+ },
+ {
+  "name": "Marvel Facsimile Dual Autographs - Padparadscha",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "MFD-BP",
+    "name": "Psylocke/Captain Britain"
+   },
+   {
+    "num": "MFD-GH",
+    "name": "Green Goblin/Harry Osborn"
+   },
+   {
+    "num": "MFD-MG",
+    "name": "Gwen Stacy/Mary Jane"
+   },
+   {
+    "num": "MFD-VS",
+    "name": "Spider-Man/Venom"
+   },
+   {
+    "num": "MFD-VW",
+    "name": "Scarlet Witch/Vision"
+   },
+   {
+    "num": "MFD-WI",
+    "name": "Iron Man/War Machine"
+   }
+  ]
+ },
+ {
+  "name": "Marvel Facsimile Triple Autographs",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "MFT-AVS",
+    "name": "Vision/Agatha Harkness/Scarlet Witch"
+   },
+   {
+    "num": "MFT-IWN",
+    "name": "Nick Fury/Iron Man/War Machine"
+   },
+   {
+    "num": "MFT-PMG",
+    "name": "Gwen Stacy/Peter Parker/Mary Jane"
+   },
+   {
+    "num": "MFT-SCN",
+    "name": "Cyclops/Storm/Nightcrawler"
+   }
+  ]
+ },
+ {
+  "name": "Marvel Facsimile Triple Autographs - Black",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "MFT-AVS",
+    "name": "Vision/Agatha Harkness/Scarlet Witch"
+   },
+   {
+    "num": "MFT-IWN",
+    "name": "Nick Fury/Iron Man/War Machine"
+   },
+   {
+    "num": "MFT-PMG",
+    "name": "Gwen Stacy/Peter Parker/Mary Jane"
+   },
+   {
+    "num": "MFT-SCN",
+    "name": "Cyclops/Storm/Nightcrawler"
+   }
+  ]
+ },
+ {
+  "name": "Marvel Facsimile Triple Autographs - Red",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "MFT-AVS",
+    "name": "Vision/Agatha Harkness/Scarlet Witch"
+   },
+   {
+    "num": "MFT-IWN",
+    "name": "Nick Fury/Iron Man/War Machine"
+   },
+   {
+    "num": "MFT-PMG",
+    "name": "Gwen Stacy/Peter Parker/Mary Jane"
+   },
+   {
+    "num": "MFT-SCN",
+    "name": "Cyclops/Storm/Nightcrawler"
+   }
+  ]
+ },
+ {
+  "name": "Marvel Facsimile Triple Autographs - Padparadscha",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "MFT-AVS",
+    "name": "Vision/Agatha Harkness/Scarlet Witch"
+   },
+   {
+    "num": "MFT-IWN",
+    "name": "Nick Fury/Iron Man/War Machine"
+   },
+   {
+    "num": "MFT-PMG",
+    "name": "Gwen Stacy/Peter Parker/Mary Jane"
+   },
+   {
+    "num": "MFT-SCN",
+    "name": "Cyclops/Storm/Nightcrawler"
+   }
+  ]
+ },
+ {
+  "name": "Marvel Facsimile Quad Autographs",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "MFQ-DNSG",
+    "name": "Doctor Doom/Silver Surfer/Galactus/Namor"
+   },
+   {
+    "num": "MFQ-SGDV",
+    "name": "Venom/Doctor Octopus/Green Goblin/Spider-Man"
+   }
+  ]
+ },
+ {
+  "name": "Marvel Facsimile Quad Autographs - Black",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "MFQ-DNSG",
+    "name": "Doctor Doom/Silver Surfer/Galactus/Namor"
+   },
+   {
+    "num": "MFQ-SGDV",
+    "name": "Venom/Doctor Octopus/Green Goblin/Spider-Man"
+   }
+  ]
+ },
+ {
+  "name": "Marvel Facsimile Quad Autographs - Red",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "MFQ-DNSG",
+    "name": "Doctor Doom/Silver Surfer/Galactus/Namor"
+   },
+   {
+    "num": "MFQ-SGDV",
+    "name": "Venom/Doctor Octopus/Green Goblin/Spider-Man"
+   }
+  ]
+ },
+ {
+  "name": "Marvel Facsimile Quad Autographs - Padparadscha",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "MFQ-DNSG",
+    "name": "Doctor Doom/Silver Surfer/Galactus/Namor"
+   },
+   {
+    "num": "MFQ-SGDV",
+    "name": "Venom/Doctor Octopus/Green Goblin/Spider-Man"
+   }
+  ]
+ },
+ {
+  "name": "Infinite Sapphire",
+  "isInsert": true,
+  "cards": [
+   {
+    "num": "IS-01",
+    "name": "Emma Frost"
+   },
+   {
+    "num": "IS-02",
+    "name": "Ghost-Spider"
+   },
+   {
+    "num": "IS-03",
+    "name": "Moon Knight"
+   },
+   {
+    "num": "IS-04",
+    "name": "Elektra"
+   },
+   {
+    "num": "IS-05",
+    "name": "Silk"
+   },
+   {
+    "num": "IS-06",
+    "name": "Hawkeye"
+   },
+   {
+    "num": "IS-07",
+    "name": "Loki"
+   },
+   {
+    "num": "IS-08",
+    "name": "Black Panther"
+   },
+   {
+    "num": "IS-09",
+    "name": "She-Hulk"
+   },
+   {
+    "num": "IS-10",
+    "name": "X-23"
+   }
+  ]
+ }
+]

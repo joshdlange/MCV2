@@ -1,0 +1,132 @@
+Build Marvel Card Vault Upcoming Set Intelligence v1.
+
+Context:
+Our current upcoming set workflow is missing some new Topps Marvel releases. We had Topps sets appear publicly through sources like Topps product pages and Blowout Buzz, but they did not hit our RSS feed. We need a more reliable way to stay on top of upcoming Marvel card sets.
+
+Goal:
+Create an admin-only Upcoming Set Intelligence tool that monitors multiple sources, detects potential upcoming Marvel card releases, and creates pending candidates for admin review. Do not automatically publish detected sets to users without review.
+
+Must do:
+- Keep the current Upcoming Sets feature.
+- Add an admin-only detection/review workflow for upcoming set candidates.
+- Treat RSS as only one source, not the source of truth.
+- Monitor or support manual checks from multiple sources:
+  - Topps release calendar
+  - Topps product pages
+  - Ripped by Topps articles/checklist spotlights
+  - Blowout Buzz / First Buzz articles
+  - Beckett/checklist pages if already used or easy to support
+  - Existing RSS feeds
+- Search for Marvel-specific trading card releases, including:
+  - Topps Marvel
+  - Topps Chrome Marvel
+  - Topps Vault Marvel
+  - Topps Mint Marvel
+  - Topps Marvel Studios
+  - Marvel Sapphire
+  - Marvel Comics
+  - Marvel trading cards
+- Create a pending candidate record when a possible upcoming set is found.
+- Candidate fields should include:
+  - detected set name
+  - normalized set name
+  - manufacturer/brand
+  - year
+  - estimated release date
+  - source name
+  - source URL
+  - source type
+  - confidence score
+  - checklist URL if found
+  - image URL if found
+  - description/snippet
+  - detected at
+  - status: pending, approved, ignored, duplicate, needs review
+- Add duplicate detection so the same set is not repeatedly suggested.
+- Match candidates against existing upcoming sets and existing card sets.
+- Add an admin review page or section under Admin → Cards & Sets or Admin → Data & Migrations.
+- Admin should be able to:
+  - approve candidate into Upcoming Sets
+  - edit title/date/description before approval
+  - mark duplicate
+  - ignore
+  - add source notes
+  - manually add an upcoming set if automation misses one
+- Do not notify users automatically when a candidate is detected.
+- User-facing Upcoming Sets should only show approved upcoming sets.
+- Add a manual “Run scan now” button for admin.
+- Add a dry-run mode that shows what would be detected without writing candidates.
+- Add clear logs for source checks and failures.
+- Handle failed source checks gracefully.
+
+Source behavior:
+- Topps release calendar should be treated as high-confidence if a Marvel set appears there.
+- Topps product pages should be high-confidence if the page clearly names a Marvel card product.
+- Ripped by Topps should be medium/high confidence depending on content.
+- Blowout Buzz / First Buzz should be medium confidence and require review.
+- Checklist sites should be medium confidence unless release date and product name are clearly present.
+- Reddit or social/community sources should not auto-create approved sets. If used later, they should only create low-confidence review candidates.
+
+Must not do:
+- Do not automatically publish detected sets to users.
+- Do not send emails or push notifications.
+- Do not create card checklists automatically from article text.
+- Do not scrape aggressively.
+- Do not break the existing Upcoming Sets page.
+- Do not change lifecycle emails.
+- Do not change subscriptions, Stripe, RevenueCat, Shippo, XP, PC Binders, Drive Sync, image approvals, card data, Android, or iOS.
+- Do not expose secrets.
+- Do not hardcode fragile one-off URLs only.
+- Do not rely on RSS alone.
+
+Preserve:
+- Existing Upcoming Sets page.
+- Existing admin auth/security.
+- Existing card set data.
+- Existing user notification interest counts.
+- Existing lifecycle email system.
+- Existing public app behavior.
+
+Suggested UI:
+Admin page section:
+Upcoming Set Intelligence
+
+Cards/rows:
+- Candidate title
+- Source
+- Confidence
+- Detected release date
+- Status
+- Possible duplicate match
+- Actions: Approve, Edit, Ignore, Duplicate, View Source
+
+Add summary stats:
+- candidates found today
+- pending review
+- approved this month
+- ignored/duplicates
+- last scan time
+- source failures
+
+QA:
+- Admin-only access verified.
+- Non-admin users cannot access scan/review endpoints.
+- Dry-run scan writes nothing.
+- Manual scan creates only pending candidates.
+- Existing Upcoming Sets page only shows approved sets.
+- Duplicate detection prevents repeated candidates.
+- Topps product page style releases can be detected.
+- Blowout First Buzz style releases can be detected as review candidates.
+- Candidate approval creates or updates an Upcoming Set safely.
+- No user notifications are sent.
+- No emails are sent.
+- App builds/runs cleanly.
+
+Final response:
+- List changed files.
+- List sources supported in v1.
+- Show sample candidates detected from current sources.
+- Confirm whether 2026 Topps Vault Marvel and recent Topps Marvel releases are detected.
+- Confirm no user-facing sets were published without approval.
+- Confirm no emails or notifications were sent.
+- Confirm safe to publish.

@@ -11655,6 +11655,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error('[Topps Mint Seed] Error:', err);
   });
 
+  // One-time seed: 2026 Topps Chrome Sapphire Edition — 29 subsets, 1,738 cards (idempotent)
+  import('./seeds/seedToppsChromeSapphire2026').then(m => m.seedToppsChromeSapphire2026()).catch(err => {
+    console.error('[Chrome Sapphire Seed] Error:', err);
+  });
+
   // One-time seed: 2026 Topps Finest Fantastic Four: 65th Anniversary — 137 subsets, 4,851 cards (idempotent)
   // Then one-time fix: copy 100 base-card images added in dev into prod (empty-only, no overwrites)
   import('./seeds/seedToppsFinestFF2026').then(m => m.seedToppsFinestFF2026())
