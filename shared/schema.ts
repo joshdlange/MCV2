@@ -260,7 +260,11 @@ export const userBadges = pgTable("user_badges", {
   userId: integer("user_id").references(() => users.id).notNull(),
   badgeId: integer("badge_id").references(() => badges.id).notNull(),
   earnedAt: timestamp("earned_at").defaultNow().notNull(),
-});
+}, (table) => [
+  // Matches the existing DB index user_badges_unique_user_badge; awardBadge's
+  // ON CONFLICT (user_id, badge_id) depends on it.
+  uniqueIndex("user_badges_unique_user_badge").on(table.userId, table.badgeId),
+]);
 
 // Relations
 export const cardSetsRelations = relations(cardSets, ({ many }) => ({

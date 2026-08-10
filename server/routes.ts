@@ -317,10 +317,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Track login and check badges on sync
       if (user) {
+        // Capture the PRE-login lastLogin before recordUserLogin overwrites it,
+        // so dormant-return badge checks compare against the real prior visit.
+        const priorLastLogin = user.lastLogin;
         storage.recordUserLogin(firebaseUid).catch(error => {
           console.error('Failed to track login:', error);
         });
-        await badgeService.checkBadgesOnLogin(user.id);
+        await badgeService.checkBadgesOnLogin(user.id, priorLastLogin);
         
         // Run retroactive badge checks for new users
         if (!user.lastLogin) {
@@ -11909,6 +11912,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }).catch(err => {
     console.error('[SkyBox 93 S2 Merge] Error:', err);
+  });
+
+  // Startup seed: "I'll Never Leave You Again" badge (login after 30+ days
+  // away). Idempotent + advisory-locked; matches by badge name.
+  import('./services/neverLeaveBadgeSeed').then(async (m) => {
+    const result = await m.seedNeverLeaveBadge();
+    console.log(`[NeverLeave Badge Seed] ${result.ran ? 'Done' : 'No-op'}: ${result.reason}`);
+  }).catch(err => {
+    console.error('[NeverLeave Badge Seed] Error:', err);
   });
 
   // One-time fix: 1992 Comic Images Spider-Man reorg — move mis-filed McFarlane

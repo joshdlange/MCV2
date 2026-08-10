@@ -140,6 +140,21 @@ export class BadgeService {
     }
   }
 
+  // 5b. I'll Never Leave You Again - login after 30+ days away.
+  // Uses the PRE-login lastLogin captured by the caller (before
+  // recordUserLogin updates it) to avoid the read-after-update race.
+  async checkNeverLeaveYouAgain(userId: number, priorLastLogin?: Date | string | null): Promise<void> {
+    if (!priorLastLogin) return; // new user or unknown — never a dormant return
+    const badge = await this.getBadgeByName("I'll Never Leave You Again");
+    if (!badge) return;
+    const last = new Date(priorLastLogin);
+    if (isNaN(last.getTime())) return;
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    if (last < thirtyDaysAgo) {
+      await this.awardBadge(userId, badge.id);
+    }
+  }
+
   // 6. Deal Maker - Check for completed trades (placeholder)
   async checkDealMaker(userId: number): Promise<void> {
     const badge = await this.getBadgeByName('Deal Maker');
@@ -458,8 +473,9 @@ export class BadgeService {
     await this.checkChattyCathy(userId);
   }
 
-  async checkBadgesOnLogin(userId: number): Promise<void> {
+  async checkBadgesOnLogin(userId: number, priorLastLogin?: Date | string | null): Promise<void> {
     await this.checkWelcomeBack(userId);
+    await this.checkNeverLeaveYouAgain(userId, priorLastLogin);
     await this.checkNightcrawler(userId);
     await this.check7DayStreak(userId);
     await this.checkNightOwl(userId);
