@@ -19,3 +19,9 @@ description: How MCV lifecycle emails work — claim-then-send dedupe, 14-day ca
 - 14-day cap is now enforced ATOMICALLY inside claimAndSend: per-email pg_advisory_xact_lock + cap recheck + claim insert in one transaction; claim rows get sent_at=now() so they count against the cap immediately; status='failed' rows are excluded from the cap but still block their own journey.
 - ALL batch runners (nudge + v2 journeys) hard-guard on REPLIT_DEPLOYMENT — dev cannot send real recipient emails even via admin endpoints. Preview/test/counts work everywhere.
 - New journeys must be added to BATCH_JOURNEYS map to be cron/admin runnable; POST /api/admin/lifecycle/run/:key runs any active batch journey.
+
+## Long-tail dormant win-back (Aug 10, 2026)
+- 7 DRAFT journeys (dormant-empty-vault/started/engaged/upgrade/missing-image, winback-90, babycomeback) live in LONGTAIL_JOURNEYS, NOT BATCH_JOURNEYS — the cron only iterates BATCH_JOURNEYS, so long-tail can NEVER auto-run even when active. Admin endpoint requires typed body {"confirm":"SEND <key>"}.
+- 150/24h global dormant cap enforced under a session-level pg advisory lock (key 913151) held for the whole run — serializes all long-tail runs across keys/instances; cap count inside lock.
+- BABYCOMEBACK: Stripe promotion code confirmed active ($5 off x 2 months repeating = 2 free months of the $5 plan); checkout session uses allow_promotion_codes: true; web-only, never claim iOS availability. lifecycleTemplate now supports codeBlock + footnote.
+- Inactivity = users.last_login (NULL excluded), same as the reactivation draft.

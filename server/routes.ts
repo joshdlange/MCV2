@@ -4714,15 +4714,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Manual trigger of any ACTIVE v2 batch journey (empty-vault, collection-momentum).
-  // Same eligibility, launch gates, cap, and claim-then-send dedupe as the hourly cron.
+  // Manual trigger of any ACTIVE batch journey.
+  // - v2 journeys (empty-vault, collection-momentum): run as the cron does.
+  // - Long-tail dormant/win-back journeys: ADDITIONALLY require the exact
+  //   typed confirmation `SEND <key>` in the request body — these target the
+  //   existing dormant backlog and must never fire from a stray click.
+  // All paths keep full eligibility, launch gates, 14-day cap, once-per-user
+  // claim, 50/batch limit, and the 150/day dormant cap. Nothing is bypassed.
   app.post("/api/admin/lifecycle/run/:key", authenticateUser, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) {
         return res.status(403).json({ message: "Admin access required" });
       }
-      const { runLifecycleJourneyNow } = await import('./jobs/lifecycleEmails');
-      const result = await runLifecycleJourneyNow(req.params.key);
+      const { runLifecycleJourneyNow, LONGTAIL_JOURNEY_KEYS } = await import('./jobs/lifecycleEmails');
+      const key = req.params.key;
+      const isLongTail = LONGTAIL_JOURNEY_KEYS.includes(key);
+      if (isLongTail && req.body?.confirm !== `SEND ${key}`) {
+        return res.status(400).json({
+          message: `This is a dormant win-back batch send to existing users. To proceed, POST again with body {"confirm": "SEND ${key}"}.`,
+          requiresConfirmation: true,
+        });
+      }
+      const result = await runLifecycleJourneyNow(key, undefined, { confirmedByAdmin: isLongTail });
       res.json(result);
     } catch (error) {
       console.error('Lifecycle journey manual run error:', error);

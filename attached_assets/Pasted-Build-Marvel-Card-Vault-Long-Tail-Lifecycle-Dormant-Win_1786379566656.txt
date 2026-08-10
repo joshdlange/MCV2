@@ -1,0 +1,380 @@
+Build Marvel Card Vault Long-Tail Lifecycle / Dormant Win-Back v1, including a last-ditch web-only BABYCOMEBACK coupon flow.
+
+Context:
+The lifecycle email system currently covers early activation:
+- Welcome
+- First-Card Nudge
+- Empty Vault Follow-Up
+- Collection Momentum Nudge
+
+That is a good start, but it does not create a longer-tail nurture path. Roughly half of the user base is dormant, and we need a careful win-back system that pushes users back into the app based on where they are in the collector journey.
+
+Important:
+Do not re-enable generic monthly emails.
+Do not send a generic newsletter.
+Do not blast all dormant users at once.
+This should be behavior-based, capped, segmented, and admin-controlled.
+
+We also have a last-ditch coupon:
+Code: BABYCOMEBACK
+Offer: 2 months free
+Availability: web checkout only
+Important limitation: this promo code should not be positioned as usable through iOS / Apple in-app purchase. It should route users to the web subscription/checkout flow.
+
+Goal:
+Create long-tail lifecycle email support for dormant users and stalled users, with a final win-back coupon email as the last step in the journey.
+
+Must do:
+- Use the existing lifecycle email system.
+- Use Resend.
+- Use the existing email_logs claim-before-send protection.
+- Respect the existing 14-day lifecycle/marketing email cap.
+- Respect unsubscribe/preference logic.
+- Keep transactional emails exempt.
+- Keep monthly and legacy campaign sends disabled.
+- Keep all sends batch-limited.
+- Add admin preview/test support for all new templates.
+- Add estimated eligible counts by segment.
+- Do not send any emails during the build.
+- Do not activate a broad dormant blast automatically on publish.
+- Add the BABYCOMEBACK coupon as a last-ditch dormant conversion email only.
+- Confirm whether the web checkout currently has a clear promo code / coupon code entry point.
+- Confirm where users enter a promo code during web checkout.
+- If the promo code entry point exists but is not obvious, improve the CTA/help copy around checkout links.
+- If there is no promo code entry point in the web checkout, report that clearly and do not activate the coupon email until the checkout flow supports it.
+- Confirm BABYCOMEBACK works only through the web/Stripe checkout flow and not iOS IAP.
+- Do not claim the coupon works in iOS.
+
+Create dormant/win-back lifecycle templates for these segments:
+
+1. Dormant Empty Vault
+Audience:
+- completed onboarding
+- zero cards
+- inactive 30+ days
+- opted into marketing/lifecycle emails
+- has not received another lifecycle/marketing email in the last 14 days
+- has not already received this dormant empty-vault email
+
+Purpose:
+Get them to add their first card.
+
+Subject:
+Still collecting? Your vault is ready
+
+Preview text:
+Add one card and bring your Marvel Card Vault to life.
+
+Body:
+Hey collector,
+
+Your vault is still here, but it looks like it never got its first card.
+
+Start small. Add one card, begin tracking your collection, and start earning Collector XP as you build.
+
+No need to organize everything today. Just add one card and get moving.
+
+CTA:
+Add Your First Card
+
+2. Dormant Started Collector
+Audience:
+- has 1 to 9 cards
+- inactive 30+ days
+- opted into marketing/lifecycle emails
+- has not received another lifecycle/marketing email in the last 14 days
+- has not already received this dormant started email
+
+Purpose:
+Get them to add more cards.
+
+Subject:
+Pick up where you left off
+
+Preview text:
+Your vault is started. Keep building from there.
+
+Body:
+Hey collector,
+
+You already started your vault. Now it is time to keep it moving.
+
+Add a few more cards, build your progress, and make your collection easier to track every time you come back.
+
+Your next card is a good place to restart.
+
+CTA:
+Add More Cards
+
+3. Dormant Engaged Collector
+Audience:
+- has 10+ cards or meaningful activity
+- inactive 30+ days
+- opted into marketing/lifecycle emails
+- has not received another lifecycle/marketing email in the last 14 days
+- has not already received this dormant engaged email
+
+Purpose:
+Bring back users who previously got value.
+
+Subject:
+Your vault has been waiting
+
+Preview text:
+New progress, images, and collector tools are ready when you are.
+
+Body:
+Hey collector,
+
+Your Marvel Card Vault has been quiet for a bit.
+
+Come back in and keep building your collection. You can add cards, organize favorites, build PC Binders, check your progress, and keep leveling up with Collector XP.
+
+Your vault is ready when you are.
+
+CTA:
+Return to Your Vault
+
+4. Dormant Super Hero / Upgrade Candidate
+Audience:
+- Free or Side Kick user
+- has meaningful activity, such as 10+ cards, repeated logins, PC Binder click, Market Trends interest, or nearing card limit
+- inactive 30+ days
+- opted into marketing/lifecycle emails
+- has not received another lifecycle/marketing email in the last 14 days
+- has not already received this upgrade-candidate dormant email
+
+Purpose:
+Nudge high-intent users toward Super Hero without being too aggressive.
+
+Subject:
+Build more than a checklist
+
+Preview text:
+PC Binders, unlimited cards, Market Trends, and more are waiting in Super Hero.
+
+Body:
+Hey collector,
+
+You have already started building your vault. Super Hero gives you more room and more ways to organize the cards that matter most.
+
+Unlock unlimited cards, custom PC Binders, Market Trends, Scan to Add, and more tools built for serious collectors.
+
+CTA:
+Explore Super Hero
+
+5. Dormant Missing Image Contributor
+Audience:
+- user owns cards that are missing images
+- inactive 30+ days
+- opted into marketing/lifecycle emails
+- has not received another lifecycle/marketing email in the last 14 days
+- has not already received this missing-image dormant email
+
+Purpose:
+Bring users back through contribution and XP.
+
+Subject:
+Help complete the vault
+
+Preview text:
+Some cards still need images. Upload one and earn XP after approval.
+
+Body:
+Hey collector,
+
+Some cards in the vault still need images, and collectors like you can help complete them.
+
+Upload a missing card image, help improve the vault for everyone, and earn Collector XP once it is approved.
+
+CTA:
+Upload an Image
+
+6. Long-Tail What’s New Win-Back
+Audience:
+- inactive 90+ days
+- opted into marketing/lifecycle emails
+- has not received another lifecycle/marketing email in the last 14 days
+- has not already received this 90-day win-back email
+
+Purpose:
+Show meaningful product progress, not a generic monthly update.
+
+Important:
+This email should only send if there is real content to include, such as:
+- new sets added
+- new image coverage added
+- PC Binders launched
+- card limit increased
+- Collector XP updates
+- Trade Block launch in the future
+- major app improvements
+
+Subject:
+A lot has changed in the vault
+
+Preview text:
+New cards, images, and collector tools have been added since you last visited.
+
+Body:
+Hey collector,
+
+A lot has changed since your last visit.
+
+Marvel Card Vault has added more ways to build, organize, and complete your collection, including better card images, custom PC Binders, Collector XP, and more tools to help your vault feel like yours.
+
+Come back and see what is new.
+
+CTA:
+See What’s New
+
+7. Last-Ditch BABYCOMEBACK Coupon Win-Back
+Audience:
+- inactive 120+ days or 180+ days, choose the safer threshold based on the current lifecycle system
+- Free or Side Kick user
+- not currently an active Super Hero subscriber
+- opted into marketing/lifecycle emails
+- has not received another lifecycle/marketing email in the last 14 days
+- has already received at least one prior dormant/win-back email or meets a strong dormant condition
+- has not already received the BABYCOMEBACK coupon email
+- only eligible if web checkout promo code support is confirmed
+
+Purpose:
+Make one final conversion attempt for dormant non-paying users.
+
+Coupon:
+- Code: BABYCOMEBACK
+- Offer: 2 months free
+- Web checkout only
+- Do not say this works in iOS
+- Route users to the web checkout/upgrade flow
+
+Subject:
+Come back free for 2 months
+
+Preview text:
+Use code BABYCOMEBACK through web checkout and unlock Super Hero.
+
+Body:
+Hey collector,
+
+Still building your Marvel card collection?
+
+Your vault is still here, and we’d love to have you back.
+
+For a limited time, you can unlock Super Hero free for 2 months with code:
+
+BABYCOMEBACK
+
+Use it through the web checkout to unlock unlimited cards, custom PC Binders, Market Trends, Scan to Add, and more collector tools.
+
+CTA:
+Redeem on Web
+
+Important footer/helper copy:
+Promo code must be redeemed through web checkout. It is not available through iOS in-app purchase.
+
+Footer:
+Marvel Card Vault is not affiliated with Marvel, Disney, Upper Deck, Topps, or any card manufacturer.
+
+Coupon checkout verification:
+- Confirm whether Stripe/web checkout currently supports promo codes.
+- Confirm whether users can clearly see where to enter BABYCOMEBACK during checkout.
+- If Stripe Checkout is used, verify that allow_promotion_codes or equivalent is enabled.
+- If a custom checkout is used, verify the promo code input exists and is easy to find.
+- If the promo code field is hidden, unclear, or only appears after clicking something, add clearer helper copy before redirecting to checkout.
+- If there is an upgrade page before checkout, add a small note:
+  “Have a promo code? You can enter it during web checkout.”
+- For the BABYCOMEBACK email CTA, link to the web upgrade/checkout path, not iOS.
+- If possible, include the promo code in the landing/checkout URL only if Stripe/web checkout safely supports it. Do not fake this if unsupported.
+- If promo code support is not confirmed, leave the BABYCOMEBACK email disabled and report the blocker.
+
+Activation rules:
+- Build all seven templates and eligibility functions.
+- Keep all new long-tail templates draft/disabled by default unless explicitly approved.
+- Do not immediately target all dormant users on publish.
+- Add launch gates or manual batch approval so existing dormant backlog cannot be blasted automatically.
+- Admin should be able to view eligible counts per dormant segment before enabling sends.
+- Admin should be able to test-send each template only to the current admin email.
+- Any real batch send to existing dormant users must require explicit typed confirmation.
+- Add daily cap controls, such as max 150 dormant win-back emails per day, in addition to 50/hour and the 14-day user cap.
+- Do not allow the admin run endpoint to bypass eligibility, caps, launch gates, once-per-user rules, or coupon checkout requirements.
+- The BABYCOMEBACK email must be disabled until web checkout promo code support is confirmed.
+
+Must not do:
+- Do not send any emails during this build.
+- Do not activate all dormant emails automatically.
+- Do not send to all dormant users on publish.
+- Do not re-enable generic monthly emails.
+- Do not re-enable legacy one-time campaigns.
+- Do not change password reset behavior.
+- Do not change transactional emails.
+- Do not change billing, subscriptions, Stripe, RevenueCat, Shippo, XP rules, card limits, PC Binders, Drive Sync, image approvals, card data, Android, or iOS.
+- Do not expose RESEND_API_KEY.
+- Do not expose Stripe secrets.
+- Do not hardcode secrets.
+- Do not create public/unprotected email endpoints.
+- Do not create a noisy email system.
+- Do not exceed one lifecycle/marketing email per user every 14 days.
+- Do not claim BABYCOMEBACK works in iOS.
+- Do not route BABYCOMEBACK users to iOS purchase.
+- Do not activate BABYCOMEBACK if promo code support cannot be confirmed in web checkout.
+
+Preserve:
+- Existing lifecycle email system.
+- Existing active emails:
+  - Welcome
+  - First-Card Nudge
+  - Empty Vault Follow-Up
+  - Collection Momentum Nudge
+- Existing 14-day frequency cap.
+- Existing once-per-user claim protection.
+- Existing production-only batch guard.
+- Existing admin preview/test tools.
+- Existing lifecycle intelligence dashboard.
+- Existing disabled monthly and legacy campaign state.
+- Existing unsubscribe/preference logic.
+- Existing transactional email behavior.
+- Existing Stripe/RevenueCat subscription logic.
+- Existing iOS IAP behavior.
+
+QA:
+- All new long-tail templates are created.
+- BABYCOMEBACK template is created as last-ditch win-back.
+- New templates are visible in admin lifecycle status.
+- New templates are draft/disabled unless explicitly activated.
+- Eligible counts show by dormant segment.
+- Admin preview works.
+- Admin test sends only to current admin email.
+- No emails are sent during build.
+- Existing dormant backlog is not emailed automatically.
+- Existing users cannot be blasted without explicit admin approval.
+- 14-day cap is respected.
+- 50/hour batch limit is respected.
+- Daily dormant cap is respected if implemented.
+- Once-per-user rule is enforced.
+- Unsubscribed users are excluded.
+- Monthly/legacy campaigns remain disabled.
+- Existing four active lifecycle emails still work.
+- Password reset still works.
+- No Brevo send occurs.
+- No API keys exposed.
+- Stripe/web checkout promo code support is confirmed.
+- Checkout clearly shows where to enter a promo code, or the blocker is reported.
+- BABYCOMEBACK is not available through iOS IAP.
+- BABYCOMEBACK email routes to web checkout only.
+- App builds/runs cleanly.
+
+Final response:
+- List changed files.
+- List all new long-tail templates.
+- Confirm which are active and which are draft/disabled.
+- Show eligible counts by dormant segment.
+- Explain how existing dormant users are protected from automatic blasts.
+- Explain how admin-controlled batch sending would work later.
+- Confirm BABYCOMEBACK web checkout promo code support status.
+- Confirm where users enter promo codes at checkout.
+- Confirm whether any checkout copy was improved.
+- Confirm BABYCOMEBACK is web-only and not iOS.
+- Confirm no emails were sent.
+- Confirm safe to publish.

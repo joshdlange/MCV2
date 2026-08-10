@@ -29,7 +29,7 @@
  */
 
 import { CronJob } from 'cron';
-import { db } from '../db';
+import { db, pool } from '../db';
 import { users, userCollections, userWishlists, pcBinders, pcBinderShareLinks, emailLogs, cards } from '../../shared/schema';
 import { and, eq, ne, sql } from 'drizzle-orm';
 import { sendResendEmail } from '../services/emailService';
@@ -65,10 +65,25 @@ function lifecycleTemplate(opts: {
   paragraphs: string[];
   ctaLabel: string;
   ctaUrl: string;
+  /** Optional promo/coupon code rendered in a highlighted box above the CTA. */
+  codeBlock?: { code: string; note: string };
+  /** Optional small-print line rendered directly under the CTA button. */
+  footnote?: string;
 }): { html: string; text: string } {
   const paragraphsHtml = opts.paragraphs
     .map(p => `<p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">${p}</p>`)
     .join('\n');
+  const codeBlockHtml = opts.codeBlock ? `
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"><tr><td style="padding:4px 0 8px;">
+            <div style="border:2px dashed ${BRAND_RED};border-radius:10px;background-color:${DARK_BG};padding:20px;text-align:center;">
+              <p style="margin:0 0 6px;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${TEXT_SECONDARY};">Your code</p>
+              <p style="margin:0;font-size:26px;font-weight:800;letter-spacing:4px;color:${TEXT_PRIMARY};font-family:'Courier New',Courier,monospace;">${opts.codeBlock.code}</p>
+              <p style="margin:10px 0 0;font-size:13px;line-height:1.5;color:${TEXT_SECONDARY};">${opts.codeBlock.note}</p>
+            </div>
+          </td></tr></table>` : '';
+  const footnoteHtml = opts.footnote
+    ? `<p style="margin:0;font-size:12px;line-height:1.5;color:${TEXT_SECONDARY};text-align:center;">${opts.footnote}</p>`
+    : '';
   const html = `
 <!DOCTYPE html>
 <html lang="en">
@@ -83,10 +98,11 @@ function lifecycleTemplate(opts: {
         </td></tr>
         <tr><td style="padding:20px 40px 40px;">
           <h1 style="margin:0 0 20px;font-size:28px;font-weight:700;color:${TEXT_PRIMARY};line-height:1.2;">${opts.heading}</h1>
-          ${paragraphsHtml}
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"><tr><td style="text-align:center;padding:20px 0;">
+          ${paragraphsHtml}${codeBlockHtml}
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"><tr><td style="text-align:center;padding:20px 0 10px;">
             <a href="${opts.ctaUrl}" style="display:inline-block;padding:16px 32px;background-color:${BRAND_RED};color:white;text-decoration:none;border-radius:8px;font-weight:600;font-size:16px;">${opts.ctaLabel}</a>
           </td></tr></table>
+          ${footnoteHtml}
         </td></tr>
         <tr><td style="padding:30px 40px;background-color:${DARK_BG};border-top:1px solid #334155;text-align:center;">
           <p style="margin:0 0 10px;font-size:14px;color:${TEXT_SECONDARY};"><strong style="color:${BRAND_RED};">Marvel Card Vault</strong></p>
@@ -107,8 +123,10 @@ function lifecycleTemplate(opts: {
     opts.heading,
     '',
     ...opts.paragraphs.map(p => p.replace(/<[^>]+>/g, '')),
+    ...(opts.codeBlock ? ['', `Your code: ${opts.codeBlock.code}`, opts.codeBlock.note] : []),
     '',
     `${opts.ctaLabel}: ${opts.ctaUrl}`,
+    ...(opts.footnote ? [opts.footnote] : []),
     '',
     'Marvel Card Vault is not affiliated with Marvel, Disney, Upper Deck, Topps, or any card manufacturer.',
     'Unsubscribe: {{UNSUBSCRIBE_URL}}',
@@ -471,6 +489,182 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     eligibleCount: async () => 0, // event-triggered on approval
     eligibilityNote: 'Event-triggered on image approval. A transactional approval email already exists — replace it, do not double-send.',
   },
+
+  // ------------- LONG-TAIL DORMANT / WIN-BACK (all DRAFT, admin-run only) ---
+  // These target the EXISTING dormant backlog by design, so they are never
+  // cron-run. Sending requires: def flipped active + admin endpoint with typed
+  // confirmation + 150/day dormant cap + 50/batch + 14-day cap + once-per-user.
+  {
+    key: 'dormant-empty-vault',
+    jobName: 'lifecycle-dormant-empty-vault',
+    stage: 'Retention',
+    active: false,
+    subject: 'Still collecting? Your vault is ready',
+    preheader: 'Add one card and bring your Marvel Card Vault to life.',
+    ctaLabel: 'Add Your First Card',
+    ctaUrl: `${APP_URL}/browse`,
+    render: () => lifecycleTemplate({
+      preheader: 'Add one card and bring your Marvel Card Vault to life.',
+      heading: 'Still collecting? Your vault is ready',
+      paragraphs: [
+        'Hey collector,',
+        'Your vault is still here, but it looks like it never got its first card.',
+        'Start small. Add one card, begin tracking your collection, and start earning Collector XP as you build.',
+        'No need to organize everything today. Just add one card and get moving.',
+      ],
+      ctaLabel: 'Add Your First Card',
+      ctaUrl: `${APP_URL}/browse`,
+    }),
+    eligibleCount: async () => countUsers(DORMANT_EMPTY_VAULT_WHERE()),
+    eligibilityNote: 'Onboarded, zero cards, inactive 30+ days, opted in, not already sent, under 14-day cap. Targets existing backlog — admin-run only, typed confirmation required.',
+  },
+  {
+    key: 'dormant-started',
+    jobName: 'lifecycle-dormant-started',
+    stage: 'Retention',
+    active: false,
+    subject: 'Pick up where you left off',
+    preheader: 'Your vault is started. Keep building from there.',
+    ctaLabel: 'Add More Cards',
+    ctaUrl: `${APP_URL}/browse`,
+    render: () => lifecycleTemplate({
+      preheader: 'Your vault is started. Keep building from there.',
+      heading: 'Pick up where you left off',
+      paragraphs: [
+        'Hey collector,',
+        'You already started your vault. Now it is time to keep it moving.',
+        'Add a few more cards, build your progress, and make your collection easier to track every time you come back.',
+        'Your next card is a good place to restart.',
+      ],
+      ctaLabel: 'Add More Cards',
+      ctaUrl: `${APP_URL}/browse`,
+    }),
+    eligibleCount: async () => countUsers(DORMANT_STARTED_WHERE()),
+    eligibilityNote: '1-9 cards, inactive 30+ days, opted in, not already sent, under 14-day cap. Admin-run only, typed confirmation required.',
+  },
+  {
+    key: 'dormant-engaged',
+    jobName: 'lifecycle-dormant-engaged',
+    stage: 'Retention',
+    active: false,
+    subject: 'Your vault has been waiting',
+    preheader: 'New progress, images, and collector tools are ready when you are.',
+    ctaLabel: 'Return to Your Vault',
+    ctaUrl: APP_URL,
+    render: () => lifecycleTemplate({
+      preheader: 'New progress, images, and collector tools are ready when you are.',
+      heading: 'Your vault has been waiting',
+      paragraphs: [
+        'Hey collector,',
+        'Your Marvel Card Vault has been quiet for a bit.',
+        'Come back in and keep building your collection. You can add cards, organize favorites, build PC Binders, check your progress, and keep leveling up with Collector XP.',
+        'Your vault is ready when you are.',
+      ],
+      ctaLabel: 'Return to Your Vault',
+      ctaUrl: APP_URL,
+    }),
+    eligibleCount: async () => countUsers(DORMANT_ENGAGED_WHERE()),
+    eligibilityNote: '10+ cards, inactive 30+ days, opted in, not already sent, under 14-day cap. Admin-run only, typed confirmation required.',
+  },
+  {
+    key: 'dormant-upgrade',
+    jobName: 'lifecycle-dormant-upgrade',
+    stage: 'Upgrade',
+    active: false,
+    subject: 'Build more than a checklist',
+    preheader: 'PC Binders, unlimited cards, Market Trends, and more are waiting in Super Hero.',
+    ctaLabel: 'Explore Super Hero',
+    ctaUrl: `${APP_URL}/subscribe`,
+    render: () => lifecycleTemplate({
+      preheader: 'PC Binders, unlimited cards, Market Trends, and more are waiting in Super Hero.',
+      heading: 'Build more than a checklist',
+      paragraphs: [
+        'Hey collector,',
+        'You have already started building your vault. Super Hero gives you more room and more ways to organize the cards that matter most.',
+        'Unlock unlimited cards, custom PC Binders, Market Trends, Scan to Add, and more tools built for serious collectors.',
+      ],
+      ctaLabel: 'Explore Super Hero',
+      ctaUrl: `${APP_URL}/subscribe`,
+    }),
+    eligibleCount: async () => countUsers(DORMANT_UPGRADE_WHERE()),
+    eligibilityNote: 'Free/Side Kick, 10+ cards (high intent), inactive 30+ days, opted in, not already sent, under 14-day cap. Admin-run only, typed confirmation required. Overlaps dormant-engaged: the 14-day cap + once-per-user rule sequence them; activate one at a time.',
+  },
+  {
+    key: 'dormant-missing-image',
+    jobName: 'lifecycle-dormant-missing-image',
+    stage: 'Contribution',
+    active: false,
+    subject: 'Help complete the vault',
+    preheader: 'Some cards still need images. Upload one and earn XP after approval.',
+    ctaLabel: 'Upload an Image',
+    ctaUrl: `${APP_URL}/my-collection`,
+    render: () => lifecycleTemplate({
+      preheader: 'Some cards still need images. Upload one and earn XP after approval.',
+      heading: 'Help complete the vault',
+      paragraphs: [
+        'Hey collector,',
+        'Some cards in the vault still need images, and collectors like you can help complete them.',
+        'Upload a missing card image, help improve the vault for everyone, and earn Collector XP once it is approved.',
+      ],
+      ctaLabel: 'Upload an Image',
+      ctaUrl: `${APP_URL}/my-collection`,
+    }),
+    eligibleCount: async () => countUsers(DORMANT_MISSING_IMAGE_WHERE()),
+    eligibilityNote: 'Owns cards missing a front image, inactive 30+ days, opted in, not already sent, under 14-day cap. Admin-run only, typed confirmation required.',
+  },
+  {
+    key: 'winback-90',
+    jobName: 'lifecycle-winback-90',
+    stage: 'Retention',
+    active: false,
+    subject: 'A lot has changed in the vault',
+    preheader: 'New cards, images, and collector tools have been added since you last visited.',
+    ctaLabel: 'See What Is New',
+    ctaUrl: APP_URL,
+    render: () => lifecycleTemplate({
+      preheader: 'New cards, images, and collector tools have been added since you last visited.',
+      heading: 'A lot has changed in the vault',
+      paragraphs: [
+        'Hey collector,',
+        'A lot has changed since your last visit.',
+        'Marvel Card Vault has added more ways to build, organize, and complete your collection, including better card images, custom PC Binders, Collector XP, and more tools to help your vault feel like yours.',
+        'Come back and see what is new.',
+      ],
+      ctaLabel: 'See What Is New',
+      ctaUrl: APP_URL,
+    }),
+    eligibleCount: async () => countUsers(WINBACK_90_WHERE()),
+    eligibilityNote: 'Inactive 90+ days, opted in, not already sent, under 14-day cap. Only activate when there is REAL new product progress to show (new sets/images/features) — update copy per activation. Admin-run only, typed confirmation required.',
+  },
+  {
+    key: 'babycomeback',
+    jobName: 'lifecycle-babycomeback',
+    stage: 'Upgrade',
+    active: false,
+    subject: 'Come back free for 2 months',
+    preheader: 'Use code BABYCOMEBACK through web checkout and unlock Super Hero.',
+    ctaLabel: 'Redeem on Web',
+    ctaUrl: `${APP_URL}/subscribe`,
+    render: () => lifecycleTemplate({
+      preheader: 'Use code BABYCOMEBACK through web checkout and unlock Super Hero.',
+      heading: 'Come back free for 2 months',
+      paragraphs: [
+        'Hey collector,',
+        'Still building your Marvel card collection?',
+        'Your vault is still here, and we would love to have you back.',
+        'For a limited time, you can unlock Super Hero free for 2 months with this code:',
+      ],
+      codeBlock: {
+        code: 'BABYCOMEBACK',
+        note: 'Enter this code in the Promo Code field on the web checkout page to get 2 months of Super Hero free.',
+      },
+      footnote: 'Promo code must be redeemed through web checkout. It is not available through iOS in-app purchase.',
+      ctaLabel: 'Redeem on Web',
+      ctaUrl: `${APP_URL}/subscribe`,
+    }),
+    eligibleCount: async () => countUsers(BABYCOMEBACK_WHERE()),
+    eligibilityNote: 'LAST-DITCH: Free/Side Kick, inactive 180+ days (or 120+ days AND already got a prior dormant/win-back email), opted in, never sent, under 14-day cap. Web/Stripe checkout only — promo code BABYCOMEBACK confirmed active in Stripe ($5 off x 2 months = 2 months free) with allow_promotion_codes enabled. Admin-run only, typed confirmation required.',
+  },
 ];
 
 function notAlreadySent(jobName: string) {
@@ -516,11 +710,93 @@ function COLLECTION_MOMENTUM_WHERE() {
   );
 }
 
-/** Batch-runnable journeys (key -> eligibility WHERE). Welcome is event-only. */
+// ---------------------------------------------------------------------------
+// Long-tail dormant / win-back eligibility (all DRAFT — admin-run only)
+// ---------------------------------------------------------------------------
+
+// Inactivity = login inactivity (users.last_login), same measure as the
+// original reactivation draft. Users with no last_login recorded are excluded.
+const INACTIVE_30 = sql`${users.lastLogin} IS NOT NULL AND ${users.lastLogin} <= now() - interval '30 days'`;
+const INACTIVE_90 = sql`${users.lastLogin} IS NOT NULL AND ${users.lastLogin} <= now() - interval '90 days'`;
+const INACTIVE_120 = sql`${users.lastLogin} IS NOT NULL AND ${users.lastLogin} <= now() - interval '120 days'`;
+const INACTIVE_180 = sql`${users.lastLogin} IS NOT NULL AND ${users.lastLogin} <= now() - interval '180 days'`;
+const ONE_TO_NINE_CARDS = sql`(SELECT count(*) FROM user_collections uc WHERE uc.user_id = ${users.id}) BETWEEN 1 AND 9`;
+const TEN_PLUS_CARDS = sql`(SELECT count(*) FROM user_collections uc WHERE uc.user_id = ${users.id}) >= 10`;
+const NOT_SUPER_HERO = sql`${users.plan} <> 'SUPER_HERO'`;
+const OWNS_CARD_MISSING_IMAGE = sql`EXISTS (
+  SELECT 1 FROM user_collections uc
+  JOIN cards c ON c.id = uc.card_id
+  WHERE uc.user_id = ${users.id} AND (c.front_image_url IS NULL OR c.front_image_url = '')
+)`;
+
+function DORMANT_EMPTY_VAULT_WHERE() {
+  return and(optedIn(), eq(users.onboardingComplete, true), ZERO_CARDS, INACTIVE_30,
+    notAlreadySent('lifecycle-dormant-empty-vault'), UNDER_CAP);
+}
+function DORMANT_STARTED_WHERE() {
+  return and(optedIn(), ONE_TO_NINE_CARDS, INACTIVE_30,
+    notAlreadySent('lifecycle-dormant-started'), UNDER_CAP);
+}
+function DORMANT_ENGAGED_WHERE() {
+  return and(optedIn(), TEN_PLUS_CARDS, INACTIVE_30,
+    notAlreadySent('lifecycle-dormant-engaged'), UNDER_CAP);
+}
+function DORMANT_UPGRADE_WHERE() {
+  return and(optedIn(), NOT_SUPER_HERO, TEN_PLUS_CARDS, INACTIVE_30,
+    notAlreadySent('lifecycle-dormant-upgrade'), UNDER_CAP);
+}
+function DORMANT_MISSING_IMAGE_WHERE() {
+  return and(optedIn(), OWNS_CARD_MISSING_IMAGE, INACTIVE_30,
+    notAlreadySent('lifecycle-dormant-missing-image'), UNDER_CAP);
+}
+function WINBACK_90_WHERE() {
+  return and(optedIn(), INACTIVE_90,
+    notAlreadySent('lifecycle-winback-90'), UNDER_CAP);
+}
+/** Prior dormant/win-back email received (successfully). */
+const HAD_PRIOR_WINBACK = sql`EXISTS (
+  SELECT 1 FROM email_logs el
+  WHERE lower(trim(el.email)) = lower(trim(${users.email}))
+    AND el.job_name IN ('lifecycle-dormant-empty-vault','lifecycle-dormant-started','lifecycle-dormant-engaged','lifecycle-dormant-upgrade','lifecycle-dormant-missing-image','lifecycle-winback-90','lifecycle-reactivation')
+    AND (el.status IS NULL OR el.status <> 'failed')
+)`;
+function BABYCOMEBACK_WHERE() {
+  return and(
+    optedIn(),
+    NOT_SUPER_HERO,
+    // Last-ditch: very dormant (180d), OR quite dormant (120d) and already
+    // worked through at least one earlier win-back email.
+    sql`(( ${INACTIVE_180} ) OR (( ${INACTIVE_120} ) AND ${HAD_PRIOR_WINBACK}))`,
+    notAlreadySent('lifecycle-babycomeback'),
+    UNDER_CAP,
+  );
+}
+
+/**
+ * CRON-runnable journeys (key -> eligibility WHERE). Welcome is event-only.
+ * Long-tail dormant journeys are deliberately NOT here — they target the
+ * existing backlog and may only run via the admin endpoint.
+ */
 const BATCH_JOURNEYS: Record<string, () => ReturnType<typeof and>> = {
   'empty-vault': EMPTY_VAULT_WHERE,
   'collection-momentum': COLLECTION_MOMENTUM_WHERE,
 };
+
+/** Admin-run-only long-tail journeys. Typed confirmation + 150/day cap. */
+const LONGTAIL_JOURNEYS: Record<string, () => ReturnType<typeof and>> = {
+  'dormant-empty-vault': DORMANT_EMPTY_VAULT_WHERE,
+  'dormant-started': DORMANT_STARTED_WHERE,
+  'dormant-engaged': DORMANT_ENGAGED_WHERE,
+  'dormant-upgrade': DORMANT_UPGRADE_WHERE,
+  'dormant-missing-image': DORMANT_MISSING_IMAGE_WHERE,
+  'winback-90': WINBACK_90_WHERE,
+  'babycomeback': BABYCOMEBACK_WHERE,
+};
+export const LONGTAIL_JOURNEY_KEYS = Object.keys(LONGTAIL_JOURNEYS);
+const LONGTAIL_JOB_NAMES = LONGTAIL_JOURNEY_KEYS.map(k => `lifecycle-${k}`);
+export const DORMANT_DAILY_CAP = 150;
+/** Advisory lock key serializing all long-tail win-back runs globally. */
+const LONGTAIL_ADVISORY_LOCK_KEY = 913151;
 
 const journeyRunning: Record<string, boolean> = {};
 const journeyLastRun: Record<string, { at: Date; sent: number; failed: number; eligible: number }> = {};
@@ -532,7 +808,8 @@ const journeyLastRun: Record<string, { at: Date; sent: number; failed: number; e
  */
 export async function runLifecycleJourneyNow(
   key: string,
-  limit: number = NUDGE_BATCH_LIMIT
+  limit: number = NUDGE_BATCH_LIMIT,
+  opts?: { confirmedByAdmin?: boolean }
 ): Promise<{ sent: number; failed: number; eligible: number; skipped?: boolean; error?: string }> {
   // HARD GUARD: batch sends only ever run in the production deployment.
   // Dev/workspace can preview, test (admin-only), and see eligible counts,
@@ -541,12 +818,46 @@ export async function runLifecycleJourneyNow(
     return { sent: 0, failed: 0, eligible: 0, skipped: true, error: 'Batch lifecycle sends only run in the production deployment' };
   }
   const def = getLifecycleEmail(key);
-  const whereFn = BATCH_JOURNEYS[key];
+  const isLongTail = key in LONGTAIL_JOURNEYS;
+  const whereFn = BATCH_JOURNEYS[key] || LONGTAIL_JOURNEYS[key];
   if (!def || !whereFn) return { sent: 0, failed: 0, eligible: 0, skipped: true, error: `Not a batch journey: ${key}` };
   if (!def.active) return { sent: 0, failed: 0, eligible: 0, skipped: true, error: `${key} is not active` };
+  // Long-tail dormant/win-back journeys target the existing backlog. They are
+  // never cron-run and each batch requires explicit typed admin confirmation.
+  if (isLongTail && !opts?.confirmedByAdmin) {
+    return { sent: 0, failed: 0, eligible: 0, skipped: true, error: `${key} is a dormant win-back journey — it only runs via the admin endpoint with typed confirmation` };
+  }
   if (journeyRunning[key]) return { sent: 0, failed: 0, eligible: 0, skipped: true };
   journeyRunning[key] = true;
+  // Long-tail runs are serialized GLOBALLY (across all keys AND all server
+  // instances) via a session-level Postgres advisory lock held for the whole
+  // run. This makes the 150/24h dormant cap concurrency-safe: the cap count
+  // happens inside the lock, and claim rows get sent_at=now() immediately, so
+  // no two overlapping runs can both see remaining capacity.
+  let lockClient: import('pg').PoolClient | null = null;
   try {
+    if (isLongTail) {
+      lockClient = await pool.connect();
+      const lockRes = await lockClient.query('SELECT pg_try_advisory_lock($1) AS ok', [LONGTAIL_ADVISORY_LOCK_KEY]);
+      if (!lockRes.rows[0]?.ok) {
+        return { sent: 0, failed: 0, eligible: 0, skipped: true, error: 'Another dormant win-back run is already in progress — try again shortly.' };
+      }
+      // Daily dormant cap: max DORMANT_DAILY_CAP win-back emails per rolling
+      // 24h across ALL long-tail journeys combined (in addition to 50/batch
+      // and the per-user 14-day cap). Counted while holding the global lock.
+      const capRes: any = await db.execute(sql`
+        SELECT count(*)::int AS c FROM email_logs
+        WHERE job_name IN (${sql.join(LONGTAIL_JOB_NAMES.map(n => sql`${n}`), sql`, `)})
+          AND sent_at > now() - interval '24 hours'
+          AND (status IS NULL OR status <> 'failed')
+      `);
+      const used = Number((capRes.rows ?? capRes)[0]?.c || 0);
+      const remaining = DORMANT_DAILY_CAP - used;
+      if (remaining <= 0) {
+        return { sent: 0, failed: 0, eligible: 0, skipped: true, error: `Daily dormant win-back cap reached (${DORMANT_DAILY_CAP}/24h). Try again tomorrow.` };
+      }
+      limit = Math.min(limit, remaining);
+    }
     const batch = await db
       .select({ id: users.id, email: users.email, displayName: users.displayName })
       .from(users)
@@ -568,6 +879,10 @@ export async function runLifecycleJourneyNow(
     journeyLastRun[key] = { at: new Date(), sent, failed, eligible: batch.length };
     return { sent, failed, eligible: batch.length };
   } finally {
+    if (lockClient) {
+      await lockClient.query('SELECT pg_advisory_unlock($1)', [LONGTAIL_ADVISORY_LOCK_KEY]).catch(() => {});
+      lockClient.release();
+    }
     journeyRunning[key] = false;
   }
 }

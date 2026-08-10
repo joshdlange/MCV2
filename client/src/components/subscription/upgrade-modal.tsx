@@ -524,6 +524,13 @@ export function UpgradeModal({ isOpen, onClose, currentPlan, trigger, title, des
               <Lock className="w-3 h-3" />
               <span>Your existing cards are safe. Upgrade anytime to keep adding.</span>
             </div>
+
+            {/* Promo codes are redeemable in Stripe web checkout only — never shown on iOS IAP paths */}
+            {!onIOS && (
+              <p className="text-center text-xs text-gray-500 mt-1">
+                Have a promo code? You can enter it during web checkout.
+              </p>
+            )}
           </div>
 
           {/* Restore Purchases — RevenueCat only */}

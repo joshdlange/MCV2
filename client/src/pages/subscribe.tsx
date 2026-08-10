@@ -124,6 +124,9 @@ export default function Subscribe() {
           <p className="text-gray-300">
             {authLoading ? "Signing you in..." : "Redirecting to checkout..."}
           </p>
+          <p className="text-xs text-gray-500">
+            Have a promo code? You can enter it on the checkout page.
+          </p>
         </CardContent>
       </Card>
     </div>
