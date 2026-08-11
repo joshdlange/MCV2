@@ -295,7 +295,8 @@ export default function CollectorProfile() {
 
   const { user, stats, xp, isOwnProfile, canViewWishlist, friendStatus, approvedContributions } = profile;
   const isSuperHero = user.plan === "SUPER_HERO";
-  const displayName = user.displayName || user.username;
+  // Usernames only on public-facing pages — never real names.
+  const displayName = user.username || user.displayName;
   const wishlistCards = wishlistData?.cards ?? [];
   const wishlistPrivate = wishlistData?.private ?? false;
   const tradeCards = tradeBlockData?.cards ?? [];

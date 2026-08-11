@@ -232,6 +232,46 @@ export async function getFeedPage(opts: {
   const userIds = Array.from(new Set(rows.map(r => r.userId)));
   const levels = await computeLevelsForUsers(userIds);
 
+  // Visual enrichment (read time, so backfilled events get images too).
+  // Only public-safe imagery: badge icons, card fronts from the shared card DB.
+  const imageByEvent: Record<number, string | null> = {};
+  const badgeIds = Array.from(new Set(rows.filter(r => r.relatedType === 'badge' && r.relatedId).map(r => r.relatedId as number)));
+  const cardIds = Array.from(new Set(rows.filter(r => r.relatedType === 'card' && r.relatedId).map(r => r.relatedId as number)));
+  const firstCardUserIds = Array.from(new Set(rows.filter(r => r.eventType === 'first_card').map(r => r.userId)));
+
+  const [badgeIcons, cardImages, firstCards] = await Promise.all([
+    badgeIds.length > 0
+      ? db.execute(sql`SELECT id, icon_url FROM badges WHERE id IN (${sql.join(badgeIds.map(id => sql`${id}`), sql`, `)})`)
+      : Promise.resolve({ rows: [] } as any),
+    cardIds.length > 0
+      ? db.execute(sql`SELECT id, front_image_url FROM cards WHERE id IN (${sql.join(cardIds.map(id => sql`${id}`), sql`, `)})`)
+      : Promise.resolve({ rows: [] } as any),
+    firstCardUserIds.length > 0
+      ? db.execute(sql`
+          SELECT DISTINCT ON (uc.user_id) uc.user_id, c.front_image_url
+          FROM user_collections uc
+          JOIN cards c ON c.id = uc.card_id
+          JOIN users u ON u.id = uc.user_id
+          WHERE uc.user_id IN (${sql.join(firstCardUserIds.map(id => sql`${id}`), sql`, `)})
+            AND u.show_collection = true
+            AND c.front_image_url IS NOT NULL AND c.front_image_url != ''
+          ORDER BY uc.user_id, uc.acquired_date ASC NULLS LAST, uc.id ASC`)
+      : Promise.resolve({ rows: [] } as any),
+  ]);
+  const badgeIconById: Record<number, string | null> = {};
+  for (const b of (badgeIcons as any).rows ?? []) badgeIconById[Number(b.id)] = b.icon_url || null;
+  const cardImageById: Record<number, string | null> = {};
+  for (const c of (cardImages as any).rows ?? []) cardImageById[Number(c.id)] = c.front_image_url || null;
+  const firstCardByUser: Record<number, string | null> = {};
+  for (const f of (firstCards as any).rows ?? []) firstCardByUser[Number(f.user_id)] = f.front_image_url || null;
+
+  for (const r of rows) {
+    if (r.relatedType === 'badge' && r.relatedId) imageByEvent[r.id] = badgeIconById[r.relatedId] ?? null;
+    else if (r.relatedType === 'card' && r.relatedId) imageByEvent[r.id] = cardImageById[r.relatedId] ?? null;
+    else if (r.eventType === 'first_card') imageByEvent[r.id] = firstCardByUser[r.userId] ?? null;
+    else imageByEvent[r.id] = null;
+  }
+
   return rows.map(r => ({
     id: r.id,
     eventType: r.eventType,
@@ -239,6 +279,7 @@ export async function getFeedPage(opts: {
     metadata: r.metadata ? safeParse(r.metadata) : null,
     relatedType: r.relatedType,
     relatedId: r.relatedId,
+    image: imageByEvent[r.id] ?? null,
     createdAt: r.createdAt,
     user: {
       id: r.userId,

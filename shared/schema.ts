@@ -57,7 +57,7 @@ export const users = pgTable("users", {
   collectorAvatarKey: text("collector_avatar_key"),
   collectorFocus: text("collector_focus"),
   allowFollowers: boolean("allow_followers").default(false).notNull(),
-  showActivityInFeed: boolean("show_activity_in_feed").default(false).notNull(),
+  showActivityInFeed: boolean("show_activity_in_feed").default(true).notNull(),
   profileCustomizationCompletedAt: timestamp("profile_customization_completed_at"),
   profileCustomizationDismissedAt: timestamp("profile_customization_dismissed_at"),
   profileCustomizationSkips: integer("profile_customization_skips").notNull().default(0),

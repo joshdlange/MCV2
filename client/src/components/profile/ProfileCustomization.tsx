@@ -29,7 +29,6 @@ export function ProfileCustomization() {
   });
 
   const [avatarKey, setAvatarKey] = useState<string | null>(null);
-  const [displayName, setDisplayName] = useState<string | null>(null);
   const [tagline, setTagline] = useState<string | null>(null);
   const [focus, setFocus] = useState<string | null>(null);
   const [profilePublic, setProfilePublic] = useState<boolean | null>(null);
@@ -50,7 +49,6 @@ export function ProfileCustomization() {
 
   // Effective values: local edits win over saved profile values
   const vAvatar = avatarKey ?? profile.collectorAvatarKey ?? null;
-  const vName = displayName ?? profile.displayName ?? "";
   const vTagline = tagline ?? profile.bio ?? "";
   const vFocus = focus ?? profile.collectorFocus ?? "";
   // Toggles default ON in this step (per Joshua); saving writes the shown values.
@@ -78,7 +76,6 @@ export function ProfileCustomization() {
     try {
       await apiRequest("PATCH", "/api/user/profile", {
         collectorAvatarKey: vAvatar,
-        displayName: vName || undefined,
         bio: vTagline,
         collectorFocus: vFocus,
         allowFollowers: vFollowers,
@@ -135,13 +132,6 @@ export function ProfileCustomization() {
                 </button>
               ))}
             </div>
-          </div>
-
-          <div>
-            <Label htmlFor="pc-name" className="text-zinc-200">Display name</Label>
-            <Input id="pc-name" value={vName} maxLength={50} onChange={(e) => setDisplayName(e.target.value)}
-              className="mt-1 bg-zinc-900 border-zinc-700 text-zinc-100" placeholder="Your collector name" />
-            <p className="text-xs text-zinc-500 mt-1">This is how other collectors may see you if your profile is public.</p>
           </div>
 
           <div>

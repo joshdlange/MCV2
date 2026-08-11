@@ -1,0 +1,227 @@
+Upgrade Marvel Card Vault Feed v1 UI from a plain activity list into a visually rich collector feed.
+
+Context:
+The Feed is now built with Activity, Leaderboards, Trade Feed, reactions, XP, and retroactive/backfilled activity. However, the current Activity feed looks too much like a plain table/list. It needs to feel more like a polished social collector feed.
+
+Current issue:
+- Feed cards are plain white rectangles with text only.
+- Many events repeat as text-only badge events.
+- The word “Feed” appears white on a white/light background, making it hard to read.
+- Activity items should be more visually appealing and should show relevant imagery where available:
+  - badge image/icon for badge events
+  - card image for card-related events
+  - set/subset image or representative card image for set completion events
+  - PC Binder cover/preview image for binder events
+  - avatar and collector identity
+- The feed should feel like a collector/social product, not an admin table.
+
+Goal:
+Redesign the Feed UI to be visually richer, more card-like, mobile-friendly, and aligned with the MCV dark comic/premium style.
+
+Must do:
+- Fix the Feed page title contrast issue immediately.
+  - The word “Feed” must be readable on the current background.
+  - Do not use white text on a white/light background.
+- Redesign feed event cards to feel like social cards, not table rows.
+- Use a stronger visual layout for each feed item:
+  - user avatar
+  - display name
+  - collector level
+  - timestamp
+  - event type badge/icon
+  - visual preview/image when available
+  - event title/body
+  - reaction row
+  - CTA/link when relevant
+- Add visual previews by event type where possible.
+
+Visual preview rules:
+- Badge earned event:
+  - show the badge icon/image prominently if available.
+  - if no badge image exists, show a styled badge emblem/card instead of only text.
+- Card milestone event:
+  - show a small card stack/card preview visual.
+  - if related card image exists, show the card image.
+- First card added:
+  - show the card image if available.
+  - otherwise show a styled card placeholder.
+- PC Binder created:
+  - show binder cover/preview image if available.
+  - otherwise show a styled binder preview card with the binder name.
+- Set/subset completed:
+  - show representative set/subset image if available.
+  - if unavailable, show a styled completion card with set/subset name and progress/completed treatment.
+- Image approved:
+  - show the approved card image if available.
+- Comeback badge:
+  - show comeback badge/icon treatment if available.
+- Shared binder:
+  - show binder preview and clear CTA to view binder if public/shared.
+
+Design direction:
+- Use MCV dark premium collector styling.
+- Feed cards should have more personality:
+  - dark or charcoal card backgrounds, or white cards with strong red/black visual headers
+  - subtle red glow or border accents
+  - comic-inspired badge/event chips
+  - halftone or diagonal energy accents where lightweight
+  - clear hierarchy and spacing
+- Keep the design readable and not too busy.
+- Feed should feel like:
+  “Collectors are building, leveling up, completing sets, and showing off their vaults.”
+- Keep the app mobile-first.
+
+Suggested feed card structure:
+- Top row:
+  - avatar
+  - display name
+  - level pill
+  - timestamp
+- Main content:
+  - visual preview on left/top depending screen size
+  - event title
+  - event detail text
+  - related entity name
+- Footer:
+  - reactions with counts
+  - CTA link/button if relevant
+
+Suggested example:
+Badge event:
+- Visual: large badge emblem
+- Text: “Joshua Lange earned the Binder Builder badge”
+- CTA: “View Profile”
+
+PC Binder event:
+- Visual: binder preview
+- Text: “Joshua created a new PC Binder: Wolverine Favorites”
+- CTA: “View Binder”
+
+Set completion event:
+- Visual: set completion card
+- Text: “Joshua completed 2024 Upper Deck Women of Marvel: Base Set”
+- CTA: “View Set”
+
+Reaction styling:
+- Current reaction buttons are okay functionally but should be styled to fit the feed.
+- Keep positive reactions only:
+  - 🔥 Fire Pull
+  - ⚡ Hero Move
+  - 👀 Need This
+  - 🏆 Vault Worthy
+- Show counts when present.
+- Selected reaction should look active.
+- Do not add comments.
+
+Feed title/header:
+- Fix the current white-on-white “Feed” title issue.
+- Use a readable dark title or place the title inside a styled dark header panel.
+- Consider a short header card:
+  - “Feed”
+  - “Milestones, leaderboards, and community activity from the Vault.”
+  - subtle activity pulse/icon
+- Ensure contrast is accessible.
+
+Leaderboards:
+- Keep Leaderboards tab.
+- If leaderboard UI is also plain, improve it visually:
+  - avatar
+  - rank
+  - display name
+  - level
+  - weekly XP
+  - compact card rows
+- Do not make all-time XP the primary leaderboard.
+- Weekly XP should remain primary.
+
+Trade Feed:
+- Keep Trade Feed as Coming Soon only.
+- Make it visually polished:
+  - dark card
+  - Super Hero callout
+  - “Trade Feed is coming soon”
+  - no trade functionality yet.
+
+Retroactive/backfill:
+- Confirm feed backfill exists and can populate meaningful events.
+- Do not run real backfill unless explicitly approved.
+- If the current feed is overpopulated with repetitive badge-only events from one user, add grouping or variety controls:
+  - collapse multiple badge events from the same user/day into one card where practical
+  - or limit repeated same-user/same-event-type items in the default feed view
+  - preserve full event history in the backend
+- The feed should not look like five identical badge rows in a row if richer event types exist.
+
+Noise control:
+- Avoid showing too many near-identical events back-to-back.
+- Consider grouping:
+  “Joshua earned 5 badges”
+  with expandable details.
+- Or show mixed event types when available.
+- Do not remove events from data, just improve presentation.
+
+Privacy:
+- Continue respecting public profile and show_activity_in_feed settings.
+- Do not show private users publicly.
+- Do not show private binders.
+- Do not expose private collections, email, real name, address, billing, or admin data.
+- Feed visual previews must only link to safe/public destinations.
+
+Must not do:
+- Do not build freeform posts.
+- Do not build comments.
+- Do not build Trade Block.
+- Do not build trade proposals, counters, shipping, messaging, or disputes.
+- Do not change feed XP rules unless needed to fix a bug.
+- Do not change lifecycle emails.
+- Do not send emails or notifications.
+- Do not change subscriptions, Stripe, RevenueCat, Shippo, Drive Sync, Data Quality, Upcoming Set Intelligence, image approval, card data, Android, or iOS.
+- Do not expose private data.
+- Do not use official Marvel character art, official Marvel logos, or copyrighted assets in new UI.
+
+Preserve:
+- Existing Feed functionality.
+- Existing Feed tabs:
+  - Activity
+  - Leaderboards
+  - Trade Feed
+- Existing reaction functionality and XP caps.
+- Existing feed event backend.
+- Existing privacy rules.
+- Existing avatar system.
+- Existing profile customization.
+- Existing leaderboard calculations.
+- Existing Trade Feed coming-soon status.
+
+QA:
+- Feed title is readable and no longer white-on-white.
+- Feed page loads on desktop.
+- Feed page loads on mobile.
+- Feed cards look visually richer and no longer table-like.
+- Badge events show badge visual treatment.
+- Card-related events show card image/placeholder where available.
+- Binder events show binder preview treatment where available.
+- Set completion events show set/completion visual treatment.
+- Reactions still work.
+- Reaction XP rules still work.
+- Leaderboards still load.
+- Trade Feed remains Coming Soon only.
+- Private users/feed-hidden users are not shown publicly.
+- Private binders/collections are not exposed.
+- Repetitive events are visually handled better.
+- No real backfill is run unless explicitly approved.
+- No emails or notifications are sent.
+- No unrelated systems changed.
+- App builds/runs cleanly.
+
+Final response:
+- List changed files.
+- Explain the new Feed visual design.
+- Confirm the Feed title contrast bug is fixed.
+- Explain which event types now show images/previews.
+- Explain how repetitive badge/event rows are handled.
+- Confirm reactions and XP still work.
+- Confirm Leaderboards still work.
+- Confirm Trade Feed is still Coming Soon only.
+- Confirm no private data is exposed.
+- Confirm no emails or notifications were sent.
+- Confirm safe to publish.

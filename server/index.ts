@@ -77,7 +77,20 @@ app.use((req, res, next) => {
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS collector_avatar_key text`);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS collector_focus text`);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS allow_followers boolean NOT NULL DEFAULT false`);
-    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS show_activity_in_feed boolean NOT NULL DEFAULT false`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS show_activity_in_feed boolean NOT NULL DEFAULT true`);
+    // Feed is opt-OUT: activity is visible by default unless the user unticks it.
+    await db.execute(sql`ALTER TABLE users ALTER COLUMN show_activity_in_feed SET DEFAULT true`);
+    // One-time flip of existing users to opted-in (guarded so later opt-outs are respected).
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS startup_migrations (name text PRIMARY KEY, run_at timestamp NOT NULL DEFAULT now())`);
+    // Marker + flip commit atomically: if the UPDATE fails, the marker rolls
+    // back too, so a later startup retries instead of silently skipping.
+    await db.transaction(async (tx) => {
+      const flip = await tx.execute(sql`INSERT INTO startup_migrations (name) VALUES ('feed_activity_opt_out_default') ON CONFLICT (name) DO NOTHING RETURNING name`);
+      if ((flip as any).rows?.length > 0) {
+        await tx.execute(sql`UPDATE users SET show_activity_in_feed = true WHERE show_activity_in_feed = false`);
+        console.log('Startup migration: flipped existing users to feed opt-in default');
+      }
+    });
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_customization_completed_at timestamp`);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_customization_dismissed_at timestamp`);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_customization_skips integer NOT NULL DEFAULT 0`);
