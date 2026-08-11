@@ -47,6 +47,9 @@ export class BadgeService {
         if (badge[0]) {
           console.log(`🏆 BADGE EARNED: User ${userId} earned "${badge[0].name}" (${badge[0].rarity})`);
           await notificationService.createBadgeNotification(userId, badge[0].name, badge[0].rarity);
+          // Feed v1: badge feed event (idempotent, never throws)
+          const { emitBadgeEarned } = await import('./services/feedService');
+          emitBadgeEarned(userId, badge[0].id).catch(() => {});
         }
       }
     } catch (error) {

@@ -177,6 +177,7 @@ export const xpEvents = pgTable("xp_events", {
   cardSetId: integer("card_set_id"), // metadata for binder-share events (no FK — ledger stays decoupled)
   imageSubmissionId: integer("image_submission_id"),
   badgeId: integer("badge_id"),
+  feedEventId: integer("feed_event_id"), // set for feed_reaction XP claims
   points: integer("points").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
@@ -188,6 +189,46 @@ export const xpEvents = pgTable("xp_events", {
   shareFirstIdx: uniqueIndex("xp_events_share_first_idx")
     .on(table.userId)
     .where(sql`event_type = 'subset_binder_share_first'`),
+  // One feed_reaction XP claim per (user, feed event) — ever. Toggling or
+  // changing a reaction can never earn XP twice.
+  feedReactionIdx: uniqueIndex("xp_events_feed_reaction_idx")
+    .on(table.userId, table.feedEventId)
+    .where(sql`event_type = 'feed_reaction'`),
+}));
+
+// Feed v1 — app-generated activity events (no freeform posts/comments).
+// Decoupled like xp_events: no FKs so it never blocks user/card deletion.
+// dedupe_key makes emission + backfill idempotent (unique, ON CONFLICT DO NOTHING).
+export const feedEvents = pgTable("feed_events", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  eventType: text("event_type").notNull(), // first_card | collection_milestone | binder_created | binder_shared | badge_earned | level_milestone | image_approved
+  title: text("title").notNull(),
+  metadata: text("metadata"), // JSON string (milestone number, badge name, binder name, etc.)
+  relatedType: text("related_type"), // badge | binder | card | share_link
+  relatedId: integer("related_id"),
+  visibility: text("visibility").notNull().default("public"),
+  hidden: boolean("hidden").notNull().default(false), // admin archive
+  dedupeKey: text("dedupe_key").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  createdIdx: index("feed_events_created_idx").on(table.createdAt),
+  userIdx: index("feed_events_user_idx").on(table.userId),
+  dedupeIdx: uniqueIndex("feed_events_dedupe_idx").on(table.dedupeKey),
+}));
+
+// One active reaction per user per feed event (change = update reaction_type).
+export const feedReactions = pgTable("feed_reactions", {
+  id: serial("id").primaryKey(),
+  feedEventId: integer("feed_event_id").notNull(),
+  userId: integer("user_id").notNull(),
+  reactionType: text("reaction_type").notNull(), // fire_pull | hero_move | need_this | vault_worthy
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  eventUserIdx: uniqueIndex("feed_reactions_event_user_idx").on(table.feedEventId, table.userId),
+  eventIdx: index("feed_reactions_event_idx").on(table.feedEventId),
+  userIdx: index("feed_reactions_user_idx").on(table.userId),
 }));
 
 export const cardPriceCache = pgTable("card_price_cache", {

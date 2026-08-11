@@ -24,6 +24,7 @@ export interface UserXpBreakdown {
   imageXp: number;
   cardXp: number;
   shareXp: number;
+  feedXp: number;
   totalXp: number;
   progress: XpProgress;
 }
@@ -110,7 +111,7 @@ export async function awardBinderShareXp(userId: number, cardSetId: number): Pro
  * card_added and binder-share XP come from the xp_events ledger.
  */
 export async function computeUserXp(userId: number): Promise<UserXpBreakdown> {
-  const [badgeRows, approvedResArr, ledgerResArr, shareResArr] = await Promise.all([
+  const [badgeRows, approvedResArr, ledgerResArr, shareResArr, feedResArr] = await Promise.all([
     db
       .select({ points: badges.points, rarity: badges.rarity })
       .from(userBadges)
@@ -131,6 +132,10 @@ export async function computeUserXp(userId: number): Promise<UserXpBreakdown> {
         eq(xpEvents.userId, userId),
         inArray(xpEvents.eventType, [XP_EVENT_BINDER_SHARE_FIRST, XP_EVENT_BINDER_SHARE_DAILY]),
       )),
+    db
+      .select({ total: sql<number>`coalesce(sum(${xpEvents.points}), 0)` })
+      .from(xpEvents)
+      .where(and(eq(xpEvents.userId, userId), eq(xpEvents.eventType, 'feed_reaction'))),
   ]);
 
   const badgeXp = badgeRows.reduce((sum, b) => {
@@ -141,9 +146,10 @@ export async function computeUserXp(userId: number): Promise<UserXpBreakdown> {
   const imageXp = imageContributionXp(Number(approvedResArr[0]?.count ?? 0));
   const cardXp = Number(ledgerResArr[0]?.total ?? 0);
   const shareXp = Number(shareResArr[0]?.total ?? 0);
-  const totalXp = badgeXp + imageXp + cardXp + shareXp;
+  const feedXp = Number(feedResArr[0]?.total ?? 0);
+  const totalXp = badgeXp + imageXp + cardXp + shareXp + feedXp;
 
-  return { badgeXp, imageXp, cardXp, shareXp, totalXp, progress: computeXpProgress(totalXp) };
+  return { badgeXp, imageXp, cardXp, shareXp, feedXp, totalXp, progress: computeXpProgress(totalXp) };
 }
 
 /** Recent XP-earning activity for the dashboard feed (ledger events only). */

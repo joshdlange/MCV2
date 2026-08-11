@@ -53,6 +53,7 @@ const AdminAnalytics = lazy(() => import("@/pages/admin/analytics"));
 const AdminNotifications = lazy(() => import("@/pages/admin/notifications"));
 const AdminLegacyTools = lazy(() => import("@/pages/admin/legacy-tools"));
 const AdminDataQuality = lazy(() => import("@/pages/admin/data-quality"));
+const AdminFeed = lazy(() => import("@/pages/admin/feed"));
 const CardSearch = lazy(() => import("@/pages/card-search"));
 const MarketTrends = lazy(() => import("@/pages/market-trends"));
 const UpcomingSets = lazy(() => import("@/pages/upcoming-sets"));
@@ -60,6 +61,7 @@ const SubscriptionSuccess = lazy(() => import("@/pages/subscription-success"));
 const SubscriptionCancelled = lazy(() => import("@/pages/subscription-cancelled"));
 const Subscribe = lazy(() => import("@/pages/subscribe"));
 const Activity = lazy(() => import("@/pages/Activity"));
+const Feed = lazy(() => import("@/pages/Feed"));
 const SharedBinder = lazy(() => import("@/pages/shared-binder"));
 const SharedPcBinder = lazy(() => import("@/pages/shared-pc-binder"));
 const ScanToAdd = lazy(() => import("@/pages/scan"));
@@ -188,6 +190,7 @@ function Router() {
           <Route path="/wishlist" component={Wishlist} />
           <Route path="/marketplace" component={Marketplace} />
           <Route path="/activity" component={Activity} />
+          <Route path="/feed" component={Feed} />
           <Route path="/trends" component={MarketTrends} />
           <Route path="/upcoming-sets" component={UpcomingSets} />
           <Route path="/profile" component={Profile} />
@@ -209,6 +212,7 @@ function Router() {
           <Route path="/admin/notifications" component={AdminNotifications} />
           <Route path="/admin/legacy-tools" component={AdminLegacyTools} />
           <Route path="/admin/data-quality" component={AdminDataQuality} />
+          <Route path="/admin/feed" component={AdminFeed} />
           <Route path="/scan" component={ScanToAdd} />
           <Route path="/collectors/:username" component={CollectorProfile} />
           <Route path="/subscribe" component={Subscribe} />

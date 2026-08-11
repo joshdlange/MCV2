@@ -60,6 +60,7 @@ const getNavigationItems = (userPlan: string): NavigationItem[] => {
   }
 
   items.push(
+    { href: "/feed", label: "Feed", icon: "Activity", isNew: true },
     { href: "/scan", label: "Scan to Add", icon: "ScanLine" },
     { href: "/trends", label: "Market Trends", icon: "TrendingUp" },
     { href: "/upcoming-sets", label: "Upcoming Sets", icon: "Calendar" },

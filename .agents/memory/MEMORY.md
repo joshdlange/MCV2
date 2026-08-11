@@ -26,4 +26,5 @@
 - [Stripe subscription linking](stripe-linking.md) — webhook must live at BOTH /api/stripe-webhook and /api/stripe/webhook; email-fallback linking + daily 7:30 CT reconcile cron alert on unlinked subs.
 - [SSRF guard for URL-fetch endpoints](ssrf-url-fetch-guard.md) — server-side fetch of supplied URLs must block private/metadata hosts per hop; reuse assertPublicHttpUrl pattern.
 - [Collector avatar registry](collector-avatars.md) — avatar keys = webp filenames in client/src/assets/avatars; append-only, server validates against the dir; tagline reuses bio.
+- [Feed v1 architecture](feed-v1.md) — dedupe-key emits, privacy at READ time, advisory-locked reaction XP cap, composite cursor; new feed reads must reuse getReadableEvent predicate.
 - [Drive image import safety](drive-image-import.md) — marked-file-wins front/back rule only (never sort order); transactional ledger gives rerun idempotency; always fresh scan before import.

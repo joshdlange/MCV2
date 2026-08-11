@@ -81,6 +81,37 @@ app.use((req, res, next) => {
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_customization_completed_at timestamp`);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_customization_dismissed_at timestamp`);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_customization_skips integer NOT NULL DEFAULT 0`);
+
+    // Feed v1 tables + feed_reaction XP dedupe
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS feed_events (
+      id serial PRIMARY KEY,
+      user_id integer NOT NULL,
+      event_type text NOT NULL,
+      title text NOT NULL,
+      metadata text,
+      related_type text,
+      related_id integer,
+      visibility text NOT NULL DEFAULT 'public',
+      hidden boolean NOT NULL DEFAULT false,
+      dedupe_key text NOT NULL,
+      created_at timestamp NOT NULL DEFAULT now()
+    )`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS feed_events_created_idx ON feed_events (created_at)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS feed_events_user_idx ON feed_events (user_id)`);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS feed_events_dedupe_idx ON feed_events (dedupe_key)`);
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS feed_reactions (
+      id serial PRIMARY KEY,
+      feed_event_id integer NOT NULL,
+      user_id integer NOT NULL,
+      reaction_type text NOT NULL,
+      created_at timestamp NOT NULL DEFAULT now(),
+      updated_at timestamp NOT NULL DEFAULT now()
+    )`);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS feed_reactions_event_user_idx ON feed_reactions (feed_event_id, user_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS feed_reactions_event_idx ON feed_reactions (feed_event_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS feed_reactions_user_idx ON feed_reactions (user_id)`);
+    await db.execute(sql`ALTER TABLE xp_events ADD COLUMN IF NOT EXISTS feed_event_id integer`);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS xp_events_feed_reaction_idx ON xp_events (user_id, feed_event_id) WHERE event_type = 'feed_reaction'`);
   } catch (error) {
     console.error('Startup migration (collector profile columns) failed:', error);
   }

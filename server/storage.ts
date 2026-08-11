@@ -970,6 +970,16 @@ export class DatabaseStorage implements IStorage {
     // Awaited but never throws — a failed award must not fail the add.
     if (item?.userId && item?.cardId) {
       await awardCardAddedXp(item.userId, item.cardId);
+      // Feed v1: first-card / collection-milestone / level-milestone events.
+      // Fire-and-forget (dedupe keys make repeats no-ops; must never slow adds).
+      import('./services/feedService')
+        .then(async (feed) => {
+          await feed.checkCollectionMilestones(item.userId);
+          const { computeUserXp } = await import('./services/xpService');
+          const { totalXp } = await computeUserXp(item.userId);
+          await feed.checkLevelMilestone(item.userId, totalXp);
+        })
+        .catch(() => {});
     }
 
     return item;
@@ -2161,6 +2171,10 @@ export class DatabaseStorage implements IStorage {
       .insert(userBadges)
       .values({ userId, badgeId })
       .returning();
+    if (userBadge) {
+      // Feed v1: badge feed event (idempotent, never throws)
+      import('./services/feedService').then(m => m.emitBadgeEarned(userId, badgeId)).catch(() => {});
+    }
     return userBadge;
   }
 

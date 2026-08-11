@@ -5573,11 +5573,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user?.id;
       if (!userId) return res.status(401).json({ message: "Not authenticated" });
-      const { badgeXp, imageXp, cardXp, shareXp, totalXp, progress } = await computeUserXp(userId);
+      const { badgeXp, imageXp, cardXp, shareXp, feedXp, totalXp, progress } = await computeUserXp(userId);
       const recentXpEvents = await getRecentXpEvents(userId, 10);
       res.json({
         ...progress,
-        breakdown: { badgeXp, imageXp, cardXp, shareXp, totalXp },
+        breakdown: { badgeXp, imageXp, cardXp, shareXp, feedXp, totalXp },
         recentXpEvents,
       });
     } catch (error) {
@@ -5596,6 +5596,148 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[XP] backfill error:', error);
       res.status(500).json({ message: "Failed to backfill XP" });
+    }
+  });
+
+  // ==========================================================================
+  // Feed v1 — activity feed, reactions, leaderboards, admin tools
+  // ==========================================================================
+
+  // Simple in-memory rate limit for reaction writes (30 per minute per user).
+  const reactionRateBuckets = new Map<number, number[]>();
+  const reactionRateLimited = (userId: number): boolean => {
+    const now = Date.now();
+    const bucket = (reactionRateBuckets.get(userId) ?? []).filter(t => now - t < 60_000);
+    if (bucket.length >= 30) { reactionRateBuckets.set(userId, bucket); return true; }
+    bucket.push(now);
+    reactionRateBuckets.set(userId, bucket);
+    return false;
+  };
+
+  // GET /api/feed?filter=everyone|me&before=<ISO>&limit=25
+  app.get("/api/feed", authenticateUser, async (req: any, res) => {
+    try {
+      const feed = await import('./services/feedService');
+      const filter = req.query.filter === 'me' ? 'me' : 'everyone';
+      // Composite cursor "<ISO>_<id>" so same-timestamp rows are never skipped
+      let before: Date | undefined;
+      let beforeId: number | undefined;
+      if (req.query.before) {
+        const raw = String(req.query.before);
+        const sep = raw.lastIndexOf('_');
+        const iso = sep > 0 ? raw.slice(0, sep) : raw;
+        const idPart = sep > 0 ? parseInt(raw.slice(sep + 1)) : NaN;
+        const d = new Date(iso);
+        if (!isNaN(d.getTime())) {
+          before = d;
+          if (!isNaN(idPart)) beforeId = idPart;
+        }
+      }
+      const limit = Math.min(parseInt(String(req.query.limit || '25')) || 25, 50);
+      const events = await feed.getFeedPage({ viewerId: req.user.id, filter, before, beforeId, limit });
+      const last = events[events.length - 1];
+      res.json({
+        events,
+        nextCursor: events.length === limit && last
+          ? `${new Date(last.createdAt).toISOString()}_${last.id}`
+          : null,
+      });
+    } catch (error) {
+      console.error('[Feed] list error:', error);
+      res.status(500).json({ message: "Failed to load feed" });
+    }
+  });
+
+  // POST /api/feed/:id/react { reaction }
+  app.post("/api/feed/:id/react", authenticateUser, async (req: any, res) => {
+    try {
+      if (reactionRateLimited(req.user.id)) {
+        return res.status(429).json({ message: "Slow down a little — try again in a minute" });
+      }
+      const feed = await import('./services/feedService');
+      const result = await feed.setReaction(req.user.id, parseInt(req.params.id), String(req.body?.reaction || ''));
+      if (!result.ok) return res.status(result.status).json({ message: result.message });
+      res.json({ reactions: result.reactions, myReaction: result.myReaction, xpAwarded: result.xpAwarded ?? 0 });
+    } catch (error) {
+      console.error('[Feed] react error:', error);
+      res.status(500).json({ message: "Failed to save reaction" });
+    }
+  });
+
+  // DELETE /api/feed/:id/react
+  app.delete("/api/feed/:id/react", authenticateUser, async (req: any, res) => {
+    try {
+      const feed = await import('./services/feedService');
+      const result = await feed.removeReaction(req.user.id, parseInt(req.params.id));
+      if (!result.ok) return res.status(result.status).json({ message: result.message });
+      res.json({ reactions: result.reactions, myReaction: result.myReaction });
+    } catch (error) {
+      console.error('[Feed] unreact error:', error);
+      res.status(500).json({ message: "Failed to remove reaction" });
+    }
+  });
+
+  // GET /api/feed/leaderboards — weekly XP + weekly image contributors
+  app.get("/api/feed/leaderboards", authenticateUser, async (_req: any, res) => {
+    try {
+      const feed = await import('./services/feedService');
+      res.json(await feed.getWeeklyLeaderboards());
+    } catch (error) {
+      console.error('[Feed] leaderboards error:', error);
+      res.status(500).json({ message: "Failed to load leaderboards" });
+    }
+  });
+
+  // Admin: feed stats
+  app.get("/api/admin/feed/stats", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const feed = await import('./services/feedService');
+      res.json(await feed.getFeedAdminStats());
+    } catch (error) {
+      console.error('[Feed] admin stats error:', error);
+      res.status(500).json({ message: "Failed to load feed stats" });
+    }
+  });
+
+  // Admin: recent feed events (includes hidden + private users, for moderation)
+  app.get("/api/admin/feed/recent", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const feed = await import('./services/feedService');
+      res.json(await feed.getRecentFeedEventsAdmin(parseInt(String(req.query.limit || '50')) || 50));
+    } catch (error) {
+      console.error('[Feed] admin recent error:', error);
+      res.status(500).json({ message: "Failed to load recent feed events" });
+    }
+  });
+
+  // Admin: backfill (dry run by default; writes only with confirm: true)
+  app.post("/api/admin/feed/backfill", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const confirm = req.body?.confirm === true;
+      const feed = await import('./services/feedService');
+      const results = await feed.runFeedBackfill(!confirm);
+      res.json({ dryRun: !confirm, results });
+    } catch (error) {
+      console.error('[Feed] backfill error:', error);
+      res.status(500).json({ message: "Failed to run feed backfill" });
+    }
+  });
+
+  // Admin: hide/unhide a feed event
+  app.post("/api/admin/feed/:id/hide", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const feed = await import('./services/feedService');
+      const hidden = req.body?.hidden !== false;
+      const ok = await feed.setFeedEventHidden(parseInt(req.params.id), hidden);
+      if (!ok) return res.status(404).json({ message: 'Feed event not found' });
+      res.json({ success: true, hidden });
+    } catch (error) {
+      console.error('[Feed] hide error:', error);
+      res.status(500).json({ message: "Failed to update feed event" });
     }
   });
 
@@ -8154,7 +8296,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (userApprovedCount >= 3) {
         await badgeService.awardBadge(pendingImage.userId, 'contributor');
       }
-      
+
+      // Feed v1: image-approved event (idempotent, fire-and-forget)
+      import('./services/feedService').then(m => m.emitFeedEvent({
+        userId: pendingImage.userId,
+        eventType: 'image_approved',
+        title: 'contributed a card image to the Vault',
+        relatedType: 'card',
+        relatedId: pendingImage.cardId,
+        dedupeKey: `image_approved:${pendingImage.userId}:${imageId}`,
+      })).catch(() => {});
+
       res.json({ message: "Image approved successfully" });
     } catch (error) {
       console.error('Approve image error:', error);
@@ -8217,6 +8369,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (userApprovedCount >= 3) {
             await badgeService.awardBadge(pendingImage.userId, 'contributor');
           }
+
+          // Feed v1: image-approved event (idempotent, fire-and-forget)
+          import('./services/feedService').then(m => m.emitFeedEvent({
+            userId: pendingImage.userId,
+            eventType: 'image_approved',
+            title: 'contributed a card image to the Vault',
+            relatedType: 'card',
+            relatedId: pendingImage.cardId,
+            dedupeKey: `image_approved:${pendingImage.userId}:${imageId}`,
+          })).catch(() => {});
 
           approved++;
         } catch (err) {
@@ -11130,6 +11292,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Binder badge check failed:', err)
       );
 
+      // Feed v1: binder-created event (idempotent, fire-and-forget)
+      import('./services/feedService').then(m => m.emitFeedEvent({
+        userId,
+        eventType: 'binder_created',
+        title: `created the "${binder.name}" PC Binder`,
+        metadata: { binderName: binder.name },
+        relatedType: 'binder',
+        relatedId: binder.id,
+        dedupeKey: `binder_created:${userId}:${binder.id}`,
+      })).catch(() => {});
+
       res.status(201).json(binder);
     } catch (error) {
       console.error("Error creating PC binder:", error);
@@ -11472,6 +11645,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .insert(pcBinderShareLinks)
         .values({ binderId, token, isActive: true })
         .returning();
+
+      // Feed v1: binder-shared event, once per binder (idempotent, fire-and-forget).
+      // Links only to the public share URL — never to private binder contents.
+      import('./services/feedService').then(m => m.emitFeedEvent({
+        userId: req.user.id,
+        eventType: 'binder_shared',
+        title: `shared the "${binder.name}" PC Binder`,
+        metadata: { binderName: binder.name, shareToken: newLink.token },
+        relatedType: 'share_link',
+        relatedId: newLink.id,
+        dedupeKey: `binder_shared:${req.user.id}:${binderId}`,
+      })).catch(() => {});
+
       res.json({ id: newLink.id, token: newLink.token, url: pcShareUrl(newLink.token) });
     } catch (error) {
       console.error("Error creating PC binder share link:", error);
