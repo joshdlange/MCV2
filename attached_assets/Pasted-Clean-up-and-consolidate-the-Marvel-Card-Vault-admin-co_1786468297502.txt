@@ -1,0 +1,101 @@
+Clean up and consolidate the Marvel Card Vault admin conversion funnel metrics.
+
+Context:
+The new Lifecycle Intelligence / Conversion Funnel section is useful, but it is visually too large and a little overwhelming. We want the admin analytics page to be easier to scan while preserving the underlying data, lifecycle calculations, and platform insights.
+
+Goal:
+Make the conversion funnel section more compact, clearer, and easier to understand without changing the backend lifecycle logic.
+
+Must do:
+- Keep all existing lifecycle intelligence calculations unchanged.
+- Keep the existing lifecycle stages and definitions unchanged.
+- Consolidate the conversion funnel UI so it takes up less vertical space.
+- Make the funnel easier to scan at a glance.
+- Keep the most important metrics visible:
+  - Signed Up
+  - Onboarding Complete
+  - Added First Card
+  - Returning
+  - Engaged
+  - Upgraded
+  - Cancelled
+- Show conversion percentages between each major step.
+- Make the biggest drop-off obvious, especially onboarding complete → first card added.
+- Keep platform conversion insights visible, but make them more compact.
+- Keep activity heatmap and safest publish windows intact.
+- Keep user lifecycle filters in the admin Users table.
+- Keep lifecycle definitions available, but move them behind a “Show definitions” / “Hide definitions” toggle or collapsible panel.
+- Make the section responsive and cleaner on mobile.
+- Use the existing admin design language.
+- Avoid adding unnecessary new charts if the same data can be shown more clearly with compact cards/tables.
+
+Suggested layout:
+- Top row: compact funnel summary cards or horizontal funnel bar:
+  - Signed Up
+  - Onboarding Complete
+  - First Card Added
+  - Returning
+  - Engaged
+  - Super Hero
+  - Cancelled
+- Under that: “Biggest Drop-Off” callout card.
+- Under that: compact platform conversion row:
+  - Web only
+  - iOS only
+  - Android only
+  - Multiple platforms
+  - No platform data
+- Definitions should be collapsed by default.
+- Deeper detail can live below the fold or inside collapsible sections.
+
+Important:
+This is a UI/organization cleanup only. Do not change the lifecycle math.
+
+Must not do:
+- Do not change lifecycle stage definitions.
+- Do not change backend calculations unless there is a clear display bug.
+- Do not modify user records.
+- Do not add permanent lifecycle labels to user records.
+- Do not send emails.
+- Do not activate lifecycle campaigns.
+- Do not change Resend, password reset, subscriptions, Stripe, RevenueCat, Shippo, XP, PC Binders, Drive Sync, Upcoming Set Intelligence, Data Quality tools, image approvals, card data, Android, or iOS.
+- Do not change public app behavior.
+- Do not remove any useful analytics currently available.
+
+Preserve:
+- Existing admin authentication.
+- Existing analytics endpoints.
+- Existing lifecycle intelligence service.
+- Existing activity heatmap.
+- Existing platform conversion calculations.
+- Existing admin Users table lifecycle filter.
+- Existing lifecycle email system.
+- Existing disabled monthly and legacy campaign state.
+- Existing public app behavior.
+
+QA:
+- Admin Analytics page loads cleanly.
+- Conversion funnel is visibly more compact.
+- Funnel numbers match previous values.
+- Conversion percentages are accurate.
+- Biggest drop-off callout displays correctly.
+- Platform conversion metrics still display correctly.
+- Activity heatmap still displays correctly.
+- Safest publish windows still display correctly.
+- Lifecycle definitions toggle works.
+- Mobile layout is cleaner and does not dominate the page.
+- Admin Users page still loads.
+- Lifecycle-stage filter still works.
+- No emails were sent.
+- No user records were modified.
+- No public-facing behavior changed.
+- App builds/runs cleanly.
+
+Final response:
+- List changed files.
+- Summarize the UI cleanup.
+- Confirm lifecycle calculations did not change.
+- Confirm funnel numbers still match the prior data.
+- Confirm no emails were sent.
+- Confirm no user data was modified.
+- Confirm safe to publish.

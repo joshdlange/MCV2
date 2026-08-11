@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
-import { Clock, Rocket, Info } from "lucide-react";
+import { Clock, Rocket, Info, TrendingDown } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface LifecycleOverview {
@@ -73,10 +73,77 @@ export default function LifecycleIntelligence() {
     { label: "Cancelled", value: overview.funnel.cancelled },
   ] : [];
 
+  // Biggest drop-off between consecutive milestones (excludes Cancelled, which isn't a "next step").
+  // Milestones are aggregate counts, not strictly nested cohorts, so only pairs where the
+  // later count is actually smaller are meaningful drop-offs.
+  const dropOffs = funnelSteps.slice(0, 6).slice(1).map((step, i) => {
+    const prev = funnelSteps[i];
+    return { from: prev.label, to: step.label, lost: prev.value - step.value };
+  }).filter(d => d.lost > 0);
+  const biggestDrop = dropOffs.length
+    ? dropOffs.reduce((max, d) => (d.lost > max.lost ? d : max), dropOffs[0])
+    : null;
+
   const maxGrid = heatmap ? Math.max(1, ...heatmap.grid.flat()) : 1;
 
   return (
     <>
+      {/* ── Compact conversion funnel ── */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Conversion Journey</CardTitle>
+          <p className="text-xs text-gray-400 font-normal">
+            Cumulative: each step counts every user who has ever reached that milestone, so one user
+            appears in multiple steps. Percentages show conversion from the previous step.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {ovLoading || !overview ? (
+            <div className="h-24 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                {funnelSteps.map((step, i) => {
+                  const isCancelled = step.label === "Cancelled";
+                  const base = funnelSteps[0]?.value ?? 0;
+                  const stepPct = i > 0 && !isCancelled && base > 0 ? Math.round((step.value / base) * 100) : null;
+                  return (
+                    <div
+                      key={step.label}
+                      className={`rounded-lg border px-2.5 py-2 ${isCancelled ? "border-red-200 bg-red-50" : "bg-gray-50"}`}
+                    >
+                      <p className={`text-xl font-bold ${isCancelled ? "text-red-600" : "text-gray-900"}`}>
+                        {step.value.toLocaleString()}
+                      </p>
+                      <p className="text-[11px] font-medium text-gray-600 leading-tight mt-0.5">{step.label}</p>
+                      {stepPct !== null && (
+                        <p className="text-[11px] font-semibold text-blue-600 mt-0.5">{stepPct}% of signups</p>
+                      )}
+                      {isCancelled && (
+                        <p className="text-[11px] font-semibold text-red-500 mt-0.5">
+                          {overview.conversion.churnRate}% churn
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {biggestDrop && biggestDrop.lost > 0 && (
+                <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-start gap-2">
+                  <TrendingDown className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                  <p className="text-xs text-amber-800">
+                    <span className="font-semibold">Biggest drop-off:</span>{" "}
+                    {biggestDrop.from} → {biggestDrop.to} — {biggestDrop.lost.toLocaleString()} fewer
+                    users have reached "{biggestDrop.to}" than "{biggestDrop.from}".
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
       {/* ── Lifecycle stages ── */}
       <Card>
         <CardHeader>
@@ -117,61 +184,6 @@ export default function LifecycleIntelligence() {
                   ))}
                 </div>
               )}
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* ── Conversion journey ── */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Conversion Journey</CardTitle>
-          <p className="text-xs text-gray-400 font-normal">
-            Cumulative: each bar counts every user who has ever reached that milestone, so one user
-            appears in multiple bars. This differs from Lifecycle Stages above, where each user
-            counts in exactly one (their highest) stage.
-          </p>
-        </CardHeader>
-        <CardContent>
-          {ovLoading || !overview ? (
-            <div className="h-40 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
-          ) : (
-            <>
-              <div className="space-y-2">
-                {funnelSteps.map((step, i) => {
-                  const base = funnelSteps[0].value || 1;
-                  const width = Math.max(2, Math.round((step.value / base) * 100));
-                  const isCancelled = step.label === "Cancelled";
-                  return (
-                    <div key={step.label} className="flex items-center gap-3">
-                      <div className="w-44 text-xs text-gray-600 text-right shrink-0">{step.label}</div>
-                      <div className="flex-1">
-                        <div
-                          className={`h-6 rounded flex items-center px-2 text-xs font-medium text-white ${isCancelled ? "bg-red-400" : "bg-blue-500"}`}
-                          style={{ width: `${width}%`, opacity: isCancelled ? 0.9 : 1 - i * 0.08 }}
-                        >
-                          {step.value}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-5">
-                {[
-                  ["Onboarding", overview.conversion.onboardingRate],
-                  ["First Card", overview.conversion.firstCardRate],
-                  ["Returning", overview.conversion.returningRate],
-                  ["Engaged", overview.conversion.engagedRate],
-                  ["Upgrade", overview.conversion.upgradeRate],
-                  ["Churn", overview.conversion.churnRate],
-                ].map(([label, rate]) => (
-                  <div key={label as string} className="bg-gray-50 border rounded-lg px-3 py-2 text-center">
-                    <div className="text-lg font-semibold text-gray-800">{rate}%</div>
-                    <div className="text-[11px] text-gray-500">{label} rate</div>
-                  </div>
-                ))}
-              </div>
             </>
           )}
         </CardContent>

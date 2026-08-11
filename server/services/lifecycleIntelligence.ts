@@ -24,7 +24,7 @@ export const STAGE_ORDER = [
 
 export const STAGE_RULES: Record<string, string> = {
   "Super Hero": "Active paid subscriber (plan SUPER_HERO, status active)",
-  "Cancelled": "Previously subscribed (has a Stripe/Apple subscription record) and status is cancelled, no longer paying",
+  "Cancelled": "Previously subscribed (has a Stripe customer/subscription or Apple record) and status is cancelled, no longer paying",
   "Dormant": "Free user with no login in 30+ days (and account older than 30 days)",
   "Power Collector": "100+ cards, or 20+ total logins with 10+ cards",
   "Engaged Collector": "10+ cards, or has a PC binder, wishlist item, image upload, or shared binder",
@@ -45,7 +45,9 @@ const PER_USER_CTE = sql`
     SELECT u.id,
       u.plan, u.subscription_status, u.onboarding_complete, u.created_at,
       u.last_login, u.total_logins,
-      (u.stripe_subscription_id IS NOT NULL OR u.apple_original_transaction_id IS NOT NULL) AS ever_subscribed,
+      -- stripe_subscription_id is cleared when a subscription is cancelled, so a churned
+      -- user's only remaining Stripe footprint is stripe_customer_id (created at checkout).
+      (u.stripe_subscription_id IS NOT NULL OR u.stripe_customer_id IS NOT NULL OR u.apple_original_transaction_id IS NOT NULL) AS ever_subscribed,
       COALESCE(c.cards, 0) AS cards,
       COALESCE(pb.binders, 0) AS binders,
       COALESCE(w.wishlist, 0) AS wishlist,

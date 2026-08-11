@@ -9,18 +9,10 @@ import {
   BarChart, Bar,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
-import { Users, CreditCard, TrendingUp, Eye, MousePointer, X, ChevronRight, ShieldCheck, RefreshCw, AlertTriangle, CheckCircle2, Apple } from "lucide-react";
+import { Users, X, Eye, MousePointer, ChevronRight, ShieldCheck, RefreshCw, AlertTriangle, CheckCircle2, Apple } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import LifecycleIntelligence from "@/components/admin/LifecycleIntelligence";
-
-interface FunnelStats {
-  signups: number;
-  addedCard: number;
-  returningUsers: number;
-  upgraded: number;
-  cancelled: number;
-}
 
 interface ModalStats {
   shown: number;
@@ -50,21 +42,6 @@ interface SignupDay {
   date: string;
   count: number;
 }
-
-interface ActivityBucket {
-  label: string;
-  count: number;
-  users: number;
-}
-
-type ActivityRange = "day" | "month" | "year" | "total";
-
-const ACTIVITY_RANGES: Array<{ key: ActivityRange; label: string }> = [
-  { key: "day", label: "Day" },
-  { key: "month", label: "Month" },
-  { key: "year", label: "Year" },
-  { key: "total", label: "Total" },
-];
 
 interface RcAuditUser {
   userId: number;
@@ -135,17 +112,6 @@ export default function AdminAnalytics() {
     }
   };
 
-  const { data: funnel, isLoading: funnelLoading } = useQuery<FunnelStats>({
-    queryKey: ["/api/admin/funnel-stats"],
-  });
-
-  const [activityRange, setActivityRange] = useState<ActivityRange>("month");
-  const { data: activity = [], isLoading: activityLoading } = useQuery<ActivityBucket[]>({
-    queryKey: [`/api/admin/activity-stats?range=${activityRange}`],
-  });
-  const totalActivity = activity.reduce((s, b) => s + b.count, 0);
-  const peakBucket = activity.reduce((max, b) => (b.count > max.count ? b : max), { label: "", count: 0, users: 0 });
-
   const { data: platformUsage, isLoading: platformUsageLoading } = useQuery<PlatformUsageStats>({
     queryKey: ["/api/admin/platform-usage-stats"],
   });
@@ -171,18 +137,6 @@ export default function AdminAnalytics() {
   const peakDay = signups.reduce((max, d) => (d.count > max.count ? d : max), { date: "", count: 0 });
 
   const chartData = signups.map((d) => ({ ...d, label: formatDay(d.date) }));
-
-  const funnelSteps = funnel
-    ? [
-        { label: "Signed Up", value: funnel.signups, icon: Users, desc: "Total registered accounts" },
-        { label: "Added a Card", value: funnel.addedCard, icon: TrendingUp, desc: "Added at least one card" },
-        { label: "Returning (3+ logins)", value: funnel.returningUsers, icon: Users, desc: "Logged in 3+ times" },
-        { label: "Upgraded", value: funnel.upgraded, icon: CreditCard, desc: "Active Super Hero subscribers" },
-        { label: "Cancelled", value: funnel.cancelled, icon: X, desc: "Were Super Hero, now cancelled" },
-      ]
-    : [];
-
-  const funnelChartData = funnelSteps.map((s) => ({ name: s.label, value: s.value }));
 
   const platformMap: Record<string, { shown: number; clicked: number }> = {};
   modal?.byPlatform?.forEach((row) => {
@@ -296,123 +250,8 @@ export default function AdminAnalytics() {
         <p className="text-sm text-gray-500 mt-0.5">All-time: how users move from signup to Super Hero</p>
       </div>
 
-      {/* ── User Activity ─────────────────────────────────────────────────────── */}
-      <Card>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <CardTitle className="text-base">User Activity</CardTitle>
-              <p className="text-xs text-gray-400 font-normal mt-0.5">
-                Card adds, scans &amp; upgrade events — times shown in Central Time. Use to spot busy vs quiet hours.
-              </p>
-            </div>
-            <div className="flex rounded-lg border bg-gray-50 p-0.5">
-              {ACTIVITY_RANGES.map((r) => (
-                <button
-                  key={r.key}
-                  onClick={() => setActivityRange(r.key)}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                    activityRange === r.key ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex gap-4 mt-2">
-            <span className="text-xs text-gray-500"><span className="font-bold text-gray-800">{totalActivity.toLocaleString()}</span> actions</span>
-            {peakBucket.label && (
-              <span className="text-xs text-gray-500">peak: <span className="font-bold text-gray-800">{peakBucket.label}</span> ({peakBucket.count.toLocaleString()})</span>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="pt-2 pb-2">
-          {activityLoading ? (
-            <div className="h-52 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
-          ) : activity.length === 0 ? (
-            <div className="h-52 flex items-center justify-center text-gray-400 text-sm">No activity recorded yet</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={activity} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="activityGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <XAxis
-                  dataKey="label"
-                  tick={{ fontSize: 11, fill: "#6b7280" }}
-                  axisLine={false}
-                  tickLine={false}
-                  interval={activity.length > 24 ? Math.floor(activity.length / 15) : activity.length > 12 ? 1 : 0}
-                />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} width={32} />
-                <Tooltip
-                  formatter={(v: number, name: string) => [v.toLocaleString(), name === "count" ? "Actions" : "Active users"]}
-                  contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                />
-                <Area type="monotone" dataKey="count" stroke="#8b5cf6" strokeWidth={2} fill="url(#activityGrad)" dot={false} activeDot={{ r: 4 }} />
-                <Area type="monotone" dataKey="users" stroke="#10b981" strokeWidth={1.5} fill="none" dot={false} activeDot={{ r: 4 }} />
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
-        </CardContent>
-      </Card>
-
-      {funnelLoading ? (
-        <div className="text-center py-12 text-gray-400">Loading funnel data…</div>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {funnelSteps.map((step, i) => (
-              <Card key={step.label} className="border">
-                <CardContent className="pt-4 pb-3 px-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
-                      style={{ backgroundColor: FUNNEL_COLORS[i] }}
-                    >
-                      {i + 1}
-                    </div>
-                    <step.icon className="w-4 h-4 text-gray-400" />
-                  </div>
-                  <p className="text-2xl font-bold text-gray-900 mt-2">{step.value.toLocaleString()}</p>
-                  <p className="text-xs font-semibold text-gray-700 mt-0.5 leading-tight">{step.label}</p>
-                  <p className="text-xs text-gray-400 mt-0.5 leading-tight">{step.desc}</p>
-                  {i > 0 && (
-                    <p className="text-xs font-medium mt-1.5" style={{ color: FUNNEL_COLORS[i] }}>
-                      {pct(step.value, funnelSteps[i - 1].value)} of prev step
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Funnel Overview</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={funnelChartData} layout="vertical" margin={{ left: 20, right: 20 }}>
-                  <XAxis type="number" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <YAxis dataKey="name" type="category" width={170} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <Tooltip formatter={(v: number) => v.toLocaleString()} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                  <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                    {funnelChartData.map((_, i) => (
-                      <Cell key={i} fill={FUNNEL_COLORS[i]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Lifecycle Intelligence v1: stages, conversion journey, activity heatmap */}
-          <LifecycleIntelligence />
+      {/* Lifecycle Intelligence v1: compact funnel, drop-off, stages, activity heatmap */}
+      <LifecycleIntelligence />
 
           <Card>
             <CardHeader>
@@ -424,69 +263,25 @@ export default function AdminAnalytics() {
             </CardHeader>
             <CardContent>
               {platformUsageLoading ? (
-                <div className="h-40 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
+                <div className="h-20 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
               ) : (
-                <>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <BarChart data={platformRows} layout="vertical" margin={{ left: 20, right: 20 }}>
-                      <XAxis type="number" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                      <YAxis dataKey="label" type="category" width={150} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <Tooltip
-                        formatter={(v: number, _n, item: any) => [
-                          `${v.toLocaleString()} users · ${item?.payload?.upgraded ?? 0} upgraded (${pct(item?.payload?.upgraded ?? 0, v)})`,
-                          "Users",
-                        ]}
-                        contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                      />
-                      <Bar dataKey="users" radius={[0, 4, 4, 0]}>
-                        {platformRows.map((r) => (
-                          <Cell key={r.key} fill={r.color} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4">
-                    {platformRows.map((r) => (
-                      <div key={r.key} className="rounded-lg border px-3 py-2">
-                        <div className="flex items-center gap-1.5">
-                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: r.color }} />
-                          <p className="text-xs font-semibold text-gray-700 leading-tight">{r.label}</p>
-                        </div>
-                        <p className="text-lg font-bold text-gray-900 mt-1">{r.users.toLocaleString()}</p>
-                        <p className="text-xs mt-0.5" style={{ color: r.color }}>
-                          {r.key === "unknown" ? "awaiting first visit" : `${pct(r.upgraded, r.users)} upgraded (${r.upgraded})`}
-                        </p>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  {platformRows.map((r) => (
+                    <div key={r.key} className="rounded-lg border px-3 py-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: r.color }} />
+                        <p className="text-xs font-semibold text-gray-700 leading-tight">{r.label}</p>
                       </div>
-                    ))}
-                  </div>
-                </>
+                      <p className="text-lg font-bold text-gray-900 mt-1">{r.users.toLocaleString()}</p>
+                      <p className="text-xs mt-0.5" style={{ color: r.color }}>
+                        {r.key === "unknown" ? "awaiting first visit" : `${pct(r.upgraded, r.users)} upgraded (${r.upgraded})`}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { label: "Card Activation Rate", value: pct(funnel!.addedCard, funnel!.signups), sub: "Signups who added a card", color: "text-blue-600" },
-              { label: "Retention Rate", value: pct(funnel!.returningUsers, funnel!.addedCard), sub: "Card adders with 3+ logins", color: "text-purple-600" },
-              { label: "Upgrade Rate", value: pct(funnel!.upgraded, funnel!.returningUsers), sub: "Returning users who paid", color: "text-green-600" },
-              {
-                label: "Churn Rate",
-                value: funnel!.upgraded > 0 ? pct(funnel!.cancelled, funnel!.upgraded + funnel!.cancelled) : "—",
-                sub: "Of ever-paid users",
-                color: "text-red-600",
-              },
-            ].map((m) => (
-              <Card key={m.label}>
-                <CardContent className="pt-4 pb-3 px-4">
-                  <p className={`text-2xl font-bold ${m.color}`}>{m.value}</p>
-                  <p className="text-xs font-semibold text-gray-700 mt-1">{m.label}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{m.sub}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </>
-      )}
 
       {/* ── How Users Found Us ──────────────────────────────────────────────────── */}
       <div>
