@@ -37,11 +37,13 @@ export function ProfileCustomization() {
   const [showActivity, setShowActivity] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Show until saved; "Skip for Now" hides it for this session and it comes
+  // back once on the next sign-in — after a second skip it never returns.
   const open =
     !!currentUser?.onboardingComplete &&
     !!profile &&
     !profile.profileCustomizationCompletedAt &&
-    !profile.profileCustomizationDismissedAt &&
+    (profile.profileCustomizationSkips ?? 0) < 2 &&
     !dismissed;
 
   if (!open) return null;

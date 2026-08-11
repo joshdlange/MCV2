@@ -1038,7 +1038,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updates =
         action === "complete"
           ? { profileCustomizationCompletedAt: new Date() }
-          : { profileCustomizationDismissedAt: new Date() };
+          : {
+              profileCustomizationDismissedAt: new Date(),
+              // Skips are counted: the modal re-shows once after the first
+              // skip, then never again after the second.
+              profileCustomizationSkips:
+                ((await storage.getUser(req.user.id))?.profileCustomizationSkips ?? 0) + 1,
+            };
       const updated = await storage.updateUser(req.user.id, updates as any);
       if (!updated) return res.status(404).json({ message: "User not found" });
       res.json({ ok: true });

@@ -1,0 +1,261 @@
+Build Marvel Card Vault Feed v1 with Activity, Leaderboards, Reactions, XP rewards, and Trade Feed Coming Soon.
+
+Context:
+Collector Profile Customization and avatar identity are now built. Users have selectable avatars, profile fields, and future-ready collector identity. We now want to start building social activity, but safely.
+
+We want the Feed to make the app feel alive and also make Collector XP matter more. Feed activity should create visible social moments. Interacting with feed items should also provide a small amount of XP, but with strict anti-spam rules.
+
+Goal:
+Create a new Feed section in the app that shows meaningful collector activity, positive reactions, weekly leaderboards, and a Trade Feed coming soon tab.
+
+This is not a freeform posting system yet.
+This is not comments.
+This is not Trade Block.
+Feed v1 should be generated from real user activity only.
+
+Must do:
+- Add a new left-nav item: Feed.
+- Feed page should have three tabs:
+  1. Activity
+  2. Leaderboards
+  3. Trade Feed
+- Activity tab should show app-generated feed events.
+- Leaderboards tab should show XP/social leaderboards.
+- Trade Feed tab should show a polished “Coming Soon” state only.
+- Use the existing CollectorAvatar component.
+- Use display name/avatar where available.
+- Show collector level where available.
+- Keep privacy safe.
+- Do not expose private collections, private binders, email, real name, address, billing, or admin data.
+
+Activity feed event types:
+Create support for meaningful events such as:
+- user added first card
+- user reached collection milestones: 50, 100, 250, 500 cards
+- user created a PC Binder
+- user completed a subset or set, if completion can be calculated reliably
+- user earned a badge
+- user reached a Collector XP level milestone
+- user uploaded an image that was approved
+- user shared a binder
+- user came back after 30 days and earned the comeback badge
+
+Avoid noisy events:
+- Do not create feed events for every login.
+- Do not create feed events for every search.
+- Do not create feed events for every page view.
+- Do not create feed events for every single card add after the first card unless it hits a milestone.
+
+Feed event system:
+- Add a feed_events table or equivalent if needed.
+- Store:
+  - user_id
+  - event_type
+  - event_title
+  - event_body/metadata
+  - related entity type/id if applicable
+  - visibility
+  - created_at
+- Future meaningful actions should create feed events.
+- Make feed events link to safe destinations where possible:
+  - public profile
+  - public/shared binder
+  - card detail if safe
+  - badge/profile page
+  - PC Binder only if public/shared
+- Make the feed mobile-first and visually polished.
+- Use avatars, concise text, timestamp, and CTA/link where useful.
+
+Retroactive backfill:
+- Add an admin-only dry-run backfill for recent meaningful events.
+- Backfill should be limited and controlled.
+- Suggested backfill:
+  - last 90 days of meaningful activity
+  - all-time major milestones if reliable
+- Backfill should not create duplicates.
+- Backfill should respect privacy settings.
+- Backfill should require explicit admin confirmation before writing.
+- Dry-run should show how many events would be created by type.
+- Do not run real backfill without explicit confirmation.
+
+Feed filters:
+- For v1, include:
+  - Everyone
+  - Me
+- If following/friends is not built yet, do not fake Following/Friends filters.
+- Make the code future-ready for Following/Friends filters later.
+
+Reactions:
+- Add positive collector-themed reactions to feed events.
+- Do not add negative reactions, downvotes, meh, or poop reactions in v1.
+- Suggested reactions:
+  - 🔥 Fire Pull
+  - ⚡ Hero Move
+  - 👀 Need This
+  - 🏆 Vault Worthy
+- Users should be able to react to a feed item.
+- Users should be able to remove/change their reaction.
+- Store reactions in a durable table with:
+  - feed_event_id
+  - user_id
+  - reaction_type
+  - created_at
+  - updated_at
+- Prevent duplicate reaction rows from the same user on the same event.
+- Show reaction counts on each feed item.
+
+XP for Feed Interaction:
+- Award a small amount of Collector XP for meaningful feed interaction.
+- Suggested XP:
+  - First reaction of the day: +5 XP
+  - Additional reactions that day: +1 XP each
+  - Daily cap for reaction XP: 10 XP
+- Alternatively, if simpler:
+  - +2 XP per reaction
+  - Max 10 XP per day from reactions
+- Award XP only when a user reacts to someone else’s feed item.
+- Do not award XP for reacting to your own feed item.
+- Do not award XP repeatedly for toggling/removing/re-adding the same reaction.
+- If a user changes reaction type on the same event, do not award additional XP.
+- If a user removes a reaction, do not subtract XP unless the existing XP system already supports clean reversal.
+- Track XP source clearly as feed_reaction.
+- Add XP event logging using the existing XP system/pattern.
+- Keep feed XP small so it encourages engagement without becoming farmable.
+
+Anti-spam / anti-abuse:
+- Enforce one reaction per user per feed event, or one active reaction per user per feed event, whichever fits the existing design.
+- Daily reaction XP cap must be enforced server-side.
+- Users cannot earn feed reaction XP by reacting to their own posts.
+- Users cannot earn extra XP by repeatedly changing reactions.
+- Users cannot earn extra XP by deleting and re-reacting to the same feed event.
+- Admin/test users should not skew leaderboards if existing admin exclusion patterns exist.
+- Add reasonable rate limiting to reaction endpoint if practical.
+- Do not create notifications for reactions in v1 unless explicitly approved.
+
+Leaderboards:
+- Add a Leaderboards tab or leaderboard area inside Feed.
+- Start with weekly leaderboards, not all-time-only leaderboards.
+- Leaderboards should include:
+  - Top XP This Week
+  - Top Image Contributors This Week, if image approval data supports it
+  - Top Set Builders / Collection Progress This Week, if data supports it safely
+- If a leaderboard cannot be calculated reliably, leave it out or show it as coming soon.
+- Show user avatar, display name, collector level, and XP earned for the period.
+- Weekly leaderboard should use XP earned during the week, not total lifetime XP.
+- Total/lifetime XP can be shown on profile but should not be the primary leaderboard.
+- Respect privacy settings:
+  - users with public profile off or show activity in feed off should not appear publicly
+  - do not expose private collection details
+  - do not expose private binder details
+- Make leaderboards mobile-friendly.
+- Keep leaderboards positive and non-toxic.
+
+Trade Feed tab:
+- Do not build Trade Block yet.
+- Do not build trade proposals.
+- Do not build messaging.
+- Do not allow users to list cards for trade yet.
+- Show a polished coming-soon panel:
+  - “Trade Feed is coming soon”
+  - “Super Hero collectors will be able to showcase cards they are open to trading once Trade Block launches.”
+  - CTA can be “Explore Super Hero” for non-Super Hero users and “Coming Soon” for Super Hero users.
+- Keep this informational only.
+
+Privacy:
+- Only show events for users who allow public profile/activity visibility.
+- If show_activity_in_feed is off, do not show that user’s events publicly.
+- Private binders should never appear.
+- Private collection details should never appear.
+- Shared/public binder events can link to public/shared URLs only.
+- Profile visibility settings must be respected.
+- Existing users should not become feed-visible unless they opted in through the new profile settings.
+- Never expose:
+  - email
+  - real name unless already intentionally public display name
+  - address
+  - billing/subscription details
+  - private binders
+  - private collection data
+  - admin-only data
+
+Admin:
+- Add admin visibility/debug if practical:
+  - feed event counts
+  - reaction counts
+  - feed XP awarded today
+  - backfill dry-run
+  - backfill confirm
+  - ability to hide/archive a feed event
+- Do not expose admin tools to non-admins.
+
+Must not do:
+- Do not build freeform user posts.
+- Do not build comments.
+- Do not build subreddit/forum behavior.
+- Do not build Follow/Friends yet unless absolutely necessary.
+- Do not build Trade Block.
+- Do not build trade proposals, counters, shipping, or disputes.
+- Do not expose private data.
+- Do not send emails or notifications.
+- Do not change lifecycle emails.
+- Do not change subscription logic.
+- Do not change Stripe, RevenueCat, Shippo, Drive Sync, Data Quality, Upcoming Set Intelligence, image approval, card data, Android, or iOS.
+- Do not alter existing profile privacy defaults.
+- Do not make all-time XP the primary leaderboard.
+- Do not change existing XP earning rules except adding the small feed_reaction XP source.
+- Do not create XP farming loopholes.
+
+Preserve:
+- Existing profile customization and avatar behavior.
+- Existing public/private settings.
+- Existing PC Binder gating.
+- Existing shared binder behavior.
+- Existing lifecycle email system.
+- Existing admin tools.
+- Existing XP system and XP event patterns.
+- Existing badge system.
+- Existing app routes.
+- Existing mobile layouts.
+
+QA:
+- Feed nav item appears.
+- Feed page loads on desktop and mobile.
+- Activity tab shows feed events.
+- Leaderboards tab loads.
+- Trade Feed tab shows Coming Soon only.
+- No trade functionality is active.
+- No freeform posting exists.
+- No comments exist.
+- Reactions work.
+- Reaction counts display correctly.
+- User can remove/change reaction.
+- User cannot create duplicate reactions on the same feed event.
+- Feed reaction XP is awarded only within daily cap.
+- Feed reaction XP is not awarded for reacting to your own feed event.
+- Feed reaction XP is not awarded repeatedly for changing/removing/re-adding reactions.
+- XP events are logged with source feed_reaction.
+- Weekly XP leaderboard calculates from period XP, not lifetime total XP.
+- Private users/feed-hidden users do not appear in public feed.
+- Private binders/collections are not exposed.
+- Retroactive backfill dry-run writes nothing.
+- Confirmed backfill does not create duplicates.
+- Feed events link only to safe/public destinations.
+- Avatars display correctly.
+- Admin/debug tools are admin-only.
+- App builds/runs cleanly.
+- No emails or notifications were sent.
+- No unrelated systems changed.
+
+Final response:
+- List changed files.
+- Explain Feed location and tabs.
+- List supported activity event types.
+- Explain reaction system.
+- Explain feed reaction XP rules and caps.
+- Explain leaderboard calculations.
+- Explain privacy rules.
+- Explain backfill behavior and whether any backfill was run.
+- Confirm Trade Feed is Coming Soon only.
+- Confirm no freeform posting/comments/trading were built.
+- Confirm no emails or notifications were sent.
+- Confirm safe to publish.

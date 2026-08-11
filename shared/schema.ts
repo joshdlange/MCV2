@@ -60,6 +60,7 @@ export const users = pgTable("users", {
   showActivityInFeed: boolean("show_activity_in_feed").default(false).notNull(),
   profileCustomizationCompletedAt: timestamp("profile_customization_completed_at"),
   profileCustomizationDismissedAt: timestamp("profile_customization_dismissed_at"),
+  profileCustomizationSkips: integer("profile_customization_skips").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
