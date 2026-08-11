@@ -1,0 +1,238 @@
+Build Marvel Card Vault Collector Profile Customization v1 using the new avatar images.
+
+Context:
+We are preparing for future social features, including public profiles, follows/friends, and an activity feed. Before building the feed, we need users to feel more “followable” with better collector identity.
+
+I have created a set of circular, superhero/comic-inspired avatar images that are Marvel-adjacent but not direct Marvel characters or copyrighted art. These should be used as selectable avatar options inside the app.
+
+Goal:
+Add a skippable Collector Profile customization experience where users can choose one of the new avatar images, customize basic collector identity, and prepare their profile for future social/follow/feed functionality.
+
+This is NOT the full Feed build yet.
+This is NOT the full Follow/Friends build yet.
+This is the profile/avatar foundation.
+
+Must do:
+- Add the new avatar images into the app as selectable profile avatar options.
+- Store the selected avatar for each user.
+- Add a skippable profile customization step.
+- Add profile customization to existing profile/settings area so users can update it later.
+- Make the experience mobile-first and polished.
+- Use the MCV design language:
+  - dark premium collector-app styling
+  - black/charcoal backgrounds
+  - red accents
+  - subtle glow
+  - comic-inspired but clean
+  - premium card/vault feel
+- Keep the avatar images circular.
+- Display avatars consistently wherever collector identity appears now or in the future.
+- Prepare reusable components for future feed/profile/follow features.
+- Do not expose private information publicly.
+
+New profile customization fields:
+- avatar image selection
+- display name
+- collector tagline/bio
+- collecting focus, for example favorite character, favorite set, or what they collect
+- public profile toggle
+- show activity in future feed toggle
+- allow followers toggle
+
+Important:
+If some of these fields already exist, reuse and extend them instead of creating duplicate profile fields.
+
+Skippable customization step:
+- Add a new step after onboarding or after first login for users who have not customized their collector profile.
+- It should say something like:
+  “Customize Your Collector Profile”
+  “Choose an avatar, add a short collector tagline, and get ready for future community features.”
+- The step must be skippable.
+- Buttons:
+  - Save Profile
+  - Skip for Now
+- If user skips, do not block them from using the app.
+- If user saves, persist their choices.
+- Users should be able to edit these choices later from profile/settings.
+- Do not show this repeatedly every login after they skip. Track that they skipped or dismissed it.
+- Consider allowing it to reappear only from Settings/Profile, not automatically.
+
+Avatar image handling:
+- Add the uploaded/generated circular avatar images to an appropriate assets directory.
+- Give each avatar a stable key/id, such as:
+  - vault-emblem
+  - card-stack
+  - mask
+  - shield
+  - lightning
+  - flame
+  - cosmic-star
+  - claw-mark
+  - helmet
+  - web-pattern
+- Store the selected avatar key/id on the user profile, not a fragile file path if possible.
+- Build a reusable avatar component that maps avatar keys to image assets.
+- Add a default avatar for users who do not choose one.
+- Make avatars render nicely at small sizes:
+  - nav/profile chip
+  - user table/avatar preview
+  - future feed post header
+  - future public profile header
+
+Profile settings page:
+- Add or update a Collector Profile section.
+- User can:
+  - choose/change avatar
+  - update display name
+  - update tagline/bio
+  - update collecting focus
+  - toggle public profile
+  - toggle allow followers
+  - toggle show activity in future feed
+- Include short helper copy:
+  “These settings prepare your collector identity for public profiles, follows, and the upcoming activity feed.”
+- Make it clear that private information is never shown.
+
+Privacy defaults:
+- Default public profile should be OFF unless already enabled by existing logic.
+- Default allow followers should be OFF unless public profile is enabled, or make it dependent on public profile.
+- Default show activity in future feed should be OFF or conservative.
+- Never expose:
+  - email
+  - real name unless already intentionally public display name
+  - address
+  - billing/subscription details
+  - private binders
+  - private collection data
+  - admin-only data
+
+Reusable components:
+- Create a reusable CollectorAvatar component.
+- Create a reusable CollectorIdentityCard or profile preview component if helpful.
+- These should be future-ready for:
+  - Feed posts
+  - Follow buttons
+  - Public profiles
+  - Shared binders
+  - Leaderboards
+  - Image contributor credit
+
+Suggested UI:
+Profile customization modal/page:
+- Header: “Customize Your Collector Profile”
+- Subcopy: “Choose how other collectors will recognize you when public profiles, follows, and the activity feed roll out.”
+- Avatar grid with circular avatar images.
+- Display name input.
+- Tagline input.
+- Collecting focus input.
+- Profile visibility toggles.
+- Save Profile button.
+- Skip for Now button.
+
+Suggested copy:
+Title:
+Customize Your Collector Profile
+
+Body:
+Choose an avatar and add a little collector personality. This will help other collectors recognize you when public profiles, follows, and the activity feed roll out.
+
+Display name helper:
+This is how other collectors may see you if your profile is public.
+
+Tagline helper:
+Example: “Wolverine collector chasing 90s inserts.”
+
+Collecting focus helper:
+Example: “X-Men, Women of Marvel, Topps Chrome, sketch cards.”
+
+Public profile toggle:
+Make my collector profile public
+
+Followers toggle:
+Allow other collectors to follow me
+
+Feed activity toggle:
+Show approved collector activity in the future feed
+
+Skip helper:
+You can skip this now and customize your profile later in Settings.
+
+Must not do:
+- Do not build the full Feed in this task.
+- Do not build freeform posts.
+- Do not build comments.
+- Do not build messaging.
+- Do not build Trade Feed.
+- Do not build full Follow/Friends yet unless a tiny future-ready placeholder is unavoidable.
+- Do not expose private collections.
+- Do not expose private PC Binders.
+- Do not expose user emails, addresses, billing details, or real names.
+- Do not allow arbitrary profile photo uploads in this task.
+- Do not use official Marvel, Disney, Topps, Upper Deck, or copyrighted character art.
+- Do not use the word “Marvel” in a way that implies affiliation.
+- Do not change subscriptions, Stripe, RevenueCat, Shippo, lifecycle emails, Resend, Drive Sync, Data Quality tools, Upcoming Set Intelligence, card data, XP rules, Android, or iOS.
+- Do not send emails or notifications.
+- Do not change public app behavior beyond the new profile customization controls.
+- Do not force users to complete profile customization before using the app.
+
+Preserve:
+- Existing onboarding flow, except for the new skippable profile customization step.
+- Existing profile/settings behavior.
+- Existing username/display behavior if already present.
+- Existing public/private settings if any.
+- Existing PC Binder gating.
+- Existing shared binder behavior.
+- Existing lifecycle email system.
+- Existing admin tools.
+- Existing app routes.
+- Existing mobile layouts.
+
+Database/schema:
+- Prefer additive schema changes only.
+- Add fields only if needed.
+- Suggested fields if not already present:
+  - collector_avatar_key
+  - collector_tagline
+  - collector_focus
+  - collector_profile_public
+  - allow_followers
+  - show_activity_in_feed
+  - profile_customization_dismissed_at
+  - profile_customization_completed_at
+- Do not remove or rename existing fields without review.
+- If migration is required, make it safe and additive.
+- Existing users should receive default values safely.
+
+QA:
+- New users see the skippable profile customization step at the appropriate time.
+- Skip works and does not block app access.
+- Save works and persists avatar/profile choices.
+- Existing users are not broken.
+- Existing users can update profile customization from Settings/Profile.
+- Avatar grid displays all provided circular avatar images.
+- Selected avatar persists after refresh/login.
+- Default avatar appears for users without a selection.
+- Public profile toggle persists.
+- Allow followers toggle persists.
+- Future feed activity toggle persists.
+- No private user information is exposed.
+- Mobile layout works.
+- Desktop layout works.
+- No emails or notifications are sent.
+- No lifecycle emails are changed.
+- No subscription/billing behavior is changed.
+- No Android or iOS native files are touched.
+- App builds/runs cleanly.
+
+Final response:
+- List changed files.
+- Explain where avatar image assets were added.
+- Explain new profile fields.
+- Explain when the skippable customization step appears.
+- Explain how users skip it.
+- Explain where users can edit profile later.
+- Confirm privacy defaults.
+- Confirm no feed/follow/comments/posts were built yet.
+- Confirm no emails were sent.
+- Confirm no unrelated systems were changed.
+- Confirm safe to publish.
