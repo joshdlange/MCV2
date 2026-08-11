@@ -1,5 +1,7 @@
+import { avatarUrl } from "@/lib/collectorAvatars";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { CollectorProfileSection } from "@/components/profile/CollectorProfileSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -79,7 +81,7 @@ function SocialFriendsSection() {
           return (
             <div key={friend.id} className="text-center">
               <Avatar className="w-12 h-12 mx-auto mb-2">
-                <AvatarImage src={friendUser.photoURL} />
+                <AvatarImage src={avatarUrl(friendUser.collectorAvatarKey) ?? friendUser.photoURL} />
                 <AvatarFallback className="bg-gray-400 text-white text-sm">
                   {friendUser.displayName?.charAt(0) || friendUser.username.charAt(0)}
                 </AvatarFallback>
@@ -243,7 +245,7 @@ function BlockedUsersSection() {
             <div key={blockedUser.id} className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Avatar className="w-8 h-8">
-                  <AvatarImage src={blockedUser.photoURL} />
+                  <AvatarImage src={avatarUrl(blockedUser.collectorAvatarKey) ?? blockedUser.photoURL} />
                   <AvatarFallback className="bg-gray-400 text-white text-xs">
                     {(blockedUser.displayName || blockedUser.username || "U").charAt(0).toUpperCase()}
                   </AvatarFallback>
@@ -534,6 +536,8 @@ export default function AccountSettings() {
 
         {/* Personal Information Tab */}
         <TabsContent value="personal">
+          <div className="space-y-6">
+          <CollectorProfileSection />
           <Card className="border-gray-200 shadow-sm">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -711,6 +715,7 @@ export default function AccountSettings() {
               )}
             </CardContent>
           </Card>
+          </div>
         </TabsContent>
 
         {/* Social Tab */}

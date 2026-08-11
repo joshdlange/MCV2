@@ -129,6 +129,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
             username: users.username,
             displayName: users.displayName,
             photoURL: users.photoURL,
+            collectorAvatarKey: users.collectorAvatarKey,
             sellerRating: users.sellerRating,
             sellerReviewCount: users.sellerReviewCount,
           },
@@ -181,6 +182,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
             username: users.username,
             displayName: users.displayName,
             photoURL: users.photoURL,
+            collectorAvatarKey: users.collectorAvatarKey,
             sellerRating: users.sellerRating,
             sellerReviewCount: users.sellerReviewCount,
             location: users.location,
@@ -470,6 +472,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
             username: users.username,
             displayName: users.displayName,
             photoURL: users.photoURL,
+            collectorAvatarKey: users.collectorAvatarKey,
           },
         })
         .from(offers)
@@ -606,6 +609,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
             username: users.username,
             displayName: users.displayName,
             photoURL: users.photoURL,
+            collectorAvatarKey: users.collectorAvatarKey,
           },
         })
         .from(offers)
@@ -1232,6 +1236,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
             username: users.username,
             displayName: users.displayName,
             photoURL: users.photoURL,
+            collectorAvatarKey: users.collectorAvatarKey,
           },
           shipment: shipments,
           review: reviews,
@@ -1267,6 +1272,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
             username: users.username,
             displayName: users.displayName,
             photoURL: users.photoURL,
+            collectorAvatarKey: users.collectorAvatarKey,
           },
           shipment: shipments,
           review: reviews,
@@ -1304,6 +1310,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
             username: users.username,
             displayName: users.displayName,
             photoURL: users.photoURL,
+            collectorAvatarKey: users.collectorAvatarKey,
           },
           shipment: shipments,
           review: reviews,
@@ -1413,6 +1420,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
             username: users.username,
             displayName: users.displayName,
             photoURL: users.photoURL,
+            collectorAvatarKey: users.collectorAvatarKey,
           },
         })
         .from(reviews)
@@ -1568,6 +1576,7 @@ export function registerMarketplaceRoutes(app: Express, authenticateUser: any) {
             username: users.username,
             displayName: users.displayName,
             photoURL: users.photoURL,
+            collectorAvatarKey: users.collectorAvatarKey,
           },
         })
         .from(blocks)

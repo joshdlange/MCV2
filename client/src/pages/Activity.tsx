@@ -1,3 +1,4 @@
+import { avatarUrl } from "@/lib/collectorAvatars";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -57,12 +58,14 @@ interface OrderData {
     username: string;
     displayName: string | null;
     photoURL: string | null;
+    collectorAvatarKey?: string | null;
   };
   buyer?: {
     id: number;
     username: string;
     displayName: string | null;
     photoURL: string | null;
+    collectorAvatarKey?: string | null;
   };
   shipment?: {
     trackingNumber: string | null;
@@ -158,7 +161,7 @@ function OrderCard({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Avatar className="w-6 h-6">
-                <AvatarImage src={otherParty?.photoURL || undefined} />
+                <AvatarImage src={avatarUrl(otherParty?.collectorAvatarKey) ?? otherParty?.photoURL ?? undefined} />
                 <AvatarFallback className="text-xs bg-gray-200">
                   {(otherParty?.displayName || otherParty?.username || '?').charAt(0).toUpperCase()}
                 </AvatarFallback>

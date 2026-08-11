@@ -52,6 +52,14 @@ export const users = pgTable("users", {
   shippingAddressJson: text("shipping_address_json"), // JSON string for default shipping address
   sellerRating: decimal("seller_rating", { precision: 3, scale: 2 }),
   sellerReviewCount: integer("seller_review_count").default(0).notNull(),
+  // Collector Profile Customization v1 (social/feed foundation).
+  // Reuses displayName, bio (tagline) and profileVisibility; these are additive.
+  collectorAvatarKey: text("collector_avatar_key"),
+  collectorFocus: text("collector_focus"),
+  allowFollowers: boolean("allow_followers").default(false).notNull(),
+  showActivityInFeed: boolean("show_activity_in_feed").default(false).notNull(),
+  profileCustomizationCompletedAt: timestamp("profile_customization_completed_at"),
+  profileCustomizationDismissedAt: timestamp("profile_customization_dismissed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

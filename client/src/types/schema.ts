@@ -160,6 +160,7 @@ export type SellerInfo = {
   username: string;
   displayName: string | null;
   photoURL: string | null;
+  collectorAvatarKey?: string | null;
   sellerRating: string | null;
   sellerReviewCount: number | null;
 };

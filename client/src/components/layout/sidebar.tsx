@@ -30,6 +30,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
+import { avatarUrl } from "@/lib/collectorAvatars";
 
 const getNavigationItems = (userPlan: string): NavigationItem[] => {
   const items: NavigationItem[] = [
@@ -98,6 +99,13 @@ export function Sidebar() {
     placeholderData: { totalCards: 0 },
   });
 
+  // Collector avatar (Collector Profile Customization) — cached profile query
+  const { data: myProfile } = useQuery<any>({
+    queryKey: ["/api/user/profile"],
+    enabled: !!user,
+    staleTime: 30000,
+  });
+
   const { data: unreadMessages } = useQuery<{ count: number }>({
     queryKey: ["/api/social/unread-count"],
     refetchInterval: 120000,
@@ -153,15 +161,15 @@ export function Sidebar() {
               title="Collector Profile"
             >
               <div className="w-7 h-7 md:w-8 md:h-8 rounded-full overflow-hidden bg-marvel-red flex items-center justify-center flex-shrink-0 group-hover:ring-2 group-hover:ring-blue-500 transition-all">
-                {user.photoURL ? (
+                {(avatarUrl(myProfile?.collectorAvatarKey) || user.photoURL) ? (
                   <img 
-                    src={user.photoURL} 
+                    src={avatarUrl(myProfile?.collectorAvatarKey) || user.photoURL || undefined} 
                     alt="User avatar" 
                     className="w-full h-full object-cover"
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }}
                   />
                 ) : null}
-                <span className={`text-white font-bold text-xs md:text-sm ${user.photoURL ? 'hidden' : ''}`}>
+                <span className={`text-white font-bold text-xs md:text-sm ${(avatarUrl(myProfile?.collectorAvatarKey) || user.photoURL) ? 'hidden' : ''}`}>
                   {(user.displayName || user.email || 'U').charAt(0).toUpperCase()}
                 </span>
               </div>

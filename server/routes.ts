@@ -971,10 +971,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'emailUpdates', 'priceAlerts', 'friendActivity', 'profileVisibility',
         'onboardingComplete', 'heardAbout', 'favoriteSets', 'marketingOptIn',
         'shippingAddressJson',
+        // Collector Profile Customization v1 (all self-service, non-privileged)
+        'collectorAvatarKey', 'collectorFocus', 'allowFollowers', 'showActivityInFeed',
       ];
       const updates: any = {};
       for (const key of SELF_SERVICE_FIELDS) {
         if (req.body[key] !== undefined) updates[key] = req.body[key];
+      }
+
+      // Validate avatar key against the server-side registry (defined below,
+      // initialized lazily — safe because handlers run after registration).
+      if (updates.collectorAvatarKey !== undefined && updates.collectorAvatarKey !== null && updates.collectorAvatarKey !== '') {
+        const k = String(updates.collectorAvatarKey);
+        if (!isValidCollectorAvatarKey(k) || (k.startsWith('reserved-') && !req.user.isAdmin)) {
+          return res.status(400).json({ message: 'Invalid avatar selection' });
+        }
+        updates.collectorAvatarKey = k;
+      } else if (updates.collectorAvatarKey === '') {
+        updates.collectorAvatarKey = null;
       }
 
       const updatedUser = await storage.updateUser(userId, updates);
@@ -986,6 +1000,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Update user error:', error);
       res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  // Collector Profile Customization v1: server-side avatar key validation.
+  // Valid keys are the webp filenames in client/src/assets/avatars (the same
+  // registry the client builds via import.meta.glob). Cached at first use.
+  let VALID_AVATAR_KEYS: Set<string> | null = null;
+  const isValidCollectorAvatarKey = (key: string): boolean => {
+    if (!/^[a-z0-9-]{1,64}$/.test(key)) return false;
+    if (!VALID_AVATAR_KEYS) {
+      try {
+        const dir = path.resolve(process.cwd(), 'client', 'src', 'assets', 'avatars');
+        VALID_AVATAR_KEYS = new Set(
+          fs.readdirSync(dir)
+            .filter((f: string) => f.endsWith('.webp'))
+            .map((f: string) => f.replace(/\.webp$/, ''))
+        );
+      } catch (e) {
+        // Fail closed: if the registry can't be read we reject rather than
+        // accept arbitrary keys (retry on next call instead of caching).
+        console.error('Avatar key validation: could not read avatars dir, rejecting key', e);
+        return false;
+      }
+    }
+    return VALID_AVATAR_KEYS.has(key);
+  };
+
+  // Collector Profile Customization v1: mark the skippable customization step
+  // as completed or dismissed (timestamps are server-set, never client-supplied).
+  app.post("/api/profile-customization/:action", authenticateUser, async (req: any, res) => {
+    try {
+      const action = req.params.action;
+      if (action !== "complete" && action !== "dismiss") {
+        return res.status(400).json({ message: "Invalid action" });
+      }
+      const updates =
+        action === "complete"
+          ? { profileCustomizationCompletedAt: new Date() }
+          : { profileCustomizationDismissedAt: new Date() };
+      const updated = await storage.updateUser(req.user.id, updates as any);
+      if (!updated) return res.status(404).json({ message: "User not found" });
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("Profile customization state error:", error);
+      res.status(500).json({ message: "Failed to save" });
     }
   });
 
@@ -1022,7 +1081,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update user profile - includes shipping address sync
   app.patch("/api/user/profile", authenticateUser, async (req: any, res) => {
     try {
-      const { displayName, bio, location, website, address, privacySettings, notifications } = req.body;
+      const { displayName, bio, location, website, address, privacySettings, notifications,
+        collectorAvatarKey, collectorFocus, allowFollowers, showActivityInFeed } = req.body;
       
       const updates: any = {};
       
@@ -1030,6 +1090,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (bio !== undefined) updates.bio = bio;
       if (location !== undefined) updates.location = location;
       if (website !== undefined) updates.website = website;
+
+      // Collector Profile Customization v1
+      if (collectorAvatarKey !== undefined) {
+        if (collectorAvatarKey === null || collectorAvatarKey === '') {
+          updates.collectorAvatarKey = null;
+        } else {
+          const k = String(collectorAvatarKey);
+          // "reserved-" keys are exclusive (owner/admin only)
+          if (!isValidCollectorAvatarKey(k) || (k.startsWith('reserved-') && !req.user.isAdmin)) {
+            return res.status(400).json({ message: 'Invalid avatar selection' });
+          }
+          updates.collectorAvatarKey = k;
+        }
+      }
+      if (collectorFocus !== undefined) updates.collectorFocus = collectorFocus === null ? null : String(collectorFocus).slice(0, 200);
+      if (allowFollowers !== undefined) updates.allowFollowers = !!allowFollowers;
+      if (showActivityInFeed !== undefined) updates.showActivityInFeed = !!showActivityInFeed;
       
       // Privacy settings
       if (privacySettings) {
@@ -5466,6 +5543,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           plan: targetUser.plan,
           createdAt: targetUser.createdAt,
           sellerRating: targetUser.sellerRating,
+          collectorAvatarKey: targetUser.collectorAvatarKey,
+          collectorFocus: targetUser.collectorFocus,
         },
         stats: publicStats,
         xp,
@@ -5852,6 +5931,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           username: users.username,
           displayName: users.displayName,
           photoURL: users.photoURL,
+          collectorAvatarKey: users.collectorAvatarKey,
         })
         .from(blocks)
         .innerJoin(users, eq(blocks.blockedUserId, users.id))

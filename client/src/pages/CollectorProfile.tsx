@@ -21,6 +21,7 @@ import { ComicBolt } from "@/components/ui/comic-bolt";
 import type { XpProgress } from "@shared/xp";
 import { XP_PER_APPROVED_IMAGE, XP_FIRST_APPROVED_IMAGE_BONUS } from "@shared/xp";
 import BadgeIcon from "@/components/profile/BadgeIcon";
+import { avatarUrl } from "@/lib/collectorAvatars";
 
 interface CollectorUser {
   id: number;
@@ -36,6 +37,8 @@ interface CollectorUser {
   plan: string;
   createdAt: string;
   sellerRating?: string;
+  collectorAvatarKey?: string | null;
+  collectorFocus?: string | null;
 }
 
 interface CollectorStats {
@@ -339,7 +342,7 @@ export default function CollectorProfile() {
         <div className="flex items-end justify-between -mt-16 md:-mt-20 mb-4">
           <div className="relative">
             <Avatar className={`w-28 h-28 md:w-36 md:h-36 border-4 shadow-xl ${isSuperHero ? "border-yellow-400" : "border-white"}`}>
-              <AvatarImage src={user.photoURL} alt={displayName} />
+              <AvatarImage src={avatarUrl(user.collectorAvatarKey) ?? user.photoURL} alt={displayName} />
               <AvatarFallback className="bg-red-600 text-white text-4xl font-bold">
                 {displayName.charAt(0).toUpperCase()}
               </AvatarFallback>
@@ -437,6 +440,11 @@ export default function CollectorProfile() {
           </div>
           <p className="text-gray-500 text-sm mb-2">@{user.username}</p>
           {user.bio && <p className="text-gray-700 text-sm mb-3 max-w-xl">{user.bio}</p>}
+          {user.collectorFocus && (
+            <p className="text-sm mb-3 max-w-xl text-red-700 font-medium">
+              Collecting focus: <span className="text-gray-700 font-normal">{user.collectorFocus}</span>
+            </p>
+          )}
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
             {user.location && (

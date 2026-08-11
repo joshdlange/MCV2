@@ -70,6 +70,31 @@ app.use((req, res, next) => {
     console.error('Startup migration (trusted_uploader) failed:', error);
   }
 
+  // Idempotent startup migration: Collector Profile Customization v1 columns.
+  try {
+    const { db } = await import('./db');
+    const { sql } = await import('drizzle-orm');
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS collector_avatar_key text`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS collector_focus text`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS allow_followers boolean NOT NULL DEFAULT false`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS show_activity_in_feed boolean NOT NULL DEFAULT false`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_customization_completed_at timestamp`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_customization_dismissed_at timestamp`);
+  } catch (error) {
+    console.error('Startup migration (collector profile columns) failed:', error);
+  }
+
+  // Idempotent startup seed: Joshua's exclusive reserved avatar (matched by
+  // email so it works in dev and prod; only sets it if he hasn't picked one).
+  try {
+    const { db } = await import('./db');
+    const { sql } = await import('drizzle-orm');
+    await db.execute(sql`UPDATE users SET collector_avatar_key = 'reserved-sabretooth'
+      WHERE lower(trim(email)) = 'joshdlange045@gmail.com' AND collector_avatar_key IS NULL`);
+  } catch (error) {
+    console.error('Startup seed (reserved-sabretooth avatar) failed:', error);
+  }
+
   // Idempotent startup migration: Drive → Cloudinary import history table.
   try {
     const { db } = await import('./db');

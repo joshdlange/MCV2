@@ -1,3 +1,4 @@
+import { avatarUrl } from "@/lib/collectorAvatars";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,8 @@ interface User {
   id: number;
   username: string;
   email: string;
+  photoURL?: string | null;
+  collectorAvatarKey?: string | null;
   isAdmin: boolean;
   plan: string;
   onboardingComplete: boolean;
@@ -324,8 +327,16 @@ export default function AdminUsers() {
                   <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-3">
-                          <User className="w-4 h-4 text-gray-500" />
+                        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-3 overflow-hidden flex-shrink-0">
+                          {(avatarUrl(user.collectorAvatarKey) ?? user.photoURL) ? (
+                            <img
+                              src={avatarUrl(user.collectorAvatarKey) ?? user.photoURL ?? undefined}
+                              alt={user.username}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <User className="w-4 h-4 text-gray-500" />
+                          )}
                         </div>
                         <div>
                           <div className="text-sm font-medium text-gray-900">{user.username}</div>

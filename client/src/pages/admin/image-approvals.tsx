@@ -1,3 +1,4 @@
+import { avatarUrl } from "@/lib/collectorAvatars";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ interface PendingSubmission {
     username: string;
     email: string;
     photoURL: string | null;
+    collectorAvatarKey?: string | null;
   };
   card: {
     id: number;
@@ -48,6 +50,7 @@ interface TrustedUploader {
   username: string;
   email: string;
   photoURL: string | null;
+    collectorAvatarKey?: string | null;
 }
 
 function TrustedUploadersCard() {
@@ -392,8 +395,8 @@ export default function AdminImageApprovals() {
                 {/* Submitter Info */}
                 <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-900 rounded-lg border">
                   <div className="w-10 h-10 rounded-full bg-marvel-red flex items-center justify-center text-white font-bold">
-                    {submission.user.photoURL ? (
-                      <img src={submission.user.photoURL} alt={submission.user.username} className="w-full h-full rounded-full" />
+                    {(avatarUrl(submission.user.collectorAvatarKey) ?? submission.user.photoURL) ? (
+                      <img src={avatarUrl(submission.user.collectorAvatarKey) ?? submission.user.photoURL ?? undefined} alt={submission.user.username} className="w-full h-full rounded-full object-cover" />
                     ) : (
                       <User className="w-5 h-5" />
                     )}
