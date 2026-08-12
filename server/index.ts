@@ -152,6 +152,23 @@ app.use((req, res, next) => {
     console.error('Startup seed (reserved-sabretooth avatar) failed:', error);
   }
 
+  // One-time startup backfill: retroactive feed events (first cards, milestones,
+  // recent badges/binders/images). Idempotent via dedupe-key ON CONFLICT, but
+  // gated by a startup_migrations marker so the scan only runs once per env.
+  try {
+    const { db } = await import('./db');
+    const { sql } = await import('drizzle-orm');
+    const marker = await db.execute(sql`SELECT 1 FROM startup_migrations WHERE name = 'feed_backfill_v1'`);
+    if ((marker as any).rows?.length === 0) {
+      const { runFeedBackfill } = await import('./services/feedService');
+      const result = await runFeedBackfill(false);
+      await db.execute(sql`INSERT INTO startup_migrations (name) VALUES ('feed_backfill_v1') ON CONFLICT (name) DO NOTHING`);
+      console.log('Startup backfill: feed events backfilled', JSON.stringify(result));
+    }
+  } catch (error) {
+    console.error('Startup backfill (feed events) failed:', error);
+  }
+
   // Idempotent startup migration: Drive → Cloudinary import history table.
   try {
     const { db } = await import('./db');
