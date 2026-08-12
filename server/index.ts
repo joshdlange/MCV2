@@ -396,6 +396,17 @@ app.use((req, res, next) => {
     console.error('Startup fix (TCMS 2025 checklist) failed:', error);
   }
 
+  // Idempotent startup fix: 2025 Topps Chrome Marvel Studios INSERT sets —
+  // strips "[Color]"/"#XX-N" decorations from card names, moving each row to
+  // its correct insert/parallel set or merging it into the existing clean row
+  // (slug-matched, marker-gated, safe in dev and prod).
+  try {
+    const { fixTcms2025Inserts } = await import('./seeds/fixTcms2025Inserts');
+    await fixTcms2025Inserts();
+  } catch (error) {
+    console.error('Startup fix (TCMS 2025 inserts) failed:', error);
+  }
+
   const server = await registerRoutes(app);
 
   // Start background services
