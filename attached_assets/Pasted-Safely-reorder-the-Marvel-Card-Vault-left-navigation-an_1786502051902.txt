@@ -1,0 +1,116 @@
+Safely reorder the Marvel Card Vault left navigation and add only subtle grouping.
+
+Context:
+The sidebar nav currently works, but Feed is sitting in the middle of collection tools. Feed is a community/social feature and should live closer to Social Hub. We want the nav order to feel more intentional, but this should be a very small, low-risk UI cleanup.
+
+This is not a sidebar redesign.
+This is not a route change.
+This is not a feature change.
+
+Goal:
+Reorder the existing left nav items and add subtle visual grouping without making the sidebar busier or taking up too much space.
+
+Must do:
+- Keep all existing nav items.
+- Keep all existing routes.
+- Keep all existing icons unless there is a tiny obvious mismatch.
+- Move Feed near Social Hub.
+- Keep Feed and Social Hub separate for now.
+- Keep the Feed NEW badge for now.
+- Keep the PC Binders NEW badge if it is still currently shown.
+- Add only subtle grouping using spacing or thin dividers.
+- Avoid large section headers that take up too much vertical space.
+- If labels are used, they must be small, muted, and optional-looking.
+- The grouping should feel subtle, not like a full new nav system.
+- Preserve the current sidebar width and general layout.
+- Preserve mobile sidebar behavior.
+
+Preferred final nav order:
+
+Dashboard
+
+Browse Cards
+My Collection
+Wishlist
+Scan to Add
+
+PC Binders
+Market Trends
+Upcoming Sets
+
+Feed
+Social Hub
+
+Admin Tools / Admin Mode should remain exactly where it is today.
+
+Upgrade / plan panel should remain exactly where it is today.
+
+Suggested visual grouping:
+- Use small vertical spacing between groups.
+- Use thin muted divider lines only if needed.
+- Avoid big labels like HOME / COLLECT / BUILD / COMMUNITY unless they are very small and subtle.
+- Do not make grouping names dominate the nav.
+- Do not increase sidebar height in a way that causes unnecessary scrolling.
+
+Optional subtle labels, only if they look clean:
+- Collect
+- Build
+- Community
+
+If labels make the sidebar feel cluttered, do not use labels. Use spacing/dividers instead.
+
+Must not do:
+- Do not redesign the sidebar.
+- Do not change the route paths.
+- Do not rename nav items.
+- Do not remove nav items.
+- Do not merge Feed and Social Hub.
+- Do not move Admin Tools/Admin Mode.
+- Do not move or redesign the Super Hero / plan panel.
+- Do not change Feed functionality.
+- Do not change Social Hub functionality.
+- Do not change PC Binder gating.
+- Do not change auth, subscriptions, Stripe, RevenueCat, lifecycle emails, XP, Feed reactions, Follow/Friends, leaderboards, Drive Sync, Data Quality tools, Upcoming Set Intelligence, card data, Android, or iOS.
+- Do not send emails or notifications.
+- Do not add new features.
+
+Preserve:
+- Existing sidebar component structure as much as possible.
+- Existing routes.
+- Existing active state behavior, with only minor polish if needed.
+- Existing mobile nav behavior.
+- Existing admin mode/admin tools behavior.
+- Existing plan/upgrade panel.
+- Existing Feed, Follow/Friends, Leaderboards, and Social Hub behavior.
+
+QA:
+- Sidebar nav order matches the preferred order.
+- Feed appears near Social Hub.
+- Feed route still works.
+- Social Hub route still works.
+- Dashboard route still works.
+- Browse Cards route still works.
+- My Collection route still works.
+- Wishlist route still works.
+- Scan to Add route still works.
+- PC Binders route and gating still work.
+- Market Trends route still works.
+- Upcoming Sets route still works.
+- Admin Tools/Admin Mode still works.
+- Super Hero / plan panel still displays correctly.
+- Active nav state still works.
+- NEW badges still display correctly.
+- Sidebar does not feel more cluttered.
+- Grouping is subtle and does not take up the whole nav.
+- Mobile sidebar still works.
+- No unrelated files or systems were changed.
+
+Final response:
+- List changed files.
+- Confirm final nav order.
+- Confirm whether spacing/dividers or subtle labels were used.
+- Confirm Feed and Social Hub remain separate.
+- Confirm no routes changed.
+- Confirm Admin Tools and plan panel were preserved.
+- Confirm all nav links still work.
+- Confirm safe to publish.

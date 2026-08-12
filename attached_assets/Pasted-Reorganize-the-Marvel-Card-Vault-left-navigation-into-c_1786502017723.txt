@@ -1,0 +1,99 @@
+Reorganize the Marvel Card Vault left navigation into clearer feature groups and move Feed into the community area.
+
+Context:
+Feed is currently placed between Wishlist and Scan to Add. That makes it feel like a collection-management feature, but Feed is really a community/social feature. We may eventually combine Feed and Social Hub into a larger Community section, but for now Feed should remain visible as its own nav item.
+
+Goal:
+Reorder and lightly group the left navigation so users understand the app better.
+
+Must do:
+- Move Feed near Social Hub.
+- Keep Feed visible and easy to find.
+- Keep the NEW badge on Feed for now.
+- Keep PC Binders NEW badge if still active.
+- Reorder nav around user intent.
+
+Preferred nav order:
+
+Dashboard
+
+Browse Cards
+My Collection
+Wishlist
+Scan to Add
+
+PC Binders
+Market Trends
+Upcoming Sets
+
+Feed
+Social Hub
+
+If section labels are already supported or easy to add, use subtle grouping:
+Home:
+- Dashboard
+
+Collect:
+- Browse Cards
+- My Collection
+- Wishlist
+- Scan to Add
+
+Build:
+- PC Binders
+- Market Trends
+- Upcoming Sets
+
+Community:
+- Feed
+- Social Hub
+
+If section labels make the nav too busy, use spacing/dividers instead.
+
+Feed/Social Hub future:
+- Do not merge Feed and Social Hub yet.
+- Do not remove Social Hub.
+- Do not remove Feed.
+- Do not change Feed functionality.
+- Keep the code future-ready for a later Community/Social Hub consolidation.
+
+Visual cleanup:
+- Make active nav state feel polished and not overly loud.
+- Feed can remain highlighted when active, but avoid making the active red block dominate the sidebar.
+- Ensure active/hover states remain readable.
+- Ensure mobile nav still works.
+
+Must not do:
+- Do not change routes.
+- Do not remove nav items.
+- Do not merge Feed and Social Hub in this task.
+- Do not change Feed backend, reactions, XP, follow/friends, leaderboards, or privacy.
+- Do not change subscriptions, lifecycle emails, admin tools, card data, Android, or iOS.
+- Do not send emails or notifications.
+
+Preserve:
+- Existing routes.
+- Existing Feed functionality.
+- Existing Social Hub functionality.
+- Existing PC Binder gating.
+- Existing admin mode/admin tools.
+- Existing mobile/sidebar behavior.
+- Existing user plan/upgrade panel.
+
+QA:
+- Left nav order matches the new grouping.
+- Feed appears near Social Hub.
+- Feed route still works.
+- Social Hub route still works.
+- Dashboard, Browse Cards, My Collection, Wishlist, Scan to Add, PC Binders, Market Trends, and Upcoming Sets still work.
+- Active state displays correctly.
+- NEW badges display correctly.
+- Mobile nav works.
+- No unrelated systems changed.
+
+Final response:
+- Confirm final nav order.
+- Confirm whether section labels or spacing/dividers were used.
+- Confirm Feed and Social Hub remain separate for now.
+- Confirm all routes still work.
+- Confirm safe to publish.

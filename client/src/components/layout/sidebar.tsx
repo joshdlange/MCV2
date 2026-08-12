@@ -32,42 +32,38 @@ import {
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { avatarUrl } from "@/lib/collectorAvatars";
 
-const getNavigationItems = (userPlan: string): NavigationItem[] => {
-  const items: NavigationItem[] = [
-    { href: "/", label: "Dashboard", icon: "LayoutDashboard" },
+// Nav items in intentional groups: home / collect / build / community.
+// Rendered with subtle spacing + thin dividers between groups (no headers).
+const getNavigationGroups = (userPlan: string): NavigationItem[][] => {
+  const collect: NavigationItem[] = [
     { href: "/browse", label: "Browse Cards", icon: "Grid3X3" },
     { href: "/my-collection", label: "My Collection", icon: "FolderOpen" },
-    { href: "/pc-binders", label: "PC Binders", icon: "BookOpen", isNew: true },
     { href: "/wishlist", label: "Wishlist", icon: "Heart" },
+    { href: "/scan", label: "Scan to Add", icon: "ScanLine" },
   ];
 
   if (FEATURE_FLAGS.MARKETPLACE_ENABLED) {
-    items.push({ 
-      href: "/marketplace", 
-      label: "Marketplace", 
-      icon: "Store",
-      badge: userPlan === 'SIDE_KICK' ? "👑" : undefined
-    });
+    collect.push(
+      { href: "/marketplace", label: "Marketplace", icon: "Store",
+        badge: userPlan === 'SIDE_KICK' ? "👑" : undefined },
+      { href: "/activity", label: "Activity", icon: "Activity",
+        badge: userPlan === 'SIDE_KICK' ? "👑" : undefined },
+    );
   }
 
-  if (FEATURE_FLAGS.MARKETPLACE_ENABLED) {
-    items.push({ 
-      href: "/activity", 
-      label: "Activity", 
-      icon: "Activity",
-      badge: userPlan === 'SIDE_KICK' ? "👑" : undefined
-    });
-  }
-
-  items.push(
-    { href: "/feed", label: "Feed", icon: "Activity", isNew: true },
-    { href: "/scan", label: "Scan to Add", icon: "ScanLine" },
-    { href: "/trends", label: "Market Trends", icon: "TrendingUp" },
-    { href: "/upcoming-sets", label: "Upcoming Sets", icon: "Calendar" },
-    { href: "/social", label: "Social Hub", icon: "Users" },
-  );
-
-  return items;
+  return [
+    [{ href: "/", label: "Dashboard", icon: "LayoutDashboard" }],
+    collect,
+    [
+      { href: "/pc-binders", label: "PC Binders", icon: "BookOpen", isNew: true },
+      { href: "/trends", label: "Market Trends", icon: "TrendingUp" },
+      { href: "/upcoming-sets", label: "Upcoming Sets", icon: "Calendar" },
+    ],
+    [
+      { href: "/feed", label: "Feed", icon: "Activity", isNew: true },
+      { href: "/social", label: "Social Hub", icon: "Users" },
+    ],
+  ];
 };
 
 
@@ -199,7 +195,9 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 md:px-4 py-3 md:py-6 space-y-1 md:space-y-2 overflow-y-auto">
-        {getNavigationItems(currentUser?.plan || 'SIDE_KICK').map((item) => (
+        {getNavigationGroups(currentUser?.plan || 'SIDE_KICK').map((group, gi) => (
+          <div key={gi} className={gi > 0 ? "pt-2 md:pt-3 mt-2 md:mt-3 border-t border-border/60 space-y-1 md:space-y-2" : "space-y-1 md:space-y-2"}>
+            {group.map((item) => (
           <Link key={item.href} href={item.href}>
             <div 
               className={`flex items-center px-3 md:px-4 py-2.5 md:py-3 rounded-lg transition-colors group cursor-pointer text-sm ${
@@ -229,6 +227,8 @@ export function Sidebar() {
               )}
             </div>
           </Link>
+            ))}
+          </div>
         ))}
 
         {/* Upgrade Section for SIDE KICK users */}

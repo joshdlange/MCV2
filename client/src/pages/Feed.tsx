@@ -670,25 +670,35 @@ function ActivityTab() {
     return filter === "me" ? g : diversifyGroups(g);
   }, [events, filter]);
 
+  // Pagination session: bumped on every filter change so an in-flight page
+  // request from a previous filter can never append into the new one.
+  const pageSessionRef = useRef(0);
+
   const changeFilter = (f: FeedFilter) => {
+    pageSessionRef.current++;
     setFilter(f);
     setExtraEvents([]);
     setCursor(null);
+    setLoadingMore(false);
   };
 
   const loadMore = async () => {
     if (!nextCursor || loadingMore) return;
+    const session = pageSessionRef.current;
     setLoadingMore(true);
     try {
       const res = await apiRequest("GET", `/api/feed?filter=${filter}&before=${encodeURIComponent(nextCursor)}`);
       const page: FeedResponse = await res.json();
+      if (session !== pageSessionRef.current) return; // filter changed mid-flight
       setExtraEvents(prev => [...prev, ...page.events]);
       setCursor(page.nextCursor ?? "");
       if (!page.nextCursor) setCursor("");
     } catch {
-      toast({ title: "Could not load more", variant: "destructive" });
+      if (session === pageSessionRef.current) {
+        toast({ title: "Could not load more", variant: "destructive" });
+      }
     } finally {
-      setLoadingMore(false);
+      if (session === pageSessionRef.current) setLoadingMore(false);
     }
   };
 
