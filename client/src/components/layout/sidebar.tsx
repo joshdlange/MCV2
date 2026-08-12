@@ -130,27 +130,27 @@ export function Sidebar() {
   };
 
   return (
-    <div className="h-screen w-80 md:w-80 bg-background shadow-lg border-r border-border flex flex-col overflow-y-auto">
+    <div className="h-screen w-80 md:w-80 bg-background shadow-lg border-r border-border flex flex-col overflow-hidden">
       {/* Logo & Branding */}
-      <div className="flex items-center px-4 py-3 md:px-6 md:py-4 bg-marvel-red flex-shrink-0">
+      <div className="flex items-center px-4 py-2 md:px-6 md:py-2.5 bg-marvel-red flex-shrink-0">
         <div className="flex items-center space-x-2 md:space-x-3">
-          <div className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center">
+          <div className="w-8 h-8 flex items-center justify-center">
             <img 
               src={vaultLogo} 
               alt="Marvelous Card Vault" 
-              className="w-8 h-8 md:w-10 md:h-10 object-contain"
+              className="w-8 h-8 object-contain"
             />
           </div>
           <div>
-            <h1 className="text-white font-bebas text-xl md:text-2xl tracking-wide">MARVELOUS</h1>
-            <p className="text-white/80 text-xs md:text-sm font-roboto">Card Vault</p>
+            <h1 className="text-white font-bebas text-lg md:text-xl tracking-wide leading-tight">MARVELOUS</h1>
+            <p className="text-white/80 text-[10px] md:text-xs font-roboto leading-tight">Card Vault</p>
           </div>
         </div>
       </div>
 
       {/* User Profile */}
       {user && (
-        <div className="border-b border-border p-3 md:p-4 flex-shrink-0">
+        <div className="border-b border-border px-3 py-1.5 md:px-4 md:py-2 flex-shrink-0">
           <div className="flex items-center space-x-2 md:space-x-3">
             <Link
               href={currentUser?.username ? `/collectors/${currentUser.username}` : "/profile"}
@@ -194,13 +194,13 @@ export function Sidebar() {
       <AdminToggle />
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 md:px-4 py-3 md:py-6 space-y-1 md:space-y-2 overflow-y-auto">
+      <nav className="flex-1 px-3 md:px-4 py-2 space-y-0.5 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {getNavigationGroups(currentUser?.plan || 'SIDE_KICK').map((group, gi) => (
-          <div key={gi} className={gi > 0 ? "pt-2 md:pt-3 mt-2 md:mt-3 border-t border-border/60 space-y-1 md:space-y-2" : "space-y-1 md:space-y-2"}>
+          <div key={gi} className={gi > 0 ? "pt-1.5 mt-1.5 border-t border-border/60 space-y-0.5" : "space-y-0.5"}>
             {group.map((item) => (
           <Link key={item.href} href={item.href}>
             <div 
-              className={`flex items-center px-3 md:px-4 py-2.5 md:py-3 rounded-lg transition-colors group cursor-pointer text-sm ${
+              className={`flex items-center px-3 md:px-4 py-2 rounded-lg transition-colors group cursor-pointer text-sm ${
                 location === item.href 
                   ? 'bg-marvel-red text-white' 
                   : 'text-foreground hover:bg-marvel-red hover:text-white'
@@ -209,7 +209,7 @@ export function Sidebar() {
               <IconComponent iconName={item.icon} />
               <span className="font-medium">{item.label}</span>
               {item.isNew && (
-                <span className="ml-2 text-[10px] font-bold tracking-wide px-1.5 py-0.5 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 text-yellow-950 shadow-sm flex-shrink-0">
+                <span className="ml-2 text-[9px] font-bold tracking-wide px-1.5 py-px rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 text-yellow-950 shadow-sm flex-shrink-0">
                   NEW
                 </span>
               )}
@@ -233,15 +233,15 @@ export function Sidebar() {
 
         {/* Upgrade Section for SIDE KICK users */}
         {currentUser && currentUser.plan === 'SIDE_KICK' && (
-          <div className="pt-3 md:pt-4 border-t border-gray-200 mt-3 md:mt-4">
+          <div className="pt-2 border-t border-gray-200 mt-2">
             <Button 
               onClick={(e) => { e.stopPropagation(); setShowUpgradeModal(true); }}
-              className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-yellow-900 font-bold py-2 md:py-3 px-3 md:px-4 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-200 text-sm"
+              className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-yellow-900 font-bold py-2 px-3 md:px-4 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-200 text-sm"
             >
-              <Crown className="w-4 h-4 md:w-5 md:h-5 mr-2" />
+              <Crown className="w-4 h-4 mr-2" />
               Upgrade to SUPER HERO
             </Button>
-            <div className="mt-2 flex flex-col items-center gap-0.5">
+            <div className="mt-1 flex items-center justify-center gap-1.5">
               <span className="text-[10px] md:text-xs text-gray-500">Collection Limit</span>
               <span className={`text-[11px] md:text-xs font-medium ${(collectionStats as any)?.totalCards >= SIDE_KICK_CARD_LIMIT ? 'text-red-600 font-bold' : 'text-gray-600'}`}>
                 {collectionStats?.totalCards || 0} / {SIDE_KICK_CARD_LIMIT}
@@ -253,13 +253,13 @@ export function Sidebar() {
 
         {/* Plan Badge for SUPER HERO users */}
         {currentUser && currentUser.plan === 'SUPER_HERO' && (
-          <div className="pt-3 md:pt-4 border-t border-gray-200 mt-3 md:mt-4">
-            <div className="flex flex-col items-center gap-1">
-              <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-yellow-900 px-2 md:px-3 py-0.5 md:py-1 text-xs">
-                <Crown className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+          <div className="pt-2 border-t border-gray-200 mt-2">
+            <div className="flex flex-col items-center gap-0.5">
+              <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-yellow-900 px-2 md:px-3 py-0.5 text-xs">
+                <Crown className="w-3 h-3 mr-1" />
                 SUPER HERO
               </Badge>
-              <div className="flex flex-col items-center gap-0.5">
+              <div className="flex items-center gap-1.5">
                 <span className="text-[10px] md:text-xs text-gray-500">Collection</span>
                 <span className="text-[11px] md:text-xs font-medium text-gray-600">
                   {collectionStats?.totalCards || 0} cards
@@ -268,7 +268,7 @@ export function Sidebar() {
               {currentUser.isAdmin && (
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowUpgradeModal(true); }}
-                  className="mt-1 text-[10px] text-gray-400 hover:text-red-500 underline transition-colors"
+                  className="text-[10px] text-gray-400 hover:text-red-500 underline transition-colors"
                 >
                   Preview Upgrade Modal
                 </button>

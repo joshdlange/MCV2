@@ -1,0 +1,150 @@
+Fix Marvel Card Vault sidebar height across all devices so the full nav fits without visible scrolling.
+
+Context:
+The nav reorder/grouping is correct, but the sidebar now shows a vertical scrollbar on both mobile and desktop/laptop views. We want the full sidebar to fit cleanly on common device heights without losing key functionality.
+
+Important:
+The Super Hero crown / plan panel is clickable and acts as an upgrade channel. Do not remove it, hide it, or break its click/upgrade behavior.
+
+Goal:
+Make the sidebar vertically compact enough to fit across desktop, laptop, tablet, and mobile drawer views without a visible scrollbar where reasonably possible.
+
+This should be a sidebar spacing/density cleanup only.
+Do not redesign the app.
+Do not change routes.
+Do not remove nav items.
+
+Must do:
+- Keep the current nav order:
+  Dashboard
+
+  Browse Cards
+  My Collection
+  Wishlist
+  Scan to Add
+
+  PC Binders
+  Market Trends
+  Upcoming Sets
+
+  Feed
+  Social Hub
+
+- Keep Feed near Social Hub.
+- Keep Feed and Social Hub separate.
+- Keep all nav items.
+- Keep all routes.
+- Keep subtle grouping/dividers if possible, but reduce their vertical space.
+- Preserve the Super Hero / plan panel as a clickable upgrade channel.
+- Preserve the crown button/pill.
+- Preserve the collection count.
+- Preserve the Preview Upgrade Modal link if it exists today.
+- Make the sidebar fit better on common desktop/laptop/mobile heights.
+- Remove visible sidebar scrollbar where reasonably possible.
+- Use a more compact vertical density across the whole sidebar.
+
+Specific spacing fixes:
+- Reduce the red logo/header block height.
+- Reduce logo/icon size slightly if needed.
+- Reduce top/bottom padding in the profile block.
+- Reduce top/bottom padding in the Admin Mode block.
+- Make Admin Tools button shorter/compact if admin mode is active.
+- Reduce nav item vertical padding/height.
+- Reduce icon/text spacing if needed.
+- Reduce divider margins substantially.
+- Make NEW badges smaller/tighter if needed.
+- Make the Super Hero / plan panel more compact while keeping it clickable.
+- Tighten spacing around:
+  - Super Hero crown pill
+  - Collection label
+  - card count
+  - Preview Upgrade Modal link
+- Preserve readability and tap targets.
+
+Admin block:
+- Do not remove Admin Mode.
+- Do not remove Admin Tools.
+- If needed, make Admin Tools compact.
+- If admin mode is off, do not show unnecessary extra admin height.
+- Do not change admin behavior, permissions, or routing.
+
+Super Hero / plan panel:
+- Do not remove it.
+- Do not hide it behind scrolling if avoidable.
+- Do not break click behavior.
+- The Super Hero crown/pill must remain clickable and should still open the upgrade modal or existing upgrade behavior.
+- Keep the plan panel visible near the bottom, but compact.
+- Do not change subscription logic.
+- Do not change upgrade modal behavior.
+
+Desktop and mobile behavior:
+- On desktop/laptop, sidebar should fit without a visible scrollbar on common heights.
+- On mobile drawer, sidebar should fit without a visible scrollbar on common phone heights where reasonably possible.
+- If extremely small screens still require scrolling, make the scrollbar minimal/hidden and ensure all items remain accessible.
+- Preserve existing drawer/overlay behavior.
+
+Must not do:
+- Do not change route paths.
+- Do not remove nav items.
+- Do not merge Feed and Social Hub.
+- Do not undo the nav reorder.
+- Do not remove NEW badges unless absolutely necessary.
+- Do not remove the Super Hero upgrade panel.
+- Do not break the clickable Super Hero crown/upgrade CTA.
+- Do not redesign the whole sidebar.
+- Do not hide important nav items behind another menu.
+- Do not change Feed, Follow/Friends, reactions, XP, leaderboards, lifecycle emails, subscriptions, Stripe, RevenueCat, card data, Drive Sync, Data Quality tools, Upcoming Set Intelligence, Android, or iOS.
+- Do not send emails or notifications.
+
+Preserve:
+- Existing sidebar component structure as much as practical.
+- Existing nav order.
+- Existing active state behavior.
+- Existing mobile drawer behavior.
+- Existing admin mode/admin tools behavior.
+- Existing Super Hero / plan panel behavior.
+- Existing upgrade modal behavior.
+- Existing Feed/Social Hub functionality.
+- Existing PC Binder gating.
+
+QA:
+- Desktop sidebar no longer shows a visible vertical scrollbar on common laptop/desktop heights.
+- Mobile sidebar no longer shows a visible vertical scrollbar on common phone heights where reasonably possible.
+- All nav items remain visible and usable:
+  - Dashboard
+  - Browse Cards
+  - My Collection
+  - Wishlist
+  - Scan to Add
+  - PC Binders
+  - Market Trends
+  - Upcoming Sets
+  - Feed
+  - Social Hub
+- Admin Mode remains visible and usable.
+- Admin Tools remains accessible when admin mode is active.
+- Super Hero crown/pill remains visible.
+- Super Hero crown/pill remains clickable.
+- Upgrade modal/upgrade behavior still works.
+- Collection count still displays.
+- Preview Upgrade Modal link still works if currently present.
+- Nav items remain readable and tappable.
+- Active nav state still works.
+- NEW badges still display.
+- Feed route still works.
+- Social Hub route still works.
+- All other nav routes still work.
+- No unrelated systems changed.
+- App builds/runs cleanly.
+
+Final response:
+- List changed files.
+- Explain what sidebar spacing/density changes were made.
+- Confirm final nav order was preserved.
+- Confirm desktop scrollbar is gone or minimized.
+- Confirm mobile scrollbar is gone or minimized.
+- Confirm Super Hero crown/pill is still clickable.
+- Confirm upgrade modal behavior still works.
+- Confirm Admin Tools remain accessible.
+- Confirm all routes still work.
+- Confirm safe to publish.

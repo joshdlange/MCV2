@@ -12,8 +12,8 @@ export function AdminToggle() {
   }
 
   return (
-    <div className="px-4 md:px-6 py-2.5 md:py-4 border-b border-border bg-muted flex-shrink-0">
-      <div className="flex items-center justify-between mb-2 md:mb-3">
+    <div className="px-4 md:px-6 py-1.5 md:py-2 border-b border-border bg-muted flex-shrink-0">
+      <div className={`flex items-center justify-between ${isAdminMode ? "mb-1.5" : ""}`}>
         <span className="text-xs md:text-sm font-medium text-foreground">Admin Mode</span>
         <Switch
           checked={isAdminMode}
@@ -28,9 +28,9 @@ export function AdminToggle() {
           <Button 
             variant="default" 
             size="sm" 
-            className="w-full bg-red-600 text-white text-xs py-1.5 md:py-2"
+            className="w-full bg-red-600 text-white text-xs h-7 py-1"
           >
-            <Settings className="w-3.5 h-3.5 md:w-4 md:h-4 mr-2" />
+            <Settings className="w-3.5 h-3.5 mr-2" />
             Admin Tools
           </Button>
         </Link>
