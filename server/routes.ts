@@ -8422,7 +8422,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         title: 'contributed a card image to the Vault',
         relatedType: 'card',
         relatedId: pendingImage.cardId,
-        dedupeKey: `image_approved:${pendingImage.userId}:${imageId}`,
+        dedupeKey: `image_approved:${pendingImage.userId}:${new Date().toISOString().slice(0, 10)}`,
       })).catch(() => {});
 
       res.json({ message: "Image approved successfully" });
@@ -8495,7 +8495,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             title: 'contributed a card image to the Vault',
             relatedType: 'card',
             relatedId: pendingImage.cardId,
-            dedupeKey: `image_approved:${pendingImage.userId}:${imageId}`,
+            dedupeKey: `image_approved:${pendingImage.userId}:${new Date().toISOString().slice(0, 10)}`,
           })).catch(() => {});
 
           approved++;

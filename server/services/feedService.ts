@@ -736,13 +736,17 @@ export async function runFeedBackfill(dryRun: boolean): Promise<Record<string, n
       key: 'image_approved',
       sql: sql`
         SELECT user_id, 'image_approved' AS event_type,
-          'contributed a card image to the Vault' AS title,
-          NULL AS metadata, 'card' AS related_type, card_id AS related_id,
-          'image_approved:' || user_id || ':' || id AS dedupe_key,
-          coalesce(reviewed_at, created_at) AS created_at
+          CASE WHEN count(*) > 1
+            THEN 'contributed ' || count(*) || ' card images to the Vault'
+            ELSE 'contributed a card image to the Vault' END AS title,
+          json_build_object('imageCount', count(*))::text AS metadata,
+          'card' AS related_type, min(card_id) AS related_id,
+          'image_approved:' || user_id || ':' || to_char(coalesce(reviewed_at, created_at)::date, 'YYYY-MM-DD') AS dedupe_key,
+          max(coalesce(reviewed_at, created_at)) AS created_at
         FROM pending_card_images
         WHERE status = 'approved'
           AND coalesce(reviewed_at, created_at) >= now() - interval '90 days'
+        GROUP BY user_id, coalesce(reviewed_at, created_at)::date
       `,
     },
   ];
