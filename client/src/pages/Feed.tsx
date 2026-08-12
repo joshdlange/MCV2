@@ -911,12 +911,13 @@ const RANK_CLASSES = [
   "bg-amber-700/20 text-amber-500 border-amber-700/40",
 ];
 
-function LeaderboardList({ title, icon, entries, valueKey, valueLabel }: {
+function LeaderboardList({ title, icon, entries, valueKey, valueLabel, followState }: {
   title: string;
   icon: JSX.Element;
   entries: LeaderboardEntry[];
   valueKey: "xp" | "approved";
   valueLabel: string;
+  followState?: FollowState | null;
 }) {
   return (
     <div className="rounded-xl bg-zinc-900 border border-zinc-800 overflow-hidden">
@@ -942,7 +943,8 @@ function LeaderboardList({ title, icon, entries, valueKey, valueLabel }: {
                   <p className="text-sm font-medium text-zinc-200 truncate">{displayName(e.user)}</p>
                   <p className="text-xs text-zinc-500">Level {e.user.collectorLevel}</p>
                 </div>
-                <span className="text-xs font-bold px-2 py-1 rounded-full bg-zinc-900 text-zinc-200 border border-zinc-700">
+                <FollowInlineButton user={e.user} followState={followState ?? null} />
+                <span className="text-xs font-bold px-2 py-1 rounded-full bg-zinc-900 text-zinc-200 border border-zinc-700 shrink-0">
                   {e[valueKey] ?? 0} {valueLabel}
                 </span>
               </div>
@@ -959,6 +961,39 @@ function LeaderboardsTab() {
     queryKey: ["/api/feed/leaderboards"],
   });
 
+  // Follow state so leaderboard rows can offer a Follow button, mirroring the
+  // pattern used by the main feed tab.
+  const [pendingFollowUsername, setPendingFollowUsername] = useState<string | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { data: followingData } = useQuery<FollowingResponse>({
+    queryKey: ["/api/feed/following"],
+    queryFn: async () => (await apiRequest("GET", "/api/feed/following")).json(),
+  });
+  const followMutation = useMutation({
+    mutationFn: async (username: string) => {
+      setPendingFollowUsername(username);
+      return (await apiRequest("POST", `/api/collectors/${username}/follow`)).json();
+    },
+    onSuccess: (_data, username) => {
+      toast({ title: `Following @${username}`, description: "Their activity will show in your Following feed." });
+      queryClient.invalidateQueries({ queryKey: ["/api/feed/following"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/feed/discover"] });
+    },
+    onError: (err: any) => {
+      toast({ title: "Could not follow", description: String(err?.message || err), variant: "destructive" });
+    },
+    onSettled: () => setPendingFollowUsername(null),
+  });
+  const followState: FollowState | null = followingData
+    ? {
+        viewerId: followingData.viewerId,
+        ids: followingData.ids,
+        pendingUsername: pendingFollowUsername,
+        follow: (username) => followMutation.mutate(username),
+      }
+    : null;
+
   if (isLoading) {
     return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
   }
@@ -972,6 +1007,7 @@ function LeaderboardsTab() {
         entries={data?.allTimeTopXp ?? []}
         valueKey="xp"
         valueLabel="XP"
+        followState={followState}
       />
       <p className="text-xs text-zinc-500 -mt-2">Collectors who make the all-time Top 10 earn the exclusive Top 10 Collector badge.</p>
       <div className="grid gap-4 md:grid-cols-2">
@@ -981,6 +1017,7 @@ function LeaderboardsTab() {
           entries={data?.topXp ?? []}
           valueKey="xp"
           valueLabel="XP"
+          followState={followState}
         />
         <LeaderboardList
           title="Top Image Contributors"
@@ -988,6 +1025,7 @@ function LeaderboardsTab() {
           entries={data?.topImageContributors ?? []}
           valueKey="approved"
           valueLabel="images"
+          followState={followState}
         />
       </div>
       <div className="rounded-xl border border-dashed border-zinc-700 py-6 text-center text-zinc-500 text-sm">

@@ -338,7 +338,7 @@ export default function CollectorProfile() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-clip">
       {/* Hero Banner */}
       <div className="relative h-44 md:h-56 bg-gradient-to-br from-red-800 via-red-600 to-red-500 overflow-hidden">
         <div className="absolute inset-0 opacity-10">
@@ -365,7 +365,7 @@ export default function CollectorProfile() {
 
       <div className="max-w-4xl mx-auto px-4">
         {/* Avatar + Identity row */}
-        <div className="flex items-end justify-between -mt-16 md:-mt-20 mb-4">
+        <div className="flex flex-wrap items-end justify-between gap-y-2 -mt-16 md:-mt-20 mb-4">
           <div className="relative">
             <Avatar className={`w-28 h-28 md:w-36 md:h-36 border-4 shadow-xl ${isSuperHero ? "border-yellow-400" : "border-white"}`}>
               <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(user.collectorAvatarKey) ?? user.photoURL} alt={displayName} />
@@ -381,7 +381,7 @@ export default function CollectorProfile() {
           </div>
 
           {/* CTA Buttons (desktop) */}
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
             {isOwnProfile ? (
               <Button
                 size="sm"
@@ -470,7 +470,7 @@ export default function CollectorProfile() {
         {/* Name + badges */}
         <div className="mb-4">
           <div className="flex items-center flex-wrap gap-2 mb-1">
-            <h1 className="text-2xl font-bold text-gray-900">{displayName}</h1>
+            <h1 className="text-2xl font-bold text-gray-900 break-words min-w-0 max-w-full">{displayName}</h1>
             <span className="inline-flex items-center gap-1 bg-gradient-to-r from-red-600 to-red-500 text-white px-2 py-0.5 rounded-full text-xs font-bold shadow-sm">
               <ComicBolt className="w-3 h-3 text-yellow-300" /> LVL {xp.level}
             </span>
@@ -487,7 +487,7 @@ export default function CollectorProfile() {
           </div>
           <p className="text-gray-500 text-sm mb-2">@{user.username}</p>
           {followInfo && (
-            <div className="flex items-center gap-4 text-sm text-gray-600 mb-2" data-testid="text-follow-counts">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 mb-2" data-testid="text-follow-counts">
               <span><span className="font-bold text-gray-900">{followInfo.followerCount}</span> Followers</span>
               <span><span className="font-bold text-gray-900">{followInfo.followingCount}</span> Following</span>
               <span><span className="font-bold text-gray-900">{followInfo.friendCount}</span> Friends</span>
@@ -496,9 +496,9 @@ export default function CollectorProfile() {
               )}
             </div>
           )}
-          {user.bio && <p className="text-gray-700 text-sm mb-3 max-w-xl">{user.bio}</p>}
+          {user.bio && <p className="text-gray-700 text-sm mb-3 max-w-xl break-words">{user.bio}</p>}
           {user.collectorFocus && (
-            <p className="text-sm mb-3 max-w-xl text-red-700 font-medium">
+            <p className="text-sm mb-3 max-w-xl text-red-700 font-medium break-words">
               Collecting focus: <span className="text-gray-700 font-normal">{user.collectorFocus}</span>
             </p>
           )}
@@ -510,8 +510,8 @@ export default function CollectorProfile() {
               </span>
             )}
             {user.website && (
-              <a href={user.website.startsWith("http") ? user.website : `https://${user.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-red-600 hover:underline">
-                <Globe className="w-3.5 h-3.5" /> {user.website}
+              <a href={user.website.startsWith("http") ? user.website : `https://${user.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-red-600 hover:underline min-w-0 max-w-full">
+                <Globe className="w-3.5 h-3.5 shrink-0" /> <span className="break-all">{user.website}</span>
               </a>
             )}
             {user.instagramUrl && (
