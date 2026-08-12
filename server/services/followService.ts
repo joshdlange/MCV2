@@ -108,8 +108,7 @@ export async function getFriendIds(viewerId: number): Promise<number[]> {
  */
 export async function getSuggestedCollectors(viewerId: number, limit = 12) {
   const res = await db.execute(sql`
-    SELECT u.id, u.username, u.display_name, u.photo_url, u.collector_avatar_key, u.collector_focus,
-           (SELECT max(fe.created_at) FROM feed_events fe WHERE fe.user_id = u.id AND fe.hidden = false) AS last_active
+    SELECT u.id, u.username, u.display_name, u.photo_url, u.collector_avatar_key, u.collector_focus
     FROM users u
     WHERE u.id <> ${viewerId}
       AND u.is_admin = false
@@ -118,7 +117,7 @@ export async function getSuggestedCollectors(viewerId: number, limit = 12) {
       AND NOT EXISTS (SELECT 1 FROM follows f WHERE f.follower_user_id = ${viewerId} AND f.following_user_id = u.id)
       AND NOT EXISTS (SELECT 1 FROM blocks bl WHERE (bl.blocker_id = ${viewerId} AND bl.blocked_user_id = u.id)
                                                OR (bl.blocker_id = u.id AND bl.blocked_user_id = ${viewerId}))
-    ORDER BY last_active DESC NULLS LAST, u.created_at DESC
+    ORDER BY u.created_at DESC NULLS LAST, u.id DESC
     LIMIT ${limit}
   `);
   const rows = (((res as any).rows ?? []) as any[]);

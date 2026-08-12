@@ -151,7 +151,7 @@ function UserAvatar({ user, size = "w-10 h-10" }: { user: FeedUser; size?: strin
   const src = avatarUrl(user.collectorAvatarKey) ?? user.photoURL ?? undefined;
   return (
     <Avatar className={`${size} ring-2 ring-red-600/40`}>
-      {src && <AvatarImage src={src} alt={displayName(user)} />}
+      {src && <AvatarImage src={src} alt={displayName(user)} referrerPolicy="no-referrer" />}
       <AvatarFallback className="bg-zinc-800 text-zinc-200">{displayName(user).charAt(0).toUpperCase()}</AvatarFallback>
     </Avatar>
   );
@@ -807,7 +807,7 @@ function DiscoverCollectorsPanel() {
         className="w-full px-4 py-2.5 border-b border-zinc-800 flex items-center justify-between text-left"
       >
         <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
-          <Users className="w-4 h-4 text-red-400" /> Collectors to Follow
+          <Users className="w-4 h-4 text-red-400" /> New to the Vault — Collectors to Follow
         </h3>
         <span className="text-zinc-500">{collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}</span>
       </button>
@@ -907,8 +907,7 @@ function LeaderboardsTab() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">Weekly rankings reset every Monday. Earn XP by adding cards, earning badges, contributing images, and cheering on other collectors.</p>
-      <DiscoverCollectorsPanel />
+      <p className="text-sm font-medium text-zinc-200">Weekly rankings reset every Monday. Earn XP by adding cards, earning badges, contributing images, and cheering on other collectors.</p>
       <LeaderboardList
         title="Top 10 Collectors — All-Time XP"
         icon={<Crown className="w-4 h-4 text-yellow-500" />}
@@ -937,6 +936,7 @@ function LeaderboardsTab() {
         <BookOpen className="w-6 h-6 mx-auto mb-2 opacity-40" />
         Set Builders leaderboard is coming soon.
       </div>
+      <DiscoverCollectorsPanel />
     </div>
   );
 }
