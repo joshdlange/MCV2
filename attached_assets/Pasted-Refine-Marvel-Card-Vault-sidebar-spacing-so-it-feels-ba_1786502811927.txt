@@ -1,0 +1,179 @@
+Refine Marvel Card Vault sidebar spacing so it feels balanced, not cramped, and add a production performance cleanup pass.
+
+Context:
+The sidebar nav order is now correct and the scrollbar issue was improved, but the latest version feels too compressed/squished. We need to split the difference: keep the sidebar fitting well across devices, but restore enough breathing room so the app still feels premium and easy to use.
+
+Current issue:
+- Sidebar now fits better, but nav items and sections feel too tight.
+- The left nav lost some polish because spacing was compressed too aggressively.
+- We still want to avoid visible scrollbars on common device heights where reasonably possible.
+- The Super Hero crown / upgrade panel must remain visible and clickable.
+- We also want a light production performance cleanup pass to protect app speed.
+
+Goal:
+Create a balanced sidebar density that fits well without feeling cramped, and perform a safe performance review/cleanup for the recent Feed/Profile/Avatar/sidebar work.
+
+Must do:
+- Keep the current nav order:
+  Dashboard
+
+  Browse Cards
+  My Collection
+  Wishlist
+  Scan to Add
+
+  PC Binders
+  Market Trends
+  Upcoming Sets
+
+  Feed
+  Social Hub
+
+- Keep Feed near Social Hub.
+- Keep Feed and Social Hub separate.
+- Keep all routes unchanged.
+- Keep all nav items.
+- Keep the subtle grouping/dividers.
+- Restore a little breathing room compared to the current overly compressed version.
+- Avoid going back to the version that caused a visible scrollbar on normal desktop/mobile heights.
+- Preserve the Super Hero / plan panel as a clickable upgrade channel.
+- Preserve the crown button/pill.
+- Preserve the collection count.
+- Preserve the Preview Upgrade Modal link if it exists today.
+- Keep desktop and mobile layouts polished.
+
+Sidebar spacing guidance:
+- Split the difference between the original tall sidebar and the current compressed sidebar.
+- Nav items should feel tappable and readable, not cramped.
+- Dividers should remain subtle but not create too much vertical height.
+- Header/profile/admin blocks should remain compact, but not squeezed.
+- Upgrade panel should remain compact, but not feel jammed.
+- The sidebar should feel premium, calm, and intentional.
+
+Specific improvements:
+- Slightly increase nav item vertical padding from the current compressed state.
+- Keep icons and text aligned cleanly.
+- Keep enough spacing between groups to show structure.
+- Keep NEW badges readable without taking too much space.
+- Make the Super Hero panel compact but visually balanced.
+- Avoid a giant empty space at the bottom if the content fits.
+- Avoid a visible scrollbar on common laptop/desktop/mobile heights where reasonably possible.
+- On very small screens, scrolling is acceptable only if necessary, but it should not show an aggressive red scrollbar unless unavoidable.
+
+Admin block:
+- Keep Admin Mode visible.
+- Keep Admin Tools accessible when admin mode is on.
+- Keep it compact but readable.
+- Do not change admin behavior, permissions, or routing.
+
+Super Hero / plan panel:
+- Do not remove it.
+- Do not hide it.
+- Do not break click behavior.
+- The Super Hero crown/pill must remain clickable and should still open the existing upgrade modal or upgrade behavior.
+- Keep the collection count visible.
+- Keep Preview Upgrade Modal link if currently present.
+- Do not change subscription logic.
+- Do not change upgrade modal behavior.
+
+Performance cleanup pass:
+Review the recent Feed, avatar, profile customization, follow/friends, and sidebar changes for production speed.
+
+Must check:
+- Avatar assets are not causing unnecessary slow loads.
+- Avatar images are appropriately optimized and lazy-loaded where practical.
+- Feed cards are not rendering huge unnecessary images when offscreen.
+- Feed list rendering does not refetch excessively.
+- Follow buttons do not trigger unnecessary full-feed reloads if avoidable.
+- Leaderboards do not over-query on every render.
+- Sidebar does not repeatedly recompute expensive user/profile data.
+- CollectorAvatar component is lightweight and reusable.
+- Avoid unnecessary console logs in production.
+- Avoid large client bundle bloat where practical.
+- Do not introduce heavy animation libraries.
+- Do not add new dependencies unless absolutely necessary.
+- If performance issues are found, make small safe fixes only.
+
+Important:
+This is not a redesign.
+This is not a route change.
+This is not a feature expansion.
+This should stay focused on sidebar polish and safe performance cleanup.
+
+Must not do:
+- Do not change route paths.
+- Do not remove nav items.
+- Do not merge Feed and Social Hub.
+- Do not undo the nav reorder.
+- Do not remove NEW badges.
+- Do not remove the Super Hero upgrade panel.
+- Do not break the clickable Super Hero crown/upgrade CTA.
+- Do not redesign the whole sidebar.
+- Do not hide important nav items behind another menu.
+- Do not change Feed functionality, Follow/Friends, reactions, XP, leaderboards, lifecycle emails, subscriptions, Stripe, RevenueCat, card data, Drive Sync, Data Quality tools, Upcoming Set Intelligence, Android, or iOS.
+- Do not send emails or notifications.
+- Do not make broad refactors.
+- Do not add heavy dependencies.
+- Do not change production data.
+
+Preserve:
+- Existing sidebar component structure as much as practical.
+- Existing nav order.
+- Existing active state behavior.
+- Existing mobile drawer behavior.
+- Existing admin mode/admin tools behavior.
+- Existing Super Hero / plan panel behavior.
+- Existing upgrade modal behavior.
+- Existing Feed/Social Hub functionality.
+- Existing PC Binder gating.
+- Existing profile/avatar/follow behavior.
+
+QA:
+- Sidebar feels less cramped than the current version.
+- Sidebar does not return to the overly tall/scrolly version.
+- Desktop sidebar looks balanced.
+- Mobile sidebar looks balanced.
+- All nav items remain visible and usable:
+  - Dashboard
+  - Browse Cards
+  - My Collection
+  - Wishlist
+  - Scan to Add
+  - PC Binders
+  - Market Trends
+  - Upcoming Sets
+  - Feed
+  - Social Hub
+- Admin Mode remains visible and usable.
+- Admin Tools remains accessible when admin mode is active.
+- Super Hero crown/pill remains visible.
+- Super Hero crown/pill remains clickable.
+- Upgrade modal/upgrade behavior still works.
+- Collection count still displays.
+- Preview Upgrade Modal link still works if currently present.
+- Nav items remain readable and tappable.
+- Active nav state still works.
+- NEW badges still display.
+- Feed route still works.
+- Social Hub route still works.
+- All other nav routes still work.
+- Feed still loads.
+- Follow/Friends still works.
+- Avatars still display.
+- No major image or avatar performance issue remains.
+- No unnecessary production console logs.
+- No unrelated systems changed.
+- App builds/runs cleanly.
+
+Final response:
+- List changed files.
+- Explain what sidebar spacing was adjusted.
+- Confirm it is balanced and no longer overly cramped.
+- Confirm final nav order was preserved.
+- Confirm desktop/mobile scrollbar status.
+- Confirm Super Hero crown/pill is still clickable.
+- Confirm upgrade modal behavior still works.
+- Summarize any performance cleanup done.
+- Confirm no heavy dependencies were added.
+- Confirm no unrelated systems changed.
+- Confirm safe to publish.

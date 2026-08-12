@@ -132,7 +132,7 @@ export function Sidebar() {
   return (
     <div className="h-screen w-80 md:w-80 bg-background shadow-lg border-r border-border flex flex-col overflow-hidden">
       {/* Logo & Branding */}
-      <div className="flex items-center px-4 py-2 md:px-6 md:py-2.5 bg-marvel-red flex-shrink-0">
+      <div className="flex items-center px-4 py-2.5 md:px-6 md:py-3 bg-marvel-red flex-shrink-0">
         <div className="flex items-center space-x-2 md:space-x-3">
           <div className="w-8 h-8 flex items-center justify-center">
             <img 
@@ -150,7 +150,7 @@ export function Sidebar() {
 
       {/* User Profile */}
       {user && (
-        <div className="border-b border-border px-3 py-1.5 md:px-4 md:py-2 flex-shrink-0">
+        <div className="border-b border-border px-3 py-2 md:px-4 md:py-2.5 flex-shrink-0">
           <div className="flex items-center space-x-2 md:space-x-3">
             <Link
               href={currentUser?.username ? `/collectors/${currentUser.username}` : "/profile"}
@@ -194,13 +194,13 @@ export function Sidebar() {
       <AdminToggle />
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 md:px-4 py-2 space-y-0.5 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav className="flex-1 px-3 md:px-4 py-2.5 md:py-3 space-y-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {getNavigationGroups(currentUser?.plan || 'SIDE_KICK').map((group, gi) => (
-          <div key={gi} className={gi > 0 ? "pt-1.5 mt-1.5 border-t border-border/60 space-y-0.5" : "space-y-0.5"}>
+          <div key={gi} className={gi > 0 ? "pt-2 mt-2 border-t border-border/60 space-y-1" : "space-y-1"}>
             {group.map((item) => (
           <Link key={item.href} href={item.href}>
             <div 
-              className={`flex items-center px-3 md:px-4 py-2 rounded-lg transition-colors group cursor-pointer text-sm ${
+              className={`flex items-center px-3 md:px-4 py-2 md:py-2.5 rounded-lg transition-colors group cursor-pointer text-sm ${
                 location === item.href 
                   ? 'bg-marvel-red text-white' 
                   : 'text-foreground hover:bg-marvel-red hover:text-white'
@@ -233,7 +233,7 @@ export function Sidebar() {
 
         {/* Upgrade Section for SIDE KICK users */}
         {currentUser && currentUser.plan === 'SIDE_KICK' && (
-          <div className="pt-2 border-t border-gray-200 mt-2">
+          <div className="pt-2.5 border-t border-gray-200 mt-2.5">
             <Button 
               onClick={(e) => { e.stopPropagation(); setShowUpgradeModal(true); }}
               className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-yellow-900 font-bold py-2 px-3 md:px-4 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-200 text-sm"
@@ -253,8 +253,8 @@ export function Sidebar() {
 
         {/* Plan Badge for SUPER HERO users */}
         {currentUser && currentUser.plan === 'SUPER_HERO' && (
-          <div className="pt-2 border-t border-gray-200 mt-2">
-            <div className="flex flex-col items-center gap-0.5">
+          <div className="pt-2.5 border-t border-gray-200 mt-2.5">
+            <div className="flex flex-col items-center gap-1">
               <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-yellow-900 px-2 md:px-3 py-0.5 text-xs">
                 <Crown className="w-3 h-3 mr-1" />
                 SUPER HERO

@@ -12,7 +12,7 @@ export function AdminToggle() {
   }
 
   return (
-    <div className="px-4 md:px-6 py-1.5 md:py-2 border-b border-border bg-muted flex-shrink-0">
+    <div className="px-4 md:px-6 py-2 md:py-2.5 border-b border-border bg-muted flex-shrink-0">
       <div className={`flex items-center justify-between ${isAdminMode ? "mb-1.5" : ""}`}>
         <span className="text-xs md:text-sm font-medium text-foreground">Admin Mode</span>
         <Switch
