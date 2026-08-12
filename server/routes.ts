@@ -280,6 +280,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Auto-friend new users with Joshua (admin user ID: 337)
         if (!isAdminEmail && user.id !== 337) {
+          // Follow system: instant mutual follow so every new collector starts
+          // with 1 follower and 1 friend (the creator). Legacy friends row is
+          // still written below for the older Social surfaces.
+          try {
+            const { makeFriends } = await import('./services/followService');
+            await makeFriends(337, user.id);
+          } catch (error) {
+            console.error('Error auto-following new user:', error);
+          }
           try {
             console.log('Attempting to auto-friend user', user.id, 'with Joshua (337)');
             // Check if friendship already exists
@@ -5085,6 +5094,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check badges when friend relationships change (only if accepted)
       if (status === 'accepted') {
         await badgeService.checkBadgesOnFriendChange(req.user.id);
+        // Unified model: an accepted friendship is a mutual follow. Dual-write
+        // so the Followers/Following/Friends header stays in sync.
+        try {
+          const { makeFriends } = await import('./services/followService');
+          await makeFriends(friendship.requesterId, friendship.recipientId);
+        } catch (e) {
+          console.error('Error mirroring accepted friendship into follows:', e);
+        }
       }
 
       res.json(friendship);

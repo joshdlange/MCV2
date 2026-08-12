@@ -213,6 +213,43 @@ app.use((req, res, next) => {
     console.error('Startup seed (Contributor badge) failed:', error);
   }
 
+  // One-time migration: convert legacy accepted friendships into mutual
+  // follows so the unified Followers/Following/Friends counts reflect them
+  // (the old Add Friend system wrote to a separate table the profile header
+  // never counted). Idempotent via marker + ON CONFLICT; no notifications.
+  try {
+    const { db } = await import('./db');
+    const { sql } = await import('drizzle-orm');
+    await db.transaction(async (tx) => {
+      const m = await tx.execute(sql`INSERT INTO startup_migrations (name) VALUES ('friends_follows_merge_v2') ON CONFLICT (name) DO NOTHING RETURNING name`);
+      if ((m as any).rows?.length > 0) {
+        const ins = await tx.execute(sql`
+          INSERT INTO follows (follower_user_id, following_user_id)
+          SELECT s.a, s.b FROM (
+            SELECT f.requester_id AS a, f.recipient_id AS b FROM friends f
+              WHERE f.status = 'accepted' AND f.requester_id <> f.recipient_id
+            UNION
+            SELECT f.recipient_id AS a, f.requester_id AS b FROM friends f
+              WHERE f.status = 'accepted' AND f.requester_id <> f.recipient_id
+          ) s
+          WHERE NOT EXISTS (
+            SELECT 1 FROM blocks bl
+            WHERE (bl.blocker_id = s.a AND bl.blocked_user_id = s.b)
+               OR (bl.blocker_id = s.b AND bl.blocked_user_id = s.a))
+          ON CONFLICT (follower_user_id, following_user_id) DO NOTHING`);
+        // Safety net for any env where an earlier merge ran without the block
+        // filter: remove follow rows between blocked pairs.
+        const del = await tx.execute(sql`
+          DELETE FROM follows f USING blocks bl
+          WHERE (bl.blocker_id = f.follower_user_id AND bl.blocked_user_id = f.following_user_id)
+             OR (bl.blocker_id = f.following_user_id AND bl.blocked_user_id = f.follower_user_id)`);
+        console.log(`[Friends Merge] Converted legacy friendships into mutual follows (+${(ins as any).rowCount ?? 0} follow rows, -${(del as any).rowCount ?? 0} blocked-pair rows)`);
+      }
+    });
+  } catch (error) {
+    console.error('Startup migration (friends→follows merge) failed:', error);
+  }
+
   // One-time startup backfill: retroactive feed events (first cards, milestones,
   // recent badges/binders/images). Idempotent via dedupe-key ON CONFLICT, but
   // gated by a startup_migrations marker so the scan only runs once per env.

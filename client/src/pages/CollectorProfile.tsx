@@ -250,15 +250,6 @@ export default function CollectorProfile() {
     },
   });
 
-  const sendFriendRequestMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/social/friend-request", { recipientId: profile?.user.id }),
-    onSuccess: () => {
-      toast({ title: "Friend request sent!" });
-      queryClient.invalidateQueries({ queryKey: ["/api/collectors", username] });
-    },
-    onError: (e: any) => toast({ title: "Failed to send friend request", description: e.message, variant: "destructive" }),
-  });
-
   const blockMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/social/block", { blockedUserId: profile?.user.id }),
     onSuccess: () => {
@@ -326,12 +317,6 @@ export default function CollectorProfile() {
   const wishlistPrivate = wishlistData?.private ?? false;
   const tradeCards = tradeBlockData?.cards ?? [];
   const earnedBadges = badgesData;
-
-  const friendButtonLabel = () => {
-    if (friendStatus === "accepted") return "Friends";
-    if (friendStatus === "pending") return "Request Sent";
-    return "Add Friend";
-  };
 
   const handleMessageClick = () => {
     setLocation(`/social?message=${user.id}`);
@@ -421,21 +406,9 @@ export default function CollectorProfile() {
                 >
                   <MessageCircle className="w-4 h-4 mr-1.5" /> Message
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => friendStatus === "none" && sendFriendRequestMutation.mutate()}
-                  disabled={friendStatus !== "none" || sendFriendRequestMutation.isPending}
-                  className={`border-gray-300 bg-white ${friendStatus === "accepted" ? "text-green-600" : "text-gray-700"}`}
-                >
-                  {friendStatus === "accepted" ? (
-                    <><UserCheck className="w-4 h-4 mr-1.5" /> Friends</>
-                  ) : friendStatus === "pending" ? (
-                    <><Clock className="w-4 h-4 mr-1.5" /> Pending</>
-                  ) : (
-                    <><UserPlus className="w-4 h-4 mr-1.5" /> Add Friend</>
-                  )}
-                </Button>
+                {/* Legacy "Add Friend" button removed: friendship is now earned
+                    through mutual follows — the Follow button above handles the
+                    whole ladder (Follow → Following → Friends). */}
                 <div className="relative">
                   <Button
                     size="sm"

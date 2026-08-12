@@ -37,18 +37,77 @@ export async function followUser(viewerId: number, targetUserId: number): Promis
   if (await isBlockedEitherWay(viewerId, targetUserId)) return { ok: false, status: 403, message: 'This collector is not available' };
 
   // Idempotent: duplicate follow is a no-op (unique index enforces it too).
-  await db.execute(sql`
+  const inserted = await db.execute(sql`
     INSERT INTO follows (follower_user_id, following_user_id)
     VALUES (${viewerId}, ${targetUserId})
     ON CONFLICT (follower_user_id, following_user_id) DO NOTHING
+    RETURNING id
   `);
+
+  // Follow-back nudge: only on a genuinely new follow, and rate-limited so an
+  // unfollow/refollow loop can't spam the target (one nudge per follower per
+  // target per 7 days).
+  if (((inserted as any).rows ?? []).length > 0) {
+    try {
+      const recent = await db.execute(sql`
+        SELECT 1 FROM notifications
+        WHERE user_id = ${targetUserId}
+          AND type IN ('new_follower', 'new_friend')
+          AND data LIKE ${'%"followerUserId":' + viewerId + '%'}
+          AND created_at > now() - interval '7 days'
+        LIMIT 1
+      `);
+      if (((recent as any).rows ?? []).length > 0) return { ok: true, status: 200 };
+      const [viewer] = await db.select({ username: users.username, displayName: users.displayName }).from(users).where(eq(users.id, viewerId)).limit(1);
+      const followsBack = await db.execute(sql`
+        SELECT 1 FROM follows WHERE follower_user_id = ${targetUserId} AND following_user_id = ${viewerId} LIMIT 1
+      `);
+      const name = viewer?.displayName || (viewer?.username ? `@${viewer.username}` : 'A collector');
+      const isNowFriends = ((followsBack as any).rows ?? []).length > 0;
+      const { notificationService } = await import('../notification-service');
+      await notificationService.createNotification(
+        targetUserId,
+        isNowFriends ? 'new_friend' : 'new_follower',
+        isNowFriends ? 'You have a new friend!' : 'New follower!',
+        isNowFriends
+          ? `${name} followed you back — you're now Friends!`
+          : `${name} is now following you. Follow back to become Friends!`,
+        { followerUserId: viewerId, followerUsername: viewer?.username ?? null },
+      );
+    } catch (e) {
+      console.error('[Follow] notification failed (follow still saved):', e);
+    }
+  }
   return { ok: true, status: 200 };
+}
+
+/**
+ * System-level mutual follow (used for auto-friending new signups with the
+ * creator account and for the legacy-friends migration). Bypasses the
+ * followability gate — both sides are made friends silently and idempotently.
+ */
+export async function makeFriends(userA: number, userB: number): Promise<void> {
+  if (userA === userB) return;
+  if (await isBlockedEitherWay(userA, userB)) return; // blocks always win
+  await db.execute(sql`
+    INSERT INTO follows (follower_user_id, following_user_id)
+    VALUES (${userA}, ${userB}), (${userB}, ${userA})
+    ON CONFLICT (follower_user_id, following_user_id) DO NOTHING
+  `);
 }
 
 export async function unfollowUser(viewerId: number, targetUserId: number): Promise<{ ok: boolean; status: number }> {
   await db
     .delete(follows)
     .where(and(eq(follows.followerUserId, viewerId), eq(follows.followingUserId, targetUserId)));
+  // Keep the legacy friends table consistent: breaking the mutual follow ends
+  // the friendship everywhere (old Social surfaces still read this table).
+  await db.execute(sql`
+    DELETE FROM friends
+    WHERE status = 'accepted'
+      AND ((requester_id = ${viewerId} AND recipient_id = ${targetUserId})
+        OR (requester_id = ${targetUserId} AND recipient_id = ${viewerId}))
+  `);
   return { ok: true, status: 200 };
 }
 
