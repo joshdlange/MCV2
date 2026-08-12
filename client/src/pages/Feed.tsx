@@ -223,17 +223,36 @@ function EventHero({ event }: { event: FeedEvent }) {
     );
   }
 
-  // Badge earned (normal): Standard treatment — badge art on a quiet charcoal/red panel
+  // Badge earned (normal): badge medallion on a layered dark panel.
+  // Two alternating treatments for variety: "ring" (crisp red ring + top
+  // glint) and "halo" (soft red glow over a dotted band).
   if (event.eventType === "badge_earned") {
+    const halo = event.id % 2 === 1;
     return (
-      <div className="relative h-24 sm:h-28 rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 flex items-center justify-center">
-        <Halftone opacity={0.06} />
-        {event.image ? (
-          <img src={event.image} alt="Badge" loading="lazy"
-            className="w-16 h-16 sm:w-20 sm:h-20 object-contain rounded-full drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] relative" />
-        ) : (
-          <Award className="w-12 h-12 text-white/85 relative" />
-        )}
+      <div className="relative h-32 sm:h-36 rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 flex items-center justify-center">
+        <Halftone opacity={0.05} />
+        {/* layered band across the middle with its own dot texture */}
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-16 sm:h-20 bg-zinc-900/70 border-y border-zinc-800/80">
+          <Halftone opacity={0.1} />
+        </div>
+        {halo && <div className="absolute w-36 h-36 rounded-full bg-red-600/20 blur-2xl" />}
+        <div
+          className={`relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-zinc-950 flex items-center justify-center ${
+            halo
+              ? "border border-red-400/70 shadow-[0_0_26px_rgba(220,38,38,0.4)]"
+              : "border-2 border-red-600 ring-2 ring-zinc-800 ring-offset-2 ring-offset-zinc-950 shadow-[0_0_16px_rgba(220,38,38,0.3)]"
+          }`}
+        >
+          {!halo && (
+            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-red-500 blur-[2px] shadow-[0_0_10px_rgba(239,68,68,0.9)]" />
+          )}
+          {event.image ? (
+            <img src={event.image} alt="Badge" loading="lazy"
+              className="w-16 h-16 sm:w-[4.75rem] sm:h-[4.75rem] object-cover rounded-full" />
+          ) : (
+            <Award className="w-10 h-10 text-white/85" />
+          )}
+        </div>
       </div>
     );
   }
