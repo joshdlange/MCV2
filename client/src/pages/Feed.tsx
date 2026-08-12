@@ -224,34 +224,47 @@ function EventHero({ event }: { event: FeedEvent }) {
   }
 
   // Badge earned (normal): badge medallion on a layered dark panel.
-  // Two alternating treatments for variety: "ring" (crisp red ring + top
-  // glint) and "halo" (soft red glow over a dotted band).
+  // Three rotating treatments for variety: "ring" (crisp red ring + top
+  // glint), "halo" (soft red glow over a dotted band), and "gold"
+  // (polished gold double ring with a gold accent line).
   if (event.eventType === "badge_earned") {
-    const halo = event.id % 2 === 1;
+    const variant = (["ring", "halo", "gold"] as const)[event.id % 3];
+    const gold = variant === "gold";
+    const halo = variant === "halo";
+    const badgeImg = event.image ? (
+      <div className="w-16 h-16 sm:w-[4.75rem] sm:h-[4.75rem] rounded-full overflow-hidden">
+        <img src={event.image} alt="Badge" loading="lazy"
+          className="w-full h-full object-cover scale-110" />
+      </div>
+    ) : (
+      <Award className="w-10 h-10 text-white/85" />
+    );
     return (
       <div className="relative h-32 sm:h-36 rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 flex items-center justify-center">
-        <Halftone opacity={0.05} />
-        {/* layered band across the middle with its own dot texture */}
-        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-16 sm:h-20 bg-zinc-900/70 border-y border-zinc-800/80">
-          <Halftone opacity={0.1} />
-        </div>
+        <Halftone opacity={gold ? 0.12 : 0.05} />
+        {/* layered band / accent line across the middle */}
+        {gold ? (
+          <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[2px] bg-gradient-to-r from-amber-700/20 via-amber-400/80 to-amber-700/20" />
+        ) : (
+          <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-16 sm:h-20 bg-zinc-900/70 border-y border-zinc-800/80">
+            <Halftone opacity={0.1} />
+          </div>
+        )}
         {halo && <div className="absolute w-36 h-36 rounded-full bg-red-600/20 blur-2xl" />}
+        {gold && <div className="absolute w-36 h-36 rounded-full bg-amber-500/10 blur-2xl" />}
         <div
           className={`relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-zinc-950 flex items-center justify-center ${
-            halo
-              ? "border border-red-400/70 shadow-[0_0_26px_rgba(220,38,38,0.4)]"
-              : "border-2 border-red-600 ring-2 ring-zinc-800 ring-offset-2 ring-offset-zinc-950 shadow-[0_0_16px_rgba(220,38,38,0.3)]"
+            gold
+              ? "border-[3px] border-amber-500 ring-2 ring-amber-800/70 ring-offset-2 ring-offset-zinc-950 shadow-[0_0_20px_rgba(245,158,11,0.3)]"
+              : halo
+                ? "border border-red-400/70 shadow-[0_0_26px_rgba(220,38,38,0.4)]"
+                : "border-2 border-red-600 ring-2 ring-zinc-800 ring-offset-2 ring-offset-zinc-950 shadow-[0_0_16px_rgba(220,38,38,0.3)]"
           }`}
         >
-          {!halo && (
+          {variant === "ring" && (
             <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-red-500 blur-[2px] shadow-[0_0_10px_rgba(239,68,68,0.9)]" />
           )}
-          {event.image ? (
-            <img src={event.image} alt="Badge" loading="lazy"
-              className="w-16 h-16 sm:w-[4.75rem] sm:h-[4.75rem] object-cover rounded-full" />
-          ) : (
-            <Award className="w-10 h-10 text-white/85" />
-          )}
+          {badgeImg}
         </div>
       </div>
     );
