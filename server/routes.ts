@@ -712,6 +712,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/days-to-upgrade", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const { getDaysToUpgrade } = await import('./services/lifecycleIntelligence');
+      res.json(await getDaysToUpgrade());
+    } catch (error) {
+      console.error('Days-to-upgrade error:', error);
+      res.status(500).json({ message: "Failed to compute days to upgrade" });
+    }
+  });
+
   app.get("/api/admin/activity-heatmap", authenticateUser, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });

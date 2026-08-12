@@ -21,6 +21,14 @@ interface LifecycleOverview {
   };
 }
 
+interface DaysToUpgrade {
+  knownUpgrades: number;
+  unknownDates: number;
+  medianDays: number | null;
+  p90Days: number | null;
+  buckets: Array<{ label: string; count: number }>;
+}
+
 interface Heatmap {
   timezone: string;
   weeks: number;
@@ -57,6 +65,10 @@ export default function LifecycleIntelligence() {
   const { data: overview, isLoading: ovLoading } = useQuery<LifecycleOverview>({
     queryKey: ["/api/admin/lifecycle-overview"],
     queryFn: () => apiRequest("GET", "/api/admin/lifecycle-overview").then(r => r.json()),
+  });
+  const { data: daysToUpgrade, isLoading: dtuLoading } = useQuery<DaysToUpgrade>({
+    queryKey: ["/api/admin/days-to-upgrade"],
+    queryFn: () => apiRequest("GET", "/api/admin/days-to-upgrade").then(r => r.json()),
   });
   const { data: heatmap, isLoading: hmLoading } = useQuery<Heatmap>({
     queryKey: ["/api/admin/activity-heatmap"],
@@ -138,6 +150,53 @@ export default function LifecycleIntelligence() {
                     users have reached "{biggestDrop.to}" than "{biggestDrop.from}".
                   </p>
                 </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Days to upgrade ── */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Time to Upgrade</CardTitle>
+          <p className="text-xs text-gray-400 font-normal">
+            How many days between signing up and becoming a paying subscriber.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {dtuLoading || !daysToUpgrade ? (
+            <div className="h-40 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
+          ) : daysToUpgrade.knownUpgrades === 0 ? (
+            <div className="h-24 flex items-center justify-center text-gray-400 text-sm">
+              No upgrade dates recorded yet.
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-2 mb-3">
+                <Badge className="bg-green-100 text-green-800 border-green-300">
+                  Median: {daysToUpgrade.medianDays} days
+                </Badge>
+                <Badge className="bg-blue-100 text-blue-800 border-blue-300">
+                  90% upgrade within {daysToUpgrade.p90Days} days
+                </Badge>
+                <Badge className="bg-gray-100 text-gray-700 border-gray-300">
+                  {daysToUpgrade.knownUpgrades} subscribers with known dates
+                </Badge>
+              </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={daysToUpgrade.buckets} margin={{ left: 0, right: 8 }}>
+                  <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={0} />
+                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                  <Tooltip formatter={(v: any) => [`${v} subscribers`, "Upgraded"]} />
+                  <Bar dataKey="count" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+              {daysToUpgrade.unknownDates > 0 && (
+                <p className="text-[11px] text-gray-400 mt-2">
+                  {daysToUpgrade.unknownDates} active subscriber{daysToUpgrade.unknownDates === 1 ? "" : "s"} excluded
+                  (no upgrade date on record — e.g. Apple subscriptions from before tracking started).
+                </p>
               )}
             </>
           )}

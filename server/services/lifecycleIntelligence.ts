@@ -174,6 +174,57 @@ export async function getLifecycleOverview() {
 }
 
 /**
+ * Days from signup to first paid upgrade, for the conversion funnel.
+ * Uses users.upgraded_at (trigger-stamped going forward; Stripe-backfilled
+ * for older subscribers). Users with no known upgrade date are excluded and
+ * reported as unknownDates so the admin UI can say so.
+ */
+export async function getDaysToUpgrade() {
+  const res = await db.execute(sql`
+    WITH d AS (
+      SELECT GREATEST(EXTRACT(epoch FROM upgraded_at - created_at) / 86400.0, 0) AS days
+      FROM users
+      WHERE upgraded_at IS NOT NULL
+        AND (firebase_uid IS NULL OR firebase_uid != 'SYSTEM_USER_MCV')
+    )
+    SELECT
+      COUNT(*) AS n,
+      percentile_cont(0.5) WITHIN GROUP (ORDER BY days) AS median_days,
+      percentile_cont(0.9) WITHIN GROUP (ORDER BY days) AS p90_days,
+      COUNT(*) FILTER (WHERE days < 1) AS same_day,
+      COUNT(*) FILTER (WHERE days >= 1 AND days < 4) AS d1_3,
+      COUNT(*) FILTER (WHERE days >= 4 AND days < 8) AS d4_7,
+      COUNT(*) FILTER (WHERE days >= 8 AND days < 15) AS d8_14,
+      COUNT(*) FILTER (WHERE days >= 15 AND days < 31) AS d15_30,
+      COUNT(*) FILTER (WHERE days >= 31 AND days < 61) AS d31_60,
+      COUNT(*) FILTER (WHERE days >= 61) AS d61_plus
+    FROM d
+  `);
+  const unknownRes = await db.execute(sql`
+    SELECT COUNT(*) AS n FROM users
+    WHERE upgraded_at IS NULL AND plan = 'SUPER_HERO' AND subscription_status = 'active'
+      AND (firebase_uid IS NULL OR firebase_uid != 'SYSTEM_USER_MCV')
+  `);
+  const r: any = (res.rows as any[])[0] || {};
+  const round1 = (v: any) => (v === null || v === undefined ? null : Math.round(Number(v) * 10) / 10);
+  return {
+    knownUpgrades: parseInt(r.n) || 0,
+    unknownDates: parseInt((unknownRes.rows as any[])[0]?.n) || 0,
+    medianDays: round1(r.median_days),
+    p90Days: round1(r.p90_days),
+    buckets: [
+      { label: "Same day", count: parseInt(r.same_day) || 0 },
+      { label: "1–3 days", count: parseInt(r.d1_3) || 0 },
+      { label: "4–7 days", count: parseInt(r.d4_7) || 0 },
+      { label: "8–14 days", count: parseInt(r.d8_14) || 0 },
+      { label: "15–30 days", count: parseInt(r.d15_30) || 0 },
+      { label: "31–60 days", count: parseInt(r.d31_60) || 0 },
+      { label: "60+ days", count: parseInt(r.d61_plus) || 0 },
+    ],
+  };
+}
+
+/**
  * Activity heatmap: day-of-week × hour-of-day in America/Chicago over the
  * last N weeks, from every timestamped user action we have (card adds, scans,
  * analytics events, XP events). Also computes the quietest and busiest

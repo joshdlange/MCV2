@@ -152,6 +152,35 @@ app.use((req, res, next) => {
     console.error('Startup seed (reserved-sabretooth avatar) failed:', error);
   }
 
+  // Idempotent startup migration: users.upgraded_at + trigger that stamps the
+  // first transition to a paid plan (covers Stripe, Apple/RevenueCat, and admin
+  // paths without touching every route). One-time Stripe backfill for
+  // pre-existing subscribers, gated by a startup_migrations marker.
+  try {
+    const { db } = await import('./db');
+    const { sql } = await import('drizzle-orm');
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS upgraded_at timestamp`);
+    await db.execute(sql`
+      CREATE OR REPLACE FUNCTION set_upgraded_at() RETURNS trigger AS $$
+      BEGIN
+        IF NEW.plan = 'SUPER_HERO' AND OLD.plan IS DISTINCT FROM 'SUPER_HERO' AND NEW.upgraded_at IS NULL THEN
+          NEW.upgraded_at := now();
+        END IF;
+        RETURN NEW;
+      END $$ LANGUAGE plpgsql`);
+    await db.execute(sql`DROP TRIGGER IF EXISTS users_set_upgraded_at ON users`);
+    await db.execute(sql`CREATE TRIGGER users_set_upgraded_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION set_upgraded_at()`);
+    const marker = await db.execute(sql`SELECT 1 FROM startup_migrations WHERE name = 'upgraded_at_backfill_v1'`);
+    if ((marker as any).rows?.length === 0) {
+      const { backfillUpgradedAtFromStripe } = await import('./services/upgradedAtBackfill');
+      const result = await backfillUpgradedAtFromStripe();
+      await db.execute(sql`INSERT INTO startup_migrations (name) VALUES ('upgraded_at_backfill_v1') ON CONFLICT (name) DO NOTHING`);
+      console.log('[UpgradedAt Backfill] Complete:', JSON.stringify(result));
+    }
+  } catch (error) {
+    console.error('Startup migration (upgraded_at) failed:', error);
+  }
+
   // One-time startup backfill: retroactive feed events (first cards, milestones,
   // recent badges/binders/images). Idempotent via dedupe-key ON CONFLICT, but
   // gated by a startup_migrations marker so the scan only runs once per env.

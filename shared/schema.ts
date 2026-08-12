@@ -61,6 +61,9 @@ export const users = pgTable("users", {
   profileCustomizationCompletedAt: timestamp("profile_customization_completed_at"),
   profileCustomizationDismissedAt: timestamp("profile_customization_dismissed_at"),
   profileCustomizationSkips: integer("profile_customization_skips").notNull().default(0),
+  // First time the user became a paying subscriber (set by DB trigger on plan
+  // transition to SUPER_HERO; backfilled from Stripe for pre-existing subs).
+  upgradedAt: timestamp("upgraded_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
