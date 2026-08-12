@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -677,7 +677,7 @@ function ActivityTab() {
   };
 
   const loadMore = async () => {
-    if (!nextCursor) return;
+    if (!nextCursor || loadingMore) return;
     setLoadingMore(true);
     try {
       const res = await apiRequest("GET", `/api/feed?filter=${filter}&before=${encodeURIComponent(nextCursor)}`);
@@ -691,6 +691,24 @@ function ActivityTab() {
       setLoadingMore(false);
     }
   };
+
+  // Infinite scroll: when the sentinel at the bottom of the list becomes
+  // visible, load the next page automatically (replaces the Load More button).
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const loadMoreRef = useRef(loadMore);
+  loadMoreRef.current = loadMore;
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMoreRef.current();
+      },
+      { rootMargin: "600px 0px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [nextCursor, isLoading, events.length]);
 
   const reactMutation = useMutation({
     mutationFn: async ({ eventId, reaction, remove }: { eventId: number; reaction: string; remove: boolean }) => {
@@ -762,10 +780,8 @@ function ActivityTab() {
             ),
           )}
           {nextCursor && nextCursor !== "" && (
-            <div className="flex justify-center pt-2">
-              <Button variant="outline" size="sm" onClick={loadMore} disabled={loadingMore} data-testid="button-load-more">
-                {loadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : "Load more"}
-              </Button>
+            <div ref={sentinelRef} className="flex justify-center py-4" data-testid="feed-infinite-sentinel">
+              {loadingMore && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />}
             </div>
           )}
         </div>
