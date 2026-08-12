@@ -231,12 +231,12 @@ export class BadgeService {
     }
   }
 
-  // 8. Hall of Fame - Check if user is in top 10 leaderboard
+  // 8. Hall of Fame - Top 10 largest collections by card count
   async checkHallOfFame(userId: number): Promise<void> {
     const badge = await this.getBadgeByName('Hall of Fame');
     if (!badge) return;
 
-    // Get top 10 users by collection count
+    // Get top 10 users by collection count (distinct from Top 10 Collector which uses XP)
     const topUsers = await db.select({
       userId: userCollections.userId,
       count: count(userCollections.id)

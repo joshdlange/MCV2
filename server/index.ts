@@ -189,6 +189,22 @@ app.use((req, res, next) => {
     console.error('Startup migration (upgraded_at) failed:', error);
   }
 
+  // Idempotent startup seed: correct Hall of Fame badge description to match
+  // its actual award condition (top 10 by card count, not XP leaderboard).
+  try {
+    const { db } = await import('./db');
+    const { sql } = await import('drizzle-orm');
+    await db.execute(sql`
+      UPDATE badges
+      SET description = 'One of the 10 largest card collections in the Vault. A monument to dedication.',
+          requirement = '{"type":"top_10_collection_count"}'::jsonb
+      WHERE name = 'Hall of Fame'
+        AND description = 'Unlocked when you reach the top 10 on the global leaderboard'
+    `);
+  } catch (error) {
+    console.error('Startup seed (Hall of Fame description fix) failed:', error);
+  }
+
   // Idempotent startup seed: Contributor badge (3+ approved image uploads).
   // The award code shipped referencing a badge that was never created, so
   // approvals logged errors and nobody ever earned it. Seeds the badge by
