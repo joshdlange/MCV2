@@ -96,11 +96,14 @@ export class BadgeService {
 
     // Loyalist = paying subscriber for 2+ months. Free-tier (SIDE_KICK) accounts
     // also carry subscriptionStatus 'active', so the plan check is required.
+    // Measured from upgradedAt (when they actually started paying) when known;
+    // account age is only a fallback for legacy subscribers with no record.
     if (user[0] && user[0].plan === 'SUPER_HERO' && user[0].subscriptionStatus === 'active') {
-      const accountAge = new Date().getTime() - new Date(user[0].createdAt).getTime();
+      const since = user[0].upgradedAt ?? user[0].createdAt;
+      const payingFor = new Date().getTime() - new Date(since).getTime();
       const twoMonthsMs = 2 * 30 * 24 * 60 * 60 * 1000;
-      
-      if (accountAge >= twoMonthsMs) {
+
+      if (payingFor >= twoMonthsMs) {
         await this.awardBadge(userId, badge.id);
       }
     }
@@ -123,23 +126,19 @@ export class BadgeService {
     await this.awardBadge(userId, badge.id);
   }
 
-  // 5. Welcome Back - Check login after 2+ weeks inactivity
-  async checkWelcomeBack(userId: number): Promise<void> {
+  // 5. Welcome Back - login after 2+ weeks inactivity.
+  // Uses the PRE-login lastLogin captured by the caller (recordUserLogin runs
+  // concurrently and can overwrite lastLogin before we read it, which made
+  // this badge unwinnable when the update won the race).
+  async checkWelcomeBack(userId: number, priorLastLogin?: Date | string | null): Promise<void> {
+    if (!priorLastLogin) return; // new user or unknown — not a return from inactivity
     const badge = await this.getBadgeByName('Welcome Back');
     if (!badge) return;
-
-    const user = await db.select()
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-
-    if (user[0] && user[0].lastLogin) {
-      const lastLogin = new Date(user[0].lastLogin);
-      const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
-      
-      if (lastLogin < twoWeeksAgo) {
-        await this.awardBadge(userId, badge.id);
-      }
+    const last = new Date(priorLastLogin);
+    if (isNaN(last.getTime())) return;
+    const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+    if (last < twoWeeksAgo) {
+      await this.awardBadge(userId, badge.id);
     }
   }
 
@@ -301,10 +300,12 @@ export class BadgeService {
       .limit(1);
 
     if (user[0] && user[0].loginStreak >= 7) {
-      // Additional logic would be needed to verify these were midnight logins
-      // This is a simplified implementation
-      const now = new Date();
-      if (now.getHours() >= 0 && now.getHours() < 6) {
+      // Additional logic would be needed to verify these were midnight logins.
+      // Simplified implementation; hour checked in US Eastern (the app's home
+      // timezone, same as Night Owl) — the server runs in UTC, so a raw
+      // getHours() would award this to afternoon collectors.
+      const hour = Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/New_York' }).format(new Date()));
+      if (hour >= 0 && hour < 6) {
         await this.awardBadge(userId, badge.id);
       }
     }
@@ -477,7 +478,7 @@ export class BadgeService {
   }
 
   async checkBadgesOnLogin(userId: number, priorLastLogin?: Date | string | null): Promise<void> {
-    await this.checkWelcomeBack(userId);
+    await this.checkWelcomeBack(userId, priorLastLogin);
     await this.checkNeverLeaveYouAgain(userId, priorLastLogin);
     await this.checkNightcrawler(userId);
     await this.check7DayStreak(userId);
@@ -654,6 +655,22 @@ export class BadgeService {
     if (!badge) return;
     
     await this.awardBadge(userId, badge.id);
+  }
+
+  // Contributor - 3+ approved card image uploads. Counts approved rows itself
+  // so every call site stays consistent with the badge's definition.
+  async checkContributor(userId: number): Promise<void> {
+    const badge = await this.getBadgeByName('Contributor');
+    if (!badge) return;
+    if (await this.hasUserEarnedBadge(userId, badge.id)) return;
+
+    const result = await db.execute(sql`
+      SELECT COUNT(*)::int AS n FROM pending_card_images
+      WHERE user_id = ${userId} AND status = 'approved'
+    `);
+    if (Number((result.rows[0] as any)?.n ?? 0) >= 3) {
+      await this.awardBadge(userId, badge.id);
+    }
   }
 
   // Badge checks for marketplace actions

@@ -8421,10 +8421,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Check if user has earned Contributor badge (3+ approved images)
-      const userApprovedCount = await storage.getUserApprovedImageCount(pendingImage.userId);
-      if (userApprovedCount >= 3) {
-        await badgeService.awardBadge(pendingImage.userId, 'contributor');
-      }
+      await badgeService.checkContributor(pendingImage.userId);
 
       // Feed v1: image-approved event (idempotent, fire-and-forget)
       import('./services/feedService').then(m => m.emitFeedEvent({
@@ -8494,10 +8491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
 
           // Contributor badge check (3+ approved images)
-          const userApprovedCount = await storage.getUserApprovedImageCount(pendingImage.userId);
-          if (userApprovedCount >= 3) {
-            await badgeService.awardBadge(pendingImage.userId, 'contributor');
-          }
+          await badgeService.checkContributor(pendingImage.userId);
 
           // Feed v1: image-approved event (idempotent, fire-and-forget)
           import('./services/feedService').then(m => m.emitFeedEvent({

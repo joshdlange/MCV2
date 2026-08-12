@@ -38,10 +38,19 @@ export async function backfillUpgradedAtFromStripe(): Promise<{ updated: number;
         }
       }
       if (createdUnix === null && row.stripe_customer_id) {
-        const subs = await stripe.subscriptions.list({ customer: row.stripe_customer_id, status: "all", limit: 10 });
-        if (subs.data.length) {
-          createdUnix = Math.min(...subs.data.map(s => s.created));
-        }
+        // Paginate the full subscription history so the EARLIEST subscription
+        // wins, even for customers with more than one page of history.
+        let startingAfter: string | undefined;
+        do {
+          const subs: Stripe.ApiList<Stripe.Subscription> = await stripe.subscriptions.list({
+            customer: row.stripe_customer_id, status: "all", limit: 100,
+            ...(startingAfter ? { starting_after: startingAfter } : {}),
+          });
+          for (const s of subs.data) {
+            if (createdUnix === null || s.created < createdUnix) createdUnix = s.created;
+          }
+          startingAfter = subs.has_more ? subs.data[subs.data.length - 1]?.id : undefined;
+        } while (startingAfter);
       }
       if (createdUnix === null) {
         skipped++;

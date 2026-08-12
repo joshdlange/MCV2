@@ -163,22 +163,54 @@ app.use((req, res, next) => {
     await db.execute(sql`
       CREATE OR REPLACE FUNCTION set_upgraded_at() RETURNS trigger AS $$
       BEGIN
-        IF NEW.plan = 'SUPER_HERO' AND OLD.plan IS DISTINCT FROM 'SUPER_HERO' AND NEW.upgraded_at IS NULL THEN
+        -- Covers both INSERT (e.g. admin-created paid accounts) and UPDATE
+        -- transitions to a paid plan. Never overwrites an existing/supplied value.
+        IF NEW.plan = 'SUPER_HERO' AND NEW.upgraded_at IS NULL
+           AND (TG_OP = 'INSERT' OR OLD.plan IS DISTINCT FROM 'SUPER_HERO') THEN
           NEW.upgraded_at := now();
         END IF;
         RETURN NEW;
       END $$ LANGUAGE plpgsql`);
     await db.execute(sql`DROP TRIGGER IF EXISTS users_set_upgraded_at ON users`);
-    await db.execute(sql`CREATE TRIGGER users_set_upgraded_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION set_upgraded_at()`);
+    await db.execute(sql`CREATE TRIGGER users_set_upgraded_at BEFORE INSERT OR UPDATE ON users FOR EACH ROW EXECUTE FUNCTION set_upgraded_at()`);
     const marker = await db.execute(sql`SELECT 1 FROM startup_migrations WHERE name = 'upgraded_at_backfill_v1'`);
     if ((marker as any).rows?.length === 0) {
       const { backfillUpgradedAtFromStripe } = await import('./services/upgradedAtBackfill');
       const result = await backfillUpgradedAtFromStripe();
-      await db.execute(sql`INSERT INTO startup_migrations (name) VALUES ('upgraded_at_backfill_v1') ON CONFLICT (name) DO NOTHING`);
-      console.log('[UpgradedAt Backfill] Complete:', JSON.stringify(result));
+      if (result.errors === 0) {
+        // Only mark done on a clean pass — a transient Stripe failure must not
+        // permanently exclude those users; next boot retries (idempotent:
+        // only rows still NULL are touched).
+        await db.execute(sql`INSERT INTO startup_migrations (name) VALUES ('upgraded_at_backfill_v1') ON CONFLICT (name) DO NOTHING`);
+      }
+      console.log('[UpgradedAt Backfill] Complete:', JSON.stringify(result), result.errors > 0 ? '(will retry failed users next boot)' : '');
     }
   } catch (error) {
     console.error('Startup migration (upgraded_at) failed:', error);
+  }
+
+  // Idempotent startup seed: Contributor badge (3+ approved image uploads).
+  // The award code shipped referencing a badge that was never created, so
+  // approvals logged errors and nobody ever earned it. Seeds the badge by
+  // name, then retro-awards existing qualifying uploaders (quiet SQL insert —
+  // no notification blast for months-old contributions).
+  try {
+    const { db } = await import('./db');
+    const { sql } = await import('drizzle-orm');
+    await db.execute(sql`
+      INSERT INTO badges (name, description, category, requirement, rarity, points, unlock_hint, is_active)
+      SELECT 'Contributor', 'Community builder! Contributed 3+ approved card images to the Vault.',
+        'Achievement', '{"type":"approved_images","count":3}', 'silver', 25,
+        'Upload card images and get 3 of them approved', true
+      WHERE NOT EXISTS (SELECT 1 FROM badges WHERE name = 'Contributor')`);
+    await db.execute(sql`
+      INSERT INTO user_badges (user_id, badge_id)
+      SELECT p.user_id, b.id
+      FROM (SELECT user_id FROM pending_card_images WHERE status = 'approved' GROUP BY user_id HAVING COUNT(*) >= 3) p
+      CROSS JOIN (SELECT id FROM badges WHERE name = 'Contributor') b
+      ON CONFLICT (user_id, badge_id) DO NOTHING`);
+  } catch (error) {
+    console.error('Startup seed (Contributor badge) failed:', error);
   }
 
   // One-time startup backfill: retroactive feed events (first cards, milestones,
@@ -187,6 +219,19 @@ app.use((req, res, next) => {
   try {
     const { db } = await import('./db');
     const { sql } = await import('drizzle-orm');
+    // Image-approved events were originally emitted one per image; they now
+    // collapse to one per uploader per day (UTC, matching the emit sites'
+    // toISOString date). Rekey any env that already has per-image events:
+    // delete the old-style rows and re-open the backfill marker so the daily
+    // aggregates get rebuilt. Transactional so a crash can't strand us keyless.
+    await db.transaction(async (tx) => {
+      const m = await tx.execute(sql`INSERT INTO startup_migrations (name) VALUES ('feed_image_daily_v1') ON CONFLICT (name) DO NOTHING RETURNING name`);
+      if ((m as any).rows?.length > 0) {
+        const del = await tx.execute(sql`DELETE FROM feed_events WHERE event_type = 'image_approved' AND dedupe_key ~ '^image_approved:[0-9]+:[0-9]+$'`);
+        await tx.execute(sql`DELETE FROM startup_migrations WHERE name = 'feed_backfill_v1'`);
+        console.log(`[Feed] Rekeyed image-approved events to daily aggregates (removed ${(del as any).rowCount ?? 0} per-image events)`);
+      }
+    });
     const marker = await db.execute(sql`SELECT 1 FROM startup_migrations WHERE name = 'feed_backfill_v1'`);
     if ((marker as any).rows?.length === 0) {
       const { runFeedBackfill } = await import('./services/feedService');
