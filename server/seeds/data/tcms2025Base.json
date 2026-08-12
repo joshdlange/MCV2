@@ -1,0 +1,1029 @@
+[
+ {
+  "movie": "Iron Man",
+  "n": 1,
+  "name": "Iron Man"
+ },
+ {
+  "movie": "Iron Man",
+  "n": 2,
+  "name": "Happy Hogan"
+ },
+ {
+  "movie": "Iron Man",
+  "n": 3,
+  "name": "Iron Monger"
+ },
+ {
+  "movie": "Iron Man",
+  "n": 4,
+  "name": "Dr. Ho Yinsen"
+ },
+ {
+  "movie": "Iron Man 2",
+  "n": 5,
+  "name": "Pepper Potts"
+ },
+ {
+  "movie": "Iron Man 2",
+  "n": 6,
+  "name": "Justin Hammer"
+ },
+ {
+  "movie": "Iron Man 2",
+  "n": 7,
+  "name": "Black Widow"
+ },
+ {
+  "movie": "Iron Man 2",
+  "n": 8,
+  "name": "Whiplash"
+ },
+ {
+  "movie": "Iron Man 2",
+  "n": 9,
+  "name": "Nick Fury"
+ },
+ {
+  "movie": "Thor",
+  "n": 10,
+  "name": "Thor"
+ },
+ {
+  "movie": "Thor",
+  "n": 11,
+  "name": "Odin"
+ },
+ {
+  "movie": "Thor",
+  "n": 12,
+  "name": "Heimdall"
+ },
+ {
+  "movie": "Thor",
+  "n": 13,
+  "name": "Frigga"
+ },
+ {
+  "movie": "Thor",
+  "n": 14,
+  "name": "Erik Selvig"
+ },
+ {
+  "movie": "Thor",
+  "n": 15,
+  "name": "Dr. Jane Foster"
+ },
+ {
+  "movie": "Thor",
+  "n": 16,
+  "name": "Darcy Lewis"
+ },
+ {
+  "movie": "Thor",
+  "n": 17,
+  "name": "Laufey"
+ },
+ {
+  "movie": "Thor",
+  "n": 18,
+  "name": "Lady Sif"
+ },
+ {
+  "movie": "Thor",
+  "n": 19,
+  "name": "Loki"
+ },
+ {
+  "movie": "Captain America: The First Avenger",
+  "n": 20,
+  "name": "Captain America"
+ },
+ {
+  "movie": "Captain America: The First Avenger",
+  "n": 21,
+  "name": "Howard Stark"
+ },
+ {
+  "movie": "Captain America: The First Avenger",
+  "n": 22,
+  "name": "Red Skull"
+ },
+ {
+  "movie": "Captain America: The First Avenger",
+  "n": 23,
+  "name": "Dr. Abraham Erskine"
+ },
+ {
+  "movie": "Captain America: The First Avenger",
+  "n": 24,
+  "name": "Agent Peggy Carter"
+ },
+ {
+  "movie": "Captain America: The First Avenger",
+  "n": 25,
+  "name": "Dr. Arnim Zola"
+ },
+ {
+  "movie": "Captain America: The First Avenger",
+  "n": 26,
+  "name": "Bucky Barnes"
+ },
+ {
+  "movie": "Marvel's The Avengers",
+  "n": 27,
+  "name": "Hulk"
+ },
+ {
+  "movie": "Marvel's The Avengers",
+  "n": 28,
+  "name": "Hawkeye"
+ },
+ {
+  "movie": "Marvel's The Avengers",
+  "n": 29,
+  "name": "Agent Phil Coulson"
+ },
+ {
+  "movie": "Marvel's The Avengers",
+  "n": 30,
+  "name": "Agent Maria Hill"
+ },
+ {
+  "movie": "Iron Man 3",
+  "n": 31,
+  "name": "Iron Patriot"
+ },
+ {
+  "movie": "Iron Man 3",
+  "n": 32,
+  "name": "\"The Mandarin\""
+ },
+ {
+  "movie": "Iron Man 3",
+  "n": 33,
+  "name": "Aldrich Killian"
+ },
+ {
+  "movie": "Iron Man 3",
+  "n": 34,
+  "name": "Ellen Brandt"
+ },
+ {
+  "movie": "Iron Man 3",
+  "n": 35,
+  "name": "Eric Savin"
+ },
+ {
+  "movie": "Iron Man 3",
+  "n": 36,
+  "name": "Dr. Maya Hansen"
+ },
+ {
+  "movie": "Thor: The Dark World",
+  "n": 37,
+  "name": "Malekith"
+ },
+ {
+  "movie": "Captain America: The Winter Soldier",
+  "n": 38,
+  "name": "Winter Soldier"
+ },
+ {
+  "movie": "Captain America: The Winter Soldier",
+  "n": 39,
+  "name": "Agent 13"
+ },
+ {
+  "movie": "Captain America: The Winter Soldier",
+  "n": 40,
+  "name": "Brock Rumlow"
+ },
+ {
+  "movie": "Captain America: The Winter Soldier",
+  "n": 41,
+  "name": "Falcon"
+ },
+ {
+  "movie": "Guardians of the Galaxy Vol. 1",
+  "n": 42,
+  "name": "Star-Lord"
+ },
+ {
+  "movie": "Guardians of the Galaxy Vol. 1",
+  "n": 43,
+  "name": "Rocket"
+ },
+ {
+  "movie": "Guardians of the Galaxy Vol. 1",
+  "n": 44,
+  "name": "Drax"
+ },
+ {
+  "movie": "Guardians of the Galaxy Vol. 1",
+  "n": 45,
+  "name": "Nebula"
+ },
+ {
+  "movie": "Guardians of the Galaxy Vol. 1",
+  "n": 46,
+  "name": "Ronan"
+ },
+ {
+  "movie": "Guardians of the Galaxy Vol. 1",
+  "n": 47,
+  "name": "Yondu Udonta"
+ },
+ {
+  "movie": "Guardians of the Galaxy Vol. 1",
+  "n": 48,
+  "name": "Gamora"
+ },
+ {
+  "movie": "Guardians of the Galaxy Vol. 1",
+  "n": 49,
+  "name": "The Collector"
+ },
+ {
+  "movie": "Guardians of the Galaxy Vol. 1",
+  "n": 50,
+  "name": "Groot"
+ },
+ {
+  "movie": "Guardians of the Galaxy Vol. 1",
+  "n": 51,
+  "name": "Nova Prime"
+ },
+ {
+  "movie": "Avengers: Age of Ultron",
+  "n": 52,
+  "name": "Wanda Maximoff"
+ },
+ {
+  "movie": "Avengers: Age of Ultron",
+  "n": 53,
+  "name": "Pietro Maximoff"
+ },
+ {
+  "movie": "Avengers: Age of Ultron",
+  "n": 54,
+  "name": "Ultron"
+ },
+ {
+  "movie": "Avengers: Age of Ultron",
+  "n": 55,
+  "name": "Vision"
+ },
+ {
+  "movie": "Avengers: Age of Ultron",
+  "n": 56,
+  "name": "Baron Strucker"
+ },
+ {
+  "movie": "Ant-Man",
+  "n": 57,
+  "name": "Ant-Man"
+ },
+ {
+  "movie": "Ant-Man",
+  "n": 58,
+  "name": "Dr. Hank Pym"
+ },
+ {
+  "movie": "Ant-Man",
+  "n": 59,
+  "name": "Hope Van Dyne"
+ },
+ {
+  "movie": "Ant-Man",
+  "n": 60,
+  "name": "Yellow Jacket"
+ },
+ {
+  "movie": "Captain America: Civil War",
+  "n": 61,
+  "name": "Spider-Man"
+ },
+ {
+  "movie": "Captain America: Civil War",
+  "n": 62,
+  "name": "Helmut Zemo"
+ },
+ {
+  "movie": "Captain America: Civil War",
+  "n": 63,
+  "name": "King T'Chaka"
+ },
+ {
+  "movie": "Captain America: Civil War",
+  "n": 64,
+  "name": "War Machine"
+ },
+ {
+  "movie": "Doctor Strange",
+  "n": 65,
+  "name": "Doctor Strange"
+ },
+ {
+  "movie": "Doctor Strange",
+  "n": 66,
+  "name": "Dr. Christine Palmer"
+ },
+ {
+  "movie": "Doctor Strange",
+  "n": 67,
+  "name": "Wong"
+ },
+ {
+  "movie": "Doctor Strange",
+  "n": 68,
+  "name": "The Ancient One"
+ },
+ {
+  "movie": "Doctor Strange",
+  "n": 69,
+  "name": "Karl Mordo"
+ },
+ {
+  "movie": "Doctor Strange",
+  "n": 70,
+  "name": "Kaecilius"
+ },
+ {
+  "movie": "Guardians of the Galaxy Vol. 2",
+  "n": 71,
+  "name": "Ego"
+ },
+ {
+  "movie": "Guardians of the Galaxy Vol. 2",
+  "n": 72,
+  "name": "Mantis"
+ },
+ {
+  "movie": "Guardians of the Galaxy Vol. 2",
+  "n": 73,
+  "name": "Baby Groot"
+ },
+ {
+  "movie": "Thor: Ragnarok",
+  "n": 74,
+  "name": "Valkyrie"
+ },
+ {
+  "movie": "Thor: Ragnarok",
+  "n": 75,
+  "name": "Grandmaster"
+ },
+ {
+  "movie": "Thor: Ragnarok",
+  "n": 76,
+  "name": "Hela"
+ },
+ {
+  "movie": "Thor: Ragnarok",
+  "n": 77,
+  "name": "Korg"
+ },
+ {
+  "movie": "Thor: Ragnarok",
+  "n": 78,
+  "name": "Miek"
+ },
+ {
+  "movie": "Black Panther",
+  "n": 79,
+  "name": "Black Panther"
+ },
+ {
+  "movie": "Black Panther",
+  "n": 80,
+  "name": "Shuri"
+ },
+ {
+  "movie": "Black Panther",
+  "n": 81,
+  "name": "Nakia"
+ },
+ {
+  "movie": "Black Panther",
+  "n": 82,
+  "name": "Okoye"
+ },
+ {
+  "movie": "Black Panther",
+  "n": 83,
+  "name": "M'Baku"
+ },
+ {
+  "movie": "Black Panther",
+  "n": 84,
+  "name": "Ulysses Klaue"
+ },
+ {
+  "movie": "Black Panther",
+  "n": 85,
+  "name": "Erik Killmonger"
+ },
+ {
+  "movie": "Black Panther",
+  "n": 86,
+  "name": "Queen Ramonda"
+ },
+ {
+  "movie": "Avengers: Infinity War",
+  "n": 87,
+  "name": "Cull Obsidian"
+ },
+ {
+  "movie": "Avengers: Infinity War",
+  "n": 88,
+  "name": "Ebony Maw"
+ },
+ {
+  "movie": "Avengers: Infinity War",
+  "n": 89,
+  "name": "Proxima Midnight"
+ },
+ {
+  "movie": "Avengers: Infinity War",
+  "n": 90,
+  "name": "Corvus Glaive"
+ },
+ {
+  "movie": "Ant-Man and the Wasp",
+  "n": 91,
+  "name": "The Wasp"
+ },
+ {
+  "movie": "Ant-Man and the Wasp",
+  "n": 92,
+  "name": "Janet Van Dyne"
+ },
+ {
+  "movie": "Ant-Man and the Wasp",
+  "n": 93,
+  "name": "Maggie Lang"
+ },
+ {
+  "movie": "Ant-Man and the Wasp",
+  "n": 94,
+  "name": "Jimmy Woo"
+ },
+ {
+  "movie": "Ant-Man and the Wasp",
+  "n": 95,
+  "name": "Dr. Bill Foster"
+ },
+ {
+  "movie": "Captain Marvel",
+  "n": 96,
+  "name": "Captain Marvel"
+ },
+ {
+  "movie": "Captain Marvel",
+  "n": 97,
+  "name": "Yon-Rogg"
+ },
+ {
+  "movie": "Captain Marvel",
+  "n": 98,
+  "name": "Talos"
+ },
+ {
+  "movie": "Captain Marvel",
+  "n": 99,
+  "name": "Dr. Wendy Lawson"
+ },
+ {
+  "movie": "Avengers: Endgame",
+  "n": 100,
+  "name": "Thanos"
+ },
+ {
+  "movie": "WandaVision",
+  "n": 101,
+  "name": "Pietro Maximoff"
+ },
+ {
+  "movie": "The Falcon and The Winter Soldier",
+  "n": 102,
+  "name": "Karli Morgenthau"
+ },
+ {
+  "movie": "Loki",
+  "n": 103,
+  "name": "Mobius"
+ },
+ {
+  "movie": "Loki",
+  "n": 104,
+  "name": "Sylvie"
+ },
+ {
+  "movie": "Loki",
+  "n": 105,
+  "name": "Classic Loki"
+ },
+ {
+  "movie": "Loki",
+  "n": 106,
+  "name": "Ravonna Renslayer"
+ },
+ {
+  "movie": "Loki",
+  "n": 107,
+  "name": "B-15"
+ },
+ {
+  "movie": "Black Widow",
+  "n": 108,
+  "name": "Melina Vostokoff"
+ },
+ {
+  "movie": "Black Widow",
+  "n": 109,
+  "name": "Dreykov"
+ },
+ {
+  "movie": "Shang-Chi and the Legend of the Ten Rings",
+  "n": 110,
+  "name": "Shang-Chi"
+ },
+ {
+  "movie": "Shang-Chi and the Legend of the Ten Rings",
+  "n": 111,
+  "name": "Katy Chen"
+ },
+ {
+  "movie": "Shang-Chi and the Legend of the Ten Rings",
+  "n": 112,
+  "name": "Wenwu"
+ },
+ {
+  "movie": "Shang-Chi and the Legend of the Ten Rings",
+  "n": 113,
+  "name": "Ying Nan"
+ },
+ {
+  "movie": "Shang-Chi and the Legend of the Ten Rings",
+  "n": 114,
+  "name": "Xialing"
+ },
+ {
+  "movie": "Shang-Chi and the Legend of the Ten Rings",
+  "n": 115,
+  "name": "Li"
+ },
+ {
+  "movie": "Shang-Chi and the Legend of the Ten Rings",
+  "n": 116,
+  "name": "Razor Fist"
+ },
+ {
+  "movie": "Eternals",
+  "n": 117,
+  "name": "Sersi"
+ },
+ {
+  "movie": "Eternals",
+  "n": 118,
+  "name": "Ikaris"
+ },
+ {
+  "movie": "Eternals",
+  "n": 119,
+  "name": "Ajak"
+ },
+ {
+  "movie": "Eternals",
+  "n": 120,
+  "name": "Kingo"
+ },
+ {
+  "movie": "Eternals",
+  "n": 121,
+  "name": "Sprite"
+ },
+ {
+  "movie": "Eternals",
+  "n": 122,
+  "name": "Phastos"
+ },
+ {
+  "movie": "Eternals",
+  "n": 123,
+  "name": "Makkari"
+ },
+ {
+  "movie": "Eternals",
+  "n": 124,
+  "name": "Druig"
+ },
+ {
+  "movie": "Eternals",
+  "n": 125,
+  "name": "Gilgamesh"
+ },
+ {
+  "movie": "Eternals",
+  "n": 126,
+  "name": "Dane Whitman"
+ },
+ {
+  "movie": "Eternals",
+  "n": 127,
+  "name": "Arishem"
+ },
+ {
+  "movie": "Hawkeye",
+  "n": 128,
+  "name": "Kate Bishop"
+ },
+ {
+  "movie": "Moon Knight",
+  "n": 129,
+  "name": "Moon Knight"
+ },
+ {
+  "movie": "Moon Knight",
+  "n": 130,
+  "name": "Khonshu"
+ },
+ {
+  "movie": "Doctor Strange in the Multiverse of Madness",
+  "n": 131,
+  "name": "America Chavez"
+ },
+ {
+  "movie": "Doctor Strange in the Multiverse of Madness",
+  "n": 132,
+  "name": "Clea"
+ },
+ {
+  "movie": "Doctor Strange in the Multiverse of Madness",
+  "n": 133,
+  "name": "Captain Marvel"
+ },
+ {
+  "movie": "Thor: Love and Thunder",
+  "n": 134,
+  "name": "Thor"
+ },
+ {
+  "movie": "Thor: Love and Thunder",
+  "n": 135,
+  "name": "The Mighty Thor"
+ },
+ {
+  "movie": "Ms. Marvel",
+  "n": 136,
+  "name": "Ms. Marvel"
+ },
+ {
+  "movie": "She-Hulk: Attorney at Law",
+  "n": 137,
+  "name": "She-Hulk"
+ },
+ {
+  "movie": "Werewolf by Night",
+  "n": 138,
+  "name": "Jack Russell"
+ },
+ {
+  "movie": "Werewolf by Night",
+  "n": 139,
+  "name": "Elsa Bloodstone"
+ },
+ {
+  "movie": "Black Panther: Wakanda Forever",
+  "n": 140,
+  "name": "Black Panther"
+ },
+ {
+  "movie": "Black Panther: Wakanda Forever",
+  "n": 141,
+  "name": "K'uk'ulkan"
+ },
+ {
+  "movie": "Black Panther: Wakanda Forever",
+  "n": 142,
+  "name": "Ironheart"
+ },
+ {
+  "movie": "Black Panther: Wakanda Forever",
+  "n": 143,
+  "name": "Namora"
+ },
+ {
+  "movie": "Black Panther: Wakanda Forever",
+  "n": 144,
+  "name": "Attuma"
+ },
+ {
+  "movie": "Black Panther: Wakanda Forever",
+  "n": 145,
+  "name": "Aneka"
+ },
+ {
+  "movie": "Ant-Man and the Wasp: Quantumania",
+  "n": 146,
+  "name": "Cassie Lang"
+ },
+ {
+  "movie": "Ant-Man and the Wasp: Quantumania",
+  "n": 147,
+  "name": "M.O.D.O.K."
+ },
+ {
+  "movie": "Guardians of the Galaxy Vol. 3",
+  "n": 148,
+  "name": "The High Evolutionary"
+ },
+ {
+  "movie": "Guardians of the Galaxy Vol. 3",
+  "n": 149,
+  "name": "Adam Warlock"
+ },
+ {
+  "movie": "Guardians of the Galaxy Vol. 3",
+  "n": 150,
+  "name": "Cosmo"
+ },
+ {
+  "movie": "Guardians of the Galaxy Vol. 3",
+  "n": 151,
+  "name": "Recorder Vim"
+ },
+ {
+  "movie": "Guardians of the Galaxy Vol. 3",
+  "n": 152,
+  "name": "Recorder Theel"
+ },
+ {
+  "movie": "Secret Invasion",
+  "n": 153,
+  "name": "Gravik"
+ },
+ {
+  "movie": "Secret Invasion",
+  "n": 154,
+  "name": "Pagon"
+ },
+ {
+  "movie": "Loki",
+  "n": 155,
+  "name": "O.B."
+ },
+ {
+  "movie": "The Marvels",
+  "n": 156,
+  "name": "Monica Rambeau"
+ },
+ {
+  "movie": "The Marvels",
+  "n": 157,
+  "name": "Dar-Benn"
+ },
+ {
+  "movie": "The Marvels",
+  "n": 158,
+  "name": "Emperor Dro'ge"
+ },
+ {
+  "movie": "The Marvels",
+  "n": 159,
+  "name": "Prince Yan"
+ },
+ {
+  "movie": "Echo",
+  "n": 160,
+  "name": "Echo"
+ },
+ {
+  "debut": true,
+  "movie": "Agatha All Along",
+  "n": 161,
+  "name": "Death"
+ },
+ {
+  "movie": "Agatha All Along",
+  "n": 162,
+  "name": "Agatha Harkness"
+ },
+ {
+  "debut": true,
+  "movie": "Agatha All Along",
+  "n": 163,
+  "name": "Lilia Calderu"
+ },
+ {
+  "debut": true,
+  "movie": "Agatha All Along",
+  "n": 164,
+  "name": "Alice Wu-Gulliver"
+ },
+ {
+  "debut": true,
+  "movie": "Agatha All Along",
+  "n": 165,
+  "name": "Wiccan"
+ },
+ {
+  "debut": true,
+  "movie": "Agatha All Along",
+  "n": 166,
+  "name": "Jennifer Kale"
+ },
+ {
+  "movie": "Captain America: Brave New World",
+  "n": 167,
+  "name": "Captain America"
+ },
+ {
+  "movie": "Captain America: Brave New World",
+  "n": 168,
+  "name": "Falcon"
+ },
+ {
+  "debut": true,
+  "movie": "Captain America: Brave New World",
+  "n": 169,
+  "name": "Ruth Bat-Seraph"
+ },
+ {
+  "movie": "Captain America: Brave New World",
+  "n": 170,
+  "name": "Isaiah Bradley"
+ },
+ {
+  "debut": true,
+  "movie": "Captain America: Brave New World",
+  "n": 171,
+  "name": "Red Hulk"
+ },
+ {
+  "debut": true,
+  "movie": "Captain America: Brave New World",
+  "n": 172,
+  "name": "Sidewinder"
+ },
+ {
+  "movie": "Captain America: Brave New World",
+  "n": 173,
+  "name": "The Leader"
+ },
+ {
+  "debut": true,
+  "movie": "Captain America: Brave New World",
+  "n": 174,
+  "name": "Leila Taylor"
+ },
+ {
+  "movie": "Daredevil: Born Again",
+  "n": 175,
+  "name": "Daredevil"
+ },
+ {
+  "debut": true,
+  "movie": "Daredevil: Born Again",
+  "n": 176,
+  "name": "Frank Castle"
+ },
+ {
+  "debut": true,
+  "movie": "Daredevil: Born Again",
+  "n": 177,
+  "name": "Daniel Blake"
+ },
+ {
+  "movie": "Daredevil: Born Again",
+  "n": 178,
+  "name": "Kingpin"
+ },
+ {
+  "debut": true,
+  "movie": "Daredevil: Born Again",
+  "n": 179,
+  "name": "Vanessa Fisk"
+ },
+ {
+  "debut": true,
+  "movie": "Daredevil: Born Again",
+  "n": 180,
+  "name": "Karen Page"
+ },
+ {
+  "debut": true,
+  "movie": "Daredevil: Born Again",
+  "n": 181,
+  "name": "Foggy Nelson"
+ },
+ {
+  "movie": "Thunderbolts\\*",
+  "n": 182,
+  "name": "Yelena Belova"
+ },
+ {
+  "debut": true,
+  "movie": "Thunderbolts\\*",
+  "n": 183,
+  "name": "Bob"
+ },
+ {
+  "movie": "Thunderbolts\\*",
+  "n": 184,
+  "name": "John F. Walker"
+ },
+ {
+  "movie": "Thunderbolts\\*",
+  "n": 185,
+  "name": "Taskmaster"
+ },
+ {
+  "movie": "Thunderbolts\\*",
+  "n": 186,
+  "name": "Ghost"
+ },
+ {
+  "movie": "Thunderbolts\\*",
+  "n": 187,
+  "name": "Red Guardian"
+ },
+ {
+  "debut": true,
+  "movie": "Thunderbolts\\*",
+  "n": 188,
+  "name": "Congressman Gary"
+ },
+ {
+  "debut": true,
+  "movie": "Thunderbolts\\*",
+  "n": 189,
+  "name": "Sentry"
+ },
+ {
+  "movie": "Thunderbolts\\*",
+  "n": 190,
+  "name": "Valentina Allegra de Fontaine"
+ },
+ {
+  "debut": true,
+  "movie": "Thunderbolts\\*",
+  "n": 191,
+  "name": "Mel"
+ },
+ {
+  "debut": true,
+  "movie": "Thunderbolts\\*",
+  "n": 192,
+  "name": "The Void"
+ },
+ {
+  "debut": true,
+  "movie": "Ironheart",
+  "n": 193,
+  "name": "Mephisto"
+ },
+ {
+  "debut": true,
+  "movie": "Fantastic Four: First Steps",
+  "n": 194,
+  "name": "Mister Fantastic"
+ },
+ {
+  "debut": true,
+  "movie": "Fantastic Four: First Steps",
+  "n": 195,
+  "name": "Invisible Woman"
+ },
+ {
+  "debut": true,
+  "movie": "Fantastic Four: First Steps",
+  "n": 196,
+  "name": "Human Torch"
+ },
+ {
+  "debut": true,
+  "movie": "Fantastic Four: First Steps",
+  "n": 197,
+  "name": "The Thing"
+ },
+ {
+  "debut": true,
+  "movie": "Fantastic Four: First Steps",
+  "n": 198,
+  "name": "Silver Surfer"
+ },
+ {
+  "debut": true,
+  "movie": "Fantastic Four: First Steps",
+  "n": 199,
+  "name": "H.E.R.B.I.E."
+ },
+ {
+  "debut": true,
+  "movie": "Fantastic Four: First Steps",
+  "n": 200,
+  "name": "Galactus"
+ }
+]

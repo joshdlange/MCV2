@@ -386,6 +386,16 @@ app.use((req, res, next) => {
     console.error('Startup repair (merge image restore) failed:', error);
   }
 
+  // Idempotent startup fix: 2025 Topps Chrome Marvel Studios checklist —
+  // completes the 200-card base + parallels, relocates mislabeled parallel
+  // strays, dedupes The Snap Variations (slug-matched, safe in dev and prod).
+  try {
+    const { fixTcms2025Checklist } = await import('./seeds/fixTcms2025Checklist');
+    await fixTcms2025Checklist();
+  } catch (error) {
+    console.error('Startup fix (TCMS 2025 checklist) failed:', error);
+  }
+
   const server = await registerRoutes(app);
 
   // Start background services
