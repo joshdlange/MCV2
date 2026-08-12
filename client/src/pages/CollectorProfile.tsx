@@ -400,10 +400,10 @@ export default function CollectorProfile() {
                     disabled={followMutation.isPending}
                     data-testid="button-follow"
                     className={followInfo.isFriend
-                      ? "bg-purple-600 hover:bg-purple-700 text-white"
+                      ? "bg-zinc-900 hover:bg-zinc-800 text-amber-300 border border-amber-500/50"
                       : followInfo.isFollowing
                         ? "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
-                        : "bg-amber-400 hover:bg-amber-300 text-zinc-950 font-bold"}
+                        : "bg-red-600 hover:bg-red-700 text-white font-bold"}
                   >
                     {followInfo.isFriend ? (
                       <><UserCheck className="w-4 h-4 mr-1.5" /> Friends</>

@@ -1,0 +1,230 @@
+Refine Marvel Card Vault Feed UI so it matches the existing MCV design system better.
+
+Context:
+The Feed redesign improved the functionality and made activity cards more visual, but the current design still feels slightly disconnected from the rest of Marvel Card Vault.
+
+Current concerns:
+- The Feed header gradient does not feel on-brand.
+- The red/gold/purple accents compete with each other.
+- The gold Follow button is visible, but it feels a little disconnected from MCV’s normal visual language.
+- The feed cards are visually better, but they are all large and similar.
+- Badge events still dominate the feed visually.
+- The feed should feel more like Marvel Card Vault: dark, clean, premium, red/black/white, collector-focused, and comic-inspired without feeling overdesigned.
+
+Goal:
+Keep the improved Feed functionality, but refine the design so it feels native to MCV and less like a separate social app.
+
+Must do:
+- Preserve all existing Feed functionality.
+- Preserve:
+  - Activity tab
+  - Leaderboards tab
+  - Trade Feed tab
+  - Everyone / Following / Friends / Me filters
+  - Follow/Friends system
+  - reactions
+  - reaction XP caps
+  - leaderboard logic
+  - privacy rules
+  - grouped/reordered repetitive events
+- Redesign the Feed visual style to better match the rest of MCV.
+- Remove or soften the current top Feed gradient treatment.
+- Use a cleaner MCV-style header:
+  - dark charcoal/black
+  - subtle halftone or dot texture
+  - thin red accent
+  - no heavy pink/purple gradient wash
+  - readable white text
+- Keep the Feed header visually strong but less generic-SaaS.
+
+Feed card hierarchy:
+Introduce visual hierarchy so not every event looks equally huge.
+
+Use 3 presentation levels:
+
+1. Hero Moment Card
+Use only for major achievements:
+- Top 10 Collector badge
+- major level milestones
+- set/subset completion
+- 250/500 card collection milestones
+- rare/legendary badges
+
+Style:
+- largest visual treatment
+- strong image/achievement preview
+- red/black base with gold used only for achievement emphasis
+
+2. Standard Visual Card
+Use for normal meaningful events:
+- PC Binder created
+- image approved
+- first card added
+- normal badge earned
+- smaller collection milestones
+
+Style:
+- medium visual preview
+- image still important, but card is not oversized
+- clean layout, less dramatic than Hero Moment
+
+3. Compact Activity Card
+Use for grouped/repetitive events:
+- multiple badges earned close together
+- lower-priority feed events
+- repeated same-user/same-type activity
+
+Style:
+- compact row/card
+- smaller visual strip or icon cluster
+- still attractive, but not a giant hero panel
+
+Design rules:
+- Main brand palette should be:
+  - black / charcoal
+  - MCV red
+  - white / light gray
+- Use gold only for true achievement/status moments:
+  - Top 10
+  - leaderboard rank
+  - major milestones
+  - rare badges
+- Use purple sparingly:
+  - badge chips only if needed
+  - do not make purple feel like a second primary brand color
+- Avoid too many competing accent colors in one card.
+- Event type chips should be subtle and consistent.
+- Feed should feel premium, clean, and collector-focused.
+
+Follow button styling:
+Current gold Follow button is visible but does not fully match the brand.
+
+Update follow button states:
+- Follow:
+  - high contrast but more MCV-native
+  - suggested: white/light pill with red icon/text on dark cards
+  - or charcoal pill with red outline and stronger contrast
+- Following:
+  - neutral gray/charcoal pill with check
+- Friends:
+  - special but not too loud
+  - suggested: dark pill with red/gold accent or subtle gold border
+- Do not make Follow look like a coupon/upgrade button.
+- Keep accessible contrast.
+- Keep button compact.
+
+Level pill styling:
+- Keep level as status.
+- Use charcoal/gold or black/gold.
+- Make it readable but not dominant.
+- Do not let it compete with Follow button or event chip.
+
+Find Collectors:
+- The current collapsed “Collectors to Follow” bar is better than the carousel.
+- Keep it compact.
+- When expanded, show a responsive grid, not horizontal scrolling.
+- Make the module visually match the Feed cards.
+- Avoid taking over the top of the feed.
+- On mobile, keep it compact and easy to collapse.
+
+Feed ordering/repetition:
+- Preserve the rule that Everyone feed avoids showing too many same-type events in a row.
+- Group repetitive badge events where practical.
+- If the feed has mostly badge events, make grouped badge events compact instead of large hero cards.
+- Do not delete underlying feed events.
+
+Visual previews:
+- Keep event previews, but match their size to importance.
+- Badge earned:
+  - normal badge = Standard or Compact
+  - Top 10 / legendary badge = Hero
+- Card/image event:
+  - card image should be the visual focal point
+- PC Binder:
+  - binder preview or styled binder card
+- Set completion:
+  - completion visual should be Hero or Standard depending importance
+- Level up:
+  - big milestone levels can be Hero
+  - normal level-up can be Standard
+
+Leaderboards:
+- Make Leaderboards tab feel consistent with refined Feed style.
+- Keep:
+  - Top 10 Collectors All-Time XP
+  - Weekly XP
+  - Top Image Contributors
+- Use avatars, rank, level, XP/contribution count.
+- Top 10 can use gold accents.
+- Weekly XP should feel competitive but not overdesigned.
+
+Trade Feed:
+- Keep Trade Feed as Coming Soon only.
+- Make it match refined Feed style.
+- Do not build Trade Block.
+
+Must not do:
+- Do not remove Feed functionality.
+- Do not change feed backend logic unless needed for display tiering.
+- Do not change reaction XP caps.
+- Do not award XP for follows.
+- Do not build comments.
+- Do not build freeform posts.
+- Do not build messaging.
+- Do not build Trade Block.
+- Do not send emails or notifications.
+- Do not change lifecycle emails.
+- Do not change subscriptions, Stripe, RevenueCat, Shippo, Drive Sync, Data Quality, Upcoming Set Intelligence, image approval, card data, Android, or iOS.
+- Do not expose private data.
+- Do not make existing users public/followable/feed-visible without consent.
+
+Preserve:
+- Existing avatar/profile customization.
+- Existing follow/friend functionality.
+- Existing Feed filters.
+- Existing reaction functionality.
+- Existing XP rules and caps.
+- Existing privacy rules.
+- Existing leaderboards.
+- Existing Top 10 Collector badge.
+- Existing Trade Feed coming-soon status.
+
+QA:
+- Feed page loads on desktop.
+- Feed page loads on mobile.
+- Feed header no longer uses the off-brand gradient.
+- Feed cards feel native to MCV’s dark/red/black/white design.
+- Hero/Standard/Compact card treatments are applied appropriately.
+- Top 10 Collector appears as a major hero moment.
+- Normal badge events are not all oversized.
+- Grouped badge events are compact and less repetitive.
+- Follow button is more visible and more on-brand.
+- Level pill is readable and does not compete with buttons.
+- Find Collectors remains compact and no horizontal scroll.
+- Reactions still work.
+- Reaction XP caps still work.
+- Follow/unfollow still works.
+- Friends/mutual follows still work.
+- Everyone/Following/Friends/Me filters still work.
+- Leaderboards still work.
+- Trade Feed remains Coming Soon only.
+- Private/feed-hidden users are not shown.
+- No private data is exposed.
+- No emails or notifications were sent.
+- No unrelated systems changed.
+- App builds/runs cleanly.
+
+Final response:
+- List changed files.
+- Explain the refined Feed design direction.
+- Explain the Hero/Standard/Compact card hierarchy.
+- Explain how Follow button styling changed.
+- Explain how Level pill styling changed.
+- Explain how repetitive badge events are handled.
+- Confirm reactions and XP still work.
+- Confirm Follow/Friends still work.
+- Confirm Leaderboards still work.
+- Confirm Trade Feed is still Coming Soon only.
+- Confirm no private data is exposed.
+- Confirm no emails or notifications were sent.
+- Confirm safe to publish.

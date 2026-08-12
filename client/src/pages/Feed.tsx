@@ -80,54 +80,46 @@ const REACTIONS: { key: string; emoji: string; label: string }[] = [
   { key: "vault_worthy", emoji: "🏆", label: "Vault Worthy" },
 ];
 
-// Per-event-type presentation: chip label, chip colors, icon, emblem gradient.
+// Per-event-type presentation: chip label, chip colors, icon.
 const EVENT_STYLE: Record<string, {
   chip: string;
   chipClass: string;
   icon: JSX.Element;
-  emblem: string; // gradient classes for the fallback visual tile
 }> = {
   first_card: {
     chip: "First Card",
     chipClass: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
     icon: <Sparkles className="w-3.5 h-3.5" />,
-    emblem: "from-yellow-500/30 to-amber-700/40",
   },
   collection_milestone: {
     chip: "Milestone",
     chipClass: "bg-amber-500/15 text-amber-400 border-amber-500/30",
     icon: <Star className="w-3.5 h-3.5" />,
-    emblem: "from-amber-500/30 to-red-700/40",
   },
   binder_created: {
     chip: "New Binder",
     chipClass: "bg-blue-500/15 text-blue-400 border-blue-500/30",
     icon: <BookOpen className="w-3.5 h-3.5" />,
-    emblem: "from-blue-500/30 to-indigo-700/40",
   },
   binder_shared: {
     chip: "Binder Shared",
     chipClass: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
     icon: <Share2 className="w-3.5 h-3.5" />,
-    emblem: "from-emerald-500/30 to-teal-700/40",
   },
   badge_earned: {
     chip: "Badge Earned",
-    chipClass: "bg-purple-500/15 text-purple-400 border-purple-500/30",
+    chipClass: "bg-purple-500/10 text-purple-300 border-purple-500/25",
     icon: <Award className="w-3.5 h-3.5" />,
-    emblem: "from-purple-500/30 to-fuchsia-700/40",
   },
   level_milestone: {
     chip: "Level Up",
     chipClass: "bg-orange-500/15 text-orange-400 border-orange-500/30",
     icon: <Trophy className="w-3.5 h-3.5" />,
-    emblem: "from-orange-500/30 to-red-700/40",
   },
   image_approved: {
     chip: "Image Added",
     chipClass: "bg-cyan-500/15 text-cyan-400 border-cyan-500/30",
     icon: <ImageIcon className="w-3.5 h-3.5" />,
-    emblem: "from-cyan-500/30 to-blue-700/40",
   },
 };
 
@@ -135,7 +127,6 @@ const DEFAULT_STYLE = {
   chip: "Activity",
   chipClass: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30",
   icon: <Sparkles className="w-3.5 h-3.5" />,
-  emblem: "from-zinc-500/30 to-zinc-700/40",
 };
 
 function timeAgo(iso: string): string {
@@ -169,7 +160,7 @@ function UserAvatar({ user, size = "w-10 h-10" }: { user: FeedUser; size?: strin
 function LevelPill({ level }: { level: number }) {
   // Collector-status treatment: charcoal + gold, not an alert-red chip.
   return (
-    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gradient-to-b from-zinc-800 to-zinc-900 text-amber-300 border border-amber-500/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
+    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-amber-300/90 border border-zinc-700">
       Lv {level}
     </span>
   );
@@ -186,16 +177,38 @@ const Halftone = ({ opacity = 0.14 }: { opacity?: number }) => (
   />
 );
 
+// Presentation tiers: Hero (major achievements) vs Standard (normal events).
+// Grouped repetitive events render as Compact rows in GroupedBadgeCard.
+type EventTier = "hero" | "standard";
+
+function eventTier(event: FeedEvent): EventTier {
+  const md = (event.metadata as any) ?? {};
+  if (event.eventType === "badge_earned") {
+    // Only truly special badges get the hero treatment.
+    return /top 10 collector/i.test(event.title) ? "hero" : "standard";
+  }
+  if (event.eventType === "collection_milestone") {
+    return Number(md.milestone ?? 0) >= 250 ? "hero" : "standard";
+  }
+  if (event.eventType === "level_milestone") {
+    const lv = Number(md.level ?? 0);
+    return lv >= 10 && lv % 5 === 0 ? "hero" : "standard";
+  }
+  if (md.setName || md.subsetName) return "hero"; // set/subset completion
+  return "standard";
+}
+
 function EventHero({ event }: { event: FeedEvent }) {
   const style = EVENT_STYLE[event.eventType] ?? DEFAULT_STYLE;
   const md = (event.metadata as any) ?? {};
+  const tier = eventTier(event);
   const isTop10 = event.eventType === "badge_earned" && /top 10 collector/i.test(event.title);
 
   // Top 10 Collector: major-achievement gold treatment
   if (isTop10) {
     return (
-      <div className="relative h-36 sm:h-40 rounded-lg overflow-hidden border border-amber-500/40 bg-gradient-to-br from-amber-500/20 via-zinc-950 to-red-950/70 flex items-center justify-center gap-4 px-4">
-        <Halftone />
+      <div className="relative h-36 sm:h-40 rounded-lg overflow-hidden border border-amber-500/40 bg-zinc-950 flex items-center justify-center gap-4 px-4">
+        <Halftone opacity={0.08} />
         {event.image && (
           <img src={event.image} alt="Top 10 Collector badge" loading="lazy"
             className="w-24 h-24 sm:w-28 sm:h-28 object-contain rounded-full drop-shadow-[0_0_20px_rgba(251,191,36,0.5)] relative" />
@@ -210,16 +223,16 @@ function EventHero({ event }: { event: FeedEvent }) {
     );
   }
 
-  // Badge earned: badge art is the hero
+  // Badge earned (normal): Standard treatment — badge art on a quiet charcoal/red panel
   if (event.eventType === "badge_earned") {
     return (
-      <div className={`relative h-32 sm:h-36 rounded-lg overflow-hidden border border-white/10 bg-gradient-to-br ${style.emblem} flex items-center justify-center`}>
-        <Halftone />
+      <div className="relative h-24 sm:h-28 rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 flex items-center justify-center">
+        <Halftone opacity={0.06} />
         {event.image ? (
           <img src={event.image} alt="Badge" loading="lazy"
-            className="w-20 h-20 sm:w-24 sm:h-24 object-contain rounded-full drop-shadow-[0_0_16px_rgba(192,132,252,0.45)] relative" />
+            className="w-16 h-16 sm:w-20 sm:h-20 object-contain rounded-full drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] relative" />
         ) : (
-          <Award className="w-14 h-14 text-white/85 relative" />
+          <Award className="w-12 h-12 text-white/85 relative" />
         )}
       </div>
     );
@@ -228,7 +241,7 @@ function EventHero({ event }: { event: FeedEvent }) {
   // Card image events (first card, image approved, etc.): card front on a blurred backdrop
   if (event.image) {
     return (
-      <div className="relative h-40 sm:h-44 rounded-lg overflow-hidden border border-white/10 bg-zinc-950">
+      <div className={`relative ${tier === "hero" ? "h-40 sm:h-44" : "h-32 sm:h-36"} rounded-lg overflow-hidden border border-white/10 bg-zinc-950`}>
         <div className="absolute inset-0 bg-center bg-cover blur-xl opacity-40 scale-110" style={{ backgroundImage: `url(${event.image})` }} />
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/70 via-transparent to-transparent" />
         <img src={event.image} alt="Card" loading="lazy"
@@ -237,30 +250,32 @@ function EventHero({ event }: { event: FeedEvent }) {
     );
   }
 
-  // Collection milestone: bold number hero
+  // Collection milestone: Hero for 250+ (gold accent), Standard (red/charcoal) below
   if (event.eventType === "collection_milestone") {
+    const hero = tier === "hero";
     return (
-      <div className={`relative h-28 sm:h-32 rounded-lg overflow-hidden border border-white/10 bg-gradient-to-br ${style.emblem} flex items-center justify-center gap-3`}>
-        <Halftone />
-        <Layers className="w-8 h-8 text-white/70 relative" />
+      <div className={`relative ${hero ? "h-32 sm:h-36 border-amber-500/30" : "h-20 sm:h-24 border-zinc-800"} rounded-lg overflow-hidden border bg-zinc-950 flex items-center justify-center gap-3`}>
+        <Halftone opacity={hero ? 0.08 : 0.05} />
+        <Layers className={`${hero ? "w-8 h-8" : "w-6 h-6"} text-white/60 relative`} />
         <div className="relative text-center">
-          <p className="text-3xl sm:text-4xl font-black text-white drop-shadow">{String(md.milestone ?? "")}</p>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-white/70">Cards in the Vault</p>
+          <p className={`${hero ? "text-4xl sm:text-5xl text-amber-300 drop-shadow-[0_0_14px_rgba(251,191,36,0.3)]" : "text-2xl sm:text-3xl text-white"} font-black drop-shadow`}>{String(md.milestone ?? "")}</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-white/60">Cards in the Vault</p>
         </div>
       </div>
     );
   }
 
-  // Level up: big level emblem
+  // Level up: Hero for big milestone levels (gold), Standard otherwise (red/charcoal)
   if (event.eventType === "level_milestone") {
+    const hero = tier === "hero";
     return (
-      <div className="relative h-28 sm:h-32 rounded-lg overflow-hidden border border-amber-500/30 bg-gradient-to-br from-amber-500/25 via-zinc-950 to-orange-900/50 flex items-center justify-center">
-        <Halftone />
+      <div className={`relative ${hero ? "h-32 sm:h-36 border-amber-500/30" : "h-20 sm:h-24 border-zinc-800"} rounded-lg overflow-hidden border bg-zinc-950 flex items-center justify-center`}>
+        <Halftone opacity={hero ? 0.08 : 0.05} />
         <div className="relative text-center">
-          <p className="text-3xl sm:text-4xl font-black text-amber-300 drop-shadow-[0_0_14px_rgba(251,191,36,0.35)]">
+          <p className={`${hero ? "text-3xl sm:text-4xl text-amber-300 drop-shadow-[0_0_14px_rgba(251,191,36,0.35)]" : "text-xl sm:text-2xl text-white"} font-black`}>
             LEVEL {String(md.level ?? "")}
           </p>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-amber-200/60 flex items-center justify-center gap-1">
+          <p className={`text-[11px] font-bold uppercase tracking-widest ${hero ? "text-amber-200/60" : "text-white/50"} flex items-center justify-center gap-1`}>
             <Trophy className="w-3.5 h-3.5" /> Collector status rising
           </p>
         </div>
@@ -272,11 +287,11 @@ function EventHero({ event }: { event: FeedEvent }) {
   if (event.eventType === "binder_created" || event.eventType === "binder_shared") {
     const binderName = md.binderName as string | undefined;
     return (
-      <div className={`relative h-28 sm:h-32 rounded-lg overflow-hidden border border-white/10 bg-gradient-to-br ${event.eventType === "binder_created" ? "from-red-700/30 to-amber-800/30" : style.emblem} flex items-center justify-center gap-4 px-4`}>
-        <Halftone />
-        <div className="relative w-14 h-[4.5rem] rounded-r-md rounded-l-sm bg-gradient-to-br from-zinc-800 to-zinc-950 border border-amber-500/30 shadow-lg flex items-center justify-center">
-          <div className="absolute left-1 top-1 bottom-1 w-1 rounded bg-amber-500/40" />
-          <BookOpen className="w-6 h-6 text-amber-300/80" />
+      <div className="relative h-24 sm:h-28 rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 flex items-center justify-center gap-4 px-4">
+        <Halftone opacity={0.06} />
+        <div className="relative w-12 h-16 rounded-r-md rounded-l-sm bg-zinc-900 border border-zinc-700 shadow-lg flex items-center justify-center">
+          <div className="absolute left-1 top-1 bottom-1 w-1 rounded bg-red-600/70" />
+          <BookOpen className="w-5 h-5 text-zinc-300" />
         </div>
         {binderName && (
           <p className="relative text-sm sm:text-base font-bold text-white/90 max-w-[60%] line-clamp-2">{binderName}</p>
@@ -288,14 +303,14 @@ function EventHero({ event }: { event: FeedEvent }) {
   // Set/subset completed or other events with a set name: completion stamp
   if (md.setName || md.subsetName) {
     return (
-      <div className="relative h-28 sm:h-32 rounded-lg overflow-hidden border border-emerald-500/30 bg-gradient-to-br from-emerald-600/20 via-zinc-950 to-amber-800/30 flex items-center justify-center gap-3 px-4">
-        <Halftone />
-        <div className="relative w-12 h-12 rounded-full border-2 border-emerald-400/60 flex items-center justify-center rotate-[-8deg]">
-          <Star className="w-6 h-6 text-emerald-300" />
+      <div className="relative h-32 sm:h-36 rounded-lg overflow-hidden border border-amber-500/30 bg-zinc-950 flex items-center justify-center gap-3 px-4">
+        <Halftone opacity={0.08} />
+        <div className="relative w-12 h-12 rounded-full border-2 border-amber-400/60 flex items-center justify-center rotate-[-8deg]">
+          <Star className="w-6 h-6 text-amber-300" />
         </div>
         <div className="relative">
           <p className="text-sm sm:text-base font-black text-white/90 line-clamp-2">{String(md.subsetName ?? md.setName)}</p>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-300/80">Completed</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-amber-300/80">Completed</p>
         </div>
       </div>
     );
@@ -303,8 +318,8 @@ function EventHero({ event }: { event: FeedEvent }) {
 
   // Generic fallback tile
   return (
-    <div className={`relative h-24 rounded-lg overflow-hidden border border-white/10 bg-gradient-to-br ${style.emblem} flex items-center justify-center`}>
-      <Halftone />
+    <div className="relative h-20 rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 flex items-center justify-center">
+      <Halftone opacity={0.05} />
       <span className="text-white/85 relative [&>svg]:w-8 [&>svg]:h-8">{style.icon}</span>
     </div>
   );
@@ -357,7 +372,7 @@ function FollowInlineButton({ user, followState }: { user: FeedUser; followState
       onClick={() => followState.follow(user.username!)}
       disabled={followState.pendingUsername === user.username}
       data-testid={`button-follow-${user.id}`}
-      className="text-[11px] font-bold rounded-full bg-amber-400 text-zinc-950 hover:bg-amber-300 px-2.5 py-0.5 inline-flex items-center gap-1 transition-colors shadow-sm disabled:opacity-60"
+      className="text-[11px] font-bold rounded-full bg-zinc-100 text-red-700 hover:bg-white px-2.5 py-0.5 inline-flex items-center gap-1 transition-colors shadow-sm disabled:opacity-60"
     >
       <UserPlus className="w-3 h-3" /> Follow
     </button>
@@ -513,28 +528,24 @@ function GroupedBadgeCard({ group, pending, onReact, followState }: {
           </span>
         </div>
 
-        {/* Hero strip: badge art front and center */}
-        <div className="relative mt-3 h-28 sm:h-32 rounded-lg overflow-hidden border border-white/10 bg-gradient-to-br from-purple-500/25 via-zinc-950 to-fuchsia-800/40 flex items-center justify-center">
-          <Halftone />
-          <div className="flex -space-x-4 relative">
+        {/* Compact strip: small badge icon cluster — grouped events stay low-key */}
+        <div className="flex items-center gap-3 mt-3">
+          <div className="flex -space-x-2.5 shrink-0">
             {icons.length > 0 ? icons.map((e) => (
-              <div key={e.id} className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-zinc-950/60 border border-purple-400/30 flex items-center justify-center ring-2 ring-zinc-900 shadow-[0_0_16px_rgba(192,132,252,0.25)]">
-                <img src={e.image!} alt="Badge" className="w-12 h-12 sm:w-14 sm:h-14 object-contain rounded-full" loading="lazy" />
+              <div key={e.id} className="w-10 h-10 rounded-full bg-zinc-950/80 border border-zinc-700 flex items-center justify-center ring-2 ring-zinc-900">
+                <img src={e.image!} alt="Badge" className="w-7 h-7 object-contain rounded-full" loading="lazy" />
               </div>
             )) : (
-              <div className="w-16 h-16 rounded-full bg-zinc-950/60 border border-purple-400/30 flex items-center justify-center">
-                <Award className="w-8 h-8 text-white/90" />
+              <div className="w-10 h-10 rounded-full bg-zinc-950/80 border border-zinc-700 flex items-center justify-center">
+                <Award className="w-5 h-5 text-white/85" />
               </div>
             )}
             {group.events.length > icons.length && icons.length > 0 && (
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center ring-2 ring-zinc-900 text-sm font-black text-zinc-300">
+              <div className="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center ring-2 ring-zinc-900 text-xs font-black text-zinc-300">
                 +{group.events.length - icons.length}
               </div>
             )}
           </div>
-        </div>
-
-        <div className="flex items-center gap-3 mt-3">
           <p className="text-sm text-zinc-200 flex-1 min-w-0">
             <span className="font-semibold">{displayName(first.user)}</span> earned {group.events.length} badges
           </p>
@@ -551,7 +562,7 @@ function GroupedBadgeCard({ group, pending, onReact, followState }: {
           <div className="mt-3 space-y-2 border-t border-zinc-800 pt-3">
             {group.events.map((e) => (
               <div key={e.id} className="flex items-center gap-3 flex-wrap">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500/30 to-fuchsia-700/40 border border-white/10 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-full bg-zinc-950 border border-zinc-700 flex items-center justify-center shrink-0">
                   {e.image ? <img src={e.image} alt="Badge" className="w-7 h-7 object-contain" loading="lazy" /> : <Award className="w-4 h-4 text-white/90" />}
                 </div>
                 <span className="text-sm text-zinc-300 flex-1 min-w-0">{e.title}</span>
@@ -691,8 +702,6 @@ function ActivityTab() {
         ))}
       </div>
 
-      <DiscoverCollectorsPanel followState={followState} />
-
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
       ) : events.length === 0 ? (
@@ -739,10 +748,44 @@ function ActivityTab() {
 
 const DISCOVER_COLLAPSED_KEY = "mcv-feed-discover-collapsed";
 
-function DiscoverCollectorsPanel({ followState }: { followState: FollowState | null }) {
+function DiscoverCollectorsPanel() {
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem(DISCOVER_COLLAPSED_KEY) === "1"; } catch { return false; }
   });
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [pendingFollowUsername, setPendingFollowUsername] = useState<string | null>(null);
+
+  const { data: followingData } = useQuery<FollowingResponse>({
+    queryKey: ["/api/feed/following"],
+    queryFn: async () => (await apiRequest("GET", "/api/feed/following")).json(),
+  });
+
+  const followMutation = useMutation({
+    mutationFn: async (username: string) => {
+      setPendingFollowUsername(username);
+      return (await apiRequest("POST", `/api/collectors/${username}/follow`)).json();
+    },
+    onSuccess: (_data, username) => {
+      toast({ title: `Following @${username}`, description: "Their activity will show in your Following feed." });
+      queryClient.invalidateQueries({ queryKey: ["/api/feed/following"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/feed/discover"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/feed"] });
+    },
+    onError: (err: any) => {
+      toast({ title: "Could not follow", description: String(err?.message || err), variant: "destructive" });
+    },
+    onSettled: () => setPendingFollowUsername(null),
+  });
+
+  const followState: FollowState | null = followingData
+    ? {
+        viewerId: followingData.viewerId,
+        ids: followingData.ids,
+        pendingUsername: pendingFollowUsername,
+        follow: (username) => followMutation.mutate(username),
+      }
+    : null;
   const toggle = () => {
     setCollapsed((v) => {
       try { localStorage.setItem(DISCOVER_COLLAPSED_KEY, v ? "0" : "1"); } catch { /* private mode */ }
@@ -761,7 +804,7 @@ function DiscoverCollectorsPanel({ followState }: { followState: FollowState | n
       <button
         onClick={toggle}
         data-testid="button-toggle-discover"
-        className="w-full px-4 py-2.5 border-b border-zinc-800 bg-gradient-to-r from-red-950/40 to-transparent flex items-center justify-between text-left"
+        className="w-full px-4 py-2.5 border-b border-zinc-800 flex items-center justify-between text-left"
       >
         <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
           <Users className="w-4 h-4 text-red-400" /> Collectors to Follow
@@ -787,7 +830,7 @@ function DiscoverCollectorsPanel({ followState }: { followState: FollowState | n
                   onClick={() => followState.follow(c.username!)}
                   disabled={followState.pendingUsername === c.username}
                   data-testid={`button-discover-follow-${c.id}`}
-                  className="mt-auto text-[11px] font-bold rounded-full bg-amber-400 text-zinc-950 hover:bg-amber-300 px-3 py-1 inline-flex items-center gap-1 transition-colors shadow-sm disabled:opacity-60"
+                  className="mt-auto text-[11px] font-bold rounded-full bg-zinc-100 text-red-700 hover:bg-white px-3 py-1 inline-flex items-center gap-1 transition-colors shadow-sm disabled:opacity-60"
                 >
                   <UserPlus className="w-3 h-3" /> Follow
                 </button>
@@ -819,7 +862,7 @@ function LeaderboardList({ title, icon, entries, valueKey, valueLabel }: {
 }) {
   return (
     <div className="rounded-xl bg-zinc-900 border border-zinc-800 overflow-hidden">
-      <div className="px-4 py-3 border-b border-zinc-800 bg-gradient-to-r from-red-950/40 to-transparent">
+      <div className="px-4 py-3 border-b border-zinc-800 border-l-2 border-l-red-600">
         <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-2">{icon}{title}</h3>
       </div>
       <div className="p-3">
@@ -841,7 +884,7 @@ function LeaderboardList({ title, icon, entries, valueKey, valueLabel }: {
                   <p className="text-sm font-medium text-zinc-200 truncate">{displayName(e.user)}</p>
                   <p className="text-xs text-zinc-500">Level {e.user.collectorLevel}</p>
                 </div>
-                <span className="text-xs font-bold px-2 py-1 rounded-full bg-gradient-to-b from-zinc-800 to-zinc-900 text-amber-300 border border-amber-500/40">
+                <span className="text-xs font-bold px-2 py-1 rounded-full bg-zinc-900 text-zinc-200 border border-zinc-700">
                   {e[valueKey] ?? 0} {valueLabel}
                 </span>
               </div>
@@ -865,6 +908,7 @@ function LeaderboardsTab() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">Weekly rankings reset every Monday. Earn XP by adding cards, earning badges, contributing images, and cheering on other collectors.</p>
+      <DiscoverCollectorsPanel />
       <LeaderboardList
         title="Top 10 Collectors — All-Time XP"
         icon={<Crown className="w-4 h-4 text-yellow-500" />}
@@ -934,9 +978,9 @@ function TradeFeedTab() {
 export default function Feed() {
   return (
     <div className="container mx-auto px-4 py-6 max-w-3xl">
-      {/* Dark header panel: title always sits on a dark surface, never white-on-white */}
-      <div className="mb-6 rounded-xl bg-gradient-to-r from-zinc-950 via-zinc-900 to-red-950/60 border border-zinc-800 px-5 py-4 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "10px 10px" }} />
+      {/* MCV-native header: dark charcoal, subtle halftone, thin red accent — no gradient wash */}
+      <div className="mb-6 rounded-xl bg-zinc-950 border border-zinc-800 border-t-2 border-t-red-600 px-5 py-4 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "10px 10px" }} />
         <h1 className="text-2xl font-black text-white flex items-center gap-2 relative" data-testid="text-feed-title">
           <ActivityIcon className="w-6 h-6 text-red-500" />
           Feed
