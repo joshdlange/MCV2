@@ -167,54 +167,145 @@ function UserAvatar({ user, size = "w-10 h-10" }: { user: FeedUser; size?: strin
 }
 
 function LevelPill({ level }: { level: number }) {
+  // Collector-status treatment: charcoal + gold, not an alert-red chip.
   return (
-    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-600/15 text-red-400 border border-red-600/30">
+    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gradient-to-b from-zinc-800 to-zinc-900 text-amber-300 border border-amber-500/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
       Lv {level}
     </span>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Event visual preview (left tile)
+// Event hero visual (large preview area — the focal point of each card)
 // ---------------------------------------------------------------------------
 
-function EventVisual({ event }: { event: FeedEvent }) {
-  const style = EVENT_STYLE[event.eventType] ?? DEFAULT_STYLE;
-  const isCardImage = event.image && event.eventType !== "badge_earned";
+const Halftone = ({ opacity = 0.14 }: { opacity?: number }) => (
+  <div
+    className="absolute inset-0 pointer-events-none"
+    style={{ opacity, backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.55) 1px, transparent 1px)", backgroundSize: "8px 8px" }}
+  />
+);
 
-  if (event.image && event.eventType === "badge_earned") {
-    // Badge emblem: circular icon on a glowing tile
+function EventHero({ event }: { event: FeedEvent }) {
+  const style = EVENT_STYLE[event.eventType] ?? DEFAULT_STYLE;
+  const md = (event.metadata as any) ?? {};
+  const isTop10 = event.eventType === "badge_earned" && /top 10 collector/i.test(event.title);
+
+  // Top 10 Collector: major-achievement gold treatment
+  if (isTop10) {
     return (
-      <div className={`w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-xl bg-gradient-to-br ${style.emblem} border border-white/10 flex items-center justify-center`}>
-        <img src={event.image} alt="Badge" className="w-11 h-11 sm:w-14 sm:h-14 object-contain drop-shadow-lg" loading="lazy" />
+      <div className="relative h-36 sm:h-40 rounded-lg overflow-hidden border border-amber-500/40 bg-gradient-to-br from-amber-500/20 via-zinc-950 to-red-950/70 flex items-center justify-center gap-4 px-4">
+        <Halftone />
+        {event.image && (
+          <img src={event.image} alt="Top 10 Collector badge" loading="lazy"
+            className="w-24 h-24 sm:w-28 sm:h-28 object-contain rounded-full drop-shadow-[0_0_20px_rgba(251,191,36,0.5)] relative" />
+        )}
+        <div className="relative">
+          <p className="text-amber-300 font-black text-base sm:text-xl tracking-wide flex items-center gap-2">
+            <Crown className="w-5 h-5 shrink-0" /> TOP 10 COLLECTOR
+          </p>
+          <p className="text-[11px] sm:text-xs text-amber-200/70 mt-0.5">Made the all-time Top 10 XP leaderboard</p>
+        </div>
       </div>
     );
   }
-  if (isCardImage) {
-    // Card front: portrait thumbnail
+
+  // Badge earned: badge art is the hero
+  if (event.eventType === "badge_earned") {
     return (
-      <div className="w-14 sm:w-16 shrink-0 rounded-lg overflow-hidden border border-white/10 shadow-lg shadow-black/40">
-        <img src={event.image!} alt="Card" className="w-full aspect-[2.5/3.5] object-cover" loading="lazy" />
+      <div className={`relative h-32 sm:h-36 rounded-lg overflow-hidden border border-white/10 bg-gradient-to-br ${style.emblem} flex items-center justify-center`}>
+        <Halftone />
+        {event.image ? (
+          <img src={event.image} alt="Badge" loading="lazy"
+            className="w-20 h-20 sm:w-24 sm:h-24 object-contain rounded-full drop-shadow-[0_0_16px_rgba(192,132,252,0.45)] relative" />
+        ) : (
+          <Award className="w-14 h-14 text-white/85 relative" />
+        )}
       </div>
     );
   }
-  // Styled fallback tile per event type
-  const binderName = (event.metadata as any)?.binderName as string | undefined;
+
+  // Card image events (first card, image approved, etc.): card front on a blurred backdrop
+  if (event.image) {
+    return (
+      <div className="relative h-40 sm:h-44 rounded-lg overflow-hidden border border-white/10 bg-zinc-950">
+        <div className="absolute inset-0 bg-center bg-cover blur-xl opacity-40 scale-110" style={{ backgroundImage: `url(${event.image})` }} />
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/70 via-transparent to-transparent" />
+        <img src={event.image} alt="Card" loading="lazy"
+          className="relative h-full mx-auto py-2 object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.65)]" />
+      </div>
+    );
+  }
+
+  // Collection milestone: bold number hero
+  if (event.eventType === "collection_milestone") {
+    return (
+      <div className={`relative h-28 sm:h-32 rounded-lg overflow-hidden border border-white/10 bg-gradient-to-br ${style.emblem} flex items-center justify-center gap-3`}>
+        <Halftone />
+        <Layers className="w-8 h-8 text-white/70 relative" />
+        <div className="relative text-center">
+          <p className="text-3xl sm:text-4xl font-black text-white drop-shadow">{String(md.milestone ?? "")}</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-white/70">Cards in the Vault</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Level up: big level emblem
+  if (event.eventType === "level_milestone") {
+    return (
+      <div className="relative h-28 sm:h-32 rounded-lg overflow-hidden border border-amber-500/30 bg-gradient-to-br from-amber-500/25 via-zinc-950 to-orange-900/50 flex items-center justify-center">
+        <Halftone />
+        <div className="relative text-center">
+          <p className="text-3xl sm:text-4xl font-black text-amber-300 drop-shadow-[0_0_14px_rgba(251,191,36,0.35)]">
+            LEVEL {String(md.level ?? "")}
+          </p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-amber-200/60 flex items-center justify-center gap-1">
+            <Trophy className="w-3.5 h-3.5" /> Collector status rising
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Binder created/shared: styled binder card with the binder name
+  if (event.eventType === "binder_created" || event.eventType === "binder_shared") {
+    const binderName = md.binderName as string | undefined;
+    return (
+      <div className={`relative h-28 sm:h-32 rounded-lg overflow-hidden border border-white/10 bg-gradient-to-br ${event.eventType === "binder_created" ? "from-red-700/30 to-amber-800/30" : style.emblem} flex items-center justify-center gap-4 px-4`}>
+        <Halftone />
+        <div className="relative w-14 h-[4.5rem] rounded-r-md rounded-l-sm bg-gradient-to-br from-zinc-800 to-zinc-950 border border-amber-500/30 shadow-lg flex items-center justify-center">
+          <div className="absolute left-1 top-1 bottom-1 w-1 rounded bg-amber-500/40" />
+          <BookOpen className="w-6 h-6 text-amber-300/80" />
+        </div>
+        {binderName && (
+          <p className="relative text-sm sm:text-base font-bold text-white/90 max-w-[60%] line-clamp-2">{binderName}</p>
+        )}
+      </div>
+    );
+  }
+
+  // Set/subset completed or other events with a set name: completion stamp
+  if (md.setName || md.subsetName) {
+    return (
+      <div className="relative h-28 sm:h-32 rounded-lg overflow-hidden border border-emerald-500/30 bg-gradient-to-br from-emerald-600/20 via-zinc-950 to-amber-800/30 flex items-center justify-center gap-3 px-4">
+        <Halftone />
+        <div className="relative w-12 h-12 rounded-full border-2 border-emerald-400/60 flex items-center justify-center rotate-[-8deg]">
+          <Star className="w-6 h-6 text-emerald-300" />
+        </div>
+        <div className="relative">
+          <p className="text-sm sm:text-base font-black text-white/90 line-clamp-2">{String(md.subsetName ?? md.setName)}</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-300/80">Completed</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Generic fallback tile
   return (
-    <div className={`w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-xl bg-gradient-to-br ${style.emblem} border border-white/10 flex flex-col items-center justify-center gap-1 px-1 relative overflow-hidden`}>
-      <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.35) 1px, transparent 1px)", backgroundSize: "6px 6px" }} />
-      <span className="text-white/90 relative">
-        {event.eventType === "collection_milestone" ? <Layers className="w-6 h-6" /> : <span className="[&>svg]:w-6 [&>svg]:h-6">{style.icon}</span>}
-      </span>
-      {(event.eventType === "collection_milestone") && (
-        <span className="text-[11px] font-black text-white/90 relative">{String((event.metadata as any)?.milestone ?? "")}</span>
-      )}
-      {(event.eventType === "level_milestone") && (
-        <span className="text-[11px] font-black text-white/90 relative">Lv {String((event.metadata as any)?.level ?? "")}</span>
-      )}
-      {binderName && (
-        <span className="text-[9px] font-semibold text-white/80 relative text-center leading-tight line-clamp-2">{binderName}</span>
-      )}
+    <div className={`relative h-24 rounded-lg overflow-hidden border border-white/10 bg-gradient-to-br ${style.emblem} flex items-center justify-center`}>
+      <Halftone />
+      <span className="text-white/85 relative [&>svg]:w-8 [&>svg]:h-8">{style.icon}</span>
     </div>
   );
 }
@@ -266,7 +357,7 @@ function FollowInlineButton({ user, followState }: { user: FeedUser; followState
       onClick={() => followState.follow(user.username!)}
       disabled={followState.pendingUsername === user.username}
       data-testid={`button-follow-${user.id}`}
-      className="text-[11px] font-semibold rounded-full border border-red-600/40 text-red-400 hover:bg-red-600/15 px-2.5 py-0.5 inline-flex items-center gap-1 transition-colors"
+      className="text-[11px] font-bold rounded-full bg-amber-400 text-zinc-950 hover:bg-amber-300 px-2.5 py-0.5 inline-flex items-center gap-1 transition-colors shadow-sm disabled:opacity-60"
     >
       <UserPlus className="w-3 h-3" /> Follow
     </button>
@@ -308,27 +399,27 @@ function EventCard({ event, pending, onReact, followState }: {
           </span>
         </div>
 
-        <div className="flex gap-3 mt-3">
-          <EventVisual event={event} />
-          <div className="flex-1 min-w-0 flex flex-col justify-between gap-2">
-            <p className="text-sm text-zinc-200 leading-snug">
-              <span className="font-semibold">{displayName(event.user)}</span> {event.title}
-            </p>
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <ReactionRow event={event} pending={pending} onReact={onReact} />
-              <div className="flex gap-3">
-                {shareToken && (
-                  <Link href={`/pc-share/${shareToken}`} className="text-xs text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1">
-                    View Binder <ExternalLink className="w-3 h-3" />
-                  </Link>
-                )}
-                {event.user.username && (
-                  <Link href={`/collectors/${event.user.username}`} className="text-xs text-zinc-500 hover:text-red-400 inline-flex items-center gap-1">
-                    View Profile <ExternalLink className="w-3 h-3" />
-                  </Link>
-                )}
-              </div>
-            </div>
+        <div className="mt-3">
+          <EventHero event={event} />
+        </div>
+
+        <p className="text-sm text-zinc-200 leading-snug mt-3">
+          <span className="font-semibold">{displayName(event.user)}</span> {event.title}
+        </p>
+
+        <div className="flex items-center justify-between gap-2 flex-wrap mt-2.5">
+          <ReactionRow event={event} pending={pending} onReact={onReact} />
+          <div className="flex gap-3">
+            {shareToken && (
+              <Link href={`/pc-share/${shareToken}`} className="text-xs text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1">
+                View Binder <ExternalLink className="w-3 h-3" />
+              </Link>
+            )}
+            {event.user.username && (
+              <Link href={`/collectors/${event.user.username}`} className="text-xs text-zinc-500 hover:text-red-400 inline-flex items-center gap-1">
+                View Profile <ExternalLink className="w-3 h-3" />
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -350,7 +441,7 @@ function groupEvents(events: FeedEvent[]): EventGroup[] {
   let run: FeedEvent[] = [];
   const flush = () => {
     if (run.length === 0) return;
-    if (run.length >= 3) {
+    if (run.length >= 2) {
       groups.push({ key: `g-${run[0].id}`, events: run });
     } else {
       for (const e of run) groups.push({ key: `e-${e.id}`, events: [e] });
@@ -375,6 +466,25 @@ function groupEvents(events: FeedEvent[]): EventGroup[] {
   }
   flush();
   return groups;
+}
+
+// Variety pass for the Everyone feed: avoid more than 2 same-type cards
+// back-to-back by pulling the next different-type card forward. Purely a
+// display-order tweak within the loaded window — no events are dropped.
+function diversifyGroups(groups: EventGroup[]): EventGroup[] {
+  const out = [...groups];
+  const typeOf = (g: EventGroup) => g.events[0].eventType;
+  for (let i = 2; i < out.length; i++) {
+    if (typeOf(out[i]) === typeOf(out[i - 1]) && typeOf(out[i]) === typeOf(out[i - 2])) {
+      let j = i + 1;
+      while (j < out.length && typeOf(out[j]) === typeOf(out[i])) j++;
+      if (j < out.length) {
+        const [g] = out.splice(j, 1);
+        out.splice(i, 0, g);
+      }
+    }
+  }
+  return out;
 }
 
 function GroupedBadgeCard({ group, pending, onReact, followState }: {
@@ -403,23 +513,28 @@ function GroupedBadgeCard({ group, pending, onReact, followState }: {
           </span>
         </div>
 
-        <div className="flex items-center gap-3 mt-3">
-          <div className="flex -space-x-3 shrink-0">
+        {/* Hero strip: badge art front and center */}
+        <div className="relative mt-3 h-28 sm:h-32 rounded-lg overflow-hidden border border-white/10 bg-gradient-to-br from-purple-500/25 via-zinc-950 to-fuchsia-800/40 flex items-center justify-center">
+          <Halftone />
+          <div className="flex -space-x-4 relative">
             {icons.length > 0 ? icons.map((e) => (
-              <div key={e.id} className="w-11 h-11 rounded-full bg-gradient-to-br from-purple-500/30 to-fuchsia-700/40 border border-white/10 flex items-center justify-center ring-2 ring-zinc-900">
-                <img src={e.image!} alt="Badge" className="w-8 h-8 object-contain" loading="lazy" />
+              <div key={e.id} className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-zinc-950/60 border border-purple-400/30 flex items-center justify-center ring-2 ring-zinc-900 shadow-[0_0_16px_rgba(192,132,252,0.25)]">
+                <img src={e.image!} alt="Badge" className="w-12 h-12 sm:w-14 sm:h-14 object-contain rounded-full" loading="lazy" />
               </div>
             )) : (
-              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-purple-500/30 to-fuchsia-700/40 border border-white/10 flex items-center justify-center">
-                <Award className="w-5 h-5 text-white/90" />
+              <div className="w-16 h-16 rounded-full bg-zinc-950/60 border border-purple-400/30 flex items-center justify-center">
+                <Award className="w-8 h-8 text-white/90" />
               </div>
             )}
             {group.events.length > icons.length && icons.length > 0 && (
-              <div className="w-11 h-11 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center ring-2 ring-zinc-900 text-xs font-bold text-zinc-300">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center ring-2 ring-zinc-900 text-sm font-black text-zinc-300">
                 +{group.events.length - icons.length}
               </div>
             )}
           </div>
+        </div>
+
+        <div className="flex items-center gap-3 mt-3">
           <p className="text-sm text-zinc-200 flex-1 min-w-0">
             <span className="font-semibold">{displayName(first.user)}</span> earned {group.events.length} badges
           </p>
@@ -506,7 +621,11 @@ function ActivityTab() {
 
   const events = [...(data?.events ?? []), ...extraEvents];
   const nextCursor = cursor ?? data?.nextCursor ?? null;
-  const groups = useMemo(() => groupEvents(events), [events]);
+  const groups = useMemo(() => {
+    const g = groupEvents(events);
+    // "Me" keeps strict history order; Everyone (and other filters) prioritize variety.
+    return filter === "me" ? g : diversifyGroups(g);
+  }, [events, filter]);
 
   const changeFilter = (f: FeedFilter) => {
     setFilter(f);
@@ -618,51 +737,65 @@ function ActivityTab() {
 // Find Collectors (discovery)
 // ---------------------------------------------------------------------------
 
+const DISCOVER_COLLAPSED_KEY = "mcv-feed-discover-collapsed";
+
 function DiscoverCollectorsPanel({ followState }: { followState: FollowState | null }) {
-  const [dismissed, setDismissed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem(DISCOVER_COLLAPSED_KEY) === "1"; } catch { return false; }
+  });
+  const toggle = () => {
+    setCollapsed((v) => {
+      try { localStorage.setItem(DISCOVER_COLLAPSED_KEY, v ? "0" : "1"); } catch { /* private mode */ }
+      return !v;
+    });
+  };
   const { data } = useQuery<{ collectors: DiscoverCollector[] }>({
     queryKey: ["/api/feed/discover"],
     queryFn: async () => (await apiRequest("GET", "/api/feed/discover")).json(),
   });
-  const collectors = data?.collectors ?? [];
-  if (dismissed || collectors.length === 0) return null;
+  const collectors = (data?.collectors ?? []).slice(0, 6);
+  if (collectors.length === 0) return null;
 
   return (
     <div className="rounded-xl bg-zinc-900 border border-zinc-800 overflow-hidden" data-testid="panel-discover">
-      <div className="px-4 py-2.5 border-b border-zinc-800 bg-gradient-to-r from-red-950/40 to-transparent flex items-center justify-between">
+      <button
+        onClick={toggle}
+        data-testid="button-toggle-discover"
+        className="w-full px-4 py-2.5 border-b border-zinc-800 bg-gradient-to-r from-red-950/40 to-transparent flex items-center justify-between text-left"
+      >
         <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
-          <Users className="w-4 h-4 text-red-400" /> Find Collectors
+          <Users className="w-4 h-4 text-red-400" /> Collectors to Follow
         </h3>
-        <button onClick={() => setDismissed(true)} className="text-xs text-zinc-500 hover:text-zinc-300" data-testid="button-dismiss-discover">
-          Hide
-        </button>
-      </div>
-      <div className="p-3 flex gap-3 overflow-x-auto">
-        {collectors.map((c) => (
-          <div key={c.id} className="shrink-0 w-32 rounded-lg bg-zinc-800/60 border border-zinc-700/60 p-3 flex flex-col items-center text-center gap-1.5">
-            <UserAvatar user={{ ...c, collectorLevel: c.collectorLevel }} size="w-12 h-12" />
-            {c.username ? (
-              <Link href={`/collectors/${c.username}`} className="text-xs font-semibold text-zinc-200 truncate w-full hover:text-red-400">
-                {c.username}
-              </Link>
-            ) : (
-              <span className="text-xs font-semibold text-zinc-200 truncate w-full">{displayName(c as FeedUser)}</span>
-            )}
-            <LevelPill level={c.collectorLevel} />
-            {c.collectorFocus && <p className="text-[10px] text-zinc-500 line-clamp-2 leading-tight">{c.collectorFocus}</p>}
-            {c.username && followState && (
-              <button
-                onClick={() => followState.follow(c.username!)}
-                disabled={followState.pendingUsername === c.username}
-                data-testid={`button-discover-follow-${c.id}`}
-                className="mt-1 text-[11px] font-semibold rounded-full border border-red-600/40 text-red-400 hover:bg-red-600/15 px-3 py-1 inline-flex items-center gap-1 transition-colors"
-              >
-                <UserPlus className="w-3 h-3" /> Follow
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
+        <span className="text-zinc-500">{collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}</span>
+      </button>
+      {!collapsed && (
+        <div className="p-3 grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+          {collectors.map((c) => (
+            <div key={c.id} className="rounded-lg bg-zinc-800/60 border border-zinc-700/60 p-3 flex flex-col items-center text-center gap-1.5 min-w-0">
+              <UserAvatar user={{ ...c, collectorLevel: c.collectorLevel }} size="w-12 h-12" />
+              {c.username ? (
+                <Link href={`/collectors/${c.username}`} className="text-xs font-semibold text-zinc-200 truncate w-full hover:text-red-400">
+                  {c.username}
+                </Link>
+              ) : (
+                <span className="text-xs font-semibold text-zinc-200 truncate w-full">{displayName(c as FeedUser)}</span>
+              )}
+              <LevelPill level={c.collectorLevel} />
+              {c.collectorFocus && <p className="text-[10px] text-zinc-500 line-clamp-2 leading-tight">{c.collectorFocus}</p>}
+              {c.username && followState && (
+                <button
+                  onClick={() => followState.follow(c.username!)}
+                  disabled={followState.pendingUsername === c.username}
+                  data-testid={`button-discover-follow-${c.id}`}
+                  className="mt-auto text-[11px] font-bold rounded-full bg-amber-400 text-zinc-950 hover:bg-amber-300 px-3 py-1 inline-flex items-center gap-1 transition-colors shadow-sm disabled:opacity-60"
+                >
+                  <UserPlus className="w-3 h-3" /> Follow
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -708,7 +841,7 @@ function LeaderboardList({ title, icon, entries, valueKey, valueLabel }: {
                   <p className="text-sm font-medium text-zinc-200 truncate">{displayName(e.user)}</p>
                   <p className="text-xs text-zinc-500">Level {e.user.collectorLevel}</p>
                 </div>
-                <span className="text-xs font-bold px-2 py-1 rounded-full bg-red-600/15 text-red-400 border border-red-600/30">
+                <span className="text-xs font-bold px-2 py-1 rounded-full bg-gradient-to-b from-zinc-800 to-zinc-900 text-amber-300 border border-amber-500/40">
                   {e[valueKey] ?? 0} {valueLabel}
                 </span>
               </div>

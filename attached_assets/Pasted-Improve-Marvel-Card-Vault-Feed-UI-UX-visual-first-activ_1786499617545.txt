@@ -1,0 +1,251 @@
+Improve Marvel Card Vault Feed UI/UX: visual-first activity cards, better collector discovery, and less repetitive feed ordering.
+
+Context:
+The Feed functionality is now mostly working:
+- Activity tab
+- Leaderboards tab
+- Trade Feed coming soon
+- Feed reactions
+- XP for reactions
+- Follow/Friends system
+- Everyone / Following / Friends / Me filters
+- Find Collectors panel
+- Top 10 Collectors leaderboard and badge
+
+However, the current Feed still does not feel visually strong enough. It looks too much like a list/table of text events. The Find Collectors carousel is a horizontal side-scroll panel that feels clunky, and the feed is overpopulated with repetitive badge-earned events. We need the Feed to feel like a visual collector/social experience.
+
+Goal:
+Make the Feed more visually appealing, less repetitive, and more centered around cards, badges, binders, sets, and collector identity.
+
+Must do:
+- Redesign feed activity cards to be visual-first.
+- Make the image/visual preview the focal point of each feed item.
+- Reduce the plain text/table feel.
+- Improve the Find Collectors section so it is not a large horizontal side-scrolling carousel.
+- Improve Follow button styling so it stands out better on the dark background.
+- Improve Level pill styling so it does not blend into the red/black UI.
+- Add better visual variety across event types.
+- Reduce repeated same-type events, especially badge-earned rows.
+- Preserve all existing feed functionality, reactions, XP caps, leaderboards, follow/friends, and privacy rules.
+
+Feed card visual direction:
+- Each feed event card should have:
+  - collector avatar
+  - display name
+  - level/status pill
+  - follow/friend button where appropriate
+  - timestamp
+  - event type chip
+  - large visual preview area
+  - event text
+  - CTA/link where relevant
+  - reaction row
+
+Visual previews by event type:
+1. Badge earned
+   - Show the badge image/icon prominently.
+   - Badge image should be larger and visually important, not a tiny icon.
+   - If multiple badge events from the same user happen close together, group them if practical.
+
+2. Top 10 Collector badge
+   - Show the Top 10 badge image prominently.
+   - Make it feel like a major achievement.
+
+3. PC Binder created
+   - Show a binder preview.
+   - If binder cover/card thumbnails exist, show them.
+   - If not, show a styled binder card with the binder name.
+
+4. Set/subset completed
+   - Show a representative set/subset image if available.
+   - If no set image exists, show a styled completion card with set/subset name and a completion stamp/treatment.
+   - CTA should be View Set or View Binder where safe.
+
+5. First card added
+   - Show the card image if available.
+   - If unavailable, show a card placeholder.
+
+6. Collection milestone
+   - Show a card stack or vault milestone visual.
+   - Example: “100 Cards Added” as a bold visual badge/card.
+
+7. Image approved
+   - Show the approved card image if available.
+   - Make it feel like the user helped complete the vault.
+
+8. Level up
+   - Show a large level emblem or level-up visual.
+   - Example: “Level 14” as the hero visual.
+
+9. Comeback badge
+   - Show comeback badge/icon treatment.
+
+10. Shared binder
+   - Show binder preview and CTA to view binder if public/shared.
+
+Design style:
+- Keep MCV dark premium collector styling.
+- Use dark/charcoal cards, subtle red accents, and comic-inspired energy.
+- Do not make every small UI element red.
+- Use visual color accents by event type:
+  - Badge earned: purple/gold
+  - Level up: gold
+  - Set completed: gold/green or gold/red
+  - PC Binder: red/gold
+  - Image approved: blue/cyan
+  - Comeback: orange/gold
+- Keep everything readable and mobile-first.
+- Avoid making the UI feel noisy or overdesigned.
+- Feed should feel like:
+  “Collectors are building, completing, leveling up, and showing off their vaults.”
+
+Find Collectors improvement:
+- Replace the big horizontal side-scroll carousel with a cleaner layout.
+- Preferred option:
+  - Compact “Collectors to Follow” module
+  - Show 3 to 6 collectors in a responsive grid
+  - Include avatar, display name, level, collecting focus if available, and Follow button
+  - Add “View More Collectors” or “Discover Collectors” button if practical
+- On mobile:
+  - no awkward horizontal scrolling
+  - use a compact stacked/grid layout
+- Allow the module to be hidden/collapsed.
+- If hidden, remember the user’s preference if practical.
+- Do not show private/non-followable users.
+
+Follow button styling:
+- Current red Follow button gets lost against the dark/red UI.
+- Make Follow visually distinct.
+- Suggested:
+  - Follow: gold/yellow filled or high-contrast pill
+  - Following: neutral dark/gray pill with check
+  - Friends: purple/blue or gold “Friends” pill
+- Keep accessible contrast.
+- Keep button compact on feed cards.
+- Do not use the same visual treatment as regular red app CTAs.
+
+Level pill styling:
+- Current red level pill blends in.
+- Restyle level as a status badge:
+  - charcoal/gold
+  - or black/gold
+  - or subtle metallic badge
+- It should feel like collector status, not an error/warning chip.
+
+Repetition / feed ordering:
+- The default Everyone feed should not show many nearly identical badge-earned cards in a row if other event types are available.
+- Add simple variety control:
+  - avoid more than 2 of the same event type back-to-back where practical
+  - or group multiple badge events from the same user/day into one card
+  - or group multiple similar badge events from nearby time windows
+- Preserve the underlying feed events.
+- Do not delete events just to make the feed look better.
+- If grouping is implemented, allow grouped badge card to show multiple badge icons/names.
+- The “Me” feed can show full history more directly, but Everyone should prioritize variety.
+
+Leaderboards:
+- Preserve Leaderboards tab.
+- Preserve:
+  - Top 10 Collectors All-Time XP
+  - Weekly XP
+  - Top Image Contributors
+- If Leaderboards UI is plain, make it match the upgraded Feed styling.
+- Show avatar, rank, display name, level, and XP/contribution count.
+- Do not make all-time XP the only leaderboard.
+- Top 10 badge should remain achievement wording:
+  “Made the all-time Top 10 XP leaderboard.”
+
+Trade Feed:
+- Preserve Trade Feed as Coming Soon only.
+- Do not build Trade Block.
+
+Privacy:
+- Continue respecting:
+  - public profile
+  - allow followers
+  - show activity in feed
+  - blocked users
+- Following someone must not bypass privacy.
+- Do not expose:
+  - emails
+  - real names unless intentionally public display name
+  - addresses
+  - billing/subscription details
+  - private collections
+  - private PC Binders
+  - admin data
+- Feed previews must link only to safe/public destinations.
+
+Must not do:
+- Do not build freeform posts.
+- Do not build comments.
+- Do not build messaging.
+- Do not build Trade Block.
+- Do not build trade proposals, counters, shipping, or disputes.
+- Do not change feed reaction XP caps.
+- Do not award XP for follows.
+- Do not change lifecycle emails.
+- Do not send emails or notifications.
+- Do not change subscriptions, Stripe, RevenueCat, Shippo, Drive Sync, Data Quality, Upcoming Set Intelligence, image approval, card data, Android, or iOS.
+- Do not make existing users public/followable/feed-visible without consent.
+- Do not expose private data.
+
+Preserve:
+- Existing Feed routes and tabs.
+- Existing Feed backend and events.
+- Existing reactions.
+- Existing reaction XP behavior and caps.
+- Existing Follow/Friends functionality.
+- Existing Feed filters:
+  - Everyone
+  - Following
+  - Friends
+  - Me
+- Existing Leaderboards.
+- Existing Top 10 Collector badge.
+- Existing profile/avatar customization.
+- Existing privacy rules.
+- Existing admin tools.
+
+QA:
+- Feed page loads on desktop.
+- Feed page loads on mobile.
+- Feed cards are visually richer and no longer feel like table rows.
+- Feed title/header remains readable.
+- Badge events show prominent badge visuals.
+- Top 10 badge event looks visually meaningful.
+- PC Binder events show binder preview or styled binder card.
+- Set completion events show image/styled completion visual.
+- Card/image-related events show card images where available.
+- Level-up events show a level visual.
+- Find Collectors no longer uses an awkward horizontal side-scroll carousel.
+- Follow button is easier to see.
+- Level pill is easier to read and feels like status.
+- Reactions still work.
+- Reaction XP caps still work.
+- Follow/unfollow still works.
+- Friends/mutual follows still work.
+- Everyone/Following/Friends/Me filters still work.
+- Leaderboards still work.
+- Top Image Contributors still works.
+- Trade Feed remains Coming Soon only.
+- Private/feed-hidden users are not shown.
+- Private data is not exposed.
+- No emails or notifications were sent.
+- No unrelated systems changed.
+- App builds/runs cleanly.
+
+Final response:
+- List changed files.
+- Explain the new feed card visual design.
+- Explain how visual previews work by event type.
+- Explain how Find Collectors was improved.
+- Explain Follow button and Level pill styling changes.
+- Explain how repetitive badge/event rows are handled.
+- Confirm reactions and XP still work.
+- Confirm Follow/Friends still work.
+- Confirm Leaderboards still work.
+- Confirm Trade Feed is still Coming Soon only.
+- Confirm no private data is exposed.
+- Confirm no emails or notifications were sent.
+- Confirm safe to publish.
