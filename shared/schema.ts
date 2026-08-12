@@ -256,6 +256,20 @@ export const pendingCardImages = pgTable("pending_card_images", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Follow system v1 — one-way follows; mutual follows = Friends.
+// Created via idempotent startup DDL in server/index.ts (db:push is unusable).
+export const follows = pgTable("follows", {
+  id: serial("id").primaryKey(),
+  followerUserId: integer("follower_user_id").references(() => users.id).notNull(),
+  followingUserId: integer("following_user_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  followerIdx: index("follows_follower_idx").on(table.followerUserId),
+  followingIdx: index("follows_following_idx").on(table.followingUserId),
+  createdAtIdx: index("follows_created_at_idx").on(table.createdAt),
+  uniqueFollow: uniqueIndex("follows_unique_idx").on(table.followerUserId, table.followingUserId),
+}));
+
 // Friends system
 export const friends = pgTable("friends", {
   id: serial("id").primaryKey(),

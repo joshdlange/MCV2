@@ -17,6 +17,12 @@ interface FeedStats {
   eventsByType: { eventType: string; count: number }[];
 }
 
+interface FollowStats {
+  totalFollows: number;
+  topFollowed: { id: number; username: string | null; followers: number }[];
+  recentFollows: { id: number; createdAt: string; followerUsername: string | null; followingUsername: string | null }[];
+}
+
 interface AdminFeedEvent {
   id: number;
   userId: number;
@@ -36,6 +42,19 @@ export default function AdminFeed() {
   const { data: stats, isLoading: statsLoading } = useQuery<FeedStats>({
     queryKey: ["/api/admin/feed/stats"],
   });
+  const { data: followStats } = useQuery<FollowStats>({
+    queryKey: ["/api/admin/feed/follows"],
+  });
+
+  const removeFollowMutation = useMutation({
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/admin/feed/follows/${id}`),
+    onSuccess: () => {
+      toast({ title: "Follow removed" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/feed/follows"] });
+    },
+    onError: (err: any) => toast({ title: "Failed to remove follow", description: String(err?.message || err), variant: "destructive" }),
+  });
+
   const { data: recent, isLoading: recentLoading } = useQuery<AdminFeedEvent[]>({
     queryKey: ["/api/admin/feed/recent"],
   });
@@ -169,6 +188,62 @@ export default function AdminFeed() {
                   </Button>
                 </div>
               ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-base">Follows</CardTitle></CardHeader>
+        <CardContent>
+          {!followStats ? (
+            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm"><span className="text-muted-foreground">Total follows:</span> <span className="font-bold">{followStats.totalFollows}</span></p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <p className="text-sm font-semibold mb-2">Most followed</p>
+                  {followStats.topFollowed.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No follows yet.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {followStats.topFollowed.map((u) => (
+                        <div key={u.id} className="flex items-center justify-between text-sm border rounded-md px-3 py-1.5">
+                          <span className="font-medium">@{u.username}</span>
+                          <span className="text-muted-foreground">{u.followers} followers</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold mb-2">Recent follows</p>
+                  {followStats.recentFollows.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No follows yet.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {followStats.recentFollows.map((f) => (
+                        <div key={f.id} className="flex items-center gap-2 text-sm border rounded-md px-3 py-1.5">
+                          <span className="truncate flex-1">
+                            @{f.followerUsername} → @{f.followingUsername}
+                          </span>
+                          <span className="text-xs text-muted-foreground shrink-0">{new Date(f.createdAt).toLocaleDateString()}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 px-2"
+                            onClick={() => removeFollowMutation.mutate(f.id)}
+                            data-testid={`button-remove-follow-${f.id}`}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </CardContent>

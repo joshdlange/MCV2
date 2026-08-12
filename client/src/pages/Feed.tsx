@@ -11,7 +11,7 @@ import { useLocation, Link } from "wouter";
 import {
   Activity as ActivityIcon, Trophy, ArrowLeftRight, Sparkles,
   Award, BookOpen, Image as ImageIcon, Share2, Star, Crown, Loader2,
-  ChevronDown, ChevronUp, ExternalLink, Layers,
+  ChevronDown, ChevronUp, ExternalLink, Layers, UserPlus, Users,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -53,6 +53,24 @@ interface LeaderboardEntry {
 interface LeaderboardsResponse {
   topXp: LeaderboardEntry[];
   topImageContributors: LeaderboardEntry[];
+  allTimeTopXp: LeaderboardEntry[];
+}
+
+type FeedFilter = "everyone" | "following" | "friends" | "me";
+
+interface FollowingResponse {
+  viewerId: number;
+  ids: number[];
+}
+
+interface DiscoverCollector {
+  id: number;
+  username: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  collectorAvatarKey: string | null;
+  collectorFocus: string | null;
+  collectorLevel: number;
 }
 
 const REACTIONS: { key: string; emoji: string; label: string }[] = [
@@ -240,10 +258,33 @@ function ReactionRow({ event, pending, onReact }: {
 // Single event card
 // ---------------------------------------------------------------------------
 
-function EventCard({ event, pending, onReact }: {
+function FollowInlineButton({ user, followState }: { user: FeedUser; followState: FollowState | null }) {
+  if (!followState || !user.username) return null;
+  if (user.id === followState.viewerId || followState.ids.includes(user.id)) return null;
+  return (
+    <button
+      onClick={() => followState.follow(user.username!)}
+      disabled={followState.pendingUsername === user.username}
+      data-testid={`button-follow-${user.id}`}
+      className="text-[11px] font-semibold rounded-full border border-red-600/40 text-red-400 hover:bg-red-600/15 px-2.5 py-0.5 inline-flex items-center gap-1 transition-colors"
+    >
+      <UserPlus className="w-3 h-3" /> Follow
+    </button>
+  );
+}
+
+interface FollowState {
+  viewerId: number;
+  ids: number[];
+  pendingUsername: string | null;
+  follow: (username: string) => void;
+}
+
+function EventCard({ event, pending, onReact, followState }: {
   event: FeedEvent;
   pending: boolean;
   onReact: (eventId: number, reaction: string, remove: boolean) => void;
+  followState: FollowState | null;
 }) {
   const style = EVENT_STYLE[event.eventType] ?? DEFAULT_STYLE;
   const shareToken = event.eventType === "binder_shared" ? (event.metadata as any)?.shareToken as string | undefined : undefined;
@@ -259,6 +300,7 @@ function EventCard({ event, pending, onReact }: {
           <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-sm text-zinc-100 truncate">{displayName(event.user)}</span>
             <LevelPill level={event.user.collectorLevel} />
+            <FollowInlineButton user={event.user} followState={followState} />
             <span className="text-xs text-zinc-500">{timeAgo(event.createdAt)}</span>
           </div>
           <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border ${style.chipClass}`}>
@@ -335,10 +377,11 @@ function groupEvents(events: FeedEvent[]): EventGroup[] {
   return groups;
 }
 
-function GroupedBadgeCard({ group, pending, onReact }: {
+function GroupedBadgeCard({ group, pending, onReact, followState }: {
   group: EventGroup;
   pending: boolean;
   onReact: (eventId: number, reaction: string, remove: boolean) => void;
+  followState: FollowState | null;
 }) {
   const [expanded, setExpanded] = useState(false);
   const first = group.events[0];
@@ -352,6 +395,7 @@ function GroupedBadgeCard({ group, pending, onReact }: {
           <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-sm text-zinc-100 truncate">{displayName(first.user)}</span>
             <LevelPill level={first.user.collectorLevel} />
+            <FollowInlineButton user={first.user} followState={followState} />
             <span className="text-xs text-zinc-500">{timeAgo(first.createdAt)}</span>
           </div>
           <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border ${EVENT_STYLE.badge_earned.chipClass}`}>
@@ -411,10 +455,11 @@ function GroupedBadgeCard({ group, pending, onReact }: {
 // ---------------------------------------------------------------------------
 
 function ActivityTab() {
-  const [filter, setFilter] = useState<"everyone" | "me">("everyone");
+  const [filter, setFilter] = useState<FeedFilter>("everyone");
   const [extraEvents, setExtraEvents] = useState<FeedEvent[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [pendingFollowUsername, setPendingFollowUsername] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -426,11 +471,44 @@ function ActivityTab() {
     },
   });
 
+  const { data: followingData } = useQuery<FollowingResponse>({
+    queryKey: ["/api/feed/following"],
+    queryFn: async () => (await apiRequest("GET", "/api/feed/following")).json(),
+  });
+
+  const followMutation = useMutation({
+    mutationFn: async (username: string) => {
+      setPendingFollowUsername(username);
+      return (await apiRequest("POST", `/api/collectors/${username}/follow`)).json();
+    },
+    onSuccess: (_data, username) => {
+      toast({ title: `Following @${username}`, description: "Their activity will show in your Following feed." });
+      queryClient.invalidateQueries({ queryKey: ["/api/feed/following"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/feed/discover"] });
+      if (filter === "following" || filter === "friends") {
+        queryClient.invalidateQueries({ queryKey: ["/api/feed", filter] });
+      }
+    },
+    onError: (err: any) => {
+      toast({ title: "Could not follow", description: String(err?.message || err), variant: "destructive" });
+    },
+    onSettled: () => setPendingFollowUsername(null),
+  });
+
+  const followState: FollowState | null = followingData
+    ? {
+        viewerId: followingData.viewerId,
+        ids: followingData.ids,
+        pendingUsername: pendingFollowUsername,
+        follow: (username) => followMutation.mutate(username),
+      }
+    : null;
+
   const events = [...(data?.events ?? []), ...extraEvents];
   const nextCursor = cursor ?? data?.nextCursor ?? null;
   const groups = useMemo(() => groupEvents(events), [events]);
 
-  const changeFilter = (f: "everyone" | "me") => {
+  const changeFilter = (f: FeedFilter) => {
     setFilter(f);
     setExtraEvents([]);
     setCursor(null);
@@ -480,44 +558,47 @@ function ActivityTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
-        <Button
-          size="sm"
-          variant={filter === "everyone" ? "default" : "outline"}
-          onClick={() => changeFilter("everyone")}
-          data-testid="button-filter-everyone"
-        >
-          Everyone
-        </Button>
-        <Button
-          size="sm"
-          variant={filter === "me" ? "default" : "outline"}
-          onClick={() => changeFilter("me")}
-          data-testid="button-filter-me"
-        >
-          Me
-        </Button>
+      <div className="flex gap-2 flex-wrap">
+        {(["everyone", "following", "friends", "me"] as FeedFilter[]).map((f) => (
+          <Button
+            key={f}
+            size="sm"
+            variant={filter === f ? "default" : "outline"}
+            onClick={() => changeFilter(f)}
+            data-testid={`button-filter-${f}`}
+          >
+            {f === "everyone" ? "Everyone" : f === "following" ? "Following" : f === "friends" ? "Friends" : "Me"}
+          </Button>
+        ))}
       </div>
+
+      <DiscoverCollectorsPanel followState={followState} />
 
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
       ) : events.length === 0 ? (
         <div className="rounded-xl bg-zinc-900 border border-zinc-800 py-12 text-center text-zinc-400">
           <ActivityIcon className="w-10 h-10 mx-auto mb-3 opacity-40" />
-          <p className="font-medium text-zinc-300">No activity yet</p>
-          <p className="text-sm mt-1">
+          <p className="font-medium text-zinc-300">
+            {filter === "following" ? "Nothing here yet" : filter === "friends" ? "No friends yet" : "No activity yet"}
+          </p>
+          <p className="text-sm mt-1 max-w-md mx-auto">
             {filter === "me"
               ? "Add cards, earn badges, and build binders to see your milestones here."
-              : "Collector milestones will show up here as the community builds their vaults."}
+              : filter === "following"
+                ? "Follow collectors to personalize your Feed."
+                : filter === "friends"
+                  ? "Friends are mutual follows. Follow collectors you know, and when they follow back, they'll show up here."
+                  : "Collector milestones will show up here as the community builds their vaults."}
           </p>
         </div>
       ) : (
         <div className="space-y-3">
           {groups.map((g) =>
             g.events.length > 1 ? (
-              <GroupedBadgeCard key={g.key} group={g} pending={reactMutation.isPending} onReact={onReact} />
+              <GroupedBadgeCard key={g.key} group={g} pending={reactMutation.isPending} onReact={onReact} followState={followState} />
             ) : (
-              <EventCard key={g.key} event={g.events[0]} pending={reactMutation.isPending} onReact={onReact} />
+              <EventCard key={g.key} event={g.events[0]} pending={reactMutation.isPending} onReact={onReact} followState={followState} />
             ),
           )}
           {nextCursor && nextCursor !== "" && (
@@ -529,6 +610,59 @@ function ActivityTab() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Find Collectors (discovery)
+// ---------------------------------------------------------------------------
+
+function DiscoverCollectorsPanel({ followState }: { followState: FollowState | null }) {
+  const [dismissed, setDismissed] = useState(false);
+  const { data } = useQuery<{ collectors: DiscoverCollector[] }>({
+    queryKey: ["/api/feed/discover"],
+    queryFn: async () => (await apiRequest("GET", "/api/feed/discover")).json(),
+  });
+  const collectors = data?.collectors ?? [];
+  if (dismissed || collectors.length === 0) return null;
+
+  return (
+    <div className="rounded-xl bg-zinc-900 border border-zinc-800 overflow-hidden" data-testid="panel-discover">
+      <div className="px-4 py-2.5 border-b border-zinc-800 bg-gradient-to-r from-red-950/40 to-transparent flex items-center justify-between">
+        <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
+          <Users className="w-4 h-4 text-red-400" /> Find Collectors
+        </h3>
+        <button onClick={() => setDismissed(true)} className="text-xs text-zinc-500 hover:text-zinc-300" data-testid="button-dismiss-discover">
+          Hide
+        </button>
+      </div>
+      <div className="p-3 flex gap-3 overflow-x-auto">
+        {collectors.map((c) => (
+          <div key={c.id} className="shrink-0 w-32 rounded-lg bg-zinc-800/60 border border-zinc-700/60 p-3 flex flex-col items-center text-center gap-1.5">
+            <UserAvatar user={{ ...c, collectorLevel: c.collectorLevel }} size="w-12 h-12" />
+            {c.username ? (
+              <Link href={`/collectors/${c.username}`} className="text-xs font-semibold text-zinc-200 truncate w-full hover:text-red-400">
+                {c.username}
+              </Link>
+            ) : (
+              <span className="text-xs font-semibold text-zinc-200 truncate w-full">{displayName(c as FeedUser)}</span>
+            )}
+            <LevelPill level={c.collectorLevel} />
+            {c.collectorFocus && <p className="text-[10px] text-zinc-500 line-clamp-2 leading-tight">{c.collectorFocus}</p>}
+            {c.username && followState && (
+              <button
+                onClick={() => followState.follow(c.username!)}
+                disabled={followState.pendingUsername === c.username}
+                data-testid={`button-discover-follow-${c.id}`}
+                className="mt-1 text-[11px] font-semibold rounded-full border border-red-600/40 text-red-400 hover:bg-red-600/15 px-3 py-1 inline-flex items-center gap-1 transition-colors"
+              >
+                <UserPlus className="w-3 h-3" /> Follow
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -597,7 +731,15 @@ function LeaderboardsTab() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">Rankings reset every Monday. Earn XP by adding cards, earning badges, contributing images, and cheering on other collectors.</p>
+      <p className="text-sm text-muted-foreground">Weekly rankings reset every Monday. Earn XP by adding cards, earning badges, contributing images, and cheering on other collectors.</p>
+      <LeaderboardList
+        title="Top 10 Collectors — All-Time XP"
+        icon={<Crown className="w-4 h-4 text-yellow-500" />}
+        entries={data?.allTimeTopXp ?? []}
+        valueKey="xp"
+        valueLabel="XP"
+      />
+      <p className="text-xs text-zinc-500 -mt-2">Collectors who make the all-time Top 10 earn the exclusive Top 10 Collector badge.</p>
       <div className="grid gap-4 md:grid-cols-2">
         <LeaderboardList
           title="Top XP This Week"

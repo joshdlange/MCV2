@@ -215,8 +215,8 @@ export default function AdminUsers() {
       </div>
 
       {/* Search and Filters */}
-      <div className="flex gap-4">
-        <div className="flex-1">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+        <div className="w-full sm:flex-1">
           <Input
             placeholder="Search users by username or email..."
             value={searchQuery}
@@ -224,8 +224,9 @@ export default function AdminUsers() {
             className="bg-white"
           />
         </div>
+        <div className="flex gap-3 sm:gap-4">
         <Select value={levelFilter} onValueChange={setLevelFilter}>
-          <SelectTrigger className="w-44 bg-white">
+          <SelectTrigger className="flex-1 sm:flex-none sm:w-44 bg-white">
             <SelectValue placeholder="Collector Level" />
           </SelectTrigger>
           <SelectContent>
@@ -237,7 +238,7 @@ export default function AdminUsers() {
           </SelectContent>
         </Select>
         <Select value={stageFilter} onValueChange={setStageFilter}>
-          <SelectTrigger className="w-52 bg-white">
+          <SelectTrigger className="flex-1 sm:flex-none sm:w-52 bg-white">
             <SelectValue placeholder="Lifecycle Stage" />
           </SelectTrigger>
           <SelectContent>
@@ -247,6 +248,7 @@ export default function AdminUsers() {
             ))}
           </SelectContent>
         </Select>
+        </div>
       </div>
 
       {/* Users Table */}

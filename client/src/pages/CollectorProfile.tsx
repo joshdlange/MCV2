@@ -225,6 +225,31 @@ export default function CollectorProfile() {
     enabled: !!username && !!currentUser,
   });
 
+  const { data: followInfo } = useQuery<{
+    followerCount: number; followingCount: number; friendCount: number;
+    isFollowing: boolean; followsYou: boolean; isFriend: boolean; canFollow: boolean;
+  }>({
+    queryKey: ["/api/collectors", username, "follow-info"],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/collectors/${username}/follow-info`, { headers });
+      if (!res.ok) throw new Error("Failed to load follow info");
+      return res.json();
+    },
+    enabled: !!username && !!currentUser,
+  });
+
+  const followMutation = useMutation({
+    mutationFn: async (unfollow: boolean) =>
+      (await apiRequest(unfollow ? "DELETE" : "POST", `/api/collectors/${username}/follow`)).json(),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["/api/collectors", username, "follow-info"], (old: any) => ({ ...old, ...data }));
+    },
+    onError: (err: any) => {
+      toast({ title: "Could not update follow", description: String(err?.message || err), variant: "destructive" });
+    },
+  });
+
   const sendFriendRequestMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/social/friend-request", { recipientId: profile?.user.id }),
     onSuccess: () => {
@@ -368,6 +393,27 @@ export default function CollectorProfile() {
               </Button>
             ) : (
               <>
+                {followInfo && (followInfo.canFollow || followInfo.isFollowing) && (
+                  <Button
+                    size="sm"
+                    onClick={() => followMutation.mutate(followInfo.isFollowing)}
+                    disabled={followMutation.isPending}
+                    data-testid="button-follow"
+                    className={followInfo.isFriend
+                      ? "bg-green-600 hover:bg-green-700 text-white"
+                      : followInfo.isFollowing
+                        ? "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                        : "bg-red-600 hover:bg-red-700 text-white"}
+                  >
+                    {followInfo.isFriend ? (
+                      <><UserCheck className="w-4 h-4 mr-1.5" /> Friends</>
+                    ) : followInfo.isFollowing ? (
+                      <><UserCheck className="w-4 h-4 mr-1.5" /> Following</>
+                    ) : (
+                      <><UserPlus className="w-4 h-4 mr-1.5" /> Follow</>
+                    )}
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   onClick={handleMessageClick}
@@ -440,6 +486,16 @@ export default function CollectorProfile() {
             )}
           </div>
           <p className="text-gray-500 text-sm mb-2">@{user.username}</p>
+          {followInfo && (
+            <div className="flex items-center gap-4 text-sm text-gray-600 mb-2" data-testid="text-follow-counts">
+              <span><span className="font-bold text-gray-900">{followInfo.followerCount}</span> Followers</span>
+              <span><span className="font-bold text-gray-900">{followInfo.followingCount}</span> Following</span>
+              <span><span className="font-bold text-gray-900">{followInfo.friendCount}</span> Friends</span>
+              {followInfo.followsYou && !followInfo.isFriend && (
+                <span className="text-xs bg-gray-100 border border-gray-200 rounded-full px-2 py-0.5">Follows you</span>
+              )}
+            </div>
+          )}
           {user.bio && <p className="text-gray-700 text-sm mb-3 max-w-xl">{user.bio}</p>}
           {user.collectorFocus && (
             <p className="text-sm mb-3 max-w-xl text-red-700 font-medium">

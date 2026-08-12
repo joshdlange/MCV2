@@ -1,0 +1,240 @@
+Build Marvel Card Vault Follow / Friends System v1 and connect it to Feed.
+
+Context:
+Feed v1 has been built with activity, leaderboards, reactions, XP, and Trade Feed coming soon. Collector Profile Customization and avatars are also built.
+
+However, the Feed is missing the core social mechanic: users need to be able to follow each other and eventually become friends/mutuals. This was the main reason for building Feed.
+
+Goal:
+Add a safe, privacy-aware Follow/Friends system and connect it to the Feed so users can discover, follow, and filter activity by people they care about.
+
+Core concept:
+- Follow is one-way.
+- Friends are mutual follows.
+- If User A follows User B, User A sees User B in the Following feed.
+- If User B also follows User A, they become Friends/mutuals.
+- No friend request approval flow in v1.
+- No messaging in this task.
+- No comments in this task.
+
+Must do:
+- Add follow/unfollow functionality.
+- Add mutual follow detection.
+- Add follower/following counts.
+- Add a Friends count based on mutual follows.
+- Add Follow/Following button to public collector profiles.
+- Add Follow/Following button to feed item headers where appropriate.
+- Add Follow/Following button to shared binder/public binder/profile surfaces where safe.
+- Add a user discovery entry point if practical, such as:
+  - “Collectors to Follow”
+  - “Suggested Collectors”
+  - or a simple searchable Collectors page/section
+- Add Feed filters:
+  - Everyone
+  - Following
+  - Friends
+  - Me
+- If there are no followed users yet, show a useful empty state:
+  “Follow collectors to personalize your Feed.”
+- If there are no friends yet, show:
+  “Friends are mutual follows. Follow collectors you know, and when they follow back, they’ll show up here.”
+- Keep all follow/friend logic privacy-safe.
+
+Database/schema:
+- Add a follows table if not already present.
+- Suggested fields:
+  - id
+  - follower_user_id
+  - following_user_id
+  - created_at
+  - updated_at
+- Add unique constraint:
+  - follower_user_id + following_user_id
+- Prevent users from following themselves.
+- Use soft delete or deleted_at only if consistent with existing app patterns. Otherwise hard delete follow rows is acceptable for unfollow if no audit requirement exists.
+- Add indexes for:
+  - follower_user_id
+  - following_user_id
+  - created_at
+- Do not modify user records unnecessarily.
+- Keep schema changes additive.
+
+Follow rules:
+- User can follow another user only if:
+  - target user has public profile enabled OR allow followers enabled, depending existing profile privacy design
+  - target user is not blocked by the viewer, if block system exists
+  - viewer is not blocked by target, if block system exists
+  - viewer is authenticated
+- User cannot follow themselves.
+- Follow button should show:
+  - Follow
+  - Following
+  - Friend / Mutual, if both users follow each other
+- Unfollow should work.
+- If a mutual friend unfollows, friendship status should disappear automatically.
+
+Privacy:
+- Existing users should not become publicly followable unless they opted in through profile settings.
+- Respect:
+  - public profile toggle
+  - allow followers toggle
+  - show activity in feed toggle
+- Private users should not appear in public discovery.
+- Feed-hidden users should not show public activity.
+- Do not expose:
+  - email
+  - real name unless intentionally public display name
+  - address
+  - billing/subscription details
+  - private collection data
+  - private PC Binders
+  - admin-only data
+- Follow counts should be okay to show only for users with public/followable profiles.
+
+Feed integration:
+- Add Feed filter tabs/buttons:
+  - Everyone
+  - Following
+  - Friends
+  - Me
+- Everyone:
+  - shows public/feed-visible activity from users who allow it
+- Following:
+  - shows activity from users the current user follows
+- Friends:
+  - shows activity from mutual follows only
+- Me:
+  - shows current user’s own feed events
+- If user follows someone, their public feed events should appear in Following.
+- If both users follow each other, their public feed events should appear in Friends.
+- Feed filters must not expose private/feed-hidden users.
+- Feed filters should work on mobile and desktop.
+- Do not fake Following/Friends with placeholder data.
+
+Profile integration:
+- Public collector profile should show:
+  - avatar
+  - display name
+  - collector level
+  - collecting focus/tagline if public
+  - follower count
+  - following count
+  - friends/mutual count if appropriate
+  - Follow/Following/Friend button
+- Account Settings should allow user to control:
+  - public profile
+  - allow followers
+  - show activity in feed
+- If allow followers is off, non-admin users should not be able to follow them.
+- If public profile is off, profile should remain private and not show follow controls publicly.
+
+Discovery:
+- Add a simple Collectors discovery section if practical.
+- This can live:
+  - inside Feed as a “Find Collectors” panel
+  - or under Social Hub
+  - or as a small section in the Feed sidebar/top area
+- Suggested discovery sorting:
+  - recently active public collectors
+  - highest weekly XP public collectors
+  - image contributors
+  - collectors with public PC Binders
+- If this is too large, keep v1 simple:
+  - searchable list of public/followable collectors
+- Show avatar, display name, level, collecting focus, and Follow button.
+- Do not expose private users.
+
+Notifications/emails:
+- Do not send emails.
+- Do not send push notifications.
+- In-app notification for “new follower” can be skipped in v1 unless there is already an existing notification system that can safely support it.
+- If adding in-app notification is easy, keep it quiet and non-email:
+  “Josh followed you.”
+- Do not create notification spam.
+
+XP:
+- Do not award XP just for following in v1 unless explicitly approved.
+- Feed reaction XP already exists separately.
+- Avoid creating a follow/unfollow XP farming loop.
+- If adding XP later, it should be capped and badge-based, not per follow.
+
+Admin:
+- Add basic admin visibility if practical:
+  - follower counts
+  - top followed collectors
+  - recent follows
+- Admin should be able to remove abusive follows if a moderation pattern exists.
+- Keep endpoints admin/auth protected where needed.
+
+Must not do:
+- Do not build freeform posts.
+- Do not build comments.
+- Do not build messaging.
+- Do not build Trade Block.
+- Do not build trade proposals, counters, shipping, or disputes.
+- Do not send emails or notifications.
+- Do not expose private profiles or private collection data.
+- Do not make existing users publicly followable by default.
+- Do not change lifecycle emails.
+- Do not change subscriptions, Stripe, RevenueCat, Shippo, Drive Sync, Data Quality, Upcoming Set Intelligence, image approval, card data, Android, or iOS.
+- Do not change XP rules except preserving existing feed reaction XP.
+- Do not use fake/mock users or fake follow data in production.
+
+Preserve:
+- Existing Feed functionality.
+- Existing Feed tabs:
+  - Activity
+  - Leaderboards
+  - Trade Feed
+- Existing Feed reactions and XP caps.
+- Existing Feed event privacy rules.
+- Existing avatar/profile customization.
+- Existing public/private profile settings.
+- Existing PC Binder gating.
+- Existing shared binder behavior.
+- Existing lifecycle email system.
+- Existing admin tools.
+- Existing app routes.
+- Existing mobile layouts.
+
+QA:
+- User can follow another public/followable user.
+- User can unfollow.
+- User cannot follow themselves.
+- Duplicate follows are prevented.
+- Mutual follows are detected as Friends.
+- Friend status disappears when one side unfollows.
+- Private/non-followable users cannot be followed.
+- Private users do not appear in collector discovery.
+- Feed Everyone filter works.
+- Feed Following filter shows only followed users’ public/feed-visible activity.
+- Feed Friends filter shows only mutual follows’ public/feed-visible activity.
+- Feed Me filter shows current user’s own feed events.
+- Follow buttons display correctly on profile and feed items.
+- Follower/following counts update correctly.
+- Existing users are not automatically public/followable.
+- No private collections, private binders, emails, addresses, billing, or admin data are exposed.
+- Mobile layout works.
+- Desktop layout works.
+- No emails were sent.
+- No push notifications were sent.
+- No freeform posts/comments/messages/trading were built.
+- App builds/runs cleanly.
+
+Final response:
+- List changed files.
+- Explain follow/unfollow behavior.
+- Explain how mutual friends are calculated.
+- Explain privacy rules and defaults.
+- Explain where Follow buttons appear.
+- Explain Feed filters:
+  - Everyone
+  - Following
+  - Friends
+  - Me
+- Explain collector discovery if added.
+- Confirm existing users were not made publicly followable by default.
+- Confirm no private data is exposed.
+- Confirm no emails or notifications were sent.
+- Confirm no comments/posts/messages/trading were built.
+- Confirm safe to publish.

@@ -5452,6 +5452,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ))
           .limit(1);
         accepted = friendRecord?.status === 'accepted';
+        // Follow v1: mutual follows also count as friends (both definitions
+        // are honored so neither system locks the other out).
+        if (!accepted) {
+          const mutual: any = await db.execute(sql`
+            SELECT 1 FROM follows a
+            JOIN follows b ON b.follower_user_id = a.following_user_id AND b.following_user_id = a.follower_user_id
+            WHERE a.follower_user_id = ${callerId} AND a.following_user_id = ${targetUser.id}
+            LIMIT 1`);
+          accepted = (mutual.rows ?? []).length > 0;
+        }
       }
       if (!accepted) return { ok: false as const, status: 403, message: "This profile is not available" };
     }
@@ -5618,7 +5628,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/feed", authenticateUser, async (req: any, res) => {
     try {
       const feed = await import('./services/feedService');
-      const filter = req.query.filter === 'me' ? 'me' : 'everyone';
+      const allowedFilters = ['everyone', 'following', 'friends', 'me'] as const;
+      const filter = (allowedFilters as readonly string[]).includes(String(req.query.filter))
+        ? (String(req.query.filter) as (typeof allowedFilters)[number])
+        : 'everyone';
       // Composite cursor "<ISO>_<id>" so same-timestamp rows are never skipped
       let before: Date | undefined;
       let beforeId: number | undefined;
@@ -5685,6 +5698,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[Feed] leaderboards error:', error);
       res.status(500).json({ message: "Failed to load leaderboards" });
+    }
+  });
+
+  // ---------------------------------------------------------------------
+  // Follow / Friends system v1
+  // ---------------------------------------------------------------------
+
+  // GET /api/collectors/:username/follow-info — counts + viewer relationship.
+  // Runs the shared access guard so private/blocked profiles reveal nothing.
+  app.get("/api/collectors/:username/follow-info", authenticateUser, async (req: any, res) => {
+    try {
+      const access = await resolveCollectorAccess(req.params.username, req.user?.id);
+      if (!access.ok) return res.status(access.status).json({ message: access.message });
+      const followSvc = await import('./services/followService');
+      const info = await followSvc.getFollowInfo(req.user.id, access.targetUser.id);
+      res.json({
+        ...info,
+        canFollow: !access.isOwnProfile && followSvc.isFollowableUser(access.targetUser),
+      });
+    } catch (error) {
+      console.error('[Follow] info error:', error);
+      res.status(500).json({ message: "Failed to load follow info" });
+    }
+  });
+
+  // POST /api/collectors/:username/follow — follow a collector
+  app.post("/api/collectors/:username/follow", authenticateUser, async (req: any, res) => {
+    try {
+      const access = await resolveCollectorAccess(req.params.username, req.user?.id);
+      if (!access.ok) return res.status(access.status).json({ message: access.message });
+      const followSvc = await import('./services/followService');
+      const result = await followSvc.followUser(req.user.id, access.targetUser.id);
+      if (!result.ok) return res.status(result.status).json({ message: result.message });
+      res.json(await followSvc.getFollowInfo(req.user.id, access.targetUser.id));
+    } catch (error) {
+      console.error('[Follow] follow error:', error);
+      res.status(500).json({ message: "Failed to follow" });
+    }
+  });
+
+  // DELETE /api/collectors/:username/follow — unfollow
+  app.delete("/api/collectors/:username/follow", authenticateUser, async (req: any, res) => {
+    try {
+      // Unfollow always works (even if the target went private or blocked you
+      // afterwards — otherwise follows get stuck), but target data (counts,
+      // relationship state) is only returned when the access guard passes.
+      const [target] = await db.select({ id: users.id }).from(users)
+        .where(eq(users.username, req.params.username)).limit(1);
+      if (!target) return res.status(404).json({ message: "Collector not found" });
+      const followSvc = await import('./services/followService');
+      await followSvc.unfollowUser(req.user.id, target.id);
+      const access = await resolveCollectorAccess(req.params.username, req.user?.id);
+      if (!access.ok) return res.json({ isFollowing: false, isFriend: false });
+      res.json(await followSvc.getFollowInfo(req.user.id, target.id));
+    } catch (error) {
+      console.error('[Follow] unfollow error:', error);
+      res.status(500).json({ message: "Failed to unfollow" });
+    }
+  });
+
+  // GET /api/feed/following — ids the viewer follows (feed follow-button state)
+  app.get("/api/feed/following", authenticateUser, async (req: any, res) => {
+    try {
+      const followSvc = await import('./services/followService');
+      res.json({ viewerId: req.user.id, ids: await followSvc.getFollowingIds(req.user.id) });
+    } catch (error) {
+      console.error('[Follow] following-ids error:', error);
+      res.status(500).json({ message: "Failed to load following" });
+    }
+  });
+
+  // GET /api/feed/discover — public collectors to follow (excludes private,
+  // feed-hidden, admins, blocked, and already-followed users).
+  app.get("/api/feed/discover", authenticateUser, async (req: any, res) => {
+    try {
+      const followSvc = await import('./services/followService');
+      res.json({ collectors: await followSvc.getSuggestedCollectors(req.user.id, 12) });
+    } catch (error) {
+      console.error('[Follow] discover error:', error);
+      res.status(500).json({ message: "Failed to load collectors" });
+    }
+  });
+
+  // Admin: follow stats (totals, top followed, recent follows)
+  app.get("/api/admin/feed/follows", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const followSvc = await import('./services/followService');
+      res.json(await followSvc.getAdminFollowStats());
+    } catch (error) {
+      console.error('[Follow] admin stats error:', error);
+      res.status(500).json({ message: "Failed to load follow stats" });
+    }
+  });
+
+  // Admin: remove an abusive follow
+  app.delete("/api/admin/feed/follows/:id", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const followSvc = await import('./services/followService');
+      await followSvc.adminRemoveFollow(parseInt(req.params.id));
+      res.json({ ok: true });
+    } catch (error) {
+      console.error('[Follow] admin remove error:', error);
+      res.status(500).json({ message: "Failed to remove follow" });
     }
   });
 
@@ -12360,6 +12478,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log(`[NeverLeave Badge Seed] ${result.ran ? 'Done' : 'No-op'}: ${result.reason}`);
   }).catch(err => {
     console.error('[NeverLeave Badge Seed] Error:', err);
+  });
+
+  // Startup seed: "Top 10 Collector" badge (all-time Top 10 XP leaderboard).
+  // Idempotent + advisory-locked; awarding happens on leaderboard computation.
+  import('./services/topTenBadgeSeed').then(async (m) => {
+    const result = await m.seedTopTenBadge();
+    console.log(`[Top10 Badge Seed] ${result.ran ? 'Done' : 'No-op'}: ${result.reason}`);
+  }).catch(err => {
+    console.error('[Top10 Badge Seed] Error:', err);
   });
 
   // One-time fix: 1992 Comic Images Spider-Man reorg — move mis-filed McFarlane

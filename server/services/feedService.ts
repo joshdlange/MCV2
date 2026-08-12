@@ -139,7 +139,7 @@ export async function emitBadgeEarned(userId: number, badgeId: number): Promise<
  */
 export async function getFeedPage(opts: {
   viewerId: number;
-  filter: 'everyone' | 'me';
+  filter: 'everyone' | 'following' | 'friends' | 'me';
   before?: Date;
   beforeId?: number; // composite cursor tiebreaker — same-timestamp rows aren't skipped
   limit?: number;
@@ -155,6 +155,17 @@ export async function getFeedPage(opts: {
   }
   if (opts.filter === 'me') {
     conditions.push(eq(feedEvents.userId, opts.viewerId));
+  }
+  // Following/Friends: restrict to the relevant user set, but the normal
+  // public + show_activity_in_feed privacy predicate below STILL applies —
+  // following someone never bypasses their privacy settings.
+  if (opts.filter === 'following' || opts.filter === 'friends') {
+    const followSvc = await import('./followService');
+    const ids = opts.filter === 'following'
+      ? await followSvc.getFollowingIds(opts.viewerId)
+      : await followSvc.getFriendIds(opts.viewerId);
+    if (ids.length === 0) return [];
+    conditions.push(inArray(feedEvents.userId, ids));
   }
 
   let rows;
@@ -508,9 +519,48 @@ export async function getWeeklyLeaderboards() {
     LIMIT 10
   `);
 
+  // All-time Top 10 collectors by total XP (same sources as computeUserXp:
+  // ledger + badge points + approved images, incl. the one-time image bonus).
+  // Same privacy/admin exclusions as the weekly boards.
+  const allTimeRes = await db.execute(sql`
+    WITH ledger AS (
+      SELECT user_id, sum(points) AS xp FROM xp_events GROUP BY user_id
+    ),
+    badge_xp AS (
+      SELECT ub.user_id, sum(coalesce(b.points, 10)) AS xp
+      FROM user_badges ub JOIN badges b ON b.id = ub.badge_id GROUP BY ub.user_id
+    ),
+    img_xp AS (
+      SELECT user_id, count(*) * 10 + 25 AS xp FROM pending_card_images
+      WHERE status = 'approved' GROUP BY user_id
+    ),
+    combined AS (
+      SELECT user_id, sum(xp) AS xp FROM (
+        SELECT * FROM ledger UNION ALL SELECT * FROM badge_xp UNION ALL SELECT * FROM img_xp
+      ) t GROUP BY user_id
+    )
+    SELECT c.user_id, c.xp::int AS xp, u.username, u.display_name, u.photo_url, u.collector_avatar_key
+    FROM combined c
+    JOIN users u ON u.id = c.user_id
+    WHERE u.is_admin = false
+      AND u.profile_visibility = 'public'
+      AND u.show_activity_in_feed = true
+      AND c.xp > 0
+    ORDER BY c.xp DESC
+    LIMIT 10
+  `);
+
   const xpRows = ((xpRes as any).rows ?? []) as any[];
   const imgRows = ((imgRes as any).rows ?? []) as any[];
-  const allIds = Array.from(new Set([...xpRows, ...imgRows].map(r => Number(r.user_id))));
+  const allTimeRows = ((allTimeRes as any).rows ?? []) as any[];
+
+  // Award the "Top 10 Collector" badge to current all-time top-10 members.
+  // Permanent once earned (Hall of Fame precedent); ON CONFLICT makes it
+  // idempotent, and awardBadge emits the feed event + quiet notification.
+  syncTopTenBadge(allTimeRows.map(r => Number(r.user_id))).catch(err =>
+    console.error('[Feed] top-10 badge sync failed:', err));
+
+  const allIds = Array.from(new Set([...xpRows, ...imgRows, ...allTimeRows].map(r => Number(r.user_id))));
   const levels = await computeLevelsForUsers(allIds);
 
   const shape = (r: any, value: number, valueKey: string) => ({
@@ -529,7 +579,24 @@ export async function getWeeklyLeaderboards() {
     weekStart: null, // client shows "This Week"
     topXp: xpRows.map(r => shape(r, Number(r.xp), 'xp')),
     topImageContributors: imgRows.map(r => shape(r, Number(r.approved), 'approved')),
+    allTimeTopXp: allTimeRows.map(r => shape(r, Number(r.xp), 'xp')),
   };
+}
+
+/** Fire-and-forget: award the Top 10 Collector badge to current top-10 users. */
+async function syncTopTenBadge(userIds: number[]) {
+  if (userIds.length === 0) return;
+  const { TOP_TEN_BADGE_NAME } = await import('./topTenBadgeSeed');
+  const [badge] = await db
+    .select({ id: badges.id })
+    .from(badges)
+    .where(eq(badges.name, TOP_TEN_BADGE_NAME))
+    .limit(1);
+  if (!badge) return; // seed hasn't run yet
+  const { badgeService } = await import('../badge-service');
+  for (const userId of userIds) {
+    await badgeService.awardBadge(userId, badge.id);
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -125,6 +125,18 @@ app.use((req, res, next) => {
     await db.execute(sql`CREATE INDEX IF NOT EXISTS feed_reactions_user_idx ON feed_reactions (user_id)`);
     await db.execute(sql`ALTER TABLE xp_events ADD COLUMN IF NOT EXISTS feed_event_id integer`);
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS xp_events_feed_reaction_idx ON xp_events (user_id, feed_event_id) WHERE event_type = 'feed_reaction'`);
+    // Follow system v1 — one-way follows; mutual = Friends. No FKs dropped, additive only.
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS follows (
+      id serial PRIMARY KEY,
+      follower_user_id integer NOT NULL REFERENCES users(id),
+      following_user_id integer NOT NULL REFERENCES users(id),
+      created_at timestamp NOT NULL DEFAULT now(),
+      CONSTRAINT follows_no_self CHECK (follower_user_id <> following_user_id)
+    )`);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS follows_unique_idx ON follows (follower_user_id, following_user_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS follows_follower_idx ON follows (follower_user_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS follows_following_idx ON follows (following_user_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS follows_created_at_idx ON follows (created_at)`);
   } catch (error) {
     console.error('Startup migration (collector profile columns) failed:', error);
   }
