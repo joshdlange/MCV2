@@ -205,6 +205,37 @@ app.use((req, res, next) => {
     console.error('Startup seed (Hall of Fame description fix) failed:', error);
   }
 
+  // One-time retroactive sweep: award Hall of Fame to users currently in the
+  // top 10 by card count who never triggered a badge check after the
+  // description fix (checkHallOfFame only fires on card adds). Quiet SQL
+  // insert — no notification blast — gated by a startup_migrations marker
+  // and advisory-locked so concurrent boots can't double-run it.
+  try {
+    const { db } = await import('./db');
+    const { sql } = await import('drizzle-orm');
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('hall_of_fame_retro_award_v1'))`);
+      const m = await tx.execute(sql`INSERT INTO startup_migrations (name) VALUES ('hall_of_fame_retro_award_v1') ON CONFLICT (name) DO NOTHING RETURNING name`);
+      if ((m as any).rows?.length > 0) {
+        const ins = await tx.execute(sql`
+          INSERT INTO user_badges (user_id, badge_id)
+          SELECT t.user_id, b.id
+          FROM (
+            SELECT user_id
+            FROM user_collections
+            GROUP BY user_id
+            ORDER BY COUNT(*) DESC, user_id ASC
+            LIMIT 10
+          ) t
+          CROSS JOIN (SELECT id FROM badges WHERE name = 'Hall of Fame') b
+          ON CONFLICT (user_id, badge_id) DO NOTHING`);
+        console.log(`[Hall of Fame Retro] Awarded Hall of Fame to ${(ins as any).rowCount ?? 0} existing top-10 collectors`);
+      }
+    });
+  } catch (error) {
+    console.error('Startup seed (Hall of Fame retro award) failed:', error);
+  }
+
   // Idempotent startup seed: Contributor badge (3+ approved image uploads).
   // The award code shipped referencing a badge that was never created, so
   // approvals logged errors and nobody ever earned it. Seeds the badge by
