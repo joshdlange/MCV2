@@ -368,7 +368,7 @@ export default function CollectorProfile() {
         <div className="flex items-end justify-between -mt-16 md:-mt-20 mb-4">
           <div className="relative">
             <Avatar className={`w-28 h-28 md:w-36 md:h-36 border-4 shadow-xl ${isSuperHero ? "border-yellow-400" : "border-white"}`}>
-              <AvatarImage src={avatarUrl(user.collectorAvatarKey) ?? user.photoURL} alt={displayName} />
+              <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(user.collectorAvatarKey) ?? user.photoURL} alt={displayName} />
               <AvatarFallback className="bg-red-600 text-white text-4xl font-bold">
                 {displayName.charAt(0).toUpperCase()}
               </AvatarFallback>

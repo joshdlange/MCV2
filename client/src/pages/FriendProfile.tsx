@@ -332,7 +332,7 @@ export default function FriendProfile() {
           <CardContent className="p-6">
             <div className="flex items-center space-x-6">
               <Avatar className="w-24 h-24 border-4 border-blue-500">
-                <AvatarImage src={avatarUrl(friend.collectorAvatarKey) ?? friend.photoURL} />
+                <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(friend.collectorAvatarKey) ?? friend.photoURL} />
                 <AvatarFallback className="bg-blue-500 text-white text-2xl font-bold">
                   {friend.displayName?.charAt(0) || friend.username.charAt(0)}
                 </AvatarFallback>

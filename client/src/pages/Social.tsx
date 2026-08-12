@@ -791,7 +791,7 @@ export default function Social() {
                         >
                           <div className="flex items-center space-x-3">
                             <Avatar className="w-10 h-10">
-                              <AvatarImage src={avatarUrl(searchUser.collectorAvatarKey) ?? searchUser.photoURL} />
+                              <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(searchUser.collectorAvatarKey) ?? searchUser.photoURL} />
                               <AvatarFallback className="bg-green-500 text-white font-bold">
                                 {searchUser.displayName?.charAt(0) || searchUser.username.charAt(0)}
                               </AvatarFallback>
@@ -840,7 +840,7 @@ export default function Social() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               <Avatar className="w-10 h-10 ring-2 ring-gray-200 dark:ring-gray-700">
-                                <AvatarImage src={avatarUrl(friendUser.collectorAvatarKey) ?? friendUser.photoURL} />
+                                <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(friendUser.collectorAvatarKey) ?? friendUser.photoURL} />
                                 <AvatarFallback className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium text-sm">
                                   {friendUser.displayName?.charAt(0) || friendUser.username.charAt(0)}
                                 </AvatarFallback>
@@ -917,7 +917,7 @@ export default function Social() {
                       <div key={`req-${request.id}`} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                         <div className="flex items-center gap-3">
                           <Avatar className="w-10 h-10 ring-2 ring-gray-200 dark:ring-gray-700">
-                            <AvatarImage src={avatarUrl(request.requester.collectorAvatarKey) ?? request.requester.photoURL} />
+                            <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(request.requester.collectorAvatarKey) ?? request.requester.photoURL} />
                             <AvatarFallback className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-medium">
                               {request.requester.displayName?.charAt(0) || request.requester.username.charAt(0)}
                             </AvatarFallback>
@@ -955,7 +955,7 @@ export default function Social() {
                       <div key={`inv-${invitation.id}`} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                         <div className="flex items-center gap-3">
                           <Avatar className="w-10 h-10 ring-2 ring-gray-200 dark:ring-gray-700">
-                            <AvatarImage src={avatarUrl(invitation.recipient.collectorAvatarKey) ?? invitation.recipient.photoURL} />
+                            <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(invitation.recipient.collectorAvatarKey) ?? invitation.recipient.photoURL} />
                             <AvatarFallback className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-medium">
                               {invitation.recipient.displayName?.charAt(0) || invitation.recipient.username.charAt(0)}
                             </AvatarFallback>
@@ -1037,7 +1037,7 @@ export default function Social() {
                               {/* Avatar with status */}
                               <div className="relative flex-shrink-0">
                                 <Avatar className="w-14 h-14">
-                                  <AvatarImage src={avatarUrl(friendUser.collectorAvatarKey) ?? friendUser.photoURL} />
+                                  <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(friendUser.collectorAvatarKey) ?? friendUser.photoURL} />
                                   <AvatarFallback className="bg-blue-500 text-white font-semibold text-lg">
                                     {friendUser.displayName?.charAt(0) || friendUser.username.charAt(0)}
                                   </AvatarFallback>
@@ -1096,7 +1096,7 @@ export default function Social() {
                           </svg>
                         </Button>
                         <Avatar className="w-10 h-10">
-                          <AvatarImage src={avatarUrl(selectedFriendUser?.collectorAvatarKey) ?? selectedFriendUser?.photoURL} />
+                          <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(selectedFriendUser?.collectorAvatarKey) ?? selectedFriendUser?.photoURL} />
                           <AvatarFallback className="bg-blue-500 text-white font-medium">
                             {selectedFriendUser?.displayName?.charAt(0) || selectedFriendUser?.username?.charAt(0) || 'U'}
                           </AvatarFallback>
@@ -1292,7 +1292,7 @@ export default function Social() {
                           >
                             <div className="relative flex-shrink-0">
                               <Avatar className="w-12 h-12">
-                                <AvatarImage src={avatarUrl(friendUser.collectorAvatarKey) ?? friendUser.photoURL} />
+                                <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(friendUser.collectorAvatarKey) ?? friendUser.photoURL} />
                                 <AvatarFallback className="bg-blue-500 text-white font-semibold">
                                   {friendUser.displayName?.charAt(0) || friendUser.username.charAt(0)}
                                 </AvatarFallback>
@@ -1344,7 +1344,7 @@ export default function Social() {
                         <div className="p-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                           <div className="flex items-center gap-3">
                             <Avatar className="w-10 h-10">
-                              <AvatarImage src={avatarUrl(selectedFriendUser?.collectorAvatarKey) ?? selectedFriendUser?.photoURL} />
+                              <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(selectedFriendUser?.collectorAvatarKey) ?? selectedFriendUser?.photoURL} />
                               <AvatarFallback className="bg-blue-500 text-white font-medium">
                                 {selectedFriendUser?.displayName?.charAt(0) || selectedFriendUser?.username?.charAt(0) || 'U'}
                               </AvatarFallback>
@@ -1625,7 +1625,7 @@ export default function Social() {
                 <div className="flex flex-col sm:flex-row gap-6">
                   <div className="flex-shrink-0">
                     <Avatar className="w-20 h-20 ring-4 ring-gray-200 dark:ring-gray-700">
-                      <AvatarImage src={avatarUrl(selectedFriendProfile.collectorAvatarKey) ?? selectedFriendProfile.photoURL} alt={selectedFriendProfile.displayName} />
+                      <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(selectedFriendProfile.collectorAvatarKey) ?? selectedFriendProfile.photoURL} alt={selectedFriendProfile.displayName} />
                       <AvatarFallback className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xl font-medium">
                         {selectedFriendProfile.displayName?.charAt(0) || selectedFriendProfile.username?.charAt(0)}
                       </AvatarFallback>

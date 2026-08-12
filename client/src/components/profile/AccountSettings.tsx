@@ -81,7 +81,7 @@ function SocialFriendsSection() {
           return (
             <div key={friend.id} className="text-center">
               <Avatar className="w-12 h-12 mx-auto mb-2">
-                <AvatarImage src={avatarUrl(friendUser.collectorAvatarKey) ?? friendUser.photoURL} />
+                <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(friendUser.collectorAvatarKey) ?? friendUser.photoURL} />
                 <AvatarFallback className="bg-gray-400 text-white text-sm">
                   {friendUser.displayName?.charAt(0) || friendUser.username.charAt(0)}
                 </AvatarFallback>
@@ -245,7 +245,7 @@ function BlockedUsersSection() {
             <div key={blockedUser.id} className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Avatar className="w-8 h-8">
-                  <AvatarImage src={avatarUrl(blockedUser.collectorAvatarKey) ?? blockedUser.photoURL} />
+                  <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(blockedUser.collectorAvatarKey) ?? blockedUser.photoURL} />
                   <AvatarFallback className="bg-gray-400 text-white text-xs">
                     {(blockedUser.displayName || blockedUser.username || "U").charAt(0).toUpperCase()}
                   </AvatarFallback>

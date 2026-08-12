@@ -907,7 +907,7 @@ function LeaderboardsTab() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm font-medium text-zinc-200">Weekly rankings reset every Monday. Earn XP by adding cards, earning badges, contributing images, and cheering on other collectors.</p>
+      <p className="text-sm font-medium text-zinc-800">Weekly rankings reset every Monday. Earn XP by adding cards, earning badges, contributing images, and cheering on other collectors.</p>
       <LeaderboardList
         title="Top 10 Collectors — All-Time XP"
         icon={<Crown className="w-4 h-4 text-yellow-500" />}

@@ -40,7 +40,7 @@ export function CollectorAvatar({
       )}
       style={{ width: size, height: size }}
     >
-      <AvatarImage src={src} alt={name ? `${name}'s avatar` : "Collector avatar"} draggable={false} />
+      <AvatarImage referrerPolicy="no-referrer" src={src} alt={name ? `${name}'s avatar` : "Collector avatar"} draggable={false} />
       <AvatarFallback
         className="bg-red-600 text-white font-bold"
         style={{ fontSize: Math.max(11, Math.round(size * 0.42)) }}

@@ -161,7 +161,7 @@ function OrderCard({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Avatar className="w-6 h-6">
-                <AvatarImage src={avatarUrl(otherParty?.collectorAvatarKey) ?? otherParty?.photoURL ?? undefined} />
+                <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(otherParty?.collectorAvatarKey) ?? otherParty?.photoURL ?? undefined} />
                 <AvatarFallback className="text-xs bg-gray-200">
                   {(otherParty?.displayName || otherParty?.username || '?').charAt(0).toUpperCase()}
                 </AvatarFallback>
