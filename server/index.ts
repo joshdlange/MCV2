@@ -376,47 +376,76 @@ app.use((req, res, next) => {
     console.error('Startup migration (pg_trgm search indexes) failed:', error);
   }
 
-  // Idempotent startup repair: restore curated card images that the Aug 4
-  // legacy duplicate-set merge left on the archived twin (ledger-guarded,
-  // never re-touches a card an admin fixed by hand).
-  try {
-    const { restoreTwinMergeImages } = await import('./seeds/restoreTwinMergeImages');
-    await restoreTwinMergeImages();
-  } catch (error) {
-    console.error('Startup repair (merge image restore) failed:', error);
-  }
+  // Heavy data-fix seeds are deferred until AFTER the server is listening —
+  // in production these can take minutes of real work on first run, and the
+  // deployer only waits ~60s for port 5000 to open (a 2026-08-13 publish
+  // failed exactly this way). All are idempotent, marker-gated, and
+  // advisory-locked, so running them post-listen (and concurrently across
+  // autoscale instances) is safe; requests arriving before they finish just
+  // see pre-fix data briefly.
+  // Until the deferred data-fix seeds finish, reject card/collection/wishlist/
+  // binder WRITES with a 503 so nobody can attach a card that a seed is about
+  // to archive or merge away (reads stay open; seeds are sub-second no-ops
+  // once their markers exist, so this window only matters on a first run).
+  let dataFixSeedsDone = false;
+  app.use((req, res, next) => {
+    if (
+      !dataFixSeedsDone &&
+      req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS' &&
+      /^\/api\/(collection|wishlist|pc-binders|cards)(\/|$)/.test(req.path)
+    ) {
+      return res.status(503).json({ message: 'The Vault is finishing a quick data update — please try again in a moment.' });
+    }
+    next();
+  });
 
-  // Idempotent startup fix: 2025 Topps Chrome Marvel Studios checklist —
-  // completes the 200-card base + parallels, relocates mislabeled parallel
-  // strays, dedupes The Snap Variations (slug-matched, safe in dev and prod).
-  try {
-    const { fixTcms2025Checklist } = await import('./seeds/fixTcms2025Checklist');
-    await fixTcms2025Checklist();
-  } catch (error) {
-    console.error('Startup fix (TCMS 2025 checklist) failed:', error);
-  }
+  const runDataFixSeeds = async () => {
+    // Idempotent startup repair: restore curated card images that the Aug 4
+    // legacy duplicate-set merge left on the archived twin (ledger-guarded,
+    // never re-touches a card an admin fixed by hand).
+    try {
+      const { restoreTwinMergeImages } = await import('./seeds/restoreTwinMergeImages');
+      await restoreTwinMergeImages();
+    } catch (error) {
+      console.error('Startup repair (merge image restore) failed:', error);
+    }
 
-  // Idempotent startup fix: 2025 Topps Chrome Marvel Studios INSERT sets —
-  // strips "[Color]"/"#XX-N" decorations from card names, moving each row to
-  // its correct insert/parallel set or merging it into the existing clean row
-  // (slug-matched, marker-gated, safe in dev and prod).
-  try {
-    const { fixTcms2025Inserts } = await import('./seeds/fixTcms2025Inserts');
-    await fixTcms2025Inserts();
-  } catch (error) {
-    console.error('Startup fix (TCMS 2025 inserts) failed:', error);
-  }
+    // Idempotent startup fix: 2025 Topps Chrome Marvel Studios checklist —
+    // completes the 200-card base + parallels, relocates mislabeled parallel
+    // strays, dedupes The Snap Variations (slug-matched, safe in dev and prod).
+    try {
+      const { fixTcms2025Checklist } = await import('./seeds/fixTcms2025Checklist');
+      await fixTcms2025Checklist();
+    } catch (error) {
+      console.error('Startup fix (TCMS 2025 checklist) failed:', error);
+    }
 
-  // Idempotent startup fix: parallel cards that leaked into base/insert set
-  // checklists across all products — moves them to their correct parallel sets
-  // (creating sets where missing), strips self-labelling decorations, and
-  // archives ambiguous Printing Plate entries (marker-gated, dev + prod safe).
-  try {
-    const { fixParallelLeaks } = await import('./seeds/fixParallelLeaks');
-    await fixParallelLeaks();
-  } catch (error) {
-    console.error('Startup fix (parallel leaks) failed:', error);
-  }
+    // Idempotent startup fix: 2025 Topps Chrome Marvel Studios INSERT sets —
+    // strips "[Color]"/"#XX-N" decorations from card names, moving each row to
+    // its correct insert/parallel set or merging it into the existing clean row
+    // (slug-matched, marker-gated, safe in dev and prod).
+    try {
+      const { fixTcms2025Inserts } = await import('./seeds/fixTcms2025Inserts');
+      await fixTcms2025Inserts();
+    } catch (error) {
+      console.error('Startup fix (TCMS 2025 inserts) failed:', error);
+    }
+
+    // Idempotent startup fix: parallel cards that leaked into base/insert set
+    // checklists across all products — moves them to their correct parallel sets
+    // (creating sets where missing), strips self-labelling decorations, and
+    // archives ambiguous Printing Plate entries (marker-gated, dev + prod safe).
+    try {
+      const { fixParallelLeaks } = await import('./seeds/fixParallelLeaks');
+      await fixParallelLeaks();
+    } catch (error) {
+      console.error('Startup fix (parallel leaks) failed:', error);
+    } finally {
+      // Always lift the write gate — a failed seed retries next boot, and
+      // blocking user writes indefinitely would be worse than the race.
+      dataFixSeedsDone = true;
+    }
+  };
 
   const server = await registerRoutes(app);
 
@@ -452,6 +481,13 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+
+    // Kick off the heavy data-fix seeds now that the port is open (see
+    // runDataFixSeeds above — deferred so slow first runs can't fail the
+    // deploy health check).
+    runDataFixSeeds().catch((error) => {
+      console.error('Deferred data-fix seeds failed:', error);
+    });
 
 
     // Nightly pricing backfill: prices cards that have an image but no
