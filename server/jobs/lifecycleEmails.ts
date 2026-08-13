@@ -996,6 +996,7 @@ function COLLECTION_MOMENTUM_WHERE() {
 // Inactivity = login inactivity (users.last_login), same measure as the
 // original reactivation draft. Users with no last_login recorded are excluded.
 const INACTIVE_30 = sql`${users.lastLogin} IS NOT NULL AND ${users.lastLogin} <= now() - interval '30 days'`;
+const INACTIVE_45 = sql`${users.lastLogin} IS NOT NULL AND ${users.lastLogin} <= now() - interval '45 days'`;
 const INACTIVE_90 = sql`${users.lastLogin} IS NOT NULL AND ${users.lastLogin} <= now() - interval '90 days'`;
 const INACTIVE_120 = sql`${users.lastLogin} IS NOT NULL AND ${users.lastLogin} <= now() - interval '120 days'`;
 const INACTIVE_180 = sql`${users.lastLogin} IS NOT NULL AND ${users.lastLogin} <= now() - interval '180 days'`;
@@ -1017,11 +1018,13 @@ function DORMANT_STARTED_WHERE() {
     notAlreadySent('lifecycle-dormant-started'), UNDER_CAP);
 }
 function DORMANT_ENGAGED_WHERE() {
-  return and(optedIn(), TEN_PLUS_CARDS, INACTIVE_30,
+  // Joshua's timing: 45-60 days for engaged (10+ card) collectors
+  return and(optedIn(), TEN_PLUS_CARDS, INACTIVE_45,
     notAlreadySent('lifecycle-dormant-engaged'), UNDER_CAP);
 }
 function DORMANT_UPGRADE_WHERE() {
-  return and(optedIn(), NOT_SUPER_HERO, TEN_PLUS_CARDS, INACTIVE_30,
+  // Same audience/timing band as dormant-engaged (10+ cards, 45+ days)
+  return and(optedIn(), NOT_SUPER_HERO, TEN_PLUS_CARDS, INACTIVE_45,
     notAlreadySent('lifecycle-dormant-upgrade'), UNDER_CAP);
 }
 function DORMANT_MISSING_IMAGE_WHERE() {
@@ -1071,7 +1074,8 @@ function PC_BINDER_PROMPT_WHERE() {
   return and(
     optedIn(),
     eq(users.plan, 'SUPER_HERO'),
-    TEN_PLUS_CARDS,
+    // Joshua's timing: 3+ days after becoming eligible (10th card added 3+ days ago)
+    sql`(SELECT count(*) FROM user_collections uc WHERE uc.user_id = ${users.id} AND uc.acquired_date <= now() - interval '3 days') >= 10`,
     sql`NOT EXISTS (SELECT 1 FROM pc_binders pb WHERE pb.user_id = ${users.id})`,
     notAlreadySent('lifecycle-pc-binder-prompt'),
     UNDER_CAP,
@@ -1081,8 +1085,10 @@ function PC_BINDER_UPGRADE_WHERE() {
   return and(
     optedIn(),
     NOT_SUPER_HERO,
-    // Real intent: hit the PC Binder gate (UpgradeModal shown on /pc-binders)
-    sql`EXISTS (SELECT 1 FROM analytics_events ae WHERE ae.user_id = ${users.id} AND ae.event_type = 'upgrade_modal_shown' AND ae.trigger = 'pc_binders')`,
+    // Real intent: hit the PC Binder gate (UpgradeModal shown on /pc-binders).
+    // Joshua's timing: send 1h+ after the gate hit (the hourly cron means it
+    // usually lands within a few hours; no upper bound — intent doesn't expire).
+    sql`EXISTS (SELECT 1 FROM analytics_events ae WHERE ae.user_id = ${users.id} AND ae.event_type = 'upgrade_modal_shown' AND ae.trigger = 'pc_binders' AND ae.created_at <= now() - interval '1 hour')`,
     notAlreadySent('lifecycle-pc-binder-upgrade'),
     UNDER_CAP,
   );
@@ -1091,6 +1097,8 @@ function MISSING_IMAGE_WHERE() {
   return and(
     optedIn(),
     OWNS_CARD_MISSING_IMAGE,
+    // Joshua's timing: 7-14 days after eligible — account at least 7 days old
+    sql`${users.createdAt} <= now() - interval '7 days'`,
     // "Has not submitted an image recently" — no pending/approved submission in 30 days
     sql`NOT EXISTS (SELECT 1 FROM pending_card_images pci WHERE pci.user_id = ${users.id} AND pci.created_at > now() - interval '30 days')`,
     notAlreadySent('lifecycle-missing-image'),
@@ -1100,7 +1108,8 @@ function MISSING_IMAGE_WHERE() {
 function SHARE_BINDER_WHERE() {
   return and(
     optedIn(),
-    sql`EXISTS (SELECT 1 FROM pc_binders pb WHERE pb.user_id = ${users.id})`,
+    // Joshua's timing: 3-7 days after creating a binder they never shared
+    sql`EXISTS (SELECT 1 FROM pc_binders pb WHERE pb.user_id = ${users.id} AND pb.created_at <= now() - interval '3 days')`,
     sql`NOT EXISTS (SELECT 1 FROM pc_binder_share_links psl JOIN pc_binders pb2 ON pb2.id = psl.binder_id WHERE pb2.user_id = ${users.id})`,
     notAlreadySent('lifecycle-share-binder'),
     UNDER_CAP,
@@ -1137,10 +1146,62 @@ const LONGTAIL_JOURNEYS: Record<string, () => ReturnType<typeof and>> = {
   'babycomeback': BABYCOMEBACK_WHERE,
 };
 export const LONGTAIL_JOURNEY_KEYS = Object.keys(LONGTAIL_JOURNEYS);
+
+/**
+ * Joshua's send-priority order (2026-08-13). When a user is eligible for
+ * multiple journeys, the earliest one here wins and the 14-day cap suppresses
+ * the rest. Tiers: upgrade-intent > product adoption > community/share >
+ * dormant win-back > coupon win-back. (Billing = event-triggered, cap-exempt;
+ * welcome + first-card nudge run before this list in the cron.)
+ */
+export const JOURNEY_PRIORITY_ORDER: string[] = [
+  // 3. Upgrade intent
+  'near-limit-500',
+  'pc-binder-upgrade',
+  // 4. Product adoption
+  'empty-vault',
+  'collection-momentum',
+  'pc-binder-prompt',
+  'missing-image',
+  // 5. Community / share
+  'share-binder',
+  // 6. Dormant win-back
+  'dormant-empty-vault',
+  'dormant-started',
+  'dormant-engaged',
+  'dormant-upgrade',
+  'dormant-missing-image',
+  'winback-90',
+  // 7. Coupon win-back (last resort)
+  'babycomeback',
+];
 const LONGTAIL_JOB_NAMES = LONGTAIL_JOURNEY_KEYS.map(k => `lifecycle-${k}`);
 export const DORMANT_DAILY_CAP = 150;
 /** Advisory lock key serializing all long-tail win-back runs globally. */
 const LONGTAIL_ADVISORY_LOCK_KEY = 913151;
+/**
+ * Cross-instance lock serializing the ENTIRE priority pass (and any manual
+ * run). Without it, two server instances at different positions in
+ * JOURNEY_PRIORITY_ORDER could let a lower-priority journey claim a user
+ * first, and the 14-day cap would then suppress the higher-priority email.
+ */
+const PRIORITY_PASS_LOCK_KEY = 913152;
+
+/** Run fn while holding the global priority-pass advisory lock (try-lock: returns null if another run holds it). */
+async function withPriorityPassLock<T>(fn: () => Promise<T>): Promise<T | null> {
+  const client = await pool.connect();
+  try {
+    const res = await client.query('SELECT pg_try_advisory_lock($1) AS ok', [PRIORITY_PASS_LOCK_KEY]);
+    if (!res.rows[0]?.ok) return null;
+    try {
+      return await fn();
+    } finally {
+      await client.query('SELECT pg_advisory_unlock($1)', [PRIORITY_PASS_LOCK_KEY]).catch(() => {});
+    }
+  } finally {
+    client.release();
+  }
+}
 
 const journeyRunning: Record<string, boolean> = {};
 const journeyLastRun: Record<string, { at: Date; sent: number; failed: number; eligible: number }> = {};
@@ -1153,7 +1214,7 @@ const journeyLastRun: Record<string, { at: Date; sent: number; failed: number; e
 export async function runLifecycleJourneyNow(
   key: string,
   limit: number = NUDGE_BATCH_LIMIT,
-  opts?: { confirmedByAdmin?: boolean }
+  opts?: { confirmedByAdmin?: boolean; cronRun?: boolean; priorityLockHeld?: boolean }
 ): Promise<{ sent: number; failed: number; eligible: number; skipped?: boolean; error?: string }> {
   // HARD GUARD: batch sends only ever run in the production deployment.
   // Dev/workspace can preview, test (admin-only), and see eligible counts,
@@ -1166,10 +1227,18 @@ export async function runLifecycleJourneyNow(
   const whereFn = BATCH_JOURNEYS[key] || LONGTAIL_JOURNEYS[key];
   if (!def || !whereFn) return { sent: 0, failed: 0, eligible: 0, skipped: true, error: `Not a batch journey: ${key}` };
   if (!(await isLifecycleActive(def))) return { sent: 0, failed: 0, eligible: 0, skipped: true, error: `${key} is not active` };
-  // Long-tail dormant/win-back journeys target the existing backlog. They are
-  // never cron-run and each batch requires explicit typed admin confirmation.
-  if (isLongTail && !opts?.confirmedByAdmin) {
-    return { sent: 0, failed: 0, eligible: 0, skipped: true, error: `${key} is a dormant win-back journey — it only runs via the admin endpoint with typed confirmation` };
+  // Long-tail dormant/win-back journeys run automatically ONLY once Joshua
+  // activates them (typed ACTIVATE confirmation in the panel). The hourly cron
+  // passes cronRun; the admin endpoint passes confirmedByAdmin. Both paths keep
+  // the global 150/24h dormant cap and the batch/advisory-lock safeguards.
+  if (isLongTail && !opts?.confirmedByAdmin && !opts?.cronRun) {
+    return { sent: 0, failed: 0, eligible: 0, skipped: true, error: `${key} is a dormant win-back journey — it runs via the hourly automation when active, or the admin endpoint with typed confirmation` };
+  }
+  // Manual (non-cron) runs must also hold the priority-pass lock so they can't
+  // interleave with a cron pass and claim users out of priority order.
+  if (!opts?.priorityLockHeld) {
+    const r = await withPriorityPassLock(() => runLifecycleJourneyNow(key, limit, { ...opts, priorityLockHeld: true }));
+    return r ?? { sent: 0, failed: 0, eligible: 0, skipped: true, error: 'An hourly automation pass is currently running — try again in a few minutes.' };
   }
   if (journeyRunning[key]) return { sent: 0, failed: 0, eligible: 0, skipped: true };
   journeyRunning[key] = true;
@@ -1585,12 +1654,23 @@ const firstCardNudgeJob = new CronJob(
       if (r.eligible > 0) {
         console.log(`[Lifecycle] First-card nudge run: ${r.sent} sent, ${r.failed} failed`);
       }
-      // v2 active batch journeys (empty-vault, collection-momentum)
-      for (const key of Object.keys(BATCH_JOURNEYS)) {
-        const jr = await runLifecycleJourneyNow(key);
-        if (jr.eligible > 0) {
-          console.log(`[Lifecycle] ${key} run: ${jr.sent} sent, ${jr.failed} failed`);
+      // All cron-runnable journeys in Joshua's priority order. Because a user
+      // may receive at most one marketing email per 14 days, processing order
+      // IS the priority: when someone is eligible for several, the earliest
+      // journey in this list claims them and the 14-day cap blocks the rest.
+      // (Billing emails are event-triggered + cap-exempt; welcome/first-card
+      // run above this loop.)
+      const passRan = await withPriorityPassLock(async () => {
+        for (const key of JOURNEY_PRIORITY_ORDER) {
+          const jr = await runLifecycleJourneyNow(key, undefined, { cronRun: true, priorityLockHeld: true });
+          if (jr.eligible > 0) {
+            console.log(`[Lifecycle] ${key} run: ${jr.sent} sent, ${jr.failed} failed`);
+          }
         }
+        return true;
+      });
+      if (passRan === null) {
+        console.log('[Lifecycle] Priority pass skipped — another instance holds the pass lock');
       }
     } catch (error) {
       console.error('[Lifecycle] Error in first-card nudge cron:', error);

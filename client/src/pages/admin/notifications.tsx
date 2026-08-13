@@ -466,19 +466,6 @@ function LifecycleEmailsCard() {
     onError: (e: any) => toast({ title: "Update failed", description: String(e?.message || e), variant: "destructive" }),
   });
 
-  const runMutation = useMutation({
-    mutationFn: async ({ key, confirm }: { key: string; confirm?: string }) => {
-      const res = await apiRequest("POST", `/api/admin/lifecycle/run/${encodeURIComponent(key)}`, confirm ? { confirm } : {});
-      return res.json();
-    },
-    onSuccess: (d: any) => {
-      if (d.error) toast({ title: "Batch not run", description: d.error, variant: "destructive" });
-      else toast({ title: "Batch complete", description: `${d.sent} sent, ${d.failed} failed (${d.eligible} eligible).` });
-      refetch();
-    },
-    onError: (e: any) => toast({ title: "Batch run failed", description: String(e?.message || e), variant: "destructive" }),
-  });
-
   const toggleActive = (e: any) => {
     if (e.active) {
       if (window.confirm(`Deactivate "${e.key}"? It stops sending immediately and returns to Draft.`)) {
@@ -490,7 +477,7 @@ function LifecycleEmailsCard() {
     const typed = window.prompt(
       `Activating "${e.key}" will start emailing real eligible users (currently ${e.eligibleNow ?? 0} eligible).\n\n` +
         (e.longTail
-          ? `This is a dormant/win-back email — even when active, each batch must be sent manually with the "Send batch" button.\n\n`
+          ? `This is a dormant/win-back email — once active, the hourly automation sends it automatically (drip, max 50/hour, and max 150 win-back emails per day across all of them).\n\n`
           : e.batchJourney
             ? `Once active, the hourly automation will start sending to eligible users (drip, one at a time, max 50/hour).\n\n`
             : `Once active, this email fires automatically when its trigger event happens.\n\n`) +
@@ -502,25 +489,6 @@ function LifecycleEmailsCard() {
       return;
     }
     activateMutation.mutate({ key: e.key, active: true, confirm: expected });
-  };
-
-  const runBatch = (e: any) => {
-    if (e.longTail) {
-      const expected = `SEND ${e.key}`;
-      const typed = window.prompt(
-        `Send one batch of "${e.key}" to up to 50 dormant users now (150/day cap across all win-back emails)?\n\nType ${expected} to confirm:`
-      );
-      if (typed === null) return;
-      if (typed.trim() !== expected) {
-        toast({ title: "Not sent", description: `Confirmation text did not match "${expected}".`, variant: "destructive" });
-        return;
-      }
-      runMutation.mutate({ key: e.key, confirm: expected });
-      return;
-    }
-    if (window.confirm(`Run one "${e.key}" batch now (same as the hourly automation, max 50 sends)?`)) {
-      runMutation.mutate({ key: e.key });
-    }
   };
 
   const openPreview = async (key: string) => {
@@ -677,18 +645,6 @@ function LifecycleEmailsCard() {
                       data-testid={`button-toggle-${e.key}`}
                     >
                       {e.active ? "Deactivate" : "Activate"}
-                    </Button>
-                  )}
-                  {e.active && e.longTail && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs"
-                      disabled={runMutation.isPending}
-                      onClick={() => runBatch(e)}
-                      data-testid={`button-run-${e.key}`}
-                    >
-                      Send batch
                     </Button>
                   )}
                 </div>
