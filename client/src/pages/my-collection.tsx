@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useDeferredValue } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,6 +32,8 @@ export default function MyCollection() {
   const [selectedSet, setSelectedSet] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [collectionView, setCollectionView] = useState<"cards" | "sets">("sets");
+  // When searching from the sets overview: show matching cards (default) or the sets containing them
+  const [searchResultMode, setSearchResultMode] = useState<"cards" | "sets">("cards");
   const [cardsViewMode, setCardsViewMode] = useState<"owned" | "missing">("owned");
   const [binderViewMode, setBinderViewMode] = useState<"binder" | "grid">("binder");
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -150,6 +152,40 @@ export default function MyCollection() {
       }
       return (b.year || 0) - (a.year || 0);
     });
+
+  // Owned cards matching the search box, independent of set/mode context —
+  // drives the search results shown from the sets overview and its count.
+  // Deferred + memoized so typing stays smooth on large collections.
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+  const activeSearch = deferredSearchQuery.trim().toLowerCase();
+  const searchMatches = useMemo(() => {
+    if (!activeSearch) return [] as CollectionItem[];
+    return (collection || []).filter(item => {
+      if (!item.card) return false;
+      const matchesSearch = (item.card.name || '').toLowerCase().includes(activeSearch) ||
+        (item.card.set?.name || '').toLowerCase().includes(activeSearch) ||
+        (item.card.cardNumber || '').toLowerCase().includes(activeSearch) ||
+        (item.card.rarity || '').toLowerCase().includes(activeSearch);
+      const matchesFavorites = !showFavoritesOnly || item.isFavorite;
+      return matchesSearch && matchesFavorites;
+    });
+  }, [collection, activeSearch, showFavoritesOnly]);
+  const matchingSetIds = useMemo(
+    () => new Set(searchMatches.map(item => item.card?.set?.id).filter(Boolean)),
+    [searchMatches]
+  );
+  const isSearchingSetsView = collectionView === "sets" && activeSearch.length > 0;
+  const showFilteredSetTiles = isSearchingSetsView && searchResultMode === "sets";
+  const SEARCH_RESULTS_CAP = 200;
+  const cappedSearchMatches = searchMatches.length > SEARCH_RESULTS_CAP
+    ? searchMatches.slice(0, SEARCH_RESULTS_CAP)
+    : searchMatches;
+  // Each NEW search starts in Cards mode (the expected default); the user's
+  // toggle choice is preserved only while refining the same active search.
+  const hasActiveQuery = searchQuery.trim().length > 0;
+  useEffect(() => {
+    if (hasActiveQuery) setSearchResultMode("cards");
+  }, [hasActiveQuery]);
 
   // Get filtered cards based on view mode (owned vs missing)
   const filteredCards = (() => {
@@ -628,10 +664,16 @@ export default function MyCollection() {
           ) : (
             <span>{collection?.length || 0} cards in collection</span>
           )}
-          {searchQuery && (
+          {(collectionView === "sets" ? isSearchingSetsView : Boolean(searchQuery.trim())) && (
             <>
               <span>•</span>
-              <span>{filteredCards.length} matching "{searchQuery}"</span>
+              <span>
+                {collectionView === "sets"
+                  ? (searchResultMode === "sets"
+                      ? `${matchingSetIds.size} set${matchingSetIds.size === 1 ? '' : 's'} with matches`
+                      : `${searchMatches.length} matching "${deferredSearchQuery.trim()}"`)
+                  : `${filteredCards.length} matching "${searchQuery.trim()}"`}
+              </span>
             </>
           )}
           {FEATURE_FLAGS.MARKETPLACE_ENABLED && (
@@ -960,7 +1002,126 @@ export default function MyCollection() {
         ) : (
           // Sets View
           <>
-          {collectionSets.length > 0 && (
+          {isSearchingSetsView && (
+            <div className="mb-4 flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+                <Button
+                  variant={searchResultMode === "cards" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setSearchResultMode("cards")}
+                  className={`rounded-none px-3 ${searchResultMode === "cards" ? "text-white" : "text-gray-900"}`}
+                >
+                  Cards ({searchMatches.length})
+                </Button>
+                <Button
+                  variant={searchResultMode === "sets" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setSearchResultMode("sets")}
+                  className={`rounded-none px-3 ${searchResultMode === "sets" ? "text-white" : "text-gray-900"}`}
+                >
+                  Sets ({matchingSetIds.size})
+                </Button>
+              </div>
+              <button
+                onClick={() => setSearchQuery("")}
+                className="text-sm text-gray-500 hover:text-gray-800 underline"
+              >
+                Clear search
+              </button>
+            </div>
+          )}
+          {isSearchingSetsView && searchResultMode === "cards" ? (
+            searchMatches.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-600">No cards in your collection match "{searchQuery}".</p>
+                <p className="text-sm text-gray-500 mt-1">Search checks card name, set name, card number, and rarity.</p>
+              </div>
+            ) : viewMode === "grid" ? (
+              <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {cappedSearchMatches.map((item) => (
+                  <Card
+                    key={item.id}
+                    className="group hover:shadow-lg transition-all duration-200 cursor-pointer"
+                    onClick={() => handleCardClick(item)}
+                  >
+                    <CardContent className="p-0">
+                      <div className="relative aspect-[2.5/3.5] bg-gray-100 rounded-t-lg overflow-hidden">
+                        {item.card?.frontImageUrl ? (
+                          <img
+                            src={item.card.frontImageUrl}
+                            alt={item.card?.name || ''}
+                            loading="lazy"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
+                            <span className="text-red-600 font-bold text-xs text-center px-2">{item.card?.name}</span>
+                          </div>
+                        )}
+                        {(item.quantity || 1) > 1 && (
+                          <Badge className="absolute top-2 right-2 bg-gray-900/80 text-white">x{item.quantity}</Badge>
+                        )}
+                      </div>
+                      <div className="p-3 space-y-1">
+                        <h3 className="font-semibold text-gray-900 text-sm line-clamp-2 leading-tight">{item.card?.name}</h3>
+                        <p className="text-xs text-gray-600 line-clamp-1">{formatSetName(item.card?.set?.name || '')}</p>
+                        <p className="text-xs text-gray-500">#{item.card?.cardNumber}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              {searchMatches.length > SEARCH_RESULTS_CAP && (
+                <p className="mt-4 text-center text-sm text-gray-500">
+                  Showing first {SEARCH_RESULTS_CAP} of {searchMatches.length} matches — refine your search to narrow results.
+                </p>
+              )}
+              </>
+            ) : (
+              <>
+              <div className="space-y-3">
+                {cappedSearchMatches.map((item) => (
+                  <Card
+                    key={item.id}
+                    className="group hover:shadow-md transition-all duration-200 cursor-pointer"
+                    onClick={() => handleCardClick(item)}
+                  >
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="w-12 h-16 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                          {item.card?.frontImageUrl ? (
+                            <img src={item.card.frontImageUrl} alt={item.card?.name || ''} loading="lazy" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-red-100 to-red-200" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 truncate">{item.card?.name}</h3>
+                          <p className="text-sm text-gray-600 truncate">{formatSetName(item.card?.set?.name || '')} • #{item.card?.cardNumber}</p>
+                        </div>
+                        {(item.quantity || 1) > 1 && (
+                          <Badge className="bg-gray-900/80 text-white flex-shrink-0">x{item.quantity}</Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              {searchMatches.length > SEARCH_RESULTS_CAP && (
+                <p className="mt-4 text-center text-sm text-gray-500">
+                  Showing first {SEARCH_RESULTS_CAP} of {searchMatches.length} matches — refine your search to narrow results.
+                </p>
+              )}
+              </>
+            )
+          ) : isSearchingSetsView && searchResultMode === "sets" && matchingSetIds.size === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-600">None of your sets contain cards matching "{searchQuery}".</p>
+            </div>
+          ) : (
+          <>
+          {!isSearchingSetsView && collectionSets.length > 0 && (
             <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
               <Share2 className="h-4 w-4 shrink-0 text-red-600" />
               <span>
@@ -971,7 +1132,7 @@ export default function MyCollection() {
           )}
           {viewMode === "grid" ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {collectionSets.map((set) => (
+              {(showFilteredSetTiles ? collectionSets.filter(s => matchingSetIds.has(s.id)) : collectionSets).map((set) => (
               <Card 
                 key={set.id} 
                 className="group hover:shadow-lg transition-all duration-200 cursor-pointer"
@@ -1100,7 +1261,7 @@ export default function MyCollection() {
           ) : (
             // Sets List View
             <div className="space-y-6">
-              {collectionSets.map((set) => (
+              {(showFilteredSetTiles ? collectionSets.filter(s => matchingSetIds.has(s.id)) : collectionSets).map((set) => (
                 <Card 
                   key={set.id} 
                   className="group hover:shadow-md transition-all duration-200 cursor-pointer"
@@ -1198,6 +1359,8 @@ export default function MyCollection() {
                 </Card>
               ))}
             </div>
+          )}
+          </>
           )}
           </>
         )}
