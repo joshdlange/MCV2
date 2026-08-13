@@ -186,11 +186,11 @@ function lifecycleTemplate(opts: {
   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:${DARK_BG};">
     <tr><td style="padding:40px 20px;">
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:600px;margin:0 auto;background-color:${CARD_BG};border-radius:12px;overflow:hidden;">
-        <tr><td style="padding:40px 40px 20px;text-align:center;background:linear-gradient(135deg,${DARK_BG} 0%,${CARD_BG} 100%);">
-          <img src="${LOGO_URL}" alt="Marvel Card Vault" style="width:150px;height:auto;display:block;margin:0 auto;">
+        <tr><td style="padding:14px 24px;text-align:center;background-color:#0B1120;border-bottom:2px solid ${BRAND_RED};">
+          <img src="${LOGO_URL}" alt="Marvel Card Vault" width="96" style="width:96px;height:auto;display:inline-block;vertical-align:middle;">
         </td></tr>
         ${heroHtml}
-        <tr><td style="padding:20px 40px 40px;">
+        <tr><td style="padding:28px 40px 40px;">
           ${eyebrowHtml}<h1 style="margin:0 0 20px;font-size:28px;font-weight:700;color:${TEXT_PRIMARY};line-height:1.2;">${opts.heading}</h1>
           ${paragraphsHtml}${statsHtml}${codeBlockHtml}
           <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"><tr><td style="text-align:center;padding:20px 0 10px;">

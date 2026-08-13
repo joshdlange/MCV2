@@ -1,0 +1,129 @@
+# Improve Marvel Card Vault Lifecycle Email Header Layout
+
+Context:
+The lifecycle email hero images are now working, but the current email layout feels disconnected. The MCV logo sits alone in a large block above the hero image, which makes the email feel like a generic notification with an image dropped underneath.
+
+We want the email header to feel more intentional and premium.
+
+Goal:
+Update the lifecycle email layout so the logo/header feels integrated with the hero image instead of floating alone above it.
+
+Preferred direction:
+Use an email-safe branded header band attached directly to the hero image.
+
+Design direction:
+
+* Remove the large standalone logo block above the hero.
+* Create a compact dark branded header strip/band that sits directly above or visually attached to the hero image.
+* Put the MCV logo inside that header band.
+* The hero image should appear immediately connected to the header band.
+* The content should begin directly below the hero image.
+* The whole email should feel like one cohesive branded card:
+
+  * branded header
+  * hero image
+  * eyebrow label
+  * headline
+  * body
+  * stat/value block if applicable
+  * CTA
+  * footer
+
+Why:
+A true image overlay may not be reliable across email clients. A header band attached to the hero is more email-safe and should still feel polished.
+
+Must do:
+
+* Keep the current app-domain hero URLs.
+* Keep all hero image mappings.
+* Keep all optimized hero images.
+* Keep the MCV logo visible.
+* Make the logo smaller/more tasteful if needed.
+* Keep the header compact.
+* Remove the large empty logo-only block.
+* Keep the red eyebrow label.
+* Keep headlines, body copy, CTA buttons, stat/value blocks, footer, and unsubscribe/preference language.
+* Preserve Gmail-friendly rendering.
+* Preserve mobile responsiveness.
+* Emails must still look acceptable if images are blocked.
+* Keep payment/billing emails cleaner if they currently do not use a hero image.
+
+Layout guidance:
+
+* Use email-safe table-compatible HTML/CSS.
+* Avoid fragile CSS positioning if major email clients may not support it.
+* Do not rely on CSS background images for the hero.
+* The logo/header band should be visually connected to the hero.
+* The hero should span the email content width.
+* Avoid giant top padding.
+* Avoid showing the logo twice.
+* Avoid making the hero too tall.
+* Keep the email visually premium, clean, and branded.
+
+Fallback behavior:
+
+* If the hero image is blocked, the email should still show the MCV logo/header, eyebrow, headline, body, CTA, and footer.
+* Do not place critical information only inside images.
+* Do not put promo codes only inside images.
+* BABYCOMEBACK code must remain live HTML text.
+
+Must not do:
+
+* Do not change email eligibility logic.
+* Do not change active/draft statuses.
+* Do not activate any draft templates.
+* Do not send production emails.
+* Do not run lifecycle batches.
+* Do not re-enable monthly emails.
+* Do not re-enable legacy campaigns.
+* Do not change Resend setup.
+* Do not add image approved/rejected emails.
+* Do not touch Scan to Add.
+* Do not change Stripe, RevenueCat, subscriptions, Feed, Follow/Friends, XP, card data, Drive Sync, Data Quality, Upcoming Set Intelligence, Android, or iOS.
+* Do not use marvelcardvault.com for app email assets.
+* Do not use localhost or Replit preview URLs in production email HTML.
+* Do not add heavy dependencies.
+
+Preserve:
+
+* Existing lifecycle email registry.
+* Existing active/draft status for every template.
+* Existing app-domain hero image URLs.
+* Existing optimized hero images.
+* Existing admin preview/test-send functionality.
+* Existing admin lifecycle email section.
+* Existing unsubscribe/footer/preference language.
+* Existing BABYCOMEBACK web-only wording.
+* Existing production safety gates.
+* Existing Resend sending logic.
+
+QA:
+
+* Send exactly one admin-only test email after the layout change, preferably Welcome.
+* Subject should include `[TEST header layout]`.
+* Test email goes only to my current admin email.
+* Hero image loads.
+* Logo/header feels visually attached to the hero image.
+* There is no large standalone logo-only block above the hero.
+* Email feels more cohesive and premium.
+* Content remains readable.
+* CTA still works.
+* Footer/unsubscribe remains intact.
+* Mobile email view still looks good.
+* Admin preview still works.
+* No production users are emailed.
+* No draft templates are activated.
+* No lifecycle batches run.
+* App builds/runs cleanly.
+
+Final response:
+
+* List changed files.
+* Explain how the header/logo layout was changed.
+* Confirm the large standalone logo block was removed.
+* Confirm the app-domain hero URLs are unchanged.
+* Confirm exactly one admin-only test email was sent.
+* Confirm no users were emailed.
+* Confirm no templates were activated.
+* Confirm no lifecycle batches ran.
+* Confirm safe to continue testing the rest one at a time.
