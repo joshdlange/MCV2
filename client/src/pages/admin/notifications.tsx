@@ -482,6 +482,9 @@ function LifecycleEmailsCard() {
   };
 
   const anyUnreachable = emails.some((e) => e.heroKey && e.heroStatus === "unreachable");
+  const usage = data?.monthlyUsage;
+  const usagePct = usage ? Math.min(100, Math.round((usage.sent / usage.limit) * 100)) : 0;
+  const usageColor = usagePct >= 100 ? "bg-red-600" : usagePct >= 80 ? "bg-amber-500" : "bg-green-600";
 
   return (
     <Card className="border border-gray-200">
@@ -504,6 +507,36 @@ function LifecycleEmailsCard() {
         </div>
       </CardHeader>
       <CardContent className="pb-4 space-y-3">
+        {usage && (
+          <div className="rounded-md border border-gray-200 px-3 py-2.5" data-testid="monthly-email-usage">
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-1.5">
+              <p className="text-xs font-medium text-gray-900 dark:text-white">
+                Emails sent this month (since {usage.monthStart})
+              </p>
+              <p className={`text-xs font-semibold ${usagePct >= 100 ? "text-red-600" : usagePct >= 80 ? "text-amber-600" : "text-gray-700 dark:text-gray-300"}`}>
+                {usage.sent.toLocaleString()} / {usage.limit.toLocaleString()} ({usage.remaining.toLocaleString()} left)
+              </p>
+            </div>
+            <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
+              <div className={`h-full rounded-full ${usageColor}`} style={{ width: `${usagePct}%` }} />
+            </div>
+            {usagePct >= 100 ? (
+              <p className="text-[11px] text-red-700 mt-1.5">
+                Monthly limit reached — marketing lifecycle sends are automatically paused until next month.
+                Billing-critical emails (welcome, payment failed, password reset) still go out.
+              </p>
+            ) : usagePct >= 80 ? (
+              <p className="text-[11px] text-amber-700 mt-1.5">
+                Approaching the monthly limit. Marketing sends stop automatically at {usage.limit.toLocaleString()}.
+              </p>
+            ) : (
+              <p className="text-[11px] text-gray-500 mt-1.5">
+                Counts every email logged this calendar month. Marketing sends pause automatically at the limit;
+                billing-critical emails are never blocked.
+              </p>
+            )}
+          </div>
+        )}
         <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2">
           <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
           <p className="text-xs text-amber-800">

@@ -1280,6 +1280,44 @@ export async function isUnderLifecycleCap(email: string): Promise<boolean> {
 // auto-retried into a possible double-send. Admin sees failures in status.
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Monthly send budget — tracks ALL emails logged in email_logs this calendar
+// month (lifecycle + campaigns + transactional, everything that goes through
+// sendResendEmail's logging or claim rows) against the Resend plan limit.
+// Marketing lifecycle sends STOP at the limit; transactional emails (welcome,
+// payment-failed, password reset) are never blocked — going slightly over on
+// billing-critical email beats silently dropping it.
+// Limit is configurable via EMAIL_MONTHLY_SEND_LIMIT (default 3000 = Resend
+// free tier). NOTE: counts by CALENDAR month; if the Resend billing anchor is
+// mid-month this is an approximation, but a consistently safe one as long as
+// the limit matches the plan.
+// ---------------------------------------------------------------------------
+export const EMAIL_MONTHLY_SEND_LIMIT = Math.max(1, parseInt(process.env.EMAIL_MONTHLY_SEND_LIMIT || '3000', 10) || 3000);
+let monthlyUsageCache: { at: number; sent: number } | null = null;
+
+export async function getMonthlyEmailUsage(): Promise<{ sent: number; limit: number; remaining: number; monthStart: string }> {
+  if (!monthlyUsageCache || Date.now() - monthlyUsageCache.at > 60_000) {
+    const res: any = await db.execute(sql`
+      SELECT count(*)::int AS sent,
+             date_trunc('month', now())::date::text AS month_start
+      FROM email_logs
+      WHERE sent_at >= date_trunc('month', now())
+        AND (status IS NULL OR status <> 'failed')
+    `);
+    const row = (res.rows ?? res)[0];
+    monthlyUsageCache = { at: Date.now(), sent: Number(row?.sent ?? 0) };
+  }
+  const sent = monthlyUsageCache.sent;
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
+  return { sent, limit: EMAIL_MONTHLY_SEND_LIMIT, remaining: Math.max(0, EMAIL_MONTHLY_SEND_LIMIT - sent), monthStart };
+}
+
+/** Bump the cached counter after a send so back-to-back batch sends don't
+ *  ride a stale 60s cache past the limit. */
+function noteMonthlySend(): void {
+  if (monthlyUsageCache) monthlyUsageCache.sent += 1;
+}
+
 async function claimAndSend(
   def: LifecycleEmailDef,
   user: { id: number; email: string; displayName?: string | null }
@@ -1289,6 +1327,11 @@ async function claimAndSend(
     const u = await db.select({ optIn: users.marketingOptIn }).from(users).where(eq(users.id, user.id)).limit(1);
     if (!u[0]?.optIn) return 'skipped';
   }
+
+  // Monthly budget guard applies to marketing journeys only; transactional
+  // emails and welcome are never blocked. Enforced ATOMICALLY inside the
+  // claim transaction below (checkBudget) — this flag just selects it.
+  const checkBudget = !def.transactional && def.key !== 'welcome';
 
   // Atomic claim. Two guarantees inside ONE transaction under a per-email
   // advisory lock (serializes concurrent lifecycle jobs for the same user):
@@ -1301,6 +1344,25 @@ async function claimAndSend(
   // from the cap (status='failed') but still block their own journey forever.
   const rows: any[] = await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(lower(trim(${user.email}))))`);
+    if (checkBudget) {
+      // Global monthly budget, enforced atomically: a month-scoped advisory
+      // lock serializes ALL marketing claims (across processes) while we
+      // count the authoritative email_logs total. The claim row inserted
+      // below (sent_at=now()) counts against the budget for the next claim
+      // the moment this transaction commits, so concurrent claims can never
+      // both squeeze through the last slot.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('email-monthly-budget'))`);
+      const budget: any = await tx.execute(sql`
+        SELECT count(*)::int AS sent FROM email_logs
+        WHERE sent_at >= date_trunc('month', now())
+          AND (status IS NULL OR status <> 'failed')
+      `);
+      const sentThisMonth = Number(((budget.rows ?? budget)[0])?.sent ?? 0);
+      if (sentThisMonth >= EMAIL_MONTHLY_SEND_LIMIT) {
+        console.warn(`[Lifecycle] ${def.key} skipped for user ${user.id}: monthly send limit reached (${sentThisMonth}/${EMAIL_MONTHLY_SEND_LIMIT})`);
+        return [];
+      }
+    }
     if (!def.exemptFromCap) {
       const cap: any = await tx.execute(sql`
         SELECT 1 FROM email_logs el
@@ -1342,6 +1404,7 @@ async function claimAndSend(
       UPDATE email_logs SET status = 'sent', provider_message_id = ${messageId || null}, sent_at = now()
       WHERE id = ${claimId}
     `);
+    noteMonthlySend();
     return 'sent';
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -1588,7 +1651,7 @@ export async function sendSubscriptionCancelledEmail(user: {
 // ---------------------------------------------------------------------------
 
 export async function getLifecycleStatus() {
-  const heroChecks = await checkHeroImages();
+  const [heroChecks, monthlyUsage] = await Promise.all([checkHeroImages(), getMonthlyEmailUsage()]);
   const emails = await Promise.all(
     LIFECYCLE_EMAILS.map(async (e) => {
       let eligibleNow: number | null = null;
@@ -1628,6 +1691,7 @@ export async function getLifecycleStatus() {
     v2LaunchDate: LIFECYCLE_V2_LAUNCH_DATE.toISOString(),
     journeyLastRun,
     totalsSent: Object.fromEntries(sentRows.map(r => [r.jobName || 'unknown', Number(r.count)])),
+    monthlyUsage,
     emails,
   };
 }
