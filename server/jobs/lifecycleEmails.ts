@@ -94,7 +94,9 @@ export type HeroImageKey =
   | 'email-hero-babycomeback'
   | 'email-hero-share-binder'
   | 'email-hero-dormant-missing-image'
-  | 'email-hero-dormant-started';
+  | 'email-hero-dormant-started'
+  | 'email-hero-dormant-engaged'
+  | 'email-hero-dormant-upgrade';
 
 // Optimized 1200x600 JPGs (<150KB) live in client/public/email-assets/ and are
 // served at /email-assets/<key>.jpg in both dev (vite publicDir) and prod
@@ -129,6 +131,8 @@ export const HERO_IMAGES: Record<HeroImageKey, { url: string | null; alt: string
   'email-hero-share-binder':           { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-share-binder.jpg`,           alt: 'I wish I could only track certain characters...' },
   'email-hero-dormant-missing-image':  { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-dormant-missing-image.jpg`,  alt: 'Will you be the hero?' },
   'email-hero-dormant-started':        { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-dormant-started.jpg`,        alt: 'Hero? Are you there?' },
+  'email-hero-dormant-engaged':        { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-dormant-engaged.jpg`,        alt: "Now's the time." },
+  'email-hero-dormant-upgrade':        { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-dormant-upgrade.jpg`,        alt: 'MCV is waaay more than just a tracker.' },
 };
 
 // ---------------------------------------------------------------------------
@@ -573,7 +577,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'missing-image',
-    heroKey: 'email-hero-complete-the-vault',
+    heroKey: 'email-hero-dormant-missing-image',
     jobName: 'lifecycle-missing-image',
     stage: 'Contribution',
     active: false,
@@ -584,7 +588,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     render: () => lifecycleTemplate({
       eyebrow: 'HELP COMPLETE THE VAULT',
       stats: [{ label: 'Reward', value: 'XP after your image is approved' }],
-      heroKey: 'email-hero-complete-the-vault',
+      heroKey: 'email-hero-dormant-missing-image',
       preheader: 'Some of your cards are missing images. Upload one and earn XP after approval.',
       heading: 'Help complete the vault',
       paragraphs: [
@@ -802,7 +806,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'dormant-engaged',
-    heroKey: 'email-hero-keep-building',
+    heroKey: 'email-hero-dormant-engaged',
     jobName: 'lifecycle-dormant-engaged',
     stage: 'Retention',
     active: false,
@@ -812,7 +816,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaUrl: APP_URL,
     render: () => lifecycleTemplate({
       eyebrow: 'COME BACK TO THE VAULT',
-      heroKey: 'email-hero-keep-building',
+      heroKey: 'email-hero-dormant-engaged',
       preheader: 'New progress, images, and collector tools are ready when you are.',
       heading: 'Your vault has been waiting',
       paragraphs: [
@@ -829,7 +833,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'dormant-upgrade',
-    heroKey: 'email-hero-upgrade',
+    heroKey: 'email-hero-dormant-upgrade',
     jobName: 'lifecycle-dormant-upgrade',
     stage: 'Upgrade',
     active: false,
@@ -839,7 +843,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaUrl: `${APP_URL}/subscribe`,
     render: () => lifecycleTemplate({
       eyebrow: 'COME BACK TO THE VAULT',
-      heroKey: 'email-hero-upgrade',
+      heroKey: 'email-hero-dormant-upgrade',
       preheader: 'PC Binders, unlimited cards, Market Trends, and more are waiting in Super Hero.',
       heading: 'Build more than a checklist',
       paragraphs: [
@@ -933,7 +937,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
         code: 'BABYCOMEBACK',
         note: 'Enter this code in the promo code field on the web checkout page for $5 off each of your first 2 months of Super Hero monthly.',
       },
-      footnote: 'Promo code must be redeemed through web checkout. It is not available through iOS in-app purchase.',
+      footnote: 'Promo code is ONLY redeemable through web checkout at app.marvelcardvault.com. It cannot be redeemed in the iOS or Android mobile apps.',
       ctaLabel: 'Redeem on Web',
       ctaUrl: `${APP_URL}/subscribe`,
     }),
