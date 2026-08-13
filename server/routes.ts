@@ -4809,6 +4809,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Activate / deactivate a lifecycle template from the admin panel.
+  // Activation requires the exact typed confirmation `ACTIVATE <key>` so a
+  // stray click can never start a campaign; deactivation is instant.
+  app.post("/api/admin/lifecycle/activate", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      const { setLifecycleActive, getLifecycleEmail: getDef } = await import('./jobs/lifecycleEmails');
+      const key = String(req.body?.key || '');
+      const active = !!req.body?.active;
+      const def = getDef(key);
+      if (!def) {
+        return res.status(404).json({ message: `Unknown lifecycle email: ${key}` });
+      }
+      if (def.transactional || key === 'welcome') {
+        return res.status(400).json({ message: `"${key}" is transactional/billing-critical and cannot be toggled from the panel.` });
+      }
+      if (active && req.body?.confirm !== `ACTIVATE ${key}`) {
+        return res.status(400).json({
+          message: `Activating "${key}" lets it email real users. To proceed, POST again with body {"confirm": "ACTIVATE ${key}"}.`,
+          requiresConfirmation: true,
+        });
+      }
+      const result = await setLifecycleActive(key, active);
+      res.json({ success: true, ...result });
+    } catch (error) {
+      console.error('Lifecycle activate error:', error);
+      res.status(500).json({ message: "Failed to update lifecycle activation" });
+    }
+  });
+
   // Manual trigger of the first-card nudge batch (same logic as the hourly cron)
   app.post("/api/admin/lifecycle/first-card-nudge/run", authenticateUser, async (req: any, res) => {
     try {

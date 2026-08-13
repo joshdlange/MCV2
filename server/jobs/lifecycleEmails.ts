@@ -1165,7 +1165,7 @@ export async function runLifecycleJourneyNow(
   const isLongTail = key in LONGTAIL_JOURNEYS;
   const whereFn = BATCH_JOURNEYS[key] || LONGTAIL_JOURNEYS[key];
   if (!def || !whereFn) return { sent: 0, failed: 0, eligible: 0, skipped: true, error: `Not a batch journey: ${key}` };
-  if (!def.active) return { sent: 0, failed: 0, eligible: 0, skipped: true, error: `${key} is not active` };
+  if (!(await isLifecycleActive(def))) return { sent: 0, failed: 0, eligible: 0, skipped: true, error: `${key} is not active` };
   // Long-tail dormant/win-back journeys target the existing backlog. They are
   // never cron-run and each batch requires explicit typed admin confirmation.
   if (isLongTail && !opts?.confirmedByAdmin) {
@@ -1236,6 +1236,61 @@ export function getLifecycleEmail(key: string): LifecycleEmailDef | undefined {
 }
 
 // ---------------------------------------------------------------------------
+// Activation overrides — DB-backed so Joshua can activate/deactivate templates
+// from the admin panel without a code deploy. def.active is the code DEFAULT;
+// a row in lifecycle_email_settings overrides it. Overrides refresh every 60s
+// (and immediately on change in the process that changed them), so a toggle
+// takes effect no later than the next hourly cron tick.
+// ---------------------------------------------------------------------------
+let activationOverrides = new Map<string, boolean>();
+let overridesLoadedAt = 0;
+
+async function ensureLifecycleSettingsTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS lifecycle_email_settings (
+      key text PRIMARY KEY,
+      active boolean NOT NULL,
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+}
+
+async function loadActivationOverrides(force = false): Promise<void> {
+  if (!force && Date.now() - overridesLoadedAt < 60_000) return;
+  try {
+    const res: any = await db.execute(sql`SELECT key, active FROM lifecycle_email_settings`);
+    activationOverrides = new Map((res.rows ?? res).map((r: any) => [String(r.key), !!r.active]));
+    overridesLoadedAt = Date.now();
+  } catch (err) {
+    // Table may not exist yet on first boot — fall back to code defaults.
+    console.error('[Lifecycle] Failed to load activation overrides (using code defaults):', err);
+    overridesLoadedAt = Date.now();
+  }
+}
+
+/** Effective active state: admin override if present, else the code default. */
+export async function isLifecycleActive(def: LifecycleEmailDef): Promise<boolean> {
+  await loadActivationOverrides();
+  const o = activationOverrides.get(def.key);
+  return o !== undefined ? o : def.active;
+}
+
+/** Admin toggle. Returns the new effective state. */
+export async function setLifecycleActive(key: string, active: boolean): Promise<{ key: string; active: boolean }> {
+  const def = getLifecycleEmail(key);
+  if (!def) throw new Error(`Unknown lifecycle email: ${key}`);
+  await ensureLifecycleSettingsTable();
+  await db.execute(sql`
+    INSERT INTO lifecycle_email_settings (key, active, updated_at)
+    VALUES (${key}, ${active}, now())
+    ON CONFLICT (key) DO UPDATE SET active = EXCLUDED.active, updated_at = now()
+  `);
+  await loadActivationOverrides(true);
+  console.log(`[Lifecycle] Admin ${active ? 'ACTIVATED' : 'deactivated'} template '${key}'`);
+  return { key, active };
+}
+
+// ---------------------------------------------------------------------------
 // 14-day global frequency cap
 // ---------------------------------------------------------------------------
 
@@ -1292,7 +1347,7 @@ export async function isUnderLifecycleCap(email: string): Promise<boolean> {
 // mid-month this is an approximation, but a consistently safe one as long as
 // the limit matches the plan.
 // ---------------------------------------------------------------------------
-export const EMAIL_MONTHLY_SEND_LIMIT = Math.max(1, parseInt(process.env.EMAIL_MONTHLY_SEND_LIMIT || '3000', 10) || 3000);
+export const EMAIL_MONTHLY_SEND_LIMIT = Math.max(1, parseInt(process.env.EMAIL_MONTHLY_SEND_LIMIT || '50000', 10) || 50000);
 let monthlyUsageCache: { at: number; sent: number } | null = null;
 
 export async function getMonthlyEmailUsage(): Promise<{ sent: number; limit: number; remaining: number; monthStart: string }> {
@@ -1322,6 +1377,10 @@ async function claimAndSend(
   def: LifecycleEmailDef,
   user: { id: number; email: string; displayName?: string | null }
 ): Promise<'sent' | 'failed' | 'skipped'> {
+  // Re-check effective activation at claim time (covers deactivation landing
+  // mid-batch and the first-card-nudge runner, which doesn't gate upstream).
+  if (def.key !== 'welcome' && !(await isLifecycleActive(def))) return 'skipped';
+
   // Re-check opt-in at send time (welcome is the account-creation exception).
   if (def.key !== 'welcome') {
     const u = await db.select({ optIn: users.marketingOptIn }).from(users).where(eq(users.id, user.id)).limit(1);
@@ -1553,6 +1612,11 @@ let lifecycleCronStarted = false;
 export function startLifecycleEmailCron(): void {
   if (lifecycleCronStarted) return;
   lifecycleCronStarted = true;
+  // Ensure the activation-overrides table exists and warm the cache
+  // (fire-and-forget: code defaults apply until it loads).
+  ensureLifecycleSettingsTable()
+    .then(() => loadActivationOverrides(true))
+    .catch(err => console.error('[Lifecycle] Failed to init lifecycle_email_settings:', err));
   firstCardNudgeJob.start();
   console.log('📧 Lifecycle email cron started (hourly: first-card nudge + empty-vault + collection-momentum; welcome is event-triggered; remaining journeys DRAFT/disabled)');
 }
@@ -1574,7 +1638,7 @@ export async function sendPaymentFailedEmail(user: {
 }, invoiceId: string): Promise<'sent' | 'failed' | 'skipped'> {
   const def = getLifecycleEmail('payment-failed')!;
   try {
-    if (!def.active) return 'skipped';
+    if (!(await isLifecycleActive(def))) return 'skipped';
     if (!process.env.REPLIT_DEPLOYMENT) {
       console.log(`[Lifecycle] payment-failed skipped for user ${user.id}: not production`);
       return 'skipped';
@@ -1585,6 +1649,10 @@ export async function sendPaymentFailedEmail(user: {
     // Per-invoice dedupe under a per-email advisory lock.
     const rows: any[] = await db.transaction(async (tx) => {
       await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${'billing:' + user.email.toLowerCase().trim()}))`);
+      // Take the shared monthly-budget lock so this transactional claim is
+      // serialized with marketing budget checks (it is NEVER rejected by the
+      // budget — billing email always sends; this only keeps the count exact).
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('email-monthly-budget'))`);
       const dupe: any = await tx.execute(sql`
         SELECT 1 FROM email_logs
         WHERE job_name = ${jobName} AND template = ${template}
@@ -1633,7 +1701,7 @@ export async function sendSubscriptionCancelledEmail(user: {
 }): Promise<'sent' | 'failed' | 'skipped'> {
   const def = getLifecycleEmail('subscription-cancelled')!;
   try {
-    if (!def.active) return 'skipped';
+    if (!(await isLifecycleActive(def))) return 'skipped';
     if (!process.env.REPLIT_DEPLOYMENT) {
       console.log(`[Lifecycle] subscription-cancelled skipped for user ${user.id}: not production`);
       return 'skipped';
@@ -1651,6 +1719,7 @@ export async function sendSubscriptionCancelledEmail(user: {
 // ---------------------------------------------------------------------------
 
 export async function getLifecycleStatus() {
+  await loadActivationOverrides(true);
   const [heroChecks, monthlyUsage] = await Promise.all([checkHeroImages(), getMonthlyEmailUsage()]);
   const emails = await Promise.all(
     LIFECYCLE_EMAILS.map(async (e) => {
@@ -1664,7 +1733,10 @@ export async function getLifecycleStatus() {
         key: e.key,
         jobName: e.jobName,
         stage: e.stage,
-        active: e.active,
+        active: await isLifecycleActive(e),
+        activeDefault: e.active,
+        batchJourney: e.key in BATCH_JOURNEYS,
+        longTail: e.key in LONGTAIL_JOURNEYS,
         exemptFromCap: !!e.exemptFromCap,
         transactional: !!e.transactional,
         heroKey: e.heroKey || null,
