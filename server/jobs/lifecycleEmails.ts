@@ -728,9 +728,9 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
       ctaLabel: 'View Your Contribution',
       ctaUrl: `${APP_URL}/my-collection`,
     }),
-    // NOTE: an image-approved email already exists as a TRANSACTIONAL
-    // notification (cardImageApprovedTemplate). This draft is a richer XP
-    // variant; do not enable both or users get two emails per approval.
+    // NOTE: PERMANENTLY INACTIVE per Joshua (Aug 2026): image approvals are
+    // notified IN-APP only (see /api/admin/pending-images approve routes).
+    // Do NOT flip this active and do not wire cardImageApprovedTemplate either.
     eligibleCount: async () => 0, // event-triggered on approval
     eligibilityNote: 'Event-triggered on image approval. A transactional approval email already exists — replace it, do not double-send.',
   },

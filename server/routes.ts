@@ -8564,6 +8564,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dedupeKey: `image_approved:${pendingImage.userId}:${new Date().toISOString().slice(0, 10)}`,
       })).catch(() => {});
 
+      // In-app notification (no email, per Joshua) — fire-and-forget
+      import('./notification-service').then(m => m.notificationService.createNotification(
+        pendingImage.userId,
+        'image_approved',
+        'Card Image Approved!',
+        `Your image for ${card.name}${card.cardNumber ? ` #${card.cardNumber}` : ''} was approved and is now live in the vault. Thanks for contributing!`,
+        { cardId: pendingImage.cardId }
+      )).catch((err) => console.error('Image-approved notification error:', err));
+
       res.json({ message: "Image approved successfully" });
     } catch (error) {
       console.error('Approve image error:', error);
@@ -8590,6 +8599,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let approved = 0;
       const failed: { id: number; reason: string }[] = [];
+      // One in-app notification per user per bulk call (dedupe)
+      const approvedCountByUser = new Map<number, number>();
 
       for (const imageId of ids) {
         try {
@@ -8634,11 +8645,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
             dedupeKey: `image_approved:${pendingImage.userId}:${new Date().toISOString().slice(0, 10)}`,
           })).catch(() => {});
 
+          approvedCountByUser.set(pendingImage.userId, (approvedCountByUser.get(pendingImage.userId) || 0) + 1);
           approved++;
         } catch (err) {
           console.error(`Bulk approve failed for image ${imageId}:`, err);
           failed.push({ id: imageId, reason: "Internal error" });
         }
+      }
+
+      // In-app notifications (no email, per Joshua): one per user per bulk call — fire-and-forget
+      if (approvedCountByUser.size > 0) {
+        import('./notification-service').then(async (m) => {
+          for (const [userId, count] of Array.from(approvedCountByUser.entries())) {
+            await m.notificationService.createNotification(
+              userId,
+              'image_approved',
+              count === 1 ? 'Card Image Approved!' : 'Card Images Approved!',
+              count === 1
+                ? 'Your card image was approved and is now live in the vault. Thanks for contributing!'
+                : `${count} of your card images were approved and are now live in the vault. Thanks for contributing!`,
+              { approvedCount: count }
+            ).catch((err: any) => console.error('Bulk image-approved notification error:', err));
+          }
+        }).catch((err) => console.error('Bulk image-approved notification error:', err));
       }
 
       res.json({ approved, failed });
