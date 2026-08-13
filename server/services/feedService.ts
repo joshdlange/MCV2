@@ -11,10 +11,11 @@ import { computeXpProgress } from '../../shared/xp';
 export const REACTION_TYPES = ['fire_pull', 'hero_move', 'need_this', 'vault_worthy'] as const;
 export type ReactionType = (typeof REACTION_TYPES)[number];
 
-// 100 is intentionally absent: the Hundred Club badge already posts a
-// "badge earned" story at 100 cards, and emitting both made the feed
-// repeat itself (Joshua, Aug 2026).
-export const COLLECTION_MILESTONES = [50, 250, 500] as const;
+// Collection-count thresholds no longer emit plain "reached N cards"
+// milestone posts: every threshold now has a real badge (Round 50, Hundred
+// Club, Round 250, No Longer a Sidekick, Vault Guardian) whose badge_earned
+// post covers the moment — emitting both made the feed repeat itself
+// (Joshua, Aug 2026). Old collection_milestone rows stay as history.
 export const LEVEL_MILESTONES = [5, 10, 15, 20, 25, 30, 40, 50] as const;
 
 // Feed reaction XP: first reaction of the (UTC) day +5, others +1, cap 10/day.
@@ -59,9 +60,9 @@ export async function emitFeedEvent(args: EmitFeedEventArgs): Promise<void> {
 }
 
 /**
- * Called after a card is added: emits first-card and collection-milestone
- * events based on the user's current distinct-card count. Dedupe keys make
- * this safe to call on every add.
+ * Called after a card is added: emits the first-card event based on the
+ * user's current distinct-card count. Dedupe keys make this safe to call on
+ * every add. (Collection-count milestones are covered by badges now.)
  */
 export async function checkCollectionMilestones(userId: number): Promise<void> {
   try {
@@ -74,17 +75,6 @@ export async function checkCollectionMilestones(userId: number): Promise<void> {
         title: 'added their first card to the Vault',
         dedupeKey: `first_card:${userId}`,
       });
-    }
-    for (const m of COLLECTION_MILESTONES) {
-      if (n >= m) {
-        await emitFeedEvent({
-          userId,
-          eventType: 'collection_milestone',
-          title: `reached ${m} cards in their collection`,
-          metadata: { milestone: m },
-          dedupeKey: `collection_milestone:${userId}:${m}`,
-        });
-      }
     }
   } catch (err) {
     console.error('[feedService] checkCollectionMilestones failed', { userId, err });
@@ -658,7 +648,7 @@ export async function setFeedEventHidden(id: number, hidden: boolean): Promise<b
 
 /**
  * Backfill: last 90 days of badges/binders/shares/approved images + all-time
- * collection milestones (first card + 50/100/250/500, reliably reconstructable
+ * collection milestones (first card, reliably reconstructable
  * from user_collections ordered by created date). Dedupe keys make the confirm
  * run idempotent; dry run writes NOTHING and only counts what a real run would
  * insert. Privacy is enforced at read time, so backfill inserts for everyone
@@ -677,23 +667,8 @@ export async function runFeedBackfill(dryRun: boolean): Promise<Record<string, n
         FROM user_collections GROUP BY user_id
       `,
     },
-    {
-      key: 'collection_milestone',
-      sql: sql`
-        SELECT user_id, 'collection_milestone' AS event_type,
-          'reached ' || m.milestone || ' cards in their collection' AS title,
-          json_build_object('milestone', m.milestone)::text AS metadata,
-          NULL AS related_type, NULL::int AS related_id,
-          'collection_milestone:' || user_id || ':' || m.milestone AS dedupe_key,
-          max(t.acquired_date) AS created_at
-        FROM (
-          SELECT user_id, acquired_date, row_number() OVER (PARTITION BY user_id ORDER BY acquired_date) AS rn
-          FROM user_collections
-        ) t
-        JOIN (VALUES (50), (250), (500)) AS m(milestone) ON t.rn = m.milestone
-        GROUP BY user_id, m.milestone
-      `,
-    },
+    // collection_milestone intentionally absent: every threshold now has a
+    // real badge whose badge_earned post covers the moment.
     {
       key: 'badge_earned',
       sql: sql`
@@ -705,6 +680,7 @@ export async function runFeedBackfill(dryRun: boolean): Promise<Record<string, n
           ub.earned_at AS created_at
         FROM user_badges ub JOIN badges b ON b.id = ub.badge_id
         WHERE ub.earned_at >= now() - interval '90 days'
+          AND NOT ub.retro -- bulk/retro seed grants must never flood the feed
       `,
     },
     {

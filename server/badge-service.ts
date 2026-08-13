@@ -506,9 +506,7 @@ export class BadgeService {
 
         activeBadgeChecks++;
         try {
-          await this.checkRookieCollector(userId);
-          await this.checkHundredClub(userId);
-          await this.checkVaultGuardian(userId);
+          await this.checkCollectionCountBadges(userId);
           await this.checkCompletionist(userId);
           await this.checkHallOfFame(userId);
           await this.checkInsertHunter(userId);
@@ -524,6 +522,32 @@ export class BadgeService {
 
       pendingBadgeChecks.set(userId, timer);
     });
+  }
+
+  // All collection-count threshold badges in one pass (single count query).
+  // Keep this list in sync with the seeded collection_count badges.
+  async checkCollectionCountBadges(userId: number): Promise<void> {
+    const thresholds: [string, number][] = [
+      ['Rookie Collector', 1],
+      ['Round 50', 50],
+      ['Hundred Club', 100],
+      ['Round 250', 250],
+      ['No Longer a Sidekick', 500],
+      ['Vault Guardian', 1000],
+    ];
+    const collectionCount = await db.select({ count: count() })
+      .from(userCollections)
+      .where(eq(userCollections.userId, userId));
+    const n = Number(collectionCount[0].count);
+    for (const [name, value] of thresholds) {
+      if (n < value) continue;
+      const badge = await this.getBadgeByName(name);
+      if (!badge) {
+        console.log(`[BADGE] ${name} badge not found in database`);
+        continue;
+      }
+      await this.awardBadge(userId, badge.id);
+    }
   }
 
   // Rookie Collector - First card added to collection

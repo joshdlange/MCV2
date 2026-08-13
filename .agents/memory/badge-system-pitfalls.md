@@ -9,5 +9,6 @@ description: How badges are awarded, why string ids fail silently, and time/race
 - Time-of-day badges must use US Eastern via `Intl.DateTimeFormat(... timeZone: 'America/New_York')` — the server runs UTC, raw `getHours()` awards "night" badges in the afternoon.
 - `users.upgraded_at` (first paid upgrade) is stamped by a DB trigger `users_set_upgraded_at` (BEFORE INSERT OR UPDATE, only when transitioning to SUPER_HERO and NULL) — new upgrade code paths need no manual stamping. Loyalist measures from it.
 
-## Retro/bulk badge awards vs feed backfill
-Retro badge seeds stamp earned_at = now(), and the feed backfill emits one badge_earned post per recipient → a wall of identical feed cards (Contributor, 32 posts, Aug 2026; cleaned via startup_migrations marker contributor_feed_spam_cleanup_v1). **How to apply:** any future retro badge award must backdate earned_at or be excluded from feed emission/backfill. Badge rows also need icon_url set at seed time or the feed shows a generic ribbon.
+
+## Retro/bulk badge awards must stay quiet
+Bulk retro grants stamped earned_at=now() once flooded the feed with identical badge_earned posts. user_badges.retro (boolean) marks bulk/retro seed grants; feed backfill excludes them. All retro-award seeds MUST insert with retro=true, run post-listen in runDataFixSeeds, and create-badge + retro-award + feed cleanup atomically in ONE marker-gated tx (rolling-deploy race). feed_reactions now has ON DELETE CASCADE FK to feed_events. Collection-count thresholds (50/100/250/500/1000) are all badges now — never re-add plain collection_milestone feed emits.

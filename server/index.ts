@@ -160,6 +160,20 @@ app.use((req, res, next) => {
     const { db } = await import('./db');
     const { sql } = await import('drizzle-orm');
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS upgraded_at timestamp`);
+    // Marks bulk/retro badge grants so feed backfill never turns them into
+    // a wall of identical "earned the X badge" posts (Contributor incident).
+    await db.execute(sql`ALTER TABLE user_badges ADD COLUMN IF NOT EXISTS retro boolean NOT NULL DEFAULT false`);
+    // feed_reactions had no FK to feed_events, so feed-event cleanups could
+    // race a concurrent reaction insert and orphan it. Purge orphans, then
+    // enforce ON DELETE CASCADE at the DB level (small table — fast DDL).
+    await db.execute(sql`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'feed_reactions_feed_event_id_fk') THEN
+          DELETE FROM feed_reactions WHERE feed_event_id NOT IN (SELECT id FROM feed_events);
+          ALTER TABLE feed_reactions ADD CONSTRAINT feed_reactions_feed_event_id_fk
+            FOREIGN KEY (feed_event_id) REFERENCES feed_events(id) ON DELETE CASCADE;
+        END IF;
+      END $$`);
     await db.execute(sql`
       CREATE OR REPLACE FUNCTION set_upgraded_at() RETURNS trigger AS $$
       BEGIN
@@ -218,8 +232,8 @@ app.use((req, res, next) => {
       const m = await tx.execute(sql`INSERT INTO startup_migrations (name) VALUES ('hall_of_fame_retro_award_v1') ON CONFLICT (name) DO NOTHING RETURNING name`);
       if ((m as any).rows?.length > 0) {
         const ins = await tx.execute(sql`
-          INSERT INTO user_badges (user_id, badge_id)
-          SELECT t.user_id, b.id
+          INSERT INTO user_badges (user_id, badge_id, retro)
+          SELECT t.user_id, b.id, true
           FROM (
             SELECT user_id
             FROM user_collections
@@ -234,68 +248,6 @@ app.use((req, res, next) => {
     });
   } catch (error) {
     console.error('Startup seed (Hall of Fame retro award) failed:', error);
-  }
-
-  // Idempotent startup seed: Contributor badge (3+ approved image uploads).
-  // The award code shipped referencing a badge that was never created, so
-  // approvals logged errors and nobody ever earned it. Seeds the badge by
-  // name, then retro-awards existing qualifying uploaders (quiet SQL insert —
-  // no notification blast for months-old contributions).
-  try {
-    const { db } = await import('./db');
-    const { sql } = await import('drizzle-orm');
-    await db.execute(sql`
-      INSERT INTO badges (name, description, category, requirement, rarity, points, unlock_hint, is_active)
-      SELECT 'Contributor', 'Community builder! Contributed 3+ approved card images to the Vault.',
-        'Achievement', '{"type":"approved_images","count":3}', 'silver', 25,
-        'Upload card images and get 3 of them approved', true
-      WHERE NOT EXISTS (SELECT 1 FROM badges WHERE name = 'Contributor')`);
-    await db.execute(sql`
-      INSERT INTO user_badges (user_id, badge_id)
-      SELECT p.user_id, b.id
-      FROM (SELECT user_id FROM pending_card_images WHERE status = 'approved' GROUP BY user_id HAVING COUNT(*) >= 3) p
-      CROSS JOIN (SELECT id FROM badges WHERE name = 'Contributor') b
-      ON CONFLICT (user_id, badge_id) DO NOTHING`);
-    // Badge shipped without artwork (feed showed the generic ribbon fallback);
-    // idempotent icon attach so dev AND prod pick it up.
-    await db.execute(sql`UPDATE badges SET icon_url = '/badge_images/contributor.png' WHERE name = 'Contributor' AND (icon_url IS NULL OR icon_url = '')`);
-    // One-time feed cleanup: the retro bulk award stamped earned_at = now(),
-    // so the feed backfill emitted one "earned the Contributor badge" story
-    // per retro recipient — a wall of identical posts. Remove them (and any
-    // reactions on them); genuinely NEW Contributor earns emit fresh events.
-    await db.transaction(async (tx) => {
-      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('contributor_feed_spam_cleanup_v1'))`);
-      const m = await tx.execute(sql`INSERT INTO startup_migrations (name) VALUES ('contributor_feed_spam_cleanup_v1') ON CONFLICT (name) DO NOTHING RETURNING name`);
-      if ((m as any).rows?.length > 0) {
-        await tx.execute(sql`
-          DELETE FROM feed_reactions fr USING feed_events fe, badges b
-          WHERE fr.feed_event_id = fe.id AND fe.event_type = 'badge_earned'
-            AND fe.related_id = b.id AND b.name = 'Contributor'`);
-        const del = await tx.execute(sql`
-          DELETE FROM feed_events fe USING badges b
-          WHERE fe.event_type = 'badge_earned' AND fe.related_id = b.id AND b.name = 'Contributor'`);
-        console.log(`[Contributor Feed Cleanup] Removed ${(del as any).rowCount ?? 0} bulk retro-award feed posts`);
-      }
-    });
-    // One-time feed cleanup: "reached 100 cards" milestone posts duplicated
-    // the Hundred Club badge post at the same moment. The 100 milestone is
-    // removed from COLLECTION_MILESTONES going forward; delete the old posts.
-    await db.transaction(async (tx) => {
-      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('hundred_club_milestone_dupe_cleanup_v1'))`);
-      const m = await tx.execute(sql`INSERT INTO startup_migrations (name) VALUES ('hundred_club_milestone_dupe_cleanup_v1') ON CONFLICT (name) DO NOTHING RETURNING name`);
-      if ((m as any).rows?.length > 0) {
-        await tx.execute(sql`
-          DELETE FROM feed_reactions fr USING feed_events fe
-          WHERE fr.feed_event_id = fe.id AND fe.event_type = 'collection_milestone'
-            AND fe.dedupe_key LIKE 'collection_milestone:%:100'`);
-        const del = await tx.execute(sql`
-          DELETE FROM feed_events
-          WHERE event_type = 'collection_milestone' AND dedupe_key LIKE 'collection_milestone:%:100'`);
-        console.log(`[Hundred Club Dupe Cleanup] Removed ${(del as any).rowCount ?? 0} duplicate 100-card milestone posts`);
-      }
-    });
-  } catch (error) {
-    console.error('Startup seed (Contributor badge) failed:', error);
   }
 
   // One-time migration: convert legacy accepted friendships into mutual
@@ -478,6 +430,93 @@ app.use((req, res, next) => {
       await fixParallelLeaks();
     } catch (error) {
       console.error('Startup fix (parallel leaks) failed:', error);
+    }
+
+    // Idempotent badge/feed seeds (deferred post-listen — bulk aggregations
+    // must never delay the deploy health check):
+    try {
+      const { db } = await import('./db');
+      const { sql } = await import('drizzle-orm');
+
+      // Contributor badge v2 (atomic): create badge + retro-award existing
+      // qualifying uploaders (quiet, retro=true) + delete ONLY the retro
+      // cohort's bulk "earned the Contributor badge" feed posts — all in one
+      // locked transaction so a genuine live earn during a rolling deploy can
+      // never be mislabeled retro or have its post deleted. Reactions vanish
+      // via the feed_reactions ON DELETE CASCADE FK.
+      await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('contributor_badge_seed_v2'))`);
+        const m = await tx.execute(sql`INSERT INTO startup_migrations (name) VALUES ('contributor_badge_seed_v2') ON CONFLICT (name) DO NOTHING RETURNING name`);
+        if ((m as any).rows?.length > 0) {
+          await tx.execute(sql`
+            INSERT INTO badges (name, description, category, requirement, rarity, points, unlock_hint, is_active, icon_url)
+            SELECT 'Contributor', 'Community builder! Contributed 3+ approved card images to the Vault.',
+              'Achievement', '{"type":"approved_images","count":3}', 'silver', 25,
+              'Upload card images and get 3 of them approved', true, '/badge_images/contributor.png'
+            WHERE NOT EXISTS (SELECT 1 FROM badges WHERE name = 'Contributor')`);
+          await tx.execute(sql`UPDATE badges SET icon_url = '/badge_images/contributor.png' WHERE name = 'Contributor' AND (icon_url IS NULL OR icon_url = '')`);
+          const cohort = await tx.execute(sql`
+            INSERT INTO user_badges (user_id, badge_id, retro)
+            SELECT p.user_id, b.id, true
+            FROM (SELECT user_id FROM pending_card_images WHERE status = 'approved' GROUP BY user_id HAVING COUNT(*) >= 3) p
+            CROSS JOIN (SELECT id FROM badges WHERE name = 'Contributor') b
+            ON CONFLICT (user_id, badge_id) DO NOTHING
+            RETURNING user_id`);
+          const cohortIds = ((cohort as any).rows ?? []).map((r: any) => Number(r.user_id));
+          if (cohortIds.length > 0) {
+            const del = await tx.execute(sql`
+              DELETE FROM feed_events fe USING badges b
+              WHERE fe.event_type = 'badge_earned' AND fe.related_id = b.id AND b.name = 'Contributor'
+                AND fe.user_id IN (SELECT unnest(ARRAY[${sql.join(cohortIds.map((id: number) => sql`${id}`), sql`, `)}]::int[]))`);
+            console.log(`[Contributor Seed v2] Retro-awarded ${cohortIds.length}, removed ${(del as any).rowCount ?? 0} bulk feed posts`);
+          }
+        }
+      });
+
+      // One-time feed cleanup: "reached 100 cards" milestone posts duplicated
+      // the Hundred Club badge post; 100 was removed from live milestones.
+      await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('hundred_club_milestone_dupe_cleanup_v1'))`);
+        const m = await tx.execute(sql`INSERT INTO startup_migrations (name) VALUES ('hundred_club_milestone_dupe_cleanup_v1') ON CONFLICT (name) DO NOTHING RETURNING name`);
+        if ((m as any).rows?.length > 0) {
+          const del = await tx.execute(sql`
+            DELETE FROM feed_events
+            WHERE event_type = 'collection_milestone' AND dedupe_key LIKE 'collection_milestone:%:100'`);
+          console.log(`[Hundred Club Dupe Cleanup] Removed ${(del as any).rowCount ?? 0} duplicate 100-card milestone posts`);
+        }
+      });
+
+      // New collection-count badges (Joshua's artwork, Aug 2026): Round 50,
+      // Round 250, No Longer a Sidekick (500). Replaces the plain
+      // collection_milestone feed posts at those thresholds. Existing
+      // qualifying collectors are retro-awarded quietly (retro=true).
+      await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('collection_badges_50_250_500_v1'))`);
+        const m = await tx.execute(sql`INSERT INTO startup_migrations (name) VALUES ('collection_badges_50_250_500_v1') ON CONFLICT (name) DO NOTHING RETURNING name`);
+        if ((m as any).rows?.length > 0) {
+          const newBadges = [
+            { name: 'Round 50', value: 50, rarity: 'bronze', points: 15, icon: '/badge_images/round_50.png', desc: 'Fifty strong! Reached 50 cards in your collection.', hint: 'Collect 50 cards' },
+            { name: 'Round 250', value: 250, rarity: 'gold', points: 50, icon: '/badge_images/round_250.png', desc: 'Serious stacker! Reached 250 cards in your collection.', hint: 'Collect 250 cards' },
+            { name: 'No Longer a Sidekick', value: 500, rarity: 'gold', points: 100, icon: '/badge_images/no_longer_a_sidekick.png', desc: 'Hero status! Reached 500 cards in your collection.', hint: 'Collect 500 cards' },
+          ];
+          for (const nb of newBadges) {
+            await tx.execute(sql`
+              INSERT INTO badges (name, description, category, requirement, rarity, points, unlock_hint, is_active, icon_url)
+              SELECT ${nb.name}, ${nb.desc}, 'Collection', ${JSON.stringify({ type: 'collection_count', value: nb.value })},
+                ${nb.rarity}, ${nb.points}, ${nb.hint}, true, ${nb.icon}
+              WHERE NOT EXISTS (SELECT 1 FROM badges WHERE name = ${nb.name})`);
+            const ins = await tx.execute(sql`
+              INSERT INTO user_badges (user_id, badge_id, retro)
+              SELECT t.user_id, b.id, true
+              FROM (SELECT user_id FROM user_collections GROUP BY user_id HAVING COUNT(*) >= ${nb.value}) t
+              CROSS JOIN (SELECT id FROM badges WHERE name = ${nb.name}) b
+              ON CONFLICT (user_id, badge_id) DO NOTHING`);
+            console.log(`[Collection Badges] ${nb.name}: retro-awarded ${(ins as any).rowCount ?? 0} collectors (quiet)`);
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Startup seed (badge/feed fixes) failed:', error);
     } finally {
       // Always lift the write gate — a failed seed retries next boot, and
       // blocking user writes indefinitely would be worse than the race.
