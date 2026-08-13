@@ -474,6 +474,15 @@ function LifecycleEmailsCard() {
     return <Badge className="bg-gray-100 text-gray-600 border-gray-200 text-xs">Draft</Badge>;
   };
 
+  const heroBadge = (e: any) => {
+    if (!e.heroKey) return null;
+    if (e.heroStatus === "reachable") return <Badge className="bg-green-100 text-green-700 border-green-200 text-[10px]">Image reachable</Badge>;
+    if (e.heroStatus === "unreachable") return <Badge className="bg-red-100 text-red-700 border-red-200 text-[10px]">Image NOT reachable</Badge>;
+    return <Badge className="bg-gray-100 text-gray-600 border-gray-200 text-[10px]">No image configured</Badge>;
+  };
+
+  const anyUnreachable = emails.some((e) => e.heroKey && e.heroStatus === "unreachable");
+
   return (
     <Card className="border border-gray-200">
       <CardHeader className="pb-2 pt-4">
@@ -503,6 +512,16 @@ function LifecycleEmailsCard() {
             confirmed action done outside this screen — real users get emailed when a template is active in production.
           </p>
         </div>
+        {anyUnreachable && (
+          <div className="flex items-start gap-2 rounded-md bg-red-50 border border-red-200 px-3 py-2">
+            <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+            <p className="text-xs text-red-800">
+              <strong>Some hero images are not reachable yet.</strong> Emails sent now would show broken image
+              spots. Hero images may be unavailable until the next app production publish
+              (app.marvelcardvault.com). Test sends still work but will include the broken image.
+            </p>
+          </div>
+        )}
         {isLoading ? (
           <p className="text-xs text-gray-500">Loading templates…</p>
         ) : (
@@ -523,13 +542,14 @@ function LifecycleEmailsCard() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-semibold text-gray-900 dark:text-white">{e.key}</span>
                     {statusBadge(e)}
+                    {heroBadge(e)}
                     {e.exemptFromCap && !e.transactional && (
                       <Badge variant="outline" className="text-[10px]">cap-exempt</Badge>
                     )}
                   </div>
                   <p className="text-[11px] text-gray-500 truncate max-w-md">{e.subject}</p>
-                  <p className="text-[10px] text-gray-400">
-                    {e.heroKey ? `Hero: ${e.heroKey}` : "No hero image"} · Eligible now: {e.eligibleNow ?? 0}
+                  <p className="text-[10px] text-gray-400 break-all">
+                    {e.heroUrl ? e.heroUrl : "No hero image"} · Eligible now: {e.eligibleNow ?? 0}
                   </p>
                 </div>
                 <div className="flex gap-2 shrink-0">

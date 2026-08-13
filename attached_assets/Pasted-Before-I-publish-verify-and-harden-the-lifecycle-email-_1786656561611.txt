@@ -1,0 +1,92 @@
+Before I publish, verify and harden the lifecycle email hero image setup.
+
+Context:
+The lifecycle test emails were sent successfully through Resend, but the hero images are broken in my inbox. You said this is because the images load from marvelcardvault.com and the new assets will not exist there until I publish.
+
+I understand that may be expected, but I want this verified and hardened before production.
+
+Must do:
+- Confirm the exact public URLs currently being inserted into each email hero image.
+- Confirm the optimized image files exist in the repo.
+- Confirm the files are in the correct public/static location for the deployed app.
+- Confirm the files will be publicly reachable after publish.
+- Confirm the email HTML uses absolute HTTPS URLs, not relative paths.
+- Confirm the image paths match the deployed public paths exactly.
+- Add a lightweight admin/preflight check in the Lifecycle Emails admin section that verifies each hero image URL is reachable before test-send or production send.
+- If the URL is not reachable, show a clear warning in admin instead of silently sending broken images.
+- Do not send any production emails.
+- Do not activate any draft emails.
+- Do not change eligibility logic.
+- Do not touch Scan to Add.
+
+Preflight behavior:
+- For each hero image key, check the final public URL.
+- Display status in admin:
+  - Reachable
+  - Not reachable
+  - Not configured
+- Show the final URL being used.
+- If running in dev and the production asset is not published yet, show:
+  “Image may be unavailable until the next production publish.”
+- Do not block admin preview.
+- For admin test send, allow sending but show a warning if images are not reachable.
+
+Email image requirements:
+- All email images must use absolute HTTPS URLs.
+- Do not use local dev URLs in production emails.
+- Do not use relative image URLs.
+- Do not embed huge base64 images.
+- Do not use the original Midjourney uploads directly.
+- Keep optimized 1200x600 assets.
+- Keep file sizes under the prior target if possible.
+
+Admin Lifecycle Emails section:
+- Confirm where this section lives in the admin UI.
+- Confirm I can see each template.
+- Confirm I can preview each template.
+- Confirm I can test-send each template only to my admin email.
+- Confirm I can see template status.
+- Confirm I can see eligible counts.
+- Confirm I can see hero image key and thumbnail/status.
+
+Test-send behavior:
+- Do not send all 18 emails at once by default.
+- Admin should allow one-at-a-time testing.
+- If there is a “send all tests” action, it should require explicit confirmation and ideally space sends apart.
+- Test emails must be clearly marked as tests.
+- Test emails must only go to my admin email unless an explicit protected admin-only override is used.
+
+Must not do:
+- Do not publish.
+- Do not send production emails.
+- Do not activate draft templates.
+- Do not run any lifecycle batches.
+- Do not re-enable monthly emails.
+- Do not re-enable legacy campaigns.
+- Do not add image approved/rejected emails.
+- Do not change billing logic.
+- Do not change Stripe or RevenueCat logic.
+- Do not touch Scan to Add.
+- Do not change Feed, Follow/Friends, XP, card data, Drive Sync, Data Quality, Upcoming Set Intelligence, Android, or iOS.
+
+QA:
+- Optimized image files exist.
+- Final email image URLs are absolute HTTPS URLs.
+- Admin preflight shows each hero image status.
+- Broken/unreachable image URLs are clearly surfaced in admin.
+- Email previews still work.
+- Admin test-send still works.
+- No production users are emailed.
+- No drafts are activated.
+- No lifecycle batches run.
+- App builds/runs cleanly.
+
+Final response:
+- List changed files.
+- List the exact hero image URLs being used.
+- Confirm whether each URL is currently reachable before publish.
+- Confirm whether each URL should become reachable after publish.
+- Confirm admin preflight/check exists.
+- Confirm where I can find the Lifecycle Emails section.
+- Confirm no emails were sent during this fix unless I explicitly ask.
+- Confirm safe to publish.

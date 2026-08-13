@@ -79,16 +79,52 @@ export type HeroImageKey =
 
 // Optimized 1200x600 JPGs (<150KB) live in client/public/email-assets/ and are
 // served at /email-assets/<key>.jpg in both dev (vite publicDir) and prod
-// (vite build copies public/ into dist/public). Emails always reference the
-// PRODUCTION domain so images load in every inbox.
+// (vite build copies public/ into dist/public).
+// CRITICAL: hero assets are served by THE APP deployment (app.marvelcardvault.com).
+// marvelcardvault.com is a SEPARATE marketing-site project that does NOT have
+// these files — never use it for email assets.
+export const EMAIL_ASSET_BASE_URL = 'https://app.marvelcardvault.com';
 export const HERO_IMAGES: Record<HeroImageKey, { url: string | null; alt: string }> = {
-  'email-hero-vault-starter':      { url: `${APP_URL}/email-assets/email-hero-vault-starter.jpg`,      alt: 'A glowing collector vault with trading cards.' },
-  'email-hero-keep-building':      { url: `${APP_URL}/email-assets/email-hero-keep-building.jpg`,      alt: 'Stacks of trading cards and binder pages in a collector workspace.' },
-  'email-hero-upgrade':            { url: `${APP_URL}/email-assets/email-hero-upgrade.jpg`,            alt: 'Premium trading cards glowing with red and gold energy.' },
-  'email-hero-pc-binder':          { url: `${APP_URL}/email-assets/email-hero-pc-binder.jpg`,          alt: 'A custom binder filled with organized trading cards.' },
-  'email-hero-complete-the-vault': { url: `${APP_URL}/email-assets/email-hero-complete-the-vault.jpg`, alt: 'Trading cards glowing as part of a collector vault.' },
-  'email-hero-community':          { url: `${APP_URL}/email-assets/email-hero-community.jpg`,          alt: 'A connected collection of trading cards and collectors.' },
+  'email-hero-vault-starter':      { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-vault-starter.jpg`,      alt: 'A glowing collector vault with trading cards.' },
+  'email-hero-keep-building':      { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-keep-building.jpg`,      alt: 'Stacks of trading cards and binder pages in a collector workspace.' },
+  'email-hero-upgrade':            { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-upgrade.jpg`,            alt: 'Premium trading cards glowing with red and gold energy.' },
+  'email-hero-pc-binder':          { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-pc-binder.jpg`,          alt: 'A custom binder filled with organized trading cards.' },
+  'email-hero-complete-the-vault': { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-complete-the-vault.jpg`, alt: 'Trading cards glowing as part of a collector vault.' },
+  'email-hero-community':          { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-community.jpg`,          alt: 'A connected collection of trading cards and collectors.' },
 };
+
+// ---------------------------------------------------------------------------
+// Hero image preflight — verifies each hero URL actually serves an image.
+// Used by the admin Lifecycle panel so broken images are surfaced BEFORE any
+// send instead of silently shipping broken emails. Cached for 60s.
+// ---------------------------------------------------------------------------
+export type HeroReachability = 'reachable' | 'unreachable' | 'not_configured';
+let heroPreflightCache: { at: number; result: Record<string, { url: string | null; status: HeroReachability }> } | null = null;
+
+export async function checkHeroImages(): Promise<Record<string, { url: string | null; status: HeroReachability }>> {
+  if (heroPreflightCache && Date.now() - heroPreflightCache.at < 60_000) return heroPreflightCache.result;
+  const result: Record<string, { url: string | null; status: HeroReachability }> = {};
+  await Promise.all((Object.keys(HERO_IMAGES) as HeroImageKey[]).map(async (key) => {
+    const url = HERO_IMAGES[key].url;
+    if (!url) { result[key] = { url, status: 'not_configured' }; return; }
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 5000);
+      let res = await fetch(url, { method: 'HEAD', signal: ctrl.signal, redirect: 'follow' });
+      if (res.status === 405 || res.status === 501) {
+        // Some servers reject HEAD; fall back to a GET we discard.
+        res = await fetch(url, { method: 'GET', signal: ctrl.signal, redirect: 'follow' });
+      }
+      clearTimeout(timer);
+      const isImage = (res.headers.get('content-type') || '').startsWith('image/');
+      result[key] = { url, status: res.ok && isImage ? 'reachable' : 'unreachable' };
+    } catch {
+      result[key] = { url, status: 'unreachable' };
+    }
+  }));
+  heroPreflightCache = { at: Date.now(), result };
+  return result;
+}
 
 // ---------------------------------------------------------------------------
 // Shared lifecycle template (dark theme + unsubscribe + non-affiliation footer)
@@ -1510,6 +1546,7 @@ export async function sendSubscriptionCancelledEmail(user: {
 // ---------------------------------------------------------------------------
 
 export async function getLifecycleStatus() {
+  const heroChecks = await checkHeroImages();
   const emails = await Promise.all(
     LIFECYCLE_EMAILS.map(async (e) => {
       let eligibleNow: number | null = null;
@@ -1527,6 +1564,8 @@ export async function getLifecycleStatus() {
         transactional: !!e.transactional,
         heroKey: e.heroKey || null,
         heroUploaded: e.heroKey ? !!HERO_IMAGES[e.heroKey].url : false,
+        heroUrl: e.heroKey ? HERO_IMAGES[e.heroKey].url : null,
+        heroStatus: e.heroKey ? heroChecks[e.heroKey]?.status ?? 'not_configured' : null,
         subject: e.subject,
         ctaLabel: e.ctaLabel,
         eligibleNow,
