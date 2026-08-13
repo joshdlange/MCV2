@@ -1,0 +1,296 @@
+# Add Marvel Card Vault Lifecycle Email Hero Images and Improve Email Presentation
+
+Context:
+We built Lifecycle Emails v3, but the test emails currently feel too plain. They look like basic notifications: logo, headline, body, button. We now have custom Midjourney-style hero images that should make the emails feel more polished, branded, and worth reading.
+
+I am going to upload/share the hero image files with you.
+
+Important:
+These images should be used as reusable lifecycle email hero assets.
+Do not send any production emails during this task.
+Do not activate any draft emails.
+Do not change eligibility logic.
+Do not touch Scan to Add.
+Do not add image approved/rejected email notifications.
+
+Goal:
+
+* Add the provided hero images to the lifecycle email system.
+* Compress/resize them for email use.
+* Map them to the right email templates.
+* Improve the lifecycle email layout so emails feel more branded, useful, and intentional.
+* Add or improve the admin area so I can preview/test lifecycle emails and see the hero image mapping.
+
+Image handling:
+
+* Take the images I provide and create optimized email-ready versions.
+* Resize/crop to a consistent email hero format.
+* Target size: 1200 × 600 if possible.
+* Acceptable ratio: 2:1.
+* Compress to WebP or JPG as appropriate for email compatibility.
+* Target file size: ideally under 200 KB each, under 300 KB max if image quality would suffer.
+* Do not distort the images.
+* Preserve the premium/cinematic feel.
+* Crop intelligently so the focal point still looks good.
+* Avoid black bars.
+* Store the optimized versions in a sensible public/static asset location.
+* Use stable filenames/keys.
+* Do not use the original huge Midjourney files directly in emails.
+
+Use these image keys:
+
+1. email-hero-vault-starter
+2. email-hero-keep-building
+3. email-hero-upgrade
+4. email-hero-pc-binder
+5. email-hero-complete-the-vault
+6. email-hero-community
+
+Image mapping:
+
+* Image 1 should become `email-hero-vault-starter`
+* Image 2 should become `email-hero-keep-building`
+* Image 3 should become `email-hero-upgrade`
+* Image 4 should become `email-hero-pc-binder`
+* Image 5 should become `email-hero-complete-the-vault`
+* Image 6 should become `email-hero-community`
+
+Lifecycle email mapping:
+
+* Welcome → email-hero-vault-starter
+
+* First-Card Nudge → email-hero-vault-starter
+
+* Empty Vault Follow-Up → email-hero-vault-starter
+
+* Dormant Empty Vault → email-hero-vault-starter
+
+* Collection Momentum → email-hero-keep-building
+
+* Dormant Started → email-hero-keep-building
+
+* Dormant Engaged → email-hero-keep-building
+
+* Near 500-Card Side Kick Limit → email-hero-upgrade
+
+* Dormant Upgrade Candidate → email-hero-upgrade
+
+* BABYCOMEBACK → email-hero-upgrade
+
+* Payment Failed / Subscription Interrupted → email-hero-upgrade or no hero image if the billing template feels cleaner without one
+
+* Subscription Cancelled / Super Hero Expired → email-hero-upgrade or no hero image if the billing template feels cleaner without one
+
+* PC Binder Prompt → email-hero-pc-binder
+
+* PC Binder Upgrade Nudge → email-hero-pc-binder
+
+* Share Binder Nudge → email-hero-community
+
+* Missing Image Contribution Nudge → email-hero-complete-the-vault
+
+* Dormant Missing-Image Contributor → email-hero-complete-the-vault
+
+Alt text:
+
+* email-hero-vault-starter: “A glowing collector vault with trading cards.”
+* email-hero-keep-building: “Stacks of trading cards and binder pages in a collector workspace.”
+* email-hero-upgrade: “Premium trading cards glowing with red and gold energy.”
+* email-hero-pc-binder: “A custom binder filled with organized trading cards.”
+* email-hero-complete-the-vault: “Trading cards glowing as part of a collector vault.”
+* email-hero-community: “A connected collection of trading cards and collectors.”
+
+Email layout improvements:
+
+* Keep the logo/header at the top.
+* Add the mapped hero image below the logo/header.
+* Add an eyebrow label above the headline where appropriate.
+* Make the headline stronger and more specific.
+* Keep body copy short and readable.
+* Add a small personalized stat/value block where useful.
+* Keep one primary CTA button.
+* Keep footer/unsubscribe/preference language intact.
+* Emails must still make sense if images are blocked by the email client.
+* Do not put important information only in images.
+* Do not put promo codes only in images.
+* BABYCOMEBACK promo code must remain real HTML text in the email body.
+
+Suggested email structure:
+
+1. Logo/header
+2. Hero image
+3. Eyebrow label
+4. Headline
+5. Short body copy
+6. Personalized stat/value block if available
+7. CTA button
+8. Footer/unsubscribe/preferences
+
+Suggested eyebrow labels:
+
+* Welcome: WELCOME TO THE VAULT
+* First-Card Nudge: START YOUR VAULT
+* Empty Vault Follow-Up: YOUR VAULT IS WAITING
+* Collection Momentum: KEEP BUILDING
+* Near 500-Card Limit: YOU’RE BUILDING FAST
+* PC Binder Prompt: PERSONAL COLLECTION
+* PC Binder Upgrade: UNLOCK PC BINDERS
+* Missing Image Nudge: HELP COMPLETE THE VAULT
+* Share Binder: SHOW OFF YOUR VAULT
+* Dormant/Win-back: COME BACK TO THE VAULT
+* BABYCOMEBACK: LIMITED COMEBACK OFFER
+* Payment Failed: ACCOUNT NOTICE
+* Subscription Cancelled: ACCOUNT UPDATE
+
+Personalized stat/value blocks:
+Add these only where reliable data exists. If reliable data does not exist, skip the stat block rather than guessing.
+
+Examples:
+
+* Welcome / first-card / empty-vault:
+
+  * Cards in your vault: 0
+  * Next step: Add your first card
+
+* Collection Momentum:
+
+  * Cards in your vault: actual card count
+  * Next milestone: next sensible milestone, like 10, 25, 50, 100
+
+* Near 500-card limit:
+
+  * Current cards: actual count / 500
+  * Super Hero: unlimited cards
+
+* PC Binder Prompt:
+
+  * Cards in your vault: actual card count
+  * PC Binders created: 0
+
+* Missing Image Nudge:
+
+  * Cards missing images: actual count if reliable
+  * Reward: XP after approval
+
+* Share Binder:
+
+  * Binder ready to share: yes, if reliable
+  * Reward: XP for sharing, if that existing XP rule is already live
+
+* BABYCOMEBACK:
+
+  * Offer: $5 off your first 2 months through web checkout
+  * Code: BABYCOMEBACK
+
+Copy guidance:
+
+* Make the emails feel less like generic notifications.
+* Make each email answer: “Why am I getting this?”
+* Keep the tone collector-focused, helpful, and energetic.
+* Do not be overly salesy.
+* Do not sound desperate.
+* Keep the copy concise.
+* Use Marvel Card Vault language like vault, collection, binder, collector, XP, Super Hero, Side Kick, PC Binder.
+* Do not claim affiliation with Marvel, Disney, Topps, Upper Deck, or any manufacturer.
+
+Admin lifecycle email area:
+From the current Notifications admin screenshot, there is not a robust lifecycle email management section yet.
+
+Please add or improve an admin section for Lifecycle Emails inside Admin → Notifications or the most appropriate admin area.
+
+Must include:
+
+* List of lifecycle email templates.
+* Status for each template: active, draft, disabled, transactional, or event-triggered.
+* Eligible count for each lifecycle/marketing email where applicable.
+* Preview button for each email.
+* Test-send button for each email that sends only to the current admin email.
+* Hero image key shown for each email.
+* Thumbnail preview of the assigned hero image if available.
+* Clear warning that test-send does not activate the template.
+* Clear warning that activate/send controls can email real users if used.
+* Do not expose dangerous send buttons casually.
+* Any real send/activation action must require explicit confirmation.
+
+Admin safety:
+
+* Admin preview/test endpoints must require admin auth.
+* Test sends must only go to the current admin account email unless explicitly overridden by a protected admin-only recipient field.
+* No public email preview endpoints.
+* No unauthenticated email endpoints.
+* Do not send to production users from dev workspace.
+* Dev/test workspace should only allow explicit admin test sends.
+* Production lifecycle sends should remain governed by existing gates, caps, and statuses.
+
+Must not do:
+
+* Do not send production emails.
+* Do not activate draft templates.
+* Do not run any batch sends.
+* Do not change eligibility rules unless needed only to support display/preview safely.
+* Do not re-enable monthly emails.
+* Do not re-enable legacy campaigns.
+* Do not add image approved/rejected emails.
+* Do not wire image approval/rejection events to email.
+* Do not touch Scan to Add.
+* Do not change Stripe or RevenueCat billing behavior.
+* Do not change subscriptions or upgrade logic.
+* Do not change PC Binder gating.
+* Do not change Feed, Follow/Friends, XP rules, card data, Drive Sync, Data Quality, Upcoming Set Intelligence, Android, or iOS.
+* Do not add heavy dependencies.
+* Do not expose secrets.
+* Do not use copyrighted logos, official Marvel art, Disney art, Topps logos, Upper Deck logos, or real card images unless explicitly approved.
+
+Preserve:
+
+* Existing Resend email sending system.
+* Existing lifecycle email framework.
+* Existing claim-before-send protection.
+* Existing once-per-template-per-user protection.
+* Existing 14-day cap.
+* Existing unsubscribe/preference logic.
+* Existing active lifecycle emails.
+* Existing draft dormant/win-back emails.
+* Existing BABYCOMEBACK web-only language.
+* Existing disabled monthly/legacy campaign state.
+* Existing password reset emails.
+* Existing admin tools and permissions.
+* Existing production safety gates.
+
+QA:
+
+* Uploaded images are optimized for email.
+* Optimized images are around 1200 × 600 or a consistent 2:1 ratio.
+* Optimized images are reasonably compressed.
+* Emails render cleanly with hero images.
+* Emails render cleanly if images are blocked.
+* Every mapped email shows the correct hero image.
+* Alt text exists for every hero image.
+* Logo/header still displays properly.
+* Footer/unsubscribe/preference language is preserved.
+* BABYCOMEBACK code appears as real text, not image-only.
+* Admin lifecycle section shows templates, statuses, eligible counts, previews, test-send, and hero image mapping.
+* Admin test sends go only to the current admin email.
+* No production users receive email.
+* No draft templates are activated.
+* Monthly and legacy campaigns remain disabled.
+* Image approved/rejected emails are not added.
+* Scan to Add remains untouched.
+* No unrelated systems changed.
+* App builds/runs cleanly.
+
+Final response:
+
+* List changed files.
+* Confirm image filenames/keys created.
+* Confirm optimized dimensions and approximate file sizes.
+* Confirm email-to-image mapping.
+* Confirm email layout improvements made.
+* Confirm admin lifecycle email section exists and where to find it.
+* Confirm preview and admin-only test-send work.
+* Confirm no production emails were sent.
+* Confirm no templates were activated.
+* Confirm monthly/legacy campaigns remain disabled.
+* Confirm image approved/rejected emails were not added.
+* Confirm Scan to Add was untouched.
+* Confirm safe to publish.

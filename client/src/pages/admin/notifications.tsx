@@ -430,6 +430,148 @@ function VaultUpgradeDripCard() {
   );
 }
 
+// ─────────────────────────────────────────────────────────────
+// Lifecycle Emails — templates, statuses, eligible counts, hero images,
+// preview + admin-only test sends. Test sends go ONLY to your admin email
+// and never activate a template. There are deliberately NO activate/batch
+// buttons here: activating a draft is a code change done with the agent.
+// ─────────────────────────────────────────────────────────────
+function LifecycleEmailsCard() {
+  const { toast } = useToast();
+  const [previewKey, setPreviewKey] = useState<string | null>(null);
+  const [previewHtml, setPreviewHtml] = useState<string>("");
+
+  const { data, isLoading, refetch, isFetching } = useQuery<any>({
+    queryKey: ["/api/admin/lifecycle/status"],
+  });
+
+  const testMutation = useMutation({
+    mutationFn: async (key: string) => {
+      const res = await apiRequest("POST", "/api/admin/lifecycle/test", { key });
+      return res.json();
+    },
+    onSuccess: (d: any) => toast({ title: "Test sent", description: `"${d.key}" sent to ${d.sentTo} only.` }),
+    onError: (e: any) => toast({ title: "Test send failed", description: String(e?.message || e), variant: "destructive" }),
+  });
+
+  const openPreview = async (key: string) => {
+    setPreviewKey(key);
+    setPreviewHtml("");
+    try {
+      const res = await apiRequest("GET", `/api/admin/lifecycle/preview?key=${encodeURIComponent(key)}`);
+      setPreviewHtml(await res.text());
+    } catch {
+      setPreviewHtml("<p style='color:red;padding:20px'>Failed to load preview.</p>");
+      toast({ title: "Preview failed", variant: "destructive" });
+    }
+  };
+
+  const emails: any[] = data?.emails ?? [];
+
+  const statusBadge = (e: any) => {
+    if (e.transactional) return <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">Transactional</Badge>;
+    if (e.active) return <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">Active</Badge>;
+    return <Badge className="bg-gray-100 text-gray-600 border-gray-200 text-xs">Draft</Badge>;
+  };
+
+  return (
+    <Card className="border border-gray-200">
+      <CardHeader className="pb-2 pt-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-red-600">
+              <Send className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-sm text-gray-900 dark:text-white">Lifecycle Emails</CardTitle>
+              <p className="text-xs text-gray-500">
+                Every lifecycle template with status, eligible count, and hero image. Preview and test-send safely.
+              </p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`h-3 w-3 mr-1 ${isFetching ? "animate-spin" : ""}`} /> Refresh counts
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="pb-4 space-y-3">
+        <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2">
+          <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+          <p className="text-xs text-amber-800">
+            <strong>Test Send</strong> emails only YOUR admin address and never activates a template.
+            Drafts cannot email users. Activating a template or running a batch send is a deliberate,
+            confirmed action done outside this screen — real users get emailed when a template is active in production.
+          </p>
+        </div>
+        {isLoading ? (
+          <p className="text-xs text-gray-500">Loading templates…</p>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {emails.map((e) => (
+              <div key={e.key} className="py-2.5 flex items-center gap-3 flex-wrap">
+                {e.heroKey ? (
+                  <img
+                    src={`/email-assets/${e.heroKey}.jpg`}
+                    alt={e.heroKey}
+                    className="w-16 h-8 object-cover rounded border border-gray-200 shrink-0"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-16 h-8 rounded border border-dashed border-gray-300 flex items-center justify-center text-[9px] text-gray-400 shrink-0">no hero</div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-semibold text-gray-900 dark:text-white">{e.key}</span>
+                    {statusBadge(e)}
+                    {e.exemptFromCap && !e.transactional && (
+                      <Badge variant="outline" className="text-[10px]">cap-exempt</Badge>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-gray-500 truncate max-w-md">{e.subject}</p>
+                  <p className="text-[10px] text-gray-400">
+                    {e.heroKey ? `Hero: ${e.heroKey}` : "No hero image"} · Eligible now: {e.eligibleNow ?? 0}
+                  </p>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => openPreview(e.key)}>
+                    Preview
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    disabled={testMutation.isPending}
+                    onClick={() => testMutation.mutate(e.key)}
+                  >
+                    <Send className="h-3 w-3 mr-1" /> Test Send
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+
+      {previewKey && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setPreviewKey(null)}>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col" onClick={(ev) => ev.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-2 border-b">
+              <p className="text-sm font-semibold text-gray-900">Preview: {previewKey}</p>
+              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setPreviewKey(null)}>Close</Button>
+            </div>
+            <iframe
+              title={`preview-${previewKey}`}
+              srcDoc={previewHtml || "<p style='padding:20px;font-family:sans-serif'>Loading…</p>"}
+              sandbox=""
+              className="w-full flex-1 min-h-[70vh] rounded-b-lg"
+            />
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export default function AdminNotifications() {
   return (
     <div className="p-6 space-y-6">
@@ -445,6 +587,15 @@ export default function AdminNotifications() {
           Notifications
         </Badge>
       </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Lifecycle Emails</h2>
+        <div className="space-y-3">
+          <LifecycleEmailsCard />
+        </div>
+      </div>
+
+      <Separator />
 
       <div>
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Delivery & Contacts</h2>
