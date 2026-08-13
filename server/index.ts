@@ -407,6 +407,17 @@ app.use((req, res, next) => {
     console.error('Startup fix (TCMS 2025 inserts) failed:', error);
   }
 
+  // Idempotent startup fix: parallel cards that leaked into base/insert set
+  // checklists across all products — moves them to their correct parallel sets
+  // (creating sets where missing), strips self-labelling decorations, and
+  // archives ambiguous Printing Plate entries (marker-gated, dev + prod safe).
+  try {
+    const { fixParallelLeaks } = await import('./seeds/fixParallelLeaks');
+    await fixParallelLeaks();
+  } catch (error) {
+    console.error('Startup fix (parallel leaks) failed:', error);
+  }
+
   const server = await registerRoutes(app);
 
   // Start background services
