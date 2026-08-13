@@ -70,12 +70,28 @@ const LOGO_URL = 'https://res.cloudinary.com/dgu7hjfvn/image/upload/v1765655501/
 // ---------------------------------------------------------------------------
 
 export type HeroImageKey =
+  // Legacy shared heroes (still used by emails Joshua hasn't drawn custom art for yet)
   | 'email-hero-vault-starter'
   | 'email-hero-keep-building'
   | 'email-hero-upgrade'
   | 'email-hero-pc-binder'
   | 'email-hero-complete-the-vault'
-  | 'email-hero-community';
+  | 'email-hero-community'
+  // Per-email custom heroes (Joshua's headline art, Aug 2026). Key = email key.
+  | 'email-hero-welcome'
+  | 'email-hero-first-card-nudge'
+  | 'email-hero-empty-vault'
+  | 'email-hero-collection-momentum'
+  | 'email-hero-subscription-cancelled'
+  | 'email-hero-near-limit-500'
+  | 'email-hero-pc-binder-prompt'
+  | 'email-hero-pc-binder-upgrade'
+  | 'email-hero-wishlist-nudge'
+  | 'email-hero-new-set-announcement'
+  | 'email-hero-reactivation'
+  | 'email-hero-dormant-empty-vault'
+  | 'email-hero-winback-90'
+  | 'email-hero-babycomeback';
 
 // Optimized 1200x600 JPGs (<150KB) live in client/public/email-assets/ and are
 // served at /email-assets/<key>.jpg in both dev (vite publicDir) and prod
@@ -91,6 +107,22 @@ export const HERO_IMAGES: Record<HeroImageKey, { url: string | null; alt: string
   'email-hero-pc-binder':          { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-pc-binder.jpg`,          alt: 'A custom binder filled with organized trading cards.' },
   'email-hero-complete-the-vault': { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-complete-the-vault.jpg`, alt: 'Trading cards glowing as part of a collector vault.' },
   'email-hero-community':          { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-community.jpg`,          alt: 'A connected collection of trading cards and collectors.' },
+  // Custom per-email heroes — headline text is baked into the art, so alt text
+  // repeats the headline for image-blocked clients and screen readers.
+  'email-hero-welcome':                { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-welcome.jpg`,                alt: 'Welcome to the Vault!' },
+  'email-hero-first-card-nudge':       { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-first-card-nudge.jpg`,       alt: 'Your vault is waiting.' },
+  'email-hero-empty-vault':            { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-empty-vault.jpg`,            alt: 'Empty vault?!?' },
+  'email-hero-collection-momentum':    { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-collection-momentum.jpg`,    alt: 'Whoa! Good start.' },
+  'email-hero-subscription-cancelled': { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-subscription-cancelled.jpg`, alt: 'Super Hero or Side Kick?' },
+  'email-hero-near-limit-500':         { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-near-limit-500.jpg`,         alt: 'Side Kicks can\'t carry much more...' },
+  'email-hero-pc-binder-prompt':       { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-pc-binder-prompt.jpg`,       alt: 'Show off how you collect with PC Binders.' },
+  'email-hero-pc-binder-upgrade':      { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-pc-binder-upgrade.jpg`,      alt: 'Behold! My binder!' },
+  'email-hero-wishlist-nudge':         { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-wishlist-nudge.jpg`,         alt: 'I need that!' },
+  'email-hero-new-set-announcement':   { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-new-set-announcement.jpg`,   alt: 'New sets added!' },
+  'email-hero-reactivation':           { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-reactivation.jpg`,           alt: 'Your vault is waiting...' },
+  'email-hero-dormant-empty-vault':    { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-dormant-empty-vault.jpg`,    alt: 'More than you might think.' },
+  'email-hero-winback-90':             { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-winback-90.jpg`,             alt: 'So. Many. Upgrades!' },
+  'email-hero-babycomeback':           { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-babycomeback.jpg`,           alt: 'Thanks for trying Marvel Card Vault — come back with 2 months of Super Hero for $5 off.' },
 };
 
 // ---------------------------------------------------------------------------
@@ -269,7 +301,7 @@ const HAS_CARDS = sql`EXISTS (SELECT 1 FROM user_collections uc WHERE uc.user_id
 export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   {
     key: 'welcome',
-    heroKey: 'email-hero-vault-starter',
+    heroKey: 'email-hero-welcome',
     jobName: 'lifecycle-welcome',
     stage: 'Activation',
     active: true,
@@ -283,7 +315,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
       // No card-count stat here: welcome fires on onboarding completion and
       // eligibility does not guarantee zero cards at send time.
       stats: [{ label: 'Next step', value: 'Add your first card' }, { label: 'Earn XP', value: 'Every card you add builds Collector Power' }],
-      heroKey: 'email-hero-vault-starter',
+      heroKey: 'email-hero-welcome',
       preheader: 'Your vault is ready. Start building your collection and earning XP.',
       heading: 'Welcome to Marvel Card Vault',
       paragraphs: [
@@ -300,7 +332,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'first-card-nudge',
-    heroKey: 'email-hero-vault-starter',
+    heroKey: 'email-hero-first-card-nudge',
     jobName: 'lifecycle-first-card-nudge',
     stage: 'Activation',
     active: true,
@@ -311,7 +343,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     render: () => lifecycleTemplate({
       eyebrow: 'START YOUR VAULT',
       stats: [{ label: 'Cards in your vault', value: '0' }, { label: 'Next step', value: 'Add your first card' }],
-      heroKey: 'email-hero-vault-starter',
+      heroKey: 'email-hero-first-card-nudge',
       preheader: 'Add your first card and start earning Collector XP.',
       heading: 'Your vault is waiting',
       paragraphs: [
@@ -336,7 +368,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   // ---------------------- v2 ACTIVE journeys -------------------------------
   {
     key: 'empty-vault',
-    heroKey: 'email-hero-vault-starter',
+    heroKey: 'email-hero-empty-vault',
     jobName: 'lifecycle-empty-vault',
     stage: 'Activation',
     active: true,
@@ -347,7 +379,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     render: () => lifecycleTemplate({
       eyebrow: 'YOUR VAULT IS WAITING',
       stats: [{ label: 'Cards in your vault', value: '0' }, { label: 'Next step', value: 'Add your first card' }],
-      heroKey: 'email-hero-vault-starter',
+      heroKey: 'email-hero-empty-vault',
       preheader: 'Add one card and bring your vault to life.',
       heading: "Still empty? Let's fix that",
       paragraphs: [
@@ -363,7 +395,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'collection-momentum',
-    heroKey: 'email-hero-keep-building',
+    heroKey: 'email-hero-collection-momentum',
     jobName: 'lifecycle-collection-momentum',
     stage: 'Engagement',
     active: true,
@@ -373,7 +405,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaUrl: `${APP_URL}/browse`,
     render: () => lifecycleTemplate({
       eyebrow: 'KEEP BUILDING',
-      heroKey: 'email-hero-keep-building',
+      heroKey: 'email-hero-collection-momentum',
       preheader: 'Add a few more cards and keep your vault moving.',
       heading: 'Your collection is off to a good start',
       paragraphs: [
@@ -422,7 +454,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     stage: 'Upgrade',
     active: false,
     exemptFromCap: true, // account-status email tied to a billing event
-    heroKey: 'email-hero-upgrade',
+    heroKey: 'email-hero-subscription-cancelled',
     subject: 'Your Super Hero access has ended',
     preheader: 'You can come back anytime and keep building without limits.',
     ctaLabel: 'Restart Super Hero',
@@ -436,7 +468,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
         'Your Super Hero subscription has ended. Your vault and every card in it are safe and exactly where you left them.',
         'When you are ready to keep building without limits, Super Hero is one tap away: unlimited cards, PC Binders, Market Trends, Scan to Add, and the full collector toolkit.',
       ],
-      heroKey: 'email-hero-upgrade',
+      heroKey: 'email-hero-subscription-cancelled',
       ctaLabel: 'Restart Super Hero',
       ctaUrl: `${APP_URL}/subscribe`,
     }),
@@ -453,7 +485,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     jobName: 'lifecycle-near-limit-500',
     stage: 'Upgrade',
     active: false,
-    heroKey: 'email-hero-upgrade',
+    heroKey: 'email-hero-near-limit-500',
     subject: "You're building fast",
     preheader: "You're getting close to the Side Kick card limit. Super Hero gives you unlimited space.",
     ctaLabel: 'Upgrade to Super Hero',
@@ -468,7 +500,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
         'Your vault is growing fast: you are closing in on the Side Kick 500-card limit.',
         'Super Hero removes the ceiling entirely: unlimited cards, plus PC Binders, Market Trends, Scan to Add, and more room to keep building the collection your way.',
       ],
-      heroKey: 'email-hero-upgrade',
+      heroKey: 'email-hero-near-limit-500',
       ctaLabel: 'Upgrade to Super Hero',
       ctaUrl: `${APP_URL}/subscribe`,
     }),
@@ -479,7 +511,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   // ------------------------- DRAFTS (disabled) -----------------------------
   {
     key: 'pc-binder-prompt',
-    heroKey: 'email-hero-pc-binder',
+    heroKey: 'email-hero-pc-binder-prompt',
     jobName: 'lifecycle-pc-binder-prompt',
     stage: 'Engagement',
     active: false,
@@ -490,7 +522,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     render: () => lifecycleTemplate({
       eyebrow: 'PERSONAL COLLECTION',
       stats: [{ label: 'PC Binders created', value: '0' }, { label: 'Next step', value: 'Build your first binder' }],
-      heroKey: 'email-hero-pc-binder',
+      heroKey: 'email-hero-pc-binder-prompt',
       preheader: 'Create a custom PC Binder for a character, artist, set, or chase list.',
       heading: 'Build a binder around your favorites',
       paragraphs: [
@@ -506,7 +538,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'pc-binder-upgrade',
-    heroKey: 'email-hero-pc-binder',
+    heroKey: 'email-hero-pc-binder-upgrade',
     jobName: 'lifecycle-pc-binder-upgrade',
     stage: 'Upgrade',
     active: false,
@@ -516,7 +548,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaUrl: `${APP_URL}/subscribe`,
     render: () => lifecycleTemplate({
       eyebrow: 'UNLOCK PC BINDERS',
-      heroKey: 'email-hero-pc-binder',
+      heroKey: 'email-hero-pc-binder-upgrade',
       preheader: 'Upgrade to Super Hero to build custom binders around the cards you care about most.',
       heading: 'PC Binders are waiting',
       paragraphs: [
@@ -589,7 +621,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'wishlist-nudge',
-    heroKey: 'email-hero-keep-building',
+    heroKey: 'email-hero-wishlist-nudge',
     jobName: 'lifecycle-wishlist-nudge',
     stage: 'Engagement',
     active: false,
@@ -599,7 +631,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaUrl: `${APP_URL}/wishlist`,
     render: () => lifecycleTemplate({
       eyebrow: 'KEEP BUILDING',
-      heroKey: 'email-hero-keep-building',
+      heroKey: 'email-hero-wishlist-nudge',
       preheader: 'Add cards to your wishlist so your next target is easy to track.',
       heading: 'What are you chasing next?',
       paragraphs: [
@@ -619,7 +651,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'reactivation',
-    heroKey: 'email-hero-keep-building',
+    heroKey: 'email-hero-reactivation',
     jobName: 'lifecycle-reactivation',
     stage: 'Retention',
     active: false,
@@ -629,7 +661,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaUrl: APP_URL,
     render: () => lifecycleTemplate({
       eyebrow: 'COME BACK TO THE VAULT',
-      heroKey: 'email-hero-keep-building',
+      heroKey: 'email-hero-reactivation',
       preheader: 'New cards, images, and progress are ready when you are.',
       heading: 'Your vault has been waiting',
       paragraphs: [
@@ -650,7 +682,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'new-set-announcement',
-    heroKey: 'email-hero-keep-building',
+    heroKey: 'email-hero-new-set-announcement',
     jobName: 'lifecycle-new-set-announcement',
     stage: 'Retention',
     active: false,
@@ -660,7 +692,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaUrl: `${APP_URL}/browse`,
     render: () => lifecycleTemplate({
       eyebrow: 'NEW IN THE VAULT',
-      heroKey: 'email-hero-keep-building',
+      heroKey: 'email-hero-new-set-announcement',
       preheader: 'Browse the newest cards added to Marvel Card Vault.',
       heading: 'New cards added: [Set Name]',
       paragraphs: [
@@ -709,7 +741,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   // confirmation + 150/day dormant cap + 50/batch + 14-day cap + once-per-user.
   {
     key: 'dormant-empty-vault',
-    heroKey: 'email-hero-vault-starter',
+    heroKey: 'email-hero-dormant-empty-vault',
     jobName: 'lifecycle-dormant-empty-vault',
     stage: 'Retention',
     active: false,
@@ -720,7 +752,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     render: () => lifecycleTemplate({
       eyebrow: 'COME BACK TO THE VAULT',
       stats: [{ label: 'Cards in your vault', value: '0' }, { label: 'Next step', value: 'Add your first card' }],
-      heroKey: 'email-hero-vault-starter',
+      heroKey: 'email-hero-dormant-empty-vault',
       preheader: 'Add one card and bring your Marvel Card Vault to life.',
       heading: 'Still collecting? Your vault is ready',
       paragraphs: [
@@ -844,7 +876,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'winback-90',
-    heroKey: 'email-hero-keep-building',
+    heroKey: 'email-hero-winback-90',
     jobName: 'lifecycle-winback-90',
     stage: 'Retention',
     active: false,
@@ -854,7 +886,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaUrl: APP_URL,
     render: () => lifecycleTemplate({
       eyebrow: 'COME BACK TO THE VAULT',
-      heroKey: 'email-hero-keep-building',
+      heroKey: 'email-hero-winback-90',
       preheader: 'New cards, images, and collector tools have been added since you last visited.',
       heading: 'A lot has changed in the vault',
       paragraphs: [
@@ -871,7 +903,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'babycomeback',
-    heroKey: 'email-hero-upgrade',
+    heroKey: 'email-hero-babycomeback',
     jobName: 'lifecycle-babycomeback',
     stage: 'Upgrade',
     active: false,
@@ -882,7 +914,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     render: () => lifecycleTemplate({
       eyebrow: 'LIMITED COMEBACK OFFER',
       stats: [{ label: 'Offer', value: '$5 off your first 2 months (web checkout)' }, { label: 'Code', value: 'BABYCOMEBACK' }],
-      heroKey: 'email-hero-upgrade',
+      heroKey: 'email-hero-babycomeback',
       preheader: 'Use code BABYCOMEBACK for $5 off your first 2 months through web checkout.',
       heading: 'A little something to welcome you back',
       paragraphs: [
