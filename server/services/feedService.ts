@@ -11,7 +11,10 @@ import { computeXpProgress } from '../../shared/xp';
 export const REACTION_TYPES = ['fire_pull', 'hero_move', 'need_this', 'vault_worthy'] as const;
 export type ReactionType = (typeof REACTION_TYPES)[number];
 
-export const COLLECTION_MILESTONES = [50, 100, 250, 500] as const;
+// 100 is intentionally absent: the Hundred Club badge already posts a
+// "badge earned" story at 100 cards, and emitting both made the feed
+// repeat itself (Joshua, Aug 2026).
+export const COLLECTION_MILESTONES = [50, 250, 500] as const;
 export const LEVEL_MILESTONES = [5, 10, 15, 20, 25, 30, 40, 50] as const;
 
 // Feed reaction XP: first reaction of the (UTC) day +5, others +1, cap 10/day.
@@ -687,7 +690,7 @@ export async function runFeedBackfill(dryRun: boolean): Promise<Record<string, n
           SELECT user_id, acquired_date, row_number() OVER (PARTITION BY user_id ORDER BY acquired_date) AS rn
           FROM user_collections
         ) t
-        JOIN (VALUES (50), (100), (250), (500)) AS m(milestone) ON t.rn = m.milestone
+        JOIN (VALUES (50), (250), (500)) AS m(milestone) ON t.rn = m.milestone
         GROUP BY user_id, m.milestone
       `,
     },

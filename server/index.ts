@@ -256,6 +256,44 @@ app.use((req, res, next) => {
       FROM (SELECT user_id FROM pending_card_images WHERE status = 'approved' GROUP BY user_id HAVING COUNT(*) >= 3) p
       CROSS JOIN (SELECT id FROM badges WHERE name = 'Contributor') b
       ON CONFLICT (user_id, badge_id) DO NOTHING`);
+    // Badge shipped without artwork (feed showed the generic ribbon fallback);
+    // idempotent icon attach so dev AND prod pick it up.
+    await db.execute(sql`UPDATE badges SET icon_url = '/badge_images/contributor.png' WHERE name = 'Contributor' AND (icon_url IS NULL OR icon_url = '')`);
+    // One-time feed cleanup: the retro bulk award stamped earned_at = now(),
+    // so the feed backfill emitted one "earned the Contributor badge" story
+    // per retro recipient — a wall of identical posts. Remove them (and any
+    // reactions on them); genuinely NEW Contributor earns emit fresh events.
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('contributor_feed_spam_cleanup_v1'))`);
+      const m = await tx.execute(sql`INSERT INTO startup_migrations (name) VALUES ('contributor_feed_spam_cleanup_v1') ON CONFLICT (name) DO NOTHING RETURNING name`);
+      if ((m as any).rows?.length > 0) {
+        await tx.execute(sql`
+          DELETE FROM feed_reactions fr USING feed_events fe, badges b
+          WHERE fr.feed_event_id = fe.id AND fe.event_type = 'badge_earned'
+            AND fe.related_id = b.id AND b.name = 'Contributor'`);
+        const del = await tx.execute(sql`
+          DELETE FROM feed_events fe USING badges b
+          WHERE fe.event_type = 'badge_earned' AND fe.related_id = b.id AND b.name = 'Contributor'`);
+        console.log(`[Contributor Feed Cleanup] Removed ${(del as any).rowCount ?? 0} bulk retro-award feed posts`);
+      }
+    });
+    // One-time feed cleanup: "reached 100 cards" milestone posts duplicated
+    // the Hundred Club badge post at the same moment. The 100 milestone is
+    // removed from COLLECTION_MILESTONES going forward; delete the old posts.
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('hundred_club_milestone_dupe_cleanup_v1'))`);
+      const m = await tx.execute(sql`INSERT INTO startup_migrations (name) VALUES ('hundred_club_milestone_dupe_cleanup_v1') ON CONFLICT (name) DO NOTHING RETURNING name`);
+      if ((m as any).rows?.length > 0) {
+        await tx.execute(sql`
+          DELETE FROM feed_reactions fr USING feed_events fe
+          WHERE fr.feed_event_id = fe.id AND fe.event_type = 'collection_milestone'
+            AND fe.dedupe_key LIKE 'collection_milestone:%:100'`);
+        const del = await tx.execute(sql`
+          DELETE FROM feed_events
+          WHERE event_type = 'collection_milestone' AND dedupe_key LIKE 'collection_milestone:%:100'`);
+        console.log(`[Hundred Club Dupe Cleanup] Removed ${(del as any).rowCount ?? 0} duplicate 100-card milestone posts`);
+      }
+    });
   } catch (error) {
     console.error('Startup seed (Contributor badge) failed:', error);
   }
