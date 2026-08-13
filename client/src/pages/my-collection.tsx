@@ -338,6 +338,62 @@ export default function MyCollection() {
     }
   });
 
+  // "Create '<term>' Binder" from the search results. Reuses the standard
+  // binder build flow: create (or reuse a same-named) binder, then the bulk
+  // search-add endpoint — the DB's unique (binder, card) index guarantees no
+  // duplicate entries, so re-running just tops up missing matches.
+  const hasPcBinderAccess = !!currentUser && (currentUser.plan === 'SUPER_HERO' || currentUser.isAdmin);
+  const createSearchBinderMutation = useMutation({
+    mutationFn: async (term: string) => {
+      // Server-side atomic get-or-create (advisory-locked) — safe against
+      // double-taps and multiple tabs. Binder names cap at 60 chars.
+      const res = await apiRequest('POST', '/api/pc-binders/get-or-create', {
+        name: term.slice(0, 60).trim(),
+        category: 'Other',
+      });
+      const binder: { id: number; name: string; reused?: boolean } = await res.json();
+      const bulkRes = await apiRequest('POST', `/api/pc-binders/${binder.id}/cards/bulk`, { search: term });
+      const bulk = await bulkRes.json();
+      return { binder, reused: !!binder.reused, added: bulk.added ?? 0 };
+    },
+    onSuccess: ({ binder, reused, added }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/pc-binders'] });
+      toast({
+        title: reused ? `Updated "${binder.name}" binder` : `Created "${binder.name}" binder`,
+        description: added > 0 ? `${added} matching card${added === 1 ? '' : 's'} added` : 'No new cards to add',
+      });
+      setLocation(`/pc-binders/${binder.id}`);
+    },
+    onError: (error: Error) => {
+      const msg = error.message || '';
+      if (msg.includes('SUPER_HERO_REQUIRED') || msg.includes('403')) {
+        setShowUpgradeModal(true);
+        return;
+      }
+      const match = msg.match(/\d+: (.+)/);
+      let errorMessage = 'Failed to create binder';
+      if (match) {
+        try { errorMessage = JSON.parse(match[1]).message || errorMessage; } catch { errorMessage = match[1]; }
+      }
+      toast({ title: errorMessage, variant: 'destructive' });
+    },
+  });
+  const handleCreateSearchBinder = () => {
+    // Use the SETTLED term (what the results on screen reflect), not the raw
+    // input — a quick type-and-tap must not build a binder for a different
+    // term than the one displayed.
+    const term = deferredSearchQuery.trim();
+    if (term.length < 2) {
+      toast({ title: 'Search term must be at least 2 characters', variant: 'destructive' });
+      return;
+    }
+    if (!hasPcBinderAccess) {
+      setShowUpgradeModal(true);
+      return;
+    }
+    createSearchBinderMutation.mutate(term.slice(0, 100));
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -1022,12 +1078,29 @@ export default function MyCollection() {
                   Sets ({matchingSetIds.size})
                 </Button>
               </div>
-              <button
-                onClick={() => setSearchQuery("")}
-                className="text-sm text-gray-500 hover:text-gray-800 underline"
-              >
-                Clear search
-              </button>
+              <div className="flex items-center gap-3 flex-wrap">
+                <Button
+                  size="sm"
+                  onClick={handleCreateSearchBinder}
+                  disabled={
+                    createSearchBinderMutation.isPending ||
+                    deferredSearchQuery.trim().length < 2 ||
+                    searchQuery.trim().toLowerCase() !== activeSearch
+                  }
+                  className="bg-[#f73f32] hover:bg-red-700 text-white max-w-full truncate"
+                  data-testid="button-create-search-binder"
+                >
+                  {createSearchBinderMutation.isPending
+                    ? "Building binder..."
+                    : `Create "${deferredSearchQuery.trim().slice(0, 20)}${deferredSearchQuery.trim().length > 20 ? '…' : ''}" Binder`}
+                </Button>
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="text-sm text-gray-500 hover:text-gray-800 underline"
+                >
+                  Clear search
+                </button>
+              </div>
             </div>
           )}
           {isSearchingSetsView && searchResultMode === "cards" ? (

@@ -11515,6 +11515,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Atomic get-or-create by name (case-insensitive), used by "Create '<term>'
+  // Binder" from collection search. Advisory-locked per (user, name) so
+  // concurrent taps/tabs can't create duplicate same-named binders — there is
+  // no unique index on (user_id, name), so the lock is the race guard.
+  app.post("/api/pc-binders/get-or-create", authenticateUser, requirePcBinderAccess, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const parsed = pcBinderInputSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.errors[0]?.message || "Invalid input" });
+      }
+      const name = parsed.data.name;
+
+      const result = await db.transaction(async (tx) => {
+        await tx.execute(
+          sql`SELECT pg_advisory_xact_lock(hashtext(${`pc_binder_name:${userId}:${name.toLowerCase()}`}))`
+        );
+        const [existing] = await tx
+          .select()
+          .from(pcBinders)
+          .where(and(eq(pcBinders.userId, userId), sql`LOWER(${pcBinders.name}) = LOWER(${name})`))
+          .limit(1);
+        if (existing) return { binder: existing, reused: true };
+
+        const [{ binderCount }] = await tx
+          .select({ binderCount: count() })
+          .from(pcBinders)
+          .where(eq(pcBinders.userId, userId));
+        if (Number(binderCount) >= MAX_PC_BINDERS_PER_USER) {
+          return { limitReached: true as const };
+        }
+
+        const [binder] = await tx
+          .insert(pcBinders)
+          .values({
+            userId,
+            name,
+            description: parsed.data.description || null,
+            category: parsed.data.category || "Other",
+          })
+          .returning();
+        return { binder, reused: false };
+      });
+
+      if ("limitReached" in result) {
+        return res.status(400).json({ message: `You've reached the limit of ${MAX_PC_BINDERS_PER_USER} PC binders` });
+      }
+
+      if (!result.reused) {
+        badgeService.checkBadgesOnBinderChange(userId).catch(err =>
+          console.error('Binder badge check failed:', err)
+        );
+        import('./services/feedService').then(m => m.emitFeedEvent({
+          userId,
+          eventType: 'binder_created',
+          title: `created the "${result.binder.name}" PC Binder`,
+          metadata: { binderName: result.binder.name },
+          relatedType: 'binder',
+          relatedId: result.binder.id,
+          dedupeKey: `binder_created:${userId}:${result.binder.id}`,
+        })).catch(() => {});
+      }
+
+      res.status(result.reused ? 200 : 201).json({ ...result.binder, reused: result.reused });
+    } catch (error) {
+      console.error("Error in PC binder get-or-create:", error);
+      res.status(500).json({ message: "Failed to create PC binder" });
+    }
+  });
+
   app.patch("/api/pc-binders/:id", authenticateUser, requirePcBinderAccess, async (req: any, res) => {
     try {
       const binderId = parseInt(req.params.id);
