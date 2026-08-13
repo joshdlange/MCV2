@@ -1,0 +1,80 @@
+Please send admin-only test emails for every lifecycle email type currently built so I can review the copy, layout, CTA buttons, unsubscribe/footer, and overall feel.
+
+Important:
+- Send test emails only to my current admin account email.
+- Do not send to any production users.
+- Do not activate any draft emails.
+- Do not run any batch sends.
+- Do not bypass this as a campaign.
+- Do not change eligibility rules.
+- Do not change lifecycle email status.
+- Do not re-enable monthly emails.
+- Do not re-enable legacy campaigns.
+- Do not send image approved/rejected emails.
+
+Please send one test email for each of these templates:
+
+Existing active lifecycle:
+1. Welcome
+2. First-Card Nudge
+3. Empty Vault Follow-Up
+4. Collection Momentum Nudge
+
+Dormant/win-back drafts:
+5. Dormant Empty Vault
+6. Dormant Started
+7. Dormant Engaged
+8. Dormant Upgrade Candidate
+9. Dormant Missing-Image Contributor
+10. 90-Day What’s-New Win-Back
+11. BABYCOMEBACK
+
+Lifecycle Emails v3:
+12. Payment Failed / Subscription Interrupted
+13. Subscription Cancelled / Super Hero Expired
+14. Near 500-Card Side Kick Limit
+15. PC Binder Prompt
+16. PC Binder Upgrade Nudge
+17. Missing Image Contribution Nudge
+18. Share Binder Nudge
+
+Testing rules:
+- These should be admin-only test sends, not real eligibility-triggered sends.
+- Use realistic sample user data in the email body where needed.
+- For the 500-card limit email, use a realistic count near the limit, like 425 out of 500.
+- For the PC Binder email, use realistic collector language.
+- For Missing Image Contribution, make sure it mentions XP after approval but does not imply an approval/rejection notification email exists.
+- For BABYCOMEBACK, make sure it clearly says web checkout only.
+- BABYCOMEBACK should use this wording:
+  “Use code BABYCOMEBACK for $5 off your first 2 months through web checkout.”
+- The BABYCOMEBACK code must appear as real text, not inside an image.
+- If hero images are missing, the email should still render cleanly without them.
+
+Also review the dev-send concern:
+- The reviewer noted that the welcome email can currently send from the dev workspace when a test account finishes onboarding.
+- Please lock lifecycle emails to production by default unless they are explicit admin-only test sends.
+- Dev/test workspace should not be able to send real lifecycle emails to normal users.
+- Preserve admin-only test email capability.
+
+Must verify:
+- All test emails went only to my admin email.
+- No production users were emailed.
+- No templates were activated.
+- No batch sends ran.
+- Monthly emails remain disabled.
+- Legacy campaigns remain disabled.
+- Image approved/rejected emails were not added or sent.
+- Lifecycle draft statuses remain unchanged.
+- Payment failed test did not require or create a real failed billing event.
+- No Stripe or RevenueCat billing behavior changed.
+- Admin panel eligible counts still display correctly.
+- Email logs clearly identify these as admin tests if logging exists.
+
+Final response:
+- List every test email sent.
+- Confirm the exact recipient was only my admin email.
+- Confirm no production users were emailed.
+- Confirm no draft templates were activated.
+- Confirm monthly/legacy campaigns remain off.
+- Confirm lifecycle emails are locked to production except explicit admin-only tests.
+- Confirm no billing behavior changed.

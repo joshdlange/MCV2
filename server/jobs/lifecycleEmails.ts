@@ -1241,6 +1241,12 @@ export async function sendLifecycleWelcome(user: {
 }): Promise<void> {
   const def = getLifecycleEmail('welcome')!;
   try {
+    // Production-only: dev/test workspaces must never email real users.
+    // Admin-only test sends go through POST /api/admin/lifecycle/test instead.
+    if (!process.env.REPLIT_DEPLOYMENT) {
+      console.log(`[Lifecycle] Welcome email skipped for user ${user.id}: not production (use the admin test endpoint for previews)`);
+      return;
+    }
     if (!user.email) return;
     const created = new Date(user.createdAt);
     if (created < LIFECYCLE_LAUNCH_DATE) {
