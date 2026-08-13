@@ -941,6 +941,36 @@ export class DatabaseStorage implements IStorage {
   }
 
   async addToCollection(insertUserCollection: InsertUserCollection): Promise<UserCollection> {
+    // Guard: never add archived (merged-away) cards. If the archive_reason
+    // embeds the canonical card id, transparently redirect the add to it;
+    // otherwise reject so retired rows can't re-accumulate user data.
+    if (insertUserCollection.cardId) {
+      const [cardRow] = await db
+        .select({ archivedAt: cards.archivedAt, archiveReason: cards.archiveReason })
+        .from(cards)
+        .where(eq(cards.id, insertUserCollection.cardId));
+      if (!cardRow) {
+        throw new Error('Card not found');
+      }
+      if (cardRow.archivedAt) {
+        const m = (cardRow.archiveReason || '').match(/(?:[Mm]erged into card |\[canonical=)(\d+)/);
+        const canonicalId = m ? parseInt(m[1], 10) : null;
+        let redirected = false;
+        if (canonicalId) {
+          const [canon] = await db
+            .select({ id: cards.id })
+            .from(cards)
+            .where(and(eq(cards.id, canonicalId), isNull(cards.archivedAt)));
+          if (canon) {
+            insertUserCollection = { ...insertUserCollection, cardId: canon.id };
+            redirected = true;
+          }
+        }
+        if (!redirected) {
+          throw new Error('This card has been retired and cannot be added to collections');
+        }
+      }
+    }
     // Use INSERT ON CONFLICT for a single optimized query (requires unique index on user_id, card_id)
     const [item] = await db
       .insert(userCollections)

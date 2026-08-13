@@ -447,6 +447,17 @@ app.use((req, res, next) => {
     }
   };
 
+  // Idempotent startup fix: user collection/wishlist/binder rows still pointing
+  // at archived (merged-away) cards — repoints them to the canonical card
+  // embedded in archive_reason, merging quantities where the user already owns
+  // the canonical (prod had ~39 such rows from the legacy set-merge passes).
+  try {
+    const { fixArchivedCollectionRows } = await import('./seeds/fixArchivedCollectionRows');
+    await fixArchivedCollectionRows();
+  } catch (error) {
+    console.error('Startup fix (archived collection rows) failed:', error);
+  }
+
   const server = await registerRoutes(app);
 
   // Start background services

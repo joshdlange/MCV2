@@ -12,3 +12,6 @@ description: How the parallel-leak repoint was verified safe, and the prod archi
 
 ## Prod anomaly (pre-existing, unrelated)
 Production has ~39 user_collections rows pointing at cards archived by the old "Legacy duplicate set merged" passes. Dev has zero. Likely cause: collectors could still add archived cards after the merge (search/add path may not filter archived), or prod merges ran before repointing was added. Needs cleanup + a guard preventing adds of archived cards.
+
+## Update (Aug 2026)
+The ~39 prod anomaly rows are handled by `server/seeds/fixArchivedCollectionRows.ts` (set-based, resolves canonical ids at runtime from archive_reason regex `merged into card N` / `[canonical=N]`, so dev/prod id drift doesn't matter). storage.addToCollection now blocks archived cards (redirects to canonical when resolvable, else throws). Wishlist add path is NOT yet guarded.
