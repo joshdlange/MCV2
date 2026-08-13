@@ -25,3 +25,10 @@ description: How MCV lifecycle emails work — claim-then-send dedupe, 14-day ca
 - 150/24h global dormant cap enforced under a session-level pg advisory lock (key 913151) held for the whole run — serializes all long-tail runs across keys/instances; cap count inside lock.
 - BABYCOMEBACK: Stripe promotion code confirmed active ($5 off x 2 months repeating = 2 free months of the $5 plan); checkout session uses allow_promotion_codes: true; web-only, never claim iOS availability. lifecycleTemplate now supports codeBlock + footnote.
 - Inactivity = users.last_login (NULL excluded), same as the reactivation draft.
+
+## v3 revenue/nurture (Aug 13, 2026)
+- All-DRAFT additions: payment-failed (transactional), subscription-cancelled, near-limit-500; tightened pc-binder-prompt (10+ cards), pc-binder-upgrade (real intent = analytics_events upgrade_modal_shown trigger='pc_binders'), missing-image (no pending_card_images in 30d), share-binder. All 5 marketing ones now in BATCH_JOURNEYS (runner still refuses active:false).
+- Billing emails are EVENT-wired into the Stripe webhook but triple-gated: def.active flag + REPLIT_DEPLOYMENT + fire-and-forget try/catch (webhook must always 200). payment-failed dedupes PER INVOICE via job_name 'billing-payment-failed' + template 'billing-payment-failed:<invoiceId>' (outside lifecycle-% namespace → cap-exempt, no once-per-user index) and bypasses marketingOptIn (billing critical). subscription-cancelled uses claimAndSend (once per user, respects opt-in).
+- **Stripe SDK v18 gotcha:** Invoice no longer has `.subscription`; the sub id lives at `invoice.parent?.subscription_details?.subscription` (string or expanded object). Handle both.
+- Hero images: lifecycleTemplate accepts heroKey; HERO_IMAGES map (8 keys email-vault-starter … email-collector-network) holds url:null until assets uploaded to Cloudinary marvel-card-vault/email/<key>; template skips the img row when url null, so emails ship image-less safely. Status endpoint exposes heroKey/heroUploaded.
+- Known gap (pre-existing, intentionally untouched): welcome email has no REPLIT_DEPLOYMENT guard — dev onboarding can send a real welcome email.

@@ -7433,9 +7433,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 stripeSubscriptionId: null
               });
               console.log(`User ${subscribedUser.id} downgraded to Side Kick plan`);
+              // Lifecycle v3: cancellation email (draft-gated, prod-only,
+              // once per user, respects opt-in). Fire-and-forget.
+              import('./jobs/lifecycleEmails').then(m =>
+                m.sendSubscriptionCancelledEmail({
+                  id: subscribedUser.id,
+                  email: subscribedUser.email,
+                  displayName: subscribedUser.displayName,
+                })
+              ).catch(err => console.error('Cancellation email hook failed:', err));
             }
           }
           break;
+
+        case 'invoice.payment_failed': {
+          // Lifecycle v3: transactional payment-failed email. ONLY reads the
+          // event — never touches billing/subscription state. Subscription
+          // invoices only; deduped per invoice inside the sender. Fully
+          // isolated: email plumbing must NEVER fail the webhook (Stripe
+          // needs a 200 or it retries).
+          try {
+            const invoice = event.data.object as Stripe.Invoice;
+            // Stripe SDK v18: subscription lives at invoice.parent.subscription_details.subscription
+            // (string or expanded object). Older payloads had invoice.subscription.
+            const rawSub = (invoice as any).parent?.subscription_details?.subscription
+              ?? (invoice as any).subscription;
+            const invoiceSubId: string | null =
+              typeof rawSub === 'string' ? rawSub : rawSub?.id ?? null;
+            if (!invoiceSubId || !invoice.id) {
+              console.log('invoice.payment_failed without subscription — ignoring (not a Super Hero billing issue)');
+              break;
+            }
+            const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id;
+            const allUsers = await storage.getAllUsers();
+            const billedUser = allUsers.find(u =>
+              (customerId && u.stripeCustomerId === customerId) || u.stripeSubscriptionId === invoiceSubId
+            );
+            if (!billedUser) {
+              console.log(`invoice.payment_failed: no user matched customer ${customerId} / sub ${invoiceSubId} — skipping email`);
+              break;
+            }
+            import('./jobs/lifecycleEmails').then(m =>
+              m.sendPaymentFailedEmail({
+                id: billedUser.id,
+                email: billedUser.email,
+                displayName: billedUser.displayName,
+              }, invoice.id!)
+            ).catch(err => console.error('Payment-failed email hook failed:', err));
+          } catch (err) {
+            console.error('Payment-failed email hook failed (webhook still acknowledged):', err);
+          }
+          break;
+        }
 
         default:
           console.log(`Unhandled event type ${event.type}`);

@@ -12,7 +12,11 @@
  *
  * DRAFT (templates + eligibility counts only, active:false — flip one at a
  * time AFTER admin preview/test, never all at once):
- *   - the remaining 8 journey emails defined in LIFECYCLE_EMAILS below.
+ *   - all remaining journey emails defined in LIFECYCLE_EMAILS below,
+ *     including the v3 set (payment-failed, subscription-cancelled,
+ *     near-limit-500, tightened pc-binder-prompt/upgrade, missing-image,
+ *     share-binder). The two billing emails are event-wired to the Stripe
+ *     webhook but stay silent until their active flag is flipped.
  *
  * Hard rules enforced here:
  *   - GLOBAL FREQUENCY CAP: no user receives more than ONE lifecycle/marketing
@@ -56,6 +60,37 @@ const TEXT_SECONDARY = '#94A3B8';
 const LOGO_URL = 'https://res.cloudinary.com/dgu7hjfvn/image/upload/v1765655501/marvel-card-vault/email-logo.png';
 
 // ---------------------------------------------------------------------------
+// Reusable MCV-branded hero images (v3). Emails render perfectly WITHOUT them:
+// a null url means "no hero yet" and the template simply skips the image row.
+// To activate a hero, upload the optimized image (600px wide, <150KB, PNG/JPG,
+// original MCV art only — NO Marvel/Disney/Topps/Upper Deck characters, logos,
+// or real card art) to Cloudinary under marvel-card-vault/email/<key> and put
+// the delivery URL here. Never place critical info or promo codes only in
+// images.
+// ---------------------------------------------------------------------------
+
+export type HeroImageKey =
+  | 'email-vault-starter'
+  | 'email-keep-building'
+  | 'email-super-hero-upgrade'
+  | 'email-pc-binder'
+  | 'email-complete-the-vault'
+  | 'email-comeback'
+  | 'email-offer-pass'
+  | 'email-collector-network';
+
+export const HERO_IMAGES: Record<HeroImageKey, { url: string | null; alt: string }> = {
+  'email-vault-starter':     { url: null, alt: 'A glowing collector vault opening with trading card silhouettes.' },
+  'email-keep-building':     { url: null, alt: 'A stack of trading cards flowing into a collector binder.' },
+  'email-super-hero-upgrade':{ url: null, alt: 'A premium vault interface with glowing card slots.' },
+  'email-pc-binder':         { url: null, alt: 'A custom collector binder with organized card sections.' },
+  'email-complete-the-vault':{ url: null, alt: 'A missing card image being filled with light.' },
+  'email-comeback':          { url: null, alt: 'A dark collector vault lighting back up.' },
+  'email-offer-pass':        { url: null, alt: 'A premium vault access pass.' },
+  'email-collector-network': { url: null, alt: 'Collector avatars connected around shared card binders.' },
+};
+
+// ---------------------------------------------------------------------------
 // Shared lifecycle template (dark theme + unsubscribe + non-affiliation footer)
 // ---------------------------------------------------------------------------
 
@@ -69,7 +104,13 @@ function lifecycleTemplate(opts: {
   codeBlock?: { code: string; note: string };
   /** Optional small-print line rendered directly under the CTA button. */
   footnote?: string;
+  /** Optional reusable hero image category. Skipped if no asset uploaded yet. */
+  heroKey?: HeroImageKey;
 }): { html: string; text: string } {
+  const hero = opts.heroKey ? HERO_IMAGES[opts.heroKey] : null;
+  const heroHtml = hero?.url
+    ? `<tr><td style="padding:0;"><img src="${hero.url}" alt="${hero.alt}" width="600" style="width:100%;max-width:600px;height:auto;display:block;"></td></tr>`
+    : '';
   const paragraphsHtml = opts.paragraphs
     .map(p => `<p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">${p}</p>`)
     .join('\n');
@@ -96,6 +137,7 @@ function lifecycleTemplate(opts: {
         <tr><td style="padding:40px 40px 20px;text-align:center;background:linear-gradient(135deg,${DARK_BG} 0%,${CARD_BG} 100%);">
           <img src="${LOGO_URL}" alt="Marvel Card Vault" style="width:150px;height:auto;display:block;margin:0 auto;">
         </td></tr>
+        ${heroHtml}
         <tr><td style="padding:20px 40px 40px;">
           <h1 style="margin:0 0 20px;font-size:28px;font-weight:700;color:${TEXT_PRIMARY};line-height:1.2;">${opts.heading}</h1>
           ${paragraphsHtml}${codeBlockHtml}
@@ -144,7 +186,12 @@ export interface LifecycleEmailDef {
   jobName: string;            // email_logs.job_name — dedupe + cap key. MUST start with 'lifecycle-'
   stage: string;              // lifecycle stage from the skill
   active: boolean;            // false = draft: previewable + countable, never auto-sent
-  exemptFromCap?: boolean;    // welcome only
+  exemptFromCap?: boolean;    // welcome + transactional/account-status emails
+  /** Transactional/billing-critical: exempt from the 14-day marketing cap,
+   *  event-triggered only, never batch-run. */
+  transactional?: boolean;
+  /** Reusable hero image category this email renders (if asset uploaded). */
+  heroKey?: HeroImageKey;
   subject: string;
   preheader: string;
   ctaLabel: string;
@@ -168,6 +215,7 @@ const HAS_CARDS = sql`EXISTS (SELECT 1 FROM user_collections uc WHERE uc.user_id
 export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   {
     key: 'welcome',
+    heroKey: 'email-vault-starter',
     jobName: 'lifecycle-welcome',
     stage: 'Activation',
     active: true,
@@ -177,6 +225,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaLabel: 'Add Your First Card',
     ctaUrl: `${APP_URL}/browse`,
     render: () => lifecycleTemplate({
+      heroKey: 'email-vault-starter',
       preheader: 'Your vault is ready. Start building your collection and earning XP.',
       heading: 'Welcome to Marvel Card Vault',
       paragraphs: [
@@ -193,6 +242,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'first-card-nudge',
+    heroKey: 'email-vault-starter',
     jobName: 'lifecycle-first-card-nudge',
     stage: 'Activation',
     active: true,
@@ -201,6 +251,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaLabel: 'Add Your First Card',
     ctaUrl: `${APP_URL}/browse`,
     render: () => lifecycleTemplate({
+      heroKey: 'email-vault-starter',
       preheader: 'Add your first card and start earning Collector XP.',
       heading: 'Your vault is waiting',
       paragraphs: [
@@ -225,6 +276,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   // ---------------------- v2 ACTIVE journeys -------------------------------
   {
     key: 'empty-vault',
+    heroKey: 'email-vault-starter',
     jobName: 'lifecycle-empty-vault',
     stage: 'Activation',
     active: true,
@@ -233,6 +285,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaLabel: 'Add Your First Card',
     ctaUrl: `${APP_URL}/browse`,
     render: () => lifecycleTemplate({
+      heroKey: 'email-vault-starter',
       preheader: 'Add one card and bring your vault to life.',
       heading: "Still empty? Let's fix that",
       paragraphs: [
@@ -248,6 +301,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'collection-momentum',
+    heroKey: 'email-keep-building',
     jobName: 'lifecycle-collection-momentum',
     stage: 'Engagement',
     active: true,
@@ -256,6 +310,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaLabel: 'Add More Cards',
     ctaUrl: `${APP_URL}/browse`,
     render: () => lifecycleTemplate({
+      heroKey: 'email-keep-building',
       preheader: 'Add a few more cards and keep your vault moving.',
       heading: 'Your collection is off to a good start',
       paragraphs: [
@@ -270,9 +325,94 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     eligibilityNote: '1-9 cards, no card added in 7+ days, most recent add AFTER v2 launch (stall began post-launch — never retroactive), opted in, not already sent, under 14-day cap.',
   },
 
+  // ---------------------- v3 REVENUE / UPGRADE (all DRAFT) -----------------
+  {
+    key: 'payment-failed',
+    jobName: 'lifecycle-payment-failed', // registry/preview identity; real sends log under billing-payment-failed (per-invoice dedupe)
+    stage: 'Upgrade',
+    active: false,
+    exemptFromCap: true,
+    transactional: true,
+    subject: 'Action needed: keep your Super Hero access',
+    preheader: 'There was an issue with your payment. Update billing to keep your vault upgraded.',
+    ctaLabel: 'Update Billing',
+    ctaUrl: `${APP_URL}/profile`,
+    render: () => lifecycleTemplate({
+      preheader: 'There was an issue with your payment. Update billing to keep your vault upgraded.',
+      heading: 'Action needed: keep your Super Hero access',
+      paragraphs: [
+        'Hey collector,',
+        'There was an issue processing your latest Super Hero payment.',
+        'No stress: updating your billing info takes about a minute and keeps your unlimited cards, PC Binders, Market Trends, and Scan to Add active without interruption.',
+      ],
+      ctaLabel: 'Update Billing',
+      ctaUrl: `${APP_URL}/profile`,
+      footnote: 'Manage billing any time from your account settings.',
+    }),
+    eligibleCount: async () => 0, // event-triggered by Stripe invoice.payment_failed — never batch-sent
+    eligibilityNote: 'TRANSACTIONAL, event-triggered by Stripe invoice.payment_failed (subscription invoices only). Deduped per invoice, exempt from the 14-day cap, ignores marketing opt-out (billing critical). Sends only when active flag is on AND in production.',
+  },
+  {
+    key: 'subscription-cancelled',
+    jobName: 'lifecycle-subscription-cancelled',
+    stage: 'Upgrade',
+    active: false,
+    exemptFromCap: true, // account-status email tied to a billing event
+    heroKey: 'email-comeback',
+    subject: 'Your Super Hero access has ended',
+    preheader: 'You can come back anytime and keep building without limits.',
+    ctaLabel: 'Restart Super Hero',
+    ctaUrl: `${APP_URL}/subscribe`,
+    render: () => lifecycleTemplate({
+      preheader: 'You can come back anytime and keep building without limits.',
+      heading: 'Your Super Hero access has ended',
+      paragraphs: [
+        'Hey collector,',
+        'Your Super Hero subscription has ended. Your vault and every card in it are safe and exactly where you left them.',
+        'When you are ready to keep building without limits, Super Hero is one tap away: unlimited cards, PC Binders, Market Trends, Scan to Add, and the full collector toolkit.',
+      ],
+      heroKey: 'email-comeback',
+      ctaLabel: 'Restart Super Hero',
+      ctaUrl: `${APP_URL}/subscribe`,
+    }),
+    eligibleCount: async () => countUsers(and(
+      optedIn(),
+      NOT_SUPER_HERO,
+      eq(users.subscriptionStatus, 'cancelled'),
+      notAlreadySent('lifecycle-subscription-cancelled'),
+    )),
+    eligibilityNote: 'Event-triggered by Stripe customer.subscription.deleted (cancellations AFTER activation only — never retroactive to the existing cancelled backlog). Respects marketing opt-in, once per user. Count shown = historical cancelled users for reference; they are NOT auto-emailed.',
+  },
+  {
+    key: 'near-limit-500',
+    jobName: 'lifecycle-near-limit-500',
+    stage: 'Upgrade',
+    active: false,
+    heroKey: 'email-super-hero-upgrade',
+    subject: "You're building fast",
+    preheader: "You're getting close to the Side Kick card limit. Super Hero gives you unlimited space.",
+    ctaLabel: 'Upgrade to Super Hero',
+    ctaUrl: `${APP_URL}/subscribe`,
+    render: () => lifecycleTemplate({
+      preheader: "You're getting close to the Side Kick card limit. Super Hero gives you unlimited space.",
+      heading: "You're building fast",
+      paragraphs: [
+        'Hey collector,',
+        'Your vault is growing fast: you are closing in on the Side Kick 500-card limit.',
+        'Super Hero removes the ceiling entirely: unlimited cards, plus PC Binders, Market Trends, Scan to Add, and more room to keep building the collection your way.',
+      ],
+      heroKey: 'email-super-hero-upgrade',
+      ctaLabel: 'Upgrade to Super Hero',
+      ctaUrl: `${APP_URL}/subscribe`,
+    }),
+    eligibleCount: async () => countUsers(NEAR_LIMIT_500_WHERE()),
+    eligibilityNote: 'Side Kick (not Super Hero), 400+ cards (80% of the 500 limit), opted in, not already sent, under 14-day cap. High-intent upgrade audience — the existing 400+ backlog IS the target once activated (once per user, 50/batch).',
+  },
+
   // ------------------------- DRAFTS (disabled) -----------------------------
   {
     key: 'pc-binder-prompt',
+    heroKey: 'email-pc-binder',
     jobName: 'lifecycle-pc-binder-prompt',
     stage: 'Engagement',
     active: false,
@@ -281,6 +421,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaLabel: 'Create a PC Binder',
     ctaUrl: `${APP_URL}/pc-binders`,
     render: () => lifecycleTemplate({
+      heroKey: 'email-pc-binder',
       preheader: 'Create a custom PC Binder for a character, artist, set, or chase list.',
       heading: 'Build a binder around your favorites',
       paragraphs: [
@@ -291,17 +432,12 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
       ctaLabel: 'Create a PC Binder',
       ctaUrl: `${APP_URL}/pc-binders`,
     }),
-    eligibleCount: async () => countUsers(and(
-      optedIn(),
-      eq(users.plan, 'SUPER_HERO'),
-      HAS_CARDS,
-      sql`NOT EXISTS (SELECT 1 FROM pc_binders pb WHERE pb.user_id = ${users.id})`,
-      notAlreadySent('lifecycle-pc-binder-prompt'),
-    )),
-    eligibilityNote: 'Super Hero plan, has cards, has never created a PC Binder.',
+    eligibleCount: async () => countUsers(PC_BINDER_PROMPT_WHERE()),
+    eligibilityNote: 'Super Hero plan, 10+ cards, has never created a PC Binder, opted in, not already sent, under 14-day cap.',
   },
   {
     key: 'pc-binder-upgrade',
+    heroKey: 'email-pc-binder',
     jobName: 'lifecycle-pc-binder-upgrade',
     stage: 'Upgrade',
     active: false,
@@ -310,6 +446,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaLabel: 'Unlock PC Binders',
     ctaUrl: `${APP_URL}/subscribe`,
     render: () => lifecycleTemplate({
+      heroKey: 'email-pc-binder',
       preheader: 'Upgrade to Super Hero to build custom binders around the cards you care about most.',
       heading: 'PC Binders are waiting',
       paragraphs: [
@@ -320,18 +457,15 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
       ctaLabel: 'Unlock PC Binders',
       ctaUrl: `${APP_URL}/subscribe`,
     }),
-    // NOTE: "clicked PC Binders" click-tracking does not exist yet; current
-    // approximation is non-Super-Hero users with cards. Tighten before enabling.
-    eligibleCount: async () => countUsers(and(
-      optedIn(),
-      ne(users.plan, 'SUPER_HERO'),
-      HAS_CARDS,
-      notAlreadySent('lifecycle-pc-binder-upgrade'),
-    )),
-    eligibilityNote: 'Free/Side Kick with cards (APPROXIMATION — add PC Binder click tracking before enabling).',
+    // v3: real intent signal — the PC Binders page fires an
+    // upgrade_modal_shown analytics event with trigger='pc_binders' when a
+    // free/Side Kick user hits the gate.
+    eligibleCount: async () => countUsers(PC_BINDER_UPGRADE_WHERE()),
+    eligibilityNote: 'Free/Side Kick who HIT THE PC BINDER GATE (upgrade_modal_shown with trigger=pc_binders), opted in, not already sent, under 14-day cap.',
   },
   {
     key: 'missing-image',
+    heroKey: 'email-complete-the-vault',
     jobName: 'lifecycle-missing-image',
     stage: 'Contribution',
     active: false,
@@ -340,6 +474,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaLabel: 'Upload an Image',
     ctaUrl: `${APP_URL}/my-collection`,
     render: () => lifecycleTemplate({
+      heroKey: 'email-complete-the-vault',
       preheader: 'Some of your cards are missing images. Upload one and earn XP after approval.',
       heading: 'Help complete the vault',
       paragraphs: [
@@ -350,15 +485,12 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
       ctaLabel: 'Upload an Image',
       ctaUrl: `${APP_URL}/my-collection`,
     }),
-    eligibleCount: async () => countUsers(and(
-      optedIn(),
-      sql`EXISTS (SELECT 1 FROM user_collections uc JOIN cards c ON c.id = uc.card_id WHERE uc.user_id = ${users.id} AND c.front_image_url IS NULL)`,
-      notAlreadySent('lifecycle-missing-image'),
-    )),
-    eligibilityNote: 'Owns at least one card whose vault image is missing.',
+    eligibleCount: async () => countUsers(MISSING_IMAGE_WHERE()),
+    eligibilityNote: 'Owns a card missing its vault image, no image submitted in the last 30 days, opted in, not already sent, under 14-day cap.',
   },
   {
     key: 'share-binder',
+    heroKey: 'email-collector-network',
     jobName: 'lifecycle-share-binder',
     stage: 'Referral/sharing',
     active: false,
@@ -367,6 +499,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaLabel: 'Share Your Binder',
     ctaUrl: `${APP_URL}/pc-binders`,
     render: () => lifecycleTemplate({
+      heroKey: 'email-collector-network',
       preheader: 'Share a binder with other collectors and earn XP.',
       heading: 'Show off your vault',
       paragraphs: [
@@ -377,16 +510,12 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
       ctaLabel: 'Share Your Binder',
       ctaUrl: `${APP_URL}/pc-binders`,
     }),
-    eligibleCount: async () => countUsers(and(
-      optedIn(),
-      sql`EXISTS (SELECT 1 FROM pc_binders pb WHERE pb.user_id = ${users.id})`,
-      sql`NOT EXISTS (SELECT 1 FROM pc_binder_share_links psl JOIN pc_binders pb2 ON pb2.id = psl.binder_id WHERE pb2.user_id = ${users.id})`,
-      notAlreadySent('lifecycle-share-binder'),
-    )),
-    eligibilityNote: 'Has a PC Binder, has never shared one.',
+    eligibleCount: async () => countUsers(SHARE_BINDER_WHERE()),
+    eligibilityNote: 'Has a PC Binder, has never shared one, opted in, not already sent, under 14-day cap.',
   },
   {
     key: 'wishlist-nudge',
+    heroKey: 'email-keep-building',
     jobName: 'lifecycle-wishlist-nudge',
     stage: 'Engagement',
     active: false,
@@ -395,6 +524,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaLabel: 'Build Your Chase List',
     ctaUrl: `${APP_URL}/wishlist`,
     render: () => lifecycleTemplate({
+      heroKey: 'email-keep-building',
       preheader: 'Add cards to your wishlist so your next target is easy to track.',
       heading: 'What are you chasing next?',
       paragraphs: [
@@ -414,6 +544,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'reactivation',
+    heroKey: 'email-comeback',
     jobName: 'lifecycle-reactivation',
     stage: 'Retention',
     active: false,
@@ -422,6 +553,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaLabel: 'Return to Your Vault',
     ctaUrl: APP_URL,
     render: () => lifecycleTemplate({
+      heroKey: 'email-comeback',
       preheader: 'New cards, images, and progress are ready when you are.',
       heading: 'Your vault has been waiting',
       paragraphs: [
@@ -442,6 +574,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'new-set-announcement',
+    heroKey: 'email-comeback',
     jobName: 'lifecycle-new-set-announcement',
     stage: 'Retention',
     active: false,
@@ -450,6 +583,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaLabel: 'View New Set',
     ctaUrl: `${APP_URL}/browse`,
     render: () => lifecycleTemplate({
+      heroKey: 'email-comeback',
       preheader: 'Browse the newest cards added to Marvel Card Vault.',
       heading: 'New cards added: [Set Name]',
       paragraphs: [
@@ -465,6 +599,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'image-approved-xp',
+    heroKey: 'email-complete-the-vault',
     jobName: 'lifecycle-image-approved-xp',
     stage: 'Contribution',
     active: false,
@@ -473,6 +608,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaLabel: 'View Your Contribution',
     ctaUrl: `${APP_URL}/my-collection`,
     render: () => lifecycleTemplate({
+      heroKey: 'email-complete-the-vault',
       preheader: 'Thanks for helping complete the vault. XP has been added to your account.',
       heading: 'Your image was approved',
       paragraphs: [
@@ -496,6 +632,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   // confirmation + 150/day dormant cap + 50/batch + 14-day cap + once-per-user.
   {
     key: 'dormant-empty-vault',
+    heroKey: 'email-vault-starter',
     jobName: 'lifecycle-dormant-empty-vault',
     stage: 'Retention',
     active: false,
@@ -504,6 +641,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaLabel: 'Add Your First Card',
     ctaUrl: `${APP_URL}/browse`,
     render: () => lifecycleTemplate({
+      heroKey: 'email-vault-starter',
       preheader: 'Add one card and bring your Marvel Card Vault to life.',
       heading: 'Still collecting? Your vault is ready',
       paragraphs: [
@@ -520,6 +658,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'dormant-started',
+    heroKey: 'email-keep-building',
     jobName: 'lifecycle-dormant-started',
     stage: 'Retention',
     active: false,
@@ -528,6 +667,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaLabel: 'Add More Cards',
     ctaUrl: `${APP_URL}/browse`,
     render: () => lifecycleTemplate({
+      heroKey: 'email-keep-building',
       preheader: 'Your vault is started. Keep building from there.',
       heading: 'Pick up where you left off',
       paragraphs: [
@@ -544,6 +684,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'dormant-engaged',
+    heroKey: 'email-comeback',
     jobName: 'lifecycle-dormant-engaged',
     stage: 'Retention',
     active: false,
@@ -552,6 +693,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaLabel: 'Return to Your Vault',
     ctaUrl: APP_URL,
     render: () => lifecycleTemplate({
+      heroKey: 'email-comeback',
       preheader: 'New progress, images, and collector tools are ready when you are.',
       heading: 'Your vault has been waiting',
       paragraphs: [
@@ -568,6 +710,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'dormant-upgrade',
+    heroKey: 'email-super-hero-upgrade',
     jobName: 'lifecycle-dormant-upgrade',
     stage: 'Upgrade',
     active: false,
@@ -576,6 +719,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaLabel: 'Explore Super Hero',
     ctaUrl: `${APP_URL}/subscribe`,
     render: () => lifecycleTemplate({
+      heroKey: 'email-super-hero-upgrade',
       preheader: 'PC Binders, unlimited cards, Market Trends, and more are waiting in Super Hero.',
       heading: 'Build more than a checklist',
       paragraphs: [
@@ -591,6 +735,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'dormant-missing-image',
+    heroKey: 'email-complete-the-vault',
     jobName: 'lifecycle-dormant-missing-image',
     stage: 'Contribution',
     active: false,
@@ -599,6 +744,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaLabel: 'Upload an Image',
     ctaUrl: `${APP_URL}/my-collection`,
     render: () => lifecycleTemplate({
+      heroKey: 'email-complete-the-vault',
       preheader: 'Some cards still need images. Upload one and earn XP after approval.',
       heading: 'Help complete the vault',
       paragraphs: [
@@ -614,6 +760,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'winback-90',
+    heroKey: 'email-comeback',
     jobName: 'lifecycle-winback-90',
     stage: 'Retention',
     active: false,
@@ -622,6 +769,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaLabel: 'See What Is New',
     ctaUrl: APP_URL,
     render: () => lifecycleTemplate({
+      heroKey: 'email-comeback',
       preheader: 'New cards, images, and collector tools have been added since you last visited.',
       heading: 'A lot has changed in the vault',
       paragraphs: [
@@ -638,6 +786,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'babycomeback',
+    heroKey: 'email-offer-pass',
     jobName: 'lifecycle-babycomeback',
     stage: 'Upgrade',
     active: false,
@@ -646,6 +795,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaLabel: 'Redeem on Web',
     ctaUrl: `${APP_URL}/subscribe`,
     render: () => lifecycleTemplate({
+      heroKey: 'email-offer-pass',
       preheader: 'Use code BABYCOMEBACK for $5 off your first 2 months through web checkout.',
       heading: 'A little something to welcome you back',
       paragraphs: [
@@ -772,14 +922,79 @@ function BABYCOMEBACK_WHERE() {
   );
 }
 
+// ---------------------------------------------------------------------------
+// v3 journey eligibility (product engagement + upgrade nudges — all DRAFT)
+// ---------------------------------------------------------------------------
+
+const SIDE_KICK_LIMIT = 500;
+const NEAR_LIMIT_THRESHOLD = 400; // 80% of the Side Kick limit
+
+function NEAR_LIMIT_500_WHERE() {
+  return and(
+    optedIn(),
+    NOT_SUPER_HERO,
+    sql`(SELECT count(*) FROM user_collections uc WHERE uc.user_id = ${users.id}) >= ${NEAR_LIMIT_THRESHOLD}`,
+    notAlreadySent('lifecycle-near-limit-500'),
+    UNDER_CAP,
+  );
+}
+function PC_BINDER_PROMPT_WHERE() {
+  return and(
+    optedIn(),
+    eq(users.plan, 'SUPER_HERO'),
+    TEN_PLUS_CARDS,
+    sql`NOT EXISTS (SELECT 1 FROM pc_binders pb WHERE pb.user_id = ${users.id})`,
+    notAlreadySent('lifecycle-pc-binder-prompt'),
+    UNDER_CAP,
+  );
+}
+function PC_BINDER_UPGRADE_WHERE() {
+  return and(
+    optedIn(),
+    NOT_SUPER_HERO,
+    // Real intent: hit the PC Binder gate (UpgradeModal shown on /pc-binders)
+    sql`EXISTS (SELECT 1 FROM analytics_events ae WHERE ae.user_id = ${users.id} AND ae.event_type = 'upgrade_modal_shown' AND ae.trigger = 'pc_binders')`,
+    notAlreadySent('lifecycle-pc-binder-upgrade'),
+    UNDER_CAP,
+  );
+}
+function MISSING_IMAGE_WHERE() {
+  return and(
+    optedIn(),
+    OWNS_CARD_MISSING_IMAGE,
+    // "Has not submitted an image recently" — no pending/approved submission in 30 days
+    sql`NOT EXISTS (SELECT 1 FROM pending_card_images pci WHERE pci.user_id = ${users.id} AND pci.created_at > now() - interval '30 days')`,
+    notAlreadySent('lifecycle-missing-image'),
+    UNDER_CAP,
+  );
+}
+function SHARE_BINDER_WHERE() {
+  return and(
+    optedIn(),
+    sql`EXISTS (SELECT 1 FROM pc_binders pb WHERE pb.user_id = ${users.id})`,
+    sql`NOT EXISTS (SELECT 1 FROM pc_binder_share_links psl JOIN pc_binders pb2 ON pb2.id = psl.binder_id WHERE pb2.user_id = ${users.id})`,
+    notAlreadySent('lifecycle-share-binder'),
+    UNDER_CAP,
+  );
+}
+
 /**
  * CRON-runnable journeys (key -> eligibility WHERE). Welcome is event-only.
  * Long-tail dormant journeys are deliberately NOT here — they target the
  * existing backlog and may only run via the admin endpoint.
+ * v3 journeys below the v2 pair are DRAFT (active:false): the runner refuses
+ * inactive defs, so listing them here only makes them runnable AFTER Joshua
+ * flips one active post-preview/test.
  */
 const BATCH_JOURNEYS: Record<string, () => ReturnType<typeof and>> = {
   'empty-vault': EMPTY_VAULT_WHERE,
   'collection-momentum': COLLECTION_MOMENTUM_WHERE,
+  // v3 (draft until individually activated)
+  'near-limit-500': NEAR_LIMIT_500_WHERE,
+  'pc-binder-prompt': PC_BINDER_PROMPT_WHERE,
+  'pc-binder-upgrade': PC_BINDER_UPGRADE_WHERE,
+  'missing-image': MISSING_IMAGE_WHERE,
+  'share-binder': SHARE_BINDER_WHERE,
 };
 
 /** Admin-run-only long-tail journeys. Typed confirmation + 150/day cap. */
@@ -1145,6 +1360,95 @@ export function startLifecycleEmailCron(): void {
 }
 
 // ---------------------------------------------------------------------------
+// v3 event-triggered billing emails (Stripe webhook hooks)
+// ---------------------------------------------------------------------------
+
+/**
+ * Payment failed (transactional). Triggered by Stripe invoice.payment_failed
+ * for SUBSCRIPTION invoices only. Deduped PER INVOICE (a retry of the same
+ * invoice never re-emails; a new billing cycle's failure may). Exempt from
+ * the 14-day marketing cap and from marketing opt-out — this is billing
+ * critical account status. Fire-and-forget: never throws into the webhook.
+ * Guards: def.active flag (draft until Joshua approves) + production-only.
+ */
+export async function sendPaymentFailedEmail(user: {
+  id: number; email: string; displayName?: string | null;
+}, invoiceId: string): Promise<'sent' | 'failed' | 'skipped'> {
+  const def = getLifecycleEmail('payment-failed')!;
+  try {
+    if (!def.active) return 'skipped';
+    if (!process.env.REPLIT_DEPLOYMENT) {
+      console.log(`[Lifecycle] payment-failed skipped for user ${user.id}: not production`);
+      return 'skipped';
+    }
+    if (!user.email || !invoiceId) return 'skipped';
+    const jobName = 'billing-payment-failed'; // outside lifecycle-% namespace: cap-exempt, no once-per-user index
+    const template = `billing-payment-failed:${invoiceId}`;
+    // Per-invoice dedupe under a per-email advisory lock.
+    const rows: any[] = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${'billing:' + user.email.toLowerCase().trim()}))`);
+      const dupe: any = await tx.execute(sql`
+        SELECT 1 FROM email_logs
+        WHERE job_name = ${jobName} AND template = ${template}
+          AND lower(trim(email)) = lower(trim(${user.email}))
+        LIMIT 1
+      `);
+      if ((dupe.rows ?? dupe).length > 0) return [];
+      const claim: any = await tx.execute(sql`
+        INSERT INTO email_logs (user_id, email, template, subject, job_name, status, lifecycle_stage, sent_at)
+        VALUES (${user.id}, ${user.email}, ${template}, ${def.subject}, ${jobName}, 'sending', 'Transactional', now())
+        RETURNING id
+      `);
+      return claim.rows ?? claim;
+    });
+    if (!rows || rows.length === 0) return 'skipped';
+    const claimId = rows[0].id;
+    try {
+      const { html, text } = def.render({ displayName: user.displayName });
+      const messageId = await sendResendEmail({
+        to: user.email, subject: def.subject, html, text,
+        template: jobName, jobName, skipLog: true,
+      });
+      await db.execute(sql`UPDATE email_logs SET status = 'sent', provider_message_id = ${messageId || null}, sent_at = now() WHERE id = ${claimId}`);
+      return 'sent';
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      await db.execute(sql`UPDATE email_logs SET status = 'failed', error = ${msg.slice(0, 500)} WHERE id = ${claimId}`).catch(() => {});
+      return 'failed';
+    }
+  } catch (error) {
+    console.error(`[Lifecycle] payment-failed email error for user ${user.id}:`, error);
+    return 'failed';
+  }
+}
+
+/**
+ * Subscription cancelled / Super Hero expired. Triggered by Stripe
+ * customer.subscription.deleted AFTER the downgrade is recorded. Uses
+ * claimAndSend: once per user ever, respects marketing opt-in (it carries a
+ * win-back CTA), exempt from the 14-day cap (account status). NEVER
+ * retroactive: only fires on live cancellation events while active.
+ * Guards: def.active flag (draft) + production-only. Fire-and-forget.
+ */
+export async function sendSubscriptionCancelledEmail(user: {
+  id: number; email: string; displayName?: string | null;
+}): Promise<'sent' | 'failed' | 'skipped'> {
+  const def = getLifecycleEmail('subscription-cancelled')!;
+  try {
+    if (!def.active) return 'skipped';
+    if (!process.env.REPLIT_DEPLOYMENT) {
+      console.log(`[Lifecycle] subscription-cancelled skipped for user ${user.id}: not production`);
+      return 'skipped';
+    }
+    if (!user.email) return 'skipped';
+    return await claimAndSend(def, user);
+  } catch (error) {
+    console.error(`[Lifecycle] subscription-cancelled email error for user ${user.id}:`, error);
+    return 'failed';
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Admin status
 // ---------------------------------------------------------------------------
 
@@ -1163,6 +1467,9 @@ export async function getLifecycleStatus() {
         stage: e.stage,
         active: e.active,
         exemptFromCap: !!e.exemptFromCap,
+        transactional: !!e.transactional,
+        heroKey: e.heroKey || null,
+        heroUploaded: e.heroKey ? !!HERO_IMAGES[e.heroKey].url : false,
         subject: e.subject,
         ctaLabel: e.ctaLabel,
         eligibleNow,

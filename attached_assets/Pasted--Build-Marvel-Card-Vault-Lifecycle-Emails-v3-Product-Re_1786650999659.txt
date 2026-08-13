@@ -1,0 +1,483 @@
+# Build Marvel Card Vault Lifecycle Emails v3: Product, Revenue, Nurture Logic, and Email Visuals
+
+Context:
+Marvel Card Vault already has a lifecycle email foundation.
+
+Existing lifecycle system includes:
+
+* Welcome
+* First-Card Nudge
+* Empty Vault Follow-Up
+* Collection Momentum Nudge
+* Draft dormant/win-back templates
+* BABYCOMEBACK web-only coupon template
+* Resend integration
+* claim-before-send protection
+* once-per-template-per-user rules
+* 14-day lifecycle/marketing cap
+* admin preview/test tools
+* disabled monthly/legacy campaigns
+
+We now want to add the next layer of lifecycle emails for product engagement, revenue protection, upgrade nudges, and more polished email presentation.
+
+Important:
+Do not send any production emails during this task.
+Do not activate all new emails automatically.
+Build templates, eligibility logic, admin previews, eligible counts, and email visual support first.
+Do not add image approved/rejected notification emails in this task.
+Do not touch Scan to Add in this task. We will audit Scan to Add accuracy separately after the email work.
+
+Goal:
+Create Lifecycle Emails v3 with:
+
+1. Payment failed / subscription interrupted
+2. Subscription cancelled / Super Hero expired
+3. Near 500-card Side Kick limit
+4. PC Binder prompt for Super Hero users
+5. PC Binder upgrade nudge for Free/Side Kick users
+6. Missing image contribution nudge
+7. Share binder nudge
+8. Reusable MCV-branded email hero image support
+9. Admin preview/test support and eligible counts
+10. No production sends during build
+11. No retroactive blasts on publish
+
+Must do:
+
+* Use the existing Resend email service.
+* Use the existing lifecycle email framework where appropriate.
+* Preserve claim-before-send protection.
+* Preserve once-per-template-per-user protection.
+* Preserve the 14-day lifecycle/marketing cap for marketing/product nudges.
+* Keep transactional/billing-critical emails exempt from the 14-day marketing cap where appropriate.
+* Respect unsubscribe/preferences.
+* Add admin preview/test support for every new template.
+* Add estimated eligible counts for every new lifecycle template.
+* Add launch gates where needed to prevent retroactive blasts.
+* Keep all new marketing/product lifecycle emails draft/disabled unless explicitly approved.
+* Do not send any emails during build.
+* Do not activate broad sends automatically.
+* Do not re-enable monthly or legacy campaigns.
+* Do not change the existing active lifecycle emails unless required to integrate shared visual/template support safely.
+
+Email 1: Payment Failed / Subscription Interrupted
+
+Type:
+Transactional/revenue protection.
+
+Audience:
+
+* user has failed payment, past_due, unpaid, or subscription payment issue if data exists from Stripe/RevenueCat
+* active or recently active subscriber
+* has not already received this exact payment-failed notice for the same billing issue if trackable
+
+Purpose:
+Help user fix billing and keep Super Hero access.
+
+Subject:
+Action needed: keep your Super Hero access
+
+Preview text:
+There was an issue with your payment. Update billing to keep your vault upgraded.
+
+Body guidance:
+Keep this short, direct, and helpful. Tell the user there was an issue with their payment and that updating billing helps avoid losing Super Hero access.
+
+CTA:
+Update Billing
+
+Rules:
+
+* This may be transactional and should not be blocked by the 14-day marketing cap.
+* Do not send if billing issue data is not available or reliable.
+* If billing update URL cannot be generated safely, report the blocker.
+* Do not change Stripe or RevenueCat billing logic.
+* Do not create unsafe billing links.
+* Do not expose Stripe or RevenueCat secrets.
+
+Email 2: Subscription Cancelled / Super Hero Expired
+
+Type:
+Lifecycle/revenue.
+
+Audience:
+
+* user was Super Hero and now cancelled or expired
+* not currently active Super Hero
+* has not already received this cancellation/expired email for the current cancellation event
+
+Purpose:
+Win back or remind them what they lose.
+
+Subject:
+Your Super Hero access has ended
+
+Preview text:
+You can come back anytime and keep building without limits.
+
+Body guidance:
+Remind them they can restart anytime. Mention unlimited cards, PC Binders, Market Trends, Scan to Add, and collector tools, but do not sound desperate.
+
+CTA:
+Restart Super Hero
+
+Rules:
+
+* Respect marketing preferences unless this is purely account status.
+* Do not use BABYCOMEBACK here unless explicitly approved later.
+* Do not claim they lost data.
+* Do not change subscription behavior.
+
+Email 3: Near 500-Card Side Kick Limit
+
+Type:
+High-intent upgrade lifecycle.
+
+Audience:
+
+* Side Kick user
+* card count at or above 400, or 80% of the 500-card limit
+* not Super Hero
+* has not already received this near-limit email
+* has not received another lifecycle/marketing email within 14 days
+* opted into marketing/lifecycle emails if preferences exist
+
+Purpose:
+Upgrade before they hit the wall.
+
+Subject:
+You’re building fast
+
+Preview text:
+You’re getting close to the Side Kick card limit. Super Hero gives you unlimited space.
+
+Body guidance:
+Mention they are nearing the Side Kick 500-card limit. Do not scare them. Position Super Hero as unlimited cards plus PC Binders, Market Trends, Scan to Add, and more room to keep building.
+
+CTA:
+Upgrade to Super Hero
+
+Email 4: PC Binder Prompt for Super Hero Users
+
+Type:
+Product engagement lifecycle.
+
+Audience:
+
+* active Super Hero user
+* has at least 10 cards
+* has zero PC Binders
+* has not already received this PC Binder prompt
+* has not received lifecycle/marketing email within 14 days
+* opted into marketing/lifecycle emails if preferences exist
+
+Purpose:
+Drive usage of a paid feature.
+
+Subject:
+Build a binder around your favorites
+
+Preview text:
+Create a PC Binder for a character, artist, set, or chase list.
+
+Body guidance:
+Explain that PC Binders let them organize their personal collection around what they care about most, not just official sets.
+
+CTA:
+Create a PC Binder
+
+Email 5: PC Binder Upgrade Nudge
+
+Type:
+Upgrade lifecycle.
+
+Audience:
+
+* Free or Side Kick user
+* clicked PC Binders, viewed PC Binder gate, or attempted to create/view gated PC Binder
+* not Super Hero
+* has not already received this PC Binder upgrade nudge
+* has not received lifecycle/marketing email within 14 days
+* opted into marketing/lifecycle emails if preferences exist
+
+Purpose:
+Convert users who show intent.
+
+Subject:
+PC Binders are waiting
+
+Preview text:
+Upgrade to Super Hero to build custom binders around the cards you care about most.
+
+Body guidance:
+Keep it specific to the action they tried to take. They showed interest in PC Binders, so the email should explain what PC Binders unlock.
+
+CTA:
+Unlock PC Binders
+
+Email 6: Missing Image Contribution Nudge
+
+Type:
+Product/community lifecycle.
+
+Audience:
+
+* user owns cards missing images
+* has not submitted an image recently
+* has not already received this missing image contribution nudge
+* has not received lifecycle/marketing email within 14 days
+* opted into marketing/lifecycle emails if preferences exist
+
+Purpose:
+Improve image coverage and bring user back.
+
+Subject:
+Help complete the vault
+
+Preview text:
+Some of your cards still need images. Upload one and earn XP after approval.
+
+Body guidance:
+Position this as helping the community and improving MCV. Mention XP after approval. Do not create approval/rejection notification emails in this task.
+
+CTA:
+Upload an Image
+
+Rules:
+
+* Do not add image approved notification emails.
+* Do not add image rejected notification emails.
+* Do not wire image approval/rejection events to email.
+* Do not change image approval logic.
+* Do not change image approval XP logic.
+
+Email 7: Share Binder Nudge
+
+Type:
+Product/social lifecycle.
+
+Audience:
+
+* user has created a PC Binder or completed/built a meaningful binder/subset
+* has not shared a binder
+* has not already received this share nudge
+* has not received lifecycle/marketing email within 14 days
+* opted into marketing/lifecycle emails if preferences exist
+
+Purpose:
+Increase sharing and feed/social activity.
+
+Subject:
+Show off your vault
+
+Preview text:
+Share a binder with other collectors and earn XP.
+
+Body guidance:
+Encourage the user to share a binder or PC Binder. Tie it to the new social/follow/feed direction without overexplaining.
+
+CTA:
+Share Your Binder
+
+Email visual support:
+Add support for reusable lifecycle email hero images so emails do not feel bland.
+
+Important:
+
+* Do not require every email to have a unique image.
+* Use reusable MCV-branded hero images by email category.
+* Store images in a sensible assets location or email template asset location.
+* Images should be optimized for email.
+* Use descriptive alt text.
+* Emails must still make sense if images are blocked by an email client.
+* Do not embed copyrighted Marvel/Disney/Topps/Upper Deck character art or logos.
+* Do not use real card art unless we explicitly provide approved assets.
+* Do not put critical information only inside images.
+* Do not put promo codes only inside images.
+* BABYCOMEBACK promo code must remain visible as real text in the email body.
+
+Reusable hero image categories:
+
+1. Vault Starter
+2. Keep Building
+3. Super Hero Upgrade
+4. PC Binder
+5. Help Complete the Vault
+6. Comeback / What’s New
+7. Offer / Coupon Pass
+8. Collector Network / Share
+
+Email-to-image mapping:
+
+* Welcome → Vault Starter
+* First-Card Nudge → Vault Starter
+* Empty Vault Follow-Up → Vault Starter
+* Dormant Empty Vault → Vault Starter
+* Collection Momentum → Keep Building
+* Dormant Started → Keep Building
+* Dormant Engaged → Comeback / What’s New
+* 90-Day What’s-New Win-Back → Comeback / What’s New
+* Near 500-card Side Kick limit → Super Hero Upgrade
+* Dormant Upgrade Candidate → Super Hero Upgrade
+* PC Binder Prompt → PC Binder
+* PC Binder Upgrade Nudge → PC Binder or Super Hero Upgrade
+* Missing Image Contribution Nudge → Help Complete the Vault
+* Dormant Missing-Image Contributor → Help Complete the Vault
+* Share Binder Nudge → Collector Network / Share
+* BABYCOMEBACK → Offer / Coupon Pass
+
+If the image assets are not available yet:
+
+* Build the email template system so hero images are optional.
+* Use safe placeholders or no image, but keep the image mapping ready.
+* Do not block the email logic build because assets are not uploaded.
+* Report where assets should be added and what filenames/keys are expected.
+
+Suggested asset keys:
+
+* email-vault-starter
+* email-keep-building
+* email-super-hero-upgrade
+* email-pc-binder
+* email-complete-the-vault
+* email-comeback
+* email-offer-pass
+* email-collector-network
+
+Suggested alt text:
+
+* Vault Starter: “A glowing collector vault opening with trading card silhouettes.”
+* Keep Building: “A stack of trading cards flowing into a collector binder.”
+* Super Hero Upgrade: “A premium vault interface with glowing card slots.”
+* PC Binder: “A custom collector binder with organized card sections.”
+* Help Complete the Vault: “A missing card image being filled with light.”
+* Comeback: “A dark collector vault lighting back up.”
+* Offer Pass: “A premium vault access pass.”
+* Collector Network: “Collector avatars connected around shared card binders.”
+
+BABYCOMEBACK coupon rules:
+
+* Keep BABYCOMEBACK as a last-ditch dormant coupon email, not part of the main v3 activation unless already present as draft/disabled.
+* BABYCOMEBACK is web checkout only.
+* Do not claim it works through iOS in-app purchase.
+* Use safer language:
+  “Use code BABYCOMEBACK for $5 off your first 2 months through web checkout.”
+* The promo code must appear as real text in the email body.
+* Confirm promo code helper copy exists on the web upgrade/checkout path.
+* Do not activate BABYCOMEBACK without explicit approval.
+
+Explicit exclusions:
+
+* Do not build image approved emails.
+* Do not build image rejected emails.
+* Do not wire image approval/rejection events to email.
+* Do not send image submission status emails.
+* Do not change the image approval flow.
+* Do not change image approval XP logic.
+* Do not touch Scan to Add logic in this task.
+* Do not attempt to fix Scan to Add matching in this task.
+
+Activation rules:
+
+* Build all templates and eligibility functions.
+* Keep new marketing/lifecycle emails draft/disabled by default unless explicitly approved.
+* Billing/payment critical emails can be wired only if eligibility data is reliable and they are safely event-triggered.
+* Do not send any emails during this task except admin-only test emails if explicitly requested.
+* Do not send to existing eligible users automatically on publish.
+* Add launch gates where needed to prevent retroactive blasts.
+* Admin should be able to view eligible counts before enabling.
+* Admin test sends must go only to the current admin email.
+* Any admin batch/run endpoint must not bypass eligibility, caps, launch gates, unsubscribe status, or once-per-user rules.
+
+Must not do:
+
+* Do not send production emails during the build.
+* Do not activate all templates automatically.
+* Do not send to all users.
+* Do not re-enable monthly emails.
+* Do not re-enable legacy campaigns.
+* Do not change password reset.
+* Do not change billing/subscription logic.
+* Do not change Stripe/RevenueCat behavior except safely using existing status data for email eligibility.
+* Do not change card limits.
+* Do not change PC Binder gating.
+* Do not change Feed, Follow/Friends, XP rules, Drive Sync, Data Quality tools, Upcoming Set Intelligence, card data, Android, or iOS.
+* Do not touch Scan to Add logic in this task.
+* Do not add image approval/rejection emails.
+* Do not expose secrets.
+* Do not create public/unprotected email endpoints.
+* Do not create noisy repeated emails.
+* Do not add heavy image assets that slow email rendering or app performance.
+* Do not use copyrighted characters, official Marvel art, official Marvel logos, Disney logos, Topps logos, Upper Deck logos, or other third-party protected assets.
+
+Preserve:
+
+* Existing lifecycle system.
+* Existing active lifecycle emails.
+* Existing dormant/win-back draft templates.
+* Existing BABYCOMEBACK web-only coupon template.
+* Existing 14-day cap.
+* Existing claim-before-send protection.
+* Existing once-per-template rules.
+* Existing unsubscribe/preference logic.
+* Existing transactional email behavior.
+* Existing disabled monthly and legacy campaign state.
+* Existing Resend setup.
+* Existing admin preview/test tools.
+* Existing image approval behavior.
+* Existing Scan to Add behavior.
+* Existing Feed/Follow/Friends behavior.
+* Existing subscription and upgrade behavior.
+* Existing PC Binder gating.
+* Existing public app behavior.
+
+QA:
+
+* All new templates are created.
+* All new eligibility functions exist.
+* Admin preview works for each template.
+* Admin test send works only to current admin email.
+* Eligible counts display.
+* New lifecycle/marketing emails are disabled/draft unless explicitly activated.
+* No production emails are sent.
+* No retroactive blast can occur on publish.
+* 14-day cap applies to marketing/product nudges.
+* Transactional billing emails are handled appropriately.
+* Payment failed email does not send unless reliable payment issue data exists.
+* Near-limit email uses the 500-card Side Kick limit.
+* PC Binder nudge respects Super Hero gating.
+* Missing image nudge only targets users with missing-image cards.
+* Share nudge only targets users with shareable binder opportunity.
+* No image approved/rejected emails are added.
+* Image approval/rejection behavior is unchanged.
+* Scan to Add behavior is unchanged.
+* Monthly/legacy campaigns remain disabled.
+* Password reset still works.
+* No Brevo send occurs.
+* No API keys exposed.
+* Email hero images are optional and mapped by template category.
+* Emails still render cleanly if images are blocked.
+* Images have alt text.
+* BABYCOMEBACK remains web-only.
+* BABYCOMEBACK promo code is not image-only.
+* App builds/runs cleanly.
+
+Final response:
+
+* List changed files.
+* List every new email/template added.
+* Confirm which are active and which are draft/disabled.
+* Explain eligibility for each.
+* Explain which are transactional vs lifecycle/marketing.
+* Confirm launch gates / no retroactive blast protection.
+* Confirm eligible counts.
+* Explain reusable email hero image support and mappings.
+* Confirm where image assets should be placed and expected keys/filenames.
+* Confirm BABYCOMEBACK remains web-only and draft/disabled unless explicitly activated.
+* Confirm no image approved/rejected emails were added.
+* Confirm image approval flow was unchanged.
+* Confirm Scan to Add was untouched.
+* Confirm whether billing/payment failure data is reliable enough to wire, or report the blocker.
+* Confirm no emails were sent.
+* Confirm no unrelated systems changed.
+* Confirm safe to publish.
