@@ -91,7 +91,10 @@ export type HeroImageKey =
   | 'email-hero-reactivation'
   | 'email-hero-dormant-empty-vault'
   | 'email-hero-winback-90'
-  | 'email-hero-babycomeback';
+  | 'email-hero-babycomeback'
+  | 'email-hero-share-binder'
+  | 'email-hero-dormant-missing-image'
+  | 'email-hero-dormant-started';
 
 // Optimized 1200x600 JPGs (<150KB) live in client/public/email-assets/ and are
 // served at /email-assets/<key>.jpg in both dev (vite publicDir) and prod
@@ -123,6 +126,9 @@ export const HERO_IMAGES: Record<HeroImageKey, { url: string | null; alt: string
   'email-hero-dormant-empty-vault':    { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-dormant-empty-vault.jpg`,    alt: 'More than you might think.' },
   'email-hero-winback-90':             { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-winback-90.jpg`,             alt: 'So. Many. Upgrades!' },
   'email-hero-babycomeback':           { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-babycomeback.jpg`,           alt: 'Thanks for trying Marvel Card Vault — come back with 2 months of Super Hero for $5 off.' },
+  'email-hero-share-binder':           { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-share-binder.jpg`,           alt: 'I wish I could only track certain characters...' },
+  'email-hero-dormant-missing-image':  { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-dormant-missing-image.jpg`,  alt: 'Will you be the hero?' },
+  'email-hero-dormant-started':        { url: `${EMAIL_ASSET_BASE_URL}/email-assets/email-hero-dormant-started.jpg`,        alt: 'Hero? Are you there?' },
 };
 
 // ---------------------------------------------------------------------------
@@ -594,7 +600,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'share-binder',
-    heroKey: 'email-hero-community',
+    heroKey: 'email-hero-share-binder',
     jobName: 'lifecycle-share-binder',
     stage: 'Referral/sharing',
     active: false,
@@ -605,7 +611,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     render: () => lifecycleTemplate({
       eyebrow: 'SHOW OFF YOUR VAULT',
       stats: [{ label: 'Binder ready to share', value: 'Yes' }, { label: 'Next step', value: 'Create a share link' }],
-      heroKey: 'email-hero-community',
+      heroKey: 'email-hero-share-binder',
       preheader: 'Share a binder with other collectors and earn XP.',
       heading: 'Show off your vault',
       paragraphs: [
@@ -769,7 +775,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'dormant-started',
-    heroKey: 'email-hero-keep-building',
+    heroKey: 'email-hero-dormant-started',
     jobName: 'lifecycle-dormant-started',
     stage: 'Retention',
     active: false,
@@ -779,7 +785,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     ctaUrl: `${APP_URL}/browse`,
     render: () => lifecycleTemplate({
       eyebrow: 'COME BACK TO THE VAULT',
-      heroKey: 'email-hero-keep-building',
+      heroKey: 'email-hero-dormant-started',
       preheader: 'Your vault is started. Keep building from there.',
       heading: 'Pick up where you left off',
       paragraphs: [
@@ -849,7 +855,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
   },
   {
     key: 'dormant-missing-image',
-    heroKey: 'email-hero-complete-the-vault',
+    heroKey: 'email-hero-dormant-missing-image',
     jobName: 'lifecycle-dormant-missing-image',
     stage: 'Contribution',
     active: false,
@@ -860,7 +866,7 @@ export const LIFECYCLE_EMAILS: LifecycleEmailDef[] = [
     render: () => lifecycleTemplate({
       eyebrow: 'HELP COMPLETE THE VAULT',
       stats: [{ label: 'Reward', value: 'XP after your image is approved' }],
-      heroKey: 'email-hero-complete-the-vault',
+      heroKey: 'email-hero-dormant-missing-image',
       preheader: 'Some cards still need images. Upload one and earn XP after approval.',
       heading: 'Help complete the vault',
       paragraphs: [
