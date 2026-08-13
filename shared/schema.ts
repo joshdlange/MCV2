@@ -624,9 +624,9 @@ export const upcomingSetInterests = pgTable("upcoming_set_interests", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// ============================================
+// --------------------------------------------
 // MARKETPLACE TABLES
-// ============================================
+// --------------------------------------------
 
 // Marketplace Listings
 export const listings = pgTable("listings", {

@@ -66,6 +66,39 @@ app.use((req, res, next) => {
     const { db } = await import('./db');
     const { sql } = await import('drizzle-orm');
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS trusted_uploader boolean NOT NULL DEFAULT false`);
+    // CONVENTION (bulk/retro badge awards): any startup seed or admin backfill
+    // that inserts user_badges rows in bulk MUST set retro = true (or backdate
+    // earned_at to the true qualifying moment). runFeedBackfill's badge_earned
+    // source skips retro rows, so a retro award for dozens of users can never
+    // flood the feed with identical "earned the X badge" posts again.
+    // Live awards via badgeService.awardBadge stay retro = false and emit
+    // their own feed event at award time.
+    await db.execute(sql`ALTER TABLE user_badges ADD COLUMN IF NOT EXISTS retro boolean NOT NULL DEFAULT false`);
+    // One-time historical classification: the Hall of Fame and Contributor
+    // bulk seeds ran BEFORE the retro column existed, so their rows default
+    // to retro = false and would still be feed-backfill candidates (the
+    // Contributor wall's feed posts were deleted, so a reopened backfill
+    // would recreate it). Selection strategy: a row of those two badges with
+    // NO matching badge_earned feed event was either quiet-seeded or had its
+    // spam post cleaned up — both mean retro; genuine live awards always
+    // have their (idempotent) feed event. Marker-gated + advisory-locked.
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS startup_migrations (name text PRIMARY KEY, run_at timestamp NOT NULL DEFAULT now())`);
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('retro_badge_flag_backfill_v1'))`);
+      const m = await tx.execute(sql`INSERT INTO startup_migrations (name) VALUES ('retro_badge_flag_backfill_v1') ON CONFLICT (name) DO NOTHING RETURNING name`);
+      if ((m as any).rows?.length > 0) {
+        const upd = await tx.execute(sql`
+          UPDATE user_badges ub SET retro = true
+          FROM badges b
+          WHERE b.id = ub.badge_id
+            AND b.name IN ('Hall of Fame', 'Contributor')
+            AND ub.retro = false
+            AND NOT EXISTS (
+              SELECT 1 FROM feed_events fe
+              WHERE fe.dedupe_key = 'badge_earned:' || ub.user_id || ':' || b.id)`);
+        console.log(`[Retro Badge Flag] Marked ${(upd as any).rowCount ?? 0} historical bulk-seeded badge rows retro = true`);
+      }
+    });
   } catch (error) {
     console.error('Startup migration (trusted_uploader) failed:', error);
   }
