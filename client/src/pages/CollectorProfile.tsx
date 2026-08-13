@@ -790,9 +790,9 @@ export default function CollectorProfile() {
                     {bindersData.binders.map((binder) => (
                       <div
                         key={binder.id}
-                        role={isOwnProfile ? "button" : undefined}
-                        onClick={isOwnProfile ? () => setLocation(`/pc-binders/${binder.id}`) : undefined}
-                        className={`rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden ${isOwnProfile ? "cursor-pointer hover:shadow-md transition-shadow" : ""}`}
+                        role="button"
+                        onClick={() => setLocation(isOwnProfile ? `/pc-binders/${binder.id}` : `/collectors/${username}/binders/${binder.id}`)}
+                        className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
                         data-testid={`binder-card-${binder.id}`}
                       >
                         <div className="h-32 bg-gradient-to-br from-purple-100 to-red-100 flex items-center justify-center overflow-hidden">

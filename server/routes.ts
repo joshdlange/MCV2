@@ -6024,6 +6024,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/collectors/:username/pc-binders/:binderId — view a collector's PC
+  // binder contents. Respects showCollection privacy (owner always allowed).
+  app.get("/api/collectors/:username/pc-binders/:binderId", authenticateUser, async (req: any, res) => {
+    try {
+      const { username } = req.params;
+      const binderId = parseInt(req.params.binderId, 10);
+      if (!Number.isInteger(binderId)) return res.status(400).json({ message: "Invalid binder id" });
+      const callerId: number | undefined = req.user?.id;
+
+      const access = await resolveCollectorAccess(username, callerId);
+      if (!access.ok) return res.status(access.status).json({ message: access.message });
+      const { targetUser, isOwnProfile } = access;
+
+      if (!targetUser.showCollection && !isOwnProfile) {
+        return res.status(403).json({ message: "This collector keeps their collections private", private: true });
+      }
+
+      const [binder] = await db
+        .select()
+        .from(pcBinders)
+        .where(and(eq(pcBinders.id, binderId), eq(pcBinders.userId, targetUser.id)))
+        .limit(1);
+      if (!binder) return res.status(404).json({ message: "Binder not found" });
+
+      // Card list with the BINDER OWNER's owned flag (matches share-page UX);
+      // no prices or private data are exposed.
+      const binderCards = await db
+        .select({
+          id: cards.id,
+          name: cards.name,
+          cardNumber: cards.cardNumber,
+          frontImageUrl: cards.frontImageUrl,
+          isInsert: cards.isInsert,
+          setName: cardSets.name,
+          owned: sql<boolean>`(${userCollections.id} IS NOT NULL)`,
+        })
+        .from(pcBinderCards)
+        .innerJoin(cards, eq(cards.id, pcBinderCards.cardId))
+        .leftJoin(cardSets, eq(cardSets.id, cards.setId))
+        .leftJoin(userCollections, and(
+          eq(userCollections.cardId, pcBinderCards.cardId),
+          eq(userCollections.userId, targetUser.id)
+        ))
+        .where(eq(pcBinderCards.binderId, binder.id))
+        .orderBy(pcBinderCards.addedAt, pcBinderCards.id);
+
+      const ownedCardIds = binderCards.filter(c => c.owned).map(c => c.id);
+      res.json({
+        ownerName: targetUser.username || "A collector",
+        ownerUsername: targetUser.username,
+        isOwnProfile,
+        binder: { id: binder.id, name: binder.name, description: binder.description, category: binder.category },
+        cards: binderCards.map(({ owned, ...card }) => card),
+        ownedCardIds,
+        stats: { totalCards: binderCards.length, ownedCount: ownedCardIds.length },
+      });
+    } catch (error) {
+      console.error('[Collectors] pc-binder detail error:', error);
+      res.status(500).json({ message: "Failed to fetch binder" });
+    }
+  });
+
   // GET /api/collectors/:username/contributions — image contribution stats (approved only)
   app.get("/api/collectors/:username/contributions", authenticateUser, async (req: any, res) => {
     try {

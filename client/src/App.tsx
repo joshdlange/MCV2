@@ -66,6 +66,7 @@ const SharedBinder = lazy(() => import("@/pages/shared-binder"));
 const SharedPcBinder = lazy(() => import("@/pages/shared-pc-binder"));
 const ScanToAdd = lazy(() => import("@/pages/scan"));
 const CollectorProfile = lazy(() => import("@/pages/CollectorProfile"));
+const CollectorBinder = lazy(() => import("@/pages/collector-binder"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 const PageSpinner = () => (
@@ -215,6 +216,7 @@ function Router() {
           <Route path="/admin/feed" component={AdminFeed} />
           <Route path="/scan" component={ScanToAdd} />
           <Route path="/collectors/:username" component={CollectorProfile} />
+          <Route path="/collectors/:username/binders/:id" component={CollectorBinder} />
           <Route path="/subscribe" component={Subscribe} />
           <Route path="/subscription-success" component={SubscriptionSuccess} />
           <Route path="/subscription-cancelled" component={SubscriptionCancelled} />

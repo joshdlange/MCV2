@@ -32,6 +32,8 @@ interface FeedEvent {
   eventType: string;
   title: string;
   metadata: Record<string, unknown> | null;
+  relatedType?: string | null;
+  relatedId?: number | null;
   image: string | null;
   createdAt: string;
   user: FeedUser;
@@ -426,6 +428,11 @@ function EventCard({ event, pending, onReact, followState }: {
 }) {
   const style = EVENT_STYLE[event.eventType] ?? DEFAULT_STYLE;
   const shareToken = event.eventType === "binder_shared" ? (event.metadata as any)?.shareToken as string | undefined : undefined;
+  // binder_created events link to the in-app binder view (server enforces
+  // the owner's collection privacy at read time).
+  const binderHref = !shareToken && event.eventType === "binder_created" && event.relatedType === "binder" && event.relatedId && event.user.username
+    ? `/collectors/${event.user.username}/binders/${event.relatedId}`
+    : null;
 
   return (
     <div
@@ -459,6 +466,11 @@ function EventCard({ event, pending, onReact, followState }: {
           <div className="flex gap-3">
             {shareToken && (
               <Link href={`/pc-share/${shareToken}`} className="text-xs text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1">
+                View Binder <ExternalLink className="w-3 h-3" />
+              </Link>
+            )}
+            {binderHref && (
+              <Link href={binderHref} className="text-xs text-blue-400 hover:text-blue-300 inline-flex items-center gap-1">
                 View Binder <ExternalLink className="w-3 h-3" />
               </Link>
             )}
