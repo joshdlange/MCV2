@@ -621,6 +621,11 @@ function LifecycleEmailsCard() {
                   <p className="text-[10px] text-gray-400 break-all">
                     {e.heroUrl ? e.heroUrl : "No hero image"} · Eligible now: {e.eligibleNow ?? 0}
                   </p>
+                  {e.stats && e.stats.sent > 0 && (
+                    <p className="text-[10px] text-gray-500" data-testid={`stats-${e.key}`}>
+                      Sent {e.stats.sent} · Opened {e.stats.opened} ({Math.round((e.stats.opened / e.stats.sent) * 100)}%) · Clicked {e.stats.clicked} ({Math.round((e.stats.clicked / e.stats.sent) * 100)}%)
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => openPreview(e.key)}>

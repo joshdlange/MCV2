@@ -14,6 +14,8 @@ const app = express();
 // Support both URL patterns: /api/stripe-webhook and /api/stripe/webhook
 app.use('/api/stripe-webhook', express.raw({ type: 'application/json' }));
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
+// Resend (Svix) webhook needs the raw body for signature verification
+app.use('/api/resend-webhook', express.raw({ type: 'application/json' }));
 
 // Compress API/JSON and other compressible responses (skips images automatically)
 app.use(compression());

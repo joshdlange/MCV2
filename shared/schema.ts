@@ -86,6 +86,19 @@ export const emailLogs = pgTable("email_logs", {
   sentAt: timestamp("sent_at").defaultNow().notNull(),
 });
 
+// Resend webhook engagement events (opened / clicked / bounced / complained).
+// One row per (provider message id, event type) — repeat opens don't inflate
+// counts. Joined to email_logs.provider_message_id for per-template stats.
+// Table is created at startup via CREATE TABLE IF NOT EXISTS (db:push is
+// blocked in this repo).
+export const emailEvents = pgTable("email_events", {
+  id: serial("id").primaryKey(),
+  providerMessageId: text("provider_message_id").notNull(),
+  eventType: text("event_type").notNull(),
+  email: text("email"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const mainSets = pgTable("main_sets", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),

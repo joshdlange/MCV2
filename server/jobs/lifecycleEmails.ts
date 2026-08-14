@@ -1322,6 +1322,58 @@ async function ensureLifecycleSettingsTable(): Promise<void> {
       updated_at timestamptz NOT NULL DEFAULT now()
     )
   `);
+  // Resend engagement events (opens/clicks) captured via /api/resend-webhook.
+  // Unique per (message, event type) so repeat opens don't inflate counts.
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS email_events (
+      id serial PRIMARY KEY,
+      provider_message_id text NOT NULL,
+      event_type text NOT NULL,
+      email text,
+      created_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await db.execute(sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS email_events_msg_type_uniq
+      ON email_events (provider_message_id, event_type)
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS email_logs_provider_msg_idx
+      ON email_logs (provider_message_id) WHERE provider_message_id IS NOT NULL
+  `);
+}
+
+/**
+ * Record a Resend engagement event (opened/clicked/bounced/complained).
+ * Idempotent: repeat events for the same message+type are ignored.
+ */
+export async function recordEmailEvent(providerMessageId: string, eventType: string, email?: string): Promise<void> {
+  await db.execute(sql`
+    INSERT INTO email_events (provider_message_id, event_type, email)
+    VALUES (${providerMessageId}, ${eventType}, ${email ?? null})
+    ON CONFLICT (provider_message_id, event_type) DO NOTHING
+  `);
+}
+
+/**
+ * Per-template engagement stats: total sends + unique opens/clicks, joined
+ * via email_logs.provider_message_id. Test sends (-test job names) excluded.
+ */
+export async function getEmailEngagementStats(): Promise<Record<string, { sent: number; opened: number; clicked: number }>> {
+  const res: any = await db.execute(sql`
+    SELECT el.job_name,
+           count(DISTINCT el.id) FILTER (WHERE el.status <> 'failed')::int AS sent,
+           count(DISTINCT ev.provider_message_id) FILTER (WHERE ev.event_type = 'opened')::int AS opened,
+           count(DISTINCT ev.provider_message_id) FILTER (WHERE ev.event_type = 'clicked')::int AS clicked
+    FROM email_logs el
+    LEFT JOIN email_events ev ON ev.provider_message_id = el.provider_message_id
+    WHERE el.job_name IS NOT NULL AND el.job_name NOT LIKE '%-test'
+    GROUP BY el.job_name
+  `);
+  const rows = res.rows ?? res;
+  const out: Record<string, { sent: number; opened: number; clicked: number }> = {};
+  for (const r of rows) out[r.job_name] = { sent: Number(r.sent), opened: Number(r.opened), clicked: Number(r.clicked) };
+  return out;
 }
 
 async function loadActivationOverrides(force = false): Promise<void> {
@@ -1800,7 +1852,14 @@ export async function sendSubscriptionCancelledEmail(user: {
 
 export async function getLifecycleStatus() {
   await loadActivationOverrides(true);
-  const [heroChecks, monthlyUsage] = await Promise.all([checkHeroImages(), getMonthlyEmailUsage()]);
+  const [heroChecks, monthlyUsage, engagement] = await Promise.all([
+    checkHeroImages(),
+    getMonthlyEmailUsage(),
+    getEmailEngagementStats().catch(err => {
+      console.error('[Lifecycle] engagement stats failed:', err);
+      return {} as Record<string, { sent: number; opened: number; clicked: number }>;
+    }),
+  ]);
   const emails = await Promise.all(
     LIFECYCLE_EMAILS.map(async (e) => {
       let eligibleNow: number | null = null;
@@ -1815,6 +1874,8 @@ export async function getLifecycleStatus() {
         stage: e.stage,
         active: await isLifecycleActive(e),
         activeDefault: e.active,
+        // payment-failed logs real sends under billing-payment-failed (per-invoice dedupe)
+        stats: engagement[e.key === 'payment-failed' ? 'billing-payment-failed' : e.jobName] ?? { sent: 0, opened: 0, clicked: 0 },
         batchJourney: e.key in BATCH_JOURNEYS,
         longTail: e.key in LONGTAIL_JOURNEYS,
         exemptFromCap: !!e.exemptFromCap,

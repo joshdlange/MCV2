@@ -4809,6 +4809,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Resend engagement webhook (Svix-signed). Captures email.opened /
+  // email.clicked (+ bounces/complaints) into email_events for the admin
+  // panel's per-template open/click rates. Raw body is preserved via the
+  // express.raw() mount in server/index.ts.
+  app.post('/api/resend-webhook', async (req, res) => {
+    try {
+      const secret = process.env.RESEND_WEBHOOK_SECRET;
+      if (!secret) return res.status(503).json({ message: 'RESEND_WEBHOOK_SECRET not configured' });
+      const payload = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : JSON.stringify(req.body);
+      const svixId = req.headers['svix-id'] as string;
+      const svixTimestamp = req.headers['svix-timestamp'] as string;
+      const svixSignature = req.headers['svix-signature'] as string;
+      if (!svixId || !svixTimestamp || !svixSignature) return res.status(400).json({ message: 'Missing signature headers' });
+      // Reject stale timestamps (replay protection, 5 min tolerance)
+      const ts = Number(svixTimestamp);
+      if (!Number.isFinite(ts) || Math.abs(Date.now() / 1000 - ts) > 300) return res.status(400).json({ message: 'Stale timestamp' });
+      const crypto = await import('crypto');
+      const secretBytes = Buffer.from(secret.startsWith('whsec_') ? secret.slice(6) : secret, 'base64');
+      const expected = crypto.createHmac('sha256', secretBytes).update(`${svixId}.${svixTimestamp}.${payload}`).digest('base64');
+      const candidates = svixSignature.split(' ').map(s => s.split(',')[1]).filter(Boolean);
+      const valid = candidates.some(c => {
+        try {
+          return c.length === expected.length && crypto.timingSafeEqual(Buffer.from(c), Buffer.from(expected));
+        } catch { return false; }
+      });
+      if (!valid) return res.status(401).json({ message: 'Invalid signature' });
+
+      const event = JSON.parse(payload);
+      const type = String(event?.type || '');
+      const messageId = event?.data?.email_id;
+      if (messageId && ['email.opened', 'email.clicked', 'email.bounced', 'email.complained', 'email.delivered'].includes(type)) {
+        const { recordEmailEvent } = await import('./jobs/lifecycleEmails');
+        const to = Array.isArray(event?.data?.to) ? event.data.to[0] : event?.data?.to;
+        await recordEmailEvent(String(messageId), type.replace('email.', ''), typeof to === 'string' ? to : undefined);
+      }
+      res.json({ received: true });
+    } catch (error) {
+      console.error('Resend webhook error:', error);
+      res.status(500).json({ message: 'Webhook processing failed' });
+    }
+  });
+
   // Activate / deactivate a lifecycle template from the admin panel.
   // Activation requires the exact typed confirmation `ACTIVATE <key>` so a
   // stray click can never start a campaign; deactivation is instant.

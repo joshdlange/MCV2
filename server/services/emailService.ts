@@ -70,7 +70,8 @@ async function logEmailToDb(
   to: string,
   subject: string,
   template: string,
-  jobName?: string
+  jobName?: string,
+  providerMessageId?: string
 ): Promise<void> {
   try {
     let userId: number | null = null;
@@ -90,6 +91,7 @@ async function logEmailToDb(
       template,
       subject,
       jobName: jobName || null,
+      providerMessageId: providerMessageId || null,
     });
   } catch (error) {
     console.warn(`Could not write email_logs entry for ${to}:`, error);
@@ -191,7 +193,7 @@ export async function sendResendEmail(options: ResendEmailOptions): Promise<stri
       throw new Error(`Resend API error: ${error.name || 'unknown'} — ${error.message || JSON.stringify(error)}`);
     }
 
-    if (!skipLog) await logEmailToDb(to, subject, template, jobName);
+    if (!skipLog) await logEmailToDb(to, subject, template, jobName, data?.id);
     console.log(`✅ [Resend] Email sent to ${to} | Template: ${template} | Job: ${jobName || 'immediate'} | Message ID: ${data?.id}`);
     return data?.id;
   } catch (error) {
