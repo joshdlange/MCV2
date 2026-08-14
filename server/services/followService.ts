@@ -48,6 +48,12 @@ export async function followUser(viewerId: number, targetUserId: number): Promis
   // unfollow/refollow loop can't spam the target (one nudge per follower per
   // target per 7 days).
   if (((inserted as any).rows ?? []).length > 0) {
+    // Friend badges (Friendly Face, Squad Assembled, ...) derive from mutual
+    // follows now — evaluate for both sides on every new follow (fire & forget).
+    import('../badge-service').then(({ badgeService }) => Promise.all([
+      badgeService.checkBadgesOnFriendChange(viewerId),
+      badgeService.checkBadgesOnFriendChange(targetUserId),
+    ])).catch(e => console.error('[Follow] badge check failed:', e));
     try {
       const recent = await db.execute(sql`
         SELECT 1 FROM notifications
@@ -176,7 +182,14 @@ export async function getSuggestedCollectors(viewerId: number, limit = 12) {
       AND NOT EXISTS (SELECT 1 FROM follows f WHERE f.follower_user_id = ${viewerId} AND f.following_user_id = u.id)
       AND NOT EXISTS (SELECT 1 FROM blocks bl WHERE (bl.blocker_id = ${viewerId} AND bl.blocked_user_id = u.id)
                                                OR (bl.blocker_id = u.id AND bl.blocked_user_id = ${viewerId}))
-    ORDER BY u.created_at DESC NULLS LAST, u.id DESC
+    ORDER BY
+      -- Engaged collectors first: recent feed activity (30d), then recent
+      -- collection adds (30d), then follower count. Signup date is a
+      -- last-resort tiebreak only.
+      (SELECT count(*) FROM feed_events fe WHERE fe.user_id = u.id AND fe.created_at > now() - interval '30 days') DESC,
+      (SELECT count(*) FROM user_collections uc WHERE uc.user_id = u.id AND uc.acquired_date > now() - interval '30 days') DESC,
+      (SELECT count(*) FROM follows f2 WHERE f2.following_user_id = u.id) DESC,
+      u.created_at DESC NULLS LAST, u.id DESC
     LIMIT ${limit}
   `);
   const rows = (((res as any).rows ?? []) as any[]);
@@ -192,6 +205,61 @@ export async function getSuggestedCollectors(viewerId: number, limit = 12) {
     collectorFocus: r.collector_focus,
     collectorLevel: levels[Number(r.id)] ?? 1,
   }));
+}
+
+/**
+ * Social Hub lists: followers / following / friends for a user, with the
+ * viewer's relation to each row so the UI can render Follow / Following /
+ * Friends buttons. Blocked users excluded.
+ */
+export async function getRelationshipLists(userId: number) {
+  const res = await db.execute(sql`
+    WITH my_following AS (SELECT following_user_id AS id FROM follows WHERE follower_user_id = ${userId}),
+         my_followers AS (SELECT follower_user_id AS id FROM follows WHERE following_user_id = ${userId}),
+         blocked AS (
+           SELECT blocked_user_id AS id FROM blocks WHERE blocker_id = ${userId}
+           UNION SELECT blocker_id FROM blocks WHERE blocked_user_id = ${userId}
+         )
+    SELECT u.id, u.username, u.display_name, u.photo_url, u.collector_avatar_key,
+           (u.id IN (SELECT id FROM my_following)) AS i_follow,
+           (u.id IN (SELECT id FROM my_followers)) AS follows_me
+    FROM users u
+    WHERE u.id IN (SELECT id FROM my_following UNION SELECT id FROM my_followers)
+      AND u.id NOT IN (SELECT id FROM blocked)
+    ORDER BY lower(coalesce(u.display_name, u.username, ''))
+  `);
+  const rows = (((res as any).rows ?? []) as any[]).map(r => ({
+    id: Number(r.id),
+    username: r.username,
+    displayName: r.display_name,
+    photoURL: r.photo_url,
+    collectorAvatarKey: r.collector_avatar_key,
+    isFollowing: r.i_follow === true,
+    followsYou: r.follows_me === true,
+    isFriend: r.i_follow === true && r.follows_me === true,
+  }));
+  return {
+    followers: rows.filter(r => r.followsYou),
+    following: rows.filter(r => r.isFollowing),
+    friends: rows.filter(r => r.isFriend),
+  };
+}
+
+/** Viewer's relation to a set of user IDs (for annotating search results). */
+export async function getRelationshipMap(viewerId: number, ids: number[]): Promise<Record<number, { isFollowing: boolean; followsYou: boolean; isFriend: boolean }>> {
+  if (ids.length === 0) return {};
+  const res = await db.execute(sql`
+    SELECT u.id,
+           EXISTS(SELECT 1 FROM follows WHERE follower_user_id = ${viewerId} AND following_user_id = u.id) AS i_follow,
+           EXISTS(SELECT 1 FROM follows WHERE follower_user_id = u.id AND following_user_id = ${viewerId}) AS follows_me
+    FROM users u WHERE u.id IN (${sql.join(ids.map(i => sql`${i}`), sql`, `)})
+  `);
+  const out: Record<number, { isFollowing: boolean; followsYou: boolean; isFriend: boolean }> = {};
+  for (const r of ((res as any).rows ?? []) as any[]) {
+    const iFollow = r.i_follow === true, followsMe = r.follows_me === true;
+    out[Number(r.id)] = { isFollowing: iFollow, followsYou: followsMe, isFriend: iFollow && followsMe };
+  }
+  return out;
 }
 
 /** Admin visibility: totals, most-followed collectors, recent follows. */

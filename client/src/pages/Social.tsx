@@ -1,6 +1,6 @@
 import { avatarUrl } from "@/lib/collectorAvatars";
 import { useState, useEffect, useRef } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -190,39 +190,35 @@ export default function Social() {
     };
   };
 
-  // Fetch friends
-  const { data: friends = [], isLoading: friendsLoading } = useQuery({
-    queryKey: ["social/friends"],
+  // Unified follow model: followers / following / friends (friends = mutual)
+  interface RelationshipUser {
+    id: number;
+    username: string;
+    displayName: string | null;
+    photoURL: string | null;
+    collectorAvatarKey: string | null;
+    isFollowing: boolean;
+    followsYou: boolean;
+    isFriend: boolean;
+  }
+  const { data: relationships, isLoading: friendsLoading } = useQuery<{
+    followers: RelationshipUser[];
+    following: RelationshipUser[];
+    friends: RelationshipUser[];
+  }>({
+    queryKey: ["social/relationships"],
     queryFn: async () => {
       const headers = await getAuthHeaders();
-      const response = await fetch("/api/social/friends", { headers });
-      if (!response.ok) throw new Error("Failed to fetch friends");
-      const friendsData = await response.json();
-      
-      // Deduplicate friends by ID to avoid showing duplicates
-      const uniqueFriends = new Map();
-      const currentUserId = currentUser?.id;
-      
-      friendsData.forEach((friend: Friend) => {
-        const friendUser = friend.requester.id === currentUserId 
-          ? friend.recipient 
-          : friend.requester;
-        
-        // Use friend ID as unique key
-        if (!uniqueFriends.has(friendUser.id)) {
-          uniqueFriends.set(friendUser.id, {
-            ...friend,
-            // Normalize to always show the friend (not current user)
-            requester: friend.requester.id === currentUserId ? friend.requester : friend.recipient,
-            recipient: friend.requester.id === currentUserId ? friend.recipient : friend.requester
-          });
-        }
-      });
-      
-      return Array.from(uniqueFriends.values());
+      const response = await fetch("/api/social/relationships", { headers });
+      if (!response.ok) throw new Error("Failed to fetch relationships");
+      return response.json();
     },
     enabled: !!user,
   });
+  const followers = relationships?.followers ?? [];
+  const following = relationships?.following ?? [];
+  const friendUsers = relationships?.friends ?? [];
+  const [peopleTab, setPeopleTab] = useState<"friends" | "followers" | "following">("friends");
 
   // Fetch message threads (only friends with message history)
   const { data: messageThreads = [] } = useQuery({
@@ -231,30 +227,6 @@ export default function Social() {
       const headers = await getAuthHeaders();
       const response = await fetch("/api/social/message-threads", { headers });
       if (!response.ok) throw new Error("Failed to fetch message threads");
-      return response.json();
-    },
-    enabled: !!user,
-  });
-
-  // Fetch friend requests
-  const { data: friendRequests = [] } = useQuery({
-    queryKey: ["social/friend-requests"],
-    queryFn: async () => {
-      const headers = await getAuthHeaders();
-      const response = await fetch("/api/social/friend-requests", { headers });
-      if (!response.ok) throw new Error("Failed to fetch friend requests");
-      return response.json();
-    },
-    enabled: !!user,
-  });
-
-  // Fetch pending invitations (outgoing requests)
-  const { data: pendingInvitations = [] } = useQuery({
-    queryKey: ["social/pending-invitations"],
-    queryFn: async () => {
-      const headers = await getAuthHeaders();
-      const response = await fetch("/api/social/pending-invitations", { headers });
-      if (!response.ok) throw new Error("Failed to fetch pending invitations");
       return response.json();
     },
     enabled: !!user,
@@ -334,7 +306,7 @@ export default function Social() {
       setShowBlockModal(false);
       setIsBlocked(true);
       queryClient.invalidateQueries({ queryKey: ["social/block-status", selectedFriendProfile.id] });
-      queryClient.invalidateQueries({ queryKey: ["social/friends"] });
+      queryClient.invalidateQueries({ queryKey: ["social/relationships"] });
       queryClient.invalidateQueries({ queryKey: ["social/friend-profile", selectedFriendProfile.id] });
       queryClient.invalidateQueries({ queryKey: ["social/friend-collection", selectedFriendProfile.id] });
       queryClient.invalidateQueries({ queryKey: ["social/friend-badges", selectedFriendProfile.id] });
@@ -359,7 +331,7 @@ export default function Social() {
       await apiRequest("DELETE", `/api/social/block/${selectedFriendProfile.id}`);
       setIsBlocked(false);
       queryClient.invalidateQueries({ queryKey: ["social/block-status", selectedFriendProfile.id] });
-      queryClient.invalidateQueries({ queryKey: ["social/friends"] });
+      queryClient.invalidateQueries({ queryKey: ["social/relationships"] });
       toast({
         title: "User unblocked",
         description: `${selectedFriendProfile.displayName || selectedFriendProfile.username} has been unblocked.`,
@@ -434,36 +406,48 @@ export default function Social() {
     }
   }, [messages, selectedFriendId]);
 
-  // Respond to friend request
-  const respondToFriendRequest = useMutation({
-    mutationFn: async ({ friendId, status }: { friendId: number; status: string }) => {
+  // Follow / unfollow (unified model — no requests, no approval)
+  const followMutation = useMutation({
+    mutationFn: async ({ userId }: { userId: number }) => {
       const headers = await getAuthHeaders();
-      const response = await fetch(`/api/social/friend-request/${friendId}/respond`, {
+      const response = await fetch(`/api/social/follow/${userId}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...headers,
-        },
-        body: JSON.stringify({ status }),
+        headers,
       });
-      if (!response.ok) throw new Error("Failed to respond to friend request");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to follow");
+      }
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["social/friend-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["social/friends"] });
-      queryClient.invalidateQueries({ queryKey: ["social/pending-invitations"] });
-      toast({
-        title: "Success",
-        description: "Friend request responded to successfully",
+    onSuccess: (_data, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: ["social/relationships"] });
+      // Update search results in place so the button flips immediately
+      setSearchResults(prev => prev.map((u: any) =>
+        u.id === userId ? { ...u, isFollowing: true, isFriend: u.followsYou } : u));
+    },
+    onError: (error: Error) => {
+      toast({ title: "Couldn't follow", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const unfollowMutation = useMutation({
+    mutationFn: async ({ userId }: { userId: number }) => {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/social/follow/${userId}`, {
+        method: "DELETE",
+        headers,
       });
+      if (!response.ok) throw new Error("Failed to unfollow");
+      return response.json();
+    },
+    onSuccess: (_data, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: ["social/relationships"] });
+      setSearchResults(prev => prev.map((u: any) =>
+        u.id === userId ? { ...u, isFollowing: false, isFriend: false } : u));
     },
     onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to respond to friend request",
-        variant: "destructive",
-      });
+      toast({ title: "Couldn't unfollow", description: "Please try again.", variant: "destructive" });
     },
   });
 
@@ -519,56 +503,6 @@ export default function Social() {
         });
       }
       queryClient.invalidateQueries({ queryKey: ["social/user-badges"] });
-    },
-  });
-
-  // Send friend request
-  const sendFriendRequest = useMutation({
-    mutationFn: async ({ recipientId }: { recipientId: number }) => {
-      const headers = await getAuthHeaders();
-      const response = await fetch("/api/social/friend-request", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...headers,
-        },
-        body: JSON.stringify({ recipientId }),
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to send friend request");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["social/friends"] });
-      queryClient.invalidateQueries({ queryKey: ["social/pending-invitations"] });
-      toast({
-        title: "Success",
-        description: "Friend request sent successfully",
-      });
-      setSearchResults([]);
-      setSearchQuery("");
-    },
-    onError: (error: Error) => {
-      const message = error.message;
-      if (message.includes("already")) {
-        toast({
-          title: "Request Pending",
-          description: "You've already sent a friend request to this person",
-        });
-      } else if (message.includes("friends")) {
-        toast({
-          title: "Already Friends",
-          description: "You're already friends with this person",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: message,
-          variant: "destructive",
-        });
-      }
     },
   });
 
@@ -697,9 +631,9 @@ export default function Social() {
           >
             <Users className="w-4 h-4" />
             <span className="hidden sm:inline">Friends</span>
-            {friends.length > 0 && (
+            {friendUsers.length > 0 && (
               <span className="ml-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs px-1.5 py-0.5 rounded-full">
-                {friends.length}
+                {friendUsers.length}
               </span>
             )}
           </TabsTrigger>
@@ -745,234 +679,215 @@ export default function Social() {
         </TabsList>
 
         <TabsContent value="friends" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Friends List - Clean Modern Design */}
+          <div className="max-w-2xl space-y-4">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">My Friends</h2>
-                <span className="text-sm text-gray-500">{friends.length} connections</span>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">People</h2>
+                <span className="text-sm text-gray-500">{friendUsers.length} friends · {followers.length} followers</span>
               </div>
-              
-              {/* Search Section - Minimal */}
+
+              {/* Search collectors */}
               <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                 <div className="flex items-center gap-3">
                   <div className="flex-1 relative">
                     <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <Input
-                      placeholder="Find new friends..."
+                      placeholder="Search collectors..."
                       value={searchQuery}
                       onChange={handleSearchChange}
                       className="pl-9 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:bg-white dark:focus:bg-gray-900 text-black dark:text-white"
                     />
                   </div>
-                  <Button
-                    onClick={() => searchUsers(searchQuery)}
-                    disabled={isSearching || !searchQuery.trim()}
-                    size="sm"
-                    className="bg-gray-900 hover:bg-gray-800 text-white dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                  </Button>
                 </div>
-                  
+
                   {isSearching && (
                     <div className="mt-3 text-center">
                       <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-gray-500"></div>
                       <p className="text-sm text-gray-600 mt-2">Searching heroes...</p>
                     </div>
                   )}
-                  
+
                   {searchResults.length > 0 && (
                     <div className="mt-3 space-y-2">
-                      {searchResults.map((searchUser: SearchUser) => (
+                      {searchResults.map((searchUser: any) => (
                         <div
                           key={searchUser.id}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                          className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
                         >
-                          <div className="flex items-center space-x-3">
+                          <Link
+                            href={`/collectors/${searchUser.username}`}
+                            className="flex items-center space-x-3 min-w-0 hover:opacity-80 transition-opacity"
+                          >
                             <Avatar className="w-10 h-10">
                               <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(searchUser.collectorAvatarKey) ?? searchUser.photoURL} />
                               <AvatarFallback className="bg-green-500 text-white font-bold">
                                 {searchUser.displayName?.charAt(0) || searchUser.username.charAt(0)}
                               </AvatarFallback>
                             </Avatar>
-                            <div>
-                              <p className="font-bold text-gray-900">{searchUser.displayName}</p>
-                              <p className="text-sm text-gray-500">@{searchUser.username}</p>
+                            <div className="min-w-0">
+                              <p className="font-bold text-gray-900 dark:text-white truncate">{searchUser.displayName}</p>
+                              <p className="text-sm text-gray-500 truncate">
+                                @{searchUser.username}
+                                {searchUser.followsYou && !searchUser.isFriend && (
+                                  <span className="ml-1.5 text-xs text-gray-400">· Follows you</span>
+                                )}
+                              </p>
                             </div>
-                          </div>
-                          <Button
-                            onClick={() => sendFriendRequest.mutate({ recipientId: searchUser.id })}
-                            disabled={sendFriendRequest.isPending}
-                            className="bg-green-500 hover:bg-green-600 text-white"
-                          >
-                            <UserPlus className="w-4 h-4 mr-1" />
-                            Add Friend
-                          </Button>
+                          </Link>
+                          {searchUser.isFriend ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => unfollowMutation.mutate({ userId: searchUser.id })}
+                              disabled={unfollowMutation.isPending}
+                              className="rounded-full text-green-700 border-green-300 bg-green-50 hover:bg-green-100 text-xs"
+                              data-testid={`button-friends-${searchUser.id}`}
+                            >
+                              <Check className="w-3.5 h-3.5 mr-1" /> Friends
+                            </Button>
+                          ) : searchUser.isFollowing ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => unfollowMutation.mutate({ userId: searchUser.id })}
+                              disabled={unfollowMutation.isPending}
+                              className="rounded-full text-gray-600 text-xs"
+                              data-testid={`button-following-${searchUser.id}`}
+                            >
+                              Following
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              onClick={() => followMutation.mutate({ userId: searchUser.id })}
+                              disabled={followMutation.isPending}
+                              className="rounded-full bg-red-600 hover:bg-red-700 text-white text-xs"
+                              data-testid={`button-follow-${searchUser.id}`}
+                            >
+                              <UserPlus className="w-3.5 h-3.5 mr-1" />
+                              {searchUser.followsYou ? "Follow Back" : "Follow"}
+                            </Button>
+                          )}
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
 
-              {/* Friends List - Social Tiles */}
+              {/* Followers / Following / Friends sub-tabs */}
+              <div className="inline-flex bg-gray-100 dark:bg-gray-800 rounded-full p-1 gap-1">
+                {([
+                  ["friends", `Friends (${friendUsers.length})`],
+                  ["followers", `Followers (${followers.length})`],
+                  ["following", `Following (${following.length})`],
+                ] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setPeopleTab(key)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      peopleTab === key
+                        ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm"
+                        : "text-gray-600 dark:text-gray-400"
+                    }`}
+                    data-testid={`tab-${key}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* People list (selected sub-tab) */}
               <div className="space-y-2">
                 {friendsLoading ? (
                   <div className="text-center py-8">
                     <div className="animate-spin w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full mx-auto mb-3"></div>
-                    <p className="text-gray-500 text-sm">Loading friends...</p>
+                    <p className="text-gray-500 text-sm">Loading...</p>
                   </div>
-                ) : friends.length === 0 ? (
-                  <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                    <Users className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-                    <p className="font-medium text-gray-600 dark:text-gray-400">No friends yet</p>
-                    <p className="text-sm text-gray-400">Search above to find collectors</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {friends.map((friend: Friend) => {
-                      const currentUserId = currentUser?.id;
-                      const isRequesterCurrentUser = friend.requester.id === currentUserId;
-                      const friendUser = isRequesterCurrentUser 
-                        ? friend.recipient : friend.requester;
-                      return (
-                        <div key={friend.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm hover:shadow-md transition-all">
+                ) : (() => {
+                  const list = peopleTab === "friends" ? friendUsers : peopleTab === "followers" ? followers : following;
+                  if (list.length === 0) {
+                    return (
+                      <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                        <Users className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+                        <p className="font-medium text-gray-600 dark:text-gray-400">
+                          {peopleTab === "friends" ? "No friends yet" : peopleTab === "followers" ? "No followers yet" : "Not following anyone yet"}
+                        </p>
+                        <p className="text-sm text-gray-400">
+                          {peopleTab === "friends"
+                            ? "Friends are collectors who follow each other — search above to find people"
+                            : "Search above to find collectors"}
+                        </p>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="space-y-2">
+                      {list.map((person) => (
+                        <div key={person.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm hover:shadow-md transition-all">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
+                            <Link href={`/collectors/${person.username}`} className="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity">
                               <Avatar className="w-10 h-10 ring-2 ring-gray-200 dark:ring-gray-700">
-                                <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(friendUser.collectorAvatarKey) ?? friendUser.photoURL} />
+                                <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(person.collectorAvatarKey) ?? person.photoURL} />
                                 <AvatarFallback className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium text-sm">
-                                  {friendUser.displayName?.charAt(0) || friendUser.username.charAt(0)}
+                                  {person.displayName?.charAt(0) || person.username.charAt(0)}
                                 </AvatarFallback>
                               </Avatar>
                               <div className="min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{friendUser.displayName || friendUser.username}</p>
-                                  <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-                                </div>
-                                <p className="text-xs text-gray-500 truncate">@{friendUser.username}</p>
+                                <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{person.displayName || person.username}</p>
+                                <p className="text-xs text-gray-500 truncate">
+                                  @{person.username}
+                                  {person.isFriend
+                                    ? " · Friends"
+                                    : person.followsYou && !person.isFollowing
+                                      ? " · Follows you"
+                                      : ""}
+                                </p>
                               </div>
+                            </Link>
+                            <div className="flex gap-1.5 items-center">
+                              {person.isFriend && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setSelectedFriendId(person.id);
+                                    const tabEvent = new CustomEvent('switchToMessages', { detail: { friendId: person.id } });
+                                    window.dispatchEvent(tabEvent);
+                                  }}
+                                  className="h-8 w-8 p-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+                                  data-testid={`button-message-${person.id}`}
+                                >
+                                  <MessageCircle className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                                </Button>
+                              )}
+                              {person.isFollowing ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => unfollowMutation.mutate({ userId: person.id })}
+                                  disabled={unfollowMutation.isPending}
+                                  className={`rounded-full text-xs ${person.isFriend ? "text-green-700 border-green-300 bg-green-50 hover:bg-green-100" : "text-gray-600"}`}
+                                >
+                                  {person.isFriend ? <><Check className="w-3.5 h-3.5 mr-1" /> Friends</> : "Following"}
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  onClick={() => followMutation.mutate({ userId: person.id })}
+                                  disabled={followMutation.isPending}
+                                  className="rounded-full bg-red-600 hover:bg-red-700 text-white text-xs"
+                                >
+                                  <UserPlus className="w-3.5 h-3.5 mr-1" />
+                                  Follow Back
+                                </Button>
+                              )}
                             </div>
-                            <div className="flex gap-1.5">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                  setSelectedFriendId(friendUser.id);
-                                  const tabEvent = new CustomEvent('switchToMessages', { detail: { friendId: friendUser.id } });
-                                  window.dispatchEvent(tabEvent);
-                                }}
-                                className="h-8 w-8 p-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
-                              >
-                                <MessageCircle className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                  setSelectedFriendProfile(friendUser);
-                                  setIsBlocked(false);
-                                  setViewingProfile(true);
-                                  setActiveTab('profile');
-                                }}
-                                className="h-8 w-8 p-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
-                              >
-                                <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                              </Button>
-                            </div>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Combined Requests & Invitations */}
-            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="p-4 border-b border-gray-100 dark:border-gray-800">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <UserPlus className="w-4 h-4 text-gray-500" />
-                    Requests & Invitations
-                  </h3>
-                  {(friendRequests.length > 0 || pendingInvitations.length > 0) && (
-                    <span className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs px-2 py-1 rounded-full">
-                      {friendRequests.length + pendingInvitations.length}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="p-4">
-                {friendRequests.length === 0 && pendingInvitations.length === 0 ? (
-                  <div className="text-center py-8">
-                    <UserPlus className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-                    <p className="text-sm text-gray-500 dark:text-gray-400">No pending requests or invitations</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {/* Incoming Friend Requests */}
-                    {friendRequests.map((request: Friend) => (
-                      <div key={`req-${request.id}`} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="w-10 h-10 ring-2 ring-gray-200 dark:ring-gray-700">
-                            <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(request.requester.collectorAvatarKey) ?? request.requester.photoURL} />
-                            <AvatarFallback className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-medium">
-                              {request.requester.displayName?.charAt(0) || request.requester.username.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-white text-sm">{request.requester.displayName || request.requester.username}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Wants to connect</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => respondToFriendRequest.mutate({ friendId: request.id, status: "accepted" })}
-                            disabled={respondToFriendRequest.isPending}
-                            className="h-8 px-3 bg-gray-900 hover:bg-gray-800 text-white dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 text-xs rounded-full"
-                          >
-                            <Check className="w-3 h-3 mr-1" />
-                            Accept
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => respondToFriendRequest.mutate({ friendId: request.id, status: "declined" })}
-                            disabled={respondToFriendRequest.isPending}
-                            className="h-8 w-8 p-0 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
-                          >
-                            <X className="w-4 h-4 text-gray-500" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                    
-                    {/* Outgoing Pending Invitations */}
-                    {pendingInvitations.map((invitation: Friend) => (
-                      <div key={`inv-${invitation.id}`} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="w-10 h-10 ring-2 ring-gray-200 dark:ring-gray-700">
-                            <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(invitation.recipient.collectorAvatarKey) ?? invitation.recipient.photoURL} />
-                            <AvatarFallback className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-medium">
-                              {invitation.recipient.displayName?.charAt(0) || invitation.recipient.username.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-white text-sm">{invitation.recipient.displayName || invitation.recipient.username}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Invitation sent</p>
-                          </div>
-                        </div>
-                        <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
-                          <Clock className="w-3 h-3" />
-                          Pending
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>

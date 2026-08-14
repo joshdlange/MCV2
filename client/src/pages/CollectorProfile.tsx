@@ -14,7 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   ArrowLeft, MapPin, Globe, Calendar, MessageCircle, UserPlus, UserCheck, UserX,
   ShieldOff, Flag, MoreVertical, Star, Award, Image, ShoppingBag, Heart,
-  Package, Edit, Zap, TrendingUp, CheckCircle, Clock, EyeOff, Repeat2,
+  Package, Edit, Zap, TrendingUp, CheckCircle, Clock, EyeOff, Repeat2, Lock,
   Instagram, ExternalLink, Settings, Sparkles, UserCircle
 } from "lucide-react";
 import { ComicBolt } from "@/components/ui/comic-bolt";
@@ -304,6 +304,54 @@ export default function CollectorProfile() {
           <Button onClick={() => setLocation("/social")} variant="outline">
             <ArrowLeft className="w-4 h-4 mr-2" /> Back to Social Hub
           </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Limited locked card: private or friends-only profile the viewer can't see
+  if ((profile as any).limited) {
+    const lim = profile as any;
+    const limUser = lim.user;
+    const rel = lim.relationship;
+    const limName = limUser.username || limUser.displayName;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center max-w-sm w-full">
+          <Avatar className="w-24 h-24 mx-auto mb-4 ring-4 ring-gray-100">
+            <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(limUser.collectorAvatarKey) ?? limUser.photoURL ?? undefined} />
+            <AvatarFallback className="bg-red-600 text-white text-2xl font-bold">
+              {limName?.charAt(0)?.toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <h1 className="text-xl font-bold text-gray-900">@{limUser.username}</h1>
+          <div className="flex items-center justify-center gap-2 text-gray-500 mt-3 mb-1">
+            <Lock className="w-4 h-4" />
+            <p className="font-medium">
+              {lim.visibility === "private" ? "This profile is private" : "This profile is friends-only"}
+            </p>
+          </div>
+          <p className="text-sm text-gray-400 mb-6">
+            {lim.visibility === "private"
+              ? "This collector keeps their vault to themselves."
+              : "Follow each other to become friends and see this profile."}
+          </p>
+          {rel && (
+            <Button
+              onClick={() => followMutation.mutate(rel.isFollowing)}
+              disabled={followMutation.isPending}
+              variant={rel.isFollowing ? "outline" : "default"}
+              className={rel.isFollowing ? "rounded-full" : "rounded-full bg-red-600 hover:bg-red-700 text-white"}
+              data-testid="button-follow-locked"
+            >
+              {rel.isFollowing ? "Following" : rel.followsYou ? "Follow Back" : "Follow"}
+            </Button>
+          )}
+          <div className="mt-4">
+            <Button onClick={() => setLocation("/social")} variant="ghost" size="sm" className="text-gray-500">
+              <ArrowLeft className="w-4 h-4 mr-2" /> Back to Social Hub
+            </Button>
+          </div>
         </div>
       </div>
     );

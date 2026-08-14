@@ -5080,94 +5080,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ========== SOCIAL FEATURES API ROUTES ==========
   
   // Friends API
+  // ── Unified follow-based social model (Aug 2026) ─────────────────────────
+  // Friends = mutual follows. The old request/approve workflow is retired:
+  // legacy endpoints below stay for old mobile builds but map onto follows.
+
+  // Followers / Following / Friends lists for the Social Hub
+  app.get("/api/social/relationships", authenticateUser, async (req: any, res) => {
+    try {
+      const { getRelationshipLists } = await import('./services/followService');
+      res.json(await getRelationshipLists(req.user.id));
+    } catch (error) {
+      console.error('Get relationships error:', error);
+      res.status(500).json({ message: "Failed to fetch relationships" });
+    }
+  });
+
+  // Follow / unfollow by user id (Social Hub buttons)
+  app.post("/api/social/follow/:userId", authenticateUser, async (req: any, res) => {
+    try {
+      const targetId = parseInt(req.params.userId);
+      if (!Number.isFinite(targetId)) return res.status(400).json({ message: "Invalid user" });
+      const { followUser } = await import('./services/followService');
+      const result = await followUser(req.user.id, targetId);
+      if (!result.ok) return res.status(result.status).json({ message: result.message });
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Follow error:', error);
+      res.status(500).json({ message: "Failed to follow" });
+    }
+  });
+
+  app.delete("/api/social/follow/:userId", authenticateUser, async (req: any, res) => {
+    try {
+      const targetId = parseInt(req.params.userId);
+      if (!Number.isFinite(targetId)) return res.status(400).json({ message: "Invalid user" });
+      const { unfollowUser } = await import('./services/followService');
+      await unfollowUser(req.user.id, targetId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Unfollow error:', error);
+      res.status(500).json({ message: "Failed to unfollow" });
+    }
+  });
+
+  // Legacy (kept for old mobile builds): friends list now derives from follows
   app.get("/api/social/friends", authenticateUser, async (req: any, res) => {
     try {
-      const friends = await storage.getFriends(req.user.id);
-      res.json(friends);
+      const { getRelationshipLists } = await import('./services/followService');
+      const { friends: friendRows } = await getRelationshipLists(req.user.id);
+      // Legacy shape for old builds: requester = caller, recipient = friend
+      const me = { id: req.user.id, username: req.user.username, displayName: req.user.displayName, photoURL: req.user.photoURL };
+      res.json(friendRows.map(f => ({
+        id: f.id, // friend's user id doubles as row id in the unified model
+        status: 'accepted',
+        requester: me,
+        recipient: { id: f.id, username: f.username, displayName: f.displayName, photoURL: f.photoURL, collectorAvatarKey: f.collectorAvatarKey },
+      })));
     } catch (error) {
       console.error('Get friends error:', error);
       res.status(500).json({ message: "Failed to fetch friends" });
     }
   });
 
-  app.get("/api/social/friend-requests", authenticateUser, async (req: any, res) => {
-    try {
-      const requests = await storage.getFriendRequests(req.user.id);
-      res.json(requests);
-    } catch (error) {
-      console.error('Get friend requests error:', error);
-      res.status(500).json({ message: "Failed to fetch friend requests" });
-    }
+  // Legacy: the request/approve workflow is gone — nothing pending, ever.
+  app.get("/api/social/friend-requests", authenticateUser, async (_req: any, res) => {
+    res.json([]);
   });
 
-  app.get("/api/social/pending-invitations", authenticateUser, async (req: any, res) => {
-    try {
-      const invitations = await storage.getPendingInvitations(req.user.id);
-      res.json(invitations);
-    } catch (error) {
-      console.error('Get pending invitations error:', error);
-      res.status(500).json({ message: "Failed to fetch pending invitations" });
-    }
+  app.get("/api/social/pending-invitations", authenticateUser, async (_req: any, res) => {
+    res.json([]);
   });
 
+  // Legacy: old builds' "Add Friend" now just follows the person.
   app.post("/api/social/friend-request", authenticateUser, async (req: any, res) => {
     try {
       const { recipientId } = req.body;
-      
       if (!recipientId || recipientId === req.user.id) {
         return res.status(400).json({ message: "Invalid recipient ID" });
       }
-
-      const [blockExists] = await db
-        .select({ id: blocks.id })
-        .from(blocks)
-        .where(or(
-          and(eq(blocks.blockerId, req.user.id), eq(blocks.blockedUserId, recipientId)),
-          and(eq(blocks.blockerId, recipientId), eq(blocks.blockedUserId, req.user.id))
-        ))
-        .limit(1);
-
-      if (blockExists) {
-        return res.status(403).json({ message: "Unable to send friend request to this user" });
-      }
-
-      // Check if friendship already exists
-      const existingFriendship = await storage.getFriendshipStatus(req.user.id, recipientId);
-      if (existingFriendship) {
-        return res.status(400).json({ message: "Friend request already exists" });
-      }
-
-      const friendship = await storage.sendFriendRequest(req.user.id, recipientId);
-      
-      // Check badges when friend relationships change
+      const { followUser } = await import('./services/followService');
+      const result = await followUser(req.user.id, parseInt(recipientId));
+      if (!result.ok) return res.status(result.status).json({ message: result.message });
       await badgeService.checkBadgesOnFriendChange(req.user.id);
-      
-      res.status(201).json(friendship);
+      res.status(201).json({ status: 'following' });
     } catch (error) {
       console.error('Send friend request error:', error);
-      res.status(500).json({ message: "Failed to send friend request" });
+      res.status(500).json({ message: "Failed to follow" });
     }
   });
 
+  // Legacy: accepting a request = following back (requests no longer exist,
+  // but an old build could still have one rendered).
   app.post("/api/social/friend-request/:id/respond", authenticateUser, async (req: any, res) => {
     try {
       const friendId = parseInt(req.params.id);
       const { status } = req.body;
-      
       if (!["accepted", "declined"].includes(status)) {
         return res.status(400).json({ message: "Invalid status" });
       }
-
       const friendship = await storage.respondToFriendRequest(friendId, status);
-      if (!friendship) {
-        return res.status(404).json({ message: "Friend request not found" });
-      }
-
-      // Check badges when friend relationships change (only if accepted)
+      if (!friendship) return res.status(404).json({ message: "Friend request not found" });
       if (status === 'accepted') {
         await badgeService.checkBadgesOnFriendChange(req.user.id);
-        // Unified model: an accepted friendship is a mutual follow. Dual-write
-        // so the Followers/Following/Friends header stays in sync.
         try {
           const { makeFriends } = await import('./services/followService');
           await makeFriends(friendship.requesterId, friendship.recipientId);
@@ -5175,7 +5189,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('Error mirroring accepted friendship into follows:', e);
         }
       }
-
       res.json(friendship);
     } catch (error) {
       console.error('Respond to friend request error:', error);
@@ -5183,11 +5196,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Legacy: "remove friend" = unfollow. Old builds pass a friendship ROW id,
+  // so resolve a row owned by the caller first; only fall back to treating
+  // the value as a user id when no such row exists (new unified clients).
   app.delete("/api/social/friend/:id", authenticateUser, async (req: any, res) => {
     try {
-      const friendId = parseInt(req.params.id);
-      await storage.removeFriend(friendId);
-      res.json({ message: "Friend removed successfully" });
+      const rawId = parseInt(req.params.id);
+      if (!Number.isFinite(rawId)) return res.status(400).json({ message: "Invalid id" });
+      let otherUserId = rawId;
+      const [row] = await db.select().from(friends)
+        .where(and(
+          eq(friends.id, rawId),
+          or(eq(friends.requesterId, req.user.id), eq(friends.recipientId, req.user.id))
+        )).limit(1);
+      if (row) {
+        otherUserId = row.requesterId === req.user.id ? row.recipientId : row.requesterId;
+      }
+      const { unfollowUser } = await import('./services/followService');
+      await unfollowUser(req.user.id, otherUserId);
+      res.json({ message: "Unfollowed" });
     } catch (error) {
       console.error('Remove friend error:', error);
       res.status(500).json({ message: "Failed to remove friend" });
@@ -5543,18 +5570,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (visibility === 'friends') {
       let accepted = false;
       if (callerId) {
-        const [friendRecord] = await db
-          .select({ status: friends.status })
-          .from(friends)
-          .where(or(
-            and(eq(friends.requesterId, callerId), eq(friends.recipientId, targetUser.id)),
-            and(eq(friends.requesterId, targetUser.id), eq(friends.recipientId, callerId))
-          ))
-          .limit(1);
-        accepted = friendRecord?.status === 'accepted';
-        // Follow v1: mutual follows also count as friends (both definitions
-        // are honored so neither system locks the other out).
-        if (!accepted) {
+        // Unified model: friends = mutual follows ONLY (legacy accepted rows
+        // were migrated into follows at startup; they no longer grant access).
+        {
           const mutual: any = await db.execute(sql`
             SELECT 1 FROM follows a
             JOIN follows b ON b.follower_user_id = a.following_user_id AND b.following_user_id = a.follower_user_id
@@ -5598,29 +5616,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (blockExists) return res.status(403).json({ message: "This profile is not available" });
       }
 
-      // Friend status
-      let friendStatus = "none";
-      let friendRequestId: number | null = null;
-      if (callerId && !isOwnProfile) {
-        const [friendRecord] = await db
-          .select()
-          .from(friends)
-          .where(or(
-            and(eq(friends.requesterId, callerId), eq(friends.recipientId, targetUser.id)),
-            and(eq(friends.requesterId, targetUser.id), eq(friends.recipientId, callerId))
-          ))
-          .limit(1);
-        if (friendRecord) {
-          friendStatus = friendRecord.status;
-          friendRequestId = friendRecord.id;
-        }
-      }
+      // Relationship (unified model: friends = mutual follows)
+      const { getFollowInfo } = await import('./services/followService');
+      const followInfo = callerId && !isOwnProfile
+        ? await getFollowInfo(callerId, targetUser.id)
+        : null;
+      const friendStatus = followInfo?.isFriend ? "accepted" : "none";
+      const friendRequestId: number | null = null;
 
-      // Profile visibility enforcement — owner can always view their own profile
+      // Profile visibility enforcement — owner always sees their own profile.
+      // Unauthorized viewers get a LIMITED locked card (not a 403) so search
+      // results and links still resolve to something sensible.
       if (!isOwnProfile) {
         const visibility = (targetUser.profileVisibility || 'public').toLowerCase();
-        if (visibility === 'private' || (visibility === 'friends' && friendStatus !== 'accepted')) {
-          return res.status(403).json({ message: "This profile is not available" });
+        if (visibility === 'private' || (visibility === 'friends' && !followInfo?.isFriend)) {
+          return res.json({
+            limited: true,
+            visibility,
+            user: {
+              id: targetUser.id,
+              username: targetUser.username,
+              displayName: targetUser.displayName,
+              photoURL: targetUser.photoURL,
+            },
+            relationship: followInfo ? {
+              isFollowing: followInfo.isFollowing,
+              followsYou: followInfo.followsYou,
+              isFriend: followInfo.isFriend,
+            } : null,
+          });
         }
       }
 
@@ -5823,15 +5847,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/collectors/:username/follow — follow a collector
+  // POST /api/collectors/:username/follow — follow a collector.
+  // Deliberately NOT gated by resolveCollectorAccess: private/friends-only
+  // profiles must still be followable (that's how a mutual follow — and thus
+  // friendship — gets established). followUser itself enforces blocks and
+  // the target's allowFollowers/followability rules.
   app.post("/api/collectors/:username/follow", authenticateUser, async (req: any, res) => {
     try {
-      const access = await resolveCollectorAccess(req.params.username, req.user?.id);
-      if (!access.ok) return res.status(access.status).json({ message: access.message });
+      const [target] = await db.select().from(users)
+        .where(eq(users.username, req.params.username)).limit(1);
+      if (!target) return res.status(404).json({ message: "Collector not found" });
       const followSvc = await import('./services/followService');
-      const result = await followSvc.followUser(req.user.id, access.targetUser.id);
+      const result = await followSvc.followUser(req.user.id, target.id);
       if (!result.ok) return res.status(result.status).json({ message: result.message });
-      res.json(await followSvc.getFollowInfo(req.user.id, access.targetUser.id));
+      res.json(await followSvc.getFollowInfo(req.user.id, target.id));
     } catch (error) {
       console.error('[Follow] follow error:', error);
       res.status(500).json({ message: "Failed to follow" });
@@ -6264,7 +6293,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ]);
 
       const filteredUsers = searchResults.filter((u: any) => !blockedIds.has(u.id));
-      res.json(filteredUsers);
+
+      // Annotate with viewer's relationship so the UI can render
+      // Follow / Following / Friends button state directly.
+      const { getRelationshipMap } = await import('./services/followService');
+      const rel = await getRelationshipMap(req.user.id, filteredUsers.map((u: any) => u.id));
+      res.json(filteredUsers.map((u: any) => ({
+        ...u,
+        isFollowing: rel[u.id]?.isFollowing ?? false,
+        followsYou: rel[u.id]?.followsYou ?? false,
+        isFriend: rel[u.id]?.isFriend ?? false,
+      })));
     } catch (error) {
       console.error('Search users error:', error);
       res.status(500).json({ message: "Failed to search users" });

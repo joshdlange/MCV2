@@ -2252,18 +2252,12 @@ export class DatabaseStorage implements IStorage {
             shouldAward = stats.completedSets >= requirement.value;
             break;
             
-          case 'friend_count':
-            const friendCount = await db.select({ count: sql`count(*)` })
-              .from(friends)
-              .where(and(
-                or(
-                  eq(friends.requesterId, userId),
-                  eq(friends.recipientId, userId)
-                ),
-                eq(friends.status, 'accepted')
-              ));
-            shouldAward = Number(friendCount[0].count) >= requirement.value;
+          case 'friend_count': {
+            // Unified model: friends = mutual follows
+            const { getFriendIds } = await import('./services/followService');
+            shouldAward = (await getFriendIds(userId)).length >= requirement.value;
             break;
+          }
             
           case 'message_sent':
           case 'messages_sent':
@@ -2355,7 +2349,9 @@ export class DatabaseStorage implements IStorage {
   // Social Features - Profiles
   async getProfileStats(userId: number): Promise<ProfileStats> {
     const collectionStats = await this.getCollectionStats(userId);
-    const friendsCount = (await this.getFriends(userId)).length;
+    // Friends = mutual follows (counts come from follows only)
+    const { getFriendIds } = await import('./services/followService');
+    const friendsCount = (await getFriendIds(userId)).length;
     const badgesCount = (await this.getUserBadges(userId)).length;
     const user = await this.getUser(userId);
     
@@ -2390,10 +2386,12 @@ export class DatabaseStorage implements IStorage {
         return true;
       case "private":
         return false;
-      case "friends":
-        // Check if they're friends
-        const friendship = await this.getFriendshipStatus(viewerUserId, targetUserId);
-        return friendship?.status === "accepted";
+      case "friends": {
+        // Friends = mutual follows (unified model; legacy friends table no
+        // longer powers access decisions)
+        const { getFollowInfo } = await import('./services/followService');
+        return (await getFollowInfo(viewerUserId, targetUserId)).isFriend;
+      }
       default:
         return false;
     }

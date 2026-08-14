@@ -271,17 +271,21 @@ export class BadgeService {
     const badge = await this.getBadgeByName('Friendship is Magic');
     if (!badge) return;
 
-    const threeMonthsAgo = new Date(Date.now() - 3 * 30 * 24 * 60 * 60 * 1000);
-    
-    const friendCount = await db.select({ count: count() })
-      .from(friends)
-      .where(and(
-        sql`(${friends.requesterId} = ${userId} OR ${friends.recipientId} = ${userId})`,
-        eq(friends.status, 'accepted'),
-        lte(friends.createdAt, threeMonthsAgo)
-      ));
+    // Unified model: friendships ≥3 months old = mutual follows where both
+    // follow rows were created at least 3 months ago.
+    const res = await db.execute(sql`
+      SELECT COUNT(*) AS count
+      FROM follows f1
+      JOIN follows f2
+        ON f2.follower_user_id = f1.following_user_id
+       AND f2.following_user_id = f1.follower_user_id
+      WHERE f1.follower_user_id = ${userId}
+        AND f1.created_at <= NOW() - INTERVAL '3 months'
+        AND f2.created_at <= NOW() - INTERVAL '3 months'
+    `);
+    const friendCount = Number(((res as any).rows?.[0] ?? {}).count ?? 0);
 
-    if (friendCount[0].count >= 5) {
+    if (friendCount >= 5) {
       await this.awardBadge(userId, badge.id);
     }
   }
@@ -602,19 +606,18 @@ export class BadgeService {
     await this.checkFriendshipIsMagic(userId);
   }
 
+  // Unified model: friends = mutual follows
+  private async getMutualFollowCount(userId: number): Promise<number> {
+    const { getFriendIds } = await import('./services/followService');
+    return (await getFriendIds(userId)).length;
+  }
+
   // Friendly Face - First friend added
   async checkFriendlyFace(userId: number): Promise<void> {
     const badge = await this.getBadgeByName('Friendly Face');
     if (!badge) return;
 
-    const friendCount = await db.select({ count: count() })
-      .from(friends)
-      .where(and(
-        sql`(${friends.requesterId} = ${userId} OR ${friends.recipientId} = ${userId})`,
-        eq(friends.status, 'accepted')
-      ));
-
-    if (Number(friendCount[0].count) >= 1) {
+    if ((await this.getMutualFollowCount(userId)) >= 1) {
       await this.awardBadge(userId, badge.id);
     }
   }
@@ -624,14 +627,7 @@ export class BadgeService {
     const badge = await this.getBadgeByName('Squad Assembled');
     if (!badge) return;
 
-    const friendCount = await db.select({ count: count() })
-      .from(friends)
-      .where(and(
-        sql`(${friends.requesterId} = ${userId} OR ${friends.recipientId} = ${userId})`,
-        eq(friends.status, 'accepted')
-      ));
-
-    if (Number(friendCount[0].count) >= 10) {
+    if ((await this.getMutualFollowCount(userId)) >= 10) {
       await this.awardBadge(userId, badge.id);
     }
   }

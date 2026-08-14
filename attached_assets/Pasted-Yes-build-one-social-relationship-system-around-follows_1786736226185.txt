@@ -1,0 +1,77 @@
+Yes, build one social relationship system around follows.
+
+Use:
+- Follow = one-way relationship
+- Friends = mutual follows
+
+Remove the old friend request / approve UX from Social Hub.
+
+Social Hub should show:
+- Followers
+- Following
+- Friends
+- Messages
+
+Search should show:
+- Follow
+- Following
+- Friends
+
+No Add Friend buttons.
+No Requests & Invitations panel.
+No pending friend-request workflow.
+
+Privacy behavior:
+- Public profile: viewable by anyone
+- Friends-only profile: full view only for mutual followers
+- Private profile: full view only for owner
+- Non-authorized viewers see a limited locked card
+- Blocked users are hidden/blocked everywhere
+
+Limited locked card should show:
+- avatar
+- display name / username
+- profile privacy state
+- follow/following/friends state if allowed
+- clear “This profile is private” or “Friends-only profile” message
+
+Limited locked card should hide:
+- collection
+- wish list
+- PC Binders
+- card values
+- feed activity
+- detailed stats
+- private badges if applicable
+
+Migration:
+- Existing accepted friendships should remain mutual follows.
+- Existing pending friend requests should convert to requester follows target, or be archived if safer.
+- Old friend records should no longer power counts or access decisions.
+- Counts should come from follows only.
+- Do not delete old records until we confirm no code reads them.
+- If retiring old friend records, archive/deprecate them safely, do not hard-delete on first pass.
+
+Notifications:
+- Replace friend request notifications with “X followed you.”
+- Include Follow Back where appropriate.
+
+Preserve:
+- Existing Feed behavior
+- Existing follows
+- Existing mutual-friend relationships
+- Existing messages
+- Existing blocking behavior
+- Existing privacy settings, but enforce them consistently
+
+QA:
+- A user I already follow does not show Add Friend anywhere.
+- A mutual follow shows Friends.
+- A one-way follow shows Following.
+- A non-followed user shows Follow.
+- Public profile is viewable.
+- Friends-only profile is fully viewable only to mutual followers.
+- Private profile shows limited locked card to others.
+- Blocked users do not appear or become accessible.
+- Social Hub counts match profile/feed counts.
+- Messages still work.

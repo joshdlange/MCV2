@@ -322,6 +322,33 @@ app.use((req, res, next) => {
     console.error('Startup migration (friends→follows merge) failed:', error);
   }
 
+  // One-time migration (Aug 2026): retire the friend-request workflow.
+  // Pending requests convert to "requester follows recipient" (one-way),
+  // then the legacy rows are archived (not deleted) so nothing is lost.
+  try {
+    const { db } = await import('./db');
+    const { sql } = await import('drizzle-orm');
+    await db.transaction(async (tx) => {
+      const m = await tx.execute(sql`INSERT INTO startup_migrations (name) VALUES ('pending_friend_requests_to_follows_v1') ON CONFLICT (name) DO NOTHING RETURNING name`);
+      if ((m as any).rows?.length > 0) {
+        const ins = await tx.execute(sql`
+          INSERT INTO follows (follower_user_id, following_user_id)
+          SELECT f.requester_id, f.recipient_id FROM friends f
+          WHERE f.status = 'pending' AND f.requester_id <> f.recipient_id
+            AND NOT EXISTS (
+              SELECT 1 FROM blocks bl
+              WHERE (bl.blocker_id = f.requester_id AND bl.blocked_user_id = f.recipient_id)
+                 OR (bl.blocker_id = f.recipient_id AND bl.blocked_user_id = f.requester_id))
+          ON CONFLICT (follower_user_id, following_user_id) DO NOTHING`);
+        const upd = await tx.execute(sql`
+          UPDATE friends SET status = 'archived_pending' WHERE status = 'pending'`);
+        console.log(`[Friend Requests Retirement] Converted pending requests to follows (+${(ins as any).rowCount ?? 0} follows, ${(upd as any).rowCount ?? 0} rows archived)`);
+      }
+    });
+  } catch (error) {
+    console.error('Startup migration (pending requests→follows) failed:', error);
+  }
+
   // One-time startup backfill: retroactive feed events (first cards, milestones,
   // recent badges/binders/images). Idempotent via dedupe-key ON CONFLICT, but
   // gated by a startup_migrations marker so the scan only runs once per env.
