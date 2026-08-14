@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -313,6 +313,12 @@ export default function ScanToAdd() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [selectedCard, setSelectedCard] = useState<ScanMatch | null>(null);
   const [submitImage, setSubmitImage] = useState(false);
+  const [dbImageBroken, setDbImageBroken] = useState(false);
+
+  // Reset the broken-image flag whenever a different card is selected
+  useEffect(() => {
+    setDbImageBroken(false);
+  }, [selectedCard?.cardId]);
 
   // Picker state
   const [pickerYear, setPickerYear] = useState<number | null>(null);
@@ -667,7 +673,7 @@ export default function ScanToAdd() {
     }
   });
 
-  const cardMissingImage = selectedCard && !selectedCard.imageUrl;
+  const cardMissingImage = selectedCard && (!selectedCard.imageUrl || dbImageBroken);
 
   const isPickerStage =
     stage === "picker-year" ||
@@ -1227,8 +1233,13 @@ export default function ScanToAdd() {
                   <div className="space-y-1">
                     <p className="text-xs text-center text-gray-500">In our database</p>
                     <div className="aspect-[2.5/3.5] rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 border-2 border-blue-200">
-                      {selectedCard.imageUrl ? (
-                        <img src={selectedCard.imageUrl} alt={selectedCard.name} className="w-full h-full object-contain" />
+                      {selectedCard.imageUrl && !dbImageBroken ? (
+                        <img
+                          src={selectedCard.imageUrl}
+                          alt={selectedCard.name}
+                          className="w-full h-full object-contain"
+                          onError={() => setDbImageBroken(true)}
+                        />
                       ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-400">
                           <ImageOff className="w-6 h-6" />
@@ -1246,8 +1257,13 @@ export default function ScanToAdd() {
               <div className="flex gap-4 items-start">
                 {!previewUrl && (
                   <div className="w-20 h-28 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 border">
-                    {selectedCard.imageUrl ? (
-                      <img src={selectedCard.imageUrl} alt={selectedCard.name} className="w-full h-full object-contain" />
+                    {selectedCard.imageUrl && !dbImageBroken ? (
+                      <img
+                        src={selectedCard.imageUrl}
+                        alt={selectedCard.name}
+                        className="w-full h-full object-contain"
+                        onError={() => setDbImageBroken(true)}
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <ImageOff className="w-6 h-6 text-gray-400" />
@@ -1298,7 +1314,9 @@ export default function ScanToAdd() {
                     Submit your photo for review
                   </p>
                   <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
-                    This card doesn't have an image yet. Your photo will be reviewed by an admin before going live.
+                    {selectedCard.imageUrl
+                      ? "Our image for this card isn't loading. Your photo will be reviewed by an admin before going live."
+                      : "This card doesn't have an image yet. Your photo will be reviewed by an admin before going live."}
                   </p>
                 </div>
               </label>
