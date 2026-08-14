@@ -1109,7 +1109,7 @@ export default function ScanToAdd() {
                     </div>
                     <div className="flex items-center gap-2">
                       {subset.isInsertSubset && (
-                        <Badge variant="outline" className="text-xs">Insert</Badge>
+                        <Badge variant="outline" className="text-xs text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600">Insert</Badge>
                       )}
                       <ChevronRight className="w-4 h-4 text-gray-400" />
                     </div>
@@ -1191,7 +1191,7 @@ export default function ScanToAdd() {
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <span className="text-xs font-mono text-gray-500">#{card.cardNumber}</span>
                         {card.isInsert && (
-                          <Badge variant="outline" className="text-xs py-0 h-4">Insert</Badge>
+                          <Badge variant="outline" className="text-xs py-0 h-4 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600">Insert</Badge>
                         )}
                       </div>
                     </div>
@@ -1265,10 +1265,10 @@ export default function ScanToAdd() {
                   )}
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
                     {selectedCard.cardNumber && (
-                      <Badge variant="outline" className="text-xs font-mono">#{selectedCard.cardNumber}</Badge>
+                      <Badge variant="outline" className="text-xs font-mono text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600">#{selectedCard.cardNumber}</Badge>
                     )}
                     {selectedCard.year && (
-                      <Badge variant="outline" className="text-xs">{selectedCard.year}</Badge>
+                      <Badge variant="outline" className="text-xs text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600">{selectedCard.year}</Badge>
                     )}
                   </div>
                 </div>
