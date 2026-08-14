@@ -35,7 +35,6 @@ import { marketTrendsService } from "./market-trends-service";
 import { ebayBrowseApi } from "./ebay-browse-api";
 import { ebayMarketplaceInsights } from "./ebay-marketplace-insights";
 import { sendEmail } from "./email";
-import { syncFirebaseUsersToBrevo } from "./contactsSync";
 import { sendResendEmail, sendPasswordResetEmail, verifyUnsubscribeToken } from "./services/emailService";
 import * as emailTriggers from "./services/emailTriggers";
 import { rehostCardImagesNow } from "./services/imageMigration";
@@ -4521,24 +4520,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin-only: Sync Firebase users to Brevo contacts
-  app.post("/api/admin/sync-contacts", authenticateUser, async (req: any, res) => {
+  // Brevo retired (Aug 2026): all email goes through Resend. The old
+  // /api/admin/sync-contacts Firebase→Brevo contact sync has been removed.
+
+  // Admin-only: all email activity (every job in email_logs, incl. campaigns & transactional)
+  app.get("/api/admin/email-activity", authenticateUser, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) {
         return res.status(403).json({ message: "Admin access required" });
       }
-
-      await syncFirebaseUsersToBrevo();
-      res.json({ 
-        success: true, 
-        message: "Firebase users synced to Brevo successfully" 
-      });
+      const { getAllEmailActivity } = await import("./jobs/lifecycleEmails");
+      res.json({ jobs: await getAllEmailActivity() });
     } catch (error) {
-      console.error('Contact sync error:', error);
-      res.status(500).json({ 
-        message: "Failed to sync contacts to Brevo",
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      console.error('Email activity error:', error);
+      res.status(500).json({ message: "Failed to load email activity" });
     }
   });
 

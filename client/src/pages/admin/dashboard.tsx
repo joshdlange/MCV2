@@ -173,7 +173,7 @@ const ADMIN_SECTIONS: AdminSection[] = [
     tools: [
       {
         title: "Email & Notifications",
-        description: "Resend test emails, Brevo contact-list sync, and past campaign history",
+        description: "All email activity with open/click rates, test emails, and past campaign history",
         href: "/admin/notifications",
         icon: Mail,
         color: "bg-rose-500",

@@ -92,71 +92,77 @@ function TestEmailCard() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Brevo contact-list sync (external write: pushes user list to Brevo)
+// All email activity — every email job that has ever sent (lifecycle,
+// campaigns, transactional), with open/click tracking where available.
 // ─────────────────────────────────────────────────────────────
-function ContactSyncCard() {
-  const { toast } = useToast();
-  const [confirmed, setConfirmed] = useState(false);
+interface EmailActivityJob {
+  jobName: string;
+  sent: number;
+  sent30d: number;
+  opened: number;
+  clicked: number;
+  failed: number;
+  lastSentAt: string | null;
+}
 
-  const syncMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/admin/sync-contacts"),
-    onSuccess: () => {
-      toast({ title: "Contact sync complete", description: "User list pushed to Brevo." });
-      setConfirmed(false);
-    },
-    onError: () => {
-      toast({ title: "Sync failed", description: "Check the server logs.", variant: "destructive" });
-      setConfirmed(false);
-    },
+function EmailActivityCard() {
+  const { data, isLoading } = useQuery<{ jobs: EmailActivityJob[] }>({
+    queryKey: ["/api/admin/email-activity"],
   });
 
+  const pct = (n: number, d: number) => (d > 0 ? `${Math.round((n / d) * 100)}%` : "—");
+  const fmtDate = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—";
+
   return (
-    <Card className="border border-amber-200">
+    <Card className="border border-gray-200">
       <CardHeader className="pb-2 pt-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-amber-500">
-              <Users className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <CardTitle className="text-sm text-gray-900 dark:text-white">Brevo Contact-List Sync</CardTitle>
-              <p className="text-xs text-gray-500">Pushes all app users to the Brevo contact list (list management only — sends no email)</p>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-blue-600">
+            <Mail className="h-4 w-4 text-white" />
           </div>
-          <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs">External Write</Badge>
+          <div>
+            <CardTitle className="text-sm text-gray-900 dark:text-white">All Email Activity</CardTitle>
+            <p className="text-xs text-gray-500">
+              Every email the app has sent, by type — lifecycle journeys, campaigns, and one-off notifications.
+              Opens/clicks only count for emails sent after tracking went live.
+            </p>
+          </div>
         </div>
       </CardHeader>
-      <CardContent className="pb-4 space-y-3">
-        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 flex items-start gap-1.5">
-          <AlertTriangle className="h-3.5 w-3.5 mt-px shrink-0" />
-          <span>
-            This pushes the full user list to Brevo in one go and there is no preview of how many contacts
-            will be sent. It does not email anyone, but only run it when you actually need Brevo refreshed.
-          </span>
-        </p>
-        {!confirmed ? (
-          <Button
-            size="sm"
-            variant="outline"
-            className="text-xs border-amber-300 text-amber-800 hover:bg-amber-100"
-            onClick={() => setConfirmed(true)}
-          >
-            <RefreshCw className="h-3 w-3 mr-1.5" /> Sync Contacts to Brevo
-          </Button>
+      <CardContent className="pb-4">
+        {isLoading ? (
+          <p className="text-xs text-gray-400">Loading…</p>
+        ) : !data?.jobs?.length ? (
+          <p className="text-xs text-gray-400">No emails sent yet.</p>
         ) : (
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-amber-800 font-medium">Push the entire user list to Brevo now?</span>
-            <Button
-              size="sm"
-              className="text-xs bg-amber-600 hover:bg-amber-700 text-white"
-              onClick={() => syncMutation.mutate()}
-              disabled={syncMutation.isPending}
-            >
-              {syncMutation.isPending ? "Syncing…" : "Yes, Sync Now"}
-            </Button>
-            <Button size="sm" variant="ghost" className="text-xs" onClick={() => setConfirmed(false)}>
-              Cancel
-            </Button>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-gray-500 border-b border-gray-200">
+                  <th className="py-1.5 pr-3 font-medium">Email type</th>
+                  <th className="py-1.5 pr-3 font-medium text-right">Last 30 days</th>
+                  <th className="py-1.5 pr-3 font-medium text-right">All time</th>
+                  <th className="py-1.5 pr-3 font-medium text-right">Opened</th>
+                  <th className="py-1.5 pr-3 font-medium text-right">Clicked</th>
+                  <th className="py-1.5 pr-3 font-medium text-right">Failed</th>
+                  <th className="py-1.5 font-medium text-right">Last sent</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.jobs.map((j) => (
+                  <tr key={j.jobName} className="border-b border-gray-100 last:border-0" data-testid={`activity-${j.jobName}`}>
+                    <td className="py-1.5 pr-3 font-mono text-gray-800 dark:text-gray-200 break-all">{j.jobName}</td>
+                    <td className="py-1.5 pr-3 text-right text-gray-700 dark:text-gray-300">{j.sent30d}</td>
+                    <td className="py-1.5 pr-3 text-right text-gray-700 dark:text-gray-300">{j.sent}</td>
+                    <td className="py-1.5 pr-3 text-right text-gray-700 dark:text-gray-300">{j.opened} ({pct(j.opened, j.sent)})</td>
+                    <td className="py-1.5 pr-3 text-right text-gray-700 dark:text-gray-300">{j.clicked} ({pct(j.clicked, j.sent)})</td>
+                    <td className={`py-1.5 pr-3 text-right ${j.failed > 0 ? "text-red-600 font-medium" : "text-gray-400"}`}>{j.failed}</td>
+                    <td className="py-1.5 text-right text-gray-500 whitespace-nowrap">{fmtDate(j.lastSentAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </CardContent>
@@ -686,7 +692,7 @@ export default function AdminNotifications() {
         <div>
           <h1 className="text-2xl font-bebas tracking-wide text-gray-900 dark:text-white">Email & Notifications</h1>
           <p className="text-gray-600 dark:text-gray-300">
-            Delivery testing, contact-list management, and campaign history. All app email is sent through Resend.
+            Delivery testing, email activity, and campaign history. All app email is sent through Resend.
           </p>
         </div>
         <Badge variant="secondary" className="flex items-center gap-2">
@@ -694,6 +700,15 @@ export default function AdminNotifications() {
           Notifications
         </Badge>
       </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">All Email Activity</h2>
+        <div className="space-y-3">
+          <EmailActivityCard />
+        </div>
+      </div>
+
+      <Separator />
 
       <div>
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Lifecycle Emails</h2>
@@ -708,7 +723,6 @@ export default function AdminNotifications() {
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Delivery & Contacts</h2>
         <div className="space-y-3">
           <TestEmailCard />
-          <ContactSyncCard />
         </div>
       </div>
 

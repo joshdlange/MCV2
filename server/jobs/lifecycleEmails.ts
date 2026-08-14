@@ -1359,6 +1359,40 @@ export async function recordEmailEvent(providerMessageId: string, eventType: str
  * Per-template engagement stats: total sends + unique opens/clicks, joined
  * via email_logs.provider_message_id. Test sends (-test job names) excluded.
  */
+/**
+ * All email activity: every job_name in email_logs (lifecycle, campaigns, transactional),
+ * with sent/opened/clicked totals, last-send time, and 30-day send count.
+ * Test jobs (%-test) are excluded.
+ */
+export async function getAllEmailActivity(): Promise<Array<{
+  jobName: string; sent: number; sent30d: number; opened: number; clicked: number; failed: number; lastSentAt: string | null;
+}>> {
+  const res: any = await db.execute(sql`
+    SELECT el.job_name,
+           count(DISTINCT el.id) FILTER (WHERE el.status <> 'failed')::int AS sent,
+           count(DISTINCT el.id) FILTER (WHERE el.status <> 'failed' AND el.sent_at > now() - interval '30 days')::int AS sent_30d,
+           count(DISTINCT el.id) FILTER (WHERE el.status = 'failed')::int AS failed,
+           count(DISTINCT ev.provider_message_id) FILTER (WHERE ev.event_type = 'opened')::int AS opened,
+           count(DISTINCT ev.provider_message_id) FILTER (WHERE ev.event_type = 'clicked')::int AS clicked,
+           max(el.sent_at) AS last_sent_at
+    FROM email_logs el
+    LEFT JOIN email_events ev ON ev.provider_message_id = el.provider_message_id
+    WHERE el.job_name IS NOT NULL AND el.job_name NOT LIKE '%-test'
+    GROUP BY el.job_name
+    ORDER BY max(el.sent_at) DESC
+  `);
+  const rows = res.rows ?? res;
+  return rows.map((r: any) => ({
+    jobName: r.job_name,
+    sent: Number(r.sent),
+    sent30d: Number(r.sent_30d),
+    opened: Number(r.opened),
+    clicked: Number(r.clicked),
+    failed: Number(r.failed),
+    lastSentAt: r.last_sent_at ? new Date(r.last_sent_at).toISOString() : null,
+  }));
+}
+
 export async function getEmailEngagementStats(): Promise<Record<string, { sent: number; opened: number; clicked: number }>> {
   const res: any = await db.execute(sql`
     SELECT el.job_name,
