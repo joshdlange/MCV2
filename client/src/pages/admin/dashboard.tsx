@@ -180,6 +180,15 @@ const ADMIN_SECTIONS: AdminSection[] = [
         status: ["active"],
         warning: "Some tools on this page send real email. Every send requires an extra confirmation.",
       },
+      {
+        title: "Push Notifications",
+        description: "Send app push notifications to iOS/Android devices — by segment or single user, with send history",
+        href: "/admin/push-notifications",
+        icon: Mail,
+        color: "bg-orange-500",
+        status: ["active"],
+        warning: "Sends real push notifications to collectors' devices. Segment sends require confirmation.",
+      },
     ],
   },
   {

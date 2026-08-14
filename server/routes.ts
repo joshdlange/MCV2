@@ -12892,6 +12892,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('📧 Scheduled email/reconcile crons SKIPPED (dev workspace — production deployment only)');
   }
 
+  // ---------------------------------------------------------------------
+  // Push notifications (FCM) — additive module, admin-triggered sends only.
+  // Service + tables live in server/pushNotifications.ts.
+  // ---------------------------------------------------------------------
+
+  // POST /api/push/register-token — called by the app on device after login
+  app.post("/api/push/register-token", authenticateUser, async (req: any, res) => {
+    try {
+      const { token, platform } = req.body || {};
+      // FCM tokens are long, printable, whitespace-free strings — reject
+      // obviously malformed input before it hits the table.
+      if (!token || typeof token !== "string" || token.length < 20 || token.length > 4096 || /\s/.test(token)) {
+        return res.status(400).json({ success: false, error: "A valid token is required" });
+      }
+      if (!["ios", "android", "web"].includes(platform)) {
+        return res.status(400).json({ success: false, error: "platform must be 'ios', 'android', or 'web'" });
+      }
+      const push = await import("./pushNotifications");
+      await push.registerToken(req.user.id, token, platform);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("[Push] register-token error:", error);
+      res.status(500).json({ success: false, error: "Failed to register token" });
+    }
+  });
+
+  // POST /api/admin/push/send — manual admin sends only (no automation)
+  app.post("/api/admin/push/send", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: "Admin access required" });
+      const { target, userId, title, body } = req.body || {};
+      if (!["all", "superhero", "sidekick", "user"].includes(target)) {
+        return res.status(400).json({ success: false, error: "target must be 'all', 'superhero', 'sidekick', or 'user'" });
+      }
+      if (!title || typeof title !== "string" || title.trim().length === 0 || title.length > 65) {
+        return res.status(400).json({ success: false, error: "title is required (max 65 characters)" });
+      }
+      if (!body || typeof body !== "string" || body.trim().length === 0 || body.length > 240) {
+        return res.status(400).json({ success: false, error: "body is required (max 240 characters)" });
+      }
+      if (target === "user" && (!Number.isInteger(userId) || userId <= 0)) {
+        return res.status(400).json({ success: false, error: "userId is required when target is 'user'" });
+      }
+      const push = await import("./pushNotifications");
+      let sent = 0, failed = 0;
+      if (target === "user") {
+        ({ sent, failed } = await push.sendPushToUser(userId, title.trim(), body.trim()));
+      } else {
+        ({ sent, failed } = await push.sendPushToSegment(target, title.trim(), body.trim()));
+      }
+      await push.logPushSend({
+        sentByAdminId: req.user.id,
+        target: target === "user" ? `user:${userId}` : target,
+        title: title.trim(),
+        body: body.trim(),
+        sentCount: sent,
+        failedCount: failed,
+      });
+      res.json({ success: true, sent, failed });
+    } catch (error) {
+      console.error("[Push] admin send error:", error);
+      res.status(500).json({ success: false, error: "Failed to send push notification" });
+    }
+  });
+
+  // GET /api/admin/push/logs — last 50 sends, newest first
+  app.get("/api/admin/push/logs", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: "Admin access required" });
+      const push = await import("./pushNotifications");
+      res.json(await push.getPushLogs(50));
+    } catch (error) {
+      console.error("[Push] logs error:", error);
+      res.status(500).json({ message: "Failed to load push logs" });
+    }
+  });
+
+  // GET /api/admin/push/stats — registered device counts
+  app.get("/api/admin/push/stats", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: "Admin access required" });
+      const push = await import("./pushNotifications");
+      res.json(await push.getPushStats());
+    } catch (error) {
+      console.error("[Push] stats error:", error);
+      res.status(500).json({ message: "Failed to load push stats" });
+    }
+  });
+
   // One-time XP backfill: seed card_added XP from existing collections so
   // long-time collectors don't show 0 card XP. Guarded — only runs if empty.
   backfillCardAddedXpIfEmpty().catch(err => {

@@ -51,6 +51,7 @@ const AdminMigrationConsole = lazy(() => import("@/pages/admin/migration-console
 const AdminBaseSetPopulation = lazy(() => import("@/pages/admin/base-set-population"));
 const AdminAnalytics = lazy(() => import("@/pages/admin/analytics"));
 const AdminNotifications = lazy(() => import("@/pages/admin/notifications"));
+const AdminPushNotifications = lazy(() => import("@/pages/admin/push-notifications"));
 const AdminLegacyTools = lazy(() => import("@/pages/admin/legacy-tools"));
 const AdminDataQuality = lazy(() => import("@/pages/admin/data-quality"));
 const AdminFeed = lazy(() => import("@/pages/admin/feed"));
@@ -211,6 +212,7 @@ function Router() {
           <Route path="/admin/base-set-population" component={AdminBaseSetPopulation} />
           <Route path="/admin/analytics" component={AdminAnalytics} />
           <Route path="/admin/notifications" component={AdminNotifications} />
+          <Route path="/admin/push-notifications" component={AdminPushNotifications} />
           <Route path="/admin/legacy-tools" component={AdminLegacyTools} />
           <Route path="/admin/data-quality" component={AdminDataQuality} />
           <Route path="/admin/feed" component={AdminFeed} />

@@ -30,4 +30,5 @@
 - [Feed v1 architecture](feed-v1.md) — dedupe-key emits, privacy at READ time, advisory-locked reaction XP cap, composite cursor; new feed reads must reuse getReadableEvent predicate.
 - [Badge system pitfalls](badge-system-pitfalls.md) — awardBadge needs numeric DB ids (slugs fail silently); badge rows must be seeded; login checks need priorLastLogin; upgraded_at stamped by DB trigger.
 - [Parallel-leak fix count verification](parallel-leak-verification.md) — verify card-merge seeds via baseline snapshot → restart → per-user diff; prod has ~39 legacy rows on archived cards (pre-existing).
+- [Push notifications](push-notifications.md) — FCM secret is FIREBASE_SERVICE_ACCOUNT_KEY (not _JSON); manual admin sends only, no crons/auto-triggers; segments map to users.plan.
 - [Drive image import safety](drive-image-import.md) — marked-file-wins front/back rule only (never sort order); transactional ledger gives rerun idempotency; always fresh scan before import.

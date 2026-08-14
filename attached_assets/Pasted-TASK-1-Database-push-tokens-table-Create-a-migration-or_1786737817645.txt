@@ -1,0 +1,192 @@
+TASK 1: Database — push_tokens table
+
+Create a migration or direct query to add this table if it doesn't exist:
+
+CREATE TABLE IF NOT EXISTS push_tokens (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token TEXT NOT NULL,
+  platform TEXT NOT NULL CHECK (platform IN ('ios', 'android', 'web')),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id, token)
+);
+
+CREATE INDEX IF NOT EXISTS idx_push_tokens_user_id ON push_tokens(user_id);
+
+---
+
+TASK 2: Push notification service file
+
+Create server/pushNotifications.js (or .ts if the project uses TypeScript):
+
+- Initialize Firebase Admin SDK using FIREBASE_SERVICE_ACCOUNT_JSON 
+  from environment secrets. Parse it as JSON.
+- Export these functions:
+
+  registerToken(userId, token, platform)
+    - Upserts the token into push_tokens table
+    - Updates updated_at on conflict
+
+  sendPushToUser(userId, title, body, data = {})
+    - Looks up all tokens for that userId from push_tokens
+    - Sends via FCM using firebase-admin messaging
+    - Returns { sent: N, failed: N }
+    - Logs failures gracefully, does not throw
+
+  sendPushToSegment(segment, title, body, data = {})
+    - segment options: 'all', 'superhero', 'sidekick'
+    - 'superhero' = users where subscription_tier = 'superhero' 
+      (or however Super Hero is stored — check existing user/subscription 
+      logic and match it exactly)
+    - 'sidekick' = users where subscription_tier = 'sidekick'
+    - 'all' = all users with tokens
+    - Joins push_tokens with users table to get the right tokens
+    - Sends in batches of 500 (FCM limit is 500 per multicast)
+    - Returns { sent: N, failed: N, totalUsers: N }
+    - Logs failures gracefully, does not throw
+
+  getPushLogs(limit = 50)
+    - Returns recent records from push_logs table (see Task 3)
+
+---
+
+TASK 3: push_logs table
+
+Create this table for audit/history:
+
+CREATE TABLE IF NOT EXISTS push_logs (
+  id SERIAL PRIMARY KEY,
+  sent_by_admin_id INTEGER REFERENCES users(id),
+  target TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  sent_count INTEGER DEFAULT 0,
+  failed_count INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+---
+
+TASK 4: API Routes
+
+Add these routes to the existing Express router. Protect admin routes 
+with the existing admin auth middleware (whatever is already used for 
+other admin routes — match that pattern exactly):
+
+PUBLIC (no auth required — called by the app on device):
+
+POST /api/push/register-token
+  Body: { token: string, platform: 'ios' | 'android' | 'web' }
+  - Requires user to be logged in (use existing session/auth middleware)
+  - Calls registerToken(userId, token, platform)
+  - Returns { success: true }
+  - Returns { success: false, error } on failure
+
+ADMIN ONLY (use existing admin auth middleware):
+
+POST /api/admin/push/send
+  Body: { 
+    target: 'all' | 'superhero' | 'sidekick' | 'user',
+    userId?: number,      (required only if target = 'user')
+    title: string,
+    body: string
+  }
+  - Validates all fields
+  - Calls appropriate send function
+  - Writes a record to push_logs
+  - Returns { success: true, sent: N, failed: N }
+
+GET /api/admin/push/logs
+  - Returns last 50 push_logs records, newest first
+  - Joins with users table to show admin name who sent
+
+GET /api/admin/push/stats
+  - Returns:
+    {
+      totalTokens: N,
+      ioTokens: N,
+      androidTokens: N,
+      usersWithTokens: N
+    }
+
+---
+
+TASK 5: Admin Panel UI
+
+Find the existing admin panel and add a new section called 
+"Push Notifications". Do not replace or restructure the existing 
+admin panel. Add to it.
+
+The Push Notifications admin section should have:
+
+[ Push Notifications ]
+
+Stats bar at top showing: 
+  Total Registered Devices | iOS Devices | Android Devices | Users Opted In
+
+─────────────────────────────────────
+Send Push Notification
+
+Target:
+  ○ All Users
+  ○ Super Hero subscribers only  
+  ○ Side Kick subscribers only
+  ○ Single User (shows a User ID input field when selected)
+
+Title: [ text input, max 65 chars, show character count ]
+
+Message: [ textarea, max 240 chars, show character count ]
+
+[ Send Test to My Account ]   [ 🚀 Send Push Notification ]
+─────────────────────────────────────
+
+Recent Push Notification History (table):
+Columns: Date | Sent By | Target | Title | Sent | Failed
+
+"Send Test to My Account" should call the send endpoint with 
+target='user' and the currently logged-in admin's userId.
+
+Show a confirmation modal before sending to any segment 
+(not needed for test sends).
+
+Show success/error toast after sending.
+
+Refresh stats and logs after a successful send.
+
+---
+
+TASK 6: Install firebase-admin
+
+Run in shell:
+npm install firebase-admin
+
+Make sure it's saved to package.json dependencies.
+
+---
+
+IMPORTANT RULES
+
+- Do NOT touch iOS or Android native files
+- Do NOT touch existing auth, billing, Stripe, RevenueCat, 
+  email lifecycle, or subscription logic
+- Do NOT modify existing admin panel sections — only ADD the new section
+- Do NOT send any push notifications automatically or on any trigger — 
+  admin-only manual sends only for now
+- Do NOT add any scheduled jobs or cron tasks
+- Match all existing code style, patterns, and middleware conventions
+- If the subscription tier field name is unclear, check the existing 
+  user/subscription code and match it exactly
+- Add error handling everywhere — push failures should never crash 
+  the server
+
+---
+
+WHEN DONE, confirm:
+1. push_tokens table created
+2. push_logs table created  
+3. firebase-admin installed
+4. pushNotifications.js service created
+5. All 5 API routes working
+6. Admin panel push section visible and functional
+7. No existing features broken
