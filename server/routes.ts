@@ -551,7 +551,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/onboarding/complete", authenticateUser, async (req: any, res) => {
     try {
-      const { username, heardAbout, favoriteSets, marketingOptIn } = req.body;
+      const { username, heardAbout, favoriteSets, marketingOptIn, pushEnabled } = req.body;
       
       // Validate username format
       const usernameRegex = /^[a-z0-9_]{3,20}$/;
@@ -582,6 +582,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         heardAbout: heardAbout.trim().slice(0, 200),
         favoriteSets: favoriteSets ? [favoriteSets] : [],
         marketingOptIn: marketingOptIn || false,
+        pushEnabled: pushEnabled !== false, // default on unless explicitly opted out
         onboardingComplete: true
       });
       
@@ -12915,6 +12916,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("[Push] register-token error:", error);
       res.status(500).json({ success: false, error: "Failed to register token" });
+    }
+  });
+
+  // GET /api/user/push-preference — current user's push opt-in state
+  app.get("/api/user/push-preference", authenticateUser, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      res.json({ push_enabled: user?.pushEnabled ?? true });
+    } catch (error) {
+      console.error("[Push] get push-preference error:", error);
+      res.status(500).json({ message: "Failed to load push preference" });
+    }
+  });
+
+  // POST /api/user/push-preference — update current user's push opt-in state
+  app.post("/api/user/push-preference", authenticateUser, async (req: any, res) => {
+    try {
+      const { push_enabled } = req.body || {};
+      if (typeof push_enabled !== "boolean") {
+        return res.status(400).json({ success: false, error: "push_enabled must be a boolean" });
+      }
+      const updated = await storage.updateUser(req.user.id, { pushEnabled: push_enabled });
+      if (!updated) {
+        // storage.updateUser swallows DB errors and returns undefined — don't
+        // report success when the preference wasn't actually saved.
+        return res.status(500).json({ success: false, error: "Failed to update push preference" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("[Push] set push-preference error:", error);
+      res.status(500).json({ success: false, error: "Failed to update push preference" });
     }
   });
 

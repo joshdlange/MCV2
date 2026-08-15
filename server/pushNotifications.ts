@@ -160,7 +160,13 @@ export async function sendPushToUser(
 ): Promise<{ sent: number; failed: number }> {
   try {
     await ensureTables();
-    const rows: any = await db.execute(sql`SELECT token FROM push_tokens WHERE user_id = ${userId}`);
+    // Respect the user's push preference — skip silently when opted out.
+    const rows: any = await db.execute(sql`
+      SELECT pt.token
+      FROM push_tokens pt
+      JOIN users u ON u.id = pt.user_id
+      WHERE pt.user_id = ${userId} AND u.push_enabled = true
+    `);
     const tokens: string[] = (rows.rows ?? []).map((r: any) => r.token);
     if (tokens.length === 0) return { sent: 0, failed: 0 };
     return await sendToTokens(tokens, title, body, sanitizeData(data));
@@ -187,7 +193,7 @@ export async function sendPushToSegment(
       SELECT pt.token, pt.user_id
       FROM push_tokens pt
       JOIN users u ON u.id = pt.user_id
-      WHERE 1=1 ${planFilter}
+      WHERE u.push_enabled = true ${planFilter}
     `);
     const list = rows.rows ?? [];
     const tokens: string[] = list.map((r: any) => r.token);

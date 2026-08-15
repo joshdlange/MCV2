@@ -41,6 +41,7 @@ export const users = pgTable("users", {
   heardAbout: text("heard_about"),
   favoriteSets: text("favorite_sets").array(),
   marketingOptIn: boolean("marketing_opt_in").default(false).notNull(),
+  pushEnabled: boolean("push_enabled").default(true).notNull(),
   lastLogin: timestamp("last_login"),
   loginStreak: integer("login_streak").default(0).notNull(),
   totalLogins: integer("total_logins").default(0).notNull(),

@@ -36,6 +36,7 @@ import {
   ImageIcon,
   ExternalLink,
   Mail,
+  Smartphone,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -428,6 +429,45 @@ export default function AccountSettings() {
     };
     setProfileData(next);
     savePreferences(next);
+  };
+
+  // Push notifications preference — saved via its own dedicated endpoint,
+  // separate from the email notification map above.
+  const [pushEnabled, setPushEnabled] = useState(true);
+  useEffect(() => {
+    if (userProfile) setPushEnabled((userProfile as any).pushEnabled ?? true);
+  }, [userProfile]);
+
+  const pushPreferenceMutation = useMutation({
+    mutationFn: async ({ enabled }: { enabled: boolean; previous: boolean }) => {
+      const res = await apiRequest('POST', '/api/user/push-preference', { push_enabled: enabled });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user/profile'] });
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully.",
+      });
+    },
+    onError: (error: any, variables) => {
+      // Restore the exact pre-click value, then let the server settle it —
+      // a blind flip could land on the wrong side if state changed meanwhile.
+      setPushEnabled(variables.previous);
+      queryClient.invalidateQueries({ queryKey: ['/api/user/profile'] });
+      toast({
+        title: "Update Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const togglePushEnabled = () => {
+    const previous = pushEnabled;
+    const next = !previous;
+    setPushEnabled(next);
+    pushPreferenceMutation.mutate({ enabled: next, previous });
   };
 
   const toggleNotification = (key: keyof typeof profileData.notifications) => {
@@ -1005,6 +1045,27 @@ export default function AccountSettings() {
                       onClick={() => toggleNotification('priceAlerts')}
                     >
                       {profileData.notifications.priceAlerts ? 'On' : 'Off'}
+                    </Button>
+                  </div>
+
+                  <div className="flex items-start justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                    <div className="flex items-start gap-2 pr-3">
+                      <Smartphone className="w-4 h-4 text-gray-500 mt-0.5" />
+                      <div>
+                        <span className="text-sm text-gray-700">Push Notifications</span>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Get notified about new cards, updates, and collection milestones
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="bg-white text-black border-gray-300 hover:bg-gray-100 rounded-full shrink-0"
+                      onClick={togglePushEnabled}
+                      disabled={pushPreferenceMutation.isPending}
+                    >
+                      {pushEnabled ? 'On' : 'Off'}
                     </Button>
                   </div>
                 </div>

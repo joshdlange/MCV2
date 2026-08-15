@@ -1,0 +1,98 @@
+We need to add a push notification preference to Marvel Card Vault.
+This is an additive change only. Do not touch any existing features,
+billing, auth, email lifecycle, subscriptions, or existing toggles.
+
+CONTEXT
+We have push notification infrastructure already built:
+- push_tokens table exists
+- push_logs table exists  
+- pushNotifications.ts service exists
+- /api/push/register-token endpoint is live
+- Admin panel push section already exists
+- Android native push wiring is already done
+- iOS push wiring is coming soon
+
+TASK 1 — Database
+Add a push_enabled column to the users table:
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS 
+push_enabled BOOLEAN DEFAULT true;
+
+Default true — assume users want notifications unless they opt out.
+
+TASK 2 — Backend
+Update the push notification service to respect push_enabled:
+- Before sending to any token, check that the user has 
+  push_enabled = true
+- Skip silently if push_enabled = false
+- Apply this check in both sendPushToUser and sendPushToSegment
+
+Add two new API endpoints:
+
+GET /api/user/push-preference
+- Returns { push_enabled: boolean } for the logged in user
+
+POST /api/user/push-preference  
+- Body: { push_enabled: boolean }
+- Updates push_enabled for the logged in user
+- Returns { success: true }
+- Requires user to be logged in
+
+TASK 3 — Onboarding
+We already have an onboarding flow with several toggles.
+Find where those toggles live and add a push notification 
+toggle that matches the exact same style and pattern.
+
+Label: "Push Notifications"
+Sublabel: "Get notified about new cards, updates, and 
+           collection milestones"
+Default: on
+
+Place it where it makes the most sense alongside the 
+existing onboarding toggles. Match existing style exactly.
+
+TASK 4 — User Settings
+We already have a user settings/account page where users 
+manage their preferences.
+Find where that lives and add the same push notification 
+toggle there so users can change it any time after onboarding.
+
+Match existing toggle style exactly.
+Label: "Push Notifications"
+Sublabel: "Get notified about new cards, updates, and 
+           collection milestones"
+
+When toggled:
+- Call POST /api/user/push-preference immediately
+- Show success confirmation matching existing UI patterns
+- If toggled off, the backend will stop sending to that user
+
+TASK 5 — iOS compatibility
+The push notification registration code already handles Android.
+The same /api/push/register-token endpoint will be used for iOS.
+Make sure:
+- The endpoint accepts platform: 'ios' as a valid value 
+  (it should already per the original build)
+- The push_enabled check applies equally to ios and android tokens
+- Nothing in the backend assumes Android-only
+
+IMPORTANT RULES
+- Do not touch existing toggles or settings
+- Do not touch billing, subscriptions, Stripe, RevenueCat
+- Do not touch email lifecycle or any existing email logic
+- Do not touch the admin push panel already built
+- Do not send any push notifications automatically
+- Match all existing UI patterns and code style exactly
+- Put the toggle wherever makes the most sense — 
+  you know the codebase, use your judgment
+- No new pages — add to existing onboarding and settings only
+
+WHEN DONE CONFIRM
+1. push_enabled column added to users table
+2. Backend respects push_enabled before sending
+3. Both API endpoints working and auth-gated
+4. Toggle added to onboarding flow
+5. Toggle added to user settings/account page
+6. iOS platform value accepted by register-token endpoint
+7. Deploy and confirm clean
+8. No existing features broken

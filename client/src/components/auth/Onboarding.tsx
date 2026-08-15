@@ -29,6 +29,7 @@ export function Onboarding() {
   const [heardAboutOther, setHeardAboutOther] = useState("");
   const [favoriteSets, setFavoriteSets] = useState("");
   const [marketingOptIn, setMarketingOptIn] = useState(true);
+  const [pushEnabled, setPushEnabled] = useState(true);
 
   // Randomize option order per user to avoid top-pick bias; "Other" stays last
   const [heardAboutOptions] = useState(() => {
@@ -131,7 +132,8 @@ export function Onboarding() {
         username,
         heardAbout: heardAboutValue,
         favoriteSets,
-        marketingOptIn
+        marketingOptIn,
+        pushEnabled
       });
 
       toast({
@@ -294,6 +296,23 @@ export function Onboarding() {
                   </Label>
                   <p className="text-xs text-gray-500">
                     Get occasional emails about new card releases, features, and community highlights
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3 p-4 border rounded-lg">
+                <Checkbox
+                  id="push-notifications"
+                  data-testid="checkbox-push-notifications"
+                  checked={pushEnabled}
+                  onCheckedChange={(checked) => setPushEnabled(checked as boolean)}
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="push-notifications" className="font-normal cursor-pointer">
+                    Push Notifications
+                  </Label>
+                  <p className="text-xs text-gray-500">
+                    Get notified about new cards, updates, and collection milestones
                   </p>
                 </div>
               </div>

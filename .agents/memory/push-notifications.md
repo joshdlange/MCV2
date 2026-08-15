@@ -9,3 +9,8 @@ description: FCM push tokens/sends for the mobile apps — service design, secre
 - Hard rules from Joshua: admin-triggered MANUAL sends only — no crons, no automatic triggers on events. Registration endpoint caps 20 tokens/user (oldest-updated evicted) and rejects malformed tokens; dead FCM tokens are pruned on send.
 - **Why:** launched ahead of a store release; keeping sends manual avoids accidental blasts while native registration is still rolling out.
 - **How to apply:** any future automated push (drips, event triggers) needs explicit approval and should reuse sendPushToUser/sendPushToSegment + push_logs, never raw FCM calls.
+
+## User opt-out (push_enabled)
+- `users.push_enabled` (default true) gates ALL sends: both sendPushToUser and sendPushToSegment filter `u.push_enabled = true`. Any new send path must join users and apply the same filter.
+- Preference is read/written ONLY via GET/POST `/api/user/push-preference` (auth-gated, self-only) — not the PATCH profile notifications map.
+- **Pitfall:** `storage.updateUser` swallows DB errors and returns `undefined` — routes must check the return value or they report success on failed writes.

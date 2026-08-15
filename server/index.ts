@@ -195,6 +195,7 @@ app.use((req, res, next) => {
     const { db } = await import('./db');
     const { sql } = await import('drizzle-orm');
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS upgraded_at timestamp`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS push_enabled boolean NOT NULL DEFAULT true`);
     // Marks bulk/retro badge grants so feed backfill never turns them into
     // a wall of identical "earned the X badge" posts (Contributor incident).
     await db.execute(sql`ALTER TABLE user_badges ADD COLUMN IF NOT EXISTS retro boolean NOT NULL DEFAULT false`);
