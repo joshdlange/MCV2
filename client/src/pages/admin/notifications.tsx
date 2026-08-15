@@ -136,8 +136,8 @@ function EmailActivityCard() {
         ) : !data?.jobs?.length ? (
           <p className="text-xs text-gray-400">No emails sent yet.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+          <div className="overflow-x-auto -mx-2 px-2">
+            <table className="w-full min-w-[560px] text-xs">
               <thead>
                 <tr className="text-left text-gray-500 border-b border-gray-200">
                   <th className="py-1.5 pr-3 font-medium">Email type</th>
@@ -152,7 +152,7 @@ function EmailActivityCard() {
               <tbody>
                 {data.jobs.map((j) => (
                   <tr key={j.jobName} className="border-b border-gray-100 last:border-0" data-testid={`activity-${j.jobName}`}>
-                    <td className="py-1.5 pr-3 font-mono text-gray-800 dark:text-gray-200 break-all">{j.jobName}</td>
+                    <td className="py-1.5 pr-3 font-mono text-gray-800 dark:text-gray-200 whitespace-nowrap">{j.jobName}</td>
                     <td className="py-1.5 pr-3 text-right text-gray-700 dark:text-gray-300">{j.sent30d}</td>
                     <td className="py-1.5 pr-3 text-right text-gray-700 dark:text-gray-300">{j.sent}</td>
                     <td className="py-1.5 pr-3 text-right text-gray-700 dark:text-gray-300">{j.opened} ({pct(j.opened, j.sent)})</td>
@@ -604,7 +604,7 @@ function LifecycleEmailsCard() {
         ) : (
           <div className="divide-y divide-gray-100">
             {emails.map((e) => (
-              <div key={e.key} className="py-2.5 flex items-center gap-3 flex-wrap">
+              <div key={e.key} className="py-2.5 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
                 {e.heroKey ? (
                   <img
                     src={`/email-assets/${e.heroKey}.jpg`}
@@ -615,7 +615,7 @@ function LifecycleEmailsCard() {
                 ) : (
                   <div className="w-16 h-8 rounded border border-dashed border-gray-300 flex items-center justify-center text-[9px] text-gray-400 shrink-0">no hero</div>
                 )}
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 w-full flex-1 sm:w-auto">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-semibold text-gray-900 dark:text-white">{e.key}</span>
                     {statusBadge(e)}
@@ -625,7 +625,7 @@ function LifecycleEmailsCard() {
                     )}
                   </div>
                   <p className="text-[11px] text-gray-500 truncate max-w-md">{e.subject}</p>
-                  <p className="text-[10px] text-gray-400 break-all">
+                  <p className="text-[10px] text-gray-400 truncate">
                     {e.heroUrl ? e.heroUrl : "No hero image"} · Eligible now: {e.eligibleNow ?? 0}
                   </p>
                   {e.stats && e.stats.sent > 0 ? (
@@ -638,7 +638,7 @@ function LifecycleEmailsCard() {
                     </p>
                   )}
                 </div>
-                <div className="flex gap-2 shrink-0">
+                <div className="flex gap-2 shrink-0 flex-wrap">
                   <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => openPreview(e.key)}>
                     Preview
                   </Button>
