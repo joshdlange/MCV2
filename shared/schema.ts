@@ -57,7 +57,7 @@ export const users = pgTable("users", {
   // Reuses displayName, bio (tagline) and profileVisibility; these are additive.
   collectorAvatarKey: text("collector_avatar_key"),
   collectorFocus: text("collector_focus"),
-  allowFollowers: boolean("allow_followers").default(false).notNull(),
+  allowFollowers: boolean("allow_followers").default(true).notNull(),
   showActivityInFeed: boolean("show_activity_in_feed").default(true).notNull(),
   profileCustomizationCompletedAt: timestamp("profile_customization_completed_at"),
   profileCustomizationDismissedAt: timestamp("profile_customization_dismissed_at"),
