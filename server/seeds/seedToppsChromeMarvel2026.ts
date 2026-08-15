@@ -8,9 +8,10 @@ import subsetData from './data/toppsChrome2026.json';
  *
  * Creates (only if missing — safe to run on every startup, dev and prod):
  *  - The master set (matched by slug), with the box image
- *  - 271 subsets (Base + 270 inserts, incl. 200 one-card "Superfractor 1/N"
- *    subsets kept per the official checklist)
- *  - 9,524 cards total
+ *  - 72 subsets (Base + inserts; the original 200 one-card "Superfractor 1/N"
+ *    junk subsets were removed from the data — see fixSuperfractor2026JunkSets —
+ *    and "The Beyond" TB-01..TB-20 was added Aug 2026)
+ *  - 9,344 cards total
  *
  * Data source: server/seeds/data/toppsChrome2026.json, generated from the
  * user's spreadsheet with these cleanups: trimmed names, merged the

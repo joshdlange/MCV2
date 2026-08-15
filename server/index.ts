@@ -500,6 +500,16 @@ app.use((req, res, next) => {
       console.error('Startup fix (parallel leaks) failed:', error);
     }
 
+    // Idempotent startup fix: 2026 Topps Chrome Superfractor — merges the 200
+    // junk one-card "Superfractor 1/N" subsets into the single canonical
+    // Superfractor subset, repointing owned copies (marker-gated, dev + prod).
+    try {
+      const { fixSuperfractor2026JunkSets } = await import('./seeds/fixSuperfractor2026JunkSets');
+      await fixSuperfractor2026JunkSets();
+    } catch (error) {
+      console.error('Startup fix (2026 Superfractor junk sets) failed:', error);
+    }
+
     // Idempotent badge/feed seeds (deferred post-listen — bulk aggregations
     // must never delay the deploy health check):
     try {
