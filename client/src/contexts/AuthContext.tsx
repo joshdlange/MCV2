@@ -5,6 +5,7 @@ import { handleRedirect } from '@/lib/handleRedirect';
 import { useAppStore } from '@/lib/store';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
+import { registerPushNotifications } from '@/services/pushNotifications';
 
 interface AuthContextType {
   user: User | null;
@@ -90,6 +91,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         if (firebaseUser) {
           await syncUserWithBackend(firebaseUser);
+
+          // Android push: no-ops on web/iOS, and never throws.
+          void registerPushNotifications();
 
           if (Capacitor.isNativePlatform()) {
             App.addListener('appStateChange', ({ isActive }) => {

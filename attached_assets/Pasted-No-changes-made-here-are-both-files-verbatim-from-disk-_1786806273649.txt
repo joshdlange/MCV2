@@ -1,0 +1,298 @@
+No changes made — here are both files verbatim from disk.
+
+---
+1. client/src/services/pushNotifications.ts (new file, 104 lines)
+
+import { Capacitor } from '@capacitor/core';
+import { apiRequest } from '@/lib/queryClient';
+
+// Android-only push token registration.
+//
+// The Android app is a Capacitor shell that loads this web app f
+// https://app.marvelcardvault.com, so this module is what actually asks the
+// OS for notification permission and hands the FCM token to the
+//
+// Deliberately scoped to Android: iOS push is not wired up yet,
+// on every other platform rather than half-register a device we can't send to.
+// The backend accepts 'ios' too, so extending this later is a on
+
+// Registration is triggered from onAuthStateChanged, which fires
+// refresh and on appStateChange. These guards keep us from re-POSTing the same
+// token on every one of those.
+let registering = false;
+let lastRegisteredToken: string | null = null;
+
+async function sendTokenToBackend(token: string): Promise<void> {
+  if (token === lastRegisteredToken) return;
+
+  // Relative path on purpose: inside the shell the WebView origin already is
+  // https://app.marvelcardvault.com, so this resolves to
+  // https://app.marvelcardvault.com/api/push/register-token — while still
+  // pointing at localhost during web development instead of hitt
+  // apiRequest attaches the existing Firebase bearer/session headers.
+  await apiRequest('POST', '/api/push/register-token', {
+    token,
+    platform: 'android',
+  });
+
+  lastRegisteredToken = token;
+  console.log('[Push] FCM token registered');
+}
+
+/**
+ * Request notification permission and register this device's FCM
+ *
+ * Safe to call on every auth state change. Never throws: a denie
+ * an offline device, or a failed request is logged and swallowed so it can
+ * never take down login.
+ *
+ * @returns true if a token was registered with the backend.
+ */
+export async function registerPushNotifications(): Promise<boolea
+  // Not logged in / not the Android shell -> skip silently.
+  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !=
+    return false;
+  }
+  if (registering) return false;
+  registering = true;
+
+  try {
+    // Dynamic import so the browser bundle never pulls in the native plugin.
+    const { PushNotifications } = await import('@capacitor/push-n
+
+    let status = await PushNotifications.checkPermissions();
+    if (status.receive === 'prompt' || status.receive === 'prompt-with-rationale') {
+      status = await PushNotifications.requestPermissions();
+    }
+
+    // User said no (or the OS blocked it). Nothing more to do — not an error.
+    if (status.receive !== 'granted') {
+      console.log('[Push] notification permission not granted; skipping');
+      return false;
+    }
+
+    // Listeners must be attached before register() so we don't miss the token.
+    const token = await new Promise<string | null>((resolve) => {
+      // If FCM never calls back (no Play Services, no network), resolve rather
+      // than leaving this promise — and the `registering` flag —
+      const timeout = setTimeout(() => resolve(null), 15000);
+
+      PushNotifications.addListener('registration', (t) => {
+        clearTimeout(timeout);
+        resolve(t.value);
+      });
+
+      PushNotifications.addListener('registrationError', (err) =>
+        clearTimeout(timeout);
+        console.warn('[Push] FCM registration failed:', err);
+        resolve(null);
+      });
+
+      PushNotifications.register();
+    });
+
+    if (!token) {
+      console.warn('[Push] no FCM token returned; skipping regist
+      return false;
+    }
+
+    await sendTokenToBackend(token);
+    return true;
+  } catch (error) {
+    // Includes the 401 apiRequest throws if the session isn't valid yet.
+    console.warn('[Push] token registration skipped:', error);
+    return false;
+  } finally {
+    registering = false;
+  }
+}
+
+---
+2. client/src/contexts/AuthContext.tsx (modified, 131 lines)
+
+import React, { createContext, useContext, useEffect, useState }
+import { User } from 'firebase/auth';
+import { auth, onAuthStateChanged } from '@/lib/firebase';
+import { handleRedirect } from '@/lib/handleRedirect';
+import { useAppStore } from '@/lib/store';
+import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
+import { registerPushNotifications } from '@/services/pushNotifications';
+
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  refreshUser: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  loading: true,
+  refreshUser: async () => {},
+});
+
+export const useAuth = () => {
+  return useContext(AuthContext);
+};
+
+interface AuthProviderProps {
+  children: React.ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { setCurrentUser } = useAppStore();
+
+  // Function to sync user with backend and update app store
+  const syncUserWithBackend = async (firebaseUser: User) => {
+    try {
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch('/api/auth/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          firebaseUid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
+          photoURL: firebaseUser.photoURL,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('User synced with backend:', data.user);
+
+        // Update app store with backend user data (including adm
+        setCurrentUser({
+          id: data.user.id,
+          name: data.user.displayName || data.user.username,
+          email: data.user.email,
+          avatar: data.user.photoURL || '',
+          isAdmin: data.user.isAdmin,
+          plan: data.user.plan,
+          subscriptionStatus: data.user.subscriptionStatus,
+          onboardingComplete: data.user.onboardingComplete || false,
+          username: data.user.username
+        });
+      } else {
+        console.error('Failed to sync user with backend');
+      }
+    } catch (error) {
+      console.error('Error syncing user:', error);
+    }
+  };
+
+  // Function to refresh user data from backend
+  const refreshUser = async () => {
+    if (user) {
+      await syncUserWithBackend(user);
+    }
+  };
+
+  useEffect(() => {
+    try {
+      // Handle redirect result from Google authentication
+      handleRedirect();
+
+      const unsubscribe = onAuthStateChanged(auth, async (firebas
+        setUser(firebaseUser);
+
+        if (firebaseUser) {
+          await syncUserWithBackend(firebaseUser);
+
+          // Android push: no-ops on web/iOS, and never throws.
+          void registerPushNotifications();
+
+          if (Capacitor.isNativePlatform()) {
+            App.addListener('appStateChange', ({ isActive }) => {
+              if (isActive && firebaseUser) {
+                syncUserWithBackend(firebaseUser);
+              }
+            });
+          }
+        } else {
+          setCurrentUser(null);
+        }
+
+        setLoading(false);
+      });
+
+      return unsubscribe;
+    } catch (error) {
+      console.error('Firebase auth error:', error);
+      // If Firebase auth fails, still mark as not loading
+      setLoading(false);
+    }
+  }, [setCurrentUser]);
+
+  const value = {
+    user,
+    loading,
+    refreshUser,
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+---
+Confirmations
+
+Exact lines added to AuthContext.tsx
+
+git diff --numstat = 4 added, 0 removed. Nothing pre-existing was modified or deleted. The 4 lines, in two places:
+
+Line 8 (after the existing import { App } from '@capacitor/app';):
+import { registerPushNotifications } from '@/services/pushNotific
+
+Lines 95–97 (inside onAuthStateChanged, after the existing await seUser);, before the existing if (Capacitor.isNativePlatform())) — a comment, the call, and one blank line:
+          // Android push: no-ops on web/iOS, and never throws.
+          void registerPushNotifications();
+
+Everything else in that file — including all of syncUserWithBackend, refreshUser, and the appStateChange listener — is pre-existing and byte-identical to
+HEAD.
+
+Imports all resolve — verified
+
+┌───────────────────────────────────────────────────┬─────────────────────────────────┐
+│                      Import                       │                          Status                           │
+├───────────────────────────────────────────────────┼─────────────────────────────────┤
+│ @capacitor/core                                   │ already a dependency ✓                                    │
+├───────────────────────────────────────────────────┼─────────────────────────────────┤
+│ @/lib/queryClient → apiRequest                    │ file exists, export async function apiRequest confirmed ✓ │
+├───────────────────────────────────────────────────┼─────────────────────────────────┤
+│ @capacitor/push-notifications                     │ installed v8.1.2, PushNotifications exported ✓            │
+├───────────────────────────────────────────────────┼─────────────────────────────────┤
+│ react, firebase/auth                              │ pre-existing ✓                                            │
+├───────────────────────────────────────────────────┼─────────────────────────────────┤
+│ @/lib/firebase, @/lib/handleRedirect, @/lib/store │ pre-existing ✓                                            │
+├───────────────────────────────────────────────────┼─────────────────────────────────┤
+│ @capacitor/app                                    │ pre-existing ✓                                            │
+├───────────────────────────────────────────────────┼─────────────────────────────────┤
+│ @/services/pushNotifications                      │ the new file ✓                                            │
+└───────────────────────────────────────────────────┴─────────────────────────────────┘
+
+Nothing new was introduced beyond @capacitor/push-notifications, h is in package.json + package-lock.json. tsc --noEmit reportszero errors in both files.
+
+Endpoint URL — correction, it is not that literal string
+
+I have to be straight with you here: the file does not contain https://app.marvelcardvault.com/api/push/register-token as a literal URL. Line 28 uses the
+relative path:
+
+await apiRequest('POST', '/api/push/register-token', { ... });
+
+It resolves to https://app.marvelcardvault.com/api/push/register-the WebView origin is https://app.marvelcardvault.com (set byserver.url) and the deployed web app is served from that host. I chose relative deliberately, matching every other API call in your app — a hardcoded
+absolute URL would make local dev POST real tokens to production.
+
+Functionally identical in production. But if you want the literal it's a one-line swap on line 28 — say the word and I'll make it:
+
+await apiRequest('POST', 'https://app.marvelcardvault.com/api/pus);
+
+I've made no changes, as asked.
