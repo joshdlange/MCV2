@@ -53,10 +53,11 @@ export default function AdminPushNotifications() {
   });
 
   const sendMutation = useMutation({
-    mutationFn: async (payload: { target: Target; userId?: number; title: string; body: string; isTest?: boolean }) => {
+    mutationFn: async (payload: { target: Target; userId?: number; username?: string; title: string; body: string; isTest?: boolean }) => {
       const res = await apiRequest("POST", "/api/admin/push/send", {
         target: payload.target,
         userId: payload.userId,
+        username: payload.username,
         title: payload.title,
         body: payload.body,
       });
@@ -85,12 +86,18 @@ export default function AdminPushNotifications() {
   const formValid =
     title.trim().length > 0 && title.length <= TITLE_MAX &&
     body.trim().length > 0 && body.length <= BODY_MAX &&
-    (target !== "user" || /^\d+$/.test(userId.trim()));
+    (target !== "user" || userId.trim().length > 0);
 
   const handleSendClick = () => {
     if (!formValid) return;
     if (target === "user") {
-      sendMutation.mutate({ target: "user", userId: parseInt(userId.trim()), title, body });
+      const entry = userId.trim();
+      // Numeric input = user ID; anything else = username
+      if (/^\d+$/.test(entry)) {
+        sendMutation.mutate({ target: "user", userId: parseInt(entry), title, body });
+      } else {
+        sendMutation.mutate({ target: "user", username: entry, title, body });
+      }
     } else {
       setConfirmOpen(true); // segment sends need confirmation
     }
@@ -171,9 +178,8 @@ export default function AdminPushNotifications() {
                   <Input
                     value={userId}
                     onChange={(e) => setUserId(e.target.value)}
-                    placeholder="User ID"
-                    className="h-8 w-32 text-sm"
-                    inputMode="numeric"
+                    placeholder="Username or user ID"
+                    className="h-8 w-44 text-sm"
                   />
                 )}
               </div>

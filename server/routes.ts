@@ -12954,7 +12954,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/push/send", authenticateUser, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) return res.status(403).json({ message: "Admin access required" });
-      const { target, userId, title, body } = req.body || {};
+      const { target, userId: rawUserId, username, title, body } = req.body || {};
       if (!["all", "superhero", "sidekick", "user"].includes(target)) {
         return res.status(400).json({ success: false, error: "target must be 'all', 'superhero', 'sidekick', or 'user'" });
       }
@@ -12964,8 +12964,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!body || typeof body !== "string" || body.trim().length === 0 || body.length > 240) {
         return res.status(400).json({ success: false, error: "body is required (max 240 characters)" });
       }
-      if (target === "user" && (!Number.isInteger(userId) || userId <= 0)) {
-        return res.status(400).json({ success: false, error: "userId is required when target is 'user'" });
+      // Single-user target: accept a numeric userId OR a username (admins
+      // know usernames, not internal IDs).
+      let userId: number | undefined = Number.isInteger(rawUserId) && rawUserId > 0 ? rawUserId : undefined;
+      if (target === "user" && !userId && typeof username === "string" && username.trim()) {
+        const found = await storage.getUserByUsername(username.trim());
+        if (!found) {
+          return res.status(404).json({ success: false, error: `No user found with username "${username.trim()}"` });
+        }
+        userId = found.id;
+      }
+      if (target === "user" && !userId) {
+        return res.status(400).json({ success: false, error: "A username or user ID is required when target is 'user'" });
       }
       const push = await import("./pushNotifications");
       let sent = 0, failed = 0;
