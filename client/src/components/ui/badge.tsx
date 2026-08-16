@@ -14,7 +14,11 @@ const badgeVariants = cva(
           "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
         destructive:
           "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
-        outline: "text-foreground",
+        // NOTE: this app's theme is dark at :root (--foreground is white) but
+        // cards are white (--card-foreground is dark). Outline badges are
+        // rendered on cards, so they must use the card text color — plain
+        // text-foreground made them white-on-white (invisible).
+        outline: "text-card-foreground border-gray-300",
       },
     },
     defaultVariants: {
