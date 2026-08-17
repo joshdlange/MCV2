@@ -153,6 +153,12 @@ export default function Social() {
     const tabParam = urlParams.get('tab');
     if (tabParam === 'messages') {
       setActiveTab('messages');
+      // Deep link (e.g. from a push notification tap): open a specific conversation.
+      const userParam = urlParams.get('user');
+      const userId = userParam ? parseInt(userParam) : NaN;
+      if (!isNaN(userId)) {
+        setSelectedFriendId(userId);
+      }
     } else if (tabParam === 'superpowers' || tabParam === 'badges') {
       setActiveTab('badges');
     } else if (tabParam === 'profile') {

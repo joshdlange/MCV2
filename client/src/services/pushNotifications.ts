@@ -17,6 +17,7 @@ import { apiRequest } from '@/lib/queryClient';
 // token on every one of those.
 let registering = false;
 let lastRegisteredToken: string | null = null;
+let tapListenerAttached = false;
 
 async function sendTokenToBackend(token: string): Promise<void> {
   if (token === lastRegisteredToken) return;
@@ -56,6 +57,25 @@ export async function registerPushNotifications(): Promise<boolean> {
   try {
     // Dynamic import so the browser bundle never pulls in the native plugin.
     const { PushNotifications } = await import('@capacitor/push-notifications');
+
+    // Route notification taps: if the payload carries an in-app url
+    // (e.g. /social?tab=messages&user=123), navigate there.
+    if (!tapListenerAttached) {
+      tapListenerAttached = true;
+      PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+        const url = action.notification?.data?.url;
+        if (typeof url !== 'string' || !url.startsWith('/') || url.startsWith('//')) return;
+        try {
+          // Same-origin check guards against any crafted payload redirecting off-site.
+          const resolved = new URL(url, window.location.origin);
+          if (resolved.origin === window.location.origin) {
+            window.location.assign(resolved.pathname + resolved.search);
+          }
+        } catch {
+          // Malformed url — ignore.
+        }
+      });
+    }
 
     let status = await PushNotifications.checkPermissions();
     if (status.receive === 'prompt' || status.receive === 'prompt-with-rationale') {

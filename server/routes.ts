@@ -5298,7 +5298,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check badge unlocks when user sends a message
       await badgeService.checkBadgesOnMessage(req.user.id, content.trim());
-      
+
+      // Fire-and-forget push to the recipient (throttled + bundled server-side).
+      import("./pushNotifications")
+        .then((push) => push.notifyNewMessage(
+          recipientId,
+          req.user.id,
+          req.user.displayName || req.user.username || "Marvel Card Vault",
+        ))
+        .catch((e) => console.error("Message push failed (non-fatal):", e));
+
       res.status(201).json(message);
     } catch (error) {
       console.error('Send message error:', error);
@@ -5336,6 +5345,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const imageUrl = await uploadImage(req.file.buffer, 'message_images');
 
       const message = await storage.sendMessage(req.user.id, recipientId, `[Image: ${req.file.originalname}]`, imageUrl);
+
+      // Fire-and-forget push to the recipient (throttled + bundled server-side).
+      import("./pushNotifications")
+        .then((push) => push.notifyNewMessage(
+          recipientId,
+          req.user.id,
+          req.user.displayName || req.user.username || "Marvel Card Vault",
+        ))
+        .catch((e) => console.error("Message push failed (non-fatal):", e));
+
       res.status(201).json({ ...message, imageUrl });
     } catch (error) {
       console.error('Send image message error:', error);

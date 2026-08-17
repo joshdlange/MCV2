@@ -207,6 +207,52 @@ export async function sendPushToSegment(
   }
 }
 
+// --- New-message push (Tier 1 transactional) ---------------------------------
+// Fired when a direct message is sent. Bundling + throttle keep a rapid burst
+// of messages from turning into a push per message: at most one push per
+// recipient+sender pair every 2 minutes, and the body collapses to
+// "N new messages" when more than one is unread.
+const lastMessagePushAt = new Map<string, number>();
+const MESSAGE_PUSH_COOLDOWN_MS = 2 * 60 * 1000;
+
+// Privacy: the push body is always generic ("New message" / "N new messages"),
+// never the message content — push bodies show on lock screens and transit
+// Apple/Google servers. The actual message is only fetched in-app after auth.
+export async function notifyNewMessage(
+  recipientId: number,
+  senderId: number,
+  senderName: string,
+): Promise<void> {
+  try {
+    const key = `${recipientId}:${senderId}`;
+    const now = Date.now();
+    if (now - (lastMessagePushAt.get(key) ?? 0) < MESSAGE_PUSH_COOLDOWN_MS) return;
+    lastMessagePushAt.set(key, now);
+    // Bounded memory: drop stale entries once the map grows.
+    if (lastMessagePushAt.size > 5000) {
+      for (const [k, t] of lastMessagePushAt) {
+        if (now - t > MESSAGE_PUSH_COOLDOWN_MS) lastMessagePushAt.delete(k);
+      }
+    }
+
+    // Bundle: count unread messages from this sender (includes the one just sent).
+    const rows: any = await db.execute(sql`
+      SELECT COUNT(*)::int AS n FROM messages
+      WHERE recipient_id = ${recipientId} AND sender_id = ${senderId} AND is_read = false
+    `);
+    const n: number = (rows.rows ?? [])[0]?.n ?? 1;
+    const body = n > 1 ? `${n} new messages` : "New message";
+
+    await sendPushToUser(recipientId, senderName, body, {
+      type: "message",
+      url: `/social?tab=messages&user=${senderId}`,
+    });
+  } catch (e) {
+    // Never let a push failure affect message delivery.
+    console.error(`[Push] notifyNewMessage(${recipientId}) failed:`, e);
+  }
+}
+
 export async function logPushSend(entry: {
   sentByAdminId: number;
   target: string;
