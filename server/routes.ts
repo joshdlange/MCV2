@@ -346,6 +346,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error('Error auto-friending new user:', error);
             // Don't fail the user creation if auto-friending fails
           }
+
+          // Welcome DM from Josh. Deliberately bypasses the message push
+          // (notifyNewMessage is only wired to the send routes) so there is no
+          // notification buzz — just the unread red bubble in the app.
+          try {
+            await storage.sendMessage(
+              337,
+              user.id,
+              "Hey, I'm Josh, the creator of MCV. Thank you for checking it out and joining our community. If you need anything, have questions or feedback, shoot me a note. Welcome to the Vault."
+            );
+            console.log('Welcome message sent to new user', user.id);
+          } catch (error) {
+            console.error('Error sending welcome message (non-blocking):', error);
+          }
         }
       } else {
         console.log('Found existing user:', user.id, 'isAdmin:', user.isAdmin);
