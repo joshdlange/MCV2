@@ -1,15 +1,16 @@
 import { Capacitor } from '@capacitor/core';
 import { apiRequest } from '@/lib/queryClient';
 
-// Android-only push token registration.
+// Native push token registration (Android + iOS).
 //
-// The Android app is a Capacitor shell that loads this web app from
+// Both native apps are Capacitor shells that load this web app from
 // https://app.marvelcardvault.com, so this module is what actually asks the
 // OS for notification permission and hands the FCM token to the backend.
 //
-// Deliberately scoped to Android: iOS push is not wired up yet, so we no-op
-// on every other platform rather than half-register a device we can't send to.
-// The backend accepts 'ios' too, so extending this later is a one-line change.
+// On iOS this only produces deliverable pushes once the APNs key is uploaded
+// to the Firebase project and the Xcode project has the Push Notifications
+// capability. Until then registration fails gracefully (registrationError /
+// timeout below) and we simply skip — it can never break login.
 
 // Registration is triggered from onAuthStateChanged, which fires on token
 // refresh and on appStateChange. These guards keep us from re-POSTing the same
@@ -27,7 +28,7 @@ async function sendTokenToBackend(token: string): Promise<void> {
   // apiRequest attaches the existing Firebase bearer/session headers.
   await apiRequest('POST', '/api/push/register-token', {
     token,
-    platform: 'android',
+    platform: Capacitor.getPlatform() === 'ios' ? 'ios' : 'android',
   });
 
   lastRegisteredToken = token;
@@ -44,8 +45,9 @@ async function sendTokenToBackend(token: string): Promise<void> {
  * @returns true if a token was registered with the backend.
  */
 export async function registerPushNotifications(): Promise<boolean> {
-  // Not logged in / not the Android shell -> skip silently.
-  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
+  // Only run inside the native shells (Android or iOS); plain web -> skip.
+  const platform = Capacitor.getPlatform();
+  if (!Capacitor.isNativePlatform() || (platform !== 'android' && platform !== 'ios')) {
     return false;
   }
   if (registering) return false;
