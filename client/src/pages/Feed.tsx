@@ -904,6 +904,53 @@ function ActivityTab() {
     return () => observer.disconnect();
   }, [nextCursor, isLoading, events.length]);
 
+  // Pull-to-refresh (touch devices): dragging down while already at the top
+  // of the page re-fetches the feed and resets pagination.
+  const [refreshing, setRefreshing] = useState(false);
+  const [pullPx, setPullPx] = useState(0);
+  const touchStartYRef = useRef<number | null>(null);
+  const PULL_TRIGGER_PX = 56;
+
+  const refreshFeed = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    pageSessionRef.current++; // cancel any in-flight loadMore append
+    setExtraEvents([]);
+    setCursor(null);
+    setLoadingMore(false);
+    try {
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["/api/feed", filter] }),
+        queryClient.refetchQueries({ queryKey: ["/api/feed/following"] }),
+      ]);
+    } finally {
+      setRefreshing(false);
+      setPullPx(0);
+    }
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartYRef.current = window.scrollY <= 0 ? e.touches[0].clientY : null;
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (touchStartYRef.current === null || refreshing) return;
+    const dy = e.touches[0].clientY - touchStartYRef.current;
+    if (dy > 0 && window.scrollY <= 0) {
+      // Dampen the drag so the indicator feels elastic.
+      setPullPx(Math.min(dy * 0.4, 80));
+    } else {
+      setPullPx(0);
+    }
+  };
+  const onTouchEnd = () => {
+    if (pullPx >= PULL_TRIGGER_PX && !refreshing) {
+      refreshFeed();
+    } else {
+      setPullPx(0);
+    }
+    touchStartYRef.current = null;
+  };
+
   const reactMutation = useMutation({
     mutationFn: async ({ eventId, reaction, remove }: { eventId: number; reaction: string; remove: boolean }) => {
       const res = remove
@@ -931,7 +978,24 @@ function ActivityTab() {
     reactMutation.mutate({ eventId, reaction, remove });
 
   return (
-    <div className="space-y-4">
+    <div
+      className="space-y-4"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      {(pullPx > 0 || refreshing) && (
+        <div
+          className="flex justify-center items-center overflow-hidden transition-[height] duration-150"
+          style={{ height: refreshing ? 40 : pullPx }}
+          data-testid="feed-pull-refresh"
+        >
+          <Loader2
+            className={`w-5 h-5 text-zinc-400 ${refreshing ? "animate-spin" : ""}`}
+            style={!refreshing ? { transform: `rotate(${pullPx * 3}deg)`, opacity: Math.min(pullPx / PULL_TRIGGER_PX, 1) } : undefined}
+          />
+        </div>
+      )}
       <div className="flex gap-2 flex-wrap">
         {(["everyone", "following", "friends", "me"] as FeedFilter[]).map((f) => (
           <Button

@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, useEffect, useRef } from "react";
 import { preloadAppleIAP, isAppleIAP, APPLE_IAP_ENABLED } from "@/services/appleIAP";
 import { initializeRevenueCat, isRevenueCatAvailable, REVENUECAT_ENABLED } from "@/services/revenueCat";
 import { Capacitor } from '@capacitor/core';
@@ -176,9 +176,31 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
+// SPA navigation keeps the previous scroll position by default. Scroll to the
+// top on every forward navigation, but leave browser back/forward (popstate)
+// alone so "back" still returns you to where you were.
+function ScrollToTop() {
+  const [location] = useLocation();
+  const isPopRef = useRef(false);
+  useEffect(() => {
+    const onPop = () => { isPopRef.current = true; };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  useEffect(() => {
+    if (isPopRef.current) {
+      isPopRef.current = false;
+      return;
+    }
+    window.scrollTo(0, 0);
+  }, [location]);
+  return null;
+}
+
 function Router() {
   return (
     <RouteErrorBoundary>
+      <ScrollToTop />
       <Suspense fallback={<PageSpinner />}>
         <Switch>
           <Route path="/" component={Dashboard} />
