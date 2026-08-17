@@ -1946,7 +1946,7 @@ export default function Social() {
 
               {/* Badge Name */}
               <DialogHeader className="mb-4">
-                <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white flex items-center justify-center gap-2">
+                <DialogTitle className="text-2xl font-bold text-white flex items-center justify-center gap-2">
                   {selectedBadge.isLocked && <Lock className="w-5 h-5 text-gray-400" />}
                   {selectedBadge.badge.name}
                 </DialogTitle>
