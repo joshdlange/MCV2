@@ -18,7 +18,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { useBackButton, useHardwareBackHandler } from "@/hooks/useBackButton";
 import heroLogoWhite from "@assets/noun-super-hero-380874-FFFFFF.png";
 import { Login } from "@/components/auth/Login";
-import { Onboarding } from "@/components/auth/Onboarding";
+import { Onboarding, HeardAboutPrompt } from "@/components/auth/Onboarding";
 import { ProfileCustomization } from "@/components/profile/ProfileCustomization";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -268,6 +268,7 @@ function AuthenticatedApp() {
     <>
       <Onboarding />
       <ProfileCustomization />
+      <HeardAboutPrompt />
       <AppLayout>
         <Router />
       </AppLayout>

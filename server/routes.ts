@@ -610,12 +610,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // "How did you hear about us?" is mandatory
-      if (typeof heardAbout !== 'string' || !heardAbout.trim()) {
-        return res.status(400).json({
-          message: 'Please let us know how you heard about us'
-        });
-      }
+      // "How did you hear about us?" is now deferred to a later sign-in
+      // (HeardAboutPrompt); accept it here if provided, but never require it.
 
       // Check if username is taken by another user
       const existingUser = await storage.getUserByUsername(username);
@@ -628,7 +624,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update user with onboarding data
       const updatedUser = await storage.updateUser(req.user.id, {
         username,
-        heardAbout: heardAbout.trim().slice(0, 200),
+        ...(typeof heardAbout === 'string' && heardAbout.trim()
+          ? { heardAbout: heardAbout.trim().slice(0, 200) }
+          : {}),
         favoriteSets: favoriteSets ? [favoriteSets] : [],
         marketingOptIn: marketingOptIn || false,
         pushEnabled: pushEnabled !== false, // default on unless explicitly opted out
