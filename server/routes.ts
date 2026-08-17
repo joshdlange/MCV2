@@ -240,7 +240,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth Routes - Sync Firebase user with backend
   app.post("/api/auth/sync", async (req, res) => {
     try {
-      const { firebaseUid, email, displayName } = req.body;
+      const { firebaseUid, email, displayName, refShareToken } = req.body;
       
       if (!firebaseUid) {
         return res.status(400).json({ message: 'Firebase UID is required' });
@@ -258,8 +258,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let user = await storage.getUserByFirebaseUid(firebaseUid);
       
       if (!user) {
-        // Create new user - check if this should be an admin user
-        const isAdminEmail = email === 'joshdlange045@gmail.com';
+        // Create new user - check if this should be an admin user.
+        // SECURITY: the admin grant must never trust the client-supplied
+        // email/uid alone (this endpoint is unauthenticated). Only grant
+        // admin when a verified Firebase ID token proves the email AND uid.
+        let isAdminEmail = false;
+        if (email === 'joshdlange045@gmail.com') {
+          try {
+            const authHeader = req.headers.authorization;
+            if (authHeader?.startsWith('Bearer ')) {
+              const decoded = await admin.auth().verifyIdToken(authHeader.substring(7));
+              isAdminEmail = decoded.email === 'joshdlange045@gmail.com' && decoded.uid === firebaseUid;
+            }
+          } catch { /* unverifiable → no admin */ }
+          if (!isAdminEmail) {
+            console.warn('Refused admin grant on unverified sync for', firebaseUid);
+          }
+        }
         const fallbackEmail = email || `${firebaseUid}@apple.local`;
         const userData = {
           firebaseUid,
@@ -273,6 +288,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         user = await storage.createUser(userData);
         console.log('Created new user:', user.id, 'isAdmin:', user.isAdmin);
+
+        // Organic-funnel attribution: if this signup arrived via a shared PC
+        // binder link, stamp the token on the new account (creation only —
+        // never updatable later). Validated against real tokens; failures
+        // never block signup.
+        if (refShareToken && typeof refShareToken === 'string' && refShareToken.length <= 64) {
+          try {
+            const [refLink] = await db
+              .select({ id: pcBinderShareLinks.id })
+              .from(pcBinderShareLinks)
+              .where(eq(pcBinderShareLinks.token, refShareToken))
+              .limit(1);
+            if (refLink) {
+              await db.update(users).set({ signupShareToken: refShareToken }).where(eq(users.id, user.id));
+              console.log('Attributed signup', user.id, 'to PC binder share token');
+            }
+          } catch (err) {
+            console.error('Share-token attribution failed (non-blocking):', err);
+          }
+        }
         
         // Note: Welcome email is now sent after onboarding is complete
         // so we have their actual chosen username, not just email prefix
@@ -12065,7 +12100,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         shareLink: link
-          ? { id: link.id, token: link.token, url: pcShareUrl(link.token), createdAt: link.createdAt }
+          ? {
+              id: link.id,
+              token: link.token,
+              url: pcShareUrl(link.token),
+              createdAt: link.createdAt,
+              viewCount: link.viewCount ?? 0,
+              shareCount: link.shareCount ?? 0,
+              lastAccessedAt: link.lastAccessedAt,
+            }
           : null,
       });
     } catch (error) {
@@ -12181,6 +12224,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/pc-share/:token/share-click — PUBLIC, counts a share-button tap
+  // (owner modal or public page). Raw counter; lightweight in-memory throttle
+  // (per IP+token) blunts scripted count inflation. Counts are bot-inclusive
+  // raw events by design.
+  const shareClickHits = new Map<string, { count: number; resetAt: number }>();
+  app.post("/api/pc-share/:token/share-click", async (req, res) => {
+    try {
+      const { token } = req.params;
+      if (!token || token.length > 64) return res.status(400).json({ message: "Invalid token" });
+
+      const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || "?";
+      const key = `${ip}:${token}`;
+      const now = Date.now();
+      const hit = shareClickHits.get(key);
+      if (!hit || now > hit.resetAt) {
+        shareClickHits.set(key, { count: 1, resetAt: now + 60 * 60 * 1000 });
+      } else if (hit.count >= 20) {
+        return res.json({ success: true }); // silently drop past the hourly cap
+      } else {
+        hit.count++;
+      }
+      if (shareClickHits.size > 10000) shareClickHits.clear(); // memory guard
+      const result = await db
+        .update(pcBinderShareLinks)
+        .set({ shareCount: sql`${pcBinderShareLinks.shareCount} + 1` })
+        .where(and(eq(pcBinderShareLinks.token, token), eq(pcBinderShareLinks.isActive, true)))
+        .returning({ id: pcBinderShareLinks.id });
+      if (result.length === 0) return res.status(404).json({ message: "Share link not found" });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error recording share click:", error);
+      res.status(500).json({ message: "Failed to record share" });
+    }
+  });
+
+  // GET /api/admin/pc-share-funnel — admin-only organic-funnel overview:
+  // total binder-link views, share taps, and signups attributed to links.
+  app.get("/api/admin/pc-share-funnel", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+      const [totals] = await db
+        .select({
+          activeLinks: sql<number>`count(*) FILTER (WHERE ${pcBinderShareLinks.isActive})`,
+          totalViews: sql<number>`COALESCE(sum(${pcBinderShareLinks.viewCount}), 0)`,
+          totalShares: sql<number>`COALESCE(sum(${pcBinderShareLinks.shareCount}), 0)`,
+        })
+        .from(pcBinderShareLinks);
+
+      const [signups] = await db
+        .select({ attributedSignups: sql<number>`count(*)` })
+        .from(users)
+        .where(sql`${users.signupShareToken} IS NOT NULL`);
+
+      // Top binders by views, with owner and attributed signups per token
+      const topLinks = await db
+        .select({
+          binderName: pcBinders.name,
+          ownerUsername: users.username,
+          viewCount: pcBinderShareLinks.viewCount,
+          shareCount: pcBinderShareLinks.shareCount,
+          signups: sql<number>`(SELECT count(*) FROM users u2 WHERE u2.signup_share_token = ${pcBinderShareLinks.token})`,
+          isActive: pcBinderShareLinks.isActive,
+          lastAccessedAt: pcBinderShareLinks.lastAccessedAt,
+        })
+        .from(pcBinderShareLinks)
+        .innerJoin(pcBinders, eq(pcBinders.id, pcBinderShareLinks.binderId))
+        .innerJoin(users, eq(users.id, pcBinders.userId))
+        .where(sql`${pcBinderShareLinks.viewCount} > 0 OR ${pcBinderShareLinks.shareCount} > 0`)
+        .orderBy(sql`${pcBinderShareLinks.viewCount} DESC`)
+        .limit(20);
+
+      res.json({
+        totals: {
+          activeLinks: Number(totals?.activeLinks ?? 0),
+          totalViews: Number(totals?.totalViews ?? 0),
+          totalShares: Number(totals?.totalShares ?? 0),
+          attributedSignups: Number(signups?.attributedSignups ?? 0),
+        },
+        topLinks: topLinks.map(l => ({ ...l, signups: Number(l.signups) })),
+      });
+    } catch (error) {
+      console.error("Error fetching PC share funnel:", error);
+      res.status(500).json({ message: "Failed to fetch funnel stats" });
+    }
+  });
+
   // GET /api/pc-share/:token — PUBLIC endpoint for shared PC binder pages.
   // Payload is privacy-scoped: sharer display name only (no email/userId), no
   // prices. Mirrors /api/share/:token semantics: 404 unknown, 410 revoked.
@@ -12203,9 +12333,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(1);
       if (!binder) return res.status(404).json({ message: "Binder not found" });
 
-      // Update last_accessed_at (fire and forget)
+      // Update last_accessed_at + view counter (fire and forget).
+      // Every visit counts (per product decision) — no dedupe.
       db.update(pcBinderShareLinks)
-        .set({ lastAccessedAt: new Date() })
+        .set({
+          lastAccessedAt: new Date(),
+          viewCount: sql`${pcBinderShareLinks.viewCount} + 1`,
+        })
         .where(eq(pcBinderShareLinks.id, link.id))
         .then(() => {})
         .catch(() => {});

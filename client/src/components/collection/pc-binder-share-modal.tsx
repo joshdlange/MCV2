@@ -32,7 +32,7 @@ export function PcBinderShareModal({ isOpen, onClose, binderId, binderName }: Pc
 
   const shareLinkKey = ["/api/pc-binders", String(binderId), "share-link"];
 
-  const { data: shareLinkData, isLoading } = useQuery<{ shareLink: { token: string; url: string; id: number; createdAt: string } | null }>({
+  const { data: shareLinkData, isLoading } = useQuery<{ shareLink: { token: string; url: string; id: number; createdAt: string; viewCount?: number; shareCount?: number } | null }>({
     queryKey: shareLinkKey,
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/pc-binders/${binderId}/share-link`);
@@ -109,6 +109,12 @@ export function PcBinderShareModal({ isOpen, onClose, binderId, binderName }: Pc
   const shareLink = shareLinkData?.shareLink;
   const shareUrl = shareLink?.url || "";
 
+  // Analytics: count every share-button tap (fire-and-forget, never blocks UX)
+  const recordShare = () => {
+    if (!shareLink?.token) return;
+    fetch(`/api/pc-share/${shareLink.token}/share-click`, { method: "POST" }).catch(() => {});
+  };
+
   const buildShareMessage = () =>
     `BEHOLD my ${binderName} PC binder! ${shareUrl}\n\nTrack your collection and its value at marvelcardvault.com`;
 
@@ -118,6 +124,7 @@ export function PcBinderShareModal({ isOpen, onClose, binderId, binderName }: Pc
   const canNativeShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
 
   const handleNativeShare = async () => {
+    recordShare();
     try {
       await navigator.share({
         title: `My ${binderName} PC binder`,
@@ -132,6 +139,7 @@ export function PcBinderShareModal({ isOpen, onClose, binderId, binderName }: Pc
   };
 
   const handleCopy = async () => {
+    recordShare();
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
@@ -143,6 +151,7 @@ export function PcBinderShareModal({ isOpen, onClose, binderId, binderName }: Pc
   };
 
   const handleFacebookShare = () => {
+    recordShare();
     window.open(
       `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(`BEHOLD my ${binderName} PC binder!\n\nTrack your collection and its value at marvelcardvault.com`)}`,
       "_blank",
@@ -151,6 +160,7 @@ export function PcBinderShareModal({ isOpen, onClose, binderId, binderName }: Pc
   };
 
   const handleTwitterShare = () => {
+    recordShare();
     const tweetText = `BEHOLD my ${binderName} PC binder!\n\nTrack your collection and its value at marvelcardvault.com`;
     window.open(
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}`,
@@ -160,6 +170,7 @@ export function PcBinderShareModal({ isOpen, onClose, binderId, binderName }: Pc
   };
 
   const handleRedditShare = () => {
+    recordShare();
     window.open(
       `https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(`BEHOLD my ${binderName} PC binder!`)}`,
       "_blank",
@@ -168,6 +179,7 @@ export function PcBinderShareModal({ isOpen, onClose, binderId, binderName }: Pc
   };
 
   const handleInstagramShare = async () => {
+    recordShare();
     try {
       await navigator.clipboard.writeText(buildShareMessage());
       setCopied(true);
@@ -218,6 +230,19 @@ export function PcBinderShareModal({ isOpen, onClose, binderId, binderName }: Pc
             </Button>
           ) : (
             <>
+              {/* Link analytics — visible to the binder owner */}
+              <div className="flex items-center justify-center gap-6 rounded-lg border border-gray-200 bg-gray-50 py-2.5" data-testid="share-link-stats">
+                <div className="text-center">
+                  <p className="text-lg font-bold text-gray-900 leading-none">{shareLink.viewCount ?? 0}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">Link views</p>
+                </div>
+                <div className="w-px h-8 bg-gray-200" />
+                <div className="text-center">
+                  <p className="text-lg font-bold text-gray-900 leading-none">{shareLink.shareCount ?? 0}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">Times shared</p>
+                </div>
+              </div>
+
               {canNativeShare && (
                 <Button
                   onClick={handleNativeShare}

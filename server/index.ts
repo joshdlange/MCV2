@@ -135,6 +135,11 @@ app.use((req, res, next) => {
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_customization_dismissed_at timestamp`);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_customization_skips integer NOT NULL DEFAULT 0`);
 
+    // PC binder share analytics (views / share taps / signup attribution)
+    await db.execute(sql`ALTER TABLE pc_binder_share_links ADD COLUMN IF NOT EXISTS view_count integer NOT NULL DEFAULT 0`);
+    await db.execute(sql`ALTER TABLE pc_binder_share_links ADD COLUMN IF NOT EXISTS share_count integer NOT NULL DEFAULT 0`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS signup_share_token text`);
+
     // Feed v1 tables + feed_reaction XP dedupe
     await db.execute(sql`CREATE TABLE IF NOT EXISTS feed_events (
       id serial PRIMARY KEY,

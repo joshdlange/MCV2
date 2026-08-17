@@ -45,6 +45,8 @@ export function handleRedirect() {
               email: user.email,
               displayName: user.displayName,
               photoURL: user.photoURL,
+              // Organic-funnel attribution: token saved when visiting a shared binder
+              refShareToken: (() => { try { return localStorage.getItem("mcv_ref_share_token") || undefined; } catch { return undefined; } })(),
             }),
           });
 

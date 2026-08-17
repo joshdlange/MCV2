@@ -47,6 +47,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           email: firebaseUser.email,
           displayName: firebaseUser.displayName,
           photoURL: firebaseUser.photoURL,
+          // Organic-funnel attribution: token saved when visiting a shared binder
+          refShareToken: (() => { try { return localStorage.getItem("mcv_ref_share_token") || undefined; } catch { return undefined; } })(),
         }),
       });
 

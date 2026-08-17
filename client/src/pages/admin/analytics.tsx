@@ -33,6 +33,19 @@ const PLATFORM_BUCKETS: Array<{ key: string; label: string; color: string }> = [
   { key: "unknown", label: "No data yet", color: "#9ca3af" },
 ];
 
+interface PcShareFunnel {
+  totals: { activeLinks: number; totalViews: number; totalShares: number; attributedSignups: number };
+  topLinks: Array<{
+    binderName: string;
+    ownerUsername: string | null;
+    viewCount: number;
+    shareCount: number;
+    signups: number;
+    isActive: boolean;
+    lastAccessedAt: string | null;
+  }>;
+}
+
 interface HeardAboutStats {
   sources: Array<{ source: string; count: number }>;
   total: number;
@@ -127,6 +140,10 @@ export default function AdminAnalytics() {
 
   const { data: heardAbout, isLoading: heardAboutLoading } = useQuery<HeardAboutStats>({
     queryKey: ["/api/admin/heard-about-stats"],
+  });
+
+  const { data: pcShareFunnel, isLoading: pcShareFunnelLoading } = useQuery<PcShareFunnel>({
+    queryKey: ["/api/admin/pc-share-funnel"],
   });
 
   const { data: signups = [], isLoading: signupsLoading } = useQuery<SignupDay[]>({
@@ -282,6 +299,65 @@ export default function AdminAnalytics() {
               )}
             </CardContent>
           </Card>
+
+      {/* ── PC Binder Share Funnel ─────────────────────────────────────────────── */}
+      <div>
+        <h2 className="text-xl font-bold text-gray-900">PC Binder Share Funnel</h2>
+        <p className="text-sm text-gray-500 mt-0.5">Organic social: shared binder links → page views → new accounts (attributed at signup)</p>
+      </div>
+
+      <Card>
+        <CardContent className="pt-6">
+          {pcShareFunnelLoading ? (
+            <div className="h-20 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { label: "Active links", value: pcShareFunnel?.totals.activeLinks ?? 0 },
+                  { label: "Share taps", value: pcShareFunnel?.totals.totalShares ?? 0 },
+                  { label: "Link views", value: pcShareFunnel?.totals.totalViews ?? 0 },
+                  { label: "Signups from links", value: pcShareFunnel?.totals.attributedSignups ?? 0 },
+                ].map((s) => (
+                  <div key={s.label} className="rounded-lg border px-3 py-2">
+                    <p className="text-lg font-bold text-gray-900">{s.value.toLocaleString()}</p>
+                    <p className="text-xs text-gray-500">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+              {(pcShareFunnel?.topLinks?.length ?? 0) > 0 && (
+                <div className="mt-4 overflow-x-auto">
+                  <table className="w-full min-w-[520px] text-sm">
+                    <thead>
+                      <tr className="text-left text-xs text-gray-500 border-b">
+                        <th className="py-1.5 pr-3 font-medium">Binder</th>
+                        <th className="py-1.5 pr-3 font-medium">Owner</th>
+                        <th className="py-1.5 pr-3 font-medium text-right">Views</th>
+                        <th className="py-1.5 pr-3 font-medium text-right">Shares</th>
+                        <th className="py-1.5 font-medium text-right">Signups</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pcShareFunnel!.topLinks.map((l, i) => (
+                        <tr key={i} className="border-b last:border-0">
+                          <td className="py-1.5 pr-3 text-gray-900">
+                            {l.binderName}
+                            {!l.isActive && <span className="ml-1.5 text-[10px] text-gray-400">(revoked)</span>}
+                          </td>
+                          <td className="py-1.5 pr-3 text-gray-600">{l.ownerUsername ?? "—"}</td>
+                          <td className="py-1.5 pr-3 text-right text-gray-900">{l.viewCount}</td>
+                          <td className="py-1.5 pr-3 text-right text-gray-900">{l.shareCount}</td>
+                          <td className="py-1.5 text-right font-semibold text-gray-900">{l.signups}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {/* ── How Users Found Us ──────────────────────────────────────────────────── */}
       <div>

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import { motion } from "framer-motion";
@@ -99,12 +99,13 @@ function SharedPcCardTile({ card, owned, index }: { card: SharedPcCard; owned: b
   );
 }
 
-function SocialShareButtons({ shareUrl, binderName, sharerName }: { shareUrl: string; binderName: string; sharerName: string }) {
+function SocialShareButtons({ shareUrl, binderName, sharerName, onShare }: { shareUrl: string; binderName: string; sharerName: string; onShare?: () => void }) {
   const [copied, setCopied] = useState(false);
   const shareMessage = `BEHOLD ${sharerName}'s ${binderName} PC binder! ${shareUrl}\n\nTrack your collection and its value at marvelcardvault.com`;
   const headline = `BEHOLD ${sharerName}'s ${binderName} PC binder!\n\nTrack your collection and its value at marvelcardvault.com`;
 
   const handleCopyLink = async () => {
+    onShare?.();
     try {
       await navigator.clipboard.writeText(shareMessage);
       setCopied(true);
@@ -115,21 +116,21 @@ function SocialShareButtons({ shareUrl, binderName, sharerName }: { shareUrl: st
   return (
     <div className="flex items-center justify-center gap-3">
       <button
-        onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(headline)}`, "_blank", "noopener,noreferrer,width=600,height=400")}
+        onClick={() => { onShare?.(); window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(headline)}`, "_blank", "noopener,noreferrer,width=600,height=400"); }}
         className="w-10 h-10 rounded-full bg-[#1877F2]/20 hover:bg-[#1877F2]/40 text-[#1877F2] flex items-center justify-center transition-colors border border-[#1877F2]/30"
         title="Share on Facebook"
       >
         <SiFacebook className="w-4 h-4" />
       </button>
       <button
-        onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(headline)}&url=${encodeURIComponent(shareUrl)}`, "_blank", "noopener,noreferrer,width=600,height=400")}
+        onClick={() => { onShare?.(); window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(headline)}&url=${encodeURIComponent(shareUrl)}`, "_blank", "noopener,noreferrer,width=600,height=400"); }}
         className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors border border-white/20"
         title="Share on X"
       >
         <SiX className="w-3.5 h-3.5" />
       </button>
       <button
-        onClick={() => window.open(`https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(`BEHOLD ${sharerName}'s ${binderName} PC binder!`)}`, "_blank", "noopener,noreferrer")}
+        onClick={() => { onShare?.(); window.open(`https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(`BEHOLD ${sharerName}'s ${binderName} PC binder!`)}`, "_blank", "noopener,noreferrer"); }}
         className="w-10 h-10 rounded-full bg-[#FF4500]/20 hover:bg-[#FF4500]/40 text-[#FF4500] flex items-center justify-center transition-colors border border-[#FF4500]/30"
         title="Share on Reddit"
       >
@@ -137,6 +138,7 @@ function SocialShareButtons({ shareUrl, binderName, sharerName }: { shareUrl: st
       </button>
       <button
         onClick={async () => {
+          onShare?.();
           try {
             await navigator.clipboard.writeText(shareMessage);
             setCopied(true);
@@ -170,6 +172,20 @@ export default function SharedPcBinder() {
     enabled: !!token,
     retry: false,
   });
+
+  // Organic-funnel attribution: remember which binder link brought this
+  // visitor in. If they later sign up, /api/auth/sync sends this token so
+  // the signup gets attributed to the shared binder.
+  useEffect(() => {
+    if (token && data) {
+      try { localStorage.setItem("mcv_ref_share_token", token); } catch { /* ignore */ }
+    }
+  }, [token, data]);
+
+  // Count share taps from the public page against the same link
+  const recordShare = () => {
+    if (token) fetch(`/api/pc-share/${token}/share-click`, { method: "POST" }).catch(() => {});
+  };
 
   const ownedSet = useMemo(() => new Set(data?.ownedCardIds ?? []), [data]);
 
@@ -336,7 +352,7 @@ export default function SharedPcBinder() {
 
         <div className="mt-8 text-center">
           <p className="text-xs text-gray-500 mb-3 tracking-wider uppercase">Share this binder</p>
-          <SocialShareButtons shareUrl={shareUrl} binderName={binder.name} sharerName={sharerName} />
+          <SocialShareButtons shareUrl={shareUrl} binderName={binder.name} sharerName={sharerName} onShare={recordShare} />
         </div>
       </div>
 

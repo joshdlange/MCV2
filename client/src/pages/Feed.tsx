@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
@@ -360,6 +361,118 @@ function EventHero({ event }: { event: FeedEvent }) {
 }
 
 // ---------------------------------------------------------------------------
+// Feed item detail popup (badge details / card details)
+// ---------------------------------------------------------------------------
+
+export interface FeedDetail {
+  kind: "badge" | "card";
+  event: FeedEvent;
+}
+
+function FeedDetailDialog({ detail, onClose }: { detail: FeedDetail | null; onClose: () => void }) {
+  const event = detail?.event ?? null;
+
+  // Badge details: enrich from the badges catalog (description, rarity).
+  const { data: badges } = useQuery<any[]>({
+    queryKey: ["/api/badges"],
+    enabled: detail?.kind === "badge",
+    staleTime: 5 * 60 * 1000,
+  });
+  const badge = detail?.kind === "badge" && event?.relatedId
+    ? badges?.find((b) => b.id === event.relatedId)
+    : undefined;
+
+  // Card details: fetch the card the event refers to.
+  const { data: card } = useQuery<any>({
+    queryKey: [`/api/cards/${event?.relatedId}`],
+    enabled: detail?.kind === "card" && !!event?.relatedId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  if (!detail || !event) return null;
+  const md = (event.metadata as any) ?? {};
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-sm bg-zinc-900 border-zinc-700 text-zinc-100">
+        {detail.kind === "badge" ? (
+          <>
+            <DialogHeader>
+              <DialogTitle className="text-zinc-100">{badge?.name ?? md.badgeName ?? "Badge earned"}</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col items-center gap-3 py-2">
+              {(badge?.iconUrl || event.image) ? (
+                <div className="w-28 h-28 rounded-full bg-zinc-950 border-2 border-red-600/60 shadow-[0_0_24px_rgba(220,38,38,0.3)] flex items-center justify-center overflow-hidden">
+                  <img src={badge?.iconUrl ?? event.image!} alt="Badge" className="w-full h-full object-cover scale-110" />
+                </div>
+              ) : (
+                <Award className="w-16 h-16 text-red-400" />
+              )}
+              {badge?.rarity && (
+                <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full border border-amber-500/40 text-amber-300 bg-amber-500/10">
+                  {badge.rarity}{badge.category ? ` · ${badge.category}` : ""}
+                </span>
+              )}
+              {badge?.description && (
+                <p className="text-sm text-zinc-300 text-center">{badge.description}</p>
+              )}
+              <p className="text-xs text-zinc-500 text-center">
+                Earned by <span className="font-semibold text-zinc-300">{displayName(event.user)}</span> · {timeAgo(event.createdAt)}
+              </p>
+              {event.user.username && (
+                <Link
+                  href={`/collectors/${event.user.username}`}
+                  onClick={onClose}
+                  className="text-xs text-red-400 hover:text-red-300 inline-flex items-center gap-1"
+                  data-testid="link-detail-profile"
+                >
+                  View {displayName(event.user)}'s profile <ExternalLink className="w-3 h-3" />
+                </Link>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle className="text-zinc-100">{card?.name ?? "Card details"}</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col items-center gap-3 py-2">
+              {(card?.frontImageUrl || event.image) && (
+                <img
+                  src={card?.frontImageUrl ?? event.image!}
+                  alt={card?.name ?? "Card"}
+                  className="max-h-72 rounded-lg object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.65)]"
+                />
+              )}
+              <div className="text-center space-y-0.5">
+                {card?.cardNumber && <p className="text-xs text-zinc-400">#{card.cardNumber}</p>}
+                {(card?.cardSet?.name || card?.setName) && (
+                  <p className="text-sm text-zinc-300">{card?.cardSet?.name ?? card?.setName}</p>
+                )}
+                {card?.rarity && <p className="text-xs text-zinc-500">{card.rarity}</p>}
+              </div>
+              <p className="text-xs text-zinc-500 text-center">
+                <span className="font-semibold text-zinc-300">{displayName(event.user)}</span> {event.title}
+              </p>
+              {event.user.username && (
+                <Link
+                  href={`/collectors/${event.user.username}`}
+                  onClick={onClose}
+                  className="text-xs text-red-400 hover:text-red-300 inline-flex items-center gap-1"
+                  data-testid="link-detail-profile"
+                >
+                  View {displayName(event.user)}'s profile <ExternalLink className="w-3 h-3" />
+                </Link>
+              )}
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Reactions row
 // ---------------------------------------------------------------------------
 
@@ -420,11 +533,12 @@ interface FollowState {
   follow: (username: string) => void;
 }
 
-function EventCard({ event, pending, onReact, followState }: {
+function EventCard({ event, pending, onReact, followState, onOpenDetail }: {
   event: FeedEvent;
   pending: boolean;
   onReact: (eventId: number, reaction: string, remove: boolean) => void;
   followState: FollowState | null;
+  onOpenDetail?: (detail: FeedDetail) => void;
 }) {
   const style = EVENT_STYLE[event.eventType] ?? DEFAULT_STYLE;
   const shareToken = event.eventType === "binder_shared" ? (event.metadata as any)?.shareToken as string | undefined : undefined;
@@ -432,6 +546,24 @@ function EventCard({ event, pending, onReact, followState }: {
   // the owner's collection privacy at read time).
   const binderHref = !shareToken && event.eventType === "binder_created" && event.relatedType === "binder" && event.relatedId && event.user.username
     ? `/collectors/${event.user.username}/binders/${event.relatedId}`
+    : null;
+  const profileHref = event.user.username ? `/collectors/${event.user.username}` : null;
+
+  // Where does clicking the hero/title take you? Badge → badge popup,
+  // card-related → card popup, binder → the binder, otherwise → profile.
+  const [, navigate] = useLocation();
+  const heroAction: (() => void) | null = onOpenDetail
+    ? event.eventType === "badge_earned"
+      ? () => onOpenDetail({ kind: "badge", event })
+      : event.relatedType === "card" && event.relatedId
+        ? () => onOpenDetail({ kind: "card", event })
+        : shareToken
+          ? () => navigate(`/pc-share/${shareToken}`)
+          : binderHref
+            ? () => navigate(binderHref)
+            : profileHref
+              ? () => navigate(profileHref)
+              : null
     : null;
 
   return (
@@ -441,9 +573,21 @@ function EventCard({ event, pending, onReact, followState }: {
     >
       <div className="p-3.5 sm:p-4">
         <div className="flex items-center gap-2.5 flex-wrap">
-          <UserAvatar user={event.user} size="w-9 h-9" />
+          {profileHref ? (
+            <Link href={profileHref} data-testid={`link-feed-avatar-${event.id}`}>
+              <UserAvatar user={event.user} size="w-9 h-9" />
+            </Link>
+          ) : (
+            <UserAvatar user={event.user} size="w-9 h-9" />
+          )}
           <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-sm text-zinc-100 truncate">{displayName(event.user)}</span>
+            {profileHref ? (
+              <Link href={profileHref} className="font-semibold text-sm text-zinc-100 truncate hover:text-red-400 transition-colors">
+                {displayName(event.user)}
+              </Link>
+            ) : (
+              <span className="font-semibold text-sm text-zinc-100 truncate">{displayName(event.user)}</span>
+            )}
             <LevelPill level={event.user.collectorLevel} />
             <FollowInlineButton user={event.user} followState={followState} />
             <span className="text-xs text-zinc-500">{timeAgo(event.createdAt)}</span>
@@ -453,11 +597,18 @@ function EventCard({ event, pending, onReact, followState }: {
           </span>
         </div>
 
-        <div className="mt-3">
+        <div
+          className={`mt-3 ${heroAction ? "cursor-pointer" : ""}`}
+          onClick={heroAction ?? undefined}
+          data-testid={`feed-event-hero-${event.id}`}
+        >
           <EventHero event={event} />
         </div>
 
-        <p className="text-sm text-zinc-200 leading-snug mt-3">
+        <p
+          className={`text-sm text-zinc-200 leading-snug mt-3 ${heroAction ? "cursor-pointer" : ""}`}
+          onClick={heroAction ?? undefined}
+        >
           <span className="font-semibold">{displayName(event.user)}</span> {event.title}
         </p>
 
@@ -546,23 +697,35 @@ function diversifyGroups(groups: EventGroup[]): EventGroup[] {
   return out;
 }
 
-function GroupedBadgeCard({ group, pending, onReact, followState }: {
+function GroupedBadgeCard({ group, pending, onReact, followState, onOpenDetail }: {
   group: EventGroup;
   pending: boolean;
   onReact: (eventId: number, reaction: string, remove: boolean) => void;
   followState: FollowState | null;
+  onOpenDetail?: (detail: FeedDetail) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const first = group.events[0];
   const icons = group.events.filter(e => e.image).slice(0, 4);
+  const profileHref = first.user.username ? `/collectors/${first.user.username}` : null;
 
   return (
     <div className="rounded-xl bg-zinc-900 border border-zinc-800 hover:border-red-900/60 transition-colors shadow-lg shadow-black/20 overflow-hidden" data-testid={`feed-group-${first.id}`}>
       <div className="p-3.5 sm:p-4">
         <div className="flex items-center gap-2.5 flex-wrap">
-          <UserAvatar user={first.user} size="w-9 h-9" />
+          {profileHref ? (
+            <Link href={profileHref}><UserAvatar user={first.user} size="w-9 h-9" /></Link>
+          ) : (
+            <UserAvatar user={first.user} size="w-9 h-9" />
+          )}
           <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-sm text-zinc-100 truncate">{displayName(first.user)}</span>
+            {profileHref ? (
+              <Link href={profileHref} className="font-semibold text-sm text-zinc-100 truncate hover:text-red-400 transition-colors">
+                {displayName(first.user)}
+              </Link>
+            ) : (
+              <span className="font-semibold text-sm text-zinc-100 truncate">{displayName(first.user)}</span>
+            )}
             <LevelPill level={first.user.collectorLevel} />
             <FollowInlineButton user={first.user} followState={followState} />
             <span className="text-xs text-zinc-500">{timeAgo(first.createdAt)}</span>
@@ -606,10 +769,18 @@ function GroupedBadgeCard({ group, pending, onReact, followState }: {
           <div className="mt-3 space-y-2 border-t border-zinc-800 pt-3">
             {group.events.map((e) => (
               <div key={e.id} className="flex items-center gap-3 flex-wrap">
-                <div className="w-9 h-9 rounded-full bg-zinc-950 border border-zinc-700 flex items-center justify-center shrink-0">
+                <div
+                  className={`w-9 h-9 rounded-full bg-zinc-950 border border-zinc-700 flex items-center justify-center shrink-0 ${onOpenDetail ? "cursor-pointer" : ""}`}
+                  onClick={onOpenDetail ? () => onOpenDetail({ kind: "badge", event: e }) : undefined}
+                >
                   {e.image ? <img src={e.image} alt="Badge" className="w-7 h-7 object-contain" loading="lazy" /> : <Award className="w-4 h-4 text-white/90" />}
                 </div>
-                <span className="text-sm text-zinc-300 flex-1 min-w-0">{e.title}</span>
+                <span
+                  className={`text-sm text-zinc-300 flex-1 min-w-0 ${onOpenDetail ? "cursor-pointer hover:text-zinc-100" : ""}`}
+                  onClick={onOpenDetail ? () => onOpenDetail({ kind: "badge", event: e }) : undefined}
+                >
+                  {e.title}
+                </span>
                 <ReactionRow event={e} pending={pending} onReact={onReact} />
               </div>
             ))}
@@ -630,6 +801,7 @@ function ActivityTab() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [pendingFollowUsername, setPendingFollowUsername] = useState<string | null>(null);
+  const [detail, setDetail] = useState<FeedDetail | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -796,9 +968,9 @@ function ActivityTab() {
         <div className="space-y-3">
           {groups.map((g) =>
             g.events.length > 1 ? (
-              <GroupedBadgeCard key={g.key} group={g} pending={reactMutation.isPending} onReact={onReact} followState={followState} />
+              <GroupedBadgeCard key={g.key} group={g} pending={reactMutation.isPending} onReact={onReact} followState={followState} onOpenDetail={setDetail} />
             ) : (
-              <EventCard key={g.key} event={g.events[0]} pending={reactMutation.isPending} onReact={onReact} followState={followState} />
+              <EventCard key={g.key} event={g.events[0]} pending={reactMutation.isPending} onReact={onReact} followState={followState} onOpenDetail={setDetail} />
             ),
           )}
           {nextCursor && nextCursor !== "" && (
@@ -808,6 +980,7 @@ function ActivityTab() {
           )}
         </div>
       )}
+      <FeedDetailDialog detail={detail} onClose={() => setDetail(null)} />
     </div>
   );
 }
@@ -950,9 +1123,21 @@ function LeaderboardList({ title, icon, entries, valueKey, valueLabel, followSta
                 <span className={`w-7 h-7 shrink-0 rounded-full border text-xs font-black flex items-center justify-center ${RANK_CLASSES[i] ?? "border-zinc-700 text-zinc-500"}`}>
                   {i + 1}
                 </span>
-                <UserAvatar user={e.user} size="w-8 h-8" />
+                {e.user.username ? (
+                  <Link href={`/collectors/${e.user.username}`} data-testid={`link-leaderboard-avatar-${e.user.id}`}>
+                    <UserAvatar user={e.user} size="w-8 h-8" />
+                  </Link>
+                ) : (
+                  <UserAvatar user={e.user} size="w-8 h-8" />
+                )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-zinc-200 truncate">{displayName(e.user)}</p>
+                  {e.user.username ? (
+                    <Link href={`/collectors/${e.user.username}`} className="block text-sm font-medium text-zinc-200 truncate hover:text-red-400 transition-colors">
+                      {displayName(e.user)}
+                    </Link>
+                  ) : (
+                    <p className="text-sm font-medium text-zinc-200 truncate">{displayName(e.user)}</p>
+                  )}
                   <p className="text-xs text-zinc-500">Level {e.user.collectorLevel}</p>
                 </div>
                 <FollowInlineButton user={e.user} followState={followState ?? null} />

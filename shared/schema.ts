@@ -42,6 +42,10 @@ export const users = pgTable("users", {
   favoriteSets: text("favorite_sets").array(),
   marketingOptIn: boolean("marketing_opt_in").default(true).notNull(),
   pushEnabled: boolean("push_enabled").default(true).notNull(),
+  // Organic-funnel attribution: the PC binder share token that brought this
+  // user in, captured at account creation only (never user-editable — must
+  // NOT be added to the PUT /api/users allowlist).
+  signupShareToken: text("signup_share_token"),
   lastLogin: timestamp("last_login"),
   loginStreak: integer("login_streak").default(0).notNull(),
   totalLogins: integer("total_logins").default(0).notNull(),
@@ -1278,6 +1282,9 @@ export const pcBinderShareLinks = pgTable("pc_binder_share_links", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   revokedAt: timestamp("revoked_at"),
   lastAccessedAt: timestamp("last_accessed_at"),
+  // Organic-funnel analytics: raw counters (every visit / every share tap).
+  viewCount: integer("view_count").default(0).notNull(),
+  shareCount: integer("share_count").default(0).notNull(),
 }, (table) => ({
   tokenIdx: uniqueIndex("pc_binder_share_links_token_idx").on(table.token),
   binderIdx: index("pc_binder_share_links_binder_idx").on(table.binderId),
