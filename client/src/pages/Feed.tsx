@@ -35,6 +35,7 @@ interface FeedEvent {
   metadata: Record<string, unknown> | null;
   relatedType?: string | null;
   relatedId?: number | null;
+  previewImages?: string[] | null;
   image: string | null;
   createdAt: string;
   user: FeedUser;
@@ -321,15 +322,31 @@ function EventHero({ event }: { event: FeedEvent }) {
   // Binder created/shared: styled binder card with the binder name
   if (event.eventType === "binder_created" || event.eventType === "binder_shared") {
     const binderName = md.binderName as string | undefined;
+    const previews = (event.previewImages ?? []).slice(0, 3);
     return (
-      <div className="relative h-24 sm:h-28 rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 flex items-center justify-center gap-4 px-4">
+      <div className={`relative ${previews.length > 0 ? "h-32 sm:h-36" : "h-24 sm:h-28"} rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 flex items-center justify-center gap-4 px-4`}>
         <Halftone opacity={0.06} />
-        <div className="relative w-12 h-16 rounded-r-md rounded-l-sm bg-zinc-900 border border-zinc-700 shadow-lg flex items-center justify-center">
-          <div className="absolute left-1 top-1 bottom-1 w-1 rounded bg-red-600/70" />
-          <BookOpen className="w-5 h-5 text-zinc-300" />
-        </div>
+        {previews.length > 0 ? (
+          <div className="relative flex items-center">
+            {previews.map((src, i) => (
+              <img
+                key={i}
+                src={src}
+                alt="Card in binder"
+                loading="lazy"
+                className={`h-24 sm:h-28 rounded-md object-contain border border-zinc-700 bg-zinc-900 shadow-[0_6px_14px_rgba(0,0,0,0.6)] ${i > 0 ? "-ml-5" : ""}`}
+                style={{ transform: `rotate(${(i - (previews.length - 1) / 2) * 6}deg)`, zIndex: i }}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="relative w-12 h-16 rounded-r-md rounded-l-sm bg-zinc-900 border border-zinc-700 shadow-lg flex items-center justify-center">
+            <div className="absolute left-1 top-1 bottom-1 w-1 rounded bg-red-600/70" />
+            <BookOpen className="w-5 h-5 text-zinc-300" />
+          </div>
+        )}
         {binderName && (
-          <p className="relative text-sm sm:text-base font-bold text-white/90 max-w-[60%] line-clamp-2">{binderName}</p>
+          <p className="relative text-sm sm:text-base font-bold text-white/90 max-w-[50%] line-clamp-2">{binderName}</p>
         )}
       </div>
     );
@@ -394,7 +411,7 @@ function FeedDetailDialog({ detail, onClose }: { detail: FeedDetail | null; onCl
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-w-sm bg-zinc-900 border-zinc-700 text-zinc-100">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-sm rounded-lg bg-zinc-900 border-zinc-700 text-zinc-100">
         {detail.kind === "badge" ? (
           <>
             <DialogHeader>

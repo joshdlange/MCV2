@@ -252,7 +252,7 @@ export async function getFeedPage(opts: {
       : Promise.resolve({ rows: [] } as any),
     firstCardUserIds.length > 0
       ? db.execute(sql`
-          SELECT DISTINCT ON (uc.user_id) uc.user_id, c.front_image_url
+          SELECT DISTINCT ON (uc.user_id) uc.user_id, c.id AS card_id, c.front_image_url
           FROM user_collections uc
           JOIN cards c ON c.id = uc.card_id
           JOIN users u ON u.id = uc.user_id
@@ -262,28 +262,86 @@ export async function getFeedPage(opts: {
           ORDER BY uc.user_id, uc.acquired_date ASC NULLS LAST, uc.id ASC`)
       : Promise.resolve({ rows: [] } as any),
   ]);
+
+  // PC binder events: enrich with up to 3 card-front previews from the binder.
+  // binder_created points straight at the binder; binder_shared points at the
+  // share link row, so resolve link → binder first. Previews respect the
+  // owner's show_collection setting (same gate as first_card imagery).
+  const binderIdByEvent: Record<number, number> = {};
+  const createdBinderIds = rows
+    .filter(r => r.eventType === 'binder_created' && r.relatedType === 'binder' && r.relatedId)
+    .map(r => { binderIdByEvent[r.id] = r.relatedId as number; return r.relatedId as number; });
+  const sharedLinkRows = rows.filter(r => r.eventType === 'binder_shared' && r.relatedType === 'share_link' && r.relatedId);
+  if (sharedLinkRows.length > 0) {
+    try {
+      const linkIds = Array.from(new Set(sharedLinkRows.map(r => r.relatedId as number)));
+      const links: any = await db.execute(sql`
+        SELECT id, binder_id FROM pc_binder_share_links
+        WHERE id IN (${sql.join(linkIds.map(id => sql`${id}`), sql`, `)})`);
+      const binderByLink: Record<number, number> = {};
+      for (const l of links.rows ?? []) binderByLink[Number(l.id)] = Number(l.binder_id);
+      for (const r of sharedLinkRows) {
+        const bid = binderByLink[r.relatedId as number];
+        if (bid) binderIdByEvent[r.id] = bid;
+      }
+    } catch (err) {
+      console.error('[feedService] binder_shared link resolution failed (non-fatal)', err);
+    }
+  }
+  const previewsByBinder: Record<number, string[]> = {};
+  const allBinderIds = Array.from(new Set([...createdBinderIds, ...Object.values(binderIdByEvent)]));
+  if (allBinderIds.length > 0) {
+    try {
+      const previews: any = await db.execute(sql`
+        SELECT x.binder_id, x.front_image_url FROM (
+          SELECT pbc.binder_id, c.front_image_url,
+                 row_number() OVER (PARTITION BY pbc.binder_id ORDER BY pbc.id) AS rn
+          FROM pc_binder_cards pbc
+          JOIN pc_binders pb ON pb.id = pbc.binder_id
+          JOIN users u ON u.id = pb.user_id
+          JOIN cards c ON c.id = pbc.card_id
+          WHERE pbc.binder_id IN (${sql.join(allBinderIds.map(id => sql`${id}`), sql`, `)})
+            AND u.show_collection = true
+            AND c.front_image_url IS NOT NULL AND c.front_image_url != ''
+        ) x WHERE x.rn <= 3`);
+      for (const p of previews.rows ?? []) {
+        (previewsByBinder[Number(p.binder_id)] ??= []).push(p.front_image_url);
+      }
+    } catch (err) {
+      console.error('[feedService] binder preview enrichment failed (non-fatal)', err);
+    }
+  }
   const badgeIconById: Record<number, string | null> = {};
   for (const b of (badgeIcons as any).rows ?? []) badgeIconById[Number(b.id)] = b.icon_url || null;
   const cardImageById: Record<number, string | null> = {};
   for (const c of (cardImages as any).rows ?? []) cardImageById[Number(c.id)] = c.front_image_url || null;
-  const firstCardByUser: Record<number, string | null> = {};
-  for (const f of (firstCards as any).rows ?? []) firstCardByUser[Number(f.user_id)] = f.front_image_url || null;
+  const firstCardByUser: Record<number, { image: string | null; cardId: number | null }> = {};
+  for (const f of (firstCards as any).rows ?? []) {
+    firstCardByUser[Number(f.user_id)] = { image: f.front_image_url || null, cardId: f.card_id ? Number(f.card_id) : null };
+  }
 
   for (const r of rows) {
     if (r.relatedType === 'badge' && r.relatedId) imageByEvent[r.id] = badgeIconById[r.relatedId] ?? null;
     else if (r.relatedType === 'card' && r.relatedId) imageByEvent[r.id] = cardImageById[r.relatedId] ?? null;
-    else if (r.eventType === 'first_card') imageByEvent[r.id] = firstCardByUser[r.userId] ?? null;
+    else if (r.eventType === 'first_card') imageByEvent[r.id] = firstCardByUser[r.userId]?.image ?? null;
     else imageByEvent[r.id] = null;
   }
 
-  return rows.map(r => ({
+  return rows.map(r => {
+    // first_card events don't store the card at emit time — surface the
+    // resolved first card as the related entity so the client can open the
+    // same card-detail popup used everywhere else.
+    const firstCard = r.eventType === 'first_card' ? firstCardByUser[r.userId] : undefined;
+    const binderId = binderIdByEvent[r.id];
+    return {
     id: r.id,
     eventType: r.eventType,
     title: r.title,
     metadata: r.metadata ? safeParse(r.metadata) : null,
-    relatedType: r.relatedType,
-    relatedId: r.relatedId,
+    relatedType: firstCard?.cardId ? 'card' : r.relatedType,
+    relatedId: firstCard?.cardId ?? r.relatedId,
     image: imageByEvent[r.id] ?? null,
+    previewImages: binderId ? (previewsByBinder[binderId] ?? null) : null,
     createdAt: r.createdAt,
     user: {
       id: r.userId,
@@ -295,7 +353,8 @@ export async function getFeedPage(opts: {
     },
     reactions: countsByEvent[r.id] ?? {},
     myReaction: myReactions[r.id] ?? null,
-  }));
+    };
+  });
 }
 
 function safeParse(s: string): unknown {
