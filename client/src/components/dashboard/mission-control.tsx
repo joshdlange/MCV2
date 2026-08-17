@@ -22,6 +22,7 @@ type Mission = {
   headline: string;
   copy: string;
   cta: string;
+  href?: string; // defaults to /browse
 };
 
 const BUILD_YOUR_VAULT: Mission = {
@@ -29,6 +30,28 @@ const BUILD_YOUR_VAULT: Mission = {
   copy: "Every card you add grows your collection value, earns XP, and helps complete your binders.",
   cta: "Add Cards",
 };
+
+const SHOW_OFF_YOUR_PC: Mission = {
+  headline: "Show Off Your PC",
+  copy: "Build a PC binder of your favorite cards and share it — every view shows off your collection to the community.",
+  cta: "Open PC Binders",
+  href: "/pc-binders",
+};
+
+const POWER_THE_ARCHIVE: Mission = {
+  headline: "Power the Archive",
+  copy: "Spot a card missing its image? Upload yours to earn XP and help every collector who owns it.",
+  cta: "Browse Cards",
+};
+
+// Evergreen missions rotate once per day so long-time collectors aren't
+// stuck on "Build Your Vault" forever.
+const EVERGREEN: Mission[] = [BUILD_YOUR_VAULT, SHOW_OFF_YOUR_PC, POWER_THE_ARCHIVE];
+
+function todaysEvergreen(): Mission {
+  const dayIndex = Math.floor(Date.now() / 86_400_000);
+  return EVERGREEN[dayIndex % EVERGREEN.length];
+}
 
 function pickMission(stats: CollectionStats, xp: XpProgress | undefined): Mission {
   const totalCards = stats.totalCards || 0;
@@ -46,7 +69,7 @@ function pickMission(stats: CollectionStats, xp: XpProgress | undefined): Missio
 
   // Never claim the wishlist is empty unless we KNOW it is zero.
   if (!wishlistKnown) {
-    return BUILD_YOUR_VAULT;
+    return todaysEvergreen();
   }
 
   if (wishlistRaw === 0) {
@@ -66,7 +89,7 @@ function pickMission(stats: CollectionStats, xp: XpProgress | undefined): Missio
     };
   }
 
-  return BUILD_YOUR_VAULT;
+  return todaysEvergreen();
 }
 
 export function MissionCard({
@@ -127,7 +150,7 @@ export function MissionCard({
         </div>
         <div className="shrink-0 w-full sm:w-auto flex flex-col items-stretch sm:items-end gap-1.5">
           <Button
-            onClick={() => setLocation("/browse")}
+            onClick={() => setLocation(mission.href ?? "/browse")}
             data-testid="button-mission-cta"
             className="w-full sm:w-auto shrink-0 min-h-[44px] font-semibold text-white border transition-shadow hover:shadow-[0_0_24px_rgba(239,68,68,0.45)] active:scale-[0.98]"
             style={{
