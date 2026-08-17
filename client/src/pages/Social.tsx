@@ -621,10 +621,13 @@ export default function Social() {
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2 shrink-0 px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors"
-          title="Join us on Whatnot"
+          title="Join us on Whatnot — new users get $25 to spend after their first purchase"
         >
           <img src={whatnotLogo} alt="Whatnot" className="w-4 h-4 rounded-sm object-contain" />
           <span className="hidden sm:inline">Find us on Whatnot</span>
+          <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
+            $25 bonus
+          </span>
         </a>
       </div>
 
