@@ -744,7 +744,8 @@ server.listen({
         console.log(
           `[Firebase Recovery] scanned=${recovery.scanned} created=${recovery.created} ` +
           `converged=${recovery.converged} email_conflicts_skipped=${recovery.skippedEmailConflict} ` +
-          `missing_email_skipped=${recovery.skippedMissingEmail} failed=${recovery.failed}`,
+          `missing_email_skipped=${recovery.skippedMissingEmail} failed=${recovery.failed} ` +
+          `already_completed=${recovery.alreadyCompleted}`,
         );
         if (recovery.failed > 0) {
           throw new Error(`${recovery.failed} safe account recovery write(s) failed`);

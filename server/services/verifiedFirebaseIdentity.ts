@@ -1,4 +1,4 @@
-import type { Auth, DecodedIdToken, UserRecord } from "firebase-admin/auth";
+import type { Auth, DecodedIdToken } from "firebase-admin/auth";
 
 export class FirebaseSyncAuthError extends Error {
   readonly status = 401;
@@ -17,10 +17,11 @@ export interface VerifiedFirebaseIdentity {
   photoURL: string | null;
 }
 
-type FirebaseAuthVerifier = Pick<Auth, "verifyIdToken" | "getUser">;
+type FirebaseTokenVerifier = Pick<Auth, "verifyIdToken">;
+type FirebaseUserReader = Pick<Auth, "getUser">;
 
 export async function verifyFirebaseSyncIdentity(
-  auth: FirebaseAuthVerifier,
+  auth: FirebaseTokenVerifier,
   authorizationHeader: string | undefined,
 ): Promise<VerifiedFirebaseIdentity> {
   if (!authorizationHeader?.startsWith("Bearer ")) {
@@ -31,18 +32,35 @@ export async function verifyFirebaseSyncIdentity(
   if (!token) throw new FirebaseSyncAuthError();
 
   let decoded: DecodedIdToken;
-  let record: UserRecord;
   try {
     decoded = await auth.verifyIdToken(token);
-    record = await auth.getUser(decoded.uid);
   } catch {
     throw new FirebaseSyncAuthError();
   }
 
   return {
     uid: decoded.uid,
-    email: record.email ?? decoded.email ?? null,
-    displayName: record.displayName ?? decoded.name ?? null,
-    photoURL: record.photoURL ?? decoded.picture ?? null,
+    email: decoded.email ?? null,
+    displayName: decoded.name ?? null,
+    photoURL: decoded.picture ?? null,
+  };
+}
+
+/**
+ * Reads the canonical Firebase profile only when a verified UID has no
+ * database row and must be created. Existing-user sync stays local after token
+ * verification rather than making a Firebase Admin network call on every app
+ * foreground.
+ */
+export async function loadCanonicalFirebaseIdentity(
+  auth: FirebaseUserReader,
+  verifiedIdentity: VerifiedFirebaseIdentity,
+): Promise<VerifiedFirebaseIdentity> {
+  const record = await auth.getUser(verifiedIdentity.uid);
+  return {
+    uid: verifiedIdentity.uid,
+    email: record.email ?? verifiedIdentity.email,
+    displayName: record.displayName ?? verifiedIdentity.displayName,
+    photoURL: record.photoURL ?? verifiedIdentity.photoURL,
   };
 }

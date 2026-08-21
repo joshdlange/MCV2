@@ -27,10 +27,28 @@ export interface FirebaseRecoveryReport extends Omit<FirebaseRecoveryPlan, "cand
   created: number;
   converged: number;
   failed: number;
+  alreadyCompleted: boolean;
 }
+
+const RECOVERY_MARKER = "firebase_only_account_recovery_v1";
+const LOCK_TIMEOUT_MS = 30_000;
+const EXTERNAL_OPERATION_TIMEOUT_MS = 30_000;
+const ACCOUNT_CREATE_TIMEOUT_MS = 15_000;
 
 function normalizedEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+function withTimeout<T>(operation: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  let timeout: NodeJS.Timeout | undefined;
+  return Promise.race([
+    operation,
+    new Promise<T>((_resolve, reject) => {
+      timeout = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+    }),
+  ]).finally(() => {
+    if (timeout) clearTimeout(timeout);
+  });
 }
 
 /**
@@ -100,15 +118,44 @@ export async function recoverSafeFirebaseOnlyAccounts(): Promise<FirebaseRecover
   const lockClient = await pool.connect();
   let locked = false;
   try {
+    // A stalled peer deployment must not keep a replacement instance in the
+    // update gate forever. Retrying at the startup level is safer than serving
+    // a partially recovered app.
+    await lockClient.query(`SET lock_timeout = '${LOCK_TIMEOUT_MS}ms'`);
     await lockClient.query(
       "SELECT pg_advisory_lock(hashtext($1))",
       ["firebase_only_account_recovery_v1"],
     );
     locked = true;
 
+    // This marker is production-database scoped and is read while holding the
+    // same lock as recovery. Once the first safe pass completes, all future
+    // rolling-deployment instances take this O(1) path instead of repeatedly
+    // paging the whole Firebase directory.
+    const completed = await lockClient.query<{ complete: boolean }>(
+      "SELECT EXISTS (SELECT 1 FROM startup_migrations WHERE name = $1) AS complete",
+      [RECOVERY_MARKER],
+    );
+    if (completed.rows[0]?.complete) {
+      return {
+        scanned: 0,
+        created: 0,
+        converged: 0,
+        failed: 0,
+        alreadyLinked: 0,
+        skippedEmailConflict: 0,
+        skippedMissingEmail: 0,
+        alreadyCompleted: true,
+      };
+    }
+
     const [firebaseUsers, databaseUsers] = await Promise.all([
-      listFirebaseUsers(),
-      db.select({ firebaseUid: users.firebaseUid, email: users.email }).from(users),
+      withTimeout(listFirebaseUsers(), EXTERNAL_OPERATION_TIMEOUT_MS, "Firebase account listing"),
+      withTimeout(
+        db.select({ firebaseUid: users.firebaseUid, email: users.email }).from(users),
+        EXTERNAL_OPERATION_TIMEOUT_MS,
+        "Database identity listing",
+      ),
     ]);
     const plan = planSafeFirebaseAccountRecovery(firebaseUsers, databaseUsers);
     let created = 0;
@@ -118,25 +165,39 @@ export async function recoverSafeFirebaseOnlyAccounts(): Promise<FirebaseRecover
     for (const firebaseUser of plan.candidates) {
       try {
         const email = normalizedEmail(firebaseUser.email!);
-        const result = await createOrGetFirebaseUser({
-          firebaseUid: firebaseUser.uid,
-          email,
-          username: getInitialUsernameSeed(firebaseUser.displayName, email),
-          displayName: firebaseUser.displayName || getInitialUsernameSeed(null, email),
-          photoURL: firebaseUser.photoURL,
-          isAdmin: false,
-          plan: "SIDE_KICK",
-          subscriptionStatus: "active",
-          // A Firebase profile already exists, so recovered collectors should
-          // return directly to the Vault rather than repeat first-run setup.
-          onboardingComplete: true,
-        });
+        const result = await withTimeout(
+          createOrGetFirebaseUser({
+            firebaseUid: firebaseUser.uid,
+            email,
+            username: getInitialUsernameSeed(firebaseUser.displayName, email),
+            displayName: firebaseUser.displayName || getInitialUsernameSeed(null, email),
+            photoURL: firebaseUser.photoURL,
+            isAdmin: false,
+            plan: "SIDE_KICK",
+            subscriptionStatus: "active",
+            // A Firebase profile already exists, so recovered collectors should
+            // return directly to the Vault rather than repeat first-run setup.
+            onboardingComplete: true,
+          }),
+          ACCOUNT_CREATE_TIMEOUT_MS,
+          "Recovered account creation",
+        );
         if (result.created) created += 1;
         else converged += 1;
       } catch (error) {
         failed += 1;
         console.error("[Firebase Recovery] Safe account creation failed:", error);
       }
+    }
+
+    // Only mark recovery complete once every safe candidate either created or
+    // converged. A failure deliberately leaves the marker absent so the
+    // startup retry/restart path attempts recovery again.
+    if (failed === 0) {
+      await lockClient.query(
+        "INSERT INTO startup_migrations (name) VALUES ($1) ON CONFLICT (name) DO NOTHING",
+        [RECOVERY_MARKER],
+      );
     }
 
     return {
@@ -147,6 +208,7 @@ export async function recoverSafeFirebaseOnlyAccounts(): Promise<FirebaseRecover
       alreadyLinked: plan.alreadyLinked,
       skippedEmailConflict: plan.skippedEmailConflict,
       skippedMissingEmail: plan.skippedMissingEmail,
+      alreadyCompleted: false,
     };
   } finally {
     if (locked) {
@@ -155,6 +217,7 @@ export async function recoverSafeFirebaseOnlyAccounts(): Promise<FirebaseRecover
         ["firebase_only_account_recovery_v1"],
       ).catch(() => undefined);
     }
+    await lockClient.query("RESET lock_timeout").catch(() => undefined);
     lockClient.release();
   }
 }

@@ -2,10 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   FirebaseSyncAuthError,
+  loadCanonicalFirebaseIdentity,
   verifyFirebaseSyncIdentity,
 } from "../services/verifiedFirebaseIdentity";
 
-test("sync identity comes only from the verified Firebase account", async () => {
+test("existing-user sync identity comes from the verified token without a profile lookup", async () => {
   const auth = {
     verifyIdToken: async (token: string) => {
       assert.equal(token, "valid-token");
@@ -13,8 +14,22 @@ test("sync identity comes only from the verified Firebase account", async () => 
         uid: "verified-uid",
         email: "token@example.test",
         name: "Token Name",
+        picture: "https://example.test/token-avatar.png",
       };
     },
+  } as any;
+
+  const identity = await verifyFirebaseSyncIdentity(auth, "Bearer valid-token");
+  assert.deepEqual(identity, {
+    uid: "verified-uid",
+    email: "token@example.test",
+    displayName: "Token Name",
+    photoURL: "https://example.test/token-avatar.png",
+  });
+});
+
+test("missing-user creation upgrades verified claims with the canonical Firebase profile", async () => {
+  const identity = await loadCanonicalFirebaseIdentity({
     getUser: async (uid: string) => {
       assert.equal(uid, "verified-uid");
       return {
@@ -24,9 +39,13 @@ test("sync identity comes only from the verified Firebase account", async () => 
         photoURL: "https://example.test/avatar.png",
       };
     },
-  } as any;
+  } as any, {
+    uid: "verified-uid",
+    email: "token@example.test",
+    displayName: "Token Name",
+    photoURL: null,
+  });
 
-  const identity = await verifyFirebaseSyncIdentity(auth, "Bearer valid-token");
   assert.deepEqual(identity, {
     uid: "verified-uid",
     email: "canonical@example.test",
@@ -39,9 +58,6 @@ test("sync rejects missing and invalid bearer tokens", async () => {
   const auth = {
     verifyIdToken: async () => {
       throw new Error("invalid");
-    },
-    getUser: async () => {
-      throw new Error("must not matter");
     },
   } as any;
 

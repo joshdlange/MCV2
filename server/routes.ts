@@ -23,6 +23,7 @@ import { imageContributionXp, computeXpProgress } from "../shared/xp";
 import { createOrGetFirebaseUser, getInitialUsernameSeed } from "./services/firebaseUserSync";
 import {
   FirebaseSyncAuthError,
+  loadCanonicalFirebaseIdentity,
   verifyFirebaseSyncIdentity,
 } from "./services/verifiedFirebaseIdentity";
 import {
@@ -236,20 +237,24 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   app.post("/api/auth/sync", async (req, res) => {
     try {
       const { refShareToken } = req.body;
-      const identity = await verifyFirebaseSyncIdentity(
+      const verifiedIdentity = await verifyFirebaseSyncIdentity(
         admin.auth(),
         req.headers.authorization,
       );
-      const firebaseUid = identity.uid;
-      const email = identity.email;
-      const displayName = identity.displayName;
+      const firebaseUid = verifiedIdentity.uid;
 
-      console.log('Auth sync request for:', firebaseUid, email);
+      console.log('Auth sync request for:', firebaseUid, verifiedIdentity.email);
 
       // Check if user exists
       let user = await storage.getUserByFirebaseUid(firebaseUid);
       
       if (!user) {
+        const identity = await loadCanonicalFirebaseIdentity(
+          admin.auth(),
+          verifiedIdentity,
+        );
+        const email = identity.email;
+        const displayName = identity.displayName;
         // UID, email, name and photo are all sourced from Firebase Admin above,
         // never from the request body.
         const isAdminEmail = email === 'joshdlange045@gmail.com';
@@ -349,7 +354,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         console.log('Found existing user:', user.id, 'isAdmin:', user.isAdmin);
         
         // Ensure admin status is correct for known admin users
-        if (user && email === 'joshdlange045@gmail.com' && !user.isAdmin) {
+        if (user && verifiedIdentity.email === 'joshdlange045@gmail.com' && !user.isAdmin) {
           await storage.updateUser(user.id, { isAdmin: true });
           user = await storage.getUserByFirebaseUid(firebaseUid);
           console.log('Updated user admin status:', user?.isAdmin);

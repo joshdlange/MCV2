@@ -6,7 +6,10 @@ import { useAppStore } from '@/lib/store';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { registerPushNotifications } from '@/services/pushNotifications';
-import { syncFirebaseUserWithBackend } from '@/lib/backendUserSync';
+import {
+  syncFirebaseUserWithBackend,
+  type BackendUser,
+} from '@/lib/backendUserSync';
 
 interface AuthContextType {
   user: User | null;
@@ -40,11 +43,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [syncError, setSyncError] = useState(false);
   const { setCurrentUser } = useAppStore();
 
-  // Function to sync user with backend and update app store
-  const syncUserWithBackend = useCallback(async (firebaseUser: User) => {
-    const backendUser = await syncFirebaseUserWithBackend(firebaseUser);
-    console.log('User synced with backend:', backendUser);
-
+  const applyBackendUser = useCallback((backendUser: BackendUser) => {
     setCurrentUser({
       id: backendUser.id,
       name: backendUser.displayName || backendUser.username,
@@ -58,7 +57,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
   }, [setCurrentUser]);
 
-  const completeFirebaseSession = useCallback(async (firebaseUser: User) => {
+  // Network-only sync. Callers must re-check auth state before committing the
+  // returned backend identity into React or the persisted app store.
+  const syncUserWithBackend = useCallback(async (firebaseUser: User) => {
+    const backendUser = await syncFirebaseUserWithBackend(firebaseUser);
+    console.log('User synced with backend:', backendUser);
+    return backendUser;
+  }, []);
+
+  const completeFirebaseSession = useCallback(async (
+    firebaseUser: User,
+    isCurrent: () => boolean = () => auth.currentUser?.uid === firebaseUser.uid,
+  ) => {
+    if (!isCurrent()) return false;
     setLoading(true);
     setSyncError(false);
     setUser(null);
@@ -66,26 +77,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setCurrentUser(null);
 
     try {
-      await syncUserWithBackend(firebaseUser);
+      const backendUser = await syncUserWithBackend(firebaseUser);
+      if (!isCurrent()) return false;
+      applyBackendUser(backendUser);
       setUser(firebaseUser);
       setSyncError(false);
       void registerPushNotifications();
       return true;
     } catch (error) {
+      if (!isCurrent()) return false;
       console.error('Backend account sync failed; blocking app access:', error);
       setUser(null);
       setCurrentUser(null);
       setSyncError(true);
       return false;
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [setCurrentUser, syncUserWithBackend]);
+  }, [applyBackendUser, setCurrentUser, syncUserWithBackend]);
+
+  const refreshExistingSession = useCallback(async (firebaseUser: User) => {
+    try {
+      const backendUser = await syncUserWithBackend(firebaseUser);
+      if (auth.currentUser?.uid !== firebaseUser.uid) return;
+      applyBackendUser(backendUser);
+      setUser(firebaseUser);
+      setSyncError(false);
+      void registerPushNotifications();
+    } catch (error) {
+      if (auth.currentUser?.uid !== firebaseUser.uid) return;
+      console.error('Backend account refresh failed; blocking app access:', error);
+      setUser(null);
+      setCurrentUser(null);
+      setSyncError(true);
+    }
+  }, [applyBackendUser, setCurrentUser, syncUserWithBackend]);
 
   // Function to refresh user data from backend
   const refreshUser = async () => {
     if (user) {
-      await syncUserWithBackend(user);
+      const backendUser = await syncUserWithBackend(user);
+      if (auth.currentUser?.uid === user.uid) {
+        applyBackendUser(backendUser);
+      }
     }
   };
 
@@ -109,20 +143,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   useEffect(() => {
+    let disposed = false;
+    let authStateGeneration = 0;
+    let appStateListener: { remove: () => Promise<void> } | null = null;
+
+    const removeAppStateListener = async () => {
+      const listener = appStateListener;
+      appStateListener = null;
+      if (listener) {
+        await listener.remove().catch(error => {
+          console.error('Failed to remove native app-state listener:', error);
+        });
+      }
+    };
+
     try {
       // Handle redirect result from Google authentication
       handleRedirect();
 
       const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        const generation = ++authStateGeneration;
+        await removeAppStateListener();
+        if (disposed || generation !== authStateGeneration) return;
+
         if (firebaseUser) {
-          const synced = await completeFirebaseSession(firebaseUser);
+          const isCurrent = () =>
+            !disposed &&
+            generation === authStateGeneration &&
+            auth.currentUser?.uid === firebaseUser.uid;
+          const synced = await completeFirebaseSession(firebaseUser, isCurrent);
+          if (disposed || generation !== authStateGeneration) return;
 
           if (synced && Capacitor.isNativePlatform()) {
-            App.addListener('appStateChange', ({ isActive }) => {
-              if (isActive && firebaseUser) {
-                void completeFirebaseSession(firebaseUser);
+            const listener = await App.addListener('appStateChange', ({ isActive }) => {
+              if (isActive && auth.currentUser?.uid === firebaseUser.uid) {
+                // Refresh in place on resume. The initial login remains gated,
+                // but an already-valid session should not blank the app while
+                // checking backend account/subscription state.
+                void refreshExistingSession(firebaseUser);
               }
             });
+            if (disposed || generation !== authStateGeneration) {
+              await listener.remove();
+            } else {
+              appStateListener = listener;
+            }
           }
         } else {
           setUser(null);
@@ -132,13 +197,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       });
 
-      return unsubscribe;
+      return () => {
+        disposed = true;
+        authStateGeneration += 1;
+        unsubscribe();
+        void removeAppStateListener();
+      };
     } catch (error) {
       console.error('Firebase auth error:', error);
       // If Firebase auth fails, still mark as not loading
       setLoading(false);
     }
-  }, [completeFirebaseSession, setCurrentUser]);
+  }, [completeFirebaseSession, refreshExistingSession, setCurrentUser]);
 
   const value = {
     user,
