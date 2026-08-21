@@ -1,22 +1,29 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { User } from 'firebase/auth';
-import { auth, onAuthStateChanged } from '@/lib/firebase';
+import { auth, onAuthStateChanged, signOutUser } from '@/lib/firebase';
 import { handleRedirect } from '@/lib/handleRedirect';
 import { useAppStore } from '@/lib/store';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { registerPushNotifications } from '@/services/pushNotifications';
+import { syncFirebaseUserWithBackend } from '@/lib/backendUserSync';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  syncError: boolean;
   refreshUser: () => Promise<void>;
+  retrySync: () => Promise<void>;
+  signOutAfterSyncError: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  syncError: false,
   refreshUser: async () => {},
+  retrySync: async () => {},
+  signOutAfterSyncError: async () => {},
 });
 
 export const useAuth = () => {
@@ -30,51 +37,50 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [syncError, setSyncError] = useState(false);
   const { setCurrentUser } = useAppStore();
 
   // Function to sync user with backend and update app store
-  const syncUserWithBackend = async (firebaseUser: User) => {
-    try {
-      const token = await firebaseUser.getIdToken();
-      const response = await fetch('/api/auth/sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          firebaseUid: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName,
-          photoURL: firebaseUser.photoURL,
-          // Organic-funnel attribution: token saved when visiting a shared binder
-          refShareToken: (() => { try { return localStorage.getItem("mcv_ref_share_token") || undefined; } catch { return undefined; } })(),
-        }),
-      });
+  const syncUserWithBackend = useCallback(async (firebaseUser: User) => {
+    const backendUser = await syncFirebaseUserWithBackend(firebaseUser);
+    console.log('User synced with backend:', backendUser);
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('User synced with backend:', data.user);
-        
-        // Update app store with backend user data (including admin status)
-        setCurrentUser({
-          id: data.user.id,
-          name: data.user.displayName || data.user.username,
-          email: data.user.email,
-          avatar: data.user.photoURL || '',
-          isAdmin: data.user.isAdmin,
-          plan: data.user.plan,
-          subscriptionStatus: data.user.subscriptionStatus,
-          onboardingComplete: data.user.onboardingComplete || false,
-          username: data.user.username
-        });
-      } else {
-        console.error('Failed to sync user with backend');
-      }
+    setCurrentUser({
+      id: backendUser.id,
+      name: backendUser.displayName || backendUser.username,
+      email: backendUser.email,
+      avatar: backendUser.photoURL || '',
+      isAdmin: backendUser.isAdmin,
+      plan: backendUser.plan,
+      subscriptionStatus: backendUser.subscriptionStatus,
+      onboardingComplete: backendUser.onboardingComplete || false,
+      username: backendUser.username
+    });
+  }, [setCurrentUser]);
+
+  const completeFirebaseSession = useCallback(async (firebaseUser: User) => {
+    setLoading(true);
+    setSyncError(false);
+    setUser(null);
+    // Never show a persisted user from another or partially-created session.
+    setCurrentUser(null);
+
+    try {
+      await syncUserWithBackend(firebaseUser);
+      setUser(firebaseUser);
+      setSyncError(false);
+      void registerPushNotifications();
+      return true;
     } catch (error) {
-      console.error('Error syncing user:', error);
+      console.error('Backend account sync failed; blocking app access:', error);
+      setUser(null);
+      setCurrentUser(null);
+      setSyncError(true);
+      return false;
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [setCurrentUser, syncUserWithBackend]);
 
   // Function to refresh user data from backend
   const refreshUser = async () => {
@@ -83,32 +89,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const retrySync = async () => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) {
+      setSyncError(false);
+      setUser(null);
+      setCurrentUser(null);
+      return;
+    }
+    await completeFirebaseSession(firebaseUser);
+  };
+
+  const signOutAfterSyncError = async () => {
+    await signOutUser();
+    setUser(null);
+    setCurrentUser(null);
+    setSyncError(false);
+    setLoading(false);
+  };
+
   useEffect(() => {
     try {
       // Handle redirect result from Google authentication
       handleRedirect();
 
       const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-        setUser(firebaseUser);
-        
         if (firebaseUser) {
-          await syncUserWithBackend(firebaseUser);
+          const synced = await completeFirebaseSession(firebaseUser);
 
-          // Android push: no-ops on web/iOS, and never throws.
-          void registerPushNotifications();
-
-          if (Capacitor.isNativePlatform()) {
+          if (synced && Capacitor.isNativePlatform()) {
             App.addListener('appStateChange', ({ isActive }) => {
               if (isActive && firebaseUser) {
-                syncUserWithBackend(firebaseUser);
+                void completeFirebaseSession(firebaseUser);
               }
             });
           }
         } else {
+          setUser(null);
           setCurrentUser(null);
+          setSyncError(false);
+          setLoading(false);
         }
-        
-        setLoading(false);
       });
 
       return unsubscribe;
@@ -117,12 +138,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // If Firebase auth fails, still mark as not loading
       setLoading(false);
     }
-  }, [setCurrentUser]);
+  }, [completeFirebaseSession, setCurrentUser]);
 
   const value = {
     user,
     loading,
+    syncError,
     refreshUser,
+    retrySync,
+    signOutAfterSyncError,
   };
 
   return (

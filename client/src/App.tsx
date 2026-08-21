@@ -11,7 +11,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileHeader } from "@/components/layout/mobile-header";
 import { useAppStore } from "@/lib/store";
-import { Search, MessageCircle } from "lucide-react";
+import { AlertTriangle, LogOut, MessageCircle, RefreshCw, Search } from "lucide-react";
 import { useLocation } from "wouter";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -252,12 +252,53 @@ function Router() {
 }
 
 function AuthenticatedApp() {
-  const { user, loading } = useAuth();
+  const {
+    user,
+    loading,
+    syncError,
+    retrySync,
+    signOutAfterSyncError,
+  } = useAuth();
   
   useBackButton();
 
   if (loading) {
     return <PageSpinner />;
+  }
+
+  if (syncError) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
+        <div className="w-full max-w-md rounded-2xl border border-red-900/70 bg-zinc-950 p-7 text-center shadow-2xl">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-red-950 text-red-400">
+            <AlertTriangle className="h-7 w-7" />
+          </div>
+          <h1 className="text-2xl font-bold">We couldn't finish setting up your Vault</h1>
+          <p className="mt-3 text-sm leading-6 text-zinc-400">
+            Your sign-in succeeded, but your collector account is not ready yet.
+            Retry now, or sign out and try another account.
+          </p>
+          <div className="mt-6 grid gap-3">
+            <button
+              type="button"
+              onClick={() => void retrySync()}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 font-semibold hover:bg-red-500"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Retry account setup
+            </button>
+            <button
+              type="button"
+              onClick={() => void signOutAfterSyncError()}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-zinc-700 px-4 font-semibold text-zinc-200 hover:bg-zinc-900"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
