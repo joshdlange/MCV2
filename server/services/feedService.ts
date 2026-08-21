@@ -2,6 +2,7 @@ import { db } from '../db';
 import { feedEvents, feedReactions, xpEvents, users, badges } from '../../shared/schema';
 import { and, eq, sql, desc, lt, inArray } from 'drizzle-orm';
 import { computeXpProgress } from '../../shared/xp';
+import { isDisplayableCardImageUrl } from '../../shared/cardImageUrls';
 
 // ---------------------------------------------------------------------------
 // Feed v1 — app-generated activity events, reactions, XP, leaderboards.
@@ -314,10 +315,17 @@ export async function getFeedPage(opts: {
   const badgeIconById: Record<number, string | null> = {};
   for (const b of (badgeIcons as any).rows ?? []) badgeIconById[Number(b.id)] = b.icon_url || null;
   const cardImageById: Record<number, string | null> = {};
-  for (const c of (cardImages as any).rows ?? []) cardImageById[Number(c.id)] = c.front_image_url || null;
+  for (const c of (cardImages as any).rows ?? []) {
+    cardImageById[Number(c.id)] = isDisplayableCardImageUrl(c.front_image_url)
+      ? c.front_image_url
+      : null;
+  }
   const firstCardByUser: Record<number, { image: string | null; cardId: number | null }> = {};
   for (const f of (firstCards as any).rows ?? []) {
-    firstCardByUser[Number(f.user_id)] = { image: f.front_image_url || null, cardId: f.card_id ? Number(f.card_id) : null };
+    firstCardByUser[Number(f.user_id)] = {
+      image: isDisplayableCardImageUrl(f.front_image_url) ? f.front_image_url : null,
+      cardId: f.card_id ? Number(f.card_id) : null,
+    };
   }
 
   for (const r of rows) {

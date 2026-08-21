@@ -207,14 +207,17 @@ function EventHero({ event }: { event: FeedEvent }) {
   const md = (event.metadata as any) ?? {};
   const tier = eventTier(event);
   const isTop10 = event.eventType === "badge_earned" && /top 10 collector/i.test(event.title);
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
+  const displayImage = event.image && event.image !== failedImageUrl ? event.image : null;
 
   // Top 10 Collector: major-achievement gold treatment
   if (isTop10) {
     return (
       <div className="relative h-36 sm:h-40 rounded-lg overflow-hidden border border-amber-500/40 bg-zinc-950 flex items-center justify-center gap-4 px-4">
         <Halftone opacity={0.08} />
-        {event.image && (
-          <img src={event.image} alt="Top 10 Collector badge" loading="lazy"
+        {displayImage && (
+          <img src={displayImage} alt="Top 10 Collector badge" loading="lazy"
+            onError={() => setFailedImageUrl(displayImage)}
             className="w-24 h-24 sm:w-28 sm:h-28 object-contain rounded-full drop-shadow-[0_0_20px_rgba(251,191,36,0.5)] relative" />
         )}
         <div className="relative">
@@ -235,9 +238,10 @@ function EventHero({ event }: { event: FeedEvent }) {
     const variant = (["ring", "halo", "gold"] as const)[event.id % 3];
     const gold = variant === "gold";
     const halo = variant === "halo";
-    const badgeImg = event.image ? (
+    const badgeImg = displayImage ? (
       <div className="w-16 h-16 sm:w-[4.75rem] sm:h-[4.75rem] rounded-full overflow-hidden">
-        <img src={event.image} alt="Badge" loading="lazy"
+        <img src={displayImage} alt="Badge" loading="lazy"
+          onError={() => setFailedImageUrl(displayImage)}
           className="w-full h-full object-cover scale-110" />
       </div>
     ) : (
@@ -275,12 +279,13 @@ function EventHero({ event }: { event: FeedEvent }) {
   }
 
   // Card image events (first card, image approved, etc.): card front on a blurred backdrop
-  if (event.image) {
+  if (displayImage) {
     return (
       <div className={`relative ${tier === "hero" ? "h-40 sm:h-44" : "h-32 sm:h-36"} rounded-lg overflow-hidden border border-white/10 bg-zinc-950`}>
-        <div className="absolute inset-0 bg-center bg-cover blur-xl opacity-40 scale-110" style={{ backgroundImage: `url(${event.image})` }} />
+        <div className="absolute inset-0 bg-center bg-cover blur-xl opacity-40 scale-110" style={{ backgroundImage: `url(${displayImage})` }} />
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/70 via-transparent to-transparent" />
-        <img src={event.image} alt="Card" loading="lazy"
+        <img src={displayImage} alt="Card" loading="lazy"
+          onError={() => setFailedImageUrl(displayImage)}
           className="relative h-full mx-auto py-2 object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.65)]" />
       </div>
     );
@@ -388,6 +393,7 @@ export interface FeedDetail {
 
 function FeedDetailDialog({ detail, onClose }: { detail: FeedDetail | null; onClose: () => void }) {
   const event = detail?.event ?? null;
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
 
   // Badge details: enrich from the badges catalog (description, rarity).
   const { data: badges } = useQuery<any[]>({
@@ -408,6 +414,8 @@ function FeedDetailDialog({ detail, onClose }: { detail: FeedDetail | null; onCl
 
   if (!detail || !event) return null;
   const md = (event.metadata as any) ?? {};
+  const detailImage = card?.frontImageUrl ?? event.image;
+  const displayDetailImage = detailImage && detailImage !== failedImageUrl ? detailImage : null;
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -454,10 +462,11 @@ function FeedDetailDialog({ detail, onClose }: { detail: FeedDetail | null; onCl
               <DialogTitle className="text-zinc-100">{card?.name ?? "Card details"}</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col items-center gap-3 py-2">
-              {(card?.frontImageUrl || event.image) && (
+              {displayDetailImage && (
                 <img
-                  src={card?.frontImageUrl ?? event.image!}
+                  src={displayDetailImage}
                   alt={card?.name ?? "Card"}
+                  onError={() => setFailedImageUrl(displayDetailImage)}
                   className="max-h-72 rounded-lg object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.65)]"
                 />
               )}

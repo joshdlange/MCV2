@@ -25,6 +25,7 @@ import {
   decideSetCheckpointCompleted,
   isReplaceableLegacyCardPlaceholderUrl,
 } from "../services/driveImageSync";
+import { isDisplayableCardImageUrl } from "../../shared/cardImageUrls";
 
 const TAG = `drive-sync-test-${Date.now()}`;
 
@@ -337,4 +338,17 @@ test("only the verified dead legacy placeholder may be replaced", () => {
     "a real card URL is never replaceable",
   );
   assert.equal(isReplaceableLegacyCardPlaceholderUrl(null), false);
+  assert.equal(
+    isDisplayableCardImageUrl(
+      "https://res.cloudinary.com/dlwfuryyz/image/upload/v1748442577/card-placeholder_ysozlo.png",
+    ),
+    false,
+    "the dead placeholder must never be rendered as a card image",
+  );
+  assert.equal(
+    isDisplayableCardImageUrl("https://example.com/real-card.jpg"),
+    true,
+    "a real non-empty card image remains displayable",
+  );
+  assert.equal(isDisplayableCardImageUrl(""), false);
 });

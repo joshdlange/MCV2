@@ -1311,7 +1311,10 @@ export async function buildDriveCleanupReport(): Promise<DriveCleanupReport> {
 // Never modifies Drive, never creates cards, never touches user collections.
 
 import { driveImageImports } from '../../shared/schema';
+import { isReplaceableLegacyCardPlaceholderUrl } from '../../shared/cardImageUrls';
 import { cloudinary } from '../cloudinary';
+
+export { isReplaceableLegacyCardPlaceholderUrl } from '../../shared/cardImageUrls';
 
 const IMPORT_FOLDER = 'marvel-cards/drive-sync';
 const IMPORT_MAX_IMAGE_BYTES = 15 * 1024 * 1024;
@@ -1320,15 +1323,6 @@ const IMPORT_UPLOAD_TIMEOUT_MS = 60_000;
 const CLOUDINARY_MAX_ATTEMPTS = 3;
 const IMPORT_DELAY_MS = 400; // pause between folders so the server stays responsive
 const IMPORT_LOCK_KEY = 'drive-image-import';
-// This is the one verified legacy placeholder asset that is now a 404 in
-// Cloudinary. It is not a card image, so it is safe to replace—but no other
-// populated URL is ever considered replaceable by this importer.
-const LEGACY_DEAD_CARD_PLACEHOLDER_URL =
-  'https://res.cloudinary.com/dlwfuryyz/image/upload/v1748442577/card-placeholder_ysozlo.png';
-
-export function isReplaceableLegacyCardPlaceholderUrl(url: string | null | undefined): boolean {
-  return (url ?? '').trim().split(/[?#]/, 1)[0] === LEGACY_DEAD_CARD_PLACEHOLDER_URL;
-}
 
 export interface DriveImportReport {
   batchId: string;
