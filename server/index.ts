@@ -1,13 +1,22 @@
 import express, { type Request, Response, NextFunction } from "express";
 import compression from "compression";
-import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
-import { startBackgroundPricing } from "./background-pricing";
-import { warmPool } from "./db";
+import { createServer } from "http";
+import { installStartupGate } from "./startupGate";
 import path from "path";
 import fs from "fs";
 
 const app = express();
+const server = createServer(app);
+
+function log(message: string, source = "express") {
+  const formattedTime = new Date().toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+  console.log(`${formattedTime} [${source}] ${message}`);
+}
 
 // CRITICAL: Stripe webhook needs raw body for signature verification
 // This MUST come BEFORE express.json() middleware
@@ -59,7 +68,42 @@ app.use((req, res, next) => {
   next();
 });
 
+// Keep already-loaded clients able to fetch hashed assets while a new instance
+// finishes initialization. index.html is deliberately excluded until ready.
+if (app.get("env") === "production") {
+  const distPath = path.resolve(import.meta.dirname, "public");
+  if (fs.existsSync(distPath)) {
+    app.use(express.static(distPath, {
+      index: false,
+      setHeaders(res, filePath) {
+        if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        } else {
+          res.setHeader("Cache-Control", "no-cache");
+        }
+      },
+    }));
+  }
+}
+
+const startupGate = installStartupGate(app);
+const port = process.env.PORT || 5000;
+
+server.on("error", (error) => {
+  console.error("HTTP server failed:", error);
+  process.exit(1);
+});
+
+server.listen({
+  port,
+  host: "0.0.0.0",
+  reusePort: true,
+}, () => {
+  log(`startup listener open on port ${port}`);
+});
+
 (async () => {
+  const { warmPool } = await import("./db");
   await warmPool();
 
   // Idempotent startup migration: trusted uploader flag (bypasses image approval queue).
@@ -685,7 +729,8 @@ app.use((req, res, next) => {
     console.error('Startup fix (archived collection rows) failed:', error);
   }
 
-  const server = await registerRoutes(app);
+  const { registerRoutes } = await import("./routes");
+  await registerRoutes(app, server);
 
   // Start background services
   console.log('Starting background services...');
@@ -705,27 +750,21 @@ app.use((req, res, next) => {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
+  const { setupVite, serveStatic } = await import("./vite");
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // Use Railway's dynamic port in production, fallback to 5000 for development
-  const port = process.env.PORT || 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
+  startupGate.markReady();
+  log(`application ready on port ${port}`);
 
-    // Kick off the heavy data-fix seeds now that the port is open (see
-    // runDataFixSeeds above — deferred so slow first runs can't fail the
-    // deploy health check).
-    runDataFixSeeds().catch((error) => {
-      console.error('Deferred data-fix seeds failed:', error);
-    });
+  // Kick off the heavy data-fix seeds now that the app is ready (see
+  // runDataFixSeeds above — deferred so slow first runs can't fail startup).
+  runDataFixSeeds().catch((error) => {
+    console.error('Deferred data-fix seeds failed:', error);
+  });
 
 
     // Nightly pricing backfill: prices cards that have an image but no
@@ -785,8 +824,6 @@ app.use((req, res, next) => {
     }
     
 
-  });
-  
   // Handle uncaught exceptions and unhandled rejections to prevent crashes
   process.on('uncaughtException', (error) => {
     console.error('Uncaught Exception:', error);

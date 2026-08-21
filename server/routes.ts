@@ -20,6 +20,7 @@ import { uploadImage } from "./cloudinary";
 import { db } from "./db";
 import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userWishlists, badges, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks, blocks, friends, userScanLogs, pcBinders, pcBinderCards, pcBinderShareLinks, PC_BINDER_CATEGORIES, SIDE_KICK_CARD_LIMIT, upcomingSetCandidates, upcomingSets as upcomingSetsTable } from "../shared/schema";
 import { imageContributionXp, computeXpProgress } from "../shared/xp";
+import { createOrGetFirebaseUser } from "./services/firebaseUserSync";
 import {
   computeUserXp,
   getRecentXpEvents,
@@ -173,20 +174,10 @@ function validateCriticalDependencies() {
   console.log('Core dependency validation passed: collection & wishlist endpoints ready');
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express, existingServer?: Server): Promise<Server> {
   
   validateCriticalDependencies();
   
-  // Health check endpoint for deployment
-  app.get("/health", (req, res) => {
-    res.json({ 
-      status: "healthy",
-      message: "Marvelous Card Vault API is running",
-      timestamp: new Date().toISOString(),
-      version: "1.0.0"
-    });
-  });
-
   app.get("/.well-known/assetlinks.json", (req, res) => {
     const assetLinks = [
       {
@@ -286,14 +277,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           subscriptionStatus: 'active'
         };
         
-        user = await storage.createUser(userData);
-        console.log('Created new user:', user.id, 'isAdmin:', user.isAdmin);
+        const syncResult = await createOrGetFirebaseUser(userData);
+        user = syncResult.user;
+        if (syncResult.created) {
+          console.log('Created new user:', user.id, 'isAdmin:', user.isAdmin);
+        } else {
+          console.log('Auth sync converged on concurrently-created user:', user.id);
+        }
 
         // Organic-funnel attribution: if this signup arrived via a shared PC
         // binder link, stamp the token on the new account (creation only —
         // never updatable later). Validated against real tokens; failures
         // never block signup.
-        if (refShareToken && typeof refShareToken === 'string' && refShareToken.length <= 64) {
+        if (syncResult.created && refShareToken && typeof refShareToken === 'string' && refShareToken.length <= 64) {
           try {
             const [refLink] = await db
               .select({ id: pcBinderShareLinks.id })
@@ -313,7 +309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // so we have their actual chosen username, not just email prefix
         
         // Auto-friend new users with Joshua (admin user ID: 337)
-        if (!isAdminEmail && user.id !== 337) {
+        if (syncResult.created && !isAdminEmail && user.id !== 337) {
           // Follow system: instant mutual follow so every new collector starts
           // with 1 follower and 1 friend (the creator). Legacy friends row is
           // still written below for the older Social surfaces.
@@ -13247,6 +13243,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error('[XP] Startup backfill error:', err);
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
+  return existingServer ?? createServer(app);
 }

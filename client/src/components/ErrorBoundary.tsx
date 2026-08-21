@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { AlertTriangle, Home, RefreshCw, RotateCcw } from "lucide-react";
+import { reloadOnceForStaleDeployChunk } from "@/lib/deployRecovery";
 
 interface Props {
   children: ReactNode;
@@ -23,6 +24,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: { componentStack?: string | null }) {
     console.error("ErrorBoundary caught an error:", error, errorInfo);
+    reloadOnceForStaleDeployChunk(error);
   }
 
   handleRetry = () => {
