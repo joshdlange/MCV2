@@ -11,7 +11,7 @@
     "db:push": "drizzle-kit push",
     "test:badges": "tsx --test server/tests/never-leave-you-again.test.ts",
     "test:drive-sync": "tsx --test server/tests/drive-sync-durable.test.ts",
-    "test:release": "tsx --test server/tests/startup-gate.test.ts client/src/lib/deployRecovery.test.ts client/src/lib/backendUserSync.test.ts server/tests/firebase-user-sync.test.ts"
+    "test:release": "tsx --test server/tests/startup-gate.test.ts client/src/lib/deployRecovery.test.ts client/src/lib/backendUserSync.test.ts server/tests/firebase-user-sync.test.ts server/tests/firebase-user-recovery.test.ts server/tests/verified-firebase-identity.test.ts"
   },
   "dependencies": {
     "@capacitor-community/apple-sign-in": "^7.1.0",

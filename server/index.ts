@@ -732,6 +732,35 @@ server.listen({
   const { registerRoutes } = await import("./routes");
   await registerRoutes(app, server);
 
+  // Production-only, safe account recovery: Firebase identities with no user
+  // row and no existing email match are restored before the app becomes ready.
+  // Same-email identities are deliberately skipped to avoid unsafe merges.
+  if (app.get("env") === "production") {
+    const { recoverSafeFirebaseOnlyAccounts } = await import("./services/firebaseUserRecovery");
+    const maxRecoveryAttempts = 5;
+    for (let attempt = 1; attempt <= maxRecoveryAttempts; attempt += 1) {
+      try {
+        const recovery = await recoverSafeFirebaseOnlyAccounts();
+        console.log(
+          `[Firebase Recovery] scanned=${recovery.scanned} created=${recovery.created} ` +
+          `converged=${recovery.converged} email_conflicts_skipped=${recovery.skippedEmailConflict} ` +
+          `missing_email_skipped=${recovery.skippedMissingEmail} failed=${recovery.failed}`,
+        );
+        if (recovery.failed > 0) {
+          throw new Error(`${recovery.failed} safe account recovery write(s) failed`);
+        }
+        break;
+      } catch (error) {
+        console.error(
+          `[Firebase Recovery] Required startup recovery attempt ${attempt}/${maxRecoveryAttempts} failed:`,
+          error,
+        );
+        if (attempt === maxRecoveryAttempts) throw error;
+        await new Promise(resolve => setTimeout(resolve, 1000 * (2 ** (attempt - 1))));
+      }
+    }
+  }
+
   // Start background services
   console.log('Starting background services...');
   // Background pricing disabled to conserve eBay API calls

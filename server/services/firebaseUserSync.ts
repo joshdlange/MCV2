@@ -8,6 +8,17 @@ export interface FirebaseUserSyncResult {
   created: boolean;
 }
 
+export function getInitialUsernameSeed(
+  displayName: string | null | undefined,
+  email: string,
+): string {
+  const candidate = displayName?.trim();
+  if (candidate && /^[a-zA-Z0-9][a-zA-Z0-9_-]{2,39}$/.test(candidate)) {
+    return candidate;
+  }
+  return email.split("@")[0] || "collector";
+}
+
 function usernameCandidates(baseUsername: string, firebaseUid: string): string[] {
   const base = baseUsername.trim().slice(0, 40) || "collector";
   const stableSuffix = crypto

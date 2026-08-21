@@ -9,8 +9,10 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   updateProfile,
-  type Auth 
+  type Auth,
+  type User,
 } from "firebase/auth";
+import { syncFirebaseUserWithBackend } from "./backendUserSync";
 
 // Detect if running in native Capacitor app (Android/iOS)
 function isNativeApp(): boolean {
@@ -54,57 +56,38 @@ export { auth };
 const provider = new GoogleAuthProvider();
 
 // Sync user with backend after authentication
-const syncUserWithBackend = async (user: any) => {
+const syncUserWithBackend = async (user: User) => {
   try {
-    const response = await fetch('/api/auth/sync', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        firebaseUid: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL,
-        // Organic-funnel attribution: token saved when visiting a shared binder
-        refShareToken: (() => { try { return localStorage.getItem("mcv_ref_share_token") || undefined; } catch { return undefined; } })(),
-      }),
+    const backendUser = await syncFirebaseUserWithBackend(user);
+    console.log('User synced with backend:', backendUser);
+      
+    // Update app store with backend user data
+    const { useAppStore } = await import('@/lib/store');
+    useAppStore.getState().setCurrentUser({
+      id: backendUser.id,
+      name: backendUser.displayName || backendUser.username,
+      email: backendUser.email,
+      avatar: backendUser.photoURL || '',
+      isAdmin: backendUser.isAdmin,
+      plan: backendUser.plan,
+      subscriptionStatus: backendUser.subscriptionStatus,
+      onboardingComplete: backendUser.onboardingComplete,
+      username: backendUser.username
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      console.log('User synced with backend:', data.user);
-      
-      // Update app store with backend user data
-      const { useAppStore } = await import('@/lib/store');
-      useAppStore.getState().setCurrentUser({
-        id: data.user.id,
-        name: data.user.displayName || data.user.username,
-        email: data.user.email,
-        avatar: data.user.photoURL || '',
-        isAdmin: data.user.isAdmin,
-        plan: data.user.plan,
-        subscriptionStatus: data.user.subscriptionStatus,
-        onboardingComplete: data.user.onboardingComplete,
-        username: data.user.username
-      });
-
-      // Check if user selected Super Hero plan during login
-      const selectedPlan = localStorage.getItem('selectedPlan');
-      if (selectedPlan === 'SUPER_HERO' && data.user.plan === 'SIDE_KICK') {
-        localStorage.removeItem('selectedPlan');
-        // Store a flag to show upgrade modal on next render
-        // This lets the app handle the upgrade flow properly through the UI
-        sessionStorage.setItem('showUpgradeOnLoad', 'true');
-        // Navigate to profile which has the upgrade button visible
-        setTimeout(() => {
-          window.location.href = '/profile';
-        }, 500);
-      } else if (selectedPlan) {
-        localStorage.removeItem('selectedPlan');
-      }
-    } else {
-      console.error('Failed to sync user with backend');
+    // Check if user selected Super Hero plan during login
+    const selectedPlan = localStorage.getItem('selectedPlan');
+    if (selectedPlan === 'SUPER_HERO' && backendUser.plan === 'SIDE_KICK') {
+      localStorage.removeItem('selectedPlan');
+      // Store a flag to show upgrade modal on next render
+      // This lets the app handle the upgrade flow properly through the UI
+      sessionStorage.setItem('showUpgradeOnLoad', 'true');
+      // Navigate to profile which has the upgrade button visible
+      setTimeout(() => {
+        window.location.href = '/profile';
+      }, 500);
+    } else if (selectedPlan) {
+      localStorage.removeItem('selectedPlan');
     }
   } catch (error) {
     console.error('Error syncing user:', error);
@@ -179,12 +162,7 @@ export const signUpWithEmail = async (email: string, password: string, displayNa
     // Update the user's display name
     if (result.user) {
       await updateProfile(result.user, { displayName });
-      await syncUserWithBackend({
-        uid: result.user.uid,
-        email: result.user.email,
-        displayName: displayName,
-        photoURL: result.user.photoURL
-      });
+      await syncUserWithBackend(result.user);
     }
     
     return result;
@@ -199,12 +177,7 @@ export const signInWithEmail = async (email: string, password: string) => {
     const result = await signInWithEmailAndPassword(auth, email, password);
     
     if (result.user) {
-      await syncUserWithBackend({
-        uid: result.user.uid,
-        email: result.user.email,
-        displayName: result.user.displayName,
-        photoURL: result.user.photoURL
-      });
+      await syncUserWithBackend(result.user);
     }
     
     return result;

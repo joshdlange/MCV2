@@ -20,7 +20,11 @@ import { uploadImage } from "./cloudinary";
 import { db } from "./db";
 import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userWishlists, badges, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks, blocks, friends, userScanLogs, pcBinders, pcBinderCards, pcBinderShareLinks, PC_BINDER_CATEGORIES, SIDE_KICK_CARD_LIMIT, upcomingSetCandidates, upcomingSets as upcomingSetsTable } from "../shared/schema";
 import { imageContributionXp, computeXpProgress } from "../shared/xp";
-import { createOrGetFirebaseUser } from "./services/firebaseUserSync";
+import { createOrGetFirebaseUser, getInitialUsernameSeed } from "./services/firebaseUserSync";
+import {
+  FirebaseSyncAuthError,
+  verifyFirebaseSyncIdentity,
+} from "./services/verifiedFirebaseIdentity";
 import {
   computeUserXp,
   getRecentXpEvents,
@@ -231,17 +235,14 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   // Auth Routes - Sync Firebase user with backend
   app.post("/api/auth/sync", async (req, res) => {
     try {
-      const { firebaseUid, email, displayName, refShareToken } = req.body;
-      
-      if (!firebaseUid) {
-        return res.status(400).json({ message: 'Firebase UID is required' });
-      }
-
-      // Apple sign-in users may have no email — look them up by UID first
-      const isAppleUser = firebaseUid.startsWith('apple_');
-      if (!email && !isAppleUser) {
-        return res.status(400).json({ message: 'Email is required for non-Apple sign-in' });
-      }
+      const { refShareToken } = req.body;
+      const identity = await verifyFirebaseSyncIdentity(
+        admin.auth(),
+        req.headers.authorization,
+      );
+      const firebaseUid = identity.uid;
+      const email = identity.email;
+      const displayName = identity.displayName;
 
       console.log('Auth sync request for:', firebaseUid, email);
 
@@ -249,29 +250,16 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       let user = await storage.getUserByFirebaseUid(firebaseUid);
       
       if (!user) {
-        // Create new user - check if this should be an admin user.
-        // SECURITY: the admin grant must never trust the client-supplied
-        // email/uid alone (this endpoint is unauthenticated). Only grant
-        // admin when a verified Firebase ID token proves the email AND uid.
-        let isAdminEmail = false;
-        if (email === 'joshdlange045@gmail.com') {
-          try {
-            const authHeader = req.headers.authorization;
-            if (authHeader?.startsWith('Bearer ')) {
-              const decoded = await admin.auth().verifyIdToken(authHeader.substring(7));
-              isAdminEmail = decoded.email === 'joshdlange045@gmail.com' && decoded.uid === firebaseUid;
-            }
-          } catch { /* unverifiable → no admin */ }
-          if (!isAdminEmail) {
-            console.warn('Refused admin grant on unverified sync for', firebaseUid);
-          }
-        }
+        // UID, email, name and photo are all sourced from Firebase Admin above,
+        // never from the request body.
+        const isAdminEmail = email === 'joshdlange045@gmail.com';
         const fallbackEmail = email || `${firebaseUid}@apple.local`;
         const userData = {
           firebaseUid,
-          username: fallbackEmail.split('@')[0],
+          username: getInitialUsernameSeed(displayName, fallbackEmail),
           email: fallbackEmail,
           displayName: displayName || fallbackEmail.split('@')[0],
+          photoURL: identity.photoURL,
           isAdmin: isAdminEmail,
           plan: 'SIDE_KICK',
           subscriptionStatus: 'active'
@@ -386,6 +374,12 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       
       res.json({ user });
     } catch (error) {
+      if (error instanceof FirebaseSyncAuthError) {
+        return res.status(error.status).json({
+          message: error.message,
+          code: error.code,
+        });
+      }
       console.error('Auth sync error:', error);
       res.status(500).json({ message: 'Failed to sync user' });
     }
