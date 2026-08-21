@@ -169,6 +169,7 @@ interface DriveImportSummary {
   eligibleFolders: number;
   uploadedImages: number;
   updatedCardRecords: number;
+  replacedDeadPlaceholders: number;
   skippedExistingImages: number;
   skippedAlreadyImported: number;
   skippedUnmatchedFolders: number;
@@ -477,6 +478,7 @@ function DriveSyncCard() {
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 text-xs max-w-2xl">
               <Stat label="Images Uploaded" value={displaySummary?.uploadedImages ?? 0} tone="green" />
               <Stat label="Cards Updated" value={displaySummary?.updatedCardRecords ?? 0} tone="green" />
+              <Stat label="Dead Placeholders Replaced" value={displaySummary?.replacedDeadPlaceholders ?? 0} tone="green" />
               <Stat label="Skipped: Already Imported" value={displaySummary?.skippedAlreadyImported ?? 0} />
               <Stat label="Skipped: Has Image" value={displaySummary?.skippedExistingImages ?? 0} />
               <Stat label="Skipped: Unmatched" value={displaySummary?.skippedUnmatchedFolders ?? 0} />

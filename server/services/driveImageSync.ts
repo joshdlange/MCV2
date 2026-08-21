@@ -1320,6 +1320,15 @@ const IMPORT_UPLOAD_TIMEOUT_MS = 60_000;
 const CLOUDINARY_MAX_ATTEMPTS = 3;
 const IMPORT_DELAY_MS = 400; // pause between folders so the server stays responsive
 const IMPORT_LOCK_KEY = 'drive-image-import';
+// This is the one verified legacy placeholder asset that is now a 404 in
+// Cloudinary. It is not a card image, so it is safe to replace—but no other
+// populated URL is ever considered replaceable by this importer.
+const LEGACY_DEAD_CARD_PLACEHOLDER_URL =
+  'https://res.cloudinary.com/dlwfuryyz/image/upload/v1748442577/card-placeholder_ysozlo.png';
+
+export function isReplaceableLegacyCardPlaceholderUrl(url: string | null | undefined): boolean {
+  return (url ?? '').trim().split(/[?#]/, 1)[0] === LEGACY_DEAD_CARD_PLACEHOLDER_URL;
+}
 
 export interface DriveImportReport {
   batchId: string;
@@ -1341,6 +1350,7 @@ export interface DriveImportReport {
     eligibleFolders: number;
     uploadedImages: number;
     updatedCardRecords: number;
+    replacedDeadPlaceholders: number;
     skippedExistingImages: number;
     skippedAlreadyImported: number;
     skippedUnmatchedFolders: number;
@@ -1446,7 +1456,7 @@ async function uploadDriveImageToCloudinary(
           public_id: publicId,
           // This deterministic object is owned by the Drive sync. Replacing an
           // orphan left by a prior failed DB transaction is safe; card URLs are
-          // separately protected by an atomic "only if still NULL" update.
+          // separately protected by an atomic expected-current-value update.
           overwrite: true,
           resource_type: 'image',
           timeout: IMPORT_UPLOAD_TIMEOUT_MS,
@@ -1512,7 +1522,7 @@ export async function runDriveImageImport(options: {
     options: { maxFolders, overwrite },
     summary: {
       eligibleFolders: 0, uploadedImages: 0, updatedCardRecords: 0,
-      skippedExistingImages: 0, skippedAlreadyImported: 0,
+      replacedDeadPlaceholders: 0, skippedExistingImages: 0, skippedAlreadyImported: 0,
       skippedUnmatchedFolders: 0, skippedWrongImageCount: 0,
       skippedStructureOddities: 0, skippedUnresolvedFrontBack: 0,
       skippedDuplicateDriveFileIds: 0, skippedDuplicateCardTargets: 0,
@@ -1803,13 +1813,16 @@ export async function runDriveImageImport(options: {
       ];
 
       for (const { side, file, existingUrl } of sides) {
+        const replacingDeadPlaceholder = isReplaceableLegacyCardPlaceholderUrl(existingUrl);
         // Idempotency: already imported and unchanged → skip
         if (priorByFileId.has(file.driveFileId) && priorByFileId.get(file.driveFileId) === (file.modifiedTime ?? null)) {
           report.summary.skippedAlreadyImported++;
           continue;
         }
-        // Never overwrite existing card images.
-        if (existingUrl) {
+        // Never overwrite an existing card image. The exact legacy 404
+        // placeholder is the sole exception: it is a known non-image and must
+        // be recoverable without weakening protection for real URLs.
+        if (existingUrl && !replacingDeadPlaceholder) {
           report.summary.skippedExistingImages++;
           report.skippedExisting.push({ folderPath: folder.path, cardId, side });
           continue;
@@ -1849,15 +1862,20 @@ export async function runDriveImageImport(options: {
 
         // Update the card record (only after a confirmed upload). The card URL
         // swap and the ledger row commit together so resumability stays accurate.
-        // The IS NULL predicate closes the race between the earlier card snapshot
-        // and this write: a concurrent admin/user update can never be overwritten.
+        // The expected-current-value predicate closes the race between the
+        // earlier card snapshot and this write. It permits only NULL, or the
+        // exact dead placeholder seen during this scan—never a real image URL.
         try {
           const applied = await db.transaction(async (tx) => {
+            const targetImageColumn = side === 'front' ? cards.frontImageUrl : cards.backImageUrl;
+            const expectedCurrentValue = replacingDeadPlaceholder
+              ? eq(targetImageColumn, existingUrl!)
+              : isNull(targetImageColumn);
             const updated = await tx.update(cards)
               .set(side === 'front' ? { frontImageUrl: cloudinaryUrl } : { backImageUrl: cloudinaryUrl })
               .where(and(
                 eq(cards.id, cardId),
-                isNull(side === 'front' ? cards.frontImageUrl : cards.backImageUrl),
+                expectedCurrentValue,
               ))
               .returning({ id: cards.id });
             if (updated.length === 0) return false;
@@ -1875,6 +1893,7 @@ export async function runDriveImageImport(options: {
             continue;
           }
           report.summary.uploadedImages++;
+          if (replacingDeadPlaceholder) report.summary.replacedDeadPlaceholders++;
           report.uploaded.push({ folderPath: folder.path, cardId, cardName: card.name, side, fileName: file.fileName, cloudinaryUrl });
           // keep in-memory ledger current so a same-run duplicate can't double-import
           priorByFileId.set(file.driveFileId, file.modifiedTime ?? null);

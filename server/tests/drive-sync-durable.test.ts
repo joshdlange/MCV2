@@ -23,6 +23,7 @@ import {
   getLatestDriveSyncJob,
   isDriveSyncJobRunningInDb,
   decideSetCheckpointCompleted,
+  isReplaceableLegacyCardPlaceholderUrl,
 } from "../services/driveImageSync";
 
 const TAG = `drive-sync-test-${Date.now()}`;
@@ -306,4 +307,34 @@ test("read-only scan writes no checkpoints: end-to-end DB assertion", async () =
   const after = await db.select().from(driveSyncSetCheckpoints)
     .where(eq(driveSyncSetCheckpoints.driveFolderId, folderId));
   assert.equal(after.length, 0, "read-only scan must not create a checkpoint row");
+});
+
+test("only the verified dead legacy placeholder may be replaced", () => {
+  assert.equal(
+    isReplaceableLegacyCardPlaceholderUrl(
+      "https://res.cloudinary.com/dlwfuryyz/image/upload/v1748442577/card-placeholder_ysozlo.png",
+    ),
+    true,
+    "the exact legacy 404 placeholder is recoverable",
+  );
+  assert.equal(
+    isReplaceableLegacyCardPlaceholderUrl(
+      "https://res.cloudinary.com/dlwfuryyz/image/upload/v1748442577/card-placeholder_ysozlo.png?cache=bust",
+    ),
+    true,
+    "a query string must not block recovery of the same legacy placeholder",
+  );
+  assert.equal(
+    isReplaceableLegacyCardPlaceholderUrl(
+      "https://res.cloudinary.com/dlwfuryyz/image/upload/v1748442577/other-card.png",
+    ),
+    false,
+    "a different Cloudinary asset is never replaceable",
+  );
+  assert.equal(
+    isReplaceableLegacyCardPlaceholderUrl("https://example.com/real-card.jpg"),
+    false,
+    "a real card URL is never replaceable",
+  );
+  assert.equal(isReplaceableLegacyCardPlaceholderUrl(null), false);
 });

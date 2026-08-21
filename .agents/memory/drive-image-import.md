@@ -6,7 +6,8 @@ description: Rules approved for the Drive → Cloudinary card image importer and
 - **Why:** Alphabetical order put BACK files first in real data; wrong proposals were caught in review.
 - Idempotency lives in the `drive_image_imports` ledger: unchanged Drive file ids are skipped on rerun. Card URL update + ledger row must commit in one transaction, or resumability reporting drifts.
 - Real import always re-scans Drive fresh (never trusts a stale dry-run report) and card URLs are swapped only AFTER Cloudinary confirms upload — same pattern as the COMC migration.
-- Card images are never overwritten. The final card update must atomically require that the target side is still empty, so a concurrent update between scan and upload is preserved.
+- Real card images are never overwritten. The sole approved exception is the exact verified 404 legacy placeholder asset; the final update must atomically require NULL or that exact value observed during the scan.
+- **Why:** A broad “replace broken URLs” rule could destroy curated images after a transient outage. The exact placeholder exception repairs known non-images without weakening the concurrent-update guard.
 - Incremental sync uses a Drive Changes cursor. Capture a baseline token before a full crawl, persist it only from the safe completion path, and force a recovery full audit when a change cannot be resolved to a top-level set.
 - A set checkpoint may become complete only after all eligible work for that set is processed without failures. Read-only scans never write checkpoints; after interruption, redoing some scan work is acceptable, but skipping pending images is not.
 - **Why:** A prematurely advanced cursor can permanently hide changes, and a scan-time “complete” checkpoint can strand images if the process dies before upload.
