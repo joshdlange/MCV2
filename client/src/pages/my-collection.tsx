@@ -18,6 +18,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
 import { SIDE_KICK_CARD_LIMIT } from "@shared/schema";
+import { compareCardNumbers } from "@shared/cardNumberSort";
 import type { CollectionItem, CardWithSet, CardSet, MainSet } from "@shared/schema";
 import { formatCardName, formatSetName } from "@/lib/formatTitle";
 import { useAppStore } from "@/lib/store";
@@ -204,20 +205,9 @@ export default function MyCollection() {
         );
       }
       
-      return filtered.sort((a, b) => {
-        const aStr = a.cardNumber?.trim() || '';
-        const bStr = b.cardNumber?.trim() || '';
-        const aParts = aStr.match(/^([A-Za-z-]*?)(\d+)(.*)$/);
-        const bParts = bStr.match(/^([A-Za-z-]*?)(\d+)(.*)$/);
-        if (aParts && bParts) {
-          const prefixCmp = aParts[1].localeCompare(bParts[1]);
-          if (prefixCmp !== 0) return prefixCmp;
-          const numCmp = parseInt(aParts[2]) - parseInt(bParts[2]);
-          if (numCmp !== 0) return numCmp;
-          return (aParts[3] || '').localeCompare(bParts[3] || '');
-        }
-        return aStr.localeCompare(bStr);
-      });
+      return filtered.sort((a, b) =>
+        compareCardNumbers(a.cardNumber, b.cardNumber),
+      );
     }
     
     // For owned cards (collection items)
@@ -237,18 +227,7 @@ export default function MyCollection() {
     }).sort((a, b) => {
       if (a.isFavorite && !b.isFavorite) return -1;
       if (!a.isFavorite && b.isFavorite) return 1;
-      const aStr = a.card?.cardNumber?.trim() || '';
-      const bStr = b.card?.cardNumber?.trim() || '';
-      const aParts = aStr.match(/^([A-Za-z-]*?)(\d+)(.*)$/);
-      const bParts = bStr.match(/^([A-Za-z-]*?)(\d+)(.*)$/);
-      if (aParts && bParts) {
-        const prefixCmp = aParts[1].localeCompare(bParts[1]);
-        if (prefixCmp !== 0) return prefixCmp;
-        const numCmp = parseInt(aParts[2]) - parseInt(bParts[2]);
-        if (numCmp !== 0) return numCmp;
-        return (aParts[3] || '').localeCompare(bParts[3] || '');
-      }
-      return aStr.localeCompare(bStr);
+      return compareCardNumbers(a.card?.cardNumber, b.card?.cardNumber);
     }) || [];
     
     return filteredCollection;

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Sparkles, BookOpen, Copy, Check } from "lucide-react";
 import { SiFacebook, SiX, SiReddit, SiInstagram } from "react-icons/si";
 import { formatSetName } from "@/lib/formatTitle";
+import { compareCardNumbers } from "@shared/cardNumberSort";
 import marvelCardVaultLogo from "@assets/Marvelous_Card_Valut_-_Trans_1772678671637.png";
 
 interface SharePageCard {
@@ -197,21 +198,9 @@ export default function SharedBinder() {
 
   const sortedCards = useMemo(() => {
     if (!data) return [];
-    return [...data.cards]
-      .sort((a, b) => {
-        const aStr = a.cardNumber?.trim() || '';
-        const bStr = b.cardNumber?.trim() || '';
-        const aParts = aStr.match(/^([A-Za-z-]*?)(\d+)(.*)$/);
-        const bParts = bStr.match(/^([A-Za-z-]*?)(\d+)(.*)$/);
-        if (aParts && bParts) {
-          const prefixCmp = aParts[1].localeCompare(bParts[1]);
-          if (prefixCmp !== 0) return prefixCmp;
-          const numCmp = parseInt(aParts[2]) - parseInt(bParts[2]);
-          if (numCmp !== 0) return numCmp;
-          return (aParts[3] || '').localeCompare(bParts[3] || '');
-        }
-        return aStr.localeCompare(bStr);
-      });
+    return [...data.cards].sort((a, b) =>
+      compareCardNumbers(a.cardNumber, b.cardNumber),
+    );
   }, [data]);
 
   const ownedCards = useMemo(() => sortedCards.filter(c => ownedSet.has(c.id)), [sortedCards, ownedSet]);

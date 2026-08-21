@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { CollectionItem, CardWithSet } from "@shared/schema";
+import { compareCardNumbers } from "@shared/cardNumberSort";
 import { formatCardName } from "@/lib/formatTitle";
 
 interface BinderCard {
@@ -135,22 +136,9 @@ export function BinderView({
         card: card
       };
     });
-    return cards.sort((a, b) => {
-      const aNum = a.card?.cardNumber?.trim() || '';
-      const bNum = b.card?.cardNumber?.trim() || '';
-      const aParts = aNum.match(/^([A-Za-z-]*?)(\d+)(.*)$/);
-      const bParts = bNum.match(/^([A-Za-z-]*?)(\d+)(.*)$/);
-      if (aParts && bParts) {
-        const prefixCmp = aParts[1].localeCompare(bParts[1]);
-        if (prefixCmp !== 0) return prefixCmp;
-        const numCmp = parseInt(aParts[2]) - parseInt(bParts[2]);
-        if (numCmp !== 0) return numCmp;
-        return (aParts[3] || '').localeCompare(bParts[3] || '');
-      }
-      if (aParts && !bParts) return 1;
-      if (!aParts && bParts) return -1;
-      return aNum.localeCompare(bNum);
-    });
+    return cards.sort((a, b) =>
+      compareCardNumbers(a.card?.cardNumber, b.card?.cardNumber),
+    );
   }, [allCardsInSet, ownedCardMap]);
 
   const totalPages = Math.ceil(binderCards.length / cardsPerPage);

@@ -1,4 +1,5 @@
 import { invalidateUserById } from "./user-cache";
+import { cardNumberNaturalSortKey } from "./cardNumberSort";
 import { 
   users, 
   mainSets,
@@ -1569,12 +1570,11 @@ export class DatabaseStorage implements IStorage {
         .from(cards)
         .innerJoin(cardSets, eq(cards.setId, cardSets.id))
         .where(eq(cards.setId, setId))
-        .orderBy(sql`
-          CASE
-            WHEN ${cards.cardNumber} ~ '^[0-9]+$' THEN LPAD(${cards.cardNumber}, 10, '0')
-            ELSE ${cards.cardNumber}
-          END
-        `);
+        .orderBy(
+          cardNumberNaturalSortKey(cards.cardNumber),
+          cards.cardNumber,
+          cards.id,
+        );
 
       console.log(`Found ${allCardsInSet.length} total cards in set ${setId}`);
 

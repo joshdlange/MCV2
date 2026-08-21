@@ -1,6 +1,7 @@
 import { optimizedImageUrl } from "@/lib/utils";
 import { useState } from "react";
 import { SIDE_KICK_CARD_LIMIT } from "@shared/schema";
+import { compareCardNumbers } from "@shared/cardNumberSort";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -268,34 +269,9 @@ export function CardGrid({
     removeFromWishlistMutation.mutate(cardId);
   };
 
-  // Natural sort function for card numbers
-  const sortCardsByNumber = (cards: CardWithSet[]) => {
-    return [...cards].sort((a, b) => {
-      const aNum = a.cardNumber;
-      const bNum = b.cardNumber;
-      
-      // Handle non-numeric card numbers (like "CG-1", "P1", etc.)
-      const aNumeric = aNum.match(/^\d+$/);
-      const bNumeric = bNum.match(/^\d+$/);
-      
-      if (aNumeric && bNumeric) {
-        // Both are pure numbers - compare numerically
-        return parseInt(aNum) - parseInt(bNum);
-      } else if (aNumeric && !bNumeric) {
-        // a is numeric, b is not - a comes first
-        return -1;
-      } else if (!aNumeric && bNumeric) {
-        // b is numeric, a is not - b comes first
-        return 1;
-      } else {
-        // Both are non-numeric - sort alphabetically
-        return aNum.localeCompare(bNum);
-      }
-    });
-  };
-
-  // Sort cards by card number in natural order
-  const sortedCards = cards ? sortCardsByNumber(cards) : [];
+  const sortedCards = cards
+    ? [...cards].sort((a, b) => compareCardNumbers(a.cardNumber, b.cardNumber))
+    : [];
 
   if (isLoading) {
     return viewMode === "grid" ? (

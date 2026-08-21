@@ -2,6 +2,7 @@ import { db } from './db';
 import { cards, cardSets, userCollections, userWishlists, cardPriceCache } from '../shared/schema';
 import type { CardWithSet } from '../shared/schema';
 import { eq, and, or, isNull, isNotNull, desc, asc, sql, count, ilike, gte, lte, inArray } from 'drizzle-orm';
+import { cardNumberNaturalSortKey } from './cardNumberSort';
 
 export interface PaginatedResult<T> {
   items: T[];
@@ -176,19 +177,26 @@ export class OptimizedStorage {
 
       // Apply where conditions and execute queries with proper numerical sorting
       const [items, totalResult] = await Promise.all([
-        whereCondition 
-          ? baseQuery.where(whereCondition).orderBy(cards.setId, sql`
-              CASE 
-                WHEN ${cards.cardNumber} ~ '^[0-9]+$' THEN LPAD(${cards.cardNumber}, 10, '0')
-                ELSE ${cards.cardNumber}
-              END
-            `).limit(pageSize).offset(offset)
-          : baseQuery.orderBy(cards.setId, sql`
-              CASE 
-                WHEN ${cards.cardNumber} ~ '^[0-9]+$' THEN LPAD(${cards.cardNumber}, 10, '0')
-                ELSE ${cards.cardNumber}
-              END
-            `).limit(pageSize).offset(offset),
+        whereCondition
+          ? baseQuery
+              .where(whereCondition)
+              .orderBy(
+                cards.setId,
+                cardNumberNaturalSortKey(cards.cardNumber),
+                sql`lower(${cards.cardNumber})`,
+                cards.id,
+              )
+              .limit(pageSize)
+              .offset(offset)
+          : baseQuery
+              .orderBy(
+                cards.setId,
+                cardNumberNaturalSortKey(cards.cardNumber),
+                sql`lower(${cards.cardNumber})`,
+                cards.id,
+              )
+              .limit(pageSize)
+              .offset(offset),
         whereCondition 
           ? countQuery.where(whereCondition)
           : countQuery

@@ -1,14 +1,12 @@
 ---
 name: Card-number natural sort
-description: card_number is text; every ORDER BY on it needs the numeric-aware CASE/LPAD pattern
+description: Card numbers require token-aware natural sorting on both the client and server.
 ---
 
-`cards.card_number` is a text column, so plain `ORDER BY card_number` sorts 1, 10, 11, 2.
+`cards.card_number` is a text column. Plain lexical order sorts `1, 11, 2`, while numeric-only padding still sorts prefixed values as `AU-24, AU-3`.
 
-**Rule:** every server-side ordering on card_number must use the numeric-aware pattern:
-`CASE WHEN card_number ~ '^[0-9]+$' THEN LPAD(card_number, 10, '0') ELSE card_number END`
-(or `card_number::integer` variant used by the paginated set endpoint).
+**Rule:** client lists must use the shared token-by-token card-number comparator. Server queries must use the matching shared SQL natural-sort key and a stable card-ID tie-breaker for pagination. Do not add raw, integer-only, or LPAD-only card-number ordering.
 
-**Why:** lexicographic orderings kept resurfacing in new endpoints (pickers, previews, shared links, missing-cards) even after the main set page was fixed — the bug re-enters with every new card-list query.
+**Why:** duplicated partial fixes handled plain numbers but failed prefixes such as `AU-3`; omitted tie-breakers also made equal card numbers unstable between pages.
 
-**How to apply:** when adding any endpoint or query returning a card list ordered by number, copy the CASE/LPAD pattern; client-side sorts already use a prefix+number comparator, so the fix belongs server-side.
+**How to apply:** route every user-facing card list through the shared comparator or SQL key. Regression coverage must include `1, 2, 11, 12`, `AU-3, AU-4, AU-24`, and multi-number values such as `A1-2, A1-11`.

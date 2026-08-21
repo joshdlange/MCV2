@@ -2,6 +2,7 @@ import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { CollectionLimitExceededError, storage } from "./storage";
+import { cardNumberNaturalSortKey } from "./cardNumberSort";
 import { getCachedUser, setCachedUser } from "./user-cache";
 import { insertCardSetSchema, insertCardSchema, insertUserCollectionSchema, insertUserWishlistSchema, insertUserSchema, insertMainSetSchema, insertFriendSchema, insertMessageSchema, insertBadgeSchema, insertUserBadgeSchema } from "../shared/schema";
 import { z } from "zod";
@@ -1675,9 +1676,9 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
           AND front_image_url != ''
           AND front_image_url NOT LIKE '%placeholder%'
           AND front_image_url NOT LIKE '%superhero-fallback%'
-        ORDER BY set_id, 
-          CASE WHEN card_number ~ '^[0-9]+$' THEN card_number::integer ELSE 999999 END,
-          card_number, id
+        ORDER BY set_id,
+          ${cardNumberNaturalSortKey(sql`card_number`)},
+          lower(card_number), id
       `);
       
       const imageMap: Record<number, string> = {};
@@ -2174,9 +2175,9 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         FROM cards c
         LEFT JOIN card_sets cs ON c.set_id = cs.id
         WHERE c.set_id = ${setId}
-        ORDER BY 
-          CASE WHEN c.card_number ~ '^[0-9]+$' THEN c.card_number::integer ELSE 999999 END,
-          c.card_number, c.id
+        ORDER BY
+          ${cardNumberNaturalSortKey(sql`c.card_number`)},
+          lower(c.card_number), c.id
         LIMIT ${limit} OFFSET ${offset}
       `);
       
@@ -3172,12 +3173,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         AND cards.id NOT IN (
           SELECT card_id FROM user_collections WHERE user_id = ${userId}
         )
-        ORDER BY 
-          CASE 
-            WHEN cards.card_number ~ '^[0-9]+$' THEN cards.card_number::integer
-            ELSE 999999
-          END ASC,
-          cards.card_number ASC
+        ORDER BY
+          ${cardNumberNaturalSortKey(sql`cards.card_number`)},
+          lower(cards.card_number),
+          cards.id
         LIMIT ${limit} OFFSET ${offset}
       `);
       
@@ -8533,7 +8532,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
             FROM cards
             WHERE set_id = ${setId}
               AND (name ILIKE ${'%' + search + '%'} OR card_number ILIKE ${'%' + search + '%'})
-            ORDER BY CASE WHEN card_number ~ '^[0-9]+$' THEN LPAD(card_number, 10, '0') ELSE card_number END
+            ORDER BY ${cardNumberNaturalSortKey(sql`card_number`)}, lower(card_number), id
             LIMIT 100
           `)
         : await db.execute(sql`
@@ -8541,7 +8540,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
                    variation, is_insert AS "isInsert"
             FROM cards
             WHERE set_id = ${setId}
-            ORDER BY CASE WHEN card_number ~ '^[0-9]+$' THEN LPAD(card_number, 10, '0') ELSE card_number END
+            ORDER BY ${cardNumberNaturalSortKey(sql`card_number`)}, lower(card_number), id
             LIMIT 100
           `);
       res.json(result.rows);
@@ -9107,7 +9106,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
           estimated_value as "estimatedValue"
         FROM cards
         WHERE set_id = ${setId}
-        ORDER BY CASE WHEN card_number ~ '^[0-9]+$' THEN LPAD(card_number, 10, '0') ELSE card_number END
+        ORDER BY ${cardNumberNaturalSortKey(sql`card_number`)}, lower(card_number), id
         LIMIT 12
       `);
 
@@ -9886,7 +9885,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
           estimated_value as "estimatedValue"
         FROM cards
         WHERE set_id = ${setId}
-        ORDER BY CASE WHEN card_number ~ '^[0-9]+$' THEN LPAD(card_number, 10, '0') ELSE card_number END
+        ORDER BY ${cardNumberNaturalSortKey(sql`card_number`)}, lower(card_number), id
         LIMIT ${parseInt(limit as string)}
         OFFSET ${offset}
       `);
@@ -10426,7 +10425,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         SELECT id, card_number, name, variation
         FROM cards
         WHERE set_id = ${sourceSetId}
-        ORDER BY card_number
+        ORDER BY ${cardNumberNaturalSortKey(sql`card_number`)}, lower(card_number), id
       `);
 
       // Get existing base cards (should be empty but check anyway)
@@ -10517,7 +10516,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         SELECT card_number, name, description, rarity
         FROM cards
         WHERE set_id = ${sourceSetId}
-        ORDER BY card_number
+        ORDER BY ${cardNumberNaturalSortKey(sql`card_number`)}, lower(card_number), id
       `);
 
       if (sourceCards.rows.length === 0) {
@@ -10645,7 +10644,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
             SELECT card_number, name, description, rarity
             FROM cards
             WHERE set_id = ${sourceSetId}
-            ORDER BY card_number
+            ORDER BY ${cardNumberNaturalSortKey(sql`card_number`)}, lower(card_number), id
           `);
 
           if (sourceCards.rows.length === 0) {
@@ -10884,7 +10883,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         SELECT c.id, c.set_id, c.card_number, c.name, c.description
         FROM cards c
         WHERE c.name ~* 'SN[0-9]+$'
-        ORDER BY c.set_id, c.card_number
+        ORDER BY c.set_id, ${cardNumberNaturalSortKey(sql`c.card_number`)}, lower(c.card_number), c.id
       `);
 
       console.log(`[SN-NORMALIZE] Found ${snCards.rows.length} cards with SN pattern`);
@@ -11040,7 +11039,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         WHERE 1=1 ${setFilter}
         GROUP BY c.set_id, c.card_number, c.name, COALESCE(c.variation, '')
         HAVING COUNT(*) > 1
-        ORDER BY c.set_id, c.card_number
+        ORDER BY c.set_id, ${cardNumberNaturalSortKey(sql`c.card_number`)}, lower(c.card_number)
       `);
 
       console.log(`[DEDUPE] Found ${dupeQuery.rows.length} duplicate groups`);
@@ -12552,12 +12551,11 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         })
         .from(cards)
         .where(eq(cards.setId, link.cardSetId))
-        .orderBy(sql`
-          CASE
-            WHEN ${cards.cardNumber} ~ '^[0-9]+$' THEN LPAD(${cards.cardNumber}, 10, '0')
-            ELSE ${cards.cardNumber}
-          END
-        `);
+        .orderBy(
+          cardNumberNaturalSortKey(cards.cardNumber),
+          sql`lower(${cards.cardNumber})`,
+          cards.id,
+        );
 
       // 4) Get owned card IDs for this user in this set
       const ownedRows = await db
