@@ -118,8 +118,11 @@ interface IStorage {
   
   // User Collections
   getUserCollection(userId: number): Promise<CollectionItem[]>;
-  addToCollection(insertUserCollection: InsertUserCollection): Promise<UserCollection>;
-  removeFromCollection(id: number): Promise<void>;
+  addToCollection(insertUserCollection: InsertUserCollection, options?: {
+    incrementExisting?: boolean;
+    distinctCardLimit?: number;
+  }): Promise<UserCollection>;
+  removeFromCollection(id: number, userId: number): Promise<boolean>;
   updateCollectionItem(id: number, updates: Partial<UserCollection>): Promise<UserCollection | undefined>;
   
   // Marketplace
@@ -128,7 +131,7 @@ interface IStorage {
   // User Wishlists
   getUserWishlist(userId: number): Promise<WishlistItem[]>;
   addToWishlist(insertUserWishlist: InsertUserWishlist): Promise<UserWishlist>;
-  removeFromWishlist(id: number): Promise<void>;
+  removeFromWishlist(id: number, userId: number): Promise<boolean>;
   
   // Stats
   getCollectionStats(userId: number): Promise<CollectionStats>;
@@ -228,6 +231,18 @@ interface IStorage {
   getAdminFunnelStats(): Promise<any>;
   getUpgradeModalStats(): Promise<any>;
   getSignupsByDay(year: number, month: number): Promise<Array<{ date: string; count: number }>>;
+}
+
+export class CollectionLimitExceededError extends Error {
+  readonly code = 'COLLECTION_LIMIT_REACHED';
+
+  constructor(
+    readonly currentCount: number,
+    readonly limit: number,
+  ) {
+    super(`Collection limit of ${limit} reached`);
+    this.name = 'CollectionLimitExceededError';
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -940,7 +955,10 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async addToCollection(insertUserCollection: InsertUserCollection): Promise<UserCollection> {
+  async addToCollection(
+    insertUserCollection: InsertUserCollection,
+    options: { incrementExisting?: boolean; distinctCardLimit?: number } = {},
+  ): Promise<UserCollection> {
     // Guard: never add archived (merged-away) cards. If the archive_reason
     // embeds the canonical card id, transparently redirect the add to it;
     // otherwise reject so retired rows can't re-accumulate user data.
@@ -972,28 +990,81 @@ export class DatabaseStorage implements IStorage {
       }
     }
     // Use INSERT ON CONFLICT for a single optimized query (requires unique index on user_id, card_id)
-    const [item] = await db
-      .insert(userCollections)
-      .values({
-        ...insertUserCollection,
-        acquiredDate: new Date(),
-        condition: insertUserCollection.condition || 'Near Mint',
-        personalValue: insertUserCollection.personalValue || null,
-        salePrice: insertUserCollection.salePrice || null,
-        isForSale: insertUserCollection.isForSale || false,
-        serialNumber: insertUserCollection.serialNumber || null,
-        quantity: insertUserCollection.quantity || 1,
-        isFavorite: insertUserCollection.isFavorite || false,
-        notes: insertUserCollection.notes || null,
-      })
-      .onConflictDoUpdate({
-        target: [userCollections.userId, userCollections.cardId],
-        set: { 
-          quantity: sql`${userCollections.quantity} + 1`,
-          acquiredDate: new Date(),
+    const values = {
+      ...insertUserCollection,
+      acquiredDate: new Date(),
+      condition: insertUserCollection.condition || 'Near Mint',
+      personalValue: insertUserCollection.personalValue || null,
+      salePrice: insertUserCollection.salePrice || null,
+      isForSale: insertUserCollection.isForSale || false,
+      serialNumber: insertUserCollection.serialNumber || null,
+      quantity: insertUserCollection.quantity || 1,
+      isFavorite: insertUserCollection.isFavorite || false,
+      notes: insertUserCollection.notes || null,
+    };
+
+    const insertOrIncrement = async (executor: any): Promise<UserCollection | undefined> => {
+      let stored: UserCollection | undefined;
+      if (options.incrementExisting === false) {
+        [stored] = await executor
+          .insert(userCollections)
+          .values(values)
+          .onConflictDoNothing()
+          .returning();
+        if (!stored) {
+          [stored] = await executor
+            .select()
+            .from(userCollections)
+            .where(and(
+              eq(userCollections.userId, insertUserCollection.userId),
+              eq(userCollections.cardId, insertUserCollection.cardId),
+            ))
+            .limit(1);
         }
-      })
-      .returning();
+      } else {
+        [stored] = await executor
+          .insert(userCollections)
+          .values(values)
+          .onConflictDoUpdate({
+            target: [userCollections.userId, userCollections.cardId],
+            set: {
+              quantity: sql`${userCollections.quantity} + 1`,
+              acquiredDate: new Date(),
+            }
+          })
+          .returning();
+      }
+      return stored;
+    };
+
+    let item: UserCollection | undefined;
+    if (options.distinctCardLimit != null) {
+      item = await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(42813, ${insertUserCollection.userId})`);
+        const [existing] = await tx
+          .select({ id: userCollections.id })
+          .from(userCollections)
+          .where(and(
+            eq(userCollections.userId, insertUserCollection.userId),
+            eq(userCollections.cardId, insertUserCollection.cardId),
+          ))
+          .limit(1);
+        if (!existing) {
+          const [countResult] = await tx
+            .select({ count: sql<number>`count(*)::int` })
+            .from(userCollections)
+            .where(eq(userCollections.userId, insertUserCollection.userId));
+          const currentCount = Number(countResult?.count ?? 0);
+          if (currentCount >= options.distinctCardLimit) {
+            throw new CollectionLimitExceededError(currentCount, options.distinctCardLimit);
+          }
+        }
+        return insertOrIncrement(tx);
+      });
+    } else {
+      item = await insertOrIncrement(db);
+    }
+    if (!item) throw new Error('Failed to add card to collection');
 
     // Award +1 XP the first time this user adds this card (farm-proof via the
     // xp_events unique index). Covers both add paths (manual + image auto-add).
@@ -1015,8 +1086,12 @@ export class DatabaseStorage implements IStorage {
     return item;
   }
 
-  async removeFromCollection(id: number): Promise<void> {
-    await db.delete(userCollections).where(eq(userCollections.id, id));
+  async removeFromCollection(id: number, userId: number): Promise<boolean> {
+    const removed = await db
+      .delete(userCollections)
+      .where(and(eq(userCollections.id, id), eq(userCollections.userId, userId)))
+      .returning({ id: userCollections.id });
+    return removed.length > 0;
   }
 
   async updateCollectionItem(id: number, updates: Partial<UserCollection>): Promise<UserCollection | undefined> {
@@ -1138,15 +1213,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async addToWishlist(insertUserWishlist: InsertUserWishlist): Promise<UserWishlist> {
-    const [item] = await db
+    let [item] = await db
       .insert(userWishlists)
       .values(insertUserWishlist)
+      .onConflictDoNothing()
       .returning();
+    if (!item) {
+      [item] = await db
+        .select()
+        .from(userWishlists)
+        .where(and(
+          eq(userWishlists.userId, insertUserWishlist.userId),
+          eq(userWishlists.cardId, insertUserWishlist.cardId),
+        ))
+        .limit(1);
+    }
+    if (!item) throw new Error('Failed to add card to wishlist');
     return item;
   }
 
-  async removeFromWishlist(id: number): Promise<void> {
-    await db.delete(userWishlists).where(eq(userWishlists.id, id));
+  async removeFromWishlist(id: number, userId: number): Promise<boolean> {
+    const removed = await db
+      .delete(userWishlists)
+      .where(and(eq(userWishlists.id, id), eq(userWishlists.userId, userId)))
+      .returning({ id: userWishlists.id });
+    return removed.length > 0;
   }
 
   async getCollectionStats(userId: number): Promise<CollectionStats> {

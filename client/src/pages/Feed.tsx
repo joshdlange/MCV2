@@ -9,6 +9,9 @@ import { apiRequest } from "@/lib/queryClient";
 import { avatarUrl } from "@/lib/collectorAvatars";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useLocation, Link } from "wouter";
+import { CardDetailModal } from "@/components/cards/card-detail-modal";
+import type { CardWithSet, CollectionItem, WishlistItem } from "@shared/schema";
+import noCardImagePlaceholder from "@assets/image_1784478496002.png";
 import {
   Activity as ActivityIcon, Trophy, ArrowLeftRight, Sparkles,
   Award, BookOpen, Image as ImageIcon, Share2, Star, Crown, Loader2,
@@ -291,6 +294,24 @@ function EventHero({ event }: { event: FeedEvent }) {
     );
   }
 
+  // Card events remain identifiable and clickable even when the shared card
+  // database does not have a usable image yet.
+  if (event.relatedType === "card" && event.relatedId) {
+    return (
+      <div className="relative h-32 sm:h-36 rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 flex items-center justify-center">
+        <Halftone opacity={0.05} />
+        <img
+          src={noCardImagePlaceholder}
+          alt="Card image not yet available"
+          className="relative h-full max-w-[55%] py-2 object-contain opacity-90"
+        />
+        <span className="absolute bottom-2 right-3 text-[10px] font-bold uppercase tracking-wide text-zinc-400">
+          View card details
+        </span>
+      </div>
+    );
+  }
+
   // Collection milestone: Hero for 250+ (gold accent), Standard (red/charcoal) below
   if (event.eventType === "collection_milestone") {
     const hero = tier === "hero";
@@ -393,7 +414,6 @@ export interface FeedDetail {
 
 function FeedDetailDialog({ detail, onClose }: { detail: FeedDetail | null; onClose: () => void }) {
   const event = detail?.event ?? null;
-  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
 
   // Badge details: enrich from the badges catalog (description, rarity).
   const { data: badges } = useQuery<any[]>({
@@ -406,22 +426,178 @@ function FeedDetailDialog({ detail, onClose }: { detail: FeedDetail | null; onCl
     : undefined;
 
   // Card details: fetch the card the event refers to.
-  const { data: card } = useQuery<any>({
+  const { data: rawCard, isLoading: cardIsLoading, isError: cardFailed } = useQuery<CardWithSet & { cardSet?: CardWithSet["set"] }>({
     queryKey: [`/api/cards/${event?.relatedId}`],
     enabled: detail?.kind === "card" && !!event?.relatedId,
     staleTime: 5 * 60 * 1000,
   });
+  const card = rawCard
+    ? ({ ...rawCard, set: rawCard.set ?? rawCard.cardSet } as CardWithSet)
+    : null;
+
+  const {
+    data: collection,
+    isLoading: collectionIsLoading,
+    isError: collectionFailed,
+  } = useQuery<CollectionItem[]>({
+    queryKey: ["/api/collection"],
+    enabled: detail?.kind === "card",
+  });
+  const {
+    data: wishlist,
+    isLoading: wishlistIsLoading,
+    isError: wishlistFailed,
+  } = useQuery<WishlistItem[]>({
+    queryKey: ["/api/wishlist"],
+    enabled: detail?.kind === "card",
+  });
+  const collectionItem = card
+    ? collection?.find(item => (item.cardId ?? item.card?.id) === card.id)
+    : undefined;
+  const wishlistItem = card
+    ? wishlist?.find(item => (item.cardId ?? item.card?.id) === card.id)
+    : undefined;
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const ownershipActions = useRef(new Set<string>());
+
+  const refreshOwnership = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/collection"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+  };
+  const beginOwnershipAction = (key: string): boolean => {
+    if (ownershipActions.current.has(key)) return false;
+    ownershipActions.current.add(key);
+    return true;
+  };
+  const endOwnershipAction = (key: string) => {
+    ownershipActions.current.delete(key);
+  };
+
+  const addToCollection = useMutation({
+    mutationFn: async (cardId: number) =>
+      (await apiRequest("POST", "/api/collection", { cardId, incrementExisting: false })).json(),
+    onSuccess: (item: CollectionItem) => {
+      queryClient.setQueryData<CollectionItem[]>(["/api/collection"], (current = []) => {
+        const withoutCard = current.filter(entry => (entry.cardId ?? entry.card?.id) !== item.cardId);
+        return [...withoutCard, { ...item, card: card! }];
+      });
+      refreshOwnership();
+      toast({ title: "Card added to collection" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Could not add card", description: error.message, variant: "destructive" });
+    },
+    onSettled: (_data, _error, cardId) => endOwnershipAction(`collection:add:${cardId}`),
+  });
+  const removeFromCollection = useMutation({
+    mutationFn: (itemId: number) => apiRequest("DELETE", `/api/collection/${itemId}`),
+    onSuccess: () => {
+      queryClient.setQueryData<CollectionItem[]>(["/api/collection"], (current = []) =>
+        current.filter(entry => entry.id !== collectionItem?.id),
+      );
+      refreshOwnership();
+      toast({ title: "Card removed from collection" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Could not remove card", description: error.message, variant: "destructive" });
+    },
+    onSettled: (_data, _error, itemId) => endOwnershipAction(`collection:remove:${itemId}`),
+  });
+  const addToWishlist = useMutation({
+    mutationFn: async (cardId: number) =>
+      (await apiRequest("POST", "/api/wishlist", { cardId, priority: 1 })).json(),
+    onSuccess: (item: WishlistItem) => {
+      queryClient.setQueryData<WishlistItem[]>(["/api/wishlist"], (current = []) => {
+        const withoutCard = current.filter(entry => (entry.cardId ?? entry.card?.id) !== item.cardId);
+        return [...withoutCard, { ...item, card: card! }];
+      });
+      refreshOwnership();
+      toast({ title: "Card added to wishlist" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Could not add card to wishlist", description: error.message, variant: "destructive" });
+    },
+    onSettled: (_data, _error, cardId) => endOwnershipAction(`wishlist:add:${cardId}`),
+  });
+  const removeFromWishlist = useMutation({
+    mutationFn: (itemId: number) => apiRequest("DELETE", `/api/wishlist/${itemId}`),
+    onSuccess: () => {
+      queryClient.setQueryData<WishlistItem[]>(["/api/wishlist"], (current = []) =>
+        current.filter(entry => entry.id !== wishlistItem?.id),
+      );
+      refreshOwnership();
+      toast({ title: "Card removed from wishlist" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Could not remove card from wishlist", description: error.message, variant: "destructive" });
+    },
+    onSettled: (_data, _error, itemId) => endOwnershipAction(`wishlist:remove:${itemId}`),
+  });
 
   if (!detail || !event) return null;
   const md = (event.metadata as any) ?? {};
-  const detailImage = card?.frontImageUrl ?? event.image;
-  const displayDetailImage = detailImage && detailImage !== failedImageUrl ? detailImage : null;
+
+  if (detail.kind === "card") {
+    if (cardIsLoading || collectionIsLoading || wishlistIsLoading) {
+      return (
+        <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-sm rounded-lg bg-zinc-900 border-zinc-700 text-zinc-100">
+            <div className="flex items-center justify-center gap-2 py-10 text-sm text-zinc-300">
+              <Loader2 className="w-5 h-5 animate-spin" /> Loading card details…
+            </div>
+          </DialogContent>
+        </Dialog>
+      );
+    }
+    if (cardFailed || collectionFailed || wishlistFailed || !card) {
+      return (
+        <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-sm rounded-lg bg-zinc-900 border-zinc-700 text-zinc-100">
+            <DialogHeader><DialogTitle>Card unavailable</DialogTitle></DialogHeader>
+            <p className="text-sm text-zinc-400">This card could not be loaded. It may have been retired or merged.</p>
+          </DialogContent>
+        </Dialog>
+      );
+    }
+
+    return (
+      <CardDetailModal
+        card={card}
+        isOpen
+        onClose={onClose}
+        isInCollection={!!collectionItem}
+        isInWishlist={!!wishlistItem}
+        collectionItemId={collectionItem?.id}
+        collectionQuantity={collectionItem?.quantity}
+        onAddToCollection={() => {
+          const key = `collection:add:${card.id}`;
+          if (beginOwnershipAction(key)) addToCollection.mutate(card.id);
+        }}
+        onRemoveFromCollection={collectionItem ? () => {
+          const key = `collection:remove:${collectionItem.id}`;
+          if (beginOwnershipAction(key)) removeFromCollection.mutate(collectionItem.id);
+        } : undefined}
+        onAddToWishlist={() => {
+          const key = `wishlist:add:${card.id}`;
+          if (beginOwnershipAction(key)) addToWishlist.mutate(card.id);
+        }}
+        onRemoveFromWishlist={wishlistItem ? () => {
+          const key = `wishlist:remove:${wishlistItem.id}`;
+          if (beginOwnershipAction(key)) removeFromWishlist.mutate(wishlistItem.id);
+        } : undefined}
+        onCardUpdate={(updatedCard) => {
+          queryClient.setQueryData([`/api/cards/${card.id}`], updatedCard);
+        }}
+      />
+    );
+  }
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="w-[calc(100vw-2rem)] max-w-sm rounded-lg bg-zinc-900 border-zinc-700 text-zinc-100">
-        {detail.kind === "badge" ? (
-          <>
+        <>
             <DialogHeader>
               <DialogTitle className="text-zinc-100">{badge?.name ?? md.badgeName ?? "Badge earned"}</DialogTitle>
             </DialogHeader>
@@ -455,44 +631,7 @@ function FeedDetailDialog({ detail, onClose }: { detail: FeedDetail | null; onCl
                 </Link>
               )}
             </div>
-          </>
-        ) : (
-          <>
-            <DialogHeader>
-              <DialogTitle className="text-zinc-100">{card?.name ?? "Card details"}</DialogTitle>
-            </DialogHeader>
-            <div className="flex flex-col items-center gap-3 py-2">
-              {displayDetailImage && (
-                <img
-                  src={displayDetailImage}
-                  alt={card?.name ?? "Card"}
-                  onError={() => setFailedImageUrl(displayDetailImage)}
-                  className="max-h-72 rounded-lg object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.65)]"
-                />
-              )}
-              <div className="text-center space-y-0.5">
-                {card?.cardNumber && <p className="text-xs text-zinc-400">#{card.cardNumber}</p>}
-                {(card?.cardSet?.name || card?.setName) && (
-                  <p className="text-sm text-zinc-300">{card?.cardSet?.name ?? card?.setName}</p>
-                )}
-                {card?.rarity && <p className="text-xs text-zinc-500">{card.rarity}</p>}
-              </div>
-              <p className="text-xs text-zinc-500 text-center">
-                <span className="font-semibold text-zinc-300">{displayName(event.user)}</span> {event.title}
-              </p>
-              {event.user.username && (
-                <Link
-                  href={`/collectors/${event.user.username}`}
-                  onClick={onClose}
-                  className="text-xs text-red-400 hover:text-red-300 inline-flex items-center gap-1"
-                  data-testid="link-detail-profile"
-                >
-                  View {displayName(event.user)}'s profile <ExternalLink className="w-3 h-3" />
-                </Link>
-              )}
-            </div>
-          </>
-        )}
+        </>
       </DialogContent>
     </Dialog>
   );
@@ -650,6 +789,16 @@ function EventCard({ event, pending, onReact, followState, onOpenDetail }: {
               <Link href={binderHref} className="text-xs text-blue-400 hover:text-blue-300 inline-flex items-center gap-1">
                 View Binder <ExternalLink className="w-3 h-3" />
               </Link>
+            )}
+            {event.relatedType === "card" && event.relatedId && heroAction && (
+              <button
+                type="button"
+                onClick={heroAction}
+                className="text-xs text-red-400 hover:text-red-300 inline-flex items-center gap-1"
+                data-testid={`button-view-card-${event.id}`}
+              >
+                View Card <ExternalLink className="w-3 h-3" />
+              </button>
             )}
             {event.user.username && (
               <Link href={`/collectors/${event.user.username}`} className="text-xs text-zinc-500 hover:text-red-400 inline-flex items-center gap-1">

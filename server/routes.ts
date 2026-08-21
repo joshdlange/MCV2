@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { CollectionLimitExceededError, storage } from "./storage";
 import { getCachedUser, setCachedUser } from "./user-cache";
 import { insertCardSetSchema, insertCardSchema, insertUserCollectionSchema, insertUserWishlistSchema, insertUserSchema, insertMainSetSchema, insertFriendSchema, insertMessageSchema, insertBadgeSchema, insertUserBadgeSchema } from "../shared/schema";
 import { z } from "zod";
@@ -2975,28 +2975,16 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       const COLLECTION_LIMIT = SIDE_KICK_CARD_LIMIT;
       
       const [userData] = await db.select({ plan: users.plan }).from(users).where(eq(users.id, req.user.id)).limit(1);
-      
-      if (userData?.plan !== 'SUPER_HERO') {
-        const [countResult] = await db.select({ count: sql<number>`count(*)::int` })
-          .from(userCollections)
-          .where(eq(userCollections.userId, req.user.id));
-        
-        if ((countResult?.count || 0) >= COLLECTION_LIMIT) {
-          return res.status(403).json({ 
-            message: `You've reached the ${COLLECTION_LIMIT} card limit for Side Kick plans. Upgrade to Super Hero for unlimited cards.`,
-            code: 'COLLECTION_LIMIT_REACHED',
-            currentCount: countResult?.count || 0,
-            limit: COLLECTION_LIMIT
-          });
-        }
-      }
 
       const validatedData = insertUserCollectionSchema.parse({
         ...req.body,
         userId: req.user.id
       });
       
-      const collectionItem = await storage.addToCollection(validatedData);
+      const collectionItem = await storage.addToCollection(validatedData, {
+        incrementExisting: req.body?.incrementExisting !== false,
+        distinctCardLimit: userData?.plan !== 'SUPER_HERO' ? COLLECTION_LIMIT : undefined,
+      });
       
       // Invalidate stats cache and check badges (fire-and-forget)
       
@@ -3010,6 +2998,14 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       console.error('Add to collection error:', error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      if (error instanceof CollectionLimitExceededError) {
+        return res.status(403).json({
+          message: `You've reached the ${error.limit} card limit for Side Kick plans. Upgrade to Super Hero for unlimited cards.`,
+          code: error.code,
+          currentCount: error.currentCount,
+          limit: error.limit,
+        });
       }
       if (error instanceof Error && (error.message.includes('retired') || error.message === 'Card not found')) {
         return res.status(400).json({ message: error.message });
@@ -3126,7 +3122,13 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   app.delete("/api/collection/:id", authenticateUser, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      await storage.removeFromCollection(id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid collection item id" });
+      }
+      const removed = await storage.removeFromCollection(id, req.user.id);
+      if (!removed) {
+        return res.status(404).json({ message: "Collection item not found" });
+      }
       
       // Invalidate stats cache and check badges (fire-and-forget)
       
@@ -3251,7 +3253,13 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   app.delete("/api/wishlist/:id", authenticateUser, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      await storage.removeFromWishlist(id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid wishlist item id" });
+      }
+      const removed = await storage.removeFromWishlist(id, req.user.id);
+      if (!removed) {
+        return res.status(404).json({ message: "Wishlist item not found" });
+      }
       
       optimizedStorage.invalidateUserStatsCache(req.user.id);
       res.json({ message: "Card removed from wishlist" });

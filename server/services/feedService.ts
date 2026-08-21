@@ -35,6 +35,37 @@ export interface EmitFeedEventArgs {
   createdAt?: Date; // backfill only
 }
 
+export function buildFirstCardFeedEvent(userId: number, firstCardId: number): EmitFeedEventArgs {
+  return {
+    userId,
+    eventType: 'first_card',
+    title: 'added their first card to the Vault',
+    relatedType: 'card',
+    relatedId: firstCardId,
+    dedupeKey: `first_card:${userId}`,
+  };
+}
+
+export function resolveVisibleFeedRelation(args: {
+  eventType: string;
+  relatedType: string | null;
+  relatedId: number | null;
+  firstCardId?: number | null;
+  canExposeCard: boolean;
+}): { relatedType: string | null; relatedId: number | null } {
+  const isCardEvent = args.relatedType === 'card' || args.eventType === 'first_card';
+  if (isCardEvent && !args.canExposeCard) {
+    return { relatedType: null, relatedId: null };
+  }
+  if (args.relatedType === 'card' && args.relatedId) {
+    return { relatedType: 'card', relatedId: args.relatedId };
+  }
+  if (args.eventType === 'first_card' && args.firstCardId) {
+    return { relatedType: 'card', relatedId: args.firstCardId };
+  }
+  return { relatedType: args.relatedType, relatedId: args.relatedId };
+}
+
 /**
  * Idempotent emit — the dedupe_key unique index makes duplicate emissions
  * (retries, backfill re-runs) no-ops. Never throws into the caller: feed
@@ -67,15 +98,16 @@ export async function emitFeedEvent(args: EmitFeedEventArgs): Promise<void> {
  */
 export async function checkCollectionMilestones(userId: number): Promise<void> {
   try {
-    const res = await db.execute(sql`SELECT count(*)::int AS n FROM user_collections WHERE user_id = ${userId}`);
-    const n = Number((res as any).rows?.[0]?.n ?? 0);
-    if (n >= 1) {
-      await emitFeedEvent({
-        userId,
-        eventType: 'first_card',
-        title: 'added their first card to the Vault',
-        dedupeKey: `first_card:${userId}`,
-      });
+    const result = await db.execute(sql`
+      SELECT card_id
+      FROM user_collections
+      WHERE user_id = ${userId}
+      ORDER BY id ASC
+      LIMIT 1
+    `);
+    const firstCardId = Number((result as any).rows?.[0]?.card_id ?? 0);
+    if (firstCardId > 0) {
+      await emitFeedEvent(buildFirstCardFeedEvent(userId, firstCardId));
     }
   } catch (err) {
     console.error('[feedService] checkCollectionMilestones failed', { userId, err });
@@ -178,6 +210,7 @@ export async function getFeedPage(opts: {
         displayName: users.displayName,
         photoURL: users.photoURL,
         collectorAvatarKey: users.collectorAvatarKey,
+        showCollection: users.showCollection,
       })
       .from(feedEvents)
       .innerJoin(users, eq(feedEvents.userId, users.id))
@@ -199,6 +232,7 @@ export async function getFeedPage(opts: {
         displayName: users.displayName,
         photoURL: users.photoURL,
         collectorAvatarKey: users.collectorAvatarKey,
+        showCollection: users.showCollection,
       })
       .from(feedEvents)
       .innerJoin(users, eq(feedEvents.userId, users.id))
@@ -241,8 +275,22 @@ export async function getFeedPage(opts: {
   // Only public-safe imagery: badge icons, card fronts from the shared card DB.
   const imageByEvent: Record<number, string | null> = {};
   const badgeIds = Array.from(new Set(rows.filter(r => r.relatedType === 'badge' && r.relatedId).map(r => r.relatedId as number)));
-  const cardIds = Array.from(new Set(rows.filter(r => r.relatedType === 'card' && r.relatedId).map(r => r.relatedId as number)));
-  const firstCardUserIds = Array.from(new Set(rows.filter(r => r.eventType === 'first_card').map(r => r.userId)));
+  const canExposeCard = (row: typeof rows[number]) =>
+    row.userId === opts.viewerId || row.showCollection === true;
+  const cardIds = Array.from(new Set(
+    rows
+      .filter(r => r.relatedType === 'card' && r.relatedId && canExposeCard(r))
+      .map(r => r.relatedId as number),
+  ));
+  const firstCardUserIds = Array.from(new Set(
+    rows
+      .filter(r =>
+        r.eventType === 'first_card'
+        && !(r.relatedType === 'card' && r.relatedId)
+        && canExposeCard(r),
+      )
+      .map(r => r.userId),
+  ));
 
   const [badgeIcons, cardImages, firstCards] = await Promise.all([
     badgeIds.length > 0
@@ -258,9 +306,8 @@ export async function getFeedPage(opts: {
           JOIN cards c ON c.id = uc.card_id
           JOIN users u ON u.id = uc.user_id
           WHERE uc.user_id IN (${sql.join(firstCardUserIds.map(id => sql`${id}`), sql`, `)})
-            AND u.show_collection = true
-            AND c.front_image_url IS NOT NULL AND c.front_image_url != ''
-          ORDER BY uc.user_id, uc.acquired_date ASC NULLS LAST, uc.id ASC`)
+            AND (u.show_collection = true OR uc.user_id = ${opts.viewerId})
+          ORDER BY uc.user_id, uc.id ASC`)
       : Promise.resolve({ rows: [] } as any),
   ]);
 
@@ -330,7 +377,7 @@ export async function getFeedPage(opts: {
 
   for (const r of rows) {
     if (r.relatedType === 'badge' && r.relatedId) imageByEvent[r.id] = badgeIconById[r.relatedId] ?? null;
-    else if (r.relatedType === 'card' && r.relatedId) imageByEvent[r.id] = cardImageById[r.relatedId] ?? null;
+    else if (r.relatedType === 'card' && r.relatedId && canExposeCard(r)) imageByEvent[r.id] = cardImageById[r.relatedId] ?? null;
     else if (r.eventType === 'first_card') imageByEvent[r.id] = firstCardByUser[r.userId]?.image ?? null;
     else imageByEvent[r.id] = null;
   }
@@ -340,14 +387,21 @@ export async function getFeedPage(opts: {
     // resolved first card as the related entity so the client can open the
     // same card-detail popup used everywhere else.
     const firstCard = r.eventType === 'first_card' ? firstCardByUser[r.userId] : undefined;
+    const relation = resolveVisibleFeedRelation({
+      eventType: r.eventType,
+      relatedType: r.relatedType,
+      relatedId: r.relatedId,
+      firstCardId: firstCard?.cardId,
+      canExposeCard: canExposeCard(r),
+    });
     const binderId = binderIdByEvent[r.id];
     return {
     id: r.id,
     eventType: r.eventType,
     title: r.title,
     metadata: r.metadata ? safeParse(r.metadata) : null,
-    relatedType: firstCard?.cardId ? 'card' : r.relatedType,
-    relatedId: firstCard?.cardId ?? r.relatedId,
+    relatedType: relation.relatedType,
+    relatedId: relation.relatedId,
     image: imageByEvent[r.id] ?? null,
     previewImages: binderId ? (previewsByBinder[binderId] ?? null) : null,
     createdAt: r.createdAt,
