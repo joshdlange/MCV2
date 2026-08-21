@@ -2175,6 +2175,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         FROM cards c
         LEFT JOIN card_sets cs ON c.set_id = cs.id
         WHERE c.set_id = ${setId}
+          AND c.archived_at IS NULL
         ORDER BY
           ${cardNumberNaturalSortKey(sql`c.card_number`)},
           lower(c.card_number), c.id
@@ -2182,7 +2183,9 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       `);
       
       const countResult = await db.execute(sql`
-        SELECT COUNT(*)::int as total FROM cards WHERE set_id = ${setId}
+        SELECT COUNT(*)::int as total
+        FROM cards
+        WHERE set_id = ${setId} AND archived_at IS NULL
       `);
       
       const cards = result.rows.map((row: any) => ({
@@ -12753,11 +12756,6 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   // One-time seed: 2026 Topps Chrome Marvel Comics — 271 subsets, 9,524 cards (idempotent)
   import('./seeds/seedToppsChromeMarvel2026').then(m => m.seedToppsChromeMarvel2026()).catch(err => {
     console.error('[Topps Chrome Seed] Error:', err);
-  });
-
-  // One-time data fix: merge legacy duplicate sets into canonical ones (idempotent)
-  import('./seeds/mergeDuplicateLegacySets').then(m => m.mergeDuplicateLegacySets()).catch(err => {
-    console.error('[Legacy Set Merge] Error:', err);
   });
 
   // One-time seed: 2026 Topps Mint Marvel — 10 subsets, 480 cards (idempotent)

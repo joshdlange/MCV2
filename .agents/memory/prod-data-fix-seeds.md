@@ -2,7 +2,7 @@
 name: Prod data fixes via startup seeds
 description: How to change production data when the prod DB is read-only from dev
 ---
-Prod DB is read-only via executeSql({environment:"production"}), BUT the NEON_DATABASE_URL secret is a direct *writable* connection to the live prod DB (verified July 2026: counts match the prod replica exactly). One-off batch scripts can run from dev with `DATABASE_URL="$NEON_DATABASE_URL"`; for code-shipped fixes, data changes reach prod through deployed code. Established pattern: idempotent seed in `server/seeds/*`, dynamically imported at startup in routes.ts (near initializeUpcomingSets).
+Prod DB is read-only via executeSql({environment:"production"}), BUT the NEON_DATABASE_URL secret is a direct *writable* connection to the live prod DB (verified July 2026: counts match the prod replica exactly). One-off batch scripts can run from dev with `DATABASE_URL="$NEON_DATABASE_URL"`; for code-shipped fixes, data changes reach prod through deployed code. Established pattern: idempotent seed in `server/seeds/*`, dynamically imported by the post-listen `runDataFixSeeds` sequence in `server/index.ts`.
 
 **Why:** autoscale can boot multiple instances at once; read-then-insert seeds raced and could duplicate/partially apply.
 
@@ -11,5 +11,5 @@ Prod DB is read-only via executeSql({environment:"production"}), BUT the NEON_DA
 Also: the admin "add cards" modal misfiled cards into the wrong set once (July 2026, Kakawow) — suspected set-selector bug, not yet investigated.
 
 ## Seeds must not block the port (2026-08-13 publish failure)
-Heavy first-run seeds ran before `server.listen`, took ~85s in prod, and the deployer only waits ~60s for port 5000 → publish failed ("required port was never opened"). Fix: run heavy data-fix seeds AFTER listen (fire-and-forget in the listen callback), with a write-gate middleware that 503s card/collection/wishlist/binder writes until seeds finish (flag flipped in `finally`).
-**How to apply:** any new startup seed that can do minutes of real prod work goes in `runDataFixSeeds` (post-listen), never before `registerRoutes`.
+Heavy first-run seeds ran before `server.listen`, took ~85s in prod, and the deployer only waits ~60s for port 5000 → publish failed ("required port was never opened"). Fix: run heavy data-fix seeds AFTER listen through the awaited `runDataFixSeeds` sequence, with a write-gate middleware that 503s card-reference writes until seeds finish (flag flipped in `finally`).
+**How to apply:** any new startup seed that can do minutes of real prod work goes in `runDataFixSeeds` (post-listen), never before `registerRoutes`. A seed that archives or merges cards must be awaited inside that gated sequence, not launched from route registration. Keep the gate aligned with every namespace that can create card references, including collection, wishlist, binders, cards, scans, and `/api/marketplace`.

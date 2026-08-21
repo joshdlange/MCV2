@@ -558,15 +558,16 @@ server.listen({
   // autoscale instances) is safe; requests arriving before they finish just
   // see pre-fix data briefly.
   // Until the deferred data-fix seeds finish, reject card/collection/wishlist/
-  // binder WRITES with a 503 so nobody can attach a card that a seed is about
-  // to archive or merge away (reads stay open; seeds are sub-second no-ops
-  // once their markers exist, so this window only matters on a first run).
+  // binder/listing/scan WRITES with a 503 so nobody can attach a card that a
+  // seed is about to archive or merge away (reads stay open; seeds are
+  // sub-second no-ops once their markers exist, so this window only matters on
+  // a first run).
   let dataFixSeedsDone = false;
   app.use((req, res, next) => {
     if (
       !dataFixSeedsDone &&
       req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS' &&
-      /^\/api\/(collection|wishlist|pc-binders|cards)(\/|$)/.test(req.path)
+      /^\/api\/(collection|wishlist|pc-binders|cards|listings|marketplace|scan)(\/|$)/.test(req.path)
     ) {
       return res.status(503).json({ message: 'The Vault is finishing a quick data update — please try again in a moment.' });
     }
@@ -574,6 +575,16 @@ server.listen({
   });
 
   const runDataFixSeeds = async () => {
+    // Idempotent duplicate/relocation repair: consolidate legacy set twins and
+    // repoint every live card reference before archived source cards disappear
+    // from normal browsing. This must be awaited under the write gate above.
+    try {
+      const { mergeDuplicateLegacySets } = await import('./seeds/mergeDuplicateLegacySets');
+      await mergeDuplicateLegacySets();
+    } catch (error) {
+      console.error('Startup repair (legacy set merge) failed:', error);
+    }
+
     // Idempotent startup repair: restore curated card images that the Aug 4
     // legacy duplicate-set merge left on the archived twin (ledger-guarded,
     // never re-touches a card an admin fixed by hand).

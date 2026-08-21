@@ -27,6 +27,13 @@ import { eq, and, inArray, sql, isNull } from 'drizzle-orm';
  *    (renamed "... - Base") and merge the Feb-2026 duplicate subset into it.
  *    (Survivor card #149 is renamed to "Thunderbolts" to match every
  *    parallel checklist in the product.)
+ *  - 1994 Flair Marvel Annual PowerBlast: merge the 20-card punctuation-name
+ *    duplicate into the verified 18-card checklist. The duplicate's extra
+ *    #2 Punisher and #6 Spider-Man rows map by their unique character names
+ *    to canonical #10 and #15.
+ *  - Relocate misplaced LM-1..LM-5 cards from the 1994 Flair Marvel Annual
+ *    base subset into the existing 1992 SkyBox Marvel Masterpieces Lost
+ *    Marvel Bonus Cards subset without retiring the 1994 base subset.
  *  - Deactivate the empty orphan subset "2020 Upper Deck Marvel Avengers
  *    Endgame & Captain Marvel".
  *
@@ -74,6 +81,13 @@ interface MergeGroup {
   retireMainSlug?: string;          // legacy main set to deactivate afterwards
   numberRules?: NumberRule[];
   numberOnlyFallback?: boolean;     // allow unique-number match when names differ
+  nameOnlyFallback?: boolean;       // allow unique normalized-name match when source numbers are wrong
+  targetMetadata?: {
+    isCanonical?: boolean;
+    isInsertSubset?: boolean;
+    canonicalSource?: string;
+    cardsAreInserts?: boolean;
+  };
 }
 
 const GROUPS: MergeGroup[] = [
@@ -121,11 +135,32 @@ const GROUPS: MergeGroup[] = [
     targetSubsetSlugs: ['2023-2023-upper-deck-marvel-platinum-base'],
     numberOnlyFallback: true,
   },
+  {
+    label: '1994 Flair PowerBlast',
+    sourceSubsetSlugs: ['1994-1994-flair-marvel-annual-flair-marvel-universe-powerblast'],
+    targetSubsetSlugs: ['1994-flair-marvel-annual-flair-marvel-universe-powerblast'],
+    nameOnlyFallback: true,
+    targetMetadata: {
+      isCanonical: true,
+      isInsertSubset: true,
+      canonicalSource: 'manual_verified',
+      cardsAreInserts: true,
+    },
+  },
 ];
 
 const PLATINUM_MAIN_SLUG = '2023-upper-deck-marvel-platinum';
 const PLATINUM_BASE_SLUG = '2023-2023-upper-deck-marvel-platinum-base';
 const EMPTY_ORPHAN_SLUG = '2020-upper-deck-marvel-avengers-endgame-captain-marvel';
+const LOST_MARVEL_SOURCE_SLUG = '1994-1994-flair-marvel-annual-base';
+const LOST_MARVEL_TARGET_SLUG = '1992-1992-skybox-marvel-masterpieces-lost-marvel-bonus-cards';
+const LOST_MARVEL_CARDS = new Map([
+  ['LM-1', 'scarletwitch'],
+  ['LM-2', 'feral'],
+  ['LM-3', 'deathbird'],
+  ['LM-4', 'typhoidmary'],
+  ['LM-5', 'jubilee'],
+]);
 
 async function refCount(tx: Tx, cardId: number): Promise<number> {
   const r: any = await tx.execute(sql`
@@ -136,7 +171,9 @@ async function refCount(tx: Tx, cardId: number): Promise<number> {
          + (SELECT count(*) FROM xp_events WHERE card_id = ${cardId})
          + (SELECT count(*) FROM pending_card_images WHERE card_id = ${cardId})
          + (SELECT count(*) FROM scan_uploads WHERE top_match_card_id = ${cardId})
-         + (SELECT count(*) FROM scan_feedback WHERE selected_card_id = ${cardId}) AS n`);
+     + (SELECT count(*) FROM scan_feedback WHERE selected_card_id = ${cardId})
+     + (SELECT count(*) FROM feed_events
+        WHERE related_type = 'card' AND related_id = ${cardId}) AS n`);
   return Number(r.rows?.[0]?.n ?? 0);
 }
 
@@ -260,6 +297,10 @@ async function applyPairBatch(tx: Tx, archiveReason: string): Promise<void> {
   await tx.execute(sql`UPDATE xp_events d SET card_id = p.surv_id FROM merge_pairs p WHERE d.card_id = p.dup_id`);
   await tx.execute(sql`UPDATE scan_uploads d SET top_match_card_id = p.surv_id FROM merge_pairs p WHERE d.top_match_card_id = p.dup_id`);
   await tx.execute(sql`UPDATE scan_feedback d SET selected_card_id = p.surv_id FROM merge_pairs p WHERE d.selected_card_id = p.dup_id`);
+  await tx.execute(sql`
+    UPDATE feed_events d SET related_id = p.surv_id
+    FROM merge_pairs p
+    WHERE d.related_type = 'card' AND d.related_id = p.dup_id`);
   await tx.execute(sql`DELETE FROM card_price_cache d USING merge_pairs p WHERE d.card_id = p.dup_id`);
 
   // Carry over images when the survivor is missing them, and prefer the dup's
@@ -287,6 +328,28 @@ async function applyPairBatch(tx: Tx, archiveReason: string): Promise<void> {
     UPDATE cards c SET archived_at = now(),
       archive_reason = ${archiveReason} || ' (merged into card ' || p.surv_id || ')'
     FROM merge_pairs p WHERE c.id = p.dup_id`);
+}
+
+export async function applyCardMergePairs(
+  tx: Tx,
+  pairs: Array<{ dup: number; surv: number }>,
+  archiveReason: string,
+): Promise<void> {
+  if (pairs.length === 0) return;
+
+  await tx.execute(sql`
+    CREATE TEMP TABLE IF NOT EXISTS merge_pairs (
+      dup_id integer PRIMARY KEY,
+      surv_id integer NOT NULL
+    ) ON COMMIT DROP`);
+  await tx.execute(sql`TRUNCATE merge_pairs`);
+  for (let i = 0; i < pairs.length; i += 500) {
+    const chunk = pairs.slice(i, i + 500);
+    await tx.execute(sql`
+      INSERT INTO merge_pairs (dup_id, surv_id)
+      VALUES ${sql.join(chunk.map((pair) => sql`(${pair.dup}, ${pair.surv})`), sql`, `)}`);
+  }
+  await applyPairBatch(tx, archiveReason);
 }
 
 async function mergeGroup(tx: Tx, group: MergeGroup): Promise<void> {
@@ -328,6 +391,7 @@ async function mergeGroup(tx: Tx, group: MergeGroup): Promise<void> {
   // Index: num -> cards, and (num|normName) -> cards
   const byNum = new Map<string, CardRow[]>();
   const byNumName = new Map<string, CardRow[]>();
+  const byName = new Map<string, CardRow[]>();
 
   let moved = 0, archivedUnref = 0;
   const pairs: Array<{ dup: number; surv: number }> = [];
@@ -359,8 +423,10 @@ async function mergeGroup(tx: Tx, group: MergeGroup): Promise<void> {
   for (const c of dedupedTargets) {
     const num = (c.cardNumber ?? '').trim();
     (byNum.get(num) ?? byNum.set(num, []).get(num)!).push(c);
-    const k = `${num}|${normName(c.name)}`;
+    const normalizedName = normName(c.name);
+    const k = `${num}|${normalizedName}`;
     (byNumName.get(k) ?? byNumName.set(k, []).get(k)!).push(c);
+    (byName.get(normalizedName) ?? byName.set(normalizedName, []).get(normalizedName)!).push(c);
   }
   for (const src of sources) {
     const srcCards = await tx.select().from(cards)
@@ -394,6 +460,11 @@ async function mergeGroup(tx: Tx, group: MergeGroup): Promise<void> {
       if (!survivor && group.numberOnlyFallback) {
         survivor = pickPreferred(byNum.get(num) ?? [], subsetById);
       }
+      // Tier 5: unique character-name match for a curated group whose legacy
+      // source contains known bad numbers (1994 Flair PowerBlast).
+      if (!survivor && group.nameOnlyFallback) {
+        survivor = pickPreferred(byName.get(nm) ?? [], subsetById);
+      }
 
       if (!survivor) {
         const refs = await refCount(tx, card.id);
@@ -414,22 +485,12 @@ async function mergeGroup(tx: Tx, group: MergeGroup): Promise<void> {
     }
   }
 
-  // Apply all repointing for the group in one set-based batch
-  await tx.execute(sql`CREATE TEMP TABLE IF NOT EXISTS merge_pairs (dup_id integer PRIMARY KEY, surv_id integer NOT NULL) ON COMMIT DROP`);
-  await tx.execute(sql`TRUNCATE merge_pairs`);
-  for (let i = 0; i < pairs.length; i += 500) {
-    const chunk = pairs.slice(i, i + 500);
-    await tx.execute(sql`
-      INSERT INTO merge_pairs (dup_id, surv_id)
-      VALUES ${sql.join(chunk.map((p) => sql`(${p.dup}, ${p.surv})`), sql`, `)}`);
-  }
-  if (pairs.length > 0) {
-    await applyPairBatch(tx, `Legacy duplicate set merged (${group.label})`);
-  }
+  // Apply all repointing for the group in one set-based batch.
+  await applyCardMergePairs(tx, pairs, `Legacy duplicate set merged (${group.label})`);
 
   for (const src of sources) {
     await tx.update(cardSets)
-      .set({ isActive: false, archivedAt: new Date() })
+      .set({ isActive: false, isCanonical: false, archivedAt: new Date() })
       .where(eq(cardSets.id, src.id));
   }
 
@@ -456,9 +517,95 @@ async function mergeGroup(tx: Tx, group: MergeGroup): Promise<void> {
       UPDATE card_sets SET total_cards =
         (SELECT count(*) FROM cards WHERE set_id = ${t.id} AND archived_at IS NULL)
       WHERE id = ${t.id}`);
+    if (group.targetMetadata) {
+      await tx.update(cardSets)
+        .set({
+          isCanonical: group.targetMetadata.isCanonical,
+          isInsertSubset: group.targetMetadata.isInsertSubset,
+          canonicalSource: group.targetMetadata.canonicalSource,
+        })
+        .where(eq(cardSets.id, t.id));
+      if (group.targetMetadata.cardsAreInserts !== undefined) {
+        await tx.update(cards)
+          .set({ isInsert: group.targetMetadata.cardsAreInserts })
+          .where(and(eq(cards.setId, t.id), isNull(cards.archivedAt)));
+      }
+    }
   }
 
   console.log(`${LOG} ${group.label}: repointed ${moved} card(s), archived ${archivedUnref} unreferenced unmatched card(s)`);
+}
+
+async function relocateLostMarvelBonusCards(tx: Tx): Promise<void> {
+  const [source] = await tx.select().from(cardSets).where(eq(cardSets.slug, LOST_MARVEL_SOURCE_SLUG));
+  if (!source) {
+    console.log(`${LOG} Lost Marvel Bonus Cards: source subset absent — skipping`);
+    return;
+  }
+
+  const sourceCards = await tx.select().from(cards).where(and(
+    eq(cards.setId, source.id),
+    inArray(cards.cardNumber, [...LOST_MARVEL_CARDS.keys()]),
+    isNull(cards.archivedAt),
+  ));
+  if (sourceCards.length === 0) {
+    console.log(`${LOG} Lost Marvel Bonus Cards: misplaced cards already relocated — skipping`);
+    return;
+  }
+  if (sourceCards.length !== LOST_MARVEL_CARDS.size) {
+    throw new Error(
+      `Lost Marvel Bonus Cards: expected ${LOST_MARVEL_CARDS.size} active source cards, found ${sourceCards.length}`,
+    );
+  }
+
+  const [target] = await tx.select().from(cardSets).where(and(
+    eq(cardSets.slug, LOST_MARVEL_TARGET_SLUG),
+    eq(cardSets.isActive, true),
+  ));
+  if (!target) throw new Error('Lost Marvel Bonus Cards: active target subset not found');
+
+  const targetCards = await tx.select().from(cards).where(and(
+    eq(cards.setId, target.id),
+    inArray(cards.cardNumber, [...LOST_MARVEL_CARDS.keys()]),
+    isNull(cards.archivedAt),
+  ));
+  if (targetCards.length !== LOST_MARVEL_CARDS.size) {
+    throw new Error(
+      `Lost Marvel Bonus Cards: expected ${LOST_MARVEL_CARDS.size} active target cards, found ${targetCards.length}`,
+    );
+  }
+
+  const sourceByNumber = new Map(sourceCards.map((card) => [card.cardNumber.trim(), card]));
+  const targetByNumber = new Map(targetCards.map((card) => [card.cardNumber.trim(), card]));
+  const pairs: Array<{ dup: number; surv: number }> = [];
+  for (const [number, expectedName] of LOST_MARVEL_CARDS) {
+    const duplicate = sourceByNumber.get(number);
+    const survivor = targetByNumber.get(number);
+    if (!duplicate || normName(duplicate.name) !== expectedName) {
+      throw new Error(`Lost Marvel Bonus Cards: source ${number} is missing or has the wrong character`);
+    }
+    if (!survivor || normName(survivor.name) !== expectedName) {
+      throw new Error(`Lost Marvel Bonus Cards: target ${number} is missing or has the wrong character`);
+    }
+    pairs.push({ dup: duplicate.id, surv: survivor.id });
+  }
+
+  await applyCardMergePairs(
+    tx,
+    pairs,
+    'Misplaced Lost Marvel Bonus card relocated to 1992 SkyBox Marvel Masterpieces',
+  );
+
+  await tx.execute(sql`
+    UPDATE card_sets SET total_cards =
+      (SELECT count(*) FROM cards WHERE set_id = ${source.id} AND archived_at IS NULL)
+    WHERE id = ${source.id}`);
+  await tx.execute(sql`
+    UPDATE card_sets SET total_cards =
+      (SELECT count(*) FROM cards WHERE set_id = ${target.id} AND archived_at IS NULL)
+    WHERE id = ${target.id}`);
+
+  console.log(`${LOG} Lost Marvel Bonus Cards: relocated ${pairs.length} card(s)`);
 }
 
 export async function mergeDuplicateLegacySets(): Promise<void> {
@@ -470,7 +617,16 @@ export async function mergeDuplicateLegacySets(): Promise<void> {
     .where(and(eq(cardSets.slug, EMPTY_ORPHAN_SLUG), eq(cardSets.isActive, true)));
   const [platBase] = await db.select().from(cardSets).where(eq(cardSets.slug, PLATINUM_BASE_SLUG));
   const needsPlatinumAttach = platBase && platBase.mainSetId == null;
-  if (active.length === 0 && !orphan && !needsPlatinumAttach) {
+  const lostMarvelProbe: any = await db.execute(sql`
+    SELECT EXISTS (
+      SELECT 1 FROM cards c
+      JOIN card_sets cs ON cs.id = c.set_id
+      WHERE cs.slug = ${LOST_MARVEL_SOURCE_SLUG}
+        AND c.card_number IN ('LM-1', 'LM-2', 'LM-3', 'LM-4', 'LM-5')
+        AND c.archived_at IS NULL
+    ) AS needed`);
+  const needsLostMarvelRelocation = Boolean(lostMarvelProbe.rows?.[0]?.needed);
+  if (active.length === 0 && !orphan && !needsPlatinumAttach && !needsLostMarvelRelocation) {
     console.log(`${LOG} Nothing to do — all legacy duplicate sets already retired`);
     return;
   }
@@ -496,6 +652,7 @@ export async function mergeDuplicateLegacySets(): Promise<void> {
     for (const group of GROUPS) {
       await mergeGroup(tx, group);
     }
+    await relocateLostMarvelBonusCards(tx);
 
     // Deactivate the empty orphan subset (only if it truly has no active cards)
     if (orphan) {
