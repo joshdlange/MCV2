@@ -33,4 +33,4 @@
 - [Push notifications](push-notifications.md) — FCM secret is FIREBASE_SERVICE_ACCOUNT_KEY (not _JSON); admin manual sends + approved new-message trigger only (generic body, no message content); segments map to users.plan.
 - [PC binder share funnel](pc-share-funnel.md) — raw view/share counters + creation-time-only signup attribution; signup_share_token must never enter the user self-update allowlist.
 - [Dark-root theme vs white cards](theme-outline-badges.md) — text-foreground is white on white cards; use text-card-foreground/explicit grays on card surfaces.
-- [Drive image import safety](drive-image-import.md) — marked-file-wins front/back rule only (never sort order); transactional ledger gives rerun idempotency; always fresh scan before import.
+- [Drive image import safety](drive-image-import.md) — marked-file-wins; never overwrite card images; cursor/checkpoint state must never hide pending Drive work.

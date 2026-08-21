@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, decimal, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, decimal, index, uniqueIndex, jsonb } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -1393,6 +1393,71 @@ export const driveImageImports = pgTable("drive_image_imports", {
 });
 
 export type DriveImageImport = typeof driveImageImports.$inferSelect;
+
+// ── Drive Sync Jobs (durable, DB-backed job status/progress) ─────────────────
+// Survives autoscale instance changes / restarts. The report endpoint reads
+// from here rather than only from process memory. A stale "running" job (no
+// heartbeat) is recoverable and gets marked "interrupted" on next inspection.
+export const driveSyncJobs = pgTable("drive_sync_jobs", {
+  id: serial("id").primaryKey(),
+  batchId: text("batch_id").notNull().unique(),
+  jobType: text("job_type").notNull(), // dry_run | import
+  mode: text("mode").notNull().default("incremental"), // incremental | full_audit
+  status: text("status").notNull(), // running | completed | failed | interrupted
+  stage: text("stage"), // e.g. scanning | listing | matching | uploading | done
+  // Progress counters
+  folderListings: integer("folder_listings").notNull().default(0),
+  totalSetFolders: integer("total_set_folders").notNull().default(0),
+  processedSetFolders: integer("processed_set_folders").notNull().default(0),
+  currentSet: text("current_set"),
+  cardFoldersProcessed: integer("card_folders_processed").notNull().default(0),
+  imagesUploaded: integer("images_uploaded").notNull().default(0),
+  cardsUpdated: integer("cards_updated").notNull().default(0),
+  scanErrorsCount: integer("scan_errors_count").notNull().default(0),
+  skippedSetsUnchanged: integer("skipped_sets_unchanged").notNull().default(0),
+  latestError: text("latest_error"),
+  // Structured detail (final report summary, scan errors, options)
+  detail: jsonb("detail"),
+  options: jsonb("options"),
+  // Timestamps / heartbeat for stale detection
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  heartbeatAt: timestamp("heartbeat_at").defaultNow().notNull(),
+  finishedAt: timestamp("finished_at"),
+});
+
+export type DriveSyncJob = typeof driveSyncJobs.$inferSelect;
+
+// ── Drive Sync Set Checkpoints (set-level cache to avoid rescanning) ─────────
+// One row per top-level "set" folder. Records the folder's latest observed
+// modifiedTime and a lightweight content signature so a normal (incremental)
+// sync can skip a top-level set folder whose subtree is unchanged since the
+// last completed pass, instead of re-crawling every descendant.
+export const driveSyncSetCheckpoints = pgTable("drive_sync_set_checkpoints", {
+  id: serial("id").primaryKey(),
+  driveFolderId: text("drive_folder_id").notNull().unique(),
+  folderName: text("folder_name").notNull(),
+  // Latest modifiedTime seen anywhere in this set's subtree (RFC3339 string).
+  lastModifiedTime: text("last_modified_time"),
+  // Cheap structural signature (child folder ids + modifiedTimes hash).
+  contentSignature: text("content_signature"),
+  // true once a full clean pass completed for this set with no scan errors.
+  completed: boolean("completed").notNull().default(false),
+  lastScannedAt: timestamp("last_scanned_at").defaultNow().notNull(),
+  lastBatchId: text("last_batch_id"),
+});
+
+export type DriveSyncSetCheckpoint = typeof driveSyncSetCheckpoints.$inferSelect;
+
+// ── Drive Sync State (durable singleton: Changes API cursor / baseline) ──────
+export const driveSyncState = pgTable("drive_sync_state", {
+  id: integer("id").primaryKey().default(1),
+  // Google Drive Changes API startPageToken captured at baseline.
+  changesPageToken: text("changes_page_token"),
+  baselineCompletedAt: timestamp("baseline_completed_at"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type DriveSyncState = typeof driveSyncState.$inferSelect;
 
 // ── Scan Uploads (Scan to Add matching history) ───────────────────────────────
 export const scanUploads = pgTable("scan_uploads", {

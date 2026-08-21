@@ -414,6 +414,73 @@ app.use((req, res, next) => {
     console.error('Startup migration (drive_image_imports) failed:', error);
   }
 
+  // Idempotent startup migration: durable Drive sync job status/progress,
+  // set-level checkpoints, and sync state (Changes API cursor / baseline).
+  try {
+    const { db } = await import('./db');
+    const { sql } = await import('drizzle-orm');
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS drive_sync_jobs (
+      id serial PRIMARY KEY,
+      batch_id text NOT NULL UNIQUE,
+      job_type text NOT NULL,
+      mode text NOT NULL DEFAULT 'incremental',
+      status text NOT NULL,
+      stage text,
+      folder_listings integer NOT NULL DEFAULT 0,
+      total_set_folders integer NOT NULL DEFAULT 0,
+      processed_set_folders integer NOT NULL DEFAULT 0,
+      current_set text,
+      card_folders_processed integer NOT NULL DEFAULT 0,
+      images_uploaded integer NOT NULL DEFAULT 0,
+      cards_updated integer NOT NULL DEFAULT 0,
+      scan_errors_count integer NOT NULL DEFAULT 0,
+      skipped_sets_unchanged integer NOT NULL DEFAULT 0,
+      latest_error text,
+      detail jsonb,
+      options jsonb,
+      started_at timestamp NOT NULL DEFAULT now(),
+      heartbeat_at timestamp NOT NULL DEFAULT now(),
+      finished_at timestamp
+    )`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_drive_sync_jobs_status ON drive_sync_jobs (status)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_drive_sync_jobs_started ON drive_sync_jobs (started_at DESC)`);
+
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS drive_sync_set_checkpoints (
+      id serial PRIMARY KEY,
+      drive_folder_id text NOT NULL UNIQUE,
+      folder_name text NOT NULL,
+      last_modified_time text,
+      content_signature text,
+      completed boolean NOT NULL DEFAULT false,
+      last_scanned_at timestamp NOT NULL DEFAULT now(),
+      last_batch_id text
+    )`);
+
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS drive_sync_state (
+      id integer PRIMARY KEY DEFAULT 1,
+      changes_page_token text,
+      baseline_completed_at timestamp,
+      updated_at timestamp NOT NULL DEFAULT now()
+    )`);
+
+    // Recover stale "running" jobs left behind by a crashed/redeployed instance.
+    // Anything running with no heartbeat in the last 5 minutes is interrupted
+    // (recoverable): the advisory lock is released with the process, so a new
+    // run can safely take over.
+    const staleRes = await db.execute(sql`
+      UPDATE drive_sync_jobs
+      SET status = 'interrupted',
+          latest_error = COALESCE(latest_error, 'Instance restarted or crashed before completion (recoverable)'),
+          finished_at = now()
+      WHERE status = 'running' AND heartbeat_at < now() - interval '5 minutes'
+      RETURNING id`);
+    if (staleRes.rows.length > 0) {
+      console.log(`[DriveSync] Marked ${staleRes.rows.length} stale running job(s) as interrupted on startup`);
+    }
+  } catch (error) {
+    console.error('Startup migration (drive_sync_jobs/checkpoints/state) failed:', error);
+  }
+
   // Idempotent startup migration: soft-archive columns for duplicate card cleanup.
   try {
     const { db } = await import('./db');

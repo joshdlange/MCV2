@@ -148,6 +148,7 @@ function ImageMigrationCard() {
 interface DryRunSummaryResponse {
   running: boolean;
   report: {
+    batchId: string;
     ranAt: string;
     alreadyImportedImages?: number;
     summary: {
@@ -164,29 +165,65 @@ interface DryRunSummaryResponse {
   } | null;
 }
 
+interface DriveImportSummary {
+  eligibleFolders: number;
+  uploadedImages: number;
+  updatedCardRecords: number;
+  skippedExistingImages: number;
+  skippedAlreadyImported: number;
+  skippedUnmatchedFolders: number;
+  skippedWrongImageCount: number;
+  skippedStructureOddities: number;
+  skippedUnresolvedFrontBack: number;
+  failedCloudinaryUploads: number;
+  failedDatabaseUpdates: number;
+  foldersProcessed: number;
+  foldersRemainingEligible: number;
+}
+
 interface ImportReportResponse {
   running: boolean;
+  job: {
+    batchId: string;
+    jobType: "dry_run" | "import";
+    mode: "incremental" | "full_audit";
+    status: "running" | "completed" | "failed" | "interrupted";
+    stage?: string | null;
+    folderListings: number;
+    totalSetFolders: number;
+    processedSetFolders: number;
+    currentSet?: string | null;
+    cardFoldersProcessed: number;
+    imagesUploaded: number;
+    cardsUpdated: number;
+    scanErrorsCount: number;
+    skippedSetsUnchanged: number;
+    latestError?: string | null;
+    detail?: {
+      summary?: DriveImportSummary;
+      incrementalStrategy?: string;
+      skippedUnchangedSets?: number;
+      scanErrorsCount?: number;
+      scanIncomplete?: boolean;
+      cursorAdvanced?: boolean;
+      failedSets?: number;
+    } | null;
+    startedAt: string;
+    heartbeatAt: string;
+    finishedAt?: string | null;
+  } | null;
   report: {
     ranAt: string;
     finishedAt?: string;
     status: "running" | "completed" | "failed";
+    mode?: "incremental" | "full_audit";
+    incrementalStrategy?: "changes_cursor" | "checkpoint_cache" | "baseline_full" | "full_audit";
+    skippedUnchangedSets?: number;
+    scanErrorsCount?: number;
+    scanIncomplete?: boolean;
     fatalError?: string;
     options: { maxFolders: number | null; overwrite: boolean };
-    summary: {
-      eligibleFolders: number;
-      uploadedImages: number;
-      updatedCardRecords: number;
-      skippedExistingImages: number;
-      skippedAlreadyImported: number;
-      skippedUnmatchedFolders: number;
-      skippedWrongImageCount: number;
-      skippedStructureOddities: number;
-      skippedUnresolvedFrontBack: number;
-      failedCloudinaryUploads: number;
-      failedDatabaseUpdates: number;
-      foldersProcessed: number;
-      foldersRemainingEligible: number;
-    };
+    summary: DriveImportSummary;
     failures: Array<{ folderPath: string; stage: string; error: string }>;
   } | null;
 }
@@ -205,7 +242,7 @@ function Stat({ label, value, tone }: { label: string; value: number | string; t
 function DriveSyncCard() {
   const { toast } = useToast();
   const qc = useQueryClient();
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importMode, setImportMode] = useState<"incremental" | "full_audit" | null>(null);
   const [confirmText, setConfirmText] = useState("");
   const [readiness, setReadiness] = useState<{ ok: boolean; checks: Array<{ name: string; ok: boolean; detail: string }> } | null>(null);
 
@@ -236,7 +273,7 @@ function DriveSyncCard() {
     refetchInterval: (q) => (q.state.data?.running ? 5000 : false),
   });
 
-  const importRunning = importData?.running === true;
+  const importRunning = importData?.running === true || importData?.job?.status === "running";
   const dryRunRunning = dryRun?.running === true;
 
   const dryRunMutation = useMutation({
@@ -254,13 +291,21 @@ function DriveSyncCard() {
   });
 
   const importMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/admin/drive-sync/import", { confirm: "IMPORT" });
+    mutationFn: async (mode: "incremental" | "full_audit") => {
+      const endpoint = mode === "full_audit"
+        ? "/api/admin/drive-sync/full-audit"
+        : "/api/admin/drive-sync/import";
+      const res = await apiRequest("POST", endpoint, {
+        confirm: mode === "full_audit" ? "FULL_AUDIT" : "IMPORT",
+      });
       return res.json();
     },
-    onSuccess: () => {
-      toast({ title: "Import started", description: "Running in the background. Progress updates below." });
-      setImportDialogOpen(false);
+    onSuccess: (_data, mode) => {
+      toast({
+        title: mode === "full_audit" ? "Full audit started" : "Drive sync started",
+        description: "Running safely in the background. Live progress appears below.",
+      });
+      setImportMode(null);
       setConfirmText("");
       qc.invalidateQueries({ queryKey: ["/api/admin/drive-sync/import-report"] });
     },
@@ -275,7 +320,37 @@ function DriveSyncCard() {
   });
 
   const s = dryRun?.report?.summary;
-  const imp = importData?.report;
+  const job = importData?.job;
+  // The rich report lives in process memory. Only combine it with the durable
+  // job when both refer to the same batch; another autoscale instance may hold
+  // an older report.
+  const imp = importData?.report && (!job || importData.report.batchId === job.batchId)
+    ? importData.report
+    : null;
+  const persistedSummary = job?.detail?.summary;
+  const displaySummary = imp?.summary ?? persistedSummary;
+  const displayedFailures = (displaySummary?.failedCloudinaryUploads ?? 0)
+    + (displaySummary?.failedDatabaseUpdates ?? 0);
+  const jobHasIssues = Boolean(
+    job?.latestError
+    || job?.scanErrorsCount
+    || job?.detail?.scanIncomplete
+    || job?.detail?.failedSets
+    || displayedFailures,
+  );
+  const progressPercent = job?.totalSetFolders
+    ? Math.min(100, Math.round((job.processedSetFolders / job.totalSetFolders) * 100))
+    : 0;
+  const statusLabel = job?.status === "running"
+    ? "Running"
+    : job?.status === "completed"
+      ? (jobHasIssues ? "Completed with issues" : "Completed")
+      : job?.status === "interrupted"
+        ? "Interrupted — safe to resume"
+        : job?.status === "failed"
+          ? "Failed"
+          : "Idle";
+  const stageLabel = (job?.stage || "waiting").replace(/_/g, " ");
 
   return (
     <Card className="border border-gray-200">
@@ -294,7 +369,7 @@ function DriveSyncCard() {
           </div>
           {importRunning ? (
             <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">
-              <RefreshCw className="h-3 w-3 mr-1 animate-spin" /> Importing
+              <RefreshCw className="h-3 w-3 mr-1 animate-spin" /> Syncing
             </Badge>
           ) : dryRunRunning || dryRunMutation.isPending ? (
             <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">
@@ -308,6 +383,57 @@ function DriveSyncCard() {
         </div>
       </CardHeader>
       <CardContent className="pb-4 space-y-4">
+        {/* Durable job status: survives app restarts and autoscale instances */}
+        {job && (
+          <div className={`rounded-lg border p-3 max-w-2xl ${
+            job.status === "running"
+              ? "bg-blue-50 border-blue-200"
+              : job.status === "completed" && !jobHasIssues
+                ? "bg-green-50 border-green-200"
+                : "bg-amber-50 border-amber-200"
+          }`}>
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <div>
+                <p className="text-xs font-semibold text-gray-900">
+                  {job.mode === "full_audit" ? "Full Archive Audit" : "New & Changed Image Sync"} — {statusLabel}
+                </p>
+                <p className="text-xs text-gray-600 capitalize">
+                  Stage: {stageLabel}{job.currentSet ? ` · Current set: ${job.currentSet}` : ""}
+                </p>
+              </div>
+              {job.status === "running" && (
+                <span className="text-xs font-semibold text-blue-700">{progressPercent}%</span>
+              )}
+            </div>
+            {job.status === "running" && job.totalSetFolders > 0 && (
+              <div className="h-2 rounded-full bg-blue-100 overflow-hidden mb-2">
+                <div
+                  className="h-full bg-blue-600 transition-all duration-500"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            )}
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 text-xs">
+              <Stat label="Set Folders" value={`${job.processedSetFolders}/${job.totalSetFolders || "?"}`} />
+              <Stat label="Drive Listings" value={job.folderListings.toLocaleString()} />
+              <Stat label="Card Folders" value={job.cardFoldersProcessed.toLocaleString()} />
+              <Stat label="Images Uploaded" value={job.imagesUploaded.toLocaleString()} tone="green" />
+              <Stat label="Cards Updated" value={job.cardsUpdated.toLocaleString()} tone="green" />
+              <Stat label="Unchanged Sets Skipped" value={job.skippedSetsUnchanged.toLocaleString()} />
+              <Stat label="Scan Errors" value={job.scanErrorsCount.toLocaleString()} tone={job.scanErrorsCount ? "amber" : undefined} />
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Started: {new Date(job.startedAt).toLocaleString()}
+              {job.finishedAt ? ` · Finished: ${new Date(job.finishedAt).toLocaleString()}` : ""}
+            </p>
+            {job.latestError && (
+              <p className="text-xs text-amber-800 bg-amber-100 border border-amber-200 rounded p-2 mt-2 break-words">
+                Latest issue: {job.latestError}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Latest dry-run scan */}
         <div>
           <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Latest Drive Scan (read-only)</p>
@@ -334,37 +460,41 @@ function DriveSyncCard() {
         </div>
 
         {/* Last import batch */}
-        {imp && (
+        {(imp || (job && displaySummary)) && (
           <div>
             <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-              Last Import Batch{" "}
-              {imp.status === "running" ? (
+              Latest Sync Results{" "}
+              {(imp?.status ?? job?.status) === "running" ? (
                 <span className="text-blue-600">(in progress…)</span>
-              ) : imp.status === "failed" ? (
-                <span className="text-red-600">(failed{imp.fatalError ? `: ${imp.fatalError}` : ""})</span>
+              ) : (imp?.status ?? job?.status) === "failed" ? (
+                <span className="text-red-600">(failed{imp?.fatalError ? `: ${imp.fatalError}` : ""})</span>
+              ) : job?.status === "interrupted" ? (
+                <span className="text-amber-600">(interrupted — run again to resume safely)</span>
               ) : (
                 <span className="text-green-600">(completed)</span>
               )}
             </p>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 text-xs max-w-2xl">
-              <Stat label="Images Uploaded" value={imp.summary.uploadedImages} tone="green" />
-              <Stat label="Cards Updated" value={imp.summary.updatedCardRecords} tone="green" />
-              <Stat label="Skipped: Already Imported" value={imp.summary.skippedAlreadyImported} />
-              <Stat label="Skipped: Has Image" value={imp.summary.skippedExistingImages} />
-              <Stat label="Skipped: Unmatched" value={imp.summary.skippedUnmatchedFolders} />
-              <Stat label="Skipped: Wrong Count" value={imp.summary.skippedWrongImageCount} />
+              <Stat label="Images Uploaded" value={displaySummary?.uploadedImages ?? 0} tone="green" />
+              <Stat label="Cards Updated" value={displaySummary?.updatedCardRecords ?? 0} tone="green" />
+              <Stat label="Skipped: Already Imported" value={displaySummary?.skippedAlreadyImported ?? 0} />
+              <Stat label="Skipped: Has Image" value={displaySummary?.skippedExistingImages ?? 0} />
+              <Stat label="Skipped: Unmatched" value={displaySummary?.skippedUnmatchedFolders ?? 0} />
+              <Stat label="Skipped: Wrong Count" value={displaySummary?.skippedWrongImageCount ?? 0} />
               <Stat
                 label="Failures"
-                value={imp.summary.failedCloudinaryUploads + imp.summary.failedDatabaseUpdates}
-                tone={imp.summary.failedCloudinaryUploads + imp.summary.failedDatabaseUpdates > 0 ? "red" : undefined}
+                value={displayedFailures}
+                tone={displayedFailures > 0 ? "red" : undefined}
               />
-              <Stat label="Folders Left" value={imp.summary.foldersRemainingEligible} />
+              <Stat label="Folders Left" value={displaySummary?.foldersRemainingEligible ?? 0} />
             </div>
-            <p className="text-xs text-gray-500 mt-1.5">
-              Started: {new Date(imp.ranAt).toLocaleString()}
-              {imp.finishedAt ? ` · Finished: ${new Date(imp.finishedAt).toLocaleString()}` : ""}
-            </p>
-            {imp.failures.length > 0 && (
+            {imp && (
+              <p className="text-xs text-gray-500 mt-1.5">
+                Strategy: {(imp.incrementalStrategy || "safe scan").replace(/_/g, " ")}
+                {imp.skippedUnchangedSets ? ` · ${imp.skippedUnchangedSets} unchanged set(s) skipped` : ""}
+              </p>
+            )}
+            {imp && imp.failures.length > 0 && (
               <div className="mt-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-2 max-w-2xl max-h-32 overflow-y-auto">
                 {imp.failures.slice(0, 20).map((f, i) => (
                   <p key={i} className="truncate">{f.folderPath} — {f.stage}: {f.error}</p>
@@ -417,54 +547,75 @@ function DriveSyncCard() {
             disabled={dryRunMutation.isPending || dryRunRunning || importRunning}
           >
             <Search className="h-3 w-3 mr-1.5" />
-            {dryRunMutation.isPending || dryRunRunning ? "Scanning… (takes a couple of minutes)" : "Run Dry Run (safe, read-only)"}
+            {dryRunMutation.isPending || dryRunRunning ? "Auditing… (may take a while)" : "Preview Full Audit (read-only)"}
           </Button>
           <Button
             size="sm"
             className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-            onClick={() => { setConfirmText(""); setImportDialogOpen(true); }}
+            onClick={() => { setConfirmText(""); setImportMode("incremental"); }}
             disabled={importRunning || dryRunMutation.isPending || dryRunRunning}
           >
             <Upload className="h-3 w-3 mr-1.5" />
-            {importRunning ? "Import Running…" : "Run Import"}
+            {importRunning ? "Sync Running…" : "Sync New & Changed Images"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs text-amber-700 border-amber-300"
+            onClick={() => { setConfirmText(""); setImportMode("full_audit"); }}
+            disabled={importRunning || dryRunMutation.isPending || dryRunRunning}
+          >
+            <Search className="h-3 w-3 mr-1.5" />
+            Full Archive Audit & Import
           </Button>
         </div>
 
-        {/* Confirm dialog: must type IMPORT */}
-        <Dialog open={importDialogOpen} onOpenChange={(open) => { setImportDialogOpen(open); if (!open) setConfirmText(""); }}>
+        {/* Confirmation is stricter for the rare, expensive full archive audit. */}
+        <Dialog open={importMode !== null} onOpenChange={(open) => { if (!open) { setImportMode(null); setConfirmText(""); } }}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-amber-600" /> Confirm Drive Image Import
+                <AlertTriangle className="h-5 w-5 text-amber-600" />
+                {importMode === "full_audit" ? "Confirm Full Archive Audit" : "Confirm Drive Image Sync"}
               </DialogTitle>
               <DialogDescription className="text-left pt-2 space-y-2">
                 <span className="block">
-                  This uploads eligible Drive images to Cloudinary and updates matching card image records. It will skip
-                  unmatched, wrong-count, ambiguous, already-imported, and existing-image records.
+                  {importMode === "full_audit"
+                    ? "This deliberately checks the entire Drive archive before importing. Use it for recovery or after a major folder reorganization—not for everyday updates."
+                    : "This checks only new, changed, previously incomplete, or retryable Drive work, then imports exact matches."}
                 </span>
                 <span className="block">
-                  Existing card images are never overwritten. Type <strong>IMPORT</strong> to confirm.
+                  Existing card images are never overwritten. Type{" "}
+                  <strong>{importMode === "full_audit" ? "FULL_AUDIT" : "IMPORT"}</strong> to confirm.
                 </span>
               </DialogDescription>
             </DialogHeader>
             <Input
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
-              placeholder="Type IMPORT to confirm"
+              placeholder={`Type ${importMode === "full_audit" ? "FULL_AUDIT" : "IMPORT"} to confirm`}
               className="bg-white text-gray-900"
               autoComplete="off"
             />
             <DialogFooter className="gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setImportDialogOpen(false)}>
+              <Button variant="ghost" size="sm" onClick={() => setImportMode(null)}>
                 Cancel
               </Button>
               <Button
                 size="sm"
                 className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                disabled={confirmText !== "IMPORT" || importMutation.isPending}
-                onClick={() => importMutation.mutate()}
+                disabled={
+                  !importMode
+                  || confirmText !== (importMode === "full_audit" ? "FULL_AUDIT" : "IMPORT")
+                  || importMutation.isPending
+                }
+                onClick={() => importMode && importMutation.mutate(importMode)}
               >
-                {importMutation.isPending ? "Starting…" : "Start Import"}
+                {importMutation.isPending
+                  ? "Starting…"
+                  : importMode === "full_audit"
+                    ? "Start Full Audit"
+                    : "Start Sync"}
               </Button>
             </DialogFooter>
           </DialogContent>

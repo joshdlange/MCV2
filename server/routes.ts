@@ -2025,9 +2025,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.user.isAdmin) {
         return res.status(403).json({ message: 'Admin access required' });
       }
-      const { confirm, maxFolders, overwrite } = req.body || {};
+      const { confirm, maxFolders, mode } = req.body || {};
       if (confirm !== 'IMPORT') {
         return res.status(400).json({ message: 'Real import requires explicit confirmation: send { "confirm": "IMPORT" }' });
+      }
+      if (mode === 'full_audit') {
+        return res.status(400).json({
+          message: 'Use /api/admin/drive-sync/full-audit with { "confirm": "FULL_AUDIT" } for a full archive audit',
+        });
       }
       let max: number | null = null;
       if (maxFolders !== undefined && maxFolders !== null) {
@@ -2036,20 +2041,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: 'maxFolders must be between 1 and 2000' });
         }
       }
-      const { runDriveImageImport, isDriveImportRunning } = await import('./services/driveImageSync');
-      if (isDriveImportRunning()) {
+      // This route is intentionally incremental-only. The separate full-audit
+      // route has a stronger confirmation token because it crawls the archive.
+      const runMode: 'incremental' = 'incremental';
+      const { runDriveImageImport, isDriveImportRunning, isDriveSyncJobRunningInDb } = await import('./services/driveImageSync');
+      if (isDriveImportRunning() || await isDriveSyncJobRunningInDb('import')) {
         return res.status(409).json({ message: 'A Drive import is already in progress' });
       }
       // Long-running (fresh scan + paced uploads): run in background, poll import-report.
-      runDriveImageImport({ maxFolders: max, overwrite: overwrite === true }).catch((err) => {
+      runDriveImageImport({ maxFolders: max, mode: runMode }).catch((err) => {
         console.error('[DriveImport] Background import failed:', err?.message || err);
       });
       res.status(202).json({
-        message: `Import started${max != null ? ` (limited to ${max} folders)` : ''}${overwrite === true ? ' with overwrite ENABLED' : ''}. Poll GET /api/admin/drive-sync/import-report for progress.`,
+        message: `Import started (${runMode})${max != null ? ` (limited to ${max} folders)` : ''}. Poll GET /api/admin/drive-sync/import-report for progress.`,
+        mode: runMode,
       });
     } catch (error: any) {
       console.error('Drive import error:', error?.message || error);
       res.status(500).json({ message: error?.message || 'Drive import failed to start' });
+    }
+  });
+
+  // Explicit FULL-AUDIT import route (admin). Forces a complete crawl of every
+  // set folder (no incremental skipping), then re-establishes the Changes API
+  // baseline cursor on clean completion so later normal syncs stay incremental.
+  app.post("/api/admin/drive-sync/full-audit", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      const { confirm, maxFolders } = req.body || {};
+      if (confirm !== 'FULL_AUDIT') {
+        return res.status(400).json({ message: 'Full audit requires explicit confirmation: send { "confirm": "FULL_AUDIT" }' });
+      }
+      let max: number | null = null;
+      if (maxFolders !== undefined && maxFolders !== null) {
+        max = parseInt(String(maxFolders), 10);
+        if (!Number.isFinite(max) || max < 1 || max > 2000) {
+          return res.status(400).json({ message: 'maxFolders must be between 1 and 2000' });
+        }
+      }
+      const { runDriveImageImport, isDriveImportRunning, isDriveSyncJobRunningInDb } = await import('./services/driveImageSync');
+      if (isDriveImportRunning() || await isDriveSyncJobRunningInDb('import')) {
+        return res.status(409).json({ message: 'A Drive import is already in progress' });
+      }
+      runDriveImageImport({ maxFolders: max, mode: 'full_audit' }).catch((err) => {
+        console.error('[DriveImport] Background full-audit failed:', err?.message || err);
+      });
+      res.status(202).json({
+        message: `Full audit started${max != null ? ` (limited to ${max} folders)` : ''}. Poll GET /api/admin/drive-sync/import-report for progress.`,
+        mode: 'full_audit',
+      });
+    } catch (error: any) {
+      console.error('Drive full-audit error:', error?.message || error);
+      res.status(500).json({ message: error?.message || 'Drive full audit failed to start' });
     }
   });
 
@@ -2058,8 +2103,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.user.isAdmin) {
         return res.status(403).json({ message: 'Admin access required' });
       }
-      const { getLastDriveImportReport, isDriveImportRunning } = await import('./services/driveImageSync');
-      res.json({ running: isDriveImportRunning(), report: getLastDriveImportReport() });
+      const { getLastDriveImportReport, isDriveImportRunning, getLatestDriveSyncJob } = await import('./services/driveImageSync');
+      // Durable, DB-backed job status/progress survives autoscale instance
+      // changes and restarts; stale "running" jobs are auto-marked interrupted.
+      const job = await getLatestDriveSyncJob('import');
+      const memReport = getLastDriveImportReport();
+      res.json({
+        running: job?.status === 'running',
+        job,                         // authoritative DB-backed status/progress
+        report: memReport,           // richer in-memory detail when same instance
+      });
     } catch (error) {
       console.error('Drive import report error:', error);
       res.status(500).json({ message: 'Failed to get import report' });
