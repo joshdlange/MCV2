@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import express from "express";
 import { createServer } from "node:http";
+import { installDataFixWriteGate } from "../dataFixWriteGate";
 import { installStartupGate } from "../startupGate";
 
 test("startup gate serves a recoverable page, then passes through when ready", async () => {
@@ -64,6 +65,54 @@ test("startup gate serves a recoverable page, then passes through when ready", a
 
     const readyHealth = await fetch(`${origin}/health`);
     assert.equal((await readyHealth.json()).ready, true);
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close(error => error ? reject(error) : resolve());
+    });
+  }
+});
+
+test("required data-fix failure keeps card-reference writes blocked", async () => {
+  const app = express();
+  const gate = installDataFixWriteGate(app);
+  app.get("/api/collection", (_req, res) => res.status(200).json({ ok: true }));
+  app.post("/api/collection", (_req, res) => res.status(200).json({ ok: true }));
+  app.post("/api/marketplace/listings", (_req, res) => res.status(200).json({ ok: true }));
+  app.post("/api/auth/sync", (_req, res) => res.status(200).json({ ok: true }));
+
+  const server = createServer(app);
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+
+  try {
+    const address = server.address();
+    assert.ok(address && typeof address === "object");
+    const origin = `http://127.0.0.1:${address.port}`;
+
+    const pendingWrite = await fetch(`${origin}/api/collection`, { method: "POST" });
+    assert.equal(pendingWrite.status, 503);
+    assert.equal((await pendingWrite.json()).code, "DATA_UPDATE_PENDING");
+
+    const allowedRead = await fetch(`${origin}/api/collection`);
+    assert.equal(allowedRead.status, 200);
+
+    gate.markFailed();
+    assert.equal(gate.state, "failed");
+    const failedCollectionWrite = await fetch(`${origin}/api/collection`, { method: "POST" });
+    assert.equal(failedCollectionWrite.status, 503);
+    assert.equal((await failedCollectionWrite.json()).code, "DATA_UPDATE_FAILED");
+    const failedMarketplaceWrite = await fetch(`${origin}/api/marketplace/listings`, { method: "POST" });
+    assert.equal(failedMarketplaceWrite.status, 503);
+    assert.equal((await failedMarketplaceWrite.json()).code, "DATA_UPDATE_FAILED");
+
+    const unrelatedWrite = await fetch(`${origin}/api/auth/sync`, { method: "POST" });
+    assert.equal(unrelatedWrite.status, 200);
+
+    gate.markReady();
+    const readyWrite = await fetch(`${origin}/api/collection`, { method: "POST" });
+    assert.equal(readyWrite.status, 200);
   } finally {
     await new Promise<void>((resolve, reject) => {
       server.close(error => error ? reject(error) : resolve());

@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import compression from "compression";
 import { createServer } from "http";
 import { installStartupGate } from "./startupGate";
+import { installDataFixWriteGate } from "./dataFixWriteGate";
 import path from "path";
 import fs from "fs";
 
@@ -562,17 +563,7 @@ server.listen({
   // seed is about to archive or merge away (reads stay open; seeds are
   // sub-second no-ops once their markers exist, so this window only matters on
   // a first run).
-  let dataFixSeedsDone = false;
-  app.use((req, res, next) => {
-    if (
-      !dataFixSeedsDone &&
-      req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS' &&
-      /^\/api\/(collection|wishlist|pc-binders|cards|listings|marketplace|scan)(\/|$)/.test(req.path)
-    ) {
-      return res.status(503).json({ message: 'The Vault is finishing a quick data update — please try again in a moment.' });
-    }
-    next();
-  });
+  const dataFixWriteGate = installDataFixWriteGate(app);
 
   const runDataFixSeeds = async () => {
     // Idempotent duplicate/relocation repair: consolidate legacy set twins and
@@ -583,6 +574,7 @@ server.listen({
       await mergeDuplicateLegacySets();
     } catch (error) {
       console.error('Startup repair (legacy set merge) failed:', error);
+      throw error;
     }
 
     // Idempotent startup repair: restore curated card images that the Aug 4
@@ -723,9 +715,9 @@ server.listen({
     } catch (error) {
       console.error('Startup seed (badge/feed fixes) failed:', error);
     } finally {
-      // Always lift the write gate — a failed seed retries next boot, and
-      // blocking user writes indefinitely would be worse than the race.
-      dataFixSeedsDone = true;
+      // Noncritical seeds above log and continue. Reaching this point means the
+      // required card merge completed, so card-reference writes are safe.
+      dataFixWriteGate.markReady();
     }
   };
 
@@ -804,6 +796,7 @@ server.listen({
   // Kick off the heavy data-fix seeds now that the app is ready (see
   // runDataFixSeeds above — deferred so slow first runs can't fail startup).
   runDataFixSeeds().catch((error) => {
+    dataFixWriteGate.markFailed();
     console.error('Deferred data-fix seeds failed:', error);
   });
 

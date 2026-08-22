@@ -4,6 +4,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../db";
 import {
   applyCardMergePairs,
+  assertExactPrefixedCardNumbers,
   mergeDuplicateLegacySets,
 } from "../seeds/mergeDuplicateLegacySets";
 import {
@@ -26,8 +27,38 @@ const POWERBLAST_SOURCE = "1994-1994-flair-marvel-annual-flair-marvel-universe-p
 const POWERBLAST_TARGET = "1994-flair-marvel-annual-flair-marvel-universe-powerblast";
 const LOST_MARVEL_SOURCE = "1994-1994-flair-marvel-annual-base";
 const LOST_MARVEL_TARGET = "1992-1992-skybox-marvel-masterpieces-lost-marvel-bonus-cards";
+const FLAIR_2023_BASE = "2023-2023-flair-marvel-base";
+const FLAIR_2023_CARVED = "2023-2023-flair-marvel-carved";
+const FLAIR_2023_FLAIRIUM = "2023-2023-flair-marvel-flairium";
 
 class FixtureRollback extends Error {}
+
+test("2023 Flair checklist guard rejects missing, duplicate, and out-of-range numbers", () => {
+  const validCarved = Array.from({ length: 24 }, (_, index) => `CC-${index + 1}`);
+  assert.doesNotThrow(() =>
+    assertExactPrefixedCardNumbers("valid carved", validCarved, "CC", 24));
+
+  const missingCarved = [...validCarved.slice(0, 23), "CC-25"];
+  assert.throws(
+    () => assertExactPrefixedCardNumbers("missing carved", missingCarved, "CC", 24),
+    /missing \[CC24\].*unexpected \[CC25\]/,
+  );
+
+  const duplicateCarved = [...validCarved.slice(0, 23), "CC-23"];
+  assert.throws(
+    () => assertExactPrefixedCardNumbers("duplicate carved", duplicateCarved, "CC", 24),
+    /missing \[CC24\].*duplicates 1/,
+  );
+
+  const outOfRangeFlairium = [
+    ...Array.from({ length: 59 }, (_, index) => `FT-${index + 1}`),
+    "FT-61",
+  ];
+  assert.throws(
+    () => assertExactPrefixedCardNumbers("out of range Flairium", outOfRangeFlairium, "FT", 60),
+    /missing \[FT60\].*unexpected \[FT61\]/,
+  );
+});
 
 test("card-pair merge preserves quantities and repoints every live reference", async () => {
   const tag = `legacy-merge-fixture-${Date.now()}`;
@@ -58,6 +89,7 @@ test("card-pair merge preserves quantities and repoints every live reference", a
           name: "Spider-Man",
           rarity: "Common",
           frontImageUrl: "/mcv/sets/fixture-spider.webp",
+          backImageUrl: "/mcv/sets/fixture-spider-back.webp",
         },
         {
           setId: targetSet.id,
@@ -70,6 +102,7 @@ test("card-pair merge preserves quantities and repoints every live reference", a
           cardNumber: "15",
           name: "Spider-Man",
           rarity: "Common",
+          frontImageUrl: "https://images.example.invalid/existing-spider.jpg",
         },
       ]).returning({
         id: cards.id,
@@ -192,7 +225,12 @@ test("card-pair merge preserves quantities and repoints every live reference", a
         { dup: sourcePunisher10.id, surv: targetPunisher10.id },
         { dup: sourceSpider6.id, surv: targetSpider15.id },
       ];
-      await applyCardMergePairs(tx, pairs, "Isolated fixture merge");
+      await applyCardMergePairs(
+        tx,
+        pairs,
+        "Isolated fixture merge",
+        { imageTransferMode: "missing-only" },
+      );
 
       const mergedCollections = await tx.select().from(userCollections)
         .where(inArray(userCollections.userId, [userA.id, userB.id]));
@@ -242,7 +280,8 @@ test("card-pair merge preserves quantities and repoints every live reference", a
       assert.ok(archivedSources.every((card) => card.archivedAt !== null));
       const [imageTarget] = await tx.select().from(cards)
         .where(and(eq(cards.id, targetSpider15.id), eq(cards.setId, targetSet.id)));
-      assert.equal(imageTarget.frontImageUrl, "/mcv/sets/fixture-spider.webp");
+      assert.equal(imageTarget.frontImageUrl, "https://images.example.invalid/existing-spider.jpg");
+      assert.equal(imageTarget.backImageUrl, "/mcv/sets/fixture-spider-back.webp");
 
       const lingering: any = await tx.execute(sql`
         SELECT
@@ -279,6 +318,15 @@ async function getMergeState() {
     lost_target AS (
       SELECT id, is_active, total_cards FROM card_sets WHERE slug = ${LOST_MARVEL_TARGET}
     ),
+    flair_base AS (
+      SELECT id, is_active, total_cards FROM card_sets WHERE slug = ${FLAIR_2023_BASE}
+    ),
+    flair_carved AS (
+      SELECT id, is_active, total_cards FROM card_sets WHERE slug = ${FLAIR_2023_CARVED}
+    ),
+    flair_flairium AS (
+      SELECT id, is_active, total_cards FROM card_sets WHERE slug = ${FLAIR_2023_FLAIRIUM}
+    ),
     retired_cards AS (
       SELECT c.id
       FROM cards c
@@ -286,6 +334,10 @@ async function getMergeState() {
          OR (
            c.set_id = (SELECT id FROM lost_source)
            AND c.card_number IN ('LM-1', 'LM-2', 'LM-3', 'LM-4', 'LM-5')
+         )
+         OR (
+           c.set_id = (SELECT id FROM flair_base)
+           AND (upper(c.card_number) LIKE 'CC%' OR upper(c.card_number) LIKE 'FT%')
          )
     )
     SELECT
@@ -318,6 +370,37 @@ async function getMergeState() {
       (SELECT total_cards FROM lost_target) AS lost_target_total,
       (SELECT count(*)::int FROM cards
        WHERE set_id = (SELECT id FROM lost_target) AND archived_at IS NULL) AS lost_target_active_cards,
+      (SELECT is_active FROM flair_base) AS flair_base_active,
+      (SELECT total_cards FROM flair_base) AS flair_base_total,
+      (SELECT count(*)::int FROM cards
+       WHERE set_id = (SELECT id FROM flair_base) AND archived_at IS NULL) AS flair_base_active_cards,
+      (SELECT count(*)::int FROM cards
+       WHERE set_id = (SELECT id FROM flair_base) AND archived_at IS NULL
+         AND card_number ~ '^[0-9]+$' AND card_number::int BETWEEN 1 AND 90) AS flair_base_1_to_90,
+      (SELECT count(*)::int FROM cards
+       WHERE set_id = (SELECT id FROM flair_base) AND archived_at IS NULL
+         AND (upper(card_number) LIKE 'CC%' OR upper(card_number) LIKE 'FT%')) AS flair_misplaced_active_cards,
+      (SELECT count(*)::int FROM cards
+       WHERE set_id = (SELECT id FROM flair_base) AND archived_at IS NOT NULL
+         AND (upper(card_number) LIKE 'CC%' OR upper(card_number) LIKE 'FT%')) AS flair_relocated_archived_cards,
+      (SELECT is_active FROM flair_carved) AS flair_carved_active,
+      (SELECT total_cards FROM flair_carved) AS flair_carved_total,
+      (SELECT count(*)::int FROM cards
+       WHERE set_id = (SELECT id FROM flair_carved) AND archived_at IS NULL) AS flair_carved_active_cards,
+      (SELECT is_active FROM flair_flairium) AS flair_flairium_active,
+      (SELECT total_cards FROM flair_flairium) AS flair_flairium_total,
+      (SELECT count(*)::int FROM cards
+       WHERE set_id = (SELECT id FROM flair_flairium) AND archived_at IS NULL) AS flair_flairium_active_cards,
+      (SELECT count(*)::int FROM cards
+       WHERE set_id = (SELECT id FROM flair_flairium) AND archived_at IS NULL
+         AND front_image_url IS NOT NULL) AS flair_flairium_front_images,
+      (SELECT count(*)::int FROM cards
+       WHERE set_id = (SELECT id FROM flair_flairium) AND archived_at IS NULL
+         AND back_image_url IS NOT NULL) AS flair_flairium_back_images,
+      (SELECT count(*)::int FROM cards
+       WHERE set_id = (SELECT id FROM flair_flairium) AND archived_at IS NULL
+         AND regexp_replace(upper(card_number), '[^A-Z0-9]', '', 'g') = 'FT53'
+         AND name = 'Bucky Barnes') AS flair_ft53_target,
       (SELECT count(*)::int FROM user_collections WHERE card_id IN (SELECT id FROM retired_cards)) AS collection_refs,
       (SELECT count(*)::int FROM user_wishlists WHERE card_id IN (SELECT id FROM retired_cards)) AS wishlist_refs,
       (SELECT count(*)::int FROM pc_binder_cards WHERE card_id IN (SELECT id FROM retired_cards)) AS binder_refs,
@@ -336,7 +419,7 @@ async function getMergeState() {
   return result.rows[0] as Record<string, unknown>;
 }
 
-test("legacy set repair consolidates PowerBlast and relocates Lost Marvel cards idempotently", async () => {
+test("legacy set repair consolidates PowerBlast and relocates Lost Marvel and 2023 Flair cards idempotently", async () => {
   await mergeDuplicateLegacySets();
   const first = await getMergeState();
 
@@ -358,6 +441,22 @@ test("legacy set repair consolidates PowerBlast and relocates Lost Marvel cards 
   assert.equal(first.lost_target_active, true);
   assert.equal(first.lost_target_total, 5);
   assert.equal(first.lost_target_active_cards, 5);
+
+  assert.equal(first.flair_base_active, true);
+  assert.equal(first.flair_base_total, 90);
+  assert.equal(first.flair_base_active_cards, 90);
+  assert.equal(first.flair_base_1_to_90, 90);
+  assert.equal(first.flair_misplaced_active_cards, 0);
+  assert.equal(first.flair_relocated_archived_cards, 84);
+  assert.equal(first.flair_carved_active, true);
+  assert.equal(first.flair_carved_total, 24);
+  assert.equal(first.flair_carved_active_cards, 24);
+  assert.equal(first.flair_flairium_active, true);
+  assert.equal(first.flair_flairium_total, 60);
+  assert.equal(first.flair_flairium_active_cards, 60);
+  assert.equal(first.flair_flairium_front_images, 60);
+  assert.equal(first.flair_flairium_back_images, 60);
+  assert.equal(first.flair_ft53_target, 1);
 
   for (const key of [
     "collection_refs",

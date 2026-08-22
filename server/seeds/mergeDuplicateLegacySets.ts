@@ -34,6 +34,9 @@ import { eq, and, inArray, sql, isNull } from 'drizzle-orm';
  *  - Relocate misplaced LM-1..LM-5 cards from the 1994 Flair Marvel Annual
  *    base subset into the existing 1992 SkyBox Marvel Masterpieces Lost
  *    Marvel Bonus Cards subset without retiring the 1994 base subset.
+ *  - Relocate the 24 CC Carved cards and 60 FT Flairium cards mistakenly
+ *    included in the 2023 Flair Marvel base subset into their existing
+ *    subsets, carrying source images only into empty target image slots.
  *  - Deactivate the empty orphan subset "2020 Upper Deck Marvel Avengers
  *    Endgame & Captain Marvel".
  *
@@ -48,11 +51,44 @@ import { eq, and, inArray, sql, isNull } from 'drizzle-orm';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type CardRow = typeof cards.$inferSelect;
+type ImageTransferMode = 'prefer-curated' | 'missing-only';
 
 const LOG = '[Legacy Set Merge]';
 
 function normName(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function normCardNumber(number: string): string {
+  return number.toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+export function assertExactPrefixedCardNumbers(
+  label: string,
+  cardNumbers: string[],
+  prefix: string,
+  expectedCount: number,
+): void {
+  const actual = cardNumbers.map(normCardNumber);
+  const actualSet = new Set(actual);
+  const expected = new Set(
+    Array.from({ length: expectedCount }, (_, index) => `${prefix}${index + 1}`),
+  );
+  const missing = [...expected].filter((number) => !actualSet.has(number));
+  const unexpected = [...actualSet].filter((number) => !expected.has(number));
+  const duplicateCount = actual.length - actualSet.size;
+  if (
+    actual.length !== expectedCount
+    || actualSet.size !== expectedCount
+    || missing.length > 0
+    || unexpected.length > 0
+  ) {
+    throw new Error(
+      `${label}: expected exact ${prefix}1-${prefix}${expectedCount} checklist; `
+      + `missing [${missing.join(', ')}], unexpected [${unexpected.join(', ')}], `
+      + `duplicates ${duplicateCount}`,
+    );
+  }
 }
 
 /** Curated (hand-picked) image paths: direct card uploads, user uploads, Drive set imports. */
@@ -161,6 +197,19 @@ const LOST_MARVEL_CARDS = new Map([
   ['LM-4', 'typhoidmary'],
   ['LM-5', 'jubilee'],
 ]);
+const FLAIR_2023_BASE_SLUG = '2023-2023-flair-marvel-base';
+const FLAIR_2023_CARVED_SLUG = '2023-2023-flair-marvel-carved';
+const FLAIR_2023_FLAIRIUM_SLUG = '2023-2023-flair-marvel-flairium';
+const FLAIR_2023_EXPECTED_COUNTS = {
+  base: 90,
+  carved: 24,
+  flarium: 60,
+} as const;
+const FLAIR_2023_NAME_EXCEPTION = {
+  number: 'FT53',
+  sourceName: 'bucky',
+  targetName: 'buckybarnes',
+} as const;
 
 async function refCount(tx: Tx, cardId: number): Promise<number> {
   const r: any = await tx.execute(sql`
@@ -204,7 +253,11 @@ function pickPreferred(cands: CardRow[], subsetById: Map<number, typeof cardSets
  * table. Handles multiple dups mapping to one survivor, and users who own
  * several dups of the same survivor, without violating unique constraints.
  */
-async function applyPairBatch(tx: Tx, archiveReason: string): Promise<void> {
+async function applyPairBatch(
+  tx: Tx,
+  archiveReason: string,
+  imageTransferMode: ImageTransferMode,
+): Promise<void> {
   // --- user_collections (unique user_id+card_id; quantities merge) ---
   await tx.execute(sql`
     UPDATE user_collections uc SET quantity = uc.quantity + agg.q
@@ -303,25 +356,32 @@ async function applyPairBatch(tx: Tx, archiveReason: string): Promise<void> {
     WHERE d.related_type = 'card' AND d.related_id = p.dup_id`);
   await tx.execute(sql`DELETE FROM card_price_cache d USING merge_pairs p WHERE d.card_id = p.dup_id`);
 
-  // Carry over images when the survivor is missing them, and prefer the dup's
-  // image when it is curated (hand-picked upload/import) and the survivor's
-  // is not — curated images must never be discarded by a merge.
+  // Carry over images when the survivor is missing them. Most legacy merges
+  // also prefer a curated duplicate image over a non-curated survivor image,
+  // but selected-card relocations can explicitly preserve every existing
+  // target image by requesting missing-only transfer.
   const curated = (col: string) => sql.raw(`(
     ${col} LIKE '%/marvel-cards/card\\_%' OR
     ${col} LIKE '%/user_uploads/%' OR
     ${col} LIKE '%/mcv/sets/%')`);
+  const frontCanReplace = imageTransferMode === 'missing-only'
+    ? sql`s.front_image_url IS NULL`
+    : sql`(s.front_image_url IS NULL
+        OR (${curated('d.front_image_url')} AND NOT ${curated('s.front_image_url')}))`;
+  const backCanReplace = imageTransferMode === 'missing-only'
+    ? sql`s.back_image_url IS NULL`
+    : sql`(s.back_image_url IS NULL
+        OR (${curated('d.back_image_url')} AND NOT ${curated('s.back_image_url')}))`;
   await tx.execute(sql`
     UPDATE cards s SET front_image_url = d.front_image_url
     FROM merge_pairs p JOIN cards d ON d.id = p.dup_id
     WHERE s.id = p.surv_id AND d.front_image_url IS NOT NULL
-      AND (s.front_image_url IS NULL
-           OR (${curated('d.front_image_url')} AND NOT ${curated('s.front_image_url')}))`);
+      AND ${frontCanReplace}`);
   await tx.execute(sql`
     UPDATE cards s SET back_image_url = d.back_image_url
     FROM merge_pairs p JOIN cards d ON d.id = p.dup_id
     WHERE s.id = p.surv_id AND d.back_image_url IS NOT NULL
-      AND (s.back_image_url IS NULL
-           OR (${curated('d.back_image_url')} AND NOT ${curated('s.back_image_url')}))`);
+      AND ${backCanReplace}`);
 
   // Soft-archive the duplicates (never hard-delete)
   await tx.execute(sql`
@@ -334,6 +394,7 @@ export async function applyCardMergePairs(
   tx: Tx,
   pairs: Array<{ dup: number; surv: number }>,
   archiveReason: string,
+  options: { imageTransferMode?: ImageTransferMode } = {},
 ): Promise<void> {
   if (pairs.length === 0) return;
 
@@ -349,7 +410,7 @@ export async function applyCardMergePairs(
       INSERT INTO merge_pairs (dup_id, surv_id)
       VALUES ${sql.join(chunk.map((pair) => sql`(${pair.dup}, ${pair.surv})`), sql`, `)}`);
   }
-  await applyPairBatch(tx, archiveReason);
+  await applyPairBatch(tx, archiveReason, options.imageTransferMode ?? 'prefer-curated');
 }
 
 async function mergeGroup(tx: Tx, group: MergeGroup): Promise<void> {
@@ -608,6 +669,180 @@ async function relocateLostMarvelBonusCards(tx: Tx): Promise<void> {
   console.log(`${LOG} Lost Marvel Bonus Cards: relocated ${pairs.length} card(s)`);
 }
 
+async function relocate2023FlairSubsetCards(tx: Tx): Promise<void> {
+  const [source] = await tx.select().from(cardSets).where(and(
+    eq(cardSets.slug, FLAIR_2023_BASE_SLUG),
+    eq(cardSets.isActive, true),
+  ));
+  if (!source) {
+    console.log(`${LOG} 2023 Flair subsets: active base subset absent — skipping`);
+    return;
+  }
+
+  const sourceCards = await tx.select().from(cards).where(and(
+    eq(cards.setId, source.id),
+    isNull(cards.archivedAt),
+  ));
+  const sourceCarved = sourceCards.filter((card) => normCardNumber(card.cardNumber).startsWith('CC'));
+  const sourceFlairium = sourceCards.filter((card) => normCardNumber(card.cardNumber).startsWith('FT'));
+  if (sourceCarved.length === 0 && sourceFlairium.length === 0) {
+    console.log(`${LOG} 2023 Flair subsets: misplaced CC/FT cards already relocated — skipping`);
+    return;
+  }
+
+  const sourceBase = sourceCards.filter((card) => /^\d+$/.test(card.cardNumber.trim()));
+  const unexpectedSource = sourceCards.filter((card) => {
+    const number = normCardNumber(card.cardNumber);
+    return !/^\d+$/.test(card.cardNumber.trim())
+      && !number.startsWith('CC')
+      && !number.startsWith('FT');
+  });
+  const normalizedBaseNumbers = new Set(sourceBase.map((card) => String(Number(card.cardNumber.trim()))));
+  const expectedBaseNumbers = new Set(
+    Array.from({ length: FLAIR_2023_EXPECTED_COUNTS.base }, (_, index) => String(index + 1)),
+  );
+  if (
+    sourceBase.length !== FLAIR_2023_EXPECTED_COUNTS.base
+    || sourceCarved.length !== FLAIR_2023_EXPECTED_COUNTS.carved
+    || sourceFlairium.length !== FLAIR_2023_EXPECTED_COUNTS.flarium
+    || unexpectedSource.length > 0
+    || normalizedBaseNumbers.size !== expectedBaseNumbers.size
+    || [...expectedBaseNumbers].some((number) => !normalizedBaseNumbers.has(number))
+  ) {
+    throw new Error(
+      `2023 Flair subsets: expected base 1-90 + ${FLAIR_2023_EXPECTED_COUNTS.carved} CC + `
+      + `${FLAIR_2023_EXPECTED_COUNTS.flarium} FT cards; found ${sourceBase.length} base, `
+      + `${sourceCarved.length} CC, ${sourceFlairium.length} FT, ${unexpectedSource.length} unexpected`,
+    );
+  }
+  assertExactPrefixedCardNumbers(
+    '2023 Flair source Carved cards',
+    sourceCarved.map((card) => card.cardNumber),
+    'CC',
+    FLAIR_2023_EXPECTED_COUNTS.carved,
+  );
+  assertExactPrefixedCardNumbers(
+    '2023 Flair source Flairium cards',
+    sourceFlairium.map((card) => card.cardNumber),
+    'FT',
+    FLAIR_2023_EXPECTED_COUNTS.flarium,
+  );
+
+  const targets = await tx.select().from(cardSets).where(and(
+    inArray(cardSets.slug, [FLAIR_2023_CARVED_SLUG, FLAIR_2023_FLAIRIUM_SLUG]),
+    eq(cardSets.isActive, true),
+  ));
+  if (targets.length !== 2) {
+    throw new Error('2023 Flair subsets: active Carved and Flairium target subsets are required');
+  }
+  if (source.mainSetId == null || targets.some((target) => target.mainSetId !== source.mainSetId)) {
+    throw new Error('2023 Flair subsets: source and targets must share the same parent product');
+  }
+
+  const targetBySlug = new Map(targets.map((target) => [target.slug, target]));
+  const carvedTarget = targetBySlug.get(FLAIR_2023_CARVED_SLUG)!;
+  const flairiumTarget = targetBySlug.get(FLAIR_2023_FLAIRIUM_SLUG)!;
+  const targetCards = await tx.select().from(cards).where(and(
+    inArray(cards.setId, [carvedTarget.id, flairiumTarget.id]),
+    isNull(cards.archivedAt),
+  ));
+  const carvedTargets = targetCards.filter((card) => card.setId === carvedTarget.id);
+  const flairiumTargets = targetCards.filter((card) => card.setId === flairiumTarget.id);
+  if (
+    carvedTargets.length !== FLAIR_2023_EXPECTED_COUNTS.carved
+    || flairiumTargets.length !== FLAIR_2023_EXPECTED_COUNTS.flarium
+    || carvedTargets.some((card) => !normCardNumber(card.cardNumber).startsWith('CC'))
+    || flairiumTargets.some((card) => !normCardNumber(card.cardNumber).startsWith('FT'))
+  ) {
+    throw new Error(
+      `2023 Flair subsets: expected ${FLAIR_2023_EXPECTED_COUNTS.carved} CC target cards and `
+      + `${FLAIR_2023_EXPECTED_COUNTS.flarium} FT target cards; found `
+      + `${carvedTargets.length} CC and ${flairiumTargets.length} FT`,
+    );
+  }
+  assertExactPrefixedCardNumbers(
+    '2023 Flair target Carved cards',
+    carvedTargets.map((card) => card.cardNumber),
+    'CC',
+    FLAIR_2023_EXPECTED_COUNTS.carved,
+  );
+  assertExactPrefixedCardNumbers(
+    '2023 Flair target Flairium cards',
+    flairiumTargets.map((card) => card.cardNumber),
+    'FT',
+    FLAIR_2023_EXPECTED_COUNTS.flarium,
+  );
+
+  const targetByNumber = new Map<string, CardRow>();
+  for (const target of targetCards) {
+    const number = normCardNumber(target.cardNumber);
+    if (targetByNumber.has(number)) {
+      throw new Error(`2023 Flair subsets: duplicate active target card number ${target.cardNumber}`);
+    }
+    targetByNumber.set(number, target);
+  }
+
+  const pairs: Array<{ dup: number; surv: number }> = [];
+  const usedTargetIds = new Set<number>();
+  let frontImagesToCopy = 0;
+  let backImagesToCopy = 0;
+  for (const duplicate of [...sourceCarved, ...sourceFlairium]) {
+    const number = normCardNumber(duplicate.cardNumber);
+    const survivor = targetByNumber.get(number);
+    if (!survivor) {
+      throw new Error(`2023 Flair subsets: no unique target for ${duplicate.cardNumber} ${duplicate.name}`);
+    }
+    const expectedTargetSetId = number.startsWith('CC') ? carvedTarget.id : flairiumTarget.id;
+    if (survivor.setId !== expectedTargetSetId) {
+      throw new Error(`2023 Flair subsets: ${duplicate.cardNumber} resolved to the wrong target subset`);
+    }
+
+    const sourceName = normName(duplicate.name);
+    const targetName = normName(survivor.name);
+    const isVerifiedException = number === FLAIR_2023_NAME_EXCEPTION.number
+      && sourceName === FLAIR_2023_NAME_EXCEPTION.sourceName
+      && targetName === FLAIR_2023_NAME_EXCEPTION.targetName;
+    if (sourceName !== targetName && !isVerifiedException) {
+      throw new Error(
+        `2023 Flair subsets: name mismatch for ${duplicate.cardNumber}: `
+        + `"${duplicate.name}" vs "${survivor.name}"`,
+      );
+    }
+    if (usedTargetIds.has(survivor.id)) {
+      throw new Error(`2023 Flair subsets: multiple source cards resolve to ${survivor.cardNumber}`);
+    }
+
+    usedTargetIds.add(survivor.id);
+    pairs.push({ dup: duplicate.id, surv: survivor.id });
+    if (duplicate.frontImageUrl && !survivor.frontImageUrl) frontImagesToCopy++;
+    if (duplicate.backImageUrl && !survivor.backImageUrl) backImagesToCopy++;
+  }
+  if (usedTargetIds.size !== targetCards.length) {
+    throw new Error(
+      `2023 Flair subsets: expected to use all ${targetCards.length} targets, used ${usedTargetIds.size}`,
+    );
+  }
+
+  await applyCardMergePairs(
+    tx,
+    pairs,
+    'Misplaced 2023 Flair Carved/Flairium card relocated to its existing subset',
+    { imageTransferMode: 'missing-only' },
+  );
+
+  for (const subset of [source, carvedTarget, flairiumTarget]) {
+    await tx.execute(sql`
+      UPDATE card_sets SET total_cards =
+        (SELECT count(*) FROM cards WHERE set_id = ${subset.id} AND archived_at IS NULL)
+      WHERE id = ${subset.id}`);
+  }
+
+  console.log(
+    `${LOG} 2023 Flair subsets: relocated ${sourceCarved.length} CC + ${sourceFlairium.length} FT cards; `
+    + `filled ${frontImagesToCopy} front and ${backImagesToCopy} back image slot(s)`,
+  );
+}
+
 export async function mergeDuplicateLegacySets(): Promise<void> {
   // Cheap idempotency probe before taking the lock
   const allSourceSlugs = GROUPS.flatMap((g) => g.sourceSubsetSlugs);
@@ -626,7 +861,22 @@ export async function mergeDuplicateLegacySets(): Promise<void> {
         AND c.archived_at IS NULL
     ) AS needed`);
   const needsLostMarvelRelocation = Boolean(lostMarvelProbe.rows?.[0]?.needed);
-  if (active.length === 0 && !orphan && !needsPlatinumAttach && !needsLostMarvelRelocation) {
+  const flair2023Probe: any = await db.execute(sql`
+    SELECT EXISTS (
+      SELECT 1 FROM cards c
+      JOIN card_sets cs ON cs.id = c.set_id
+      WHERE cs.slug = ${FLAIR_2023_BASE_SLUG}
+        AND (upper(c.card_number) LIKE 'CC%' OR upper(c.card_number) LIKE 'FT%')
+        AND c.archived_at IS NULL
+    ) AS needed`);
+  const needs2023FlairRelocation = Boolean(flair2023Probe.rows?.[0]?.needed);
+  if (
+    active.length === 0
+    && !orphan
+    && !needsPlatinumAttach
+    && !needsLostMarvelRelocation
+    && !needs2023FlairRelocation
+  ) {
     console.log(`${LOG} Nothing to do — all legacy duplicate sets already retired`);
     return;
   }
@@ -653,6 +903,7 @@ export async function mergeDuplicateLegacySets(): Promise<void> {
       await mergeGroup(tx, group);
     }
     await relocateLostMarvelBonusCards(tx);
+    await relocate2023FlairSubsetCards(tx);
 
     // Deactivate the empty orphan subset (only if it truly has no active cards)
     if (orphan) {
