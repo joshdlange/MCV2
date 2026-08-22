@@ -5,6 +5,8 @@ import { db } from "../db";
 import {
   applyCardMergePairs,
   assertExactPrefixedCardNumbers,
+  buildExactLenDuplicatePairs,
+  mergeExactLenDuplicateRows,
   mergeDuplicateLegacySets,
 } from "../seeds/mergeDuplicateLegacySets";
 import {
@@ -30,6 +32,7 @@ const LOST_MARVEL_TARGET = "1992-1992-skybox-marvel-masterpieces-lost-marvel-bon
 const FLAIR_2023_BASE = "2023-2023-flair-marvel-base";
 const FLAIR_2023_CARVED = "2023-2023-flair-marvel-carved";
 const FLAIR_2023_FLAIRIUM = "2023-2023-flair-marvel-flairium";
+const LENTICULAR_2024 = "2024-2024-upper-deck-marvel-masterpieces-92-platinum-lenticular";
 
 class FixtureRollback extends Error {}
 
@@ -57,6 +60,51 @@ test("2023 Flair checklist guard rejects missing, duplicate, and out-of-range nu
   assert.throws(
     () => assertExactPrefixedCardNumbers("out of range Flairium", outOfRangeFlairium, "FT", 60),
     /missing \[FT60\].*unexpected \[FT61\]/,
+  );
+});
+
+test("2024 Lenticular LEN guard requires exact one-to-one name and number pairs", () => {
+  const validCards = [
+    { id: 1, cardNumber: "1", name: "Blob" },
+    { id: 2, cardNumber: "1", name: "BlobLEN" },
+    { id: 3, cardNumber: "2", name: "Johnny Blaze" },
+    { id: 4, cardNumber: "2", name: "Johnny BlazeLEN" },
+  ];
+  assert.deepEqual(
+    buildExactLenDuplicatePairs("valid Lenticular", validCards, 2),
+    [{ dup: 2, surv: 1 }, { dup: 4, surv: 3 }],
+  );
+
+  assert.throws(
+    () => buildExactLenDuplicatePairs(
+      "wrong character",
+      validCards.map((card) => card.id === 4 ? { ...card, name: "Black WidowLEN" } : card),
+      2,
+    ),
+    /no exact regular match for 2 Black WidowLEN/,
+  );
+
+  assert.throws(
+    () => buildExactLenDuplicatePairs(
+      "duplicate number",
+      validCards.map((card) => card.id >= 3 ? { ...card, cardNumber: "1" } : card),
+      2,
+    ),
+    /missing \[2\].*duplicates 1/,
+  );
+
+  assert.throws(
+    () => buildExactLenDuplicatePairs("missing LEN", validCards.slice(0, 3), 2),
+    /expected 2 regular \+ 2 LEN cards/,
+  );
+
+  assert.throws(
+    () => buildExactLenDuplicatePairs(
+      "malformed suffix",
+      validCards.map((card) => card.id === 2 ? { ...card, name: "BlobLEN!" } : card),
+      2,
+    ),
+    /malformed LEN suffix/,
   );
 });
 
@@ -303,6 +351,224 @@ test("card-pair merge preserves quantities and repoints every live reference", a
   );
 });
 
+test("Lenticular LEN merge wiring preserves references and target images", async () => {
+  const tag = `lenticular-len-fixture-${Date.now()}`;
+
+  await assert.rejects(
+    db.transaction(async (tx) => {
+      const [subset] = await tx.insert(cardSets).values({
+        name: `${tag} Lenticular`,
+        slug: tag,
+        year: 2024,
+        totalCards: 4,
+      }).returning();
+      const fixtureCards = await tx.insert(cards).values([
+        {
+          setId: subset.id,
+          cardNumber: "1",
+          name: "Blob",
+          rarity: "Common",
+          frontImageUrl: "/mcv/sets/existing-blob-front.webp",
+        },
+        {
+          setId: subset.id,
+          cardNumber: "1",
+          name: "BlobLEN",
+          rarity: "Common",
+          frontImageUrl: "/mcv/sets/source-blob-front.webp",
+          backImageUrl: "/mcv/sets/source-blob-back.webp",
+        },
+        {
+          setId: subset.id,
+          cardNumber: "2",
+          name: "Johnny Blaze",
+          rarity: "Common",
+          backImageUrl: "/mcv/sets/existing-blaze-back.webp",
+        },
+        {
+          setId: subset.id,
+          cardNumber: "2",
+          name: "Johnny BlazeLEN",
+          rarity: "Common",
+          frontImageUrl: "/mcv/sets/source-blaze-front.webp",
+          backImageUrl: "/mcv/sets/source-blaze-back.webp",
+        },
+      ]).returning();
+      const blob = fixtureCards.find((card) => card.name === "Blob")!;
+      const blobLen = fixtureCards.find((card) => card.name === "BlobLEN")!;
+      const blaze = fixtureCards.find((card) => card.name === "Johnny Blaze")!;
+      const blazeLen = fixtureCards.find((card) => card.name === "Johnny BlazeLEN")!;
+
+      const [user] = await tx.insert(users).values({
+        firebaseUid: tag,
+        username: tag,
+        email: `${tag}@example.invalid`,
+      }).returning();
+      const collections = await tx.insert(userCollections).values([
+        { userId: user.id, cardId: blob.id, quantity: 3 },
+        { userId: user.id, cardId: blobLen.id, quantity: 2 },
+      ]).returning();
+      const targetCollection = collections.find((row) => row.cardId === blob.id)!;
+      const sourceCollection = collections.find((row) => row.cardId === blobLen.id)!;
+
+      await tx.insert(userWishlists).values([
+        { userId: user.id, cardId: blob.id },
+        { userId: user.id, cardId: blobLen.id },
+      ]);
+      const [binder] = await tx.insert(pcBinders)
+        .values({ userId: user.id, name: `${tag} binder` })
+        .returning();
+      await tx.insert(pcBinderCards).values([
+        { binderId: binder.id, cardId: blob.id },
+        { binderId: binder.id, cardId: blobLen.id },
+      ]);
+      await tx.insert(xpEvents).values([
+        { userId: user.id, eventType: "card_added", cardId: blob.id, points: 1 },
+        { userId: user.id, eventType: "card_added", cardId: blobLen.id, points: 1 },
+      ]);
+      await tx.insert(feedEvents).values({
+        userId: user.id,
+        eventType: "first_card",
+        title: "LEN fixture",
+        relatedType: "card",
+        relatedId: blazeLen.id,
+        dedupeKey: `${tag}-feed`,
+      });
+      await tx.insert(pendingCardImages).values({
+        userId: user.id,
+        cardId: blazeLen.id,
+        frontImageUrl: "/mcv/sets/pending-len.webp",
+      });
+      const [scan] = await tx.insert(scanUploads).values({
+        userId: user.id,
+        confidenceLevel: "high",
+        topMatchCardId: blazeLen.id,
+      }).returning();
+      await tx.insert(scanFeedback).values({
+        scanUploadId: scan.id,
+        userId: user.id,
+        feedbackType: "wrong",
+        selectedCardId: blobLen.id,
+      });
+      await tx.insert(listings).values({
+        sellerId: user.id,
+        userCollectionId: sourceCollection.id,
+        cardId: blobLen.id,
+        price: "5.00",
+        description: "LEN fixture listing",
+        conditionSnapshot: "Near Mint",
+      });
+
+      const result = await mergeExactLenDuplicateRows(tx, subset, 2, "LEN fixture");
+      assert.deepEqual(result, {
+        merged: 2,
+        frontImagesCopied: 1,
+        backImagesCopied: 1,
+      });
+
+      const remainingCards = await tx.select().from(cards)
+        .where(eq(cards.setId, subset.id));
+      const mergedBlob = remainingCards.find((card) => card.id === blob.id)!;
+      const mergedBlaze = remainingCards.find((card) => card.id === blaze.id)!;
+      assert.equal(mergedBlob.frontImageUrl, "/mcv/sets/existing-blob-front.webp");
+      assert.equal(mergedBlob.backImageUrl, "/mcv/sets/source-blob-back.webp");
+      assert.equal(mergedBlaze.frontImageUrl, "/mcv/sets/source-blaze-front.webp");
+      assert.equal(mergedBlaze.backImageUrl, "/mcv/sets/existing-blaze-back.webp");
+      assert.ok(remainingCards.find((card) => card.id === blobLen.id)!.archivedAt);
+      assert.ok(remainingCards.find((card) => card.id === blazeLen.id)!.archivedAt);
+
+      const [mergedCollection] = await tx.select().from(userCollections)
+        .where(eq(userCollections.userId, user.id));
+      assert.equal(mergedCollection.id, targetCollection.id);
+      assert.equal(mergedCollection.cardId, blob.id);
+      assert.equal(mergedCollection.quantity, 5);
+      const [listing] = await tx.select().from(listings).where(eq(listings.sellerId, user.id));
+      assert.equal(listing.userCollectionId, targetCollection.id);
+      assert.equal(listing.cardId, blob.id);
+
+      const [wishlistRows, binderRows, xpRows, feedRows, pendingRows, scanRows, feedbackRows] =
+        await Promise.all([
+          tx.select().from(userWishlists).where(eq(userWishlists.userId, user.id)),
+          tx.select().from(pcBinderCards).where(eq(pcBinderCards.binderId, binder.id)),
+          tx.select().from(xpEvents).where(eq(xpEvents.userId, user.id)),
+          tx.select().from(feedEvents).where(eq(feedEvents.userId, user.id)),
+          tx.select().from(pendingCardImages).where(eq(pendingCardImages.userId, user.id)),
+          tx.select().from(scanUploads).where(eq(scanUploads.userId, user.id)),
+          tx.select().from(scanFeedback).where(eq(scanFeedback.userId, user.id)),
+        ]);
+      assert.deepEqual(wishlistRows.map((row) => row.cardId), [blob.id]);
+      assert.deepEqual(binderRows.map((row) => row.cardId), [blob.id]);
+      assert.deepEqual(xpRows.map((row) => row.cardId), [blob.id]);
+      assert.equal(feedRows[0].relatedId, blaze.id);
+      assert.equal(pendingRows[0].cardId, blaze.id);
+      assert.equal(scanRows[0].topMatchCardId, blaze.id);
+      assert.equal(feedbackRows[0].selectedCardId, blob.id);
+
+      const [refreshedSubset] = await tx.select().from(cardSets)
+        .where(eq(cardSets.id, subset.id));
+      assert.equal(refreshedSubset.totalCards, 2);
+      assert.deepEqual(
+        await mergeExactLenDuplicateRows(tx, refreshedSubset, 2, "LEN fixture"),
+        { merged: 0, frontImagesCopied: 0, backImagesCopied: 0 },
+      );
+
+      throw new FixtureRollback();
+    }),
+    (error: unknown) => error instanceof FixtureRollback,
+  );
+});
+
+test("Lenticular LEN merge rejects malformed pairs before changing cards", async () => {
+  const tag = `lenticular-len-invalid-${Date.now()}`;
+
+  await assert.rejects(
+    db.transaction(async (tx) => {
+      const [subset] = await tx.insert(cardSets).values({
+        name: tag,
+        slug: tag,
+        year: 2024,
+        totalCards: 4,
+      }).returning();
+      await tx.insert(cards).values([
+        { setId: subset.id, cardNumber: "1", name: "Blob", rarity: "Common" },
+        { setId: subset.id, cardNumber: "1", name: "BlobLEN", rarity: "Common" },
+        { setId: subset.id, cardNumber: "2", name: "Johnny Blaze", rarity: "Common" },
+        { setId: subset.id, cardNumber: "2", name: "Black WidowLEN", rarity: "Common" },
+      ]);
+
+      await assert.rejects(
+        mergeExactLenDuplicateRows(tx, subset, 2, "invalid LEN fixture"),
+        /no exact regular match/,
+      );
+      const untouched = await tx.select().from(cards).where(eq(cards.setId, subset.id));
+      assert.equal(untouched.length, 4);
+      assert.ok(untouched.every((card) => card.archivedAt === null));
+
+      const [terminalSubset] = await tx.insert(cardSets).values({
+        name: `${tag} terminal`,
+        slug: `${tag}-terminal`,
+        year: 2024,
+        totalCards: 2,
+      }).returning();
+      await tx.insert(cards).values([
+        { setId: terminalSubset.id, cardNumber: "1", name: "BlobL.E.N.", rarity: "Common" },
+        { setId: terminalSubset.id, cardNumber: "2", name: "Johnny Blaze", rarity: "Common" },
+      ]);
+      await assert.rejects(
+        mergeExactLenDuplicateRows(tx, terminalSubset, 2, "invalid terminal LEN fixture"),
+        /malformed LEN suffix remains in terminal checklist/,
+      );
+      const terminalUntouched = await tx.select().from(cards)
+        .where(eq(cards.setId, terminalSubset.id));
+      assert.equal(terminalUntouched.length, 2);
+      assert.ok(terminalUntouched.every((card) => card.archivedAt === null));
+
+      throw new FixtureRollback();
+    }),
+    (error: unknown) => error instanceof FixtureRollback,
+  );
+});
+
 async function getMergeState() {
   const result = await db.execute(sql`
     WITH power_source AS (
@@ -327,6 +593,9 @@ async function getMergeState() {
     flair_flairium AS (
       SELECT id, is_active, total_cards FROM card_sets WHERE slug = ${FLAIR_2023_FLAIRIUM}
     ),
+    lenticular_2024 AS (
+      SELECT id, is_active, total_cards FROM card_sets WHERE slug = ${LENTICULAR_2024}
+    ),
     retired_cards AS (
       SELECT c.id
       FROM cards c
@@ -338,6 +607,10 @@ async function getMergeState() {
          OR (
            c.set_id = (SELECT id FROM flair_base)
            AND (upper(c.card_number) LIKE 'CC%' OR upper(c.card_number) LIKE 'FT%')
+         )
+         OR (
+           c.set_id = (SELECT id FROM lenticular_2024)
+           AND upper(trim(c.name)) ~ 'LEN$'
          )
     )
     SELECT
@@ -401,6 +674,28 @@ async function getMergeState() {
        WHERE set_id = (SELECT id FROM flair_flairium) AND archived_at IS NULL
          AND regexp_replace(upper(card_number), '[^A-Z0-9]', '', 'g') = 'FT53'
          AND name = 'Bucky Barnes') AS flair_ft53_target,
+      (SELECT is_active FROM lenticular_2024) AS lenticular_2024_active,
+      (SELECT total_cards FROM lenticular_2024) AS lenticular_2024_total,
+      (SELECT count(*)::int FROM cards
+       WHERE set_id = (SELECT id FROM lenticular_2024) AND archived_at IS NULL) AS lenticular_2024_active_cards,
+      (SELECT count(*)::int FROM cards
+       WHERE set_id = (SELECT id FROM lenticular_2024) AND archived_at IS NULL
+         AND card_number ~ '^[0-9]+$' AND card_number::int BETWEEN 1 AND 100) AS lenticular_2024_numbers_1_to_100,
+      (SELECT count(*)::int FROM cards
+       WHERE set_id = (SELECT id FROM lenticular_2024) AND archived_at IS NULL
+         AND upper(trim(name)) ~ 'LEN$') AS lenticular_2024_active_len_cards,
+      (SELECT count(*)::int FROM cards
+       WHERE set_id = (SELECT id FROM lenticular_2024) AND archived_at IS NOT NULL
+         AND upper(trim(name)) ~ 'LEN$') AS lenticular_2024_archived_len_cards,
+      (SELECT count(*)::int FROM cards
+       WHERE set_id = (SELECT id FROM lenticular_2024) AND archived_at IS NULL
+         AND front_image_url IS NOT NULL) AS lenticular_2024_front_images,
+      (SELECT count(*)::int FROM cards
+       WHERE set_id = (SELECT id FROM lenticular_2024) AND archived_at IS NULL
+         AND back_image_url IS NOT NULL) AS lenticular_2024_back_images,
+      (SELECT count(*)::int FROM cards
+       WHERE set_id = (SELECT id FROM lenticular_2024) AND archived_at IS NULL
+         AND card_number = '1' AND name = 'Blob') AS lenticular_2024_blob_target,
       (SELECT count(*)::int FROM user_collections WHERE card_id IN (SELECT id FROM retired_cards)) AS collection_refs,
       (SELECT count(*)::int FROM user_wishlists WHERE card_id IN (SELECT id FROM retired_cards)) AS wishlist_refs,
       (SELECT count(*)::int FROM pc_binder_cards WHERE card_id IN (SELECT id FROM retired_cards)) AS binder_refs,
@@ -419,7 +714,7 @@ async function getMergeState() {
   return result.rows[0] as Record<string, unknown>;
 }
 
-test("legacy set repair consolidates PowerBlast and relocates Lost Marvel and 2023 Flair cards idempotently", async () => {
+test("legacy set repair consolidates known duplicate and misplaced checklists idempotently", async () => {
   await mergeDuplicateLegacySets();
   const first = await getMergeState();
 
@@ -457,6 +752,16 @@ test("legacy set repair consolidates PowerBlast and relocates Lost Marvel and 20
   assert.equal(first.flair_flairium_front_images, 60);
   assert.equal(first.flair_flairium_back_images, 60);
   assert.equal(first.flair_ft53_target, 1);
+
+  assert.equal(first.lenticular_2024_active, true);
+  assert.equal(first.lenticular_2024_total, 100);
+  assert.equal(first.lenticular_2024_active_cards, 100);
+  assert.equal(first.lenticular_2024_numbers_1_to_100, 100);
+  assert.equal(first.lenticular_2024_active_len_cards, 0);
+  assert.equal(first.lenticular_2024_archived_len_cards, 100);
+  assert.equal(first.lenticular_2024_front_images, 99);
+  assert.equal(first.lenticular_2024_back_images, 30);
+  assert.equal(first.lenticular_2024_blob_target, 1);
 
   for (const key of [
     "collection_refs",

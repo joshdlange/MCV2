@@ -37,6 +37,9 @@ import { eq, and, inArray, sql, isNull } from 'drizzle-orm';
  *  - Relocate the 24 CC Carved cards and 60 FT Flairium cards mistakenly
  *    included in the 2023 Flair Marvel base subset into their existing
  *    subsets, carrying source images only into empty target image slots.
+ *  - Merge the 100 erroneous CharacterLEN rows in the 2024 Upper Deck Marvel
+ *    Masterpieces '92 Platinum Lenticular subset into the matching regular
+ *    Character rows at the same card number.
  *  - Deactivate the empty orphan subset "2020 Upper Deck Marvel Avengers
  *    Endgame & Captain Marvel".
  *
@@ -51,6 +54,7 @@ import { eq, and, inArray, sql, isNull } from 'drizzle-orm';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type CardRow = typeof cards.$inferSelect;
+type CardSetRow = typeof cardSets.$inferSelect;
 type ImageTransferMode = 'prefer-curated' | 'missing-only';
 
 const LOG = '[Legacy Set Merge]';
@@ -89,6 +93,87 @@ export function assertExactPrefixedCardNumbers(
       + `duplicates ${duplicateCount}`,
     );
   }
+}
+
+type LenDuplicateCard = Pick<CardRow, 'id' | 'cardNumber' | 'name'>;
+
+export function buildExactLenDuplicatePairs(
+  label: string,
+  cardRows: LenDuplicateCard[],
+  expectedCount: number,
+): Array<{ dup: number; surv: number }> {
+  const malformedLenNames = cardRows.filter((card) =>
+    normName(card.name).endsWith('len') && !/LEN$/i.test(card.name.trim()));
+  if (malformedLenNames.length > 0) {
+    throw new Error(
+      `${label}: malformed LEN suffix on "${malformedLenNames[0].name}"`,
+    );
+  }
+  const duplicates = cardRows.filter((card) => /LEN$/i.test(card.name.trim()));
+  const survivors = cardRows.filter((card) => !/LEN$/i.test(card.name.trim()));
+  if (
+    cardRows.length !== expectedCount * 2
+    || duplicates.length !== expectedCount
+    || survivors.length !== expectedCount
+  ) {
+    throw new Error(
+      `${label}: expected ${expectedCount} regular + ${expectedCount} LEN cards; `
+      + `found ${survivors.length} regular + ${duplicates.length} LEN among ${cardRows.length} active cards`,
+    );
+  }
+
+  assertExactPrefixedCardNumbers(
+    `${label} regular cards`,
+    survivors.map((card) => card.cardNumber),
+    '',
+    expectedCount,
+  );
+  assertExactPrefixedCardNumbers(
+    `${label} LEN cards`,
+    duplicates.map((card) => card.cardNumber),
+    '',
+    expectedCount,
+  );
+
+  const survivorByKey = new Map<string, LenDuplicateCard>();
+  for (const survivor of survivors) {
+    const key = `${normCardNumber(survivor.cardNumber)}|${normName(survivor.name)}`;
+    if (survivorByKey.has(key)) {
+      throw new Error(`${label}: ambiguous regular card ${survivor.cardNumber} ${survivor.name}`);
+    }
+    survivorByKey.set(key, survivor);
+  }
+
+  const usedSurvivors = new Set<number>();
+  const pairs: Array<{ dup: number; surv: number }> = [];
+  for (const duplicate of duplicates) {
+    const duplicateName = normName(duplicate.name);
+    if (!duplicateName.endsWith('len') || duplicateName.length === 3) {
+      throw new Error(`${label}: malformed LEN name "${duplicate.name}"`);
+    }
+    const regularName = duplicateName.slice(0, -3);
+    const key = `${normCardNumber(duplicate.cardNumber)}|${regularName}`;
+    const survivor = survivorByKey.get(key);
+    if (!survivor) {
+      throw new Error(
+        `${label}: no exact regular match for ${duplicate.cardNumber} ${duplicate.name}`,
+      );
+    }
+    if (usedSurvivors.has(survivor.id)) {
+      throw new Error(
+        `${label}: multiple LEN cards resolve to ${survivor.cardNumber} ${survivor.name}`,
+      );
+    }
+    usedSurvivors.add(survivor.id);
+    pairs.push({ dup: duplicate.id, surv: survivor.id });
+  }
+  if (usedSurvivors.size !== survivors.length) {
+    throw new Error(
+      `${label}: expected to use all ${survivors.length} regular cards, used ${usedSurvivors.size}`,
+    );
+  }
+
+  return pairs;
 }
 
 /** Curated (hand-picked) image paths: direct card uploads, user uploads, Drive set imports. */
@@ -210,6 +295,10 @@ const FLAIR_2023_NAME_EXCEPTION = {
   sourceName: 'bucky',
   targetName: 'buckybarnes',
 } as const;
+const LENTICULAR_2024_SLUG = '2024-2024-upper-deck-marvel-masterpieces-92-platinum-lenticular';
+const LENTICULAR_2024_NAME = "2024 Upper Deck Marvel Masterpieces '92 Platinum - Lenticular";
+const LENTICULAR_2024_PARENT_SLUG = '2024-upper-deck-marvel-masterpieces-92-platinum';
+const LENTICULAR_2024_EXPECTED_CARDS = 100;
 
 async function refCount(tx: Tx, cardId: number): Promise<number> {
   const r: any = await tx.execute(sql`
@@ -411,6 +500,72 @@ export async function applyCardMergePairs(
       VALUES ${sql.join(chunk.map((pair) => sql`(${pair.dup}, ${pair.surv})`), sql`, `)}`);
   }
   await applyPairBatch(tx, archiveReason, options.imageTransferMode ?? 'prefer-curated');
+}
+
+export async function mergeExactLenDuplicateRows(
+  tx: Tx,
+  subset: CardSetRow,
+  expectedCount: number,
+  label: string,
+): Promise<{ merged: number; frontImagesCopied: number; backImagesCopied: number }> {
+  const activeCards = await tx.select().from(cards).where(and(
+    eq(cards.setId, subset.id),
+    isNull(cards.archivedAt),
+  ));
+  const lenCards = activeCards.filter((card) => /LEN$/i.test(card.name.trim()));
+  if (lenCards.length === 0) {
+    const malformedLenNames = activeCards.filter((card) => normName(card.name).endsWith('len'));
+    if (malformedLenNames.length > 0) {
+      throw new Error(`${label}: malformed LEN suffix remains in terminal checklist`);
+    }
+    if (activeCards.length !== expectedCount) {
+      throw new Error(
+        `${label}: terminal checklist expected ${expectedCount} active regular cards, found ${activeCards.length}`,
+      );
+    }
+    assertExactPrefixedCardNumbers(
+      `${label} terminal cards`,
+      activeCards.map((card) => card.cardNumber),
+      '',
+      expectedCount,
+    );
+    if (subset.totalCards !== expectedCount) {
+      await tx.update(cardSets)
+        .set({ totalCards: expectedCount })
+        .where(eq(cardSets.id, subset.id));
+    }
+    return { merged: 0, frontImagesCopied: 0, backImagesCopied: 0 };
+  }
+
+  const pairs = buildExactLenDuplicatePairs(label, activeCards, expectedCount);
+  const cardById = new Map(activeCards.map((card) => [card.id, card]));
+  let frontImagesCopied = 0;
+  let backImagesCopied = 0;
+  for (const pair of pairs) {
+    const duplicate = cardById.get(pair.dup)!;
+    const survivor = cardById.get(pair.surv)!;
+    if (duplicate.frontImageUrl && !survivor.frontImageUrl) frontImagesCopied++;
+    if (duplicate.backImageUrl && !survivor.backImageUrl) backImagesCopied++;
+  }
+
+  await applyCardMergePairs(
+    tx,
+    pairs,
+    `Erroneous ${label} LEN duplicate merged into matching regular card`,
+    { imageTransferMode: 'missing-only' },
+  );
+  const remaining: any = await tx.execute(sql`
+    SELECT count(*)::int AS count
+    FROM cards
+    WHERE set_id = ${subset.id} AND archived_at IS NULL`);
+  if (Number(remaining.rows?.[0]?.count ?? -1) !== expectedCount) {
+    throw new Error(`${label}: merge did not leave exactly ${expectedCount} active cards`);
+  }
+  await tx.update(cardSets)
+    .set({ totalCards: expectedCount })
+    .where(eq(cardSets.id, subset.id));
+
+  return { merged: pairs.length, frontImagesCopied, backImagesCopied };
 }
 
 async function mergeGroup(tx: Tx, group: MergeGroup): Promise<void> {
@@ -843,6 +998,37 @@ async function relocate2023FlairSubsetCards(tx: Tx): Promise<void> {
   );
 }
 
+async function merge2024LenticularLenDuplicates(tx: Tx): Promise<void> {
+  const [subset] = await tx.select().from(cardSets)
+    .where(eq(cardSets.slug, LENTICULAR_2024_SLUG));
+  if (!subset) {
+    console.log(`${LOG} 2024 Lenticular LEN duplicates: subset absent — skipping`);
+    return;
+  }
+  if (!subset.isActive || subset.name !== LENTICULAR_2024_NAME || subset.mainSetId == null) {
+    throw new Error('2024 Lenticular LEN duplicates: subset identity or parent product is invalid');
+  }
+  const [parent] = await tx.select().from(mainSets).where(eq(mainSets.id, subset.mainSetId));
+  if (!parent || parent.slug !== LENTICULAR_2024_PARENT_SLUG || !parent.isActive) {
+    throw new Error('2024 Lenticular LEN duplicates: expected active parent product is missing');
+  }
+
+  const result = await mergeExactLenDuplicateRows(
+    tx,
+    subset,
+    LENTICULAR_2024_EXPECTED_CARDS,
+    '2024 Lenticular LEN duplicates',
+  );
+  if (result.merged === 0) {
+    console.log(`${LOG} 2024 Lenticular LEN duplicates: exact terminal checklist confirmed — skipping`);
+    return;
+  }
+  console.log(
+    `${LOG} 2024 Lenticular LEN duplicates: merged ${result.merged} card(s); `
+    + `filled ${result.frontImagesCopied} front and ${result.backImagesCopied} back image slot(s)`,
+  );
+}
+
 export async function mergeDuplicateLegacySets(): Promise<void> {
   // Cheap idempotency probe before taking the lock
   const allSourceSlugs = GROUPS.flatMap((g) => g.sourceSubsetSlugs);
@@ -870,12 +1056,19 @@ export async function mergeDuplicateLegacySets(): Promise<void> {
         AND c.archived_at IS NULL
     ) AS needed`);
   const needs2023FlairRelocation = Boolean(flair2023Probe.rows?.[0]?.needed);
+  // This subset is small, so always validate its exact terminal state under
+  // the advisory lock. That prevents the cheap no-op path from ever bypassing
+  // a name, parent, suffix, count, or card-number identity guard.
+  const [lenticular2024Subset] = await db.select({ id: cardSets.id }).from(cardSets)
+    .where(eq(cardSets.slug, LENTICULAR_2024_SLUG));
+  const needs2024LenticularValidation = Boolean(lenticular2024Subset);
   if (
     active.length === 0
     && !orphan
     && !needsPlatinumAttach
     && !needsLostMarvelRelocation
     && !needs2023FlairRelocation
+    && !needs2024LenticularValidation
   ) {
     console.log(`${LOG} Nothing to do — all legacy duplicate sets already retired`);
     return;
@@ -904,6 +1097,7 @@ export async function mergeDuplicateLegacySets(): Promise<void> {
     }
     await relocateLostMarvelBonusCards(tx);
     await relocate2023FlairSubsetCards(tx);
+    await merge2024LenticularLenDuplicates(tx);
 
     // Deactivate the empty orphan subset (only if it truly has no active cards)
     if (orphan) {
