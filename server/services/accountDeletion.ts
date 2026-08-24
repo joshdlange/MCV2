@@ -269,52 +269,82 @@ function jobToDeletedAccount(job: AccountDeletionJob): DeletedAccount {
 async function stageDeletionJob(options: DeleteAccountOptions): Promise<AccountDeletionJob> {
   await ensureAccountDeletionInfrastructure();
 
-  const [existing] = await db
-    .select()
-    .from(schema.accountDeletionJobs)
-    .where(eq(schema.accountDeletionJobs.userId, options.userId))
-    .limit(1);
-  if (existing) return existing;
+  return db.transaction(async (tx) => {
+    // Serialize deletion staging with the onboarding-recovery provider call.
+    // Whichever operation acquires this lock first finishes first; once a
+    // deletion job exists, the recovery worker refuses to send.
+    await tx.execute(sql`
+      SELECT pg_advisory_xact_lock(
+        hashtext(${"user-outbound-email:" + options.userId})
+      )
+    `);
 
-  const [account] = await db
-    .select({
-      id: schema.users.id,
-      firebaseUid: schema.users.firebaseUid,
-      username: schema.users.username,
-      email: schema.users.email,
-      displayName: schema.users.displayName,
-      stripeSubscriptionId: schema.users.stripeSubscriptionId,
-      appleOriginalTransactionId: schema.users.appleOriginalTransactionId,
-    })
-    .from(schema.users)
-    .where(eq(schema.users.id, options.userId))
-    .limit(1);
-  if (!account) throw new AccountNotFoundError();
+    const cancelCompensationIfPresent = async () => {
+      const infrastructure: any = await tx.execute(sql`
+        SELECT to_regclass('public.onboarding_compensation_grants') AS table_name
+      `);
+      const row = (infrastructure.rows ?? infrastructure)[0];
+      if (row?.table_name) {
+        await tx.execute(sql`
+          UPDATE onboarding_compensation_grants
+          SET status = 'cancelled', updated_at = now()
+          WHERE user_id = ${options.userId}
+            AND status <> 'sent'
+        `);
+      }
+    };
 
-  await db
-    .insert(schema.accountDeletionJobs)
-    .values({
-      userId: account.id,
-      firebaseUid: account.firebaseUid,
-      username: account.username,
-      email: account.email,
-      displayName: account.displayName,
-      stripeSubscriptionId: account.stripeSubscriptionId,
-      appleOriginalTransactionId: account.appleOriginalTransactionId,
-      source: options.source,
-      actorUserId: options.actorUserId,
-      actorEmail: options.actorEmail,
-      status: "pending",
-    })
-    .onConflictDoNothing({ target: schema.accountDeletionJobs.userId });
+    const [existing] = await tx
+      .select()
+      .from(schema.accountDeletionJobs)
+      .where(eq(schema.accountDeletionJobs.userId, options.userId))
+      .limit(1);
+    if (existing) {
+      await cancelCompensationIfPresent();
+      return existing;
+    }
 
-  const [job] = await db
-    .select()
-    .from(schema.accountDeletionJobs)
-    .where(eq(schema.accountDeletionJobs.userId, options.userId))
-    .limit(1);
-  if (!job) throw new Error("Failed to stage account deletion");
-  return job;
+    const [account] = await tx
+      .select({
+        id: schema.users.id,
+        firebaseUid: schema.users.firebaseUid,
+        username: schema.users.username,
+        email: schema.users.email,
+        displayName: schema.users.displayName,
+        stripeSubscriptionId: schema.users.stripeSubscriptionId,
+        appleOriginalTransactionId: schema.users.appleOriginalTransactionId,
+      })
+      .from(schema.users)
+      .where(eq(schema.users.id, options.userId))
+      .limit(1);
+    if (!account) throw new AccountNotFoundError();
+
+    await tx
+      .insert(schema.accountDeletionJobs)
+      .values({
+        userId: account.id,
+        firebaseUid: account.firebaseUid,
+        username: account.username,
+        email: account.email,
+        displayName: account.displayName,
+        stripeSubscriptionId: account.stripeSubscriptionId,
+        appleOriginalTransactionId: account.appleOriginalTransactionId,
+        source: options.source,
+        actorUserId: options.actorUserId,
+        actorEmail: options.actorEmail,
+        status: "pending",
+      })
+      .onConflictDoNothing({ target: schema.accountDeletionJobs.userId });
+    await cancelCompensationIfPresent();
+
+    const [job] = await tx
+      .select()
+      .from(schema.accountDeletionJobs)
+      .where(eq(schema.accountDeletionJobs.userId, options.userId))
+      .limit(1);
+    if (!job) throw new Error("Failed to stage account deletion");
+    return job;
+  });
 }
 
 async function claimDeletionJob(userId: number): Promise<AccountDeletionJob> {

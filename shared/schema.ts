@@ -95,6 +95,33 @@ export const emailLogs = pgTable("email_logs", {
     .where(sql`${table.providerMessageId} IS NOT NULL`),
 }));
 
+// One-time service recovery for accounts blocked by the pre-August-2026
+// Unicode-in-request-headers onboarding bug. The exact cohort is frozen by
+// user ID in the worker; one row owns both the Stripe grant and email state so
+// production restarts can safely resume without duplicating either.
+export const onboardingCompensationGrants = pgTable("onboarding_compensation_grants", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  campaign: text("campaign").notNull(),
+  offerMonths: integer("offer_months").notNull(),
+  promotionCode: text("promotion_code").notNull(),
+  stripeCouponId: text("stripe_coupon_id"),
+  stripePromotionCodeId: text("stripe_promotion_code_id"),
+  status: text("status").default("pending").notNull(),
+  emailLogId: integer("email_log_id"),
+  attempts: integer("attempts").default(0).notNull(),
+  lastError: text("last_error"),
+  lastAttemptAt: timestamp("last_attempt_at"),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  recipientCampaignIdx: uniqueIndex("onboarding_comp_grant_user_campaign_idx")
+    .on(table.userId, table.campaign),
+  promotionCodeIdx: uniqueIndex("onboarding_comp_grant_promo_code_idx")
+    .on(table.promotionCode),
+}));
+
 // Resend webhook engagement events (opened / clicked / bounced / complained).
 // One row per (provider message id, event type) — repeat opens don't inflate
 // counts. Joined to email_logs.provider_message_id for per-template stats.

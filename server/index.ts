@@ -793,6 +793,16 @@ server.listen({
   startupGate.markReady();
   log(`application ready on port ${port}`);
 
+  // The recovery email describes this deployment as fixed, so it must never
+  // start until routes, static assets, and the startup gate are all ready.
+  import('./services/onboardingCompensation')
+    .then(({ startOnboardingCompensationWorker }) => {
+      startOnboardingCompensationWorker();
+    })
+    .catch((error) => {
+      console.error('[OnboardingCompensation] Failed to schedule worker:', error);
+    });
+
   // Kick off the heavy data-fix seeds now that the app is ready (see
   // runDataFixSeeds above — deferred so slow first runs can't fail startup).
   runDataFixSeeds().catch((error) => {

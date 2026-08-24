@@ -105,6 +105,77 @@ export function welcomeTemplate(user: { displayName: string; username: string })
   return baseTemplate({ title: 'Welcome to Marvelous Card Vault', bodyHtml });
 }
 
+function escapeEmailHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+export function onboardingRecoveryTemplate(params: {
+  displayName?: string | null;
+  promotionCode: string;
+  freeMonths: number;
+}): { html: string; text: string } {
+  const name = escapeEmailHtml(params.displayName?.trim() || 'Collector');
+  const code = escapeEmailHtml(params.promotionCode);
+  const monthLabel = params.freeMonths === 1 ? 'one month' : `${params.freeMonths} months`;
+  const subject = 'We fixed your Marvelous Card Vault signup';
+  const bodyHtml = `
+    <h1 style="margin: 0 0 20px; font-size: 28px; font-weight: 700; color: ${TEXT_PRIMARY}; line-height: 1.2;">
+      Your signup issue is fixed
+    </h1>
+    <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
+      Hi ${name},
+    </p>
+    <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
+      You recently tried to finish setting up your Marvelous Card Vault account, but a browser issue involving special characters in profile names stopped the final step. We fixed it, and your account is still intact.
+    </p>
+    <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: ${TEXT_SECONDARY};">
+      Sign in again using the same sign-in method. We will take you back to finish setup normally.
+    </p>
+    <div style="background-color: ${DARK_BG}; padding: 22px; border-radius: 8px; border-left: 4px solid ${BRAND_RED}; margin: 24px 0; text-align: center;">
+      <p style="margin: 0 0 8px; font-size: 15px; color: ${TEXT_SECONDARY};">
+        As an apology, here is ${monthLabel} of Super Hero free:
+      </p>
+      <p style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: 1px; color: ${TEXT_PRIMARY};">
+        ${code}
+      </p>
+    </div>
+    <p style="margin: 0 0 8px; font-size: 14px; line-height: 1.6; color: ${TEXT_SECONDARY};">
+      After setup, choose the $5 monthly Super Hero plan on the website and enter this code during checkout. The code is unique to this recovery offer and can be redeemed once.
+    </p>
+    ${ctaButton('Finish Your Setup', 'https://app.marvelcardvault.com')}
+    <p style="margin: 18px 0 0; font-size: 14px; line-height: 1.6; color: ${TEXT_SECONDARY};">
+      If you run into anything else, reply to this email and we will help.
+    </p>
+  `;
+
+  const text = [
+    `Hi ${params.displayName?.trim() || 'Collector'},`,
+    '',
+    'You recently tried to finish setting up your Marvelous Card Vault account, but a browser issue involving special characters in profile names stopped the final step. We fixed it, and your account is still intact.',
+    '',
+    'Sign in again using the same sign-in method. We will take you back to finish setup normally.',
+    '',
+    `As an apology, here is ${monthLabel} of Super Hero free:`,
+    params.promotionCode,
+    '',
+    'After setup, choose the $5 monthly Super Hero plan on the website and enter this code during checkout. The code can be redeemed once.',
+    '',
+    'Finish your setup: https://app.marvelcardvault.com',
+    '',
+    'If you run into anything else, reply to this email and we will help.',
+  ].join('\n');
+
+  return {
+    html: baseTemplate({ title: subject, preheader: 'Your account is intact and setup is ready to finish.', bodyHtml }),
+    text,
+  };
+}
+
 /**
  * 2. Password Reset Request
  */
