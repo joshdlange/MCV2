@@ -16,6 +16,11 @@ same column types, nullability, and index names. Because it matches the Drizzle 
 `db:push` sees the DB as already in-sync and won't try to recreate it. Verify columns + indexes
 after creating. For destructive changes, prefer `db:push --force` only with explicit user awareness.
 
+Drizzle Kit can also fail before computing any diff when introspecting expression/partial indexes:
+an existing index whose introspection reports a null column expression triggers an internal Zod
+error. Treat this as another all-or-nothing `db:push` blocker; do not modify an unrelated live index
+just to unblock an additive table.
+
 ## Drizzle push matches unique constraints by NAME, and prompts abort everything
 `db:push` compares unique constraints by drizzle's naming convention (`<table>_<col>_unique`).
 The prod DB had many legacy Postgres-default names (`<table>_<col>_key`), so push kept prompting
@@ -69,3 +74,13 @@ always lands on the Login page for auth-gated routes — even though the user's 
 IS logged in (you can see it in the browser console logs). Do NOT keep retrying screenshots of
 authed pages; verify those flows via the network/console logs (endpoint responses) instead. The
 login screenshot is still useful: it proves unauth users correctly route to Login, not elsewhere.
+
+## PostgreSQL aggregate arrays are driver-dependent
+Runtime metadata queries using `array_agg` may return a PostgreSQL array literal string such as
+`{user_id,campaign}` rather than a JavaScript array.
+
+**Why:** A fail-closed production schema validator passed mocked tests but crashed against the real
+development driver when it called `.join()` on that string.
+
+**How to apply:** Normalize metadata array values from either JavaScript arrays or PostgreSQL array
+literals, and exercise critical schema validators against the real development database.

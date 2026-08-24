@@ -297,7 +297,20 @@ export interface CompensationIndexMetadata {
   index_name: string;
   indisunique: boolean;
   has_predicate: boolean;
-  columns: string[];
+  columns: string[] | string;
+}
+
+function normalizeIndexColumns(columns: CompensationIndexMetadata["columns"]): string[] {
+  if (Array.isArray(columns)) return columns;
+  const trimmed = columns.trim();
+  if (!trimmed) return [];
+  const inner = trimmed.startsWith("{") && trimmed.endsWith("}")
+    ? trimmed.slice(1, -1)
+    : trimmed;
+  return inner
+    .split(",")
+    .map((column) => column.trim().replace(/^"(.*)"$/, "$1"))
+    .filter(Boolean);
 }
 
 export function compensationIndexesAreValid(rows: CompensationIndexMetadata[]): boolean {
@@ -307,10 +320,10 @@ export function compensationIndexesAreValid(rows: CompensationIndexMetadata[]): 
   return Boolean(
     recipient?.indisunique
     && recipient.has_predicate === false
-    && recipient.columns.join(",") === "user_id,campaign"
+    && normalizeIndexColumns(recipient.columns).join(",") === "user_id,campaign"
     && code?.indisunique
     && code.has_predicate === false
-    && code.columns.join(",") === "promotion_code",
+    && normalizeIndexColumns(code.columns).join(",") === "promotion_code",
   );
 }
 

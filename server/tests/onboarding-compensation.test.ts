@@ -61,6 +61,14 @@ test("schema validation requires the exact unique indexes and columns", () => {
   ];
   assert.equal(compensationIndexesAreValid(valid), true);
   assert.equal(
+    compensationIndexesAreValid([
+      { ...valid[0], columns: "{user_id,campaign}" },
+      { ...valid[1], columns: "{promotion_code}" },
+    ]),
+    true,
+    "PostgreSQL array strings from the live driver must validate",
+  );
+  assert.equal(
     compensationIndexesAreValid(valid.map((index) => ({ ...index, indisunique: false }))),
     false,
   );
