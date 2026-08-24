@@ -24,6 +24,7 @@ import {
   isDriveSyncJobRunningInDb,
   decideSetCheckpointCompleted,
   isReplaceableLegacyCardPlaceholderUrl,
+  resolveDriveImageSides,
 } from "../services/driveImageSync";
 import { isDisplayableCardImageUrl } from "../../shared/cardImageUrls";
 
@@ -351,4 +352,46 @@ test("only the verified dead legacy placeholder may be replaced", () => {
     "a real non-empty card image remains displayable",
   );
   assert.equal(isDisplayableCardImageUrl(""), false);
+});
+
+test("single-image folders always import as the front", () => {
+  const unlabelled = resolveDriveImageSides([
+    { id: "single", name: "FLEER1.jpg", mimeType: "image/jpeg" },
+  ]);
+  assert.deepEqual(
+    unlabelled?.map(({ side, file }) => ({ side, id: file.id })),
+    [{ side: "front", id: "single" }],
+    "a one-image card folder is a front-only import candidate",
+  );
+
+  const numberEndingInTwo = resolveDriveImageSides([
+    { id: "number-two", name: "SS2.webp", mimeType: "image/webp" },
+  ]);
+  assert.deepEqual(
+    numberEndingInTwo?.map(({ side, file }) => ({ side, id: file.id })),
+    [{ side: "front", id: "number-two" }],
+    "a card number ending in 2 must not be mistaken for a back-side marker",
+  );
+});
+
+test("abbreviated and common typo front/back markers resolve safely", () => {
+  const sides = resolveDriveImageSides([
+    { id: "back", name: "X MEN 1 B.jpg", mimeType: "image/jpeg" },
+    { id: "front", name: "X MEN 1 F.jpg", mimeType: "image/jpeg" },
+  ]);
+  assert.deepEqual(
+    sides?.map(({ side, file }) => ({ side, id: file.id })),
+    [{ side: "front", id: "front" }, { side: "back", id: "back" }],
+    "clear F/B abbreviations must resolve without relying on file order",
+  );
+
+  const typoSides = resolveDriveImageSides([
+    { id: "back", name: "73 blue back.jpg", mimeType: "image/jpeg" },
+    { id: "front", name: "73 blue frpnt.jpg", mimeType: "image/jpeg" },
+  ]);
+  assert.deepEqual(
+    typoSides?.map(({ side, file }) => ({ side, id: file.id })),
+    [{ side: "front", id: "front" }, { side: "back", id: "back" }],
+    "known one-character filename mistakes must not block an otherwise clear pair",
+  );
 });

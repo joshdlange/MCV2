@@ -4,6 +4,9 @@ description: Rules approved for the Drive → Cloudinary card image importer and
 ---
 - Front/back rule (user-approved): with exactly 2 images, a filename marked FRONT/BACK wins its side and the unmarked file is the opposite side. Sort order alone is NOT an approved basis — never use it without explicit new approval.
 - **Why:** Alphabetical order put BACK files first in real data; wrong proposals were caught in review.
+- One-image rule (user-approved): a card folder containing exactly one image means that image is the card front, even when the filename itself is unlabelled.
+- **Why:** The live Drive archive contains thousands of legitimate front-only card folders; requiring two images discarded usable paid image work.
+- **How to apply:** Treat one image as a front-only candidate, preserve the no-overwrite guard, and never infer sides from filenames ending in 1/2 because those digits are often part of the card number.
 - Idempotency lives in the `drive_image_imports` ledger: unchanged Drive file ids are skipped on rerun. Card URL update + ledger row must commit in one transaction, or resumability reporting drifts.
 - Real import always re-scans Drive fresh (never trusts a stale dry-run report) and card URLs are swapped only AFTER Cloudinary confirms upload — same pattern as the COMC migration.
 - Real card images are never overwritten. The sole approved exception is the exact verified 404 legacy placeholder asset; the final update must atomically require NULL or that exact value observed during the scan.

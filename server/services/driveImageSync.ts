@@ -611,11 +611,17 @@ type ImageSide = 'front' | 'back' | 'ambiguous';
 
 function inferSide(fileName: string): ImageSide {
   const base = fileName.toLowerCase().replace(/\.[a-z0-9]+$/, '');
-  if (/\b(front|obverse)\b|front/i.test(base)) return 'front';
-  if (/\b(back|reverse)\b|back/i.test(base)) return 'back';
-  // trailing 1/2 (e.g. "IMG_1", "53-1", "53 (2)")
-  const m = base.match(/(?:^|[^0-9])([12])(?:\)|\s*)$/);
-  if (m) return m[1] === '1' ? 'front' : 'back';
+  const tokens = base.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  const hasFrontMarker = tokens.some(token =>
+    ['front', 'obverse', 'f'].includes(token)
+    || ['fron', 'frontt', 'fronnt', 'froont', 'frpnt', 'ront'].includes(token)
+  );
+  const hasBackMarker = tokens.some(token =>
+    ['back', 'reverse', 'b'].includes(token)
+    || ['bac', 'backk', 'bck'].includes(token)
+  );
+  if (hasFrontMarker && !hasBackMarker) return 'front';
+  if (hasBackMarker && !hasFrontMarker) return 'back';
   return 'ambiguous';
 }
 
@@ -1113,7 +1119,7 @@ export async function runDriveImageSyncDryRun(opts: DriveScanOptions = {}): Prom
         frontBackStatus = hasFront && hasBack ? 'ok' : 'ambiguous';
       }
       if (frontBackStatus === 'ambiguous') report.summary.ambiguousImagePairs++;
-      if (imageFiles.length !== 2) report.summary.cardFoldersNotExactlyTwoImages++;
+      if (imageFiles.length < 1 || imageFiles.length > 2) report.summary.cardFoldersNotExactlyTwoImages++;
 
       // Strict card match
       let match: CardFolderReport['match'];
@@ -1551,6 +1557,29 @@ function resolveFrontBack(files: DriveItem[]): { front: DriveItem; back: DriveIt
   return null; // both ambiguous or both claim the same side → skip
 }
 
+/**
+ * Produce the safe importable sides for a card folder.
+ *
+ * Per the archive contract, a lone image is always a front-only candidate.
+ * This deliberately does not infer a side from a trailing 1/2 because card
+ * numbers commonly end in those digits (for example SS2.webp). Two-image
+ * folders retain the strict, unambiguous pairing rule.
+ */
+export function resolveDriveImageSides(
+  files: DriveItem[],
+): Array<{ side: 'front' | 'back'; file: DriveItem }> | null {
+  if (files.length === 1) {
+    return [{ side: 'front', file: files[0] }];
+  }
+  const pair = resolveFrontBack(files);
+  return pair
+    ? [
+        { side: 'front', file: pair.front },
+        { side: 'back', file: pair.back },
+      ]
+    : null;
+}
+
 export async function runDriveImageImport(options: {
   maxFolders?: number | null;
   mode?: 'incremental' | 'full_audit';
@@ -1766,7 +1795,10 @@ export async function runDriveImageImport(options: {
     const cardById = new Map(cardRows.map(c => [c.id, c]));
 
     // Build the eligible list with every exclusion counted
-    interface EligibleFolder { folder: CardFolderReport; front: ImageFileReport; back: ImageFileReport; }
+    interface EligibleFolder {
+      folder: CardFolderReport;
+      sides: Array<{ side: 'front' | 'back'; file: ImageFileReport }>;
+    }
     const eligible: EligibleFolder[] = [];
 
     for (const folder of scan.allCardFolders) {
@@ -1774,7 +1806,7 @@ export async function runDriveImageImport(options: {
         report.summary.skippedUnmatchedFolders++;
         continue;
       }
-      if (folder.imageCount !== 2) {
+      if (folder.imageCount < 1 || folder.imageCount > 2) {
         report.summary.skippedWrongImageCount++;
         continue;
       }
@@ -1792,14 +1824,16 @@ export async function runDriveImageImport(options: {
         continue;
       }
       const items: DriveItem[] = files.map(f => ({ id: f.driveFileId, name: f.fileName, mimeType: f.mimeType, modifiedTime: f.modifiedTime }));
-      const resolved = resolveFrontBack(items);
-      if (!resolved) {
+      const resolvedSides = resolveDriveImageSides(items);
+      if (!resolvedSides) {
         report.summary.skippedUnresolvedFrontBack++;
         continue;
       }
-      const frontFile = files.find(f => f.driveFileId === resolved.front.id)!;
-      const backFile = files.find(f => f.driveFileId === resolved.back.id)!;
-      eligible.push({ folder, front: frontFile, back: backFile });
+      const sides = resolvedSides.map(({ side, file }) => ({
+        side,
+        file: files.find(candidate => candidate.driveFileId === file.id)!,
+      }));
+      eligible.push({ folder, sides });
     }
 
     report.summary.eligibleFolders = eligible.length;
@@ -1848,7 +1882,7 @@ export async function runDriveImageImport(options: {
       }
     };
 
-    for (const { folder, front, back } of toProcess) {
+    for (const { folder, sides } of toProcess) {
       const cardId = folder.match.cardId!;
       const card = cardById.get(cardId);
       if (!card) {
@@ -1868,12 +1902,14 @@ export async function runDriveImageImport(options: {
         lastHeartbeat = Date.now();
       }
 
-      const sides: Array<{ side: 'front' | 'back'; file: ImageFileReport; existingUrl: string | null }> = [
-        { side: 'front', file: front, existingUrl: card.frontImageUrl },
-        { side: 'back', file: back, existingUrl: card.backImageUrl },
-      ];
+      const sidesWithExisting: Array<{ side: 'front' | 'back'; file: ImageFileReport; existingUrl: string | null }> =
+        sides.map(({ side, file }) => ({
+          side,
+          file,
+          existingUrl: side === 'front' ? card.frontImageUrl : card.backImageUrl,
+        }));
 
-      for (const { side, file, existingUrl } of sides) {
+      for (const { side, file, existingUrl } of sidesWithExisting) {
         const replacingDeadPlaceholder = isReplaceableLegacyCardPlaceholderUrl(existingUrl);
         // Idempotency: already imported and unchanged → skip
         if (priorByFileId.has(file.driveFileId) && priorByFileId.get(file.driveFileId) === (file.modifiedTime ?? null)) {
