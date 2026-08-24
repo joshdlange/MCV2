@@ -12753,12 +12753,12 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
     console.error('[Kakawow Fix] Error:', err);
   });
 
-  // One-time seed: 2026 Topps Chrome Marvel Comics — 271 subsets, 9,524 cards (idempotent)
+  // One-time seed: 2026 Topps Chrome Marvel Comics — 77 subsets, 9,444 cards (idempotent)
   import('./seeds/seedToppsChromeMarvel2026').then(m => m.seedToppsChromeMarvel2026()).catch(err => {
     console.error('[Topps Chrome Seed] Error:', err);
   });
 
-  // One-time seed: 2026 Topps Mint Marvel — 10 subsets, 480 cards (idempotent)
+  // One-time seed: 2026 Topps Mint Marvel — 20 subsets, 1,730 cards (idempotent)
   import('./seeds/seedToppsMintMarvel2026').then(m => m.seedToppsMintMarvel2026()).catch(err => {
     console.error('[Topps Mint Seed] Error:', err);
   });
