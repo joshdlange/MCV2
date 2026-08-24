@@ -38,3 +38,4 @@
 - [Zero-error deployment handoff](deployment-handoff.md) — open the HTTP listener before startup work; gate root/API traffic until routes and SPA assets are ready.
 - [Auth sync must converge](auth-sync-convergence.md) — Firebase identity alone never unlocks the app; backend user creation must survive UID races and username collisions.
 - [Account deletion saga](account-deletion-saga.md) — deletion spans Stripe, Firebase, DB, and Resend; persist each stage, retry safely, and scrub staged PII only after notices complete.
+- [Stripe coupon product scopes](stripe-coupon-product-scopes.md) — `applies_to` may be omitted unless explicitly expanded; validate product limits with an expanded retrieval.
