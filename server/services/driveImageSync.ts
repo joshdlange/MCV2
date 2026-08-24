@@ -11,7 +11,7 @@
 import crypto from 'crypto';
 import { db, pool } from '../db';
 import { mainSets, cardSets, cards, driveSyncJobs, driveSyncSetCheckpoints, driveSyncState } from '../../shared/schema';
-import { inArray, eq, sql, desc, and, isNull } from 'drizzle-orm';
+import { inArray, eq, sql, desc, and, isNull, lt } from 'drizzle-orm';
 
 // ---------- Google Drive auth (service account, read-only) ----------
 
@@ -166,6 +166,7 @@ async function getFolderMeta(folderId: string): Promise<DriveItem> {
 // endpoints read from these rows, not only from process memory.
 
 const STALE_HEARTBEAT_MS = 5 * 60 * 1000;
+const ACTIVE_HEARTBEAT_MS = 30 * 1000;
 
 export interface JobProgress {
   stage?: string;
@@ -179,6 +180,7 @@ export interface JobProgress {
   scanErrorsCount?: number;
   skippedSetsUnchanged?: number;
   latestError?: string | null;
+  detail?: Record<string, unknown>;
 }
 
 /** Lightweight durable job handle used to persist progress as work happens. */
@@ -216,6 +218,7 @@ class DriveSyncJobTracker {
     if (p.scanErrorsCount !== undefined) set.scanErrorsCount = p.scanErrorsCount;
     if (p.skippedSetsUnchanged !== undefined) set.skippedSetsUnchanged = p.skippedSetsUnchanged;
     if (p.latestError !== undefined) set.latestError = p.latestError;
+    if (p.detail !== undefined) set.detail = p.detail;
     // Progress persistence must never crash the job.
     await db.update(driveSyncJobs).set(set).where(eq(driveSyncJobs.batchId, this.batchId)).catch((e) => {
       console.error('[DriveSync] Failed to persist job progress:', e?.message || e);
@@ -226,6 +229,18 @@ class DriveSyncJobTracker {
     if (this.closed) return;
     await db.update(driveSyncJobs).set({ heartbeatAt: new Date() })
       .where(eq(driveSyncJobs.batchId, this.batchId)).catch(() => {});
+  }
+
+  /**
+   * Keep the durable lease alive during every phase, including long Drive
+   * Changes/API calls that do not naturally emit progress counters.
+   */
+  startHeartbeat(): () => void {
+    const timer = setInterval(() => {
+      void this.heartbeat();
+    }, ACTIVE_HEARTBEAT_MS);
+    timer.unref?.();
+    return () => clearInterval(timer);
   }
 
   async finish(status: 'completed' | 'failed', extra: { stage?: string; latestError?: string | null; detail?: any } = {}): Promise<void> {
@@ -251,13 +266,28 @@ export async function getLatestDriveSyncJob(jobType: 'dry_run' | 'import'): Prom
     .orderBy(desc(driveSyncJobs.startedAt))
     .limit(1);
   if (!row) return null;
-  if (row.status === 'running' && Date.now() - new Date(row.heartbeatAt).getTime() > STALE_HEARTBEAT_MS) {
-    await db.update(driveSyncJobs).set({
+  if (row.status === 'running') {
+    const staleBefore = new Date(Date.now() - STALE_HEARTBEAT_MS);
+    // Re-check staleness atomically in the UPDATE. Previously a heartbeat could
+    // land after the SELECT but before this write, and the report poller would
+    // still falsely interrupt a healthy job.
+    const [interrupted] = await db.update(driveSyncJobs).set({
       status: 'interrupted',
       latestError: row.latestError || 'Instance restarted or crashed before completion (recoverable)',
       finishedAt: new Date(),
-    }).where(eq(driveSyncJobs.id, row.id)).catch(() => {});
-    return { ...row, status: 'interrupted', latestError: row.latestError || 'Instance restarted or crashed before completion (recoverable)' };
+    }).where(and(
+      eq(driveSyncJobs.id, row.id),
+      eq(driveSyncJobs.status, 'running'),
+      lt(driveSyncJobs.heartbeatAt, staleBefore),
+    )).returning().catch(() => []);
+    if (interrupted) return interrupted;
+
+    // The row changed after our first SELECT (usually a fresh heartbeat). Return
+    // current DB truth instead of the stale snapshot.
+    const [current] = await db.select().from(driveSyncJobs)
+      .where(eq(driveSyncJobs.id, row.id))
+      .limit(1);
+    return current ?? row;
   }
   return row;
 }
@@ -384,14 +414,17 @@ async function saveCursor(token: string): Promise<void> {
  * baseline). Resolution walks each changed file's parent chain up to a direct
  * child of the root; unresolved changes are reported but do not throw.
  */
-async function computeAffectedSetsFromChanges(rootId: string): Promise<
+async function computeAffectedSetsFromChanges(
+  rootId: string,
+  tracker?: DriveSyncJobTracker | null,
+): Promise<
   { affected: Set<string>; unresolved: number; newToken: string } | null
 > {
   const state = await loadSyncState();
   if (!state?.changesPageToken) return null;
 
   // Map: folderId -> parentId cache to resolve ancestry cheaply.
-  const parentCache = new Map<string, string | null>();
+  const parentCache = new Map<string, Promise<string | null>>();
   const rootChildIds = new Set<string>();
   try {
     const children = await listChildren(rootId);
@@ -407,19 +440,17 @@ async function computeAffectedSetsFromChanges(rootId: string): Promise<
     let current: string | null = fileId;
     for (let depth = 0; depth < 12 && current; depth++) {
       if (rootChildIds.has(current)) return current;
-      let parent = parentCache.get(current);
-      if (parent === undefined) {
-        try {
-          const meta = await driveFetch(
+      let parentPromise = parentCache.get(current);
+      if (!parentPromise) {
+        parentPromise = driveFetch(
             `https://www.googleapis.com/drive/v3/files/${current}?fields=id,parents&supportsAllDrives=true`,
             `Resolve parents (${current})`,
-          );
-          parent = Array.isArray(meta.parents) && meta.parents.length ? meta.parents[0] : null;
-        } catch {
-          parent = null;
-        }
-        parentCache.set(current, parent ?? null);
+          )
+          .then((meta) => Array.isArray(meta.parents) && meta.parents.length ? meta.parents[0] : null)
+          .catch(() => null);
+        parentCache.set(current, parentPromise);
       }
+      const parent = await parentPromise;
       if (parent && rootChildIds.has(parent)) return parent;
       current = parent ?? null;
     }
@@ -430,7 +461,9 @@ async function computeAffectedSetsFromChanges(rootId: string): Promise<
   let unresolved = 0;
   let pageToken: string = state.changesPageToken;
   let newToken: string | null = null;
+  let processedChanges = 0;
   const MAX_CHANGE_PAGES = 500;
+  const CHANGE_RESOLVE_CONCURRENCY = 16;
   let pages = 0;
   while (true) {
     if (pages >= MAX_CHANGE_PAGES) {
@@ -445,12 +478,37 @@ async function computeAffectedSetsFromChanges(rootId: string): Promise<
       + `&fields=newStartPageToken,nextPageToken,changes(fileId,removed,file(id,name,parents,mimeType))`
       + `&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true&includeRemoved=true`;
     const body = await driveFetch(url, 'List Drive changes');
-    for (const ch of (body.changes || [])) {
+    const changes: any[] = body.changes || [];
+    const resolvable: string[] = [];
+    for (const ch of changes) {
       const fileId = ch.file?.id || ch.fileId;
       if (!fileId) { unresolved++; continue; }
-      const top = await resolveTopSet(fileId);
-      if (top) affected.add(top); else unresolved++;
+      // The Changes response already includes the current parent for ordinary
+      // files. Seed the ancestry cache so we do not waste one metadata request
+      // per changed file before walking toward the root.
+      if (Array.isArray(ch.file?.parents)) {
+        parentCache.set(fileId, Promise.resolve(ch.file.parents[0] ?? null));
+      }
+      resolvable.push(fileId);
     }
+    for (let i = 0; i < resolvable.length; i += CHANGE_RESOLVE_CONCURRENCY) {
+      const batch = resolvable.slice(i, i + CHANGE_RESOLVE_CONCURRENCY);
+      const tops = await Promise.all(batch.map(resolveTopSet));
+      for (const top of tops) {
+        if (top) affected.add(top); else unresolved++;
+      }
+    }
+    processedChanges += changes.length;
+    await tracker?.update({
+      stage: 'computing changes',
+      detail: {
+        incrementalStrategy: 'changes_cursor',
+        changePagesProcessed: pages,
+        changeRecordsProcessed: processedChanges,
+        affectedSetCount: affected.size,
+        unresolvedChanges: unresolved,
+      },
+    });
     if (body.nextPageToken) { pageToken = body.nextPageToken; continue; }
     // Terminal page: a valid newStartPageToken is REQUIRED to advance safely.
     if (!body.newStartPageToken) {
@@ -1542,6 +1600,7 @@ export async function runDriveImageImport(options: {
   // Durable, DB-backed job row (survives restarts; drives the report endpoint).
   // Created inside try so a create failure still resets importRunning.
   let tracker: DriveSyncJobTracker | null = null;
+  let stopHeartbeat: (() => void) | null = null;
   let lockAcquired = false;
   let lockClient: Awaited<ReturnType<typeof pool.connect>> | null = null;
   try {
@@ -1563,6 +1622,7 @@ export async function runDriveImageImport(options: {
       batchId, jobType: 'import', mode, stage: 'starting',
       options: { maxFolders, overwrite: false, mode },
     });
+    stopHeartbeat = tracker.startHeartbeat();
 
     console.log(`[DriveImport] Batch ${batchId} started (mode=${mode}, maxFolders=${maxFolders ?? 'all'}, overwrite=${overwrite})`);
 
@@ -1619,7 +1679,7 @@ export async function runDriveImageImport(options: {
         console.log('[DriveImport] No cursor/checkpoints — running as baseline_full');
       } else {
         try {
-          const changes = await computeAffectedSetsFromChanges(rootId);
+          const changes = await computeAffectedSetsFromChanges(rootId, tracker);
           if (changes) {
             // Preferred: Changes API cursor. Only affected top-level sets are
             // scanned; every other set is skipped via checkpoint cache.
@@ -1637,6 +1697,13 @@ export async function runDriveImageImport(options: {
               // DEFER advancing the cursor until the whole job completes cleanly.
               pendingCursorToken = changes.newToken;
               forceSetIds = changes.affected;
+              await tracker?.update({
+                detail: {
+                  incrementalStrategy: 'changes_cursor',
+                  affectedSetCount: changes.affected.size,
+                  unresolvedChanges: 0,
+                },
+              });
               console.log(`[DriveImport] Changes cursor: ${changes.affected.size} affected set(s)`);
             }
           } else {
@@ -2024,6 +2091,7 @@ export async function runDriveImageImport(options: {
     console.error(`[DriveImport] Batch ${batchId} failed:`, err?.message || err);
     throw err;
   } finally {
+    stopHeartbeat?.();
     if (lockClient) {
       if (lockAcquired) {
         await lockClient.query(

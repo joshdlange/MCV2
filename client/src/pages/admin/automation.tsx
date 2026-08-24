@@ -490,10 +490,15 @@ function DriveSyncCard() {
               />
               <Stat label="Folders Left" value={displaySummary?.foldersRemainingEligible ?? 0} />
             </div>
-            {imp && (
+            {(imp?.incrementalStrategy || job?.detail?.incrementalStrategy) && (
               <p className="text-xs text-gray-500 mt-1.5">
-                Strategy: {(imp.incrementalStrategy || "safe scan").replace(/_/g, " ")}
-                {imp.skippedUnchangedSets ? ` · ${imp.skippedUnchangedSets} unchanged set(s) skipped` : ""}
+                Strategy: {String(imp?.incrementalStrategy || job?.detail?.incrementalStrategy || "safe scan").replace(/_/g, " ")}
+                {(imp?.skippedUnchangedSets || job?.skippedSetsUnchanged)
+                  ? ` · ${imp?.skippedUnchangedSets ?? job?.skippedSetsUnchanged} unchanged set(s) skipped`
+                  : ""}
+                {typeof job?.detail?.changeRecordsProcessed === "number"
+                  ? ` · ${job.detail.changeRecordsProcessed} Drive change(s) checked`
+                  : ""}
               </p>
             )}
             {imp && imp.failures.length > 0 && (
