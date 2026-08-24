@@ -1,21 +1,15 @@
 import { auth } from './firebase';
+import { createApiHeaders } from './authHeaders';
 
 // Enhanced API client that includes Firebase authentication headers
 export const apiRequest = async (method: string, url: string, data?: any) => {
   const user = auth.currentUser;
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+  let token: string | undefined;
 
   if (user) {
-    const token = await user.getIdToken();
-    headers['Authorization'] = `Bearer ${token}`;
-    headers['x-firebase-uid'] = user.uid;
-    headers['x-user-email'] = user.email || '';
-    headers['x-display-name'] = user.displayName || '';
-    headers['x-photo-url'] = user.photoURL || '';
-    headers['x-user-name'] = user.displayName || user.email?.split('@')[0] || 'User';
+    token = await user.getIdToken();
   }
+  const headers = createApiHeaders(token);
 
   const config: RequestInit = {
     method,

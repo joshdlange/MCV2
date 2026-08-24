@@ -2,6 +2,7 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { auth } from "./firebase";
 import type { Auth } from "firebase/auth";
 import { Capacitor } from "@capacitor/core";
+import { createApiHeaders } from "./authHeaders";
 
 // web | ios | android — computed once; sent on every request so the server
 // can track which platforms each user actually uses.
@@ -21,27 +22,18 @@ async function throwIfResNotOk(res: Response) {
 }
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "x-app-platform": APP_PLATFORM,
-  };
+  let token: string | undefined;
 
   try {
     const user = (auth as any)?.currentUser;
     if (user) {
-      const token = await user.getIdToken();
-      headers['Authorization'] = `Bearer ${token}`;
-      headers['x-firebase-uid'] = user.uid;
-      headers['x-user-email'] = user.email || '';
-      headers['x-display-name'] = user.displayName || '';
-      headers['x-photo-url'] = user.photoURL || '';
-      headers['x-user-name'] = user.displayName || user.email?.split('@')[0] || 'User';
+      token = await user.getIdToken();
     }
   } catch (error) {
     console.error('Error getting auth headers:', error);
   }
 
-  return headers;
+  return createApiHeaders(token, APP_PLATFORM);
 }
 
 export async function apiRequest(
