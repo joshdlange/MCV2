@@ -108,14 +108,34 @@ export default function AdminUsers() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest('DELETE', `/api/admin/users/${id}`);
+      const response = await apiRequest('DELETE', `/api/admin/users/${id}`);
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
-      toast({ title: "User deleted successfully" });
+      if (data?.status === "pending") {
+        toast({
+          title: "Account deletion is pending",
+          description: "The account has not been reported as fully deleted yet. It will retry automatically.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const warnings = data?.notifications?.warnings;
+      toast({
+        title: "User and account data deleted",
+        description: Array.isArray(warnings) && warnings.length > 0
+          ? warnings.join(" ")
+          : "Confirmation emails were sent to the user and admin.",
+        variant: Array.isArray(warnings) && warnings.length > 0 ? "destructive" : "default",
+      });
     },
-    onError: () => {
-      toast({ title: "Failed to delete user", variant: "destructive" });
+    onError: (error: any) => {
+      toast({
+        title: "Failed to delete user",
+        description: error?.message || "No account data was reported as deleted.",
+        variant: "destructive",
+      });
     }
   });
 

@@ -89,7 +89,11 @@ export const emailLogs = pgTable("email_logs", {
   providerMessageId: text("provider_message_id"),
   error: text("error"),
   sentAt: timestamp("sent_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  providerMessageIdIdx: index("email_logs_provider_msg_idx")
+    .on(table.providerMessageId)
+    .where(sql`${table.providerMessageId} IS NOT NULL`),
+}));
 
 // Resend webhook engagement events (opened / clicked / bounced / complained).
 // One row per (provider message id, event type) — repeat opens don't inflate
@@ -103,6 +107,44 @@ export const emailEvents = pgTable("email_events", {
   email: text("email"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// Durable account-deletion saga. Identity fields exist only while deletion or
+// its required notifications are pending; they are nulled when the job
+// completes. There is deliberately no FK to users so the job survives removal.
+export const accountDeletionJobs = pgTable("account_deletion_jobs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().unique(),
+  firebaseUid: text("firebase_uid"),
+  username: text("username"),
+  email: text("email"),
+  displayName: text("display_name"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  appleOriginalTransactionId: text("apple_original_transaction_id"),
+  source: text("source").notNull(),
+  actorUserId: integer("actor_user_id"),
+  actorEmail: text("actor_email"),
+  status: text("status").default("pending").notNull(),
+  stripeCancelledAt: timestamp("stripe_cancelled_at"),
+  firebaseDeletedAt: timestamp("firebase_deleted_at"),
+  dataDeletedAt: timestamp("data_deleted_at"),
+  userConfirmationSentAt: timestamp("user_confirmation_sent_at"),
+  adminNoticeSentAt: timestamp("admin_notice_sent_at"),
+  lastError: text("last_error"),
+  attemptCount: integer("attempt_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// HMAC hashes only, never raw deleted addresses. Suppression is permanent
+// because delayed/replayed provider events must never recreate deleted PII.
+export const accountDeletionEmailSuppressions = pgTable(
+  "account_deletion_email_suppressions",
+  {
+    recipientHash: text("recipient_hash").primaryKey(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+);
 
 export const mainSets = pgTable("main_sets", {
   id: serial("id").primaryKey(),

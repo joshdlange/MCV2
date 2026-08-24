@@ -115,6 +115,8 @@ export interface ResendEmailOptions {
   replyTo?: string;
   template?: string;
   jobName?: string;
+  /** Stable provider-level idempotency key for retryable transactional sends. */
+  idempotencyKey?: string;
   /** Skip the automatic email_logs insert — for callers (lifecycle system)
    * that pre-claim their own log row and update it after the send. */
   skipLog?: boolean;
@@ -152,6 +154,7 @@ export async function sendResendEmail(options: ResendEmailOptions): Promise<stri
     replyTo,
     template = 'unknown',
     jobName,
+    idempotencyKey,
     skipLog = false,
   } = options;
 
@@ -179,15 +182,18 @@ export async function sendResendEmail(options: ResendEmailOptions): Promise<stri
       };
     }
 
-    const { data, error } = await client.emails.send({
-      from,
-      to,
-      subject,
-      html: finalHtml,
-      ...(finalText ? { text: finalText } : {}),
-      ...(replyTo ? { replyTo } : {}),
-      ...(extraHeaders ? { headers: extraHeaders } : {}),
-    });
+    const { data, error } = await client.emails.send(
+      {
+        from,
+        to,
+        subject,
+        html: finalHtml,
+        ...(finalText ? { text: finalText } : {}),
+        ...(replyTo ? { replyTo } : {}),
+        ...(extraHeaders ? { headers: extraHeaders } : {}),
+      },
+      idempotencyKey ? { idempotencyKey } : undefined,
+    );
 
     if (error) {
       throw new Error(`Resend API error: ${error.name || 'unknown'} — ${error.message || JSON.stringify(error)}`);

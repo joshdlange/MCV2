@@ -53,6 +53,13 @@ import { verifyRcEntitlement, reconcileRevenueCatSubscriptions, startRevenueCatR
 import { uploadUserCardImage, uploadMainSetThumbnail, downloadAndUploadToCloudinary, isCloudinaryUrl } from "./cloudinary";
 import { registerMarketplaceRoutes } from "./marketplace-routes";
 import { optimizedStorage, tokenizeSearch } from "./optimized-storage";
+import {
+  AccountDeletionPendingError,
+  AccountNotFoundError,
+  deleteAccountPermanently,
+  shouldSuppressAccountDeletionEmailEvent,
+  startAccountDeletionRetryWorker,
+} from "./services/accountDeletion";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1117,18 +1124,58 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
     }
   });
 
-  // Delete user (admin only)
-  app.delete("/api/users/:id", authenticateUser, async (req: any, res) => {
+  const deleteStripeSubscriptionForAccount = async (subscriptionId: string) => {
+    try {
+      await stripe.subscriptions.cancel(subscriptionId);
+    } catch (error: any) {
+      if (error?.code === "resource_missing") return;
+      throw error;
+    }
+  };
+
+  // Delete user (admin only). Both paths use the same complete cleanup service.
+  app.delete(["/api/admin/users/:id", "/api/users/:id"], authenticateUser, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) {
         return res.status(403).json({ message: 'Admin access required' });
       }
-      
+
       const userId = parseInt(req.params.id);
-      await storage.deleteUser(userId);
-      res.json({ message: "User deleted successfully" });
+      if (!Number.isInteger(userId) || userId <= 0) {
+        return res.status(400).json({ message: "Invalid user id" });
+      }
+      if (userId === req.user.id) {
+        return res.status(400).json({
+          message: "Use Account Settings to delete your own account",
+        });
+      }
+
+      const result = await deleteAccountPermanently({
+        userId,
+        source: "admin",
+        actorUserId: req.user.id,
+        actorEmail: req.user.email,
+        dependencies: {
+          cancelStripeSubscription: deleteStripeSubscriptionForAccount,
+        },
+      });
+      res.json({
+        message: "User and associated account data deleted successfully",
+        status: result.status,
+        notifications: result.notifications,
+      });
     } catch (error) {
       console.error('Delete user error:', error);
+      if (error instanceof AccountNotFoundError) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      if (error instanceof AccountDeletionPendingError) {
+        return res.status(202).json({
+          message: "Account deletion is pending and will retry automatically",
+          status: "pending",
+          authDeleted: error.authDeleted,
+        });
+      }
       res.status(500).json({ message: "Failed to delete user" });
     }
   });
@@ -4943,7 +4990,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       if (messageId && ['email.opened', 'email.clicked', 'email.bounced', 'email.complained', 'email.delivered'].includes(type)) {
         const { recordEmailEvent } = await import('./jobs/lifecycleEmails');
         const to = Array.isArray(event?.data?.to) ? event.data.to[0] : event?.data?.to;
-        await recordEmailEvent(String(messageId), type.replace('email.', ''), typeof to === 'string' ? to : undefined);
+        const recipient = typeof to === 'string' ? to : undefined;
+        if (!(await shouldSuppressAccountDeletionEmailEvent(recipient))) {
+          await recordEmailEvent(String(messageId), type.replace('email.', ''), recipient);
+        }
       }
       res.json({ received: true });
     } catch (error) {
@@ -12656,79 +12706,34 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
 
   app.delete("/api/user/account", authenticateUser, async (req: any, res) => {
     try {
-      const userId = req.user.id;
-      const firebaseUid = req.user.firebaseUid;
-
-      const schema = await import("../shared/schema");
-
-      await db.transaction(async (tx) => {
-        const userOrders = await tx.select({ id: schema.orders.id })
-          .from(schema.orders)
-          .where(or(eq(schema.orders.buyerId, userId), eq(schema.orders.sellerId, userId)));
-        const orderIds = userOrders.map(o => o.id);
-
-        await tx.delete(schema.reviews).where(
-          or(eq(schema.reviews.reviewerId, userId), eq(schema.reviews.revieweeId, userId))
-        );
-
-        if (orderIds.length > 0) {
-          for (const orderId of orderIds) {
-            await tx.delete(schema.shipments).where(eq(schema.shipments.orderId, orderId));
-          }
-          for (const orderId of orderIds) {
-            await tx.delete(schema.orders).where(eq(schema.orders.id, orderId));
-          }
-        }
-
-        await tx.delete(schema.offers).where(eq(schema.offers.buyerId, userId));
-
-        const userListings = await tx.select({ id: schema.listings.id })
-          .from(schema.listings)
-          .where(eq(schema.listings.sellerId, userId));
-        if (userListings.length > 0) {
-          for (const listing of userListings) {
-            await tx.delete(schema.offers).where(eq(schema.offers.listingId, listing.id));
-          }
-        }
-        await tx.delete(schema.listings).where(eq(schema.listings.sellerId, userId));
-
-        await tx.delete(schema.payoutRequests).where(eq(schema.payoutRequests.sellerId, userId));
-        await tx.delete(schema.payoutAccounts).where(eq(schema.payoutAccounts.userId, userId));
-        await tx.delete(schema.userCollections).where(eq(schema.userCollections.userId, userId));
-        await tx.delete(schema.userWishlists).where(eq(schema.userWishlists.userId, userId));
-        await tx.delete(schema.xpEvents).where(eq(schema.xpEvents.userId, userId));
-        await tx.delete(schema.userBadges).where(eq(schema.userBadges.userId, userId));
-        await tx.delete(schema.notifications).where(eq(schema.notifications.userId, userId));
-        await tx.delete(schema.friends).where(
-          or(eq(schema.friends.requesterId, userId), eq(schema.friends.recipientId, userId))
-        );
-        await tx.delete(schema.messages).where(
-          or(eq(schema.messages.senderId, userId), eq(schema.messages.recipientId, userId))
-        );
-        await tx.delete(schema.shareLinks).where(eq(schema.shareLinks.userId, userId));
-        await tx.delete(schema.blocks).where(
-          or(eq(schema.blocks.userId, userId), eq(schema.blocks.blockedUserId, userId))
-        );
-        await tx.delete(schema.reports).where(
-          or(eq(schema.reports.reporterId, userId), eq(schema.reports.targetUserId, userId))
-        );
-        await tx.delete(schema.pendingCardImages).where(eq(schema.pendingCardImages.userId, userId));
-        await tx.update(schema.pendingCardImages)
-          .set({ reviewedBy: null })
-          .where(eq(schema.pendingCardImages.reviewedBy, userId));
-        await tx.delete(schema.emailLogs).where(eq(schema.emailLogs.userId, userId));
-        await tx.delete(schema.users).where(eq(schema.users.id, userId));
+      const result = await deleteAccountPermanently({
+        userId: req.user.id,
+        source: "self_service",
+        actorUserId: req.user.id,
+        actorEmail: req.user.email,
+        dependencies: {
+          cancelStripeSubscription: deleteStripeSubscriptionForAccount,
+        },
       });
 
-      try {
-        await admin.auth().deleteUser(firebaseUid);
-      } catch (firebaseErr) {
-        console.error("Failed to delete Firebase user (DB records already removed):", firebaseErr);
-      }
-
-      res.json({ success: true });
+      res.json({
+        success: true,
+        status: result.status,
+        notifications: result.notifications,
+      });
     } catch (error) {
       console.error("Account deletion failed:", error);
+      if (error instanceof AccountNotFoundError) {
+        return res.status(404).json({ message: "Account not found" });
+      }
+      if (error instanceof AccountDeletionPendingError) {
+        return res.status(202).json({
+          success: false,
+          status: "pending",
+          authDeleted: error.authDeleted,
+          message: "Account deletion is pending and will retry automatically",
+        });
+      }
       res.status(500).json({ message: "Failed to delete account" });
     }
   });
@@ -12741,6 +12746,9 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
 
   // Initialize email automation cron jobs
   startEmailCronJobs();
+  startAccountDeletionRetryWorker({
+    cancelStripeSubscription: deleteStripeSubscriptionForAccount,
+  });
   console.log('Email automation jobs initialized');
 
   // One-time seed: 2026 CardFun Marvel Rivals - Eternal Glory (idempotent)

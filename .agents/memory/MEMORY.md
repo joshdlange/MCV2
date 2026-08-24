@@ -37,3 +37,4 @@
 - [Drive image import safety](drive-image-import.md) — marked-file-wins; never overwrite card images; cursor/checkpoint state must never hide pending Drive work.
 - [Zero-error deployment handoff](deployment-handoff.md) — open the HTTP listener before startup work; gate root/API traffic until routes and SPA assets are ready.
 - [Auth sync must converge](auth-sync-convergence.md) — Firebase identity alone never unlocks the app; backend user creation must survive UID races and username collisions.
+- [Account deletion saga](account-deletion-saga.md) — deletion spans Stripe, Firebase, DB, and Resend; persist each stage, retry safely, and scrub staged PII only after notices complete.

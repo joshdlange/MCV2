@@ -512,7 +512,27 @@ export default function AccountSettings() {
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
     try {
-      await apiRequest("DELETE", "/api/user/account");
+      const response = await apiRequest("DELETE", "/api/user/account");
+      const result = await response.json();
+      if (result?.status === "pending") {
+        toast({
+          title: "Account deletion is pending",
+          description: "The deletion will retry automatically. Your account has not been reported as fully deleted yet.",
+          variant: "destructive",
+        });
+        setIsDeleting(false);
+        setShowDeleteModal(false);
+        if (!result?.authDeleted) return;
+      }
+      if (result?.status === "notifications_pending") {
+        toast({
+          title: "Account deleted",
+          description: "Your data and sign-in were removed. The confirmation emails are still retrying automatically.",
+        });
+        // Keep the truthful final status visible before signing out and
+        // navigating away from the authenticated account screen.
+        await new Promise((resolve) => window.setTimeout(resolve, 3000));
+      }
       await signOutUser();
       window.location.href = "/";
     } catch (err: any) {
@@ -1121,6 +1141,11 @@ export default function AccountSettings() {
               <p className="text-gray-500 text-sm mb-6">
                 This will permanently delete your account and all your collection data. This cannot be undone.
               </p>
+              {userProfile?.appleOriginalTransactionId && (
+                <p className="text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm mb-6">
+                  Deleting your account does not cancel an App Store subscription. Cancel it in your Apple subscription settings to prevent future renewals.
+                </p>
+              )}
               <div className="flex gap-3 w-full">
                 <Button
                   variant="outline"
