@@ -1908,6 +1908,7 @@ export async function runDriveImageImport(options: {
           file,
           existingUrl: side === 'front' ? card.frontImageUrl : card.backImageUrl,
         }));
+      let attemptedUploadThisFolder = false;
 
       for (const { side, file, existingUrl } of sidesWithExisting) {
         const replacingDeadPlaceholder = isReplaceableLegacyCardPlaceholderUrl(existingUrl);
@@ -1928,6 +1929,7 @@ export async function runDriveImageImport(options: {
         // Heartbeat right before the slow network work so a long download/upload
         // cannot cross the stale threshold mid-operation.
         await maybeHeartbeat();
+        attemptedUploadThisFolder = true;
         let cloudinaryUrl = '';
         let publicId = `card_${cardId}_${side}`;
         // Keep the durable lease heartbeat fresh independently of individual
@@ -2012,7 +2014,12 @@ export async function runDriveImageImport(options: {
       const updatedThisFolder = report.uploaded.filter(u => u.cardId === cardId).length > 0;
       if (updatedThisFolder) report.summary.updatedCardRecords++;
 
-      await new Promise(r => setTimeout(r, IMPORT_DELAY_MS));
+      // A real network upload already needs pacing to protect the web process
+      // and external services. Pure idempotency/existing-image skips do not;
+      // delaying those made large resume/full-audit runs needlessly slow.
+      if (attemptedUploadThisFolder) {
+        await new Promise(r => setTimeout(r, IMPORT_DELAY_MS));
+      }
     }
 
     // ---- Persist set checkpoints AFTER uploads (resumability-correct) ----
