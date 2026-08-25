@@ -1882,13 +1882,13 @@ export async function runDriveImageImport(options: {
       }
     };
 
-    for (const { folder, sides } of toProcess) {
+    const processEligibleFolder = async ({ folder, sides }: EligibleFolder) => {
       const cardId = folder.match.cardId!;
       const card = cardById.get(cardId);
       if (!card) {
         report.summary.skippedUnmatchedFolders++;
         markSetFailed(folder.setFolderId);
-        continue;
+        return;
       }
       report.summary.foldersProcessed++;
       await maybeHeartbeat();
@@ -2020,6 +2020,17 @@ export async function runDriveImageImport(options: {
       if (attemptedUploadThisFolder) {
         await new Promise(r => setTimeout(r, IMPORT_DELAY_MS));
       }
+    };
+
+    // Drive downloads and Cloudinary uploads are independent for each eligible
+    // card (duplicate card targets were removed above). A bounded worker pool
+    // cuts large archive runs from sequential hours to minutes without creating
+    // an unbounded burst that could exhaust memory, DB connections, or API
+    // quotas. Await each batch so checkpoints still advance only after all work
+    // in the selected processing slice has settled.
+    const UPLOAD_CONCURRENCY = 6;
+    for (let i = 0; i < toProcess.length; i += UPLOAD_CONCURRENCY) {
+      await Promise.all(toProcess.slice(i, i + UPLOAD_CONCURRENCY).map(processEligibleFolder));
     }
 
     // ---- Persist set checkpoints AFTER uploads (resumability-correct) ----
