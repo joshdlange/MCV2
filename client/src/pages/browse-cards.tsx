@@ -410,9 +410,15 @@ export default function BrowseCards() {
              set.description?.toLowerCase().includes(query);
     });
     
-    // Sort: base sets first, then by year descending
+    // Within a main set, keep subsets with cards ahead of empty/Coming Soon
+    // subsets so an empty checklist is never the focal point. Preserve the
+    // existing base-set and year ordering within each populated/empty group.
     return filtered.sort((a, b) => {
       if (currentMainSet) {
+        const aIsEmpty = a.totalCards === 0;
+        const bIsEmpty = b.totalCards === 0;
+        if (aIsEmpty !== bIsEmpty) return aIsEmpty ? 1 : -1;
+
         const aIsBase = isBaseSetName(a.name, currentMainSet.name);
         const bIsBase = isBaseSetName(b.name, currentMainSet.name);
         if (aIsBase && !bIsBase) return -1;
