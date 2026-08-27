@@ -13,7 +13,7 @@ interface LifecycleOverview {
   rules: Record<string, string>;
   funnel: {
     signedUp: number; onboardingComplete: number; addedFirstCard: number;
-    returning: number; engaged: number; upgraded: number; cancelled: number;
+    returning: number; engaged: number; upgraded: number; cancelled: number; deleted: number;
   };
   conversion: {
     onboardingRate: number; firstCardRate: number; returningRate: number;
@@ -83,6 +83,7 @@ export default function LifecycleIntelligence() {
     { label: "Engaged", value: overview.funnel.engaged },
     { label: "Upgraded (paying)", value: overview.funnel.upgraded },
     { label: "Cancelled", value: overview.funnel.cancelled },
+    { label: "Deleted Accounts", value: overview.funnel.deleted },
   ] : [];
 
   // Biggest drop-off between consecutive milestones (excludes Cancelled, which isn't a "next step").
@@ -114,15 +115,18 @@ export default function LifecycleIntelligence() {
             <div className="h-24 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
           ) : (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
                 {funnelSteps.map((step, i) => {
                   const isCancelled = step.label === "Cancelled";
+                  const isDeleted = step.label === "Deleted Accounts";
                   const base = funnelSteps[0]?.value ?? 0;
-                  const stepPct = i > 0 && !isCancelled && base > 0 ? Math.round((step.value / base) * 100) : null;
+                  const stepPct = i > 0 && !isCancelled && !isDeleted && base > 0 ? Math.round((step.value / base) * 100) : null;
                   return (
                     <div
                       key={step.label}
-                      className={`rounded-lg border px-2.5 py-2 ${isCancelled ? "border-red-200 bg-red-50" : "bg-gray-50"}`}
+                      className={`rounded-lg border px-2.5 py-2 ${
+                        isDeleted ? "border-gray-300 bg-gray-100" : isCancelled ? "border-red-200 bg-red-50" : "bg-gray-50"
+                      }`}
                     >
                       <p className={`text-xl font-bold ${isCancelled ? "text-red-600" : "text-gray-900"}`}>
                         {step.value.toLocaleString()}
@@ -135,6 +139,9 @@ export default function LifecycleIntelligence() {
                         <p className="text-[11px] font-semibold text-red-500 mt-0.5">
                           {overview.conversion.churnRate}% churn
                         </p>
+                      )}
+                      {isDeleted && (
+                        <p className="text-[11px] font-semibold text-gray-500 mt-0.5">completed deletions</p>
                       )}
                     </div>
                   );

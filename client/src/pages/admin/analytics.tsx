@@ -54,6 +54,7 @@ interface HeardAboutStats {
 interface SignupDay {
   date: string;
   count: number;
+  deleted: number;
 }
 
 interface RcAuditUser {
@@ -151,6 +152,7 @@ export default function AdminAnalytics() {
   });
 
   const totalSignupsThisMonth = signups.reduce((s, d) => s + d.count, 0);
+  const totalDeletedThisMonth = signups.reduce((s, d) => s + d.deleted, 0);
   const peakDay = signups.reduce((max, d) => (d.count > max.count ? d : max), { date: "", count: 0 });
 
   const chartData = signups.map((d) => ({ ...d, label: formatDay(d.date) }));
@@ -170,8 +172,8 @@ export default function AdminAnalytics() {
       <div>
         <div className="flex items-center justify-between mb-1">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Daily Signups</h1>
-            <p className="text-sm text-gray-500 mt-0.5">New registrations by day — use to correlate with marketing</p>
+            <h1 className="text-2xl font-bold text-gray-900">Daily Account Activity</h1>
+            <p className="text-sm text-gray-500 mt-0.5">New registrations and completed account deletions by day</p>
           </div>
           <div className="flex items-center gap-2">
             <Select value={String(selectedMonth)} onValueChange={(v) => setSelectedMonth(Number(v))}>
@@ -203,6 +205,10 @@ export default function AdminAnalytics() {
             <span className="text-xl font-bold text-blue-700">{totalSignupsThisMonth}</span>
             <span className="text-sm text-blue-600">signups this month</span>
           </div>
+          <div className="bg-red-50 border border-red-100 rounded-lg px-4 py-2 flex items-center gap-3">
+            <span className="text-xl font-bold text-red-700">{totalDeletedThisMonth}</span>
+            <span className="text-sm text-red-600">accounts deleted this month</span>
+          </div>
           {peakDay.date && (
             <div className="bg-purple-50 border border-purple-100 rounded-lg px-4 py-2 flex items-center gap-3">
               <span className="text-xl font-bold text-purple-700">{peakDay.count}</span>
@@ -225,6 +231,10 @@ export default function AdminAnalytics() {
                       <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
                       <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.02} />
                     </linearGradient>
+                    <linearGradient id="deletedGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0.01} />
+                    </linearGradient>
                   </defs>
                   <XAxis
                     dataKey="label"
@@ -241,17 +251,28 @@ export default function AdminAnalytics() {
                     width={28}
                   />
                   <Tooltip
-                    formatter={(v: number) => [v, "Signups"]}
+                    formatter={(v: number, name: string) => [v, name === "deleted" ? "Deleted accounts" : "Signups"]}
                     labelFormatter={(label) => `Date: ${label}`}
                     contentStyle={{ fontSize: 12, borderRadius: 8 }}
                   />
                   <Area
                     type="monotone"
                     dataKey="count"
+                    name="signups"
                     stroke="#3b82f6"
                     strokeWidth={2}
                     fill="url(#signupGrad)"
                     dot={{ r: 3, fill: "#3b82f6", strokeWidth: 0 }}
+                    activeDot={{ r: 5 }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="deleted"
+                    name="deleted"
+                    stroke="#ef4444"
+                    strokeWidth={2}
+                    fill="url(#deletedGrad)"
+                    dot={{ r: 3, fill: "#ef4444", strokeWidth: 0 }}
                     activeDot={{ r: 5 }}
                   />
                 </AreaChart>

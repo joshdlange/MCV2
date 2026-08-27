@@ -140,7 +140,8 @@ export async function getLifecycleOverview() {
         COUNT(*) FILTER (WHERE total_logins >= 3) AS returning,
         COUNT(*) FILTER (WHERE cards >= 10 OR binders > 0 OR wishlist > 0 OR images > 0 OR shared_binders > 0) AS engaged,
         COUNT(*) FILTER (WHERE plan = 'SUPER_HERO' AND subscription_status = 'active') AS upgraded,
-        COUNT(*) FILTER (WHERE ever_subscribed AND subscription_status = 'cancelled') AS cancelled
+        COUNT(*) FILTER (WHERE ever_subscribed AND subscription_status = 'cancelled') AS cancelled,
+        (SELECT COUNT(*) FROM account_deletion_jobs WHERE status = 'completed') AS deleted
       FROM staged`),
   ]);
   const byStage: Record<string, number> = {};
@@ -156,6 +157,7 @@ export async function getLifecycleOverview() {
     engaged: parseInt(f.engaged) || 0,
     upgraded: parseInt(f.upgraded) || 0,
     cancelled: parseInt(f.cancelled) || 0,
+    deleted: parseInt(f.deleted) || 0,
   };
   const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 1000) / 10 : 0);
   return {

@@ -2949,16 +2949,34 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getSignupsByDay(year: number, month: number): Promise<Array<{ date: string; count: number }>> {
+  async getSignupsByDay(year: number, month: number): Promise<Array<{ date: string; count: number; deleted: number }>> {
     const result = await db.execute(sql`
-      SELECT TO_CHAR(created_at, 'YYYY-MM-DD') AS date, COUNT(*) AS count
-      FROM users
-      WHERE EXTRACT(YEAR FROM created_at) = ${year}
-        AND EXTRACT(MONTH FROM created_at) = ${month}
+      WITH account_events AS (
+        SELECT created_at AS event_at, 1 AS signups, 0 AS deleted
+        FROM users
+        WHERE EXTRACT(YEAR FROM created_at) = ${year}
+          AND EXTRACT(MONTH FROM created_at) = ${month}
+        UNION ALL
+        SELECT data_deleted_at AS event_at, 0 AS signups, 1 AS deleted
+        FROM account_deletion_jobs
+        WHERE status = 'completed'
+          AND data_deleted_at IS NOT NULL
+          AND EXTRACT(YEAR FROM data_deleted_at) = ${year}
+          AND EXTRACT(MONTH FROM data_deleted_at) = ${month}
+      )
+      SELECT
+        TO_CHAR(event_at, 'YYYY-MM-DD') AS date,
+        SUM(signups) AS count,
+        SUM(deleted) AS deleted
+      FROM account_events
       GROUP BY date
       ORDER BY date ASC
     `);
-    return result.rows.map((r: any) => ({ date: r.date as string, count: parseInt(r.count) || 0 }));
+    return result.rows.map((r: any) => ({
+      date: r.date as string,
+      count: parseInt(r.count) || 0,
+      deleted: parseInt(r.deleted) || 0,
+    }));
   }
 
   async getActivityStats(range: 'day' | 'month' | 'year' | 'total'): Promise<Array<{ label: string; count: number; users: number }>> {
