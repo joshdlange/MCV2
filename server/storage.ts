@@ -2135,6 +2135,7 @@ export class DatabaseStorage implements IStorage {
         senderId: messages.senderId,
         recipientId: messages.recipientId,
         content: messages.content,
+        imageUrl: messages.imageUrl,
         isRead: messages.isRead,
         createdAt: messages.createdAt,
         sender: {

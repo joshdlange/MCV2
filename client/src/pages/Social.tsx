@@ -44,6 +44,7 @@ interface Message {
   senderId: number;
   recipientId: number;
   content: string;
+  imageUrl?: string | null;
   isRead: boolean;
   createdAt: string;
   sender: {
@@ -404,6 +405,8 @@ export default function Social() {
   // opens or new messages arrive (desktop + mobile containers).
   const desktopMessagesRef = useRef<HTMLDivElement>(null);
   const mobileMessagesRef = useRef<HTMLDivElement>(null);
+  const desktopComposerRef = useRef<HTMLTextAreaElement>(null);
+  const mobileComposerRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     for (const ref of [desktopMessagesRef, mobileMessagesRef]) {
       if (ref.current) {
@@ -411,6 +414,23 @@ export default function Social() {
       }
     }
   }, [messages, selectedFriendId]);
+
+  useEffect(() => {
+    if (!newMessage) {
+      for (const ref of [desktopComposerRef, mobileComposerRef]) {
+        if (ref.current) {
+          ref.current.style.height = "40px";
+          ref.current.style.overflowY = "hidden";
+        }
+      }
+    }
+  }, [newMessage]);
+
+  const resizeMessageComposer = (textarea: HTMLTextAreaElement) => {
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 40), 120)}px`;
+    textarea.style.overflowY = textarea.scrollHeight > 120 ? "auto" : "hidden";
+  };
 
   // Follow / unfollow (unified model — no requests, no approval)
   const followMutation = useMutation({
@@ -542,7 +562,7 @@ export default function Social() {
   };
 
   const handleSendMessage = () => {
-    if (selectedFriendId && newMessage.trim()) {
+    if (selectedFriendId && newMessage.trim() && !sendMessage.isPending) {
       sendMessage.mutate({ recipientId: selectedFriendId, content: newMessage.trim() });
     }
   };
@@ -1057,16 +1077,16 @@ export default function Social() {
                                   : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-md'
                               }`}
                             >
-                              {(message as any).imageUrl && (
+                              {message.imageUrl && (
                                 <img 
-                                  src={(message as any).imageUrl} 
+                                  src={message.imageUrl}
                                   alt="Shared" 
-                                  className="rounded-lg max-w-full h-auto mb-2"
+                                  className="rounded-lg max-w-full max-h-96 h-auto object-contain mb-2"
                                   onError={(e) => { e.currentTarget.outerHTML = '<p class="text-xs italic opacity-70 mb-1">Image no longer available</p>'; }}
                                 />
                               )}
-                              {!((message as any).imageUrl && /^\[Image:.*\]$/.test(message.content.trim())) && (
-                                <p className="text-sm leading-relaxed">{message.content}</p>
+                              {!(message.imageUrl && /^\[Image:.*\]$/.test(message.content.trim())) && (
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
                               )}
                               <p className={`text-xs mt-1 ${
                                 message.senderId === currentUser?.id ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
@@ -1126,18 +1146,20 @@ export default function Social() {
                       
                       {/* Message Input */}
                       <div className="flex-1">
-                        <Input
+                        <Textarea
+                          ref={desktopComposerRef}
+                          rows={1}
                           placeholder="Message..."
                           value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500"
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
+                          onChange={(e) => {
+                            setNewMessage(e.target.value);
+                            resizeMessageComposer(e.target);
+                          }}
+                          className="w-full min-h-10 max-h-[120px] resize-none overflow-y-hidden px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-2xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                               e.preventDefault();
-                              if (newMessage.trim() && selectedFriendId) {
-                                sendMessage.mutate({ recipientId: selectedFriendId, content: newMessage.trim() });
-                                setNewMessage("");
-                              }
+                              handleSendMessage();
                             }
                           }}
                           data-testid="input-message"
@@ -1146,12 +1168,7 @@ export default function Social() {
                       
                       {/* Send Button */}
                       <Button
-                        onClick={() => {
-                          if (newMessage.trim() && selectedFriendId) {
-                            sendMessage.mutate({ recipientId: selectedFriendId, content: newMessage.trim() });
-                            setNewMessage("");
-                          }
-                        }}
+                        onClick={handleSendMessage}
                         disabled={!newMessage.trim() || sendMessage.isPending}
                         className="w-10 h-10 rounded-full bg-blue-500 hover:bg-blue-600 text-white p-0 flex-shrink-0"
                         data-testid="button-send-message"
@@ -1306,15 +1323,17 @@ export default function Social() {
                                     : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-md'
                                 }`}
                               >
-                                {(message as any).imageUrl && (
+                                {message.imageUrl && (
                                   <img 
-                                    src={(message as any).imageUrl} 
+                                    src={message.imageUrl}
                                     alt="Shared" 
-                                    className="rounded-lg max-w-full h-auto mb-2"
-                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    className="rounded-lg max-w-full max-h-80 h-auto object-contain mb-2"
+                                    onError={(e) => { e.currentTarget.outerHTML = '<p class="text-xs italic opacity-70 mb-1">Image no longer available</p>'; }}
                                   />
                                 )}
-                                <p className="text-sm leading-relaxed">{message.content}</p>
+                                {!(message.imageUrl && /^\[Image:.*\]$/.test(message.content.trim())) && (
+                                  <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+                                )}
                                 <p className={`text-xs mt-1 ${
                                   message.senderId === currentUser?.id ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
                                 }`}>
@@ -1370,30 +1389,27 @@ export default function Social() {
                         </Button>
                         
                         <div className="flex-1">
-                          <Input
+                          <Textarea
+                            ref={mobileComposerRef}
+                            rows={1}
                             placeholder="Message..."
                             value={newMessage}
-                            onChange={(e) => setNewMessage(e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500"
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter' && !e.shiftKey) {
+                            onChange={(e) => {
+                              setNewMessage(e.target.value);
+                              resizeMessageComposer(e.target);
+                            }}
+                            className="w-full min-h-10 max-h-[120px] resize-none overflow-y-hidden px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-2xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                                 e.preventDefault();
-                                if (newMessage.trim() && selectedFriendId) {
-                                  sendMessage.mutate({ recipientId: selectedFriendId, content: newMessage.trim() });
-                                  setNewMessage("");
-                                }
+                                handleSendMessage();
                               }
                             }}
                           />
                         </div>
                         
                         <Button
-                          onClick={() => {
-                            if (newMessage.trim() && selectedFriendId) {
-                              sendMessage.mutate({ recipientId: selectedFriendId, content: newMessage.trim() });
-                              setNewMessage("");
-                            }
-                          }}
+                          onClick={handleSendMessage}
                           disabled={!newMessage.trim() || sendMessage.isPending}
                           className="w-10 h-10 rounded-full bg-blue-500 hover:bg-blue-600 text-white p-0 flex-shrink-0"
                         >
