@@ -205,11 +205,16 @@ async function downloadPublicImage(rawUrl: string, redirectsRemaining: number = 
     const transport = target.url.protocol === 'https:' ? https : http;
     const request = transport.request(target.url, {
       method: 'GET',
+      autoSelectFamily: false,
       headers: {
         Accept: 'image/*',
         'User-Agent': 'MarvelCardVault-ImageAdmin/1.0',
       },
-      lookup: (_hostname, _options, callback) => {
+      lookup: (_hostname, options, callback) => {
+        if (typeof options === 'object' && options.all) {
+          callback(null, [{ address: target.address, family: target.family }]);
+          return;
+        }
         callback(null, target.address, target.family);
       },
     }, (response) => {

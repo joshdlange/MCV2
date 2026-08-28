@@ -455,19 +455,21 @@ export function CardDetailModal({
             
             {/* Admin Tools Dropdown - Only visible when toggled */}
             {canEditCardImages && showAdminTools && !isEditing && !isImageEditing && (
-              <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 space-y-2 animate-in slide-in-from-top-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  {isFullAdmin ? 'Admin Tools' : 'Image Admin Tools'}
-                </p>
-                <div className="flex flex-wrap gap-2">
+              <div className="rounded-xl border border-slate-700/70 bg-slate-900/85 p-3 shadow-lg shadow-black/20 space-y-3 animate-in slide-in-from-top-2">
+                <div className="flex items-center gap-2 px-1">
+                  <Settings className="h-3.5 w-3.5 text-slate-400" />
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.14em]">
+                    {isFullAdmin ? 'Card Management' : 'Image Management'}
+                  </p>
+                </div>
+                <div className={isFullAdmin ? "grid grid-cols-2 gap-2" : "grid grid-cols-1 gap-2"}>
                   <Button
                     onClick={startImageEditing}
-                    variant="outline"
                     size="sm"
-                    className="flex-1 min-w-[110px] bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                    className="h-10 justify-start rounded-lg border border-blue-400/30 bg-blue-500/15 px-3 text-blue-100 shadow-none hover:bg-blue-500/25 hover:text-white"
                     data-testid="button-edit-card-images"
                   >
-                    <Image className="w-4 h-4 mr-1" />
+                    <Image className="w-4 h-4 mr-2 text-blue-300" />
                     Edit Images
                   </Button>
                   {isFullAdmin && (
@@ -475,33 +477,30 @@ export function CardDetailModal({
                       <Button
                         onClick={() => updateImageMutation.mutate(card.id)}
                         disabled={updateImageMutation.isPending}
-                        variant="outline"
                         size="sm"
-                        className="flex-1 min-w-[100px]"
+                        className="h-10 justify-start rounded-lg border border-slate-700 bg-slate-800/80 px-3 text-slate-200 shadow-none hover:bg-slate-700 hover:text-white"
                         data-testid="button-update-image"
                       >
-                        <Image className="w-4 h-4 mr-1" />
+                        <RefreshCw className={`w-4 h-4 mr-2 text-slate-400 ${updateImageMutation.isPending ? 'animate-spin' : ''}`} />
                         {updateImageMutation.isPending ? 'Updating...' : 'Find Image'}
                       </Button>
                       <Button
                         onClick={startEditing}
-                        variant="outline"
                         size="sm"
-                        className="flex-1 min-w-[80px]"
+                        className="h-10 justify-start rounded-lg border border-slate-700 bg-slate-800/80 px-3 text-slate-200 shadow-none hover:bg-slate-700 hover:text-white"
                         data-testid="button-edit-card"
                       >
-                        <Edit className="w-4 h-4 mr-1" />
+                        <Edit className="w-4 h-4 mr-2 text-slate-400" />
                         Edit Details
                       </Button>
                       <Button
                         onClick={handleDelete}
                         disabled={deleteCardMutation.isPending}
-                        variant="destructive"
                         size="sm"
-                        className="flex-1 min-w-[80px]"
+                        className="h-10 justify-start rounded-lg border border-red-400/25 bg-red-500/10 px-3 text-red-300 shadow-none hover:bg-red-500/20 hover:text-red-200"
                         data-testid="button-delete-card"
                       >
-                        <Trash2 className="w-4 h-4 mr-1" />
+                        <Trash2 className="w-4 h-4 mr-2" />
                         Delete
                       </Button>
                     </>

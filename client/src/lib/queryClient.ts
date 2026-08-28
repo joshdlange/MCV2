@@ -16,8 +16,28 @@ const APP_PLATFORM = (() => {
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    const contentType = res.headers.get("content-type") || "";
+    let message = res.statusText || "Request failed";
+
+    if (contentType.includes("application/json")) {
+      try {
+        const body = await res.json();
+        if (typeof body?.message === "string" && body.message.trim()) {
+          message = body.message.trim();
+        }
+      } catch {
+        // Keep the concise status message when an upstream returns malformed JSON.
+      }
+    } else {
+      const text = (await res.text()).trim();
+      const isHtml = contentType.includes("text/html") || /<!doctype html|<html[\s>]/i.test(text);
+      if (!isHtml && text) message = text.slice(0, 300);
+    }
+
+    if ([502, 503, 504].includes(res.status) && message === res.statusText) {
+      message = "The service is temporarily unavailable. Please try again.";
+    }
+    throw new Error(`${res.status}: ${message}`);
   }
 }
 

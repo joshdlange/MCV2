@@ -7,4 +7,4 @@ Card image URL replacements must go through the dedicated Image Admin workflow. 
 
 **Why:** Passing a URL directly to a remote fetcher allows redirect/DNS SSRF gaps, and alternative write paths can leave external URLs behind or bypass per-editor counters. Successful operations must be recoverable, attributable, and all-or-nothing.
 
-**How to apply:** Any new UI or API that replaces card images must reuse this workflow, preserve optimistic concurrency and old Cloudinary assets, and derive distinct-card/total-operation counters only from committed image-update audit events.
+**How to apply:** Any new UI or API that replaces card images must reuse this workflow, preserve optimistic concurrency and old Cloudinary assets, and derive distinct-card/total-operation counters only from committed image-update audit events. Custom pinned DNS lookup callbacks must support Node's `options.all` array response form or production requests fail with an undefined IP.
