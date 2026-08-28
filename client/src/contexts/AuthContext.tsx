@@ -50,6 +50,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       email: backendUser.email,
       avatar: backendUser.photoURL || '',
       isAdmin: backendUser.isAdmin,
+      imageAdmin: backendUser.imageAdmin || false,
       plan: backendUser.plan,
       subscriptionStatus: backendUser.subscriptionStatus,
       onboardingComplete: backendUser.onboardingComplete || false,

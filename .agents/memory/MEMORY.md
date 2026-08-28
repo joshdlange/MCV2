@@ -39,3 +39,4 @@
 - [Auth sync must converge](auth-sync-convergence.md) — Firebase identity alone never unlocks the app; backend user creation must survive UID races and username collisions.
 - [Account deletion saga](account-deletion-saga.md) — deletion spans Stripe, Firebase, DB, and Resend; persist each stage, retry safely, and scrub staged PII only after notices complete.
 - [Stripe coupon product scopes](stripe-coupon-product-scopes.md) — `applies_to` may be omitted unless explicitly expanded; validate product limits with an expanded retrieval.
+- [Image Admin boundary](image-admin-boundary.md) — card image replacements use one byte-ingested, Cloudinary-first, audited endpoint; generic card writes must reject image fields.

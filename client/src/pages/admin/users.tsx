@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Edit, Trash2, UserPlus, Shield, User, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { Edit, Trash2, UserPlus, Shield, User, ArrowUp, ArrowDown, ArrowUpDown, Image as ImageIcon, X } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -41,6 +41,7 @@ interface User {
   photoURL?: string | null;
   collectorAvatarKey?: string | null;
   isAdmin: boolean;
+  imageAdmin: boolean;
   plan: string;
   onboardingComplete: boolean;
   createdAt: string;
@@ -57,6 +58,17 @@ interface User {
   totalLogins?: number;
 }
 
+interface ImageAdminSummary {
+  id: number;
+  username: string;
+  displayName?: string | null;
+  isAdmin: boolean;
+  imageAdmin: boolean;
+  cardsEdited: number;
+  totalEdits: number;
+  lastEditAt?: string | null;
+}
+
 export default function AdminUsers() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -66,6 +78,7 @@ export default function AdminUsers() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [levelFilter, setLevelFilter] = useState<string>('all');
   const [stageFilter, setStageFilter] = useState<string>('all');
+  const [imageAdminUsername, setImageAdminUsername] = useState("");
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -75,6 +88,11 @@ export default function AdminUsers() {
     queryFn: async () => {
       return apiRequest('GET', '/api/admin/users').then(res => res.json());
     }
+  });
+
+  const { data: imageAdmins = [], isLoading: imageAdminsLoading } = useQuery<ImageAdminSummary[]>({
+    queryKey: ['/api/admin/image-admins'],
+    queryFn: () => apiRequest('GET', '/api/admin/image-admins').then((res) => res.json()),
   });
 
   const createUserMutation = useMutation({
@@ -137,6 +155,31 @@ export default function AdminUsers() {
         variant: "destructive",
       });
     }
+  });
+
+  const addImageAdminMutation = useMutation({
+    mutationFn: (username: string) => apiRequest('POST', '/api/admin/image-admins', { username }),
+    onSuccess: () => {
+      setImageAdminUsername("");
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/image-admins'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      toast({ title: "Image Admin access granted" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Could not add Image Admin", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const removeImageAdminMutation = useMutation({
+    mutationFn: (userId: number) => apiRequest('DELETE', `/api/admin/image-admins/${userId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/image-admins'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      toast({ title: "Image Admin access removed" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Could not remove Image Admin", description: error.message, variant: "destructive" });
+    },
   });
 
   const handleDeleteUser = (user: User) => {
@@ -232,6 +275,103 @@ export default function AdminUsers() {
             <CreateUserForm onSubmit={createUserMutation.mutate} isLoading={createUserMutation.isPending} />
           </DialogContent>
         </Dialog>
+      </div>
+
+      {/* Standalone Image Admin role management and edit counters */}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="p-5 border-b border-gray-200">
+          <div className="flex items-start gap-3">
+            <div className="rounded-lg bg-blue-50 p-2">
+              <ImageIcon className="w-5 h-5 text-blue-700" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-lg font-semibold text-gray-900">Image Admins</h2>
+              <p className="text-sm text-gray-600">
+                Grant image-only card editing access and track successful Cloudinary image updates.
+              </p>
+              <form
+                className="flex flex-col sm:flex-row gap-2 mt-4 max-w-xl"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const username = imageAdminUsername.trim();
+                  if (username) addImageAdminMutation.mutate(username);
+                }}
+              >
+                <Input
+                  value={imageAdminUsername}
+                  onChange={(event) => setImageAdminUsername(event.target.value)}
+                  placeholder="Enter an exact username"
+                  className="bg-white"
+                />
+                <Button
+                  type="submit"
+                  disabled={!imageAdminUsername.trim() || addImageAdminMutation.isPending}
+                  className="bg-blue-700 hover:bg-blue-800 whitespace-nowrap"
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Add Image Admin
+                </Button>
+              </form>
+            </div>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Access</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cards Edited</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Updates</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Update</th>
+                <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {imageAdminsLoading ? (
+                <tr><td colSpan={6} className="px-5 py-4 text-sm text-gray-500 text-center">Loading Image Admins…</td></tr>
+              ) : imageAdmins.length === 0 ? (
+                <tr><td colSpan={6} className="px-5 py-4 text-sm text-gray-500 text-center">No Image Admins yet.</td></tr>
+              ) : imageAdmins.map((imageAdmin) => (
+                <tr key={imageAdmin.id}>
+                  <td className="px-5 py-3">
+                    <p className="text-sm font-medium text-gray-900">{imageAdmin.username}</p>
+                    {imageAdmin.displayName && <p className="text-xs text-gray-500">{imageAdmin.displayName}</p>}
+                  </td>
+                  <td className="px-5 py-3">
+                    <Badge className={
+                      imageAdmin.isAdmin
+                        ? "bg-red-600 text-white"
+                        : imageAdmin.imageAdmin
+                          ? "bg-blue-100 text-blue-800 border-blue-200"
+                          : "bg-gray-100 text-gray-700 border-gray-200"
+                    }>
+                      {imageAdmin.isAdmin ? "True Admin" : imageAdmin.imageAdmin ? "Image Admin" : "Former Image Admin"}
+                    </Badge>
+                  </td>
+                  <td className="px-5 py-3 text-sm font-semibold text-gray-900">{imageAdmin.cardsEdited}</td>
+                  <td className="px-5 py-3 text-sm text-gray-700">{imageAdmin.totalEdits}</td>
+                  <td className="px-5 py-3 text-sm text-gray-500">
+                    {imageAdmin.lastEditAt ? new Date(imageAdmin.lastEditAt).toLocaleString() : "—"}
+                  </td>
+                  <td className="px-5 py-3 text-right">
+                    {imageAdmin.imageAdmin && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeImageAdminMutation.mutate(imageAdmin.id)}
+                        disabled={removeImageAdminMutation.isPending}
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        Remove
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -371,6 +511,11 @@ export default function AdminUsers() {
                         <Badge className="bg-red-600 text-white border-red-600">
                           <Shield className="w-3 h-3 mr-1" />
                           Admin
+                        </Badge>
+                      ) : user.imageAdmin ? (
+                        <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                          <ImageIcon className="w-3 h-3 mr-1" />
+                          Image Admin
                         </Badge>
                       ) : (
                         <Badge className="bg-gray-100 text-gray-800 border-gray-300">User</Badge>

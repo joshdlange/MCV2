@@ -23,6 +23,7 @@ export const users = pgTable("users", {
   address: text("address"),
   isAdmin: boolean("is_admin").default(false).notNull(),
   trustedUploader: boolean("trusted_uploader").default(false).notNull(),
+  imageAdmin: boolean("image_admin").default(false).notNull(),
   plan: text("plan").default("SIDE_KICK").notNull(), // SIDE_KICK or SUPER_HERO
   subscriptionStatus: text("subscription_status").default("active").notNull(), // active, cancelled, expired
   stripeCustomerId: text("stripe_customer_id"),

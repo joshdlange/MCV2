@@ -3,7 +3,7 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { CollectionLimitExceededError, storage } from "./storage";
 import { cardNumberNaturalSortKey } from "./cardNumberSort";
-import { getCachedUser, setCachedUser } from "./user-cache";
+import { getCachedUser, invalidateUserById, setCachedUser } from "./user-cache";
 import { insertCardSetSchema, insertCardSchema, insertUserCollectionSchema, insertUserWishlistSchema, insertUserSchema, insertMainSetSchema, insertFriendSchema, insertMessageSchema, insertBadgeSchema, insertUserBadgeSchema } from "../shared/schema";
 import { z } from "zod";
 import multer from "multer";
@@ -44,7 +44,7 @@ import { ebayMarketplaceInsights } from "./ebay-marketplace-insights";
 import { sendEmail } from "./email";
 import { sendResendEmail, sendPasswordResetEmail, verifyUnsubscribeToken } from "./services/emailService";
 import * as emailTriggers from "./services/emailTriggers";
-import { rehostCardImagesNow } from "./services/imageMigration";
+import { deleteImageAdminUpload, uploadImageAdminUrl } from "./services/imageMigration";
 import { vaultUpgradeAnnouncementTemplate } from "./services/emailTemplates";
 import { startEmailCronJobs, startVaultUpgradeDripCron, runVaultUpgradeDripNow, getVaultUpgradeDripStatus } from "./jobs/emailCron";
 import { LIFECYCLE_EMAILS, getLifecycleEmail, getLifecycleStatus, sendLifecycleWelcome, runFirstCardNudgeNow, startLifecycleEmailCron } from "./jobs/lifecycleEmails";
@@ -759,6 +759,114 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
     }
   });
 
+  // Image Admins are a narrow role: they may only replace card image URLs.
+  // Full admins are included so their image-edit totals are visible too.
+  app.get("/api/admin/image-admins", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const result = await db.execute(sql`
+        SELECT
+          u.id,
+          u.username,
+          u.display_name,
+          u.is_admin,
+          u.image_admin,
+          COUNT(DISTINCT aal.entity_id) FILTER (
+            WHERE aal.action_type = 'card_image_update' AND aal.entity_type = 'card'
+          ) AS cards_edited,
+          COUNT(aal.id) FILTER (
+            WHERE aal.action_type = 'card_image_update' AND aal.entity_type = 'card'
+          ) AS total_edits,
+          MAX(aal.created_at) FILTER (
+            WHERE aal.action_type = 'card_image_update' AND aal.entity_type = 'card'
+          ) AS last_edit_at
+        FROM users u
+        LEFT JOIN admin_audit_logs aal ON aal.admin_user_id = u.id
+        WHERE u.is_admin = true
+          OR u.image_admin = true
+          OR EXISTS (
+            SELECT 1 FROM admin_audit_logs history
+            WHERE history.admin_user_id = u.id
+              AND history.action_type = 'card_image_update'
+              AND history.entity_type = 'card'
+          )
+        GROUP BY u.id, u.username, u.display_name, u.is_admin, u.image_admin
+        ORDER BY u.is_admin DESC, u.username ASC
+      `);
+      res.json(result.rows.map((row: any) => ({
+        id: row.id,
+        username: row.username,
+        displayName: row.display_name,
+        isAdmin: row.is_admin,
+        imageAdmin: row.image_admin,
+        cardsEdited: parseInt(row.cards_edited) || 0,
+        totalEdits: parseInt(row.total_edits) || 0,
+        lastEditAt: row.last_edit_at || null,
+      })));
+    } catch (error) {
+      console.error('Get image admins error:', error);
+      res.status(500).json({ message: 'Failed to fetch Image Admins' });
+    }
+  });
+
+  app.post("/api/admin/image-admins", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const { username } = z.object({ username: z.string().trim().min(1).max(100) }).strict().parse(req.body);
+      const [target] = await db.select().from(users).where(ilike(users.username, username)).limit(1);
+      if (!target) return res.status(404).json({ message: 'Username not found' });
+
+      if (!target.imageAdmin) {
+        await db.transaction(async (tx) => {
+          await tx.update(users).set({ imageAdmin: true }).where(eq(users.id, target.id));
+          await tx.insert(adminAuditLogs).values({
+            adminUserId: req.user.id,
+            actionType: 'image_admin_assignment',
+            entityType: 'user',
+            entityId: target.id,
+            entityName: target.username,
+            notes: 'Image Admin access granted',
+          });
+        });
+        invalidateUserById(target.id);
+      }
+      res.json({ id: target.id, username: target.username, imageAdmin: true });
+    } catch (error) {
+      console.error('Add image admin error:', error);
+      if (error instanceof z.ZodError) return res.status(400).json({ message: 'A valid username is required' });
+      res.status(500).json({ message: 'Failed to add Image Admin' });
+    }
+  });
+
+  app.delete("/api/admin/image-admins/:id", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+      const targetId = parseInt(req.params.id);
+      if (!Number.isInteger(targetId)) return res.status(400).json({ message: 'Invalid user ID' });
+      const [target] = await db.select().from(users).where(eq(users.id, targetId)).limit(1);
+      if (!target) return res.status(404).json({ message: 'User not found' });
+
+      if (target.imageAdmin) {
+        await db.transaction(async (tx) => {
+          await tx.update(users).set({ imageAdmin: false }).where(eq(users.id, target.id));
+          await tx.insert(adminAuditLogs).values({
+            adminUserId: req.user.id,
+            actionType: 'image_admin_assignment',
+            entityType: 'user',
+            entityId: target.id,
+            entityName: target.username,
+            notes: 'Image Admin access removed',
+          });
+        });
+        invalidateUserById(target.id);
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Remove image admin error:', error);
+      res.status(500).json({ message: 'Failed to remove Image Admin' });
+    }
+  });
+
   // ── Lifecycle Intelligence v1 (admin-only, read-only, calculated) ──────────
   app.get("/api/admin/lifecycle-overview", authenticateUser, async (req: any, res) => {
     try {
@@ -1032,7 +1140,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       }
 
       // Allowlist of self-service profile/preference fields. Privileged fields
-      // (isAdmin, trustedUploader, plan, subscriptionStatus, stripe/apple IDs)
+      // (isAdmin, imageAdmin, trustedUploader, plan, subscriptionStatus, stripe/apple IDs)
       // can only be changed through the dedicated admin routes.
       const SELF_SERVICE_FIELDS = [
         'username', 'displayName', 'photoURL', 'bio', 'location', 'website',
@@ -2906,24 +3014,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       
       const id = parseInt(req.params.id);
       const validatedData = insertCardSchema.parse(req.body);
-      
-      const updatedCard = await storage.updateCard(id, validatedData);
+      const { frontImageUrl: _frontImageUrl, backImageUrl: _backImageUrl, ...cardDetails } = validatedData;
+      const updatedCard = await storage.updateCard(id, cardDetails);
       if (!updatedCard) {
         return res.status(404).json({ message: "Card not found" });
-      }
-
-      // Same immediate re-host as the PATCH route: pasted external image
-      // links are copied to Cloudinary before they can expire. Best-effort.
-      if (validatedData.frontImageUrl || validatedData.backImageUrl) {
-        try {
-          const rehosted = await rehostCardImagesNow(id);
-          if (rehosted) {
-            updatedCard.frontImageUrl = rehosted.frontImageUrl;
-            updatedCard.backImageUrl = rehosted.backImageUrl;
-          }
-        } catch (rehostError) {
-          console.error('Immediate image re-host failed (save is intact):', rehostError);
-        }
       }
 
       res.json(updatedCard);
@@ -2942,6 +3036,9 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       if (!req.user.isAdmin) {
         return res.status(403).json({ message: 'Admin access required' });
       }
+      if ('frontImageUrl' in req.body || 'backImageUrl' in req.body) {
+        return res.status(400).json({ message: 'Use the dedicated Edit Images action to change card images' });
+      }
       
       const id = parseInt(req.params.id);
       const existingCard = await storage.getCard(id);
@@ -2954,27 +3051,102 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         return res.status(404).json({ message: "Card not found" });
       }
 
-      // If the admin pasted an external image link (eBay, COMC, ...), re-host
-      // it to Cloudinary immediately so the card never depends on a link that
-      // can expire. Best-effort: any failure keeps the saved URL (worker retries)
-      // and never turns the already-persisted save into an error.
-      const imageChanged = ['frontImageUrl', 'backImageUrl'].some((f) => f in req.body && req.body[f]);
-      if (imageChanged) {
-        try {
-          const rehosted = await rehostCardImagesNow(id);
-          if (rehosted) {
-            updatedCard.frontImageUrl = rehosted.frontImageUrl;
-            updatedCard.backImageUrl = rehosted.backImageUrl;
-          }
-        } catch (rehostError) {
-          console.error('Immediate image re-host failed (save is intact):', rehostError);
-        }
-      }
-
       res.json(updatedCard);
     } catch (error) {
       console.error('Patch card error:', error);
       res.status(500).json({ message: "Failed to update card" });
+    }
+  });
+
+  const cardImageUrlUpdateSchema = z.object({
+    frontImageUrl: z.string().trim().url().max(2048).optional(),
+    backImageUrl: z.string().trim().url().max(2048).optional(),
+  }).strict().refine(
+    (value) => value.frontImageUrl !== undefined || value.backImageUrl !== undefined,
+    { message: 'At least one image URL is required' },
+  );
+
+  // Dedicated Image Admin workflow. This route can only change image URLs,
+  // uploads every submitted source to Cloudinary before the database commit,
+  // and records one auditable edit operation per successful request.
+  app.patch("/api/cards/:id/images", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin && !req.user.imageAdmin) {
+        return res.status(403).json({ message: 'Image Admin access required' });
+      }
+      const id = parseInt(req.params.id);
+      if (!Number.isInteger(id)) return res.status(400).json({ message: 'Invalid card ID' });
+      const input = cardImageUrlUpdateSchema.parse(req.body);
+      const existingCard = await storage.getCard(id);
+      if (!existingCard) return res.status(404).json({ message: 'Card not found' });
+
+      const changedSides = (['front', 'back'] as const).filter((side) => {
+        const key = side === 'front' ? 'frontImageUrl' : 'backImageUrl';
+        return input[key] !== undefined && input[key] !== existingCard[key];
+      });
+      if (changedSides.length === 0) {
+        return res.status(400).json({ message: 'Enter a new front or back image URL' });
+      }
+
+      const uploadResults = await Promise.allSettled(changedSides.map(async (side) => {
+        const key = side === 'front' ? 'frontImageUrl' : 'backImageUrl';
+        const sourceUrl = input[key]!;
+        const uploaded = await uploadImageAdminUrl(sourceUrl, id, side);
+        return { key, ...uploaded };
+      }));
+      const successfulUploads = uploadResults
+        .filter((result): result is PromiseFulfilledResult<Awaited<ReturnType<typeof uploadImageAdminUrl>> & { key: string }> => result.status === 'fulfilled')
+        .map((result) => result.value);
+      const failedUpload = uploadResults.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+      if (failedUpload) {
+        await Promise.all(successfulUploads.map((upload) => deleteImageAdminUpload(upload.publicId)));
+        throw failedUpload.reason;
+      }
+      const imageUpdates = Object.fromEntries(successfulUploads.map((upload) => [upload.key, upload.url]));
+
+      try {
+        const updatedCard = await db.transaction(async (tx) => {
+          const expectedConditions = [eq(cards.id, id)];
+          if (changedSides.includes('front')) {
+            expectedConditions.push(existingCard.frontImageUrl
+              ? eq(cards.frontImageUrl, existingCard.frontImageUrl)
+              : isNull(cards.frontImageUrl));
+          }
+          if (changedSides.includes('back')) {
+            expectedConditions.push(existingCard.backImageUrl
+              ? eq(cards.backImageUrl, existingCard.backImageUrl)
+              : isNull(cards.backImageUrl));
+          }
+          const [updated] = await tx.update(cards)
+            .set(imageUpdates)
+            .where(and(...expectedConditions))
+            .returning();
+          if (!updated) {
+            const conflict = new Error('This card changed while the images were uploading. Reopen it and try again.');
+            (conflict as any).statusCode = 409;
+            throw conflict;
+          }
+          await tx.insert(adminAuditLogs).values({
+            adminUserId: req.user.id,
+            actionType: 'card_image_update',
+            entityType: 'card',
+            entityId: id,
+            entityName: `${existingCard.name} #${existingCard.cardNumber}`,
+            notes: JSON.stringify({ sides: changedSides }),
+          });
+          return updated;
+        });
+        res.json(updatedCard);
+      } catch (error) {
+        await Promise.all(successfulUploads.map((upload) => deleteImageAdminUpload(upload.publicId)));
+        throw error;
+      }
+    } catch (error: any) {
+      console.error('Image Admin card update error:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0]?.message || 'Invalid image URL' });
+      }
+      res.status(error?.statusCode || 502).json({ message: error?.message || 'Failed to import image to Cloudinary' });
     }
   });
 

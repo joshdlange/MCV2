@@ -2,6 +2,10 @@ import { db } from '../db';
 import { cards } from '../../shared/schema';
 import { sql, eq, and } from 'drizzle-orm';
 import { cloudinary } from '../cloudinary';
+import dns from 'node:dns/promises';
+import net from 'node:net';
+import http from 'node:http';
+import https from 'node:https';
 
 /**
  * External → Cloudinary card image migration (all hosts, one pipeline).
@@ -130,6 +134,165 @@ async function uploadOne(url: string, cardId: number, side: 'front' | 'back', ti
     }
   }
   throw lastError instanceof Error ? lastError : new Error(toErrorMessage(lastError));
+}
+
+function isPrivateAddress(ip: string): boolean {
+  // The downloader intentionally supports IPv4 only. Conservatively treating
+  // every IPv6 address as blocked avoids mapped/compatible and special-scope
+  // bypasses until a complete IPv6 CIDR policy is needed.
+  if (ip.includes(':')) return true;
+  const parts = ip.split('.').map(Number);
+  if (parts.length !== 4 || parts.some(Number.isNaN)) return true;
+  return parts[0] === 0 || parts[0] === 10 || parts[0] === 127
+    || (parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127)
+    || (parts[0] === 169 && parts[1] === 254)
+    || (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31)
+    || (parts[0] === 192 && parts[1] === 0 && (parts[2] === 0 || parts[2] === 2))
+    || (parts[0] === 192 && parts[1] === 168)
+    || (parts[0] === 198 && (parts[1] === 18 || parts[1] === 19 || (parts[1] === 51 && parts[2] === 100)))
+    || (parts[0] === 203 && parts[1] === 0 && parts[2] === 113)
+    || parts[0] >= 224;
+}
+
+function parsePublicImageUrl(rawUrl: string): URL {
+  const parsed = new URL(rawUrl);
+  if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Only HTTP and HTTPS image URLs are allowed');
+  if (parsed.username || parsed.password) throw new Error('Image URLs cannot contain credentials');
+  const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal')) {
+    throw new Error('Image URL host is not allowed');
+  }
+  return parsed;
+}
+
+interface ResolvedPublicTarget {
+  url: URL;
+  address: string;
+  family: 4 | 6;
+}
+
+async function resolvePublicTarget(rawUrl: string): Promise<ResolvedPublicTarget> {
+  const url = parsePublicImageUrl(rawUrl);
+  const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  const literalFamily = net.isIP(host);
+  if (literalFamily === 6) throw new Error('IPv6 image hosts are not supported');
+  const addresses = literalFamily === 4
+    ? [{ address: host, family: 4 as const }]
+    : await dns.lookup(host, { all: true });
+  const ipv4Addresses = addresses.filter((entry) => entry.family === 4);
+  if (
+    ipv4Addresses.length === 0
+    || ipv4Addresses.some(({ address }) => isPrivateAddress(address))
+  ) {
+    throw new Error('Image URL host is not allowed');
+  }
+  const selected = ipv4Addresses[0];
+  return { url, address: selected.address, family: 4 };
+}
+
+export async function assertPublicImageUrl(rawUrl: string): Promise<URL> {
+  return (await resolvePublicTarget(rawUrl)).url;
+}
+
+export async function resolvePublicImageRedirect(currentUrl: string, location: string): Promise<URL> {
+  const redirectUrl = new URL(location, currentUrl);
+  return (await resolvePublicTarget(redirectUrl.toString())).url;
+}
+
+async function downloadPublicImage(rawUrl: string, redirectsRemaining: number = 3): Promise<{ buffer: Buffer; contentType: string }> {
+  const target = await resolvePublicTarget(rawUrl);
+  return new Promise((resolve, reject) => {
+    const transport = target.url.protocol === 'https:' ? https : http;
+    const request = transport.request(target.url, {
+      method: 'GET',
+      headers: {
+        Accept: 'image/*',
+        'User-Agent': 'MarvelCardVault-ImageAdmin/1.0',
+      },
+      lookup: (_hostname, _options, callback) => {
+        callback(null, target.address, target.family);
+      },
+    }, (response) => {
+      const status = response.statusCode || 0;
+      const location = response.headers.location;
+      if (status >= 300 && status < 400 && location) {
+        response.resume();
+        if (redirectsRemaining <= 0) return reject(new Error('Image URL redirected too many times'));
+        const nextUrl = new URL(location, target.url).toString();
+        downloadPublicImage(nextUrl, redirectsRemaining - 1).then(resolve, reject);
+        return;
+      }
+      if (status < 200 || status >= 300) {
+        response.resume();
+        return reject(new Error(`Image download returned HTTP ${status}`));
+      }
+
+      const contentType = String(response.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+      if (!contentType.startsWith('image/')) {
+        response.resume();
+        return reject(new Error('URL did not return an image'));
+      }
+      const contentLength = Number(response.headers['content-length'] || 0);
+      const maxBytes = 12 * 1024 * 1024;
+      if (contentLength > maxBytes) {
+        response.resume();
+        return reject(new Error('Image is larger than 12 MB'));
+      }
+
+      const chunks: Buffer[] = [];
+      let totalBytes = 0;
+      response.on('data', (chunk: Buffer) => {
+        totalBytes += chunk.length;
+        if (totalBytes > maxBytes) {
+          request.destroy(new Error('Image is larger than 12 MB'));
+          return;
+        }
+        chunks.push(chunk);
+      });
+      response.on('end', () => resolve({ buffer: Buffer.concat(chunks), contentType }));
+      response.on('error', reject);
+    });
+    request.setTimeout(20_000, () => request.destroy(new Error('Image download timed out')));
+    request.on('error', reject);
+    request.end();
+  });
+}
+
+/**
+ * Re-host a URL submitted through the Image Admin workflow. A unique public ID
+ * preserves the old Cloudinary asset so a failed or incorrect replacement can
+ * be rolled back without depending on the original source.
+ */
+export async function uploadImageAdminUrl(
+  rawUrl: string,
+  cardId: number,
+  side: 'front' | 'back',
+): Promise<{ url: string; publicId: string }> {
+  const downloaded = await downloadPublicImage(rawUrl);
+  const publicId = `card_${cardId}_${side}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const dataUri = `data:${downloaded.contentType};base64,${downloaded.buffer.toString('base64')}`;
+
+  const result = await cloudinary.uploader.upload(dataUri, {
+    folder: 'marvel-cards/image-admin',
+    public_id: publicId,
+    overwrite: false,
+    resource_type: 'image',
+    timeout: UPLOAD_TIMEOUT_MS,
+    transformation: [
+      { width: 800, height: 1120, crop: 'fit', quality: 'auto' },
+      { format: 'auto' },
+    ],
+  });
+  if (!result?.secure_url) throw new Error('Cloudinary returned no image URL');
+  return { url: result.secure_url, publicId: result.public_id };
+}
+
+export async function deleteImageAdminUpload(publicId: string): Promise<void> {
+  try {
+    await cloudinary.uploader.destroy(publicId, { resource_type: 'image', invalidate: true });
+  } catch (error) {
+    console.error(`[ImageAdmin] Failed to clean up orphaned Cloudinary asset ${publicId}:`, error);
+  }
 }
 
 /**

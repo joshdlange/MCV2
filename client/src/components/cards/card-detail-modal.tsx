@@ -58,7 +58,9 @@ export function CardDetailModal({
   const [condition, setCondition] = useState("Near Mint");
   const [notes, setNotes] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+  const [isImageEditing, setIsImageEditing] = useState(false);
   const [editedCard, setEditedCard] = useState<Partial<CardWithSet>>({});
+  const [editedImageUrls, setEditedImageUrls] = useState({ frontImageUrl: "", backImageUrl: "" });
   const [frontImageFile, setFrontImageFile] = useState<File | null>(null);
   const [backImageFile, setBackImageFile] = useState<File | null>(null);
   const [frontPreview, setFrontPreview] = useState<string | null>(null);
@@ -69,10 +71,19 @@ export function CardDetailModal({
   const [showAdminTools, setShowAdminTools] = useState(false);
   
   const { isAdminMode, currentUser } = useAppStore();
+  const isFullAdmin = Boolean(currentUser?.isAdmin && isAdminMode);
+  const canEditCardImages = Boolean(currentUser?.imageAdmin || isFullAdmin);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [showQuantityControls, setShowQuantityControls] = useState(false);
   useEffect(() => { setShowQuantityControls(false); }, [card?.id, isOpen]);
+  useEffect(() => {
+    setIsImageEditing(false);
+    setEditedImageUrls({
+      frontImageUrl: card?.frontImageUrl || "",
+      backImageUrl: card?.backImageUrl || "",
+    });
+  }, [card?.id, isOpen]);
 
   // Self-sufficient ownership lookup: shares the app-wide collection cache so
   // every entry point (browse, binders, search, …) gets quantity for free.
@@ -122,6 +133,30 @@ export function CardDetailModal({
     onError: () => {
       toast({ title: "Failed to update card", variant: "destructive" });
     }
+  });
+
+  const updateCardImagesMutation = useMutation({
+    mutationFn: async (updates: { frontImageUrl?: string; backImageUrl?: string }) => {
+      if (!card) throw new Error('No card selected');
+      const response = await apiRequest('PATCH', `/api/cards/${card.id}/images`, updates);
+      return response.json();
+    },
+    onSuccess: (updatedCard: CardWithSet) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/cards'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cards/search'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/image-admins'] });
+      onCardUpdate?.({ ...card!, ...updatedCard });
+      setIsImageEditing(false);
+      setShowAdminTools(false);
+      toast({ title: "Card images saved to Cloudinary" });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Image update failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const deleteCardMutation = useMutation({
@@ -263,6 +298,28 @@ export function CardDetailModal({
     updateCardMutation.mutate(editedCard);
   };
 
+  const startImageEditing = () => {
+    setEditedImageUrls({
+      frontImageUrl: card.frontImageUrl || "",
+      backImageUrl: card.backImageUrl || "",
+    });
+    setIsImageEditing(true);
+    setIsEditing(false);
+  };
+
+  const handleSaveImages = () => {
+    const updates: { frontImageUrl?: string; backImageUrl?: string } = {};
+    const front = editedImageUrls.frontImageUrl.trim();
+    const back = editedImageUrls.backImageUrl.trim();
+    if (front && front !== (card.frontImageUrl || "")) updates.frontImageUrl = front;
+    if (back && back !== (card.backImageUrl || "")) updates.backImageUrl = back;
+    if (!updates.frontImageUrl && !updates.backImageUrl) {
+      toast({ title: "Paste a new front or back image URL", variant: "destructive" });
+      return;
+    }
+    updateCardImagesMutation.mutate(updates);
+  };
+
   const handleDelete = () => {
     if (confirm('Are you sure you want to delete this card? This action cannot be undone.')) {
       deleteCardMutation.mutate();
@@ -347,8 +404,6 @@ export function CardDetailModal({
       cardNumber: card.cardNumber,
       rarity: card.rarity,
       estimatedValue: card.estimatedValue,
-      frontImageUrl: card.frontImageUrl,
-      backImageUrl: card.backImageUrl,
       isInsert: card.isInsert,
       description: card.description,
     });
@@ -373,13 +428,13 @@ export function CardDetailModal({
           {/* Card Title - Centered */}
           <div className="flex-1 text-center px-2 min-w-0">
             <h2 className="text-base sm:text-lg font-bebas tracking-wide truncate text-white">
-              {isEditing ? 'Edit Card' : formatCardName(card.name)}
+              {isEditing ? 'Edit Card' : isImageEditing ? 'Edit Card Images' : formatCardName(card.name)}
             </h2>
             <p className="text-xs text-gray-400">#{card.cardNumber}</p>
           </div>
           
           {/* Admin Tools Toggle or Empty Space */}
-          {isAdminMode && !isEditing ? (
+          {canEditCardImages && !isEditing && !isImageEditing ? (
             <Button
               variant="ghost"
               size="sm"
@@ -399,42 +454,113 @@ export function CardDetailModal({
           <div className="p-4 space-y-4">
             
             {/* Admin Tools Dropdown - Only visible when toggled */}
-            {isAdminMode && showAdminTools && !isEditing && (
+            {canEditCardImages && showAdminTools && !isEditing && !isImageEditing && (
               <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 space-y-2 animate-in slide-in-from-top-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Admin Tools</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  {isFullAdmin ? 'Admin Tools' : 'Image Admin Tools'}
+                </p>
                 <div className="flex flex-wrap gap-2">
                   <Button
-                    onClick={() => updateImageMutation.mutate(card.id)}
-                    disabled={updateImageMutation.isPending}
+                    onClick={startImageEditing}
                     variant="outline"
                     size="sm"
-                    className="flex-1 min-w-[100px] bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                    data-testid="button-update-image"
+                    className="flex-1 min-w-[110px] bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                    data-testid="button-edit-card-images"
                   >
                     <Image className="w-4 h-4 mr-1" />
-                    {updateImageMutation.isPending ? 'Updating...' : 'Find Image'}
+                    Edit Images
                   </Button>
-                  <Button
-                    onClick={startEditing}
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 min-w-[80px]"
-                    data-testid="button-edit-card"
-                  >
-                    <Edit className="w-4 h-4 mr-1" />
-                    Edit
-                  </Button>
-                  <Button
-                    onClick={handleDelete}
-                    disabled={deleteCardMutation.isPending}
-                    variant="destructive"
-                    size="sm"
-                    className="flex-1 min-w-[80px]"
-                    data-testid="button-delete-card"
-                  >
-                    <Trash2 className="w-4 h-4 mr-1" />
-                    Delete
-                  </Button>
+                  {isFullAdmin && (
+                    <>
+                      <Button
+                        onClick={() => updateImageMutation.mutate(card.id)}
+                        disabled={updateImageMutation.isPending}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 min-w-[100px]"
+                        data-testid="button-update-image"
+                      >
+                        <Image className="w-4 h-4 mr-1" />
+                        {updateImageMutation.isPending ? 'Updating...' : 'Find Image'}
+                      </Button>
+                      <Button
+                        onClick={startEditing}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 min-w-[80px]"
+                        data-testid="button-edit-card"
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Edit Details
+                      </Button>
+                      <Button
+                        onClick={handleDelete}
+                        disabled={deleteCardMutation.isPending}
+                        variant="destructive"
+                        size="sm"
+                        className="flex-1 min-w-[80px]"
+                        data-testid="button-delete-card"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Delete
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {isImageEditing && (
+              <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">Edit Images</p>
+                    <p className="text-xs text-gray-500">New URLs are copied to Cloudinary before this card changes.</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleSaveImages}
+                      disabled={updateCardImagesMutation.isPending}
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <Save className="w-4 h-4 mr-1" />
+                      {updateCardImagesMutation.isPending ? 'Uploading...' : 'Save'}
+                    </Button>
+                    <Button onClick={() => setIsImageEditing(false)} variant="outline" size="sm">
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="imageAdminFrontUrl" className="text-xs text-gray-700 dark:text-gray-300">Front Image URL</Label>
+                    <Input
+                      id="imageAdminFrontUrl"
+                      type="url"
+                      value={editedImageUrls.frontImageUrl}
+                      onChange={(e) => setEditedImageUrls((value) => ({ ...value, frontImageUrl: e.target.value }))}
+                      placeholder="https://..."
+                      className="bg-white text-gray-900 border-gray-300 mt-1"
+                    />
+                    {editedImageUrls.frontImageUrl && (
+                      <img src={editedImageUrls.frontImageUrl} alt="Front preview" className="mt-2 max-h-44 rounded border object-contain" />
+                    )}
+                  </div>
+                  <div>
+                    <Label htmlFor="imageAdminBackUrl" className="text-xs text-gray-700 dark:text-gray-300">Back Image URL</Label>
+                    <Input
+                      id="imageAdminBackUrl"
+                      type="url"
+                      value={editedImageUrls.backImageUrl}
+                      onChange={(e) => setEditedImageUrls((value) => ({ ...value, backImageUrl: e.target.value }))}
+                      placeholder="https://..."
+                      className="bg-white text-gray-900 border-gray-300 mt-1"
+                    />
+                    {editedImageUrls.backImageUrl && (
+                      <img src={editedImageUrls.backImageUrl} alt="Back preview" className="mt-2 max-h-44 rounded border object-contain" />
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -506,24 +632,6 @@ export function CardDetailModal({
                     />
                   </div>
                   <div>
-                    <Label htmlFor="frontImage" className="text-xs text-gray-700 dark:text-gray-300">Front Image URL</Label>
-                    <Input
-                      id="frontImage"
-                      value={editedCard.frontImageUrl || ''}
-                      onChange={(e) => setEditedCard({ ...editedCard, frontImageUrl: e.target.value })}
-                      className="bg-white text-gray-900 border-gray-300 mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="backImage" className="text-xs text-gray-700 dark:text-gray-300">Back Image URL</Label>
-                    <Input
-                      id="backImage"
-                      value={editedCard.backImageUrl || ''}
-                      onChange={(e) => setEditedCard({ ...editedCard, backImageUrl: e.target.value })}
-                      className="bg-white text-gray-900 border-gray-300 mt-1"
-                    />
-                  </div>
-                  <div>
                     <Label htmlFor="description" className="text-xs text-gray-700 dark:text-gray-300">Description</Label>
                     <Textarea
                       id="description"
@@ -546,7 +654,7 @@ export function CardDetailModal({
             )}
 
             {/* Card Image - Optimized for Mobile with Value-Based Aura */}
-            {!isEditing && (() => {
+            {!isEditing && !isImageEditing && (() => {
               // Calculate aura tier based on eBay pricing (if available) or card's estimated value
               // Priority: manual override > eBay avg price > card.estimatedValue
               const priceForTier = pricing?.avgPrice && pricing.avgPrice > 0 

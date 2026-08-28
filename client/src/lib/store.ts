@@ -10,6 +10,7 @@ interface AppState {
     email: string;
     avatar: string;
     isAdmin: boolean;
+    imageAdmin: boolean;
     plan: string;
     subscriptionStatus: string;
     onboardingComplete: boolean;

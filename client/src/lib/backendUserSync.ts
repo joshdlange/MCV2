@@ -7,6 +7,7 @@ export interface BackendUser {
   displayName: string | null;
   photoURL: string | null;
   isAdmin: boolean;
+  imageAdmin: boolean;
   plan: string;
   subscriptionStatus: string;
   onboardingComplete: boolean;

@@ -113,6 +113,7 @@ server.listen({
     const { db } = await import('./db');
     const { sql } = await import('drizzle-orm');
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS trusted_uploader boolean NOT NULL DEFAULT false`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS image_admin boolean NOT NULL DEFAULT false`);
     // CONVENTION (bulk/retro badge awards): any startup seed or admin backfill
     // that inserts user_badges rows in bulk MUST set retro = true (or backdate
     // earned_at to the true qualifying moment). runFeedBackfill's badge_earned
