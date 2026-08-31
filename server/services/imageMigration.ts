@@ -266,18 +266,30 @@ async function downloadPublicImage(rawUrl: string, redirectsRemaining: number = 
 /**
  * Re-host a URL submitted through the Image Admin workflow. A unique public ID
  * preserves the old Cloudinary asset so a failed or incorrect replacement can
- * be rolled back without depending on the original source.
+ * be rolled back without depending on the original source. COMC blocks this
+ * server's downloader with Cloudflare, so verified img.comc.com image paths use
+ * Cloudinary's remote fetcher—the same proven path used by image migration.
  */
 export async function uploadImageAdminUrl(
   rawUrl: string,
   cardId: number,
   side: 'front' | 'back',
 ): Promise<{ url: string; publicId: string }> {
-  const downloaded = await downloadPublicImage(rawUrl);
+  const validatedUrl = await assertPublicImageUrl(rawUrl);
   const publicId = `card_${cardId}_${side}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-  const dataUri = `data:${downloaded.contentType};base64,${downloaded.buffer.toString('base64')}`;
+  const isComcImage = validatedUrl.protocol === 'https:'
+    && validatedUrl.hostname.toLowerCase() === 'img.comc.com'
+    && validatedUrl.pathname.startsWith('/i/');
 
-  const result = await cloudinary.uploader.upload(dataUri, {
+  let uploadSource: string;
+  if (isComcImage) {
+    uploadSource = validatedUrl.toString();
+  } else {
+    const downloaded = await downloadPublicImage(validatedUrl.toString());
+    uploadSource = `data:${downloaded.contentType};base64,${downloaded.buffer.toString('base64')}`;
+  }
+
+  const result = await cloudinary.uploader.upload(uploadSource, {
     folder: 'marvel-cards/image-admin',
     public_id: publicId,
     overwrite: false,
