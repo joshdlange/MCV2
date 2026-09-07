@@ -5,7 +5,9 @@ import { db } from "../db";
 import {
   applyCardMergePairs,
   assertExactPrefixedCardNumbers,
+  buildExactDuplicateCardPairs,
   buildExactLenDuplicatePairs,
+  buildHildebrandtPowerBlastPairs,
   mergeExactLenDuplicateRows,
   mergeDuplicateLegacySets,
 } from "../seeds/mergeDuplicateLegacySets";
@@ -105,6 +107,85 @@ test("2024 Lenticular LEN guard requires exact one-to-one name and number pairs"
       2,
     ),
     /malformed LEN suffix/,
+  );
+});
+
+test("1994 Hildebrandt PowerBlast guard merges numeric duplicates into exact PB1-PB9 survivors", () => {
+  const canonical = [
+    "Apocalypse",
+    "Archangel",
+    "Cable",
+    "Cyclops",
+    "Gambit",
+    "Magneto",
+    "Rogue",
+    "Sabertooth",
+    "Wolverine",
+  ].map((name, index) => ({ id: index + 1, cardNumber: `PB${index + 1}`, name }));
+  const numeric = canonical.map((card, index) => ({
+    id: index + 101,
+    cardNumber: String(index + 1),
+    name: index === 7 ? "Sabretooth" : card.name,
+  }));
+  numeric.push({
+    id: 200,
+    cardNumber: "1",
+    name: "1994 Marvel Marvel Masterpieces PowerBlast 1 Apocalypse",
+  });
+
+  assert.deepEqual(
+    buildHildebrandtPowerBlastPairs([...canonical, ...numeric]),
+    [
+      ...canonical.map((card, index) => ({ dup: index + 101, surv: card.id })),
+      { dup: 200, surv: 1 },
+    ],
+  );
+
+  assert.throws(
+    () => buildHildebrandtPowerBlastPairs([
+      ...canonical,
+      { id: 300, cardNumber: "4", name: "Wolverine" },
+    ]),
+    /name mismatch/,
+  );
+  assert.throws(
+    () => buildHildebrandtPowerBlastPairs([
+      ...canonical.filter((card) => card.cardNumber !== "PB9"),
+      ...numeric,
+    ]),
+    /missing \[PB9\]/,
+  );
+});
+
+test("exact duplicate card pairing prefers the image-bearing survivor", () => {
+  assert.deepEqual(
+    buildExactDuplicateCardPairs([
+      {
+        id: 10,
+        cardNumber: "IC14",
+        name: "Amazing Fantasy (1962) #15",
+        variation: null,
+        frontImageUrl: "https://example.com/front.jpg",
+        backImageUrl: "https://example.com/back.jpg",
+      },
+      {
+        id: 20,
+        cardNumber: "IC14",
+        name: "Amazing Fantasy (1962) #15",
+        variation: null,
+        frontImageUrl: null,
+        backImageUrl: null,
+      },
+      {
+        id: 30,
+        cardNumber: "IC15",
+        name: "Different card",
+        variation: null,
+        frontImageUrl: null,
+        backImageUrl: null,
+      },
+    ]),
+    [{ dup: 20, surv: 10 }],
   );
 });
 

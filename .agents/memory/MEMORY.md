@@ -40,3 +40,4 @@
 - [Account deletion saga](account-deletion-saga.md) — deletion spans Stripe, Firebase, DB, and Resend; persist each stage, retry safely, and scrub staged PII only after notices complete.
 - [Stripe coupon product scopes](stripe-coupon-product-scopes.md) — `applies_to` may be omitted unless explicitly expanded; validate product limits with an expanded retrieval.
 - [Image Admin boundary](image-admin-boundary.md) — card image replacements use one byte-ingested, Cloudinary-first, audited endpoint; generic card writes must reject image fields.
+- [Catalog duplicate audits](catalog-duplicate-audits.md) — repeated card numbers are mostly legitimate inserts; only merge after identity/subset classification and preserve all collector references.

@@ -40,6 +40,13 @@ import { eq, and, inArray, sql, isNull } from 'drizzle-orm';
  *  - Merge the 100 erroneous CharacterLEN rows in the 2024 Upper Deck Marvel
  *    Masterpieces '92 Platinum Lenticular subset into the matching regular
  *    Character rows at the same card number.
+ *  - Repair 1994 Hildebrandt collisions: move the misplaced Gold Foil Wrecker
+ *    #138 out of Base, and merge the duplicate numeric 1-9 PowerBlast rows
+ *    into the canonical PB1-PB9 checklist.
+ *  - Merge the duplicate 2023 What If...? 1990 Marvel Universe subset and its
+ *    49-card twin, preserving collector references from both copies.
+ *  - Merge exact blank twin rows in the 2023 Marvel Platinum 1962/1963
+ *    subsets into their image-bearing counterparts.
  *  - Deactivate the empty orphan subset "2020 Upper Deck Marvel Avengers
  *    Endgame & Captain Marvel".
  *
@@ -176,6 +183,87 @@ export function buildExactLenDuplicatePairs(
   return pairs;
 }
 
+type HildebrandtPowerBlastCard = Pick<CardRow, 'id' | 'cardNumber' | 'name'>;
+
+export function buildHildebrandtPowerBlastPairs(
+  cardRows: HildebrandtPowerBlastCard[],
+): Array<{ dup: number; surv: number }> {
+  const numericRows = cardRows.filter((card) => /^\d+$/.test(card.cardNumber.trim()));
+  if (numericRows.length === 0) return [];
+
+  const canonicalRows = cardRows.filter((card) => /^PB\d+$/i.test(card.cardNumber.trim()));
+  assertExactPrefixedCardNumbers(
+    '1994 Hildebrandt PowerBlast canonical cards',
+    canonicalRows.map((card) => card.cardNumber),
+    'PB',
+    9,
+  );
+
+  const survivorByNumber = new Map(
+    canonicalRows.map((card) => [normCardNumber(card.cardNumber), card]),
+  );
+  return numericRows.map((duplicate) => {
+    const number = Number(duplicate.cardNumber.trim());
+    if (!Number.isInteger(number) || number < 1 || number > 9) {
+      throw new Error(
+        `1994 Hildebrandt PowerBlast: unexpected numeric card ${duplicate.cardNumber} ${duplicate.name}`,
+      );
+    }
+    const survivor = survivorByNumber.get(`PB${number}`);
+    if (!survivor) {
+      throw new Error(
+        `1994 Hildebrandt PowerBlast: no PB${number} survivor for ${duplicate.name}`,
+      );
+    }
+    const duplicateName = normName(duplicate.name).replace(/sabretooth/g, 'sabertooth');
+    const survivorName = normName(survivor.name).replace(/sabretooth/g, 'sabertooth');
+    if (
+      duplicateName !== survivorName
+      && !duplicateName.endsWith(survivorName)
+    ) {
+      throw new Error(
+        `1994 Hildebrandt PowerBlast: name mismatch ${duplicate.cardNumber} `
+        + `"${duplicate.name}" -> ${survivor.cardNumber} "${survivor.name}"`,
+      );
+    }
+    return { dup: duplicate.id, surv: survivor.id };
+  });
+}
+
+type ExactDuplicateCard = Pick<
+  CardRow,
+  'id' | 'cardNumber' | 'name' | 'variation' | 'frontImageUrl' | 'backImageUrl'
+>;
+
+export function buildExactDuplicateCardPairs(
+  cardRows: ExactDuplicateCard[],
+): Array<{ dup: number; surv: number }> {
+  const groups = new Map<string, ExactDuplicateCard[]>();
+  for (const card of cardRows) {
+    const key = [
+      normCardNumber(card.cardNumber),
+      normName(card.name),
+      normName(card.variation ?? ''),
+    ].join('|');
+    groups.set(key, [...(groups.get(key) ?? []), card]);
+  }
+
+  const pairs: Array<{ dup: number; surv: number }> = [];
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const ranked = [...group].sort((a, b) => {
+      const imageScore = (card: ExactDuplicateCard) =>
+        Number(Boolean(card.frontImageUrl)) + Number(Boolean(card.backImageUrl));
+      return imageScore(b) - imageScore(a) || a.id - b.id;
+    });
+    const survivor = ranked[0];
+    for (const duplicate of ranked.slice(1)) {
+      pairs.push({ dup: duplicate.id, surv: survivor.id });
+    }
+  }
+  return pairs;
+}
+
 /** Curated (hand-picked) image paths: direct card uploads, user uploads, Drive set imports. */
 function isCuratedImage(url: string | null | undefined): boolean {
   if (!url) return false;
@@ -268,6 +356,11 @@ const GROUPS: MergeGroup[] = [
       cardsAreInserts: true,
     },
   },
+  {
+    label: '2023 What If 1990 Marvel Universe',
+    sourceSubsetSlugs: ['2023-upper-deck-marvel-what-if-1990-marvel-universe'],
+    targetSubsetSlugs: ['2023-2023-upper-deck-marvel-what-if-1990-marvel-universe'],
+  },
 ];
 
 const PLATINUM_MAIN_SLUG = '2023-upper-deck-marvel-platinum';
@@ -299,6 +392,13 @@ const LENTICULAR_2024_SLUG = '2024-2024-upper-deck-marvel-masterpieces-92-platin
 const LENTICULAR_2024_NAME = "2024 Upper Deck Marvel Masterpieces '92 Platinum - Lenticular";
 const LENTICULAR_2024_PARENT_SLUG = '2024-upper-deck-marvel-masterpieces-92-platinum';
 const LENTICULAR_2024_EXPECTED_CARDS = 100;
+const HILDEBRANDT_BASE_SLUG = '1994-1994-fleer-marvel-masterpieces-hildebrandt-brothers-base';
+const HILDEBRANDT_GOLD_FOIL_SLUG = '1994-1994-fleer-marvel-masterpieces-hildebrandt-brothers-gold-foil-signature';
+const HILDEBRANDT_POWERBLAST_SLUG = '1994-1994-fleer-marvel-masterpieces-hildebrandt-brothers-powerblast';
+const PLATINUM_EXACT_DUPLICATE_SLUGS = [
+  '2023-upper-deck-marvel-platinum-1962',
+  '2023-upper-deck-marvel-platinum-1963',
+] as const;
 
 async function refCount(tx: Tx, cardId: number): Promise<number> {
   const r: any = await tx.execute(sql`
@@ -566,6 +666,124 @@ export async function mergeExactLenDuplicateRows(
     .where(eq(cardSets.id, subset.id));
 
   return { merged: pairs.length, frontImagesCopied, backImagesCopied };
+}
+
+async function repair1994HildebrandtCollisions(tx: Tx): Promise<void> {
+  const subsets = await tx.select().from(cardSets).where(inArray(cardSets.slug, [
+    HILDEBRANDT_BASE_SLUG,
+    HILDEBRANDT_GOLD_FOIL_SLUG,
+    HILDEBRANDT_POWERBLAST_SLUG,
+  ]));
+  const subsetBySlug = new Map(subsets.map((subset) => [subset.slug, subset]));
+  const base = subsetBySlug.get(HILDEBRANDT_BASE_SLUG);
+  const goldFoil = subsetBySlug.get(HILDEBRANDT_GOLD_FOIL_SLUG);
+  const powerBlast = subsetBySlug.get(HILDEBRANDT_POWERBLAST_SLUG);
+  if (!base || !goldFoil || !powerBlast) {
+    throw new Error('1994 Hildebrandt repair: expected Base, Gold Foil Signature, and PowerBlast subsets');
+  }
+
+  const activeCards = await tx.select().from(cards).where(and(
+    inArray(cards.setId, [base.id, goldFoil.id, powerBlast.id]),
+    isNull(cards.archivedAt),
+  ));
+
+  const powerBlastPairs = buildHildebrandtPowerBlastPairs(
+    activeCards.filter((card) => card.setId === powerBlast.id),
+  );
+  await applyCardMergePairs(
+    tx,
+    powerBlastPairs,
+    '1994 Hildebrandt PowerBlast duplicate checklist',
+    { imageTransferMode: 'missing-only' },
+  );
+
+  const base138 = activeCards.filter(
+    (card) => card.setId === base.id && normCardNumber(card.cardNumber) === '138',
+  );
+  const misplacedWreckers = base138.filter(
+    (card) => normName(card.name).includes('wreckergoldfoilsignature'),
+  );
+  if (base138.length > 1 && misplacedWreckers.length !== base138.length - 1) {
+    throw new Error(
+      `1994 Hildebrandt repair: Base #138 has ${base138.length} rows but `
+      + `${misplacedWreckers.length} recognizable misplaced Gold Foil row(s)`,
+    );
+  }
+  if (misplacedWreckers.length > 1) {
+    throw new Error('1994 Hildebrandt repair: multiple misplaced Gold Foil Wrecker rows');
+  }
+
+  let movedWrecker = false;
+  const misplacedWrecker = misplacedWreckers[0];
+  if (misplacedWrecker) {
+    const goldFoil138 = activeCards.filter(
+      (card) => card.setId === goldFoil.id && normCardNumber(card.cardNumber) === '138',
+    );
+    if (goldFoil138.length > 1) {
+      throw new Error('1994 Hildebrandt repair: multiple Gold Foil Signature #138 targets');
+    }
+    if (goldFoil138.length === 1) {
+      await applyCardMergePairs(
+        tx,
+        [{ dup: misplacedWrecker.id, surv: goldFoil138[0].id }],
+        '1994 Hildebrandt misplaced Gold Foil Wrecker',
+        { imageTransferMode: 'missing-only' },
+      );
+    } else {
+      await tx.update(cards).set({
+        setId: goldFoil.id,
+        name: 'Wrecker',
+        variation: null,
+      }).where(eq(cards.id, misplacedWrecker.id));
+    }
+    movedWrecker = true;
+  }
+
+  if (powerBlastPairs.length > 0 || movedWrecker) {
+    await tx.execute(sql`
+      UPDATE card_sets cs
+      SET total_cards = (
+        SELECT count(*)::integer FROM cards c
+        WHERE c.set_id = cs.id AND c.archived_at IS NULL
+      )
+      WHERE cs.id IN (${base.id}, ${goldFoil.id}, ${powerBlast.id})`);
+    console.log(
+      `${LOG} 1994 Hildebrandt: merged ${powerBlastPairs.length} PowerBlast row(s); `
+      + `Gold Foil Wrecker ${movedWrecker ? 'relocated' : 'already correct'}`,
+    );
+  }
+}
+
+async function repair2023PlatinumExactDuplicates(tx: Tx): Promise<void> {
+  const subsets = await tx.select().from(cardSets).where(
+    inArray(cardSets.slug, [...PLATINUM_EXACT_DUPLICATE_SLUGS]),
+  );
+  let merged = 0;
+  for (const subset of subsets) {
+    const activeCards = await tx.select().from(cards).where(and(
+      eq(cards.setId, subset.id),
+      isNull(cards.archivedAt),
+    ));
+    const pairs = buildExactDuplicateCardPairs(activeCards);
+    if (pairs.length === 0) continue;
+    await applyCardMergePairs(
+      tx,
+      pairs,
+      '2023 Marvel Platinum exact duplicate card',
+      { imageTransferMode: 'missing-only' },
+    );
+    await tx.execute(sql`
+      UPDATE card_sets
+      SET total_cards = (
+        SELECT count(*)::integer FROM cards
+        WHERE set_id = ${subset.id} AND archived_at IS NULL
+      )
+      WHERE id = ${subset.id}`);
+    merged += pairs.length;
+  }
+  if (merged > 0) {
+    console.log(`${LOG} 2023 Marvel Platinum: merged ${merged} exact duplicate card row(s)`);
+  }
 }
 
 async function mergeGroup(tx: Tx, group: MergeGroup): Promise<void> {
@@ -1056,6 +1274,20 @@ export async function mergeDuplicateLegacySets(): Promise<void> {
         AND c.archived_at IS NULL
     ) AS needed`);
   const needs2023FlairRelocation = Boolean(flair2023Probe.rows?.[0]?.needed);
+  const hildebrandtProbe: any = await db.execute(sql`
+    SELECT EXISTS (
+      SELECT 1
+      FROM cards c
+      JOIN card_sets cs ON cs.id = c.set_id
+      WHERE c.archived_at IS NULL
+        AND (
+          (cs.slug = ${HILDEBRANDT_POWERBLAST_SLUG} AND c.card_number ~ '^[0-9]+$')
+          OR
+          (cs.slug = ${HILDEBRANDT_BASE_SLUG} AND trim(c.card_number) = '138'
+            AND lower(c.name) LIKE '%gold foil signature%')
+        )
+    ) AS needed`);
+  const needsHildebrandtRepair = Boolean(hildebrandtProbe.rows?.[0]?.needed);
   // This subset is small, so always validate its exact terminal state under
   // the advisory lock. That prevents the cheap no-op path from ever bypassing
   // a name, parent, suffix, count, or card-number identity guard.
@@ -1068,6 +1300,7 @@ export async function mergeDuplicateLegacySets(): Promise<void> {
     && !needsPlatinumAttach
     && !needsLostMarvelRelocation
     && !needs2023FlairRelocation
+    && !needsHildebrandtRepair
     && !needs2024LenticularValidation
   ) {
     console.log(`${LOG} Nothing to do — all legacy duplicate sets already retired`);
@@ -1098,6 +1331,10 @@ export async function mergeDuplicateLegacySets(): Promise<void> {
     await relocateLostMarvelBonusCards(tx);
     await relocate2023FlairSubsetCards(tx);
     await merge2024LenticularLenDuplicates(tx);
+    if (needsHildebrandtRepair) {
+      await repair1994HildebrandtCollisions(tx);
+    }
+    await repair2023PlatinumExactDuplicates(tx);
 
     // Deactivate the empty orphan subset (only if it truly has no active cards)
     if (orphan) {
