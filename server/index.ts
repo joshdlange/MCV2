@@ -114,6 +114,27 @@ server.listen({
     const { sql } = await import('drizzle-orm');
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS trusted_uploader boolean NOT NULL DEFAULT false`);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS image_admin boolean NOT NULL DEFAULT false`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS native_mobile_logins integer NOT NULL DEFAULT 0`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS vault_regular_moment_acknowledged_at timestamp`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS vault_regular_moment_claim_id text`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS native_mobile_login_events (
+        id serial PRIMARY KEY,
+        user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        session_id text NOT NULL,
+        platform text NOT NULL,
+        login_number integer NOT NULL,
+        created_at timestamp NOT NULL DEFAULT now()
+      )
+    `);
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS native_mobile_login_events_user_session_unique
+      ON native_mobile_login_events (user_id, session_id)
+    `);
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS native_mobile_login_events_user_number_unique
+      ON native_mobile_login_events (user_id, login_number)
+    `);
     // CONVENTION (bulk/retro badge awards): any startup seed or admin backfill
     // that inserts user_badges rows in bulk MUST set retro = true (or backdate
     // earned_at to the true qualifying moment). runFeedBackfill's badge_earned

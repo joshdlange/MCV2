@@ -5,6 +5,7 @@ import {
   BackendUserSyncError,
   syncFirebaseUserWithBackend,
 } from "./backendUserSync";
+import { getNativeLaunchSession } from "./nativeLaunchSession";
 
 const firebaseUser = {
   uid: "firebase-user-1",
@@ -125,4 +126,38 @@ test("backend sync rejects instead of admitting a Firebase-only user", async () 
       return true;
     },
   );
+});
+
+test("native login metadata is sent only when the caller supplies a native launch", async () => {
+  let requestBody: any;
+  await syncFirebaseUserWithBackend(firebaseUser, {
+    nativeLogin: {
+      sessionId: "native-session-123",
+      platform: "android",
+    },
+    fetchImpl: async (_input, init) => {
+      requestBody = JSON.parse(String(init?.body));
+      return new Response(JSON.stringify({
+        user: {
+          id: 42,
+          username: "collector",
+          email: "collector@example.test",
+        },
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    },
+  });
+
+  assert.deepEqual(requestBody.nativeLogin, {
+    sessionId: "native-session-123",
+    platform: "android",
+  });
+});
+
+test("app-level auth retries reuse one native cold-launch session", () => {
+  const first = getNativeLaunchSession("android");
+  const retry = getNativeLaunchSession("android");
+
+  assert.ok(first);
+  assert.strictEqual(retry, first);
+  assert.equal(retry?.sessionId, first.sessionId);
 });

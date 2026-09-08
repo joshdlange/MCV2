@@ -8,6 +8,12 @@ project(':capacitor-community-apple-sign-in').projectDir = new File('../node_mod
 include ':capacitor-app'
 project(':capacitor-app').projectDir = new File('../node_modules/@capacitor/app/android')
 
+include ':capacitor-push-notifications'
+project(':capacitor-push-notifications').projectDir = new File('../node_modules/@capacitor/push-notifications/android')
+
+include ':capgo-capacitor-in-app-review'
+project(':capgo-capacitor-in-app-review').projectDir = new File('../node_modules/@capgo/capacitor-in-app-review/android')
+
 include ':capgo-capacitor-social-login'
 project(':capgo-capacitor-social-login').projectDir = new File('../node_modules/@capgo/capacitor-social-login/android')
 

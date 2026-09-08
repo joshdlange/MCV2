@@ -27,7 +27,7 @@ export class BadgeService {
   }
 
   // Award badge to user (uses ON CONFLICT to prevent race condition duplicates)
-  async awardBadge(userId: number, badgeId: number): Promise<void> {
+  async awardBadge(userId: number, badgeId: number): Promise<boolean> {
     try {
       // Use raw SQL with ON CONFLICT to prevent duplicates at database level
       const result = await db.execute(sql`
@@ -51,10 +51,13 @@ export class BadgeService {
           const { emitBadgeEarned } = await import('./services/feedService');
           emitBadgeEarned(userId, badge[0].id).catch(() => {});
         }
+        return true;
       }
+      return false;
     } catch (error) {
       // Silently handle any duplicate key errors as a safety net
       console.log(`[BADGE] Could not award badge ${badgeId} to user ${userId}: ${error}`);
+      return false;
     }
   }
 
@@ -155,6 +158,24 @@ export class BadgeService {
     if (last < thirtyDaysAgo) {
       await this.awardBadge(userId, badge.id);
     }
+  }
+
+  async checkVaultRegular(userId: number, nativeLoginCount: number) {
+    if (nativeLoginCount < 4) return null;
+    let badge = await this.getBadgeByName("Vault Regular");
+    if (!badge) {
+      // The startup seed normally runs first. This fallback closes the small
+      // rolling-deploy window where a login can arrive before the seed task.
+      const { seedVaultRegularBadge } = await import("./services/vaultRegularBadgeSeed");
+      await seedVaultRegularBadge();
+      badge = await this.getBadgeByName("Vault Regular");
+    }
+    if (!badge) return null;
+    const awardedNow = await this.awardBadge(userId, badge.id);
+    if (!awardedNow && !(await this.hasUserEarnedBadge(userId, badge.id))) {
+      return null;
+    }
+    return badge;
   }
 
   // 6. Deal Maker - Check for completed trades (placeholder)

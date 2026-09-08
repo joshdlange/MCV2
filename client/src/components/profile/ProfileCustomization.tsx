@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,10 @@ import { useAppStore } from "@/lib/store";
 import { AVATAR_KEYS, AVATAR_MAP } from "@/lib/collectorAvatars";
 import { CollectorAvatar } from "@/components/profile/CollectorAvatar";
 import { Loader2, Sparkles } from "lucide-react";
+import {
+  resolveIntroFlowState,
+  useIntroFlow,
+} from "@/contexts/IntroFlowContext";
 
 /**
  * Skippable Collector Profile customization step (social/feed foundation).
@@ -21,9 +25,14 @@ export function ProfileCustomization() {
   const { currentUser } = useAppStore();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { setProfileCustomizationState } = useIntroFlow();
   const [dismissed, setDismissed] = useState(false);
 
-  const { data: profile } = useQuery<any>({
+  const {
+    data: profile,
+    isFetchedAfterMount,
+    isFetching,
+  } = useQuery<any>({
     queryKey: ["/api/user/profile"],
     enabled: !!currentUser?.onboardingComplete,
   });
@@ -44,6 +53,21 @@ export function ProfileCustomization() {
     !profile.profileCustomizationCompletedAt &&
     (profile.profileCustomizationSkips ?? 0) < 2 &&
     !dismissed;
+
+  useEffect(() => {
+    setProfileCustomizationState(resolveIntroFlowState({
+      enabled: !!currentUser?.onboardingComplete,
+      ready: isFetchedAfterMount && !isFetching && !!profile,
+      open,
+    }));
+  }, [
+    currentUser?.onboardingComplete,
+    isFetchedAfterMount,
+    isFetching,
+    open,
+    profile,
+    setProfileCustomizationState,
+  ]);
 
   if (!open) return null;
 

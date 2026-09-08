@@ -13,6 +13,10 @@ import { useAppStore } from "@/lib/store";
 import { auth } from "@/lib/firebase";
 import { AVATAR_KEYS } from "@/lib/collectorAvatars";
 import { CollectorAvatar } from "@/components/profile/CollectorAvatar";
+import {
+  resolveIntroFlowState,
+  useIntroFlow,
+} from "@/contexts/IntroFlowContext";
 
 /**
  * Single-screen onboarding: username + avatar + opt-ins, one "Enter the Vault"
@@ -263,7 +267,13 @@ export function Onboarding() {
  */
 export function HeardAboutPrompt() {
   const { currentUser } = useAppStore();
-  const { data: profile } = useQuery<any>({
+  const queryClient = useQueryClient();
+  const { setHeardAboutState } = useIntroFlow();
+  const {
+    data: profile,
+    isFetchedAfterMount,
+    isFetching,
+  } = useQuery<any>({
     queryKey: ["/api/user/profile"],
     enabled: !!currentUser?.onboardingComplete,
   });
@@ -282,6 +292,22 @@ export function HeardAboutPrompt() {
     accountAgeMs > 24 * 60 * 60 * 1000 &&
     !dismissed;
 
+  useEffect(() => {
+    setHeardAboutState(resolveIntroFlowState({
+      enabled: !!currentUser?.onboardingComplete,
+      ready: isFetchedAfterMount && !isFetching && !saving && !!profile,
+      open,
+    }));
+  }, [
+    currentUser?.onboardingComplete,
+    isFetchedAfterMount,
+    isFetching,
+    open,
+    profile,
+    saving,
+    setHeardAboutState,
+  ]);
+
   if (!open) return null;
 
   const save = async (value: string) => {
@@ -289,6 +315,7 @@ export function HeardAboutPrompt() {
     setDismissed(true); // close immediately; never block the app
     try {
       await apiRequest("PUT", `/api/users/${currentUser!.id}`, { heardAbout: value.slice(0, 200) });
+      await queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
     } catch (e) {
       console.error("heardAbout save failed (non-fatal):", e);
     } finally {

@@ -11,6 +11,19 @@ export interface BackendUser {
   plan: string;
   subscriptionStatus: string;
   onboardingComplete: boolean;
+  nativeReviewMilestone?: NativeReviewMilestone | null;
+}
+
+export interface NativeReviewMilestone {
+  key: "vault_regular";
+  loginNumber: number;
+  platform: "android" | "ios";
+  badge: {
+    name: string;
+    description: string;
+    iconUrl: string | null;
+    rarity: string;
+  };
 }
 
 export class BackendUserSyncError extends Error {
@@ -30,6 +43,10 @@ interface SyncOptions {
   maxAttempts?: number;
   maxStartupAttempts?: number;
   maxTransportAttempts?: number;
+  nativeLogin?: {
+    sessionId: string;
+    platform: "android" | "ios";
+  };
 }
 
 const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
@@ -89,6 +106,7 @@ export async function syncFirebaseUserWithBackend(
               return undefined;
             }
           })(),
+          nativeLogin: options.nativeLogin,
         }),
       });
     } catch (error) {
@@ -103,7 +121,10 @@ export async function syncFirebaseUserWithBackend(
 
     const data = await response.json().catch(() => ({}));
     if (response.ok && data?.user?.id) {
-      return data.user as BackendUser;
+      return {
+        ...data.user,
+        nativeReviewMilestone: data.nativeReviewMilestone ?? null,
+      } as BackendUser;
     }
 
     const error = new BackendUserSyncError(

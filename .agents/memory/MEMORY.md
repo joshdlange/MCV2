@@ -41,3 +41,4 @@
 - [Stripe coupon product scopes](stripe-coupon-product-scopes.md) — `applies_to` may be omitted unless explicitly expanded; validate product limits with an expanded retrieval.
 - [Image Admin boundary](image-admin-boundary.md) — card image replacements use one byte-ingested, Cloudinary-first, audited endpoint; generic card writes must reject image fields.
 - [Catalog duplicate audits](catalog-duplicate-audits.md) — repeated card numbers are mostly legitimate inserts; only merge after identity/subset classification and preserve all collector references.
+- [Native review milestones](native-review-milestones.md) — rewards stay independent; use stable launch IDs, session dialog sequencing, and replay-safe one-winner review claims.

@@ -50,6 +50,9 @@ export const users = pgTable("users", {
   lastLogin: timestamp("last_login"),
   loginStreak: integer("login_streak").default(0).notNull(),
   totalLogins: integer("total_logins").default(0).notNull(),
+  nativeMobileLogins: integer("native_mobile_logins").default(0).notNull(),
+  vaultRegularMomentAcknowledgedAt: timestamp("vault_regular_moment_acknowledged_at"),
+  vaultRegularMomentClaimId: text("vault_regular_moment_claim_id"),
   lastInactivityEmailSent: timestamp("last_inactivity_email_sent"),
   lastWeeklyDigestSent: timestamp("last_weekly_digest_sent"),
   // Marketplace fields
@@ -422,6 +425,21 @@ export const userBadges = pgTable("user_badges", {
   // Matches the existing DB index user_badges_unique_user_badge; awardBadge's
   // ON CONFLICT (user_id, badge_id) depends on it.
   uniqueIndex("user_badges_unique_user_badge").on(table.userId, table.badgeId),
+]);
+
+// Idempotency ledger for native app launches that count toward mobile-only
+// milestones. A generated session ID prevents a retried auth sync from
+// counting the same launch more than once.
+export const nativeMobileLoginEvents = pgTable("native_mobile_login_events", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  sessionId: text("session_id").notNull(),
+  platform: text("platform").notNull(),
+  loginNumber: integer("login_number").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("native_mobile_login_events_user_session_unique").on(table.userId, table.sessionId),
+  uniqueIndex("native_mobile_login_events_user_number_unique").on(table.userId, table.loginNumber),
 ]);
 
 // Relations
