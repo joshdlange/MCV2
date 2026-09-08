@@ -1,0 +1,86 @@
+Build a 4th Mobile Login Store Review Prompt and Badge Moment.
+
+Context:
+On a user's 4th native mobile app login, we want to create a positive engagement moment. The user should receive a badge for becoming a returning mobile collector, and we should also show a neutral app store review prompt.
+
+Important:
+The badge is awarded for the user's 4th native mobile app login.
+The review prompt is separate.
+The badge must not depend on whether the user leaves a review.
+The app must not verify, track, or require a review to unlock the badge.
+
+Goal:
+On the user's 4th native iOS/Android app login:
+1. Award the returning collector badge.
+2. Show the normal badge unlocked experience.
+3. Then show a neutral store review prompt, either immediately after the badge moment or on the next screen/session if that feels cleaner.
+
+Must do:
+- Count only native mobile app logins.
+- Do not count web logins.
+- Award the badge once on the 4th native mobile login.
+- Show a neutral app review prompt on or after the 4th native mobile login.
+- Use the native app review flow where available.
+- Add Not Now and Don't Ask Again.
+- Do not ask for a specific rating.
+- Do not mention 5 stars.
+- Do not offer a coupon, XP, free month, giveaway entry, or additional reward tied to a review.
+- Do not ask users to prove they reviewed.
+- Do not track whether a review was left.
+- If the user dismisses the review prompt, they still keep the badge.
+- If the review API does not display, they still keep the badge.
+
+Badge:
+- Name: Vault Regular
+- Key: vault_regular
+- Unlock condition: Log in to the native mobile app 4 times.
+- Description: Came back to the vault 4 times on mobile.
+- Award once per user.
+- I will provide the badge image separately.
+
+Review prompt copy:
+Title:
+Enjoying Marvel Card Vault?
+
+Body:
+Reviews help other collectors find MCV and help us keep improving the vault.
+
+CTA:
+Leave a Review
+
+Secondary:
+Not Now
+
+Tertiary:
+Don't Ask Again
+
+Must not do:
+- Do not award the badge for leaving a review.
+- Do not say the badge is for reviewing the app.
+- Do not ask for a 5-star review.
+- Do not incentivize reviews.
+- Do not gate anything behind a review.
+- Do not send emails or push notifications for reviews.
+- Do not change billing, subscriptions, card data, Scan to Add, Trade Block, Feed, Follow/Friends, lifecycle emails, Android release config, or iOS release config unless needed only for the native review prompt.
+
+QA:
+- Web login does not count.
+- Native mobile login count works.
+- Badge unlocks on the 4th native mobile login.
+- Badge unlocks even if the user does not review.
+- Review prompt appears separately from the badge unlock.
+- Review prompt is neutral.
+- Not Now works.
+- Don't Ask Again works.
+- Badge can only be earned once.
+- No review incentive language exists anywhere.
+- App builds/runs cleanly.
+
+Final response:
+- List changed files.
+- Confirm the badge unlock condition.
+- Confirm the review prompt trigger.
+- Confirm badge unlock does not depend on leaving a review.
+- Confirm no incentivized review language was added.
+- Confirm no emails or push notifications were sent.
+- Confirm safe to publish.
