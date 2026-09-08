@@ -16,9 +16,20 @@ import { DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
+import { BadgeImage } from "@/components/badges/BadgeImage";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppStore } from "@/lib/store";
 import whatnotLogo from "@/assets/whatnot-logo.png";
+
+function getInitialSocialTab() {
+  if (typeof window === "undefined") return "badges";
+  const requestedTab = new URLSearchParams(window.location.search).get("tab");
+  if (requestedTab === "superpowers") return "badges";
+  if (["messages", "badges", "profile", "friends"].includes(requestedTab ?? "")) {
+    return requestedTab!;
+  }
+  return "badges";
+}
 
 interface Friend {
   id: number;
@@ -96,7 +107,7 @@ export default function Social() {
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState("badges");
+  const [activeTab, setActiveTab] = useState(getInitialSocialTab);
   const [selectedFriendProfile, setSelectedFriendProfile] = useState<any>(null);
   const [viewingProfile, setViewingProfile] = useState(false);
   
@@ -124,6 +135,7 @@ export default function Social() {
   const { data: badgeUnlockStats } = useQuery<Record<number, { earnedCount: number; percent: number }>>({
     queryKey: ["/api/badges/unlock-stats"],
     staleTime: 5 * 60 * 1000,
+    enabled: activeTab === "badges",
   });
   
   const queryClient = useQueryClient();
@@ -248,7 +260,7 @@ export default function Social() {
       if (!response.ok) throw new Error("Failed to fetch user badges");
       return response.json();
     },
-    enabled: !!user,
+    enabled: !!user && activeTab === "badges",
   });
 
   // Fetch friend profile data
@@ -382,7 +394,7 @@ export default function Social() {
       if (!response.ok) throw new Error("Failed to fetch badges");
       return response.json();
     },
-    enabled: !!user,
+    enabled: !!user && activeTab === "badges",
   });
 
   // Fetch messages for selected friend
@@ -1477,11 +1489,11 @@ export default function Social() {
                       <div className="flex justify-center mb-3">
                         <div className={`w-14 h-14 rounded-full flex items-center justify-center border-2 ${getRarityStyle(userBadge.badge.rarity || 'common')}`}>
                           {userBadge.badge.iconUrl ? (
-                            <img 
-                              src={userBadge.badge.iconUrl} 
+                            <BadgeImage
+                              iconUrl={userBadge.badge.iconUrl}
                               alt={userBadge.badge.name}
                               className="w-10 h-10 object-cover rounded-full"
-                              loading="lazy"
+                              displaySize={40}
                             />
                           ) : (
                             <span className="text-xl">{getRarityEmoji(userBadge.badge.rarity || 'common')}</span>
@@ -1526,11 +1538,11 @@ export default function Social() {
                         >
                           <div className="w-10 h-10 mx-auto mb-2 rounded-full flex items-center justify-center bg-gray-200 dark:bg-gray-700">
                             {badge.iconUrl ? (
-                              <img 
-                                src={badge.iconUrl} 
+                              <BadgeImage
+                                iconUrl={badge.iconUrl}
                                 alt={badge.name}
                                 className="w-6 h-6 object-cover rounded-full opacity-50"
-                                loading="lazy"
+                                displaySize={24}
                               />
                             ) : (
                               <Lock className="w-4 h-4 text-gray-400" />
@@ -1676,11 +1688,11 @@ export default function Social() {
                         <div key={userBadge.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-center hover:shadow-sm transition-shadow">
                           <div className={`w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center border-2 ${getRarityStyle(userBadge.badge.rarity || 'common')}`}>
                             {userBadge.badge.iconUrl ? (
-                              <img 
-                                src={userBadge.badge.iconUrl} 
+                              <BadgeImage
+                                iconUrl={userBadge.badge.iconUrl}
                                 alt={userBadge.badge.name}
                                 className="w-8 h-8 object-contain"
-                                loading="lazy"
+                                displaySize={32}
                               />
                             ) : (
                               <span className="text-lg">{getRarityEmoji(userBadge.badge.rarity || 'common')}</span>
@@ -1950,10 +1962,12 @@ export default function Social() {
                     : getRarityStyle(selectedBadge.badge.rarity || 'common')
                 } ${!selectedBadge.isLocked ? getRarityGlow(selectedBadge.badge.rarity || 'common') : ''}`}>
                   {selectedBadge.badge.iconUrl ? (
-                    <img 
-                      src={selectedBadge.badge.iconUrl} 
+                    <BadgeImage
+                      iconUrl={selectedBadge.badge.iconUrl}
                       alt={selectedBadge.badge.name}
                       className={`w-16 h-16 object-cover rounded-full ${selectedBadge.isLocked ? 'opacity-40 grayscale' : ''}`}
+                      displaySize={64}
+                      eager
                     />
                   ) : selectedBadge.isLocked ? (
                     <Lock className="w-10 h-10 text-gray-400" />

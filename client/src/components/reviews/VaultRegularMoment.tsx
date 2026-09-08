@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { BadgeImage } from "@/components/badges/BadgeImage";
 
 interface VaultRegularMomentProps {
   open: boolean;
@@ -97,10 +98,12 @@ export function VaultRegularMoment({
                 transition={{ delay: 0.12, duration: 0.58, ease: [0.22, 1, 0.36, 1] }}
                 className="relative h-full w-full overflow-hidden rounded-[31%] border-[5px] border-[#f6d39b]/90 bg-[#c65e58] shadow-[0_16px_36px_rgba(4,3,10,0.4)]"
               >
-                <img
-                  src="/uploads/badges/vault-regular.png"
+                <BadgeImage
+                  iconUrl="/uploads/badges/vault-regular.png"
                   alt="Vault Regular badge"
                   className="h-full w-full object-cover"
+                  displaySize={220}
+                  eager
                 />
               </motion.div>
             </div>
