@@ -1,4 +1,5 @@
 import { avatarUrl } from "@/lib/collectorAvatars";
+import { normalizeTrustedAvatarUrl } from "@shared/trustedAvatarUrl";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -395,8 +396,8 @@ export default function AdminImageApprovals() {
                 {/* Submitter Info */}
                 <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-900 rounded-lg border">
                   <div className="w-10 h-10 rounded-full bg-marvel-red flex items-center justify-center text-white font-bold">
-                    {(avatarUrl(submission.user.collectorAvatarKey) ?? submission.user.photoURL) ? (
-                      <img src={avatarUrl(submission.user.collectorAvatarKey) ?? submission.user.photoURL ?? undefined} alt={submission.user.username} className="w-full h-full rounded-full object-cover" />
+                    {(avatarUrl(submission.user.collectorAvatarKey) ?? normalizeTrustedAvatarUrl(submission.user.photoURL)) ? (
+                      <img src={avatarUrl(submission.user.collectorAvatarKey) ?? normalizeTrustedAvatarUrl(submission.user.photoURL) ?? undefined} alt={submission.user.username} className="w-full h-full rounded-full object-cover" />
                     ) : (
                       <User className="w-5 h-5" />
                     )}

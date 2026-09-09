@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { CardWithSet } from "@/types/database";
+import { normalizeExternalProfileUrl } from "@shared/externalProfileUrl";
 
 interface FriendProfileData {
   user: {
@@ -389,10 +390,10 @@ export default function FriendProfile() {
                       {friend.location}
                     </div>
                   )}
-                  {friend.website && (
+                  {normalizeExternalProfileUrl(friend.website) && (
                     <div className="flex items-center">
                       <Globe className="w-4 h-4 mr-1" />
-                      <a href={friend.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                      <a href={normalizeExternalProfileUrl(friend.website) ?? undefined} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                         {friend.website}
                       </a>
                     </div>

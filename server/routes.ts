@@ -28,6 +28,13 @@ import {
   verifyFirebaseSyncIdentity,
 } from "./services/verifiedFirebaseIdentity";
 import {
+  InvalidAppleIdentityTokenError,
+  verifyAppleIdentityToken,
+} from "./services/appleIdentityToken";
+import { toAuthUser, toPrivateProfileUser, toPublicProfileUser } from "./services/userResponses";
+import { normalizeExternalProfileUrl } from "../shared/externalProfileUrl";
+import { normalizeTrustedAvatarUrl } from "../shared/trustedAvatarUrl";
+import {
   computeUserXp,
   getRecentXpEvents,
   backfillCardAddedXpIfEmpty,
@@ -45,7 +52,7 @@ import { ebayMarketplaceInsights } from "./ebay-marketplace-insights";
 import { sendEmail } from "./email";
 import { sendResendEmail, sendPasswordResetEmail, verifyUnsubscribeToken } from "./services/emailService";
 import * as emailTriggers from "./services/emailTriggers";
-import { deleteImageAdminUpload, uploadImageAdminUrl } from "./services/imageMigration";
+import { deleteImageAdminUpload, downloadPublicImage, uploadImageAdminUrl } from "./services/imageMigration";
 import { vaultUpgradeAnnouncementTemplate } from "./services/emailTemplates";
 import { startEmailCronJobs, startVaultUpgradeDripCron, runVaultUpgradeDripNow, getVaultUpgradeDripStatus } from "./jobs/emailCron";
 import { LIFECYCLE_EMAILS, getLifecycleEmail, getLifecycleStatus, sendLifecycleWelcome, runFirstCardNudgeNow, startLifecycleEmailCron } from "./jobs/lifecycleEmails";
@@ -256,8 +263,6 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       );
       const firebaseUid = verifiedIdentity.uid;
 
-      console.log('Auth sync request for:', firebaseUid, verifiedIdentity.email);
-
       // Check if user exists
       let user = await storage.getUserByFirebaseUid(firebaseUid);
       
@@ -277,7 +282,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
           username: getInitialUsernameSeed(displayName, fallbackEmail),
           email: fallbackEmail,
           displayName: displayName || fallbackEmail.split('@')[0],
-          photoURL: identity.photoURL,
+          photoURL: normalizeTrustedAvatarUrl(identity.photoURL),
           isAdmin: isAdminEmail,
           plan: 'SIDE_KICK',
           subscriptionStatus: 'active'
@@ -410,7 +415,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         }
       }
       
-      res.json({ user });
+      if (!user) {
+        throw new Error("User synchronization did not produce a user");
+      }
+      res.json({ user: toAuthUser(user) });
     } catch (error) {
       if (error instanceof FirebaseSyncAuthError) {
         return res.status(error.status).json({
@@ -426,36 +434,20 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   app.post("/api/auth/apple-sign-in", async (req, res) => {
     try {
       const { identityToken, rawNonce } = req.body;
-      if (!identityToken || !rawNonce) {
+      if (
+        typeof identityToken !== "string" ||
+        typeof rawNonce !== "string" ||
+        identityToken.length > 10_000 ||
+        rawNonce.length < 16 ||
+        rawNonce.length > 256
+      ) {
         return res.status(400).json({ error: "identityToken and rawNonce are required" });
       }
 
-      const parts = identityToken.split(".");
-      if (parts.length !== 3) {
-        return res.status(400).json({ error: "Invalid identity token format" });
-      }
-
-      const payloadJson = Buffer.from(parts[1], "base64url").toString("utf8");
-      const payload = JSON.parse(payloadJson);
-
-      if (payload.iss !== "https://appleid.apple.com") {
-        return res.status(401).json({ error: "Invalid token issuer" });
-      }
-
-      if (payload.nonce) {
-        const crypto = await import("crypto");
-        const expectedNonce = crypto.createHash("sha256").update(rawNonce).digest("hex");
-        if (payload.nonce !== expectedNonce) {
-          return res.status(401).json({ error: "Invalid nonce" });
-        }
-      }
-
-      const appleSub = payload.sub;
-      if (!appleSub) {
-        return res.status(401).json({ error: "No Apple user ID in token" });
-      }
-
-      const appleEmail = payload.email || null;
+      const {
+        appleUserId: appleSub,
+        email: appleEmail,
+      } = await verifyAppleIdentityToken(identityToken, rawNonce);
 
       // Resolve the account this Apple sub should sign into
       // Priority: 1) already mapped by appleUserId, 2) email match with existing account, 3) new Apple account
@@ -464,7 +456,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       if (!linkedUser && appleEmail) {
         linkedUser = await storage.getUserByEmail(appleEmail);
         if (linkedUser) {
-          console.log(`Apple sign-in: linking apple sub ${appleSub} to existing account ${linkedUser.id} (${appleEmail})`);
+          console.log(`Apple sign-in: linking verified Apple identity to existing account ${linkedUser.id}`);
         }
       }
 
@@ -502,8 +494,11 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         appleUserId: appleSub,
       });
 
-      return res.json({ customToken, firebaseUid: linkedFirebaseUid, email: appleEmail });
+      return res.json({ customToken });
     } catch (error: any) {
+      if (error instanceof InvalidAppleIdentityTokenError) {
+        return res.status(401).json({ error: "Invalid Apple identity token" });
+      }
       console.error("Apple sign-in error:", error);
       return res.status(500).json({ error: "Failed to process Apple sign-in" });
     }
@@ -511,7 +506,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
 
   // Get current user
   app.get("/api/auth/me", authenticateUser, (req: any, res) => {
-    res.json({ user: req.user });
+    res.json({ user: toAuthUser(req.user) });
   });
 
   // Simple in-memory rate limiter for the public forgot-password endpoint.
@@ -657,7 +652,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
           : {}),
         favoriteSets: favoriteSets ? [favoriteSets] : [],
         marketingOptIn: marketingOptIn || false,
-        pushEnabled: pushEnabled !== false, // default on unless explicitly opted out
+        pushEnabled: pushEnabled === true,
         onboardingComplete: true
       });
       
@@ -672,7 +667,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         console.error('Failed to send welcome email:', error);
       });
       
-      res.json({ user: updatedUser });
+      res.json({ user: toAuthUser(updatedUser) });
     } catch (error) {
       console.error('Complete onboarding error:', error);
       res.status(500).json({ message: 'Failed to complete onboarding' });
@@ -687,7 +682,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       }
       
       const users = await storage.getAllUsers();
-      res.json(users);
+      res.json(users.map((user) => ({
+        ...user,
+        photoURL: normalizeTrustedAvatarUrl(user.photoURL),
+      })));
     } catch (error) {
       console.error('Get users error:', error);
       res.status(500).json({ message: "Failed to fetch users" });
@@ -764,6 +762,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         const lc = lifecycleMap.get(user.id);
         return {
           ...user,
+          photoURL: normalizeTrustedAvatarUrl(user.photoURL),
           cardsInCollection: cardCountMap.get(user.id) || 0,
           totalXp,
           collectorLevel: computeXpProgress(totalXp).level,
@@ -1147,7 +1146,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       }
 
       console.log(`Admin ${req.user.id} updated user ${userId}: plan=${plan}, isAdmin=${isAdmin}`);
-      res.json(updatedUser);
+      res.json(toPrivateProfileUser(updatedUser));
     } catch (error) {
       console.error('Admin update user error:', error);
       res.status(500).json({ message: "Failed to update user" });
@@ -1168,7 +1167,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       // (isAdmin, imageAdmin, trustedUploader, plan, subscriptionStatus, stripe/apple IDs)
       // can only be changed through the dedicated admin routes.
       const SELF_SERVICE_FIELDS = [
-        'username', 'displayName', 'photoURL', 'bio', 'location', 'website',
+        'username', 'displayName', 'bio', 'location', 'website',
         'instagramUrl', 'whatnotUrl', 'ebayUrl', 'address',
         'showEmail', 'showCollection', 'showWishlist', 'showImageAttribution',
         'emailUpdates', 'priceAlerts', 'friendActivity', 'profileVisibility',
@@ -1180,6 +1179,25 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       const updates: any = {};
       for (const key of SELF_SERVICE_FIELDS) {
         if (req.body[key] !== undefined) updates[key] = req.body[key];
+      }
+
+      const profileUrlDomains: Record<string, readonly string[] | undefined> = {
+        website: undefined,
+        instagramUrl: ["instagram.com"],
+        whatnotUrl: ["whatnot.com"],
+        ebayUrl: ["ebay.com"],
+      };
+      for (const [key, domains] of Object.entries(profileUrlDomains)) {
+        if (updates[key] === undefined) continue;
+        if (updates[key] === null || String(updates[key]).trim() === "") {
+          updates[key] = null;
+          continue;
+        }
+        const normalized = normalizeExternalProfileUrl(updates[key], domains);
+        if (!normalized) {
+          return res.status(400).json({ message: `Invalid ${key}` });
+        }
+        updates[key] = normalized;
       }
 
       // Validate avatar key against the server-side registry (defined below,
@@ -1199,7 +1217,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         return res.status(404).json({ message: "User not found" });
       }
       
-      res.json(updatedUser);
+      res.json(toPrivateProfileUser(updatedUser));
     } catch (error) {
       console.error('Update user error:', error);
       res.status(500).json({ message: "Failed to update user" });
@@ -1320,7 +1338,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      res.json(user);
+      res.json(toPrivateProfileUser(user));
     } catch (error) {
       console.error('Get user profile error:', error);
       res.status(500).json({ message: "Failed to fetch user profile" });
@@ -1338,7 +1356,17 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       if (displayName !== undefined) updates.displayName = displayName;
       if (bio !== undefined) updates.bio = bio;
       if (location !== undefined) updates.location = location;
-      if (website !== undefined) updates.website = website;
+      if (website !== undefined) {
+        if (website === null || String(website).trim() === "") {
+          updates.website = null;
+        } else {
+          const normalizedWebsite = normalizeExternalProfileUrl(website);
+          if (!normalizedWebsite) {
+            return res.status(400).json({ message: "Invalid website" });
+          }
+          updates.website = normalizedWebsite;
+        }
+      }
 
       // Collector Profile Customization v1
       if (collectorAvatarKey !== undefined) {
@@ -1393,7 +1421,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       }
       
       const updatedUser = await storage.updateUser(req.user.id, updates);
-      res.json(updatedUser);
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Failed to update user profile" });
+      }
+      res.json(toPrivateProfileUser(updatedUser));
     } catch (error) {
       console.error('Update user profile error:', error);
       res.status(500).json({ message: "Failed to update user profile" });
@@ -1420,7 +1451,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         return res.status(400).send(renderUnsubPage('Invalid link', 'This unsubscribe link is invalid or has expired. You can manage your email preferences from your account settings.'));
       }
       await db.update(users).set({ marketingOptIn: false }).where(sql`lower(trim(${users.email})) = ${email}`);
-      console.log(`📭 Unsubscribed from marketing emails: ${email}`);
+      console.log('Marketing email unsubscribe processed');
       if (req.method === 'POST') return res.status(200).json({ ok: true });
       return res.status(200).send(renderUnsubPage("You're unsubscribed", "You won't receive any more marketing or product-update emails. You can turn them back on anytime in your account settings."));
     } catch (error) {
@@ -1605,8 +1636,8 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
             validatedData.thumbnailImageUrl = cloudinaryUrl;
             console.log(`Successfully converted external URL to Cloudinary: ${cloudinaryUrl}`);
           } catch (downloadError) {
-            console.error('Failed to download external image, keeping original URL:', downloadError);
-            // Keep the original URL if download fails
+            console.error('Rejected external main-set thumbnail:', downloadError);
+            return res.status(400).json({ message: 'Thumbnail URL could not be safely imported' });
           }
         }
       }
@@ -3684,7 +3715,13 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       }
       
       const marketplaceItems = await storage.getMarketplaceItems();
-      res.json(marketplaceItems);
+      res.json(marketplaceItems.map((item: any) => ({
+        ...item,
+        seller: item.seller ? {
+          ...item.seller,
+          photoURL: normalizeTrustedAvatarUrl(item.seller.photoURL),
+        } : item.seller,
+      })));
     } catch (error) {
       console.error('Get marketplace error:', error);
       res.status(500).json({ message: "Failed to fetch marketplace items" });
@@ -4222,12 +4259,8 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
 
   // Bulk image update endpoints
   app.post("/api/admin/update-missing-images", authenticateUser, async (req: any, res) => {
-    console.log(`[DEBUG] Bulk update endpoint hit with body:`, req.body);
-    console.log(`[DEBUG] Authenticated user:`, req.user);
-    
     try {
       if (!req.user.isAdmin) {
-        console.log(`[DEBUG] Admin check failed for user:`, req.user);
         return res.status(403).json({ message: "Admin access required" });
       }
 
@@ -4395,30 +4428,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
 
       for (const card of cardsToMigrate) {
         try {
-          const response = await fetch(card.frontImageUrl!, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-              'Accept': 'image/*,*/*;q=0.8',
-            },
-          });
-
-          if (!response.ok) {
-            failed++;
-            continue;
-          }
-
-          const contentType = response.headers.get('content-type') || 'image/jpeg';
-          if (!contentType.startsWith('image/')) {
-            failed++;
-            continue;
-          }
-
-          const arrayBuffer = await response.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
-          if (buffer.length > 10 * 1024 * 1024) {
-            failed++;
-            continue;
-          }
+          const { contentType, buffer } = await downloadPublicImage(card.frontImageUrl!);
 
           const result = await cloudinary.uploader.upload(
             `data:${contentType};base64,${buffer.toString('base64')}`,
@@ -4911,7 +4921,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         jobName: 'campaign-vault-upgrade-test',
       });
 
-      console.log(`[Campaign] Vault upgrade TEST email sent to ${to} — message ID: ${messageId}`);
+      console.log(`[Campaign] Vault upgrade test sent — message ID: ${messageId}`);
       res.json({ success: true, message: `Test email sent to ${to}`, messageId });
     } catch (error) {
       console.error('[Campaign] Vault upgrade test email error:', error);
@@ -4968,7 +4978,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
           failed++;
           const msg = err instanceof Error ? err.message : 'Unknown error';
           errors.push(`${user.email}: ${msg}`);
-          console.error(`[Campaign] Failed to send to ${user.email}:`, err);
+          console.error(`[Campaign] Failed to send to user ${user.id}:`, err);
         }
       }
 
@@ -5482,12 +5492,12 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       const { getRelationshipLists } = await import('./services/followService');
       const { friends: friendRows } = await getRelationshipLists(req.user.id);
       // Legacy shape for old builds: requester = caller, recipient = friend
-      const me = { id: req.user.id, username: req.user.username, displayName: req.user.displayName, photoURL: req.user.photoURL };
+      const me = { id: req.user.id, username: req.user.username, displayName: req.user.displayName, photoURL: normalizeTrustedAvatarUrl(req.user.photoURL) };
       res.json(friendRows.map(f => ({
         id: f.id, // friend's user id doubles as row id in the unified model
         status: 'accepted',
         requester: me,
-        recipient: { id: f.id, username: f.username, displayName: f.displayName, photoURL: f.photoURL, collectorAvatarKey: f.collectorAvatarKey },
+        recipient: { id: f.id, username: f.username, displayName: f.displayName, photoURL: normalizeTrustedAvatarUrl(f.photoURL), collectorAvatarKey: f.collectorAvatarKey },
       })));
     } catch (error) {
       console.error('Get friends error:', error);
@@ -5818,7 +5828,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       }
 
       const profile = await storage.getFriendProfile(req.user.id, friendId);
-      res.json(profile);
+      res.json({
+        ...profile,
+        user: toPublicProfileUser(profile.user),
+      });
     } catch (error) {
       console.error('Get friend profile error:', error);
       res.status(500).json({ message: error.message || "Failed to fetch friend profile" });
@@ -6009,7 +6022,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
               id: targetUser.id,
               username: targetUser.username,
               displayName: targetUser.displayName,
-              photoURL: targetUser.photoURL,
+              photoURL: normalizeTrustedAvatarUrl(targetUser.photoURL),
             },
             relationship: followInfo ? {
               isFollowing: followInfo.isFollowing,
@@ -6045,7 +6058,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
           id: targetUser.id,
           username: targetUser.username,
           displayName: targetUser.displayName,
-          photoURL: targetUser.photoURL,
+          photoURL: normalizeTrustedAvatarUrl(targetUser.photoURL),
           bio: targetUser.bio,
           location: targetUser.location,
           website: targetUser.website,
@@ -6672,6 +6685,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       const rel = await getRelationshipMap(req.user.id, filteredUsers.map((u: any) => u.id));
       res.json(filteredUsers.map((u: any) => ({
         ...u,
+        photoURL: normalizeTrustedAvatarUrl(u.photoURL),
         isFollowing: rel[u.id]?.isFollowing ?? false,
         followsYou: rel[u.id]?.followsYou ?? false,
         isFriend: rel[u.id]?.isFriend ?? false,
@@ -6776,7 +6790,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         .innerJoin(users, eq(blocks.blockedUserId, users.id))
         .where(eq(blocks.blockerId, req.user.id));
 
-      res.json(blockedList);
+      res.json(blockedList.map((user) => ({
+        ...user,
+        photoURL: normalizeTrustedAvatarUrl(user.photoURL),
+      })));
     } catch (error) {
       console.error('Get blocked users error:', error);
       res.status(500).json({ message: "Failed to fetch blocked users" });
@@ -7104,7 +7121,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
             firebaseUid: user.firebaseUid
           });
           
-          console.log(`Restored user: ${user.email} (ID: ${user.id})`);
+          console.log(`Restored user ID ${user.id}`);
         } catch (error) {
           console.error(`Failed to restore user ${firebaseUser.uid}:`, error);
           errors.push({
@@ -7383,8 +7400,8 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         try {
           scrapedData.thumbnailUrl = await cacheImageToCloudinary(scrapedData.thumbnailUrl);
         } catch (imageError) {
-          console.error('Failed to cache image, using original URL:', imageError);
-          // Continue with original URL if caching fails
+          console.error('Failed to safely cache imported thumbnail:', imageError);
+          scrapedData.thumbnailUrl = undefined;
         }
       }
 
@@ -7802,7 +7819,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
               }
             }
             if (!resolvedUserId) {
-              console.error(`❌ Stripe subscription ${session.subscription} completed but could not be linked to any user (customer ${session.customer}, email ${session.customer_details?.email})`);
+              console.error(`Stripe subscription ${session.subscription} completed but could not be linked to a user (customer ${session.customer})`);
               try {
                 await sendEmail(
                   'josh@marvelcardvault.com',
@@ -8108,7 +8125,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         stripeSubscriptionId: activeSub.id,
       });
 
-      console.log(`User ${user.id} (${user.email}) restored to Super Hero via restore-subscription (sub: ${activeSub.id})`);
+      console.log(`User ${user.id} restored to Super Hero via restore-subscription (sub: ${activeSub.id})`);
 
       try {
         await sendEmail(
@@ -8973,7 +8990,13 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       }
       
       const pendingImages = await storage.getPendingCardImages();
-      res.json(pendingImages);
+      res.json(pendingImages.map((submission: any) => ({
+        ...submission,
+        user: submission.user ? {
+          ...submission.user,
+          photoURL: normalizeTrustedAvatarUrl(submission.user.photoURL),
+        } : submission.user,
+      })));
     } catch (error) {
       console.error('Get pending images error:', error);
       res.status(500).json({ message: "Failed to fetch pending images" });
@@ -13353,7 +13376,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   app.get("/api/user/push-preference", authenticateUser, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
-      res.json({ push_enabled: user?.pushEnabled ?? true });
+      res.json({ push_enabled: user?.pushEnabled ?? false });
     } catch (error) {
       console.error("[Push] get push-preference error:", error);
       res.status(500).json({ message: "Failed to load push preference" });

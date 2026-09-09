@@ -45,6 +45,7 @@ import { useLocation } from "wouter";
 import { useAppStore } from "@/lib/store";
 import { UpgradeModal } from "@/components/subscription/upgrade-modal";
 import { signOutUser } from "@/lib/firebase";
+import { registerPushNotifications } from "@/services/pushNotifications";
 
 // Social Components
 function SocialFriendsSection() {
@@ -463,9 +464,23 @@ export default function AccountSettings() {
     },
   });
 
-  const togglePushEnabled = () => {
+  const togglePushEnabled = async () => {
     const previous = pushEnabled;
     const next = !previous;
+
+    if (next) {
+      const registered = await registerPushNotifications();
+      if (!registered) {
+        setPushEnabled(false);
+        toast({
+          title: "Push notifications not enabled",
+          description: "Device permission was not granted. You can try again whenever you choose.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setPushEnabled(next);
     pushPreferenceMutation.mutate({ enabled: next, previous });
   };
@@ -905,11 +920,11 @@ export default function AccountSettings() {
                       <h3 className="font-semibold mb-2 text-gray-900">Manage Subscription</h3>
                       <p className="text-sm text-muted-foreground mb-4">
                         Your Super Hero subscription is active.
-                        {userProfile?.stripeCustomerId
+                        {userProfile?.hasStripeCustomer
                           ? ' Update your payment method, view invoices, or cancel anytime through the secure Stripe billing portal.'
                           : ' Manage or cancel it from wherever you signed up.'}
                       </p>
-                      {userProfile?.stripeCustomerId ? (
+                      {userProfile?.hasStripeCustomer ? (
                         <Button
                           onClick={() => portalMutation.mutate()}
                           disabled={portalMutation.isPending}
@@ -1141,7 +1156,7 @@ export default function AccountSettings() {
               <p className="text-gray-500 text-sm mb-6">
                 This will permanently delete your account and all your collection data. This cannot be undone.
               </p>
-              {userProfile?.appleOriginalTransactionId && (
+              {userProfile?.hasAppleSubscription && (
                 <p className="text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm mb-6">
                   Deleting your account does not cancel an App Store subscription. Cancel it in your Apple subscription settings to prevent future renewals.
                 </p>

@@ -199,7 +199,25 @@ export async function resolvePublicImageRedirect(currentUrl: string, location: s
   return (await resolvePublicTarget(redirectUrl.toString())).url;
 }
 
-async function downloadPublicImage(rawUrl: string, redirectsRemaining: number = 3): Promise<{ buffer: Buffer; contentType: string }> {
+function isAllowedImageDomain(url: URL, allowedDomains: readonly string[]): boolean {
+  const hostname = url.hostname.toLowerCase().replace(/\.$/, '');
+  return allowedDomains.some((domain) => {
+    const normalizedDomain = domain.toLowerCase();
+    return hostname === normalizedDomain || hostname.endsWith(`.${normalizedDomain}`);
+  });
+}
+
+export async function downloadPublicImage(
+  rawUrl: string,
+  redirectsRemaining: number = 3,
+  allowedDomains?: readonly string[],
+): Promise<{ buffer: Buffer; contentType: string }> {
+  if (allowedDomains) {
+    const parsed = parsePublicImageUrl(rawUrl);
+    if (!isAllowedImageDomain(parsed, allowedDomains)) {
+      throw new Error('Image URL domain is not allowed');
+    }
+  }
   const target = await resolvePublicTarget(rawUrl);
   return new Promise((resolve, reject) => {
     const transport = target.url.protocol === 'https:' ? https : http;
@@ -224,7 +242,7 @@ async function downloadPublicImage(rawUrl: string, redirectsRemaining: number = 
         response.resume();
         if (redirectsRemaining <= 0) return reject(new Error('Image URL redirected too many times'));
         const nextUrl = new URL(location, target.url).toString();
-        downloadPublicImage(nextUrl, redirectsRemaining - 1).then(resolve, reject);
+        downloadPublicImage(nextUrl, redirectsRemaining - 1, allowedDomains).then(resolve, reject);
         return;
       }
       if (status < 200 || status >= 300) {
@@ -233,9 +251,9 @@ async function downloadPublicImage(rawUrl: string, redirectsRemaining: number = 
       }
 
       const contentType = String(response.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
-      if (!contentType.startsWith('image/')) {
+      if (!isSafeRasterContentType(contentType)) {
         response.resume();
-        return reject(new Error('URL did not return an image'));
+        return reject(new Error('URL did not return a supported raster image'));
       }
       const contentLength = Number(response.headers['content-length'] || 0);
       const maxBytes = 12 * 1024 * 1024;
@@ -261,6 +279,16 @@ async function downloadPublicImage(rawUrl: string, redirectsRemaining: number = 
     request.on('error', reject);
     request.end();
   });
+}
+
+export function isSafeRasterContentType(contentType: string): boolean {
+  return [
+    'image/avif',
+    'image/gif',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+  ].includes(contentType.toLowerCase().split(';')[0].trim());
 }
 
 /**

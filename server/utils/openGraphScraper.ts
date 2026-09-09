@@ -1,5 +1,5 @@
-import fetch from 'node-fetch';
 import * as cheerio from 'cheerio';
+import { downloadPublicText } from '../services/publicHttp';
 
 export interface OpenGraphData {
   title?: string;
@@ -23,27 +23,7 @@ export interface ScrapedSetData {
  */
 export async function scrapeOpenGraphMetadata(url: string): Promise<OpenGraphData> {
   try {
-    // Validate URL
-    const parsedUrl = new URL(url);
-    
-    // Fetch the page with timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; MarvelCardVault/1.0; +https://marvelcardvault.com)',
-      },
-      signal: controller.signal,
-    });
-    
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const html = await response.text();
+    const html = await downloadPublicText(url);
     const $ = cheerio.load(html);
 
     // Extract OpenGraph metadata

@@ -18,6 +18,7 @@ import {
   Instagram, ExternalLink, Settings, Sparkles, UserCircle
 } from "lucide-react";
 import { ComicBolt } from "@/components/ui/comic-bolt";
+import { normalizeExternalProfileUrl } from "@shared/externalProfileUrl";
 import type { XpProgress } from "@shared/xp";
 import { XP_PER_APPROVED_IMAGE, XP_FIRST_APPROVED_IMAGE_BONUS } from "@shared/xp";
 import BadgeIcon from "@/components/profile/BadgeIcon";
@@ -530,18 +531,18 @@ export default function CollectorProfile() {
                 <MapPin className="w-3.5 h-3.5" /> {user.location}
               </span>
             )}
-            {user.website && (
-              <a href={user.website.startsWith("http") ? user.website : `https://${user.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-red-600 hover:underline min-w-0 max-w-full">
+            {normalizeExternalProfileUrl(user.website) && (
+              <a href={normalizeExternalProfileUrl(user.website) ?? undefined} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-red-600 hover:underline min-w-0 max-w-full">
                 <Globe className="w-3.5 h-3.5 shrink-0" /> <span className="break-all">{user.website}</span>
               </a>
             )}
-            {user.instagramUrl && (
-              <a href={user.instagramUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-pink-600 hover:underline">
+            {normalizeExternalProfileUrl(user.instagramUrl, ["instagram.com"]) && (
+              <a href={normalizeExternalProfileUrl(user.instagramUrl, ["instagram.com"]) ?? undefined} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-pink-600 hover:underline">
                 <Instagram className="w-3.5 h-3.5" /> Instagram
               </a>
             )}
-            {user.whatnotUrl && (
-              <a href={user.whatnotUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-purple-600 hover:underline">
+            {normalizeExternalProfileUrl(user.whatnotUrl, ["whatnot.com"]) && (
+              <a href={normalizeExternalProfileUrl(user.whatnotUrl, ["whatnot.com"]) ?? undefined} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-purple-600 hover:underline">
                 <ExternalLink className="w-3.5 h-3.5" /> Whatnot
               </a>
             )}

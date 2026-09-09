@@ -232,7 +232,7 @@ export const googlePlayLaunchJob = new CronJob(
           // Small delay to avoid overwhelming the email service
           await new Promise(resolve => setTimeout(resolve, 100));
         } catch (error) {
-          console.error(`Failed to send to ${user.email}:`, error);
+          console.error(`Failed to send to user ${user.id}:`, error);
           errorCount++;
         }
       }
@@ -291,7 +291,7 @@ export const thanks2uBlastJob = new CronJob(
           // Small delay to avoid overwhelming the email service
           await new Promise(resolve => setTimeout(resolve, 150));
         } catch (error) {
-          console.error(`Failed to send THANKS2U to ${user.email}:`, error);
+          console.error(`Failed to send THANKS2U to user ${user.id}:`, error);
           errorCount++;
         }
       }
@@ -334,7 +334,7 @@ export async function runThanks2uBlastNow(): Promise<{ sent: number; failed: num
       successCount++;
       await new Promise(resolve => setTimeout(resolve, 150));
     } catch (error) {
-      console.error(`Failed to send THANKS2U to ${user.email}:`, error);
+      console.error(`Failed to send THANKS2U to user ${user.id}:`, error);
       errorCount++;
     }
   }
@@ -381,7 +381,7 @@ export const thanks2uFollowUpJob = new CronJob(
           successCount++;
           await new Promise(resolve => setTimeout(resolve, 150));
         } catch (error) {
-          console.error(`Failed to send THANKS2U follow-up to ${user.email}:`, error);
+          console.error(`Failed to send THANKS2U follow-up to user ${user.id}:`, error);
           errorCount++;
         }
       }
@@ -424,7 +424,7 @@ export async function runThanks2uFollowUpNow(): Promise<{ sent: number; failed: 
       successCount++;
       await new Promise(resolve => setTimeout(resolve, 150));
     } catch (error) {
-      console.error(`Failed to send THANKS2U follow-up to ${user.email}:`, error);
+      console.error(`Failed to send THANKS2U follow-up to user ${user.id}:`, error);
       errorCount++;
     }
   }
@@ -501,7 +501,7 @@ export async function runVaultUpgradeNow(): Promise<{ sent: number; failed: numb
       await new Promise(resolve => setTimeout(resolve, 500));
     } catch (err) {
       failed++;
-      console.error(`[VaultUpgrade] Failed to send to ${user.email}:`, err);
+      console.error(`[VaultUpgrade] Failed to send to user ${user.id}:`, err);
     }
   }
 
@@ -596,7 +596,7 @@ export async function runVaultUpgradeDripNow(
         await new Promise((resolve) => setTimeout(resolve, 500)); // 2/sec — respect Resend rate limit
       } catch (err) {
         failed++;
-        console.error(`[VaultUpgradeDrip] Failed to send to ${user.email}:`, err);
+        console.error(`[VaultUpgradeDrip] Failed to send to user ${user.id}:`, err);
       }
     }
 

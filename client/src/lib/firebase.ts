@@ -59,7 +59,6 @@ const provider = new GoogleAuthProvider();
 const syncUserWithBackend = async (user: User) => {
   try {
     const backendUser = await syncFirebaseUserWithBackend(user);
-    console.log('User synced with backend:', backendUser);
       
     // Update app store with backend user data
     const { useAppStore } = await import('@/lib/store');
@@ -99,13 +98,6 @@ const syncUserWithBackend = async (user: User) => {
 export const signInWithGoogle = async () => {
   try {
     console.log('Starting Google sign-in...');
-    console.log('Firebase config check:', {
-      apiKey: !!import.meta.env.VITE_FIREBASE_API_KEY,
-      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-      appId: !!import.meta.env.VITE_FIREBASE_APP_ID,
-      hostname: window.location.hostname,
-      isNative: isNativeApp()
-    });
     
     // Use native authentication on Capacitor (Android/iOS)
     if (isNativeApp()) {

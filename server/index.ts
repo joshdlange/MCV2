@@ -33,6 +33,18 @@ app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+app.use((_req, res, next) => {
+  // MCV never needs to contact devices on a collector's local network.
+  // Cover both the original Chrome directive and the newer split directives.
+  res.setHeader(
+    'Permissions-Policy',
+    'local-network-access=(), local-network=(), loopback-network=()',
+  );
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
 // Serve uploaded images statically with long-term caching
 const staticOpts = { maxAge: '1y', immutable: true };
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), staticOpts));
@@ -41,22 +53,11 @@ app.use('/badge_images', express.static(path.join(process.cwd(), 'badge_images')
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
 
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      // Serializing full response bodies is CPU overhead; skip in production
-      if (capturedJsonResponse && process.env.NODE_ENV !== "production") {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
 
       if (logLine.length > 80) {
         logLine = logLine.slice(0, 79) + "…";
@@ -185,17 +186,7 @@ server.listen({
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS show_activity_in_feed boolean NOT NULL DEFAULT true`);
     // Feed is opt-OUT: activity is visible by default unless the user unticks it.
     await db.execute(sql`ALTER TABLE users ALTER COLUMN show_activity_in_feed SET DEFAULT true`);
-    // One-time flip of existing users to opted-in (guarded so later opt-outs are respected).
-    await db.execute(sql`CREATE TABLE IF NOT EXISTS startup_migrations (name text PRIMARY KEY, run_at timestamp NOT NULL DEFAULT now())`);
-    // Marker + flip commit atomically: if the UPDATE fails, the marker rolls
-    // back too, so a later startup retries instead of silently skipping.
-    await db.transaction(async (tx) => {
-      const flip = await tx.execute(sql`INSERT INTO startup_migrations (name) VALUES ('feed_activity_opt_out_default') ON CONFLICT (name) DO NOTHING RETURNING name`);
-      if ((flip as any).rows?.length > 0) {
-        await tx.execute(sql`UPDATE users SET show_activity_in_feed = true WHERE show_activity_in_feed = false`);
-        console.log('Startup migration: flipped existing users to feed opt-in default');
-      }
-    });
+    // Existing choices are never rewritten: false may be an explicit opt-out.
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_customization_completed_at timestamp`);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_customization_dismissed_at timestamp`);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_customization_skips integer NOT NULL DEFAULT 0`);
@@ -270,7 +261,8 @@ server.listen({
     const { db } = await import('./db');
     const { sql } = await import('drizzle-orm');
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS upgraded_at timestamp`);
-    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS push_enabled boolean NOT NULL DEFAULT true`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS push_enabled boolean NOT NULL DEFAULT false`);
+    await db.execute(sql`ALTER TABLE users ALTER COLUMN push_enabled SET DEFAULT false`);
     // Marks bulk/retro badge grants so feed backfill never turns them into
     // a wall of identical "earned the X badge" posts (Contributor incident).
     await db.execute(sql`ALTER TABLE user_badges ADD COLUMN IF NOT EXISTS retro boolean NOT NULL DEFAULT false`);

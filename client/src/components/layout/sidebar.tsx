@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { avatarUrl } from "@/lib/collectorAvatars";
+import { normalizeTrustedAvatarUrl } from "@shared/trustedAvatarUrl";
 
 // Nav items in intentional groups: home / collect / build / community.
 // Rendered with subtle spacing + thin dividers between groups (no headers).
@@ -158,15 +159,15 @@ export function Sidebar() {
               title="Collector Profile"
             >
               <div className="w-7 h-7 md:w-8 md:h-8 rounded-full overflow-hidden bg-marvel-red flex items-center justify-center flex-shrink-0 group-hover:ring-2 group-hover:ring-blue-500 transition-all">
-                {(avatarUrl(myProfile?.collectorAvatarKey) || user.photoURL) ? (
+                {(avatarUrl(myProfile?.collectorAvatarKey) || normalizeTrustedAvatarUrl(user.photoURL)) ? (
                   <img 
-                    src={avatarUrl(myProfile?.collectorAvatarKey) || user.photoURL || undefined} 
+                    src={avatarUrl(myProfile?.collectorAvatarKey) || normalizeTrustedAvatarUrl(user.photoURL) || undefined}
                     alt="User avatar" 
                     className="w-full h-full object-cover"
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }}
                   />
                 ) : null}
-                <span className={`text-white font-bold text-xs md:text-sm ${(avatarUrl(myProfile?.collectorAvatarKey) || user.photoURL) ? 'hidden' : ''}`}>
+                <span className={`text-white font-bold text-xs md:text-sm ${(avatarUrl(myProfile?.collectorAvatarKey) || normalizeTrustedAvatarUrl(user.photoURL)) ? 'hidden' : ''}`}>
                   {(user.displayName || user.email || 'U').charAt(0).toUpperCase()}
                 </span>
               </div>

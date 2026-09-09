@@ -82,7 +82,7 @@ async function logEmailToDb(
         .limit(1);
       userId = user[0]?.id || null;
     } catch (error) {
-      console.warn(`Could not find userId for email ${to}`);
+      console.warn('Could not resolve user ID for email log');
     }
 
     await db.insert(emailLogs).values({
@@ -94,7 +94,7 @@ async function logEmailToDb(
       providerMessageId: providerMessageId || null,
     });
   } catch (error) {
-    console.warn(`Could not write email_logs entry for ${to}:`, error);
+    console.warn('Could not write email_logs entry');
   }
 }
 
@@ -162,8 +162,8 @@ export async function sendResendEmail(options: ResendEmailOptions): Promise<stri
   try {
     client = getResendClient();
   } catch (error) {
-    console.error(`❌ [Resend] Cannot send email to ${to} | Template: ${template} | ${error instanceof Error ? error.message : error}`);
-    throw error;
+    console.error(`[Resend] Email client unavailable | Template: ${template}`);
+    throw new Error('Email service is unavailable');
   }
 
   try {
@@ -196,15 +196,16 @@ export async function sendResendEmail(options: ResendEmailOptions): Promise<stri
     );
 
     if (error) {
-      throw new Error(`Resend API error: ${error.name || 'unknown'} — ${error.message || JSON.stringify(error)}`);
+      throw new Error(`Resend API error: ${error.name || 'unknown'}`);
     }
 
     if (!skipLog) await logEmailToDb(to, subject, template, jobName, data?.id);
-    console.log(`✅ [Resend] Email sent to ${to} | Template: ${template} | Job: ${jobName || 'immediate'} | Message ID: ${data?.id}`);
+    console.log(`[Resend] Email sent | Template: ${template} | Job: ${jobName || 'immediate'} | Message ID: ${data?.id}`);
     return data?.id;
   } catch (error) {
-    console.error(`❌ [Resend] Error sending email to ${to} | Template: ${template}:`, error);
-    throw error;
+    const errorName = error instanceof Error ? error.name : 'UnknownError';
+    console.error(`[Resend] Error sending email | Template: ${template} | Type: ${errorName}`);
+    throw new Error('Email delivery failed');
   }
 }
 

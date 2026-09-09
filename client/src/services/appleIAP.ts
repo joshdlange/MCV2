@@ -361,7 +361,7 @@ export async function purchaseAppleSubscription(
           });
 
           const data = await response.json();
-          console.log(`${LOG} receipt verification response:`, response.status, data);
+          console.log(`${LOG} receipt verification response status:`, response.status);
 
           if (response.ok && data.success) {
             transaction.finish();

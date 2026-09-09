@@ -69,7 +69,7 @@ export async function reconcileStripeSubscriptions(autoFix: boolean): Promise<St
           stripeSubscriptionId: sub.id,
         });
         result.autoLinked.push({ subId: sub.id, userId: candidate.id, email: candidate.email || '' });
-        console.log(`[Stripe Reconcile] Auto-linked sub ${sub.id} to user ${candidate.id} (${candidate.email})`);
+        console.log(`[Stripe Reconcile] Auto-linked sub ${sub.id} to user ${candidate.id}`);
         continue;
       } catch (e) {
         result.errors++;

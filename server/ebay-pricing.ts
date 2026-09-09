@@ -319,8 +319,6 @@ export class EbayPricingService {
       };
       
       console.log(`📤 Making Browse API request...`);
-      console.log(`🔑 Using OAuth token: ${accessToken.substring(0, 20)}...`);
-      console.log(`📋 Request headers:`, JSON.stringify(headers, null, 2));
       
       this.totalRequestCount++; // count Browse API calls toward the call budget
       const response = await fetch(url, {
@@ -483,7 +481,6 @@ export class EbayPricingService {
       await this.waitForRateLimit();
       
       console.log('eBay API Request URL:', `${this.findingApiUrl}?${params.toString()}`);
-      console.log('eBay API Headers:', headers);
       
       // Check rate limits before making request
       if (!this.canMakeRequest()) {

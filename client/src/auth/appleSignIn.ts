@@ -55,7 +55,7 @@ export async function signInWithAppleUnified(): Promise<UserCredential> {
     const identityToken = result.response.identityToken;
 
     if (!identityToken) {
-      console.error("[AppleSignIn] No identityToken in response:", JSON.stringify(result.response));
+      console.error("[AppleSignIn] No identityToken in response");
       throw new Error("No identity token returned from Apple Sign-In");
     }
 

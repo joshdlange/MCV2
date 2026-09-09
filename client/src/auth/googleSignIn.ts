@@ -59,8 +59,7 @@ async function initSocialLoginIfNeeded() {
 
   console.log(
     "[AuthInit] initialize start — platform:", (window as any).Capacitor?.getPlatform?.() ?? "web",
-    "| iOSClientId present:", !!IOS_CLIENT_ID,
-    "| webClientId:", WEB_CLIENT_ID.substring(0, 20) + "…"
+    "| iOSClientId present:", !!IOS_CLIENT_ID
   );
 
   if (isIOSNative() && !IOS_CLIENT_ID) {
@@ -101,7 +100,7 @@ export async function signInWithGoogleUnified(): Promise<UserCredential> {
     throw loginErr;
   }
 
-  console.log('[GoogleSignIn] SocialLogin.login() response:', JSON.stringify(res).substring(0, 500));
+  console.log('[GoogleSignIn] Native sign-in completed');
 
   let idToken =
     res?.idToken ||
@@ -133,7 +132,7 @@ export async function signInWithGoogleUnified(): Promise<UserCredential> {
   }
 
   if (!idToken) {
-    console.error("[GoogleSignIn] No idToken found. Full response:", JSON.stringify(res, null, 2));
+    console.error("[GoogleSignIn] No idToken found");
     throw new Error("No idToken returned from native Google login. Please try again.");
   }
 

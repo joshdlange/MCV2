@@ -12,7 +12,7 @@
     "generate:badge-images": "node scripts/generate-badge-thumbnails.mjs",
     "test:badges": "tsx --test server/tests/never-leave-you-again.test.ts server/tests/vault-regular.test.ts",
     "test:drive-sync": "tsx --test server/tests/drive-sync-durable.test.ts",
-    "test:release": "tsx --test server/tests/startup-gate.test.ts client/src/lib/deployRecovery.test.ts client/src/lib/backendUserSync.test.ts client/src/lib/authHeaders.test.ts client/src/lib/badgeImages.test.ts client/src/lib/dailyMission.test.ts server/tests/firebase-user-sync.test.ts server/tests/firebase-user-recovery.test.ts server/tests/firebase-user-recovery-marker.test.ts server/tests/verified-firebase-identity.test.ts server/tests/feed-card-linkage.test.ts server/tests/feed-card-actions.test.ts shared/cardNumberSort.test.ts server/tests/card-number-sql-sort.test.ts server/tests/legacy-set-merge-regression.test.ts server/tests/parallel-subset-variants.test.ts server/tests/account-deletion.test.ts server/tests/onboarding-compensation.test.ts server/tests/vault-regular.test.ts"
+    "test:release": "tsx --test server/tests/startup-gate.test.ts client/src/lib/deployRecovery.test.ts client/src/lib/backendUserSync.test.ts client/src/lib/authHeaders.test.ts client/src/lib/badgeImages.test.ts client/src/lib/dailyMission.test.ts server/tests/apple-identity-token.test.ts server/tests/image-proxy-url.test.ts server/tests/public-http.test.ts server/tests/user-responses.test.ts server/tests/firebase-user-sync.test.ts server/tests/firebase-user-recovery.test.ts server/tests/firebase-user-recovery-marker.test.ts server/tests/verified-firebase-identity.test.ts server/tests/feed-card-linkage.test.ts server/tests/feed-card-actions.test.ts shared/cardNumberSort.test.ts shared/externalProfileUrl.test.ts shared/trustedAvatarUrl.test.ts server/tests/card-number-sql-sort.test.ts server/tests/legacy-set-merge-regression.test.ts server/tests/parallel-subset-variants.test.ts server/tests/account-deletion.test.ts server/tests/onboarding-compensation.test.ts server/tests/vault-regular.test.ts"
   },
   "dependencies": {
     "@capacitor-community/apple-sign-in": "^7.1.0",
@@ -61,9 +61,10 @@
     "@types/node-fetch": "^2.6.12",
     "@types/nodemailer": "^7.0.4",
     "@types/pg": "^8.15.4",
+    "@types/request": "^2.48.13",
     "cheerio": "^1.1.2",
     "class-variance-authority": "^0.7.1",
-    "cloudinary": "^2.6.1",
+    "cloudinary": "^2.11.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "compression": "^1.8.1",
@@ -80,8 +81,10 @@
     "fast-xml-parser": "^5.4.2",
     "firebase": "^11.8.1",
     "firebase-admin": "^13.4.0",
+    "form-data": "^2.5.5",
     "framer-motion": "^11.13.1",
     "input-otp": "^1.4.2",
+    "jose": "^6.2.12",
     "lucide-react": "^0.453.0",
     "memorystore": "^1.6.7",
     "multer": "^2.0.0",
@@ -141,5 +144,21 @@
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "1.13.5",
+    "@types/node-fetch": {
+      "form-data": "4.0.6"
+    },
+    "@types/request": {
+      "form-data": "2.5.5"
+    },
+    "@aws-sdk/xml-builder": {
+      "fast-xml-parser": "5.3.5"
+    },
+    "brace-expansion": "2.1.4",
+    "browserslist": "4.28.9",
+    "protobufjs": "7.5.5",
+    "websocket-driver": "0.7.5"
   }
 }

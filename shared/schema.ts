@@ -42,7 +42,7 @@ export const users = pgTable("users", {
   heardAbout: text("heard_about"),
   favoriteSets: text("favorite_sets").array(),
   marketingOptIn: boolean("marketing_opt_in").default(true).notNull(),
-  pushEnabled: boolean("push_enabled").default(true).notNull(),
+  pushEnabled: boolean("push_enabled").default(false).notNull(),
   // Organic-funnel attribution: the PC binder share token that brought this
   // user in, captured at account creation only (never user-editable — must
   // NOT be added to the PUT /api/users allowlist).

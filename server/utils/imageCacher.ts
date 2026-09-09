@@ -13,16 +13,13 @@ export async function cacheImageToCloudinary(
   folderPrefix = 'upcoming-sets'
 ): Promise<string> {
   try {
-    // Validate URL
-    const parsedUrl = new URL(imageUrl);
-    
     // Generate a unique filename based on the source URL
-    const hash = crypto.createHash('md5').update(imageUrl).digest('hex');
-    const ext = parsedUrl.pathname.split('.').pop() || 'jpg';
+    const hash = crypto.createHash('sha256').update(imageUrl).digest('hex');
     const publicId = `${folderPrefix}/${hash}`;
+    const { downloadPublicImage } = await import('../services/imageMigration');
+    const { buffer, contentType } = await downloadPublicImage(imageUrl);
 
-    // Upload to Cloudinary directly from URL
-    const result = await cloudinary.uploader.upload(imageUrl, {
+    const result = await cloudinary.uploader.upload(`data:${contentType};base64,${buffer.toString('base64')}`, {
       public_id: publicId,
       folder: folderPrefix,
       overwrite: false, // Don't re-upload if already exists

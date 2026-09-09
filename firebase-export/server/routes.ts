@@ -53,7 +53,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 // Middleware to authenticate Firebase users
 const authenticateUser = async (req: any, res: any, next: any) => {
   console.log("AUTH MIDDLEWARE HIT");
-  console.log("Authorization Header:", req.headers.authorization);
   
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {

@@ -5,16 +5,15 @@ import { apiRequest } from '@/lib/queryClient';
 //
 // Both native apps are Capacitor shells that load this web app from
 // https://app.marvelcardvault.com, so this module is what actually asks the
-// OS for notification permission and hands the FCM token to the backend.
+// OS for notification permission and hands the FCM token to the backend. It
+// must only be called after an explicit collector action in onboarding or
+// Settings; authentication and app-resume paths must never call it.
 //
 // On iOS this only produces deliverable pushes once the APNs key is uploaded
 // to the Firebase project and the Xcode project has the Push Notifications
 // capability. Until then registration fails gracefully (registrationError /
-// timeout below) and we simply skip — it can never break login.
-
-// Registration is triggered from onAuthStateChanged, which fires on token
-// refresh and on appStateChange. These guards keep us from re-POSTing the same
-// token on every one of those.
+// timeout below) and we simply skip without blocking the chosen UI action.
+// These guards also keep repeated user actions from re-POSTing the same token.
 let registering = false;
 let lastRegisteredToken: string | null = null;
 let tapListenerAttached = false;

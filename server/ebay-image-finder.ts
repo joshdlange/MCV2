@@ -499,24 +499,11 @@ export function checkConfiguration(): void {
   
   // Check eBay configuration
   const ebayAppId = process.env.EBAY_APP_ID_PROD || process.env.EBAY_APP_ID || '';
-  console.log(`🔑 eBay App ID configured: ${ebayAppId ? 'YES' : 'NO'}`);
-  if (ebayAppId) {
-    console.log(`🔑 eBay App ID (first 20 chars): ${ebayAppId.substring(0, 20)}...`);
-    console.log(`🔑 eBay App ID length: ${ebayAppId.length} characters`);
-  }
   
   // Check Cloudinary configuration
   const cloudinaryName = process.env.CLOUDINARY_CLOUD_NAME || '';
   const cloudinaryKey = process.env.CLOUDINARY_API_KEY || '';
   const cloudinarySecret = process.env.CLOUDINARY_API_SECRET || '';
-  
-  console.log(`☁️ Cloudinary Cloud Name: ${cloudinaryName ? 'YES' : 'NO'}`);
-  console.log(`☁️ Cloudinary API Key: ${cloudinaryKey ? 'YES' : 'NO'}`);
-  console.log(`☁️ Cloudinary API Secret: ${cloudinarySecret ? 'YES' : 'NO'}`);
-  
-  if (cloudinaryName) {
-    console.log(`☁️ Cloudinary Cloud Name: ${cloudinaryName}`);
-  }
 }
 
 /**

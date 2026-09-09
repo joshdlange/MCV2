@@ -13,6 +13,7 @@ import { useAppStore } from "@/lib/store";
 import { auth } from "@/lib/firebase";
 import { AVATAR_KEYS } from "@/lib/collectorAvatars";
 import { CollectorAvatar } from "@/components/profile/CollectorAvatar";
+import { registerPushNotifications } from "@/services/pushNotifications";
 
 /**
  * Single-screen onboarding: username + avatar + opt-ins, one "Enter the Vault"
@@ -33,7 +34,7 @@ export function Onboarding() {
 
   const [avatarKey, setAvatarKey] = useState<string | null>(null);
   const [marketingOptIn, setMarketingOptIn] = useState(true);
-  const [pushEnabled, setPushEnabled] = useState(true);
+  const [pushEnabled, setPushEnabled] = useState(false);
 
   useEffect(() => {
     const validateUsername = async () => {
@@ -93,6 +94,15 @@ export function Onboarding() {
         marketingOptIn,
         pushEnabled
       });
+
+      if (pushEnabled) {
+        const registered = await registerPushNotifications();
+        if (!registered) {
+          await apiRequest("POST", "/api/user/push-preference", {
+            push_enabled: false,
+          });
+        }
+      }
 
       // Save the chosen avatar (non-fatal, editable in Settings) and —
       // independently — mark the old customization step done so the legacy

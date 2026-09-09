@@ -51,10 +51,13 @@ export function ProfileCustomization() {
   const vAvatar = avatarKey ?? profile.collectorAvatarKey ?? null;
   const vTagline = tagline ?? profile.bio ?? "";
   const vFocus = focus ?? profile.collectorFocus ?? "";
-  // Toggles default ON in this step (per Joshua); saving writes the shown values.
-  const vPublic = profilePublic ?? (profile.profileVisibility ?? "public") !== "private";
-  const vFollowers = vPublic && (allowFollowers ?? (profile.allowFollowers || !profile.profileCustomizationCompletedAt));
-  const vActivity = showActivity ?? (profile.showActivityInFeed || !profile.profileCustomizationCompletedAt);
+  // Existing privacy choices always win; defaults apply only when a value is absent.
+  const savedVisibility = profile.profileVisibility ?? "public";
+  const vPublic = profilePublic ?? savedVisibility === "public";
+  const savedFollowers = typeof profile.allowFollowers === "boolean" ? profile.allowFollowers : true;
+  const savedActivity = typeof profile.showActivityInFeed === "boolean" ? profile.showActivityInFeed : true;
+  const vFollowers = profilePublic === false ? false : (allowFollowers ?? savedFollowers);
+  const vActivity = showActivity ?? savedActivity;
 
   const finish = async (action: "complete" | "dismiss") => {
     await apiRequest("POST", `/api/profile-customization/${action}`);
@@ -80,7 +83,10 @@ export function ProfileCustomization() {
         collectorFocus: vFocus,
         allowFollowers: vFollowers,
         showActivityInFeed: vActivity,
-        privacySettings: { profileVisibility: vPublic ? "public" : "private" },
+        privacySettings: {
+          profileVisibility:
+            profilePublic === null ? savedVisibility : (profilePublic ? "public" : "private"),
+        },
       });
       await finish("complete");
       toast({ title: "Collector profile saved!", description: "You can update it anytime in Settings." });

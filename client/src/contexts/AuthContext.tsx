@@ -5,7 +5,6 @@ import { handleRedirect } from '@/lib/handleRedirect';
 import { useAppStore } from '@/lib/store';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
-import { registerPushNotifications } from '@/services/pushNotifications';
 import { getNativeLaunchSession } from '@/lib/nativeLaunchSession';
 import {
   syncFirebaseUserWithBackend,
@@ -67,7 +66,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     nativeLogin?: { sessionId: string; platform: "android" | "ios" },
   ) => {
     const backendUser = await syncFirebaseUserWithBackend(firebaseUser, { nativeLogin });
-    console.log('User synced with backend:', backendUser);
     return backendUser;
   }, []);
 
@@ -91,7 +89,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       applyBackendUser(backendUser);
       setUser(firebaseUser);
       setSyncError(false);
-      void registerPushNotifications();
       return true;
     } catch (error) {
       if (!isCurrent()) return false;
@@ -112,7 +109,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       applyBackendUser(backendUser);
       setUser(firebaseUser);
       setSyncError(false);
-      void registerPushNotifications();
     } catch (error) {
       if (auth.currentUser?.uid !== firebaseUser.uid) return;
       console.error('Backend account refresh failed; blocking app access:', error);

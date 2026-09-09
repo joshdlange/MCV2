@@ -1,5 +1,4 @@
 import { v2 as cloudinary } from 'cloudinary';
-import fetch from 'node-fetch';
 
 // Configure Cloudinary
 cloudinary.config({
@@ -171,7 +170,16 @@ export async function uploadMainSetThumbnail(
 
 // Check if URL is already a Cloudinary URL
 export function isCloudinaryUrl(url: string): boolean {
-  return url.includes('res.cloudinary.com') || url.includes('cloudinary.com');
+  try {
+    const parsed = new URL(url);
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
+      return false;
+    }
+    const hostname = parsed.hostname.toLowerCase().replace(/\.$/, '');
+    return hostname === 'cloudinary.com' || hostname.endsWith('.cloudinary.com');
+  } catch {
+    return false;
+  }
 }
 
 // Download external image URL and upload to Cloudinary
@@ -188,34 +196,8 @@ export async function downloadAndUploadToCloudinary(
 
     console.log(`Downloading external image for main set ${mainSetId}: ${externalUrl}`);
 
-    // Fetch the image from the external URL
-    const response = await fetch(externalUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'image/*,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to download image: ${response.status} ${response.statusText}`);
-    }
-
-    // Get content type from response headers
-    const contentType = response.headers.get('content-type') || 'image/jpeg';
-    
-    // Validate it's actually an image
-    if (!contentType.startsWith('image/')) {
-      throw new Error(`Invalid content type: ${contentType}`);
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    
-    // Check file size (max 10MB)
-    if (buffer.length > 10 * 1024 * 1024) {
-      throw new Error(`Image too large: ${buffer.length} bytes`);
-    }
+    const { downloadPublicImage } = await import('./services/imageMigration');
+    const { contentType, buffer } = await downloadPublicImage(externalUrl);
 
     // Upload to Cloudinary with proper mime type
     const uploadOptions: any = {
@@ -237,8 +219,7 @@ export async function downloadAndUploadToCloudinary(
     return result.secure_url;
   } catch (error) {
     console.error(`Failed to download/upload external image for main set ${mainSetId}:`, error);
-    // Return original URL if download fails
-    return externalUrl;
+    throw error;
   }
 }
 

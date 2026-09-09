@@ -1,4 +1,5 @@
 import { avatarUrl } from "@/lib/collectorAvatars";
+import { normalizeTrustedAvatarUrl } from "@shared/trustedAvatarUrl";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -733,9 +734,9 @@ function MarketplaceContent() {
               {selectedItem.seller && (
                 <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
                   <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
-                    {(avatarUrl(selectedItem.seller.collectorAvatarKey) ?? selectedItem.seller.photoURL) ? (
+                    {(avatarUrl(selectedItem.seller.collectorAvatarKey) ?? normalizeTrustedAvatarUrl(selectedItem.seller.photoURL)) ? (
                       <img 
-                        src={avatarUrl(selectedItem.seller.collectorAvatarKey) ?? selectedItem.seller.photoURL ?? undefined} 
+                        src={avatarUrl(selectedItem.seller.collectorAvatarKey) ?? normalizeTrustedAvatarUrl(selectedItem.seller.photoURL) ?? undefined}
                         alt={selectedItem.seller.username || 'Seller'}
                         className="w-full h-full object-cover"
                       />

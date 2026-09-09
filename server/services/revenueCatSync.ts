@@ -117,7 +117,7 @@ export async function reconcileRevenueCatSubscriptions(autoFix: boolean): Promis
         if (autoFix) {
           await storage.updateUser(u.id, { plan: 'SUPER_HERO', subscriptionStatus: 'active' });
           record.fixed = true;
-          console.log(`[RC Reconcile] Auto-upgraded user ${u.id} (${u.email}) to SUPER_HERO`);
+          console.log(`[RC Reconcile] Auto-upgraded user ${u.id} to SUPER_HERO`);
         }
       })
     );

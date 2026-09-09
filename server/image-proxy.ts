@@ -1,49 +1,57 @@
 import { Request, Response } from 'express';
-import fetch from 'node-fetch';
+import { downloadPublicImage } from './services/imageMigration';
 
 // Cache for storing image responses to avoid repeated requests
 const imageCache = new Map<string, { data: Buffer; contentType: string; timestamp: number }>();
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+const ALLOWED_IMAGE_DOMAINS = [
+  'storage.googleapis.com',
+  'images.pricecharting.com',
+  'drive.google.com',
+  'res.cloudinary.com',
+  'ebayimg.com',
+  'walmartimages.com',
+  'cdn.shopify.com',
+  'media-amazon.com',
+  'assets.dacw.co',
+  'dacardworld1.imgix.net',
+  'collectorsavenue.com',
+  'tradercracks.com',
+  'thetoytemple.com',
+] as const;
 
-export async function proxyImage(req: Request, res: Response) {
+export function normalizeProxiedImageUrl(rawUrl: unknown): string | null {
+  if (typeof rawUrl !== 'string' || rawUrl.length > 2_048) return null;
   try {
-    let imageUrl = req.query.url as string;
-    
-    if (!imageUrl) {
-      return res.status(400).json({ error: 'Image URL is required' });
+    const parsed = new URL(rawUrl);
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
+      return null;
     }
 
-    // Convert Google Drive URLs to direct download format
-    if (imageUrl.includes('drive.google.com')) {
-      const fileIdMatch = imageUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    const hostname = parsed.hostname.toLowerCase().replace(/\.$/, '');
+    const allowed = ALLOWED_IMAGE_DOMAINS.some(
+      (domain) => hostname === domain || hostname.endsWith(`.${domain}`),
+    );
+    if (!allowed) return null;
+
+    if (hostname === 'drive.google.com') {
+      const fileIdMatch = parsed.pathname.match(/^\/file\/d\/([a-zA-Z0-9_-]+)(?:\/|$)/);
       if (fileIdMatch) {
-        imageUrl = `https://drive.google.com/uc?export=view&id=${fileIdMatch[1]}`;
+        return `https://drive.google.com/uc?export=view&id=${fileIdMatch[1]}`;
       }
     }
 
-    // Validate URL to prevent abuse
-    const allowedDomains = [
-      'storage.googleapis.com',
-      'images.pricecharting.com',
-      'drive.google.com',
-      'res.cloudinary.com',
-      'i.ebayimg.com',
-      'ebayimg.com',
-      'i5.walmartimages.com',
-      'walmartimages.com',
-      'cdn.shopify.com',
-      'm.media-amazon.com',
-      'media-amazon.com',
-      'assets.dacw.co',
-      'dacardworld1.imgix.net',
-      'collectorsavenue.com',
-      'tradercracks.com',
-      'thetoytemple.com'
-    ];
-    
-    const isAllowed = allowedDomains.some(domain => imageUrl.includes(domain));
-    if (!isAllowed) {
-      return res.status(403).json({ error: 'Domain not allowed' });
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
+export async function proxyImage(req: Request, res: Response) {
+  try {
+    const imageUrl = normalizeProxiedImageUrl(req.query.url);
+    if (!imageUrl) {
+      return res.status(400).json({ error: 'Invalid or disallowed image URL' });
     }
 
     // Check cache first
@@ -54,24 +62,11 @@ export async function proxyImage(req: Request, res: Response) {
       return res.send(cached.data);
     }
 
-    // Fetch image from external source
-    const response = await fetch(imageUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'image/*,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate',
-        'Referer': 'https://www.pricecharting.com/',
-      },
-    });
-
-    if (!response.ok) {
-      console.error(`Failed to fetch image: ${response.status} ${response.statusText}`);
-      return res.status(response.status).json({ error: 'Failed to fetch image' });
-    }
-
-    const contentType = response.headers.get('content-type') || 'image/jpeg';
-    const buffer = await response.buffer();
+    const { contentType, buffer } = await downloadPublicImage(
+      imageUrl,
+      3,
+      ALLOWED_IMAGE_DOMAINS,
+    );
 
     // Cache the result
     imageCache.set(imageUrl, {
@@ -90,6 +85,8 @@ export async function proxyImage(req: Request, res: Response) {
     }
 
     res.set('Content-Type', contentType);
+    res.set('Content-Security-Policy', "sandbox; default-src 'none'");
+    res.set('X-Content-Type-Options', 'nosniff');
     res.set('Cache-Control', 'public, max-age=86400'); // 24 hours
     res.send(buffer);
 
