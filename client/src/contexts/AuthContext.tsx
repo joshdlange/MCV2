@@ -10,7 +10,6 @@ import { getNativeLaunchSession } from '@/lib/nativeLaunchSession';
 import {
   syncFirebaseUserWithBackend,
   type BackendUser,
-  type NativeReviewMilestone,
 } from '@/lib/backendUserSync';
 
 interface AuthContextType {
@@ -20,8 +19,6 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
   retrySync: () => Promise<void>;
   signOutAfterSyncError: () => Promise<void>;
-  nativeReviewMilestone: NativeReviewMilestone | null;
-  dismissNativeReviewMilestone: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -31,8 +28,6 @@ const AuthContext = createContext<AuthContextType>({
   refreshUser: async () => {},
   retrySync: async () => {},
   signOutAfterSyncError: async () => {},
-  nativeReviewMilestone: null,
-  dismissNativeReviewMilestone: () => {},
 });
 
 export const useAuth = () => {
@@ -47,8 +42,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncError, setSyncError] = useState(false);
-  const [nativeReviewMilestone, setNativeReviewMilestone] =
-    useState<NativeReviewMilestone | null>(null);
   const { setCurrentUser } = useAppStore();
 
   const applyBackendUser = useCallback((backendUser: BackendUser) => {
@@ -62,6 +55,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       plan: backendUser.plan,
       subscriptionStatus: backendUser.subscriptionStatus,
       onboardingComplete: backendUser.onboardingComplete || false,
+      totalLogins: backendUser.totalLogins || 0,
       username: backendUser.username
     });
   }, [setCurrentUser]);
@@ -95,7 +89,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       );
       if (!isCurrent()) return false;
       applyBackendUser(backendUser);
-      setNativeReviewMilestone(backendUser.nativeReviewMilestone ?? null);
       setUser(firebaseUser);
       setSyncError(false);
       void registerPushNotifications();
@@ -105,7 +98,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Backend account sync failed; blocking app access:', error);
       setUser(null);
       setCurrentUser(null);
-      setNativeReviewMilestone(null);
       setSyncError(true);
       return false;
     } finally {
@@ -126,7 +118,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Backend account refresh failed; blocking app access:', error);
       setUser(null);
       setCurrentUser(null);
-      setNativeReviewMilestone(null);
       setSyncError(true);
     }
   }, [applyBackendUser, setCurrentUser, syncUserWithBackend]);
@@ -147,7 +138,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setSyncError(false);
       setUser(null);
       setCurrentUser(null);
-      setNativeReviewMilestone(null);
       return;
     }
     await completeFirebaseSession(firebaseUser);
@@ -157,7 +147,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     await signOutUser();
     setUser(null);
     setCurrentUser(null);
-    setNativeReviewMilestone(null);
     setSyncError(false);
     setLoading(false);
   };
@@ -212,7 +201,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } else {
           setUser(null);
           setCurrentUser(null);
-          setNativeReviewMilestone(null);
           setSyncError(false);
           setLoading(false);
         }
@@ -238,8 +226,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     refreshUser,
     retrySync,
     signOutAfterSyncError,
-    nativeReviewMilestone,
-    dismissNativeReviewMilestone: () => setNativeReviewMilestone(null),
   };
 
   return (

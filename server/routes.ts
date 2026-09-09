@@ -38,10 +38,7 @@ import { sql, eq, ne, ilike, like, and, or, isNull, count, exists, desc, inArray
 import { findAndUpdateCardImage, batchUpdateCardImages } from "./ebay-image-finder";
 import { registerPerformanceRoutes } from "./performance-routes";
 import { badgeService } from "./badge-service";
-import {
-  acknowledgeVaultRegularMoment,
-  recordNativeMobileLogin,
-} from "./services/nativeMobileLogin";
+import { recordNativeMobileLogin } from "./services/nativeMobileLogin";
 import { marketTrendsService } from "./market-trends-service";
 import { ebayBrowseApi } from "./ebay-browse-api";
 import { ebayMarketplaceInsights } from "./ebay-marketplace-insights";
@@ -377,30 +374,24 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         }
       }
       
-      let nativeReviewMilestone: {
-        key: "vault_regular";
-        loginNumber: number;
-        platform: "android" | "ios";
-        badge: {
-          name: string;
-          description: string;
-          iconUrl: string | null;
-          rarity: string;
-        };
-      } | null = null;
-
       // Track login and check badges on sync
       if (user) {
         // Capture the PRE-login lastLogin before recordUserLogin overwrites it,
         // so dormant-return badge checks compare against the real prior visit.
         const priorLastLogin = user.lastLogin;
-        storage.recordUserLogin(firebaseUid).catch(error => {
+        const wasFirstLogin = !user.lastLogin;
+        try {
+          const totalLogins = await storage.recordUserLogin(firebaseUid);
+          if (totalLogins !== undefined) {
+            user = { ...user, totalLogins };
+          }
+        } catch (error) {
           console.error('Failed to track login:', error);
-        });
+        }
         await badgeService.checkBadgesOnLogin(user.id, priorLastLogin);
         
         // Run retroactive badge checks for new users
-        if (!user.lastLogin) {
+        if (wasFirstLogin) {
           await badgeService.runRetroactiveBadgeChecks(user.id);
         }
 
@@ -412,27 +403,14 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
             nativeLogin.data.sessionId,
             nativeLogin.data.platform,
           );
-          const badge = await badgeService.checkVaultRegular(
+          await badgeService.checkVaultRegular(
             user.id,
             nativeResult.loginNumber,
           );
-          if (badge && !nativeResult.milestoneAcknowledged) {
-            nativeReviewMilestone = {
-              key: "vault_regular",
-              loginNumber: nativeResult.loginNumber,
-              platform: nativeResult.platform,
-              badge: {
-                name: badge.name,
-                description: badge.description,
-                iconUrl: badge.iconUrl,
-                rarity: badge.rarity,
-              },
-            };
-          }
         }
       }
       
-      res.json({ user, nativeReviewMilestone });
+      res.json({ user });
     } catch (error) {
       if (error instanceof FirebaseSyncAuthError) {
         return res.status(error.status).json({
@@ -442,38 +420,6 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       }
       console.error('Auth sync error:', error);
       res.status(500).json({ message: 'Failed to sync user' });
-    }
-  });
-
-  app.post("/api/mobile-review/vault-regular/acknowledge", authenticateUser, async (req: any, res) => {
-    try {
-      const claim = z.object({
-        claimId: z.string()
-          .min(16)
-          .max(128)
-          .regex(/^[A-Za-z0-9:_-]+$/),
-      }).safeParse(req.body);
-      if (!claim.success) {
-        return res.status(400).json({
-          message: "A valid milestone claim is required",
-          code: "INVALID_MILESTONE_CLAIM",
-        });
-      }
-
-      const result = await acknowledgeVaultRegularMoment(
-        req.user.id,
-        claim.data.claimId,
-      );
-      if (!result.eligible) {
-        return res.status(409).json({
-          message: "Vault Regular has not been earned yet",
-          code: "VAULT_REGULAR_NOT_EARNED",
-        });
-      }
-      res.json({ success: true, ...result });
-    } catch (error) {
-      console.error("Failed to acknowledge Vault Regular moment:", error);
-      res.status(500).json({ message: "Failed to save badge moment" });
     }
   });
 

@@ -14,6 +14,7 @@ interface AppState {
     plan: string;
     subscriptionStatus: string;
     onboardingComplete: boolean;
+    totalLogins: number;
     username?: string;
   } | null;
   toggleAdminMode: () => void;

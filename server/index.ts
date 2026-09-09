@@ -115,8 +115,6 @@ server.listen({
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS trusted_uploader boolean NOT NULL DEFAULT false`);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS image_admin boolean NOT NULL DEFAULT false`);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS native_mobile_logins integer NOT NULL DEFAULT 0`);
-    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS vault_regular_moment_acknowledged_at timestamp`);
-    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS vault_regular_moment_claim_id text`);
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS native_mobile_login_events (
         id serial PRIMARY KEY,

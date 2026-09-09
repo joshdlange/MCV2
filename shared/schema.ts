@@ -51,8 +51,6 @@ export const users = pgTable("users", {
   loginStreak: integer("login_streak").default(0).notNull(),
   totalLogins: integer("total_logins").default(0).notNull(),
   nativeMobileLogins: integer("native_mobile_logins").default(0).notNull(),
-  vaultRegularMomentAcknowledgedAt: timestamp("vault_regular_moment_acknowledged_at"),
-  vaultRegularMomentClaimId: text("vault_regular_moment_claim_id"),
   lastInactivityEmailSent: timestamp("last_inactivity_email_sent"),
   lastWeeklyDigestSent: timestamp("last_weekly_digest_sent"),
   // Marketplace fields

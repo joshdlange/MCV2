@@ -20,8 +20,6 @@ import heroLogoWhite from "@assets/noun-super-hero-380874-FFFFFF.png";
 import { Login } from "@/components/auth/Login";
 import { Onboarding, HeardAboutPrompt } from "@/components/auth/Onboarding";
 import { ProfileCustomization } from "@/components/profile/ProfileCustomization";
-import { NativeReviewMilestone } from "@/components/reviews/NativeReviewMilestone";
-import { IntroFlowProvider } from "@/contexts/IntroFlowContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 function RouteErrorBoundary({ children }: { children: React.ReactNode }) {
@@ -308,15 +306,14 @@ function AuthenticatedApp() {
   }
 
   return (
-    <IntroFlowProvider>
+    <>
       <Onboarding />
       <ProfileCustomization />
       <HeardAboutPrompt />
-      <NativeReviewMilestone />
       <AppLayout>
         <Router />
       </AppLayout>
-    </IntroFlowProvider>
+    </>
   );
 }
 

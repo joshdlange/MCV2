@@ -7,13 +7,6 @@ export interface NativeMobileLoginResult {
   recorded: boolean;
   loginNumber: number;
   platform: NativeMobilePlatform;
-  milestoneAcknowledged: boolean;
-}
-
-export interface VaultRegularAcknowledgementResult {
-  claimed: boolean;
-  eligible: boolean;
-  acknowledged: boolean;
 }
 
 /**
@@ -31,9 +24,8 @@ export async function recordNativeMobileLogin(
     await tx.execute(sql`SELECT pg_advisory_xact_lock(917204, ${userId})`);
 
     const existing: any = await tx.execute(sql`
-      SELECT e.login_number, u.vault_regular_moment_acknowledged_at
+      SELECT e.login_number
       FROM native_mobile_login_events e
-      JOIN users u ON u.id = e.user_id
       WHERE e.user_id = ${userId} AND e.session_id = ${sessionId}
       LIMIT 1
     `);
@@ -43,12 +35,11 @@ export async function recordNativeMobileLogin(
         recorded: false,
         loginNumber: Number(existingRow.login_number),
         platform,
-        milestoneAcknowledged: Boolean(existingRow.vault_regular_moment_acknowledged_at),
       };
     }
 
     const userResult: any = await tx.execute(sql`
-      SELECT native_mobile_logins, vault_regular_moment_acknowledged_at
+      SELECT native_mobile_logins
       FROM users
       WHERE id = ${userId}
       FOR UPDATE
@@ -73,41 +64,6 @@ export async function recordNativeMobileLogin(
       recorded: true,
       loginNumber,
       platform,
-      milestoneAcknowledged: Boolean(user.vault_regular_moment_acknowledged_at),
     };
   });
-}
-
-export async function acknowledgeVaultRegularMoment(
-  userId: number,
-  claimId: string,
-): Promise<VaultRegularAcknowledgementResult> {
-  const claimedResult: any = await db.execute(sql`
-    UPDATE users
-    SET vault_regular_moment_acknowledged_at = now(),
-        vault_regular_moment_claim_id = ${claimId}
-    WHERE id = ${userId}
-      AND native_mobile_logins >= 4
-      AND vault_regular_moment_acknowledged_at IS NULL
-    RETURNING id
-  `);
-  if ((claimedResult.rows ?? claimedResult).length > 0) {
-    return { claimed: true, eligible: true, acknowledged: true };
-  }
-
-  const statusResult: any = await db.execute(sql`
-    SELECT native_mobile_logins,
-           vault_regular_moment_acknowledged_at,
-           vault_regular_moment_claim_id
-    FROM users
-    WHERE id = ${userId}
-    LIMIT 1
-  `);
-  const user = (statusResult.rows ?? statusResult)[0];
-  const acknowledged = Boolean(user?.vault_regular_moment_acknowledged_at);
-  return {
-    claimed: acknowledged && user?.vault_regular_moment_claim_id === claimId,
-    eligible: Number(user?.native_mobile_logins ?? 0) >= 4,
-    acknowledged,
-  };
 }

@@ -12,7 +12,6 @@ dependencies {
     implementation project(':capacitor-community-apple-sign-in')
     implementation project(':capacitor-app')
     implementation project(':capacitor-push-notifications')
-    implementation project(':capgo-capacitor-in-app-review')
     implementation project(':capgo-capacitor-social-login')
     implementation project(':revenuecat-purchases-capacitor')
     implementation "com.android.billingclient:billing:8.3.0"

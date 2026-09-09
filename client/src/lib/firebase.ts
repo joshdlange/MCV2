@@ -69,9 +69,11 @@ const syncUserWithBackend = async (user: User) => {
       email: backendUser.email,
       avatar: backendUser.photoURL || '',
       isAdmin: backendUser.isAdmin,
+      imageAdmin: backendUser.imageAdmin || false,
       plan: backendUser.plan,
       subscriptionStatus: backendUser.subscriptionStatus,
       onboardingComplete: backendUser.onboardingComplete,
+      totalLogins: backendUser.totalLogins || 0,
       username: backendUser.username
     });
 

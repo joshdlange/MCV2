@@ -1,15 +1,10 @@
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { and, eq, inArray } from "drizzle-orm";
 
 import { db } from "../db";
 import { badgeService } from "../badge-service";
-import {
-  acknowledgeVaultRegularMoment,
-  recordNativeMobileLogin,
-} from "../services/nativeMobileLogin";
+import { recordNativeMobileLogin } from "../services/nativeMobileLogin";
 import {
   seedVaultRegularBadge,
   VAULT_REGULAR_BADGE_NAME,
@@ -88,74 +83,4 @@ test("a retried auth sync cannot count the same native launch twice", async () =
   assert.equal(first.loginNumber, 1);
   assert.equal(retry.recorded, false);
   assert.equal(retry.loginNumber, 1);
-});
-
-test("acknowledgement permanently suppresses another badge/review moment", async () => {
-  const user = await createTestUser();
-  for (let loginNumber = 1; loginNumber <= 4; loginNumber += 1) {
-    await recordNativeMobileLogin(user.id, `ack-session-${loginNumber}`, "android");
-  }
-
-  const firstAcknowledgement = await acknowledgeVaultRegularMoment(
-    user.id,
-    "claim-first-device",
-  );
-  const retriedAcknowledgement = await acknowledgeVaultRegularMoment(
-    user.id,
-    "claim-first-device",
-  );
-  const competingAcknowledgement = await acknowledgeVaultRegularMoment(
-    user.id,
-    "claim-second-device",
-  );
-  assert.deepEqual(firstAcknowledgement, {
-    claimed: true,
-    eligible: true,
-    acknowledged: true,
-  });
-  assert.deepEqual(retriedAcknowledgement, {
-    claimed: true,
-    eligible: true,
-    acknowledged: true,
-  });
-  assert.deepEqual(competingAcknowledgement, {
-    claimed: false,
-    eligible: true,
-    acknowledged: true,
-  });
-  const fifth = await recordNativeMobileLogin(user.id, "ack-session-5", "android");
-  assert.equal(fifth.loginNumber, 5);
-  assert.equal(fifth.milestoneAcknowledged, true);
-});
-
-test("acknowledgement cannot be claimed before the fourth native launch", async () => {
-  const user = await createTestUser();
-  const result = await acknowledgeVaultRegularMoment(user.id, "claim-too-early");
-
-  assert.deepEqual(result, {
-    claimed: false,
-    eligible: false,
-    acknowledged: false,
-  });
-});
-
-test("review request remains native Android-only and never tracks a rating", () => {
-  const syncClient = readFileSync(
-    path.resolve(import.meta.dirname, "../../client/src/lib/backendUserSync.ts"),
-    "utf8",
-  );
-  const reviewService = readFileSync(
-    path.resolve(import.meta.dirname, "../../client/src/services/appReview.ts"),
-    "utf8",
-  );
-  const reviewMoment = readFileSync(
-    path.resolve(import.meta.dirname, "../../client/src/components/reviews/NativeReviewMilestone.tsx"),
-    "utf8",
-  );
-
-  assert.match(syncClient, /nativeLogin:\s*options\.nativeLogin/);
-  assert.match(reviewService, /Capacitor\.getPlatform\(\)\s*!==\s*"android"/);
-  assert.match(reviewService, /CapgoInAppReview\.requestReview\(\)/);
-  assert.doesNotMatch(reviewMoment, /Leave a Review|5.?star|positive review/i);
-  assert.doesNotMatch(reviewService, /trackRating|ratingValue|reviewCompleted|reviewSubmitted/i);
 });

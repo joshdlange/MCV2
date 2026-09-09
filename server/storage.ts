@@ -89,7 +89,7 @@ interface IStorage {
   getAllUsers(): Promise<User[]>;
   updateUser(id: number, insertUser: Partial<InsertUser>): Promise<User | undefined>;
   deleteUser(id: number): Promise<void>;
-  recordUserLogin(firebaseUid: string): Promise<void>;
+  recordUserLogin(firebaseUid: string): Promise<number | undefined>;
   
   // Main Sets
   getMainSets(): Promise<MainSet[]>;
@@ -385,15 +385,17 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async recordUserLogin(firebaseUid: string): Promise<void> {
+  async recordUserLogin(firebaseUid: string): Promise<number | undefined> {
     try {
       const now = new Date();
       const user = await this.getUserByFirebaseUid(firebaseUid);
       
       if (!user) {
         console.error('User not found for login tracking:', firebaseUid);
-        return;
+        return undefined;
       }
+
+      const currentTotalLogins = user.totalLogins || 0;
 
       // Calculate login streak
       let newLoginStreak = 1;
@@ -407,24 +409,27 @@ export class DatabaseStorage implements IStorage {
         } else if (daysDiff === 0) {
           // Same day login - don't update streak or total
           newLoginStreak = user.loginStreak || 1;
-          return; // Exit early to avoid updating for same-day logins
+          return currentTotalLogins; // Exit early to avoid updating for same-day logins
         }
         // If daysDiff > 1, streak resets to 1 (already set above)
       }
 
+      const newTotalLogins = currentTotalLogins + 1;
       await db
         .update(users)
         .set({
           lastLogin: now,
           loginStreak: newLoginStreak,
-          totalLogins: (user.totalLogins || 0) + 1
+          totalLogins: newTotalLogins
         })
         .where(eq(users.firebaseUid, firebaseUid));
 
-      console.log(`Login tracked for user ${firebaseUid}: streak ${newLoginStreak}, total ${(user.totalLogins || 0) + 1}`);
+      console.log(`Login tracked for user ${firebaseUid}: streak ${newLoginStreak}, total ${newTotalLogins}`);
+      return newTotalLogins;
     } catch (error) {
       console.error('Error recording user login:', error);
       // Don't throw - login tracking shouldn't break authentication
+      return undefined;
     }
   }
 
