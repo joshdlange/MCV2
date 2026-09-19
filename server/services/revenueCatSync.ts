@@ -16,9 +16,19 @@ interface RcEntitlement {
   expires_date?: string | null;
 }
 
+interface RcSubscriptionLifecycle {
+  product_identifier: string;
+  purchase_date?: string;
+  original_purchase_date?: string;
+  expires_date?: string | null;
+  unsubscribe_detected_at?: string | null;
+  billing_issues_detected_at?: string | null;
+}
+
 interface RcVerifyResult {
   ok: boolean;              // true if the RC lookup itself succeeded (even if no entitlement)
   entitlement: RcEntitlement | null; // present only when an ACTIVE super_hero entitlement exists
+  lifecycle: RcSubscriptionLifecycle | null;
   error?: string;          // set when the lookup failed
 }
 
@@ -32,7 +42,7 @@ interface RcVerifyResult {
  */
 export async function verifyRcEntitlement(firebaseUid: string): Promise<RcVerifyResult> {
   const rcSecretKey = process.env.REVENUECAT_SECRET_KEY;
-  if (!rcSecretKey) return { ok: false, entitlement: null, error: 'REVENUECAT_SECRET_KEY not configured' };
+  if (!rcSecretKey) return { ok: false, entitlement: null, lifecycle: null, error: 'REVENUECAT_SECRET_KEY not configured' };
 
   try {
     const res = await fetch(
@@ -44,17 +54,34 @@ export async function verifyRcEntitlement(firebaseUid: string): Promise<RcVerify
     // RC returns 200 (existing) or 201 (auto-created empty subscriber). Anything
     // else, a missing body, or a body carrying an error code is a failed lookup.
     if ((!res.ok && res.status !== 201) || !body || typeof body.code === 'number') {
-      return { ok: false, entitlement: null, error: `HTTP ${res.status}${body?.code ? ` code ${body.code}` : ''}` };
+      return { ok: false, entitlement: null, lifecycle: null, error: `HTTP ${res.status}${body?.code ? ` code ${body.code}` : ''}` };
     }
 
     const entitlement: RcEntitlement | undefined = body?.subscriber?.entitlements?.[RC_ENTITLEMENT];
-    if (!entitlement) return { ok: true, entitlement: null };
+    const subscriptions = body?.subscriber?.subscriptions || {};
+    const productId = entitlement?.product_identifier;
+    const candidates = Object.entries(subscriptions) as Array<[string, any]>;
+    const selected = (productId && subscriptions[productId])
+      ? [productId, subscriptions[productId]] as [string, any]
+      : candidates.sort((a, b) =>
+          new Date(b[1]?.expires_date || b[1]?.purchase_date || 0).getTime()
+          - new Date(a[1]?.expires_date || a[1]?.purchase_date || 0).getTime()
+        )[0];
+    const lifecycle: RcSubscriptionLifecycle | null = selected ? {
+      product_identifier: selected[0],
+      purchase_date: selected[1]?.purchase_date,
+      original_purchase_date: selected[1]?.original_purchase_date,
+      expires_date: selected[1]?.expires_date,
+      unsubscribe_detected_at: selected[1]?.unsubscribe_detected_at,
+      billing_issues_detected_at: selected[1]?.billing_issues_detected_at,
+    } : null;
+    if (!entitlement) return { ok: true, entitlement: null, lifecycle };
 
     // expires_date is null for lifetime entitlements; otherwise must be in the future.
     const isActive = !entitlement.expires_date || new Date(entitlement.expires_date) > new Date();
-    return { ok: true, entitlement: isActive ? entitlement : null };
+    return { ok: true, entitlement: isActive ? entitlement : null, lifecycle };
   } catch (e: any) {
-    return { ok: false, entitlement: null, error: e?.message || 'network error' };
+    return { ok: false, entitlement: null, lifecycle: null, error: e?.message || 'network error' };
   }
 }
 

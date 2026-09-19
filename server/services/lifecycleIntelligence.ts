@@ -1,5 +1,6 @@
 import { db } from "../db";
 import { sql } from "drizzle-orm";
+import { getSubscriptionTruthOverview } from "./subscriptionTruth";
 
 /**
  * User Activity / Lifecycle Intelligence v1 (admin-only, read-only).
@@ -23,8 +24,8 @@ export const STAGE_ORDER = [
 ] as const;
 
 export const STAGE_RULES: Record<string, string> = {
-  "Super Hero": "Active paid subscriber (plan SUPER_HERO, status active)",
-  "Cancelled": "Previously subscribed (has a Stripe customer/subscription or Apple record) and status is cancelled, no longer paying",
+  "Super Hero": "Current provider-verified payer, complimentary member, scheduled cancellation, or customer in payment recovery",
+  "Cancelled": "Provider lifecycle confirms the subscription ended; customer IDs alone do not qualify",
   "Dormant": "Free user with no login in 30+ days (and account older than 30 days)",
   "Power Collector": "100+ cards, or 20+ total logins with 10+ cards",
   "Engaged Collector": "10+ cards, or has a PC binder, wishlist item, image upload, or shared binder",
@@ -79,7 +80,18 @@ const PER_USER_CTE = sql`
         WHEN onboarding_complete AND created_at <= now() - interval '7 days' THEN 'Empty Vault'
         WHEN onboarding_complete THEN 'Onboarding Complete'
         ELSE 'Signed Up'
-      END AS stage
+      END AS stage,
+      CASE
+        WHEN COALESCE(last_login, created_at) < now() - interval '30 days'
+             AND created_at < now() - interval '30 days' THEN 'Dormant'
+        WHEN cards >= 100 OR (total_logins >= 20 AND cards >= 10) THEN 'Power Collector'
+        WHEN cards >= 10 OR binders > 0 OR wishlist > 0 OR images > 0 OR shared_binders > 0 THEN 'Engaged Collector'
+        WHEN total_logins >= 3 THEN 'Returning Collector'
+        WHEN cards >= 1 THEN 'Collector Started'
+        WHEN onboarding_complete AND created_at <= now() - interval '7 days' THEN 'Empty Vault'
+        WHEN onboarding_complete THEN 'Onboarding Complete'
+        ELSE 'Signed Up'
+      END AS engagement_stage
     FROM counts
   )
 `;
@@ -97,20 +109,22 @@ export interface LifecycleUserRow {
 
 /** Per-user lifecycle stage + engagement counts + platforms, for the admin user table. */
 export async function getLifecycleUserRows(): Promise<Map<number, LifecycleUserRow>> {
-  const [stagesRes, platformsRes] = await Promise.all([
+  const [stagesRes, platformsRes, truth] = await Promise.all([
     db.execute(sql`${PER_USER_CTE}
-      SELECT id, stage, binders, wishlist, images, shared_binders FROM staged`),
+      SELECT id, stage, engagement_stage, binders, wishlist, images, shared_binders FROM staged`),
     db.execute(sql`
       SELECT user_id,
         ARRAY_AGG(platform ORDER BY first_seen_at) AS platforms,
         (ARRAY_AGG(platform ORDER BY first_seen_at))[1] AS first_platform
       FROM user_platforms GROUP BY user_id`),
+    getSubscriptionTruthOverview(),
   ]);
   const platMap = new Map<number, { platforms: string[]; first: string | null }>();
   for (const r of platformsRes.rows as any[]) {
     platMap.set(r.user_id, { platforms: r.platforms || [], first: r.first_platform || null });
   }
   const map = new Map<number, LifecycleUserRow>();
+  const engagementStage = new Map<number, string>();
   for (const r of stagesRes.rows as any[]) {
     const p = platMap.get(r.id);
     map.set(r.id, {
@@ -123,13 +137,26 @@ export async function getLifecycleUserRows(): Promise<Map<number, LifecycleUserR
       platforms: p?.platforms || [],
       platformFirstSeen: p?.first || null,
     });
+    engagementStage.set(r.id, r.engagement_stage);
+  }
+  for (const customer of truth.customers) {
+    const row = map.get(customer.userId);
+    if (!row) continue;
+    if (["paying", "complimentary", "cancellation_scheduled", "payment_declined"].includes(customer.status)) {
+      row.stage = "Super Hero";
+    } else if (["churned_canceled", "churned_declined"].includes(customer.status)) {
+      row.stage = "Cancelled";
+    } else if (row.stage === "Cancelled" || row.stage === "Super Hero") {
+      // Unknown provenance is deliberately not presented as known paid/churn.
+      row.stage = engagementStage.get(customer.userId) || "Signed Up";
+    }
   }
   return map;
 }
 
 /** Counts by lifecycle stage + funnel + conversion rates, for the analytics dashboard. */
 export async function getLifecycleOverview() {
-  const [stagesRes, funnelRes] = await Promise.all([
+  const [stagesRes, funnelRes, truth] = await Promise.all([
     db.execute(sql`${PER_USER_CTE}
       SELECT stage, COUNT(*) AS n FROM staged GROUP BY stage`),
     db.execute(sql`${PER_USER_CTE}
@@ -143,10 +170,15 @@ export async function getLifecycleOverview() {
         COUNT(*) FILTER (WHERE ever_subscribed AND subscription_status = 'cancelled') AS cancelled,
         (SELECT COUNT(*) FROM account_deletion_jobs WHERE status = 'completed') AS deleted
       FROM staged`),
+    getSubscriptionTruthOverview(),
   ]);
   const byStage: Record<string, number> = {};
   for (const s of STAGE_ORDER) byStage[s] = 0;
   for (const r of stagesRes.rows as any[]) byStage[r.stage] = parseInt(r.n) || 0;
+  byStage["Super Hero"] =
+    truth.summary.paying + truth.summary.complimentary +
+    truth.summary.paymentDeclined;
+  byStage["Cancelled"] = truth.summary.churnedCanceled + truth.summary.churnedDeclined;
 
   const f: any = (funnelRes.rows as any[])[0] || {};
   const funnel = {
@@ -155,8 +187,8 @@ export async function getLifecycleOverview() {
     addedFirstCard: parseInt(f.added_first_card) || 0,
     returning: parseInt(f.returning) || 0,
     engaged: parseInt(f.engaged) || 0,
-    upgraded: parseInt(f.upgraded) || 0,
-    cancelled: parseInt(f.cancelled) || 0,
+    upgraded: truth.summary.paying + truth.summary.paymentDeclined,
+    cancelled: truth.summary.churnedCanceled + truth.summary.churnedDeclined,
     deleted: parseInt(f.deleted) || 0,
   };
   const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 1000) / 10 : 0);

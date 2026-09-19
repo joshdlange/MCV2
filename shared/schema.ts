@@ -175,6 +175,72 @@ export const accountDeletionEmailSuppressions = pgTable(
   },
 );
 
+// Durable billing lifecycle truth. Provider objects remain owned by Stripe /
+// RevenueCat; these tables store only application lifecycle evidence, current
+// classification and retry-work ownership.
+export const subscriptionTruthEvents = pgTable("subscription_truth_events", {
+  id: serial("id").primaryKey(),
+  provider: text("provider").notNull(),
+  providerEventId: text("provider_event_id").notNull(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  reason: text("reason").notNull(),
+  occurredAt: timestamp("occurred_at").notNull(),
+  applied: boolean("applied").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  providerEventIdx: uniqueIndex("subscription_truth_provider_event_idx")
+    .on(table.provider, table.providerEventId),
+  userOccurredIdx: index("subscription_truth_event_user_occurred_idx")
+    .on(table.userId, table.occurredAt),
+}));
+
+export const subscriptionTruthSnapshots = pgTable("subscription_truth_snapshots", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  provider: text("provider").notNull(),
+  status: text("status").notNull(),
+  reason: text("reason").notNull(),
+  providerOccurredAt: timestamp("provider_occurred_at").notNull(),
+  recoveryEndsAt: timestamp("recovery_ends_at"),
+  evidenceId: text("evidence_id").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  userProviderIdx: uniqueIndex("subscription_truth_snapshot_user_provider_idx")
+    .on(table.userId, table.provider),
+}));
+
+export const stripeRecoveryClaims = pgTable("stripe_recovery_claims", {
+  invoiceId: text("invoice_id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  subscriptionId: text("subscription_id").notNull(),
+  firstFailedAt: timestamp("first_failed_at").notNull(),
+  recoveryEndsAt: timestamp("recovery_ends_at").notNull(),
+  nextAttemptAt: timestamp("next_attempt_at"),
+  attemptCount: integer("attempt_count").default(0).notNull(),
+  status: text("status").default("pending").notNull(),
+  claimToken: text("claim_token"),
+  claimedAt: timestamp("claimed_at"),
+  lastError: text("last_error"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  dueIdx: index("stripe_recovery_due_idx").on(table.status, table.nextAttemptAt),
+}));
+
+export const stripeRecoveryAttempts = pgTable("stripe_recovery_attempts", {
+  id: serial("id").primaryKey(),
+  invoiceId: text("invoice_id").notNull(),
+  attemptNumber: integer("attempt_number").notNull(),
+  idempotencyKey: text("idempotency_key").notNull().unique(),
+  status: text("status").default("claimed").notNull(),
+  declineCode: text("decline_code"),
+  error: text("error"),
+  attemptedAt: timestamp("attempted_at").defaultNow().notNull(),
+}, (table) => ({
+  invoiceAttemptIdx: uniqueIndex("stripe_recovery_invoice_attempt_idx")
+    .on(table.invoiceId, table.attemptNumber),
+}));
+
 export const mainSets = pgTable("main_sets", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),

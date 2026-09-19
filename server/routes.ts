@@ -57,7 +57,18 @@ import { vaultUpgradeAnnouncementTemplate } from "./services/emailTemplates";
 import { startEmailCronJobs, startVaultUpgradeDripCron, runVaultUpgradeDripNow, getVaultUpgradeDripStatus } from "./jobs/emailCron";
 import { LIFECYCLE_EMAILS, getLifecycleEmail, getLifecycleStatus, sendLifecycleWelcome, runFirstCardNudgeNow, startLifecycleEmailCron } from "./jobs/lifecycleEmails";
 import { initializeUpcomingSets, syncRSSFeed, expireReleasedSets } from "./services/upcomingSetsSync";
-import { verifyRcEntitlement, reconcileRevenueCatSubscriptions, startRevenueCatReconcileCron, getSubscriberBreakdown, SYSTEM_USER_FIREBASE_UID } from "./services/revenueCatSync";
+import { verifyRcEntitlement, reconcileRevenueCatSubscriptions, startRevenueCatReconcileCron, SYSTEM_USER_FIREBASE_UID } from "./services/revenueCatSync";
+import {
+  getSubscriptionTruthOverview,
+  finalizePaidStripeRecovery,
+  hasActiveStripeRecovery,
+  isStripeRecoveryDeadline,
+  recordSubscriptionTransition,
+  processStripePaymentFailure,
+  startStripeRecoveryCron,
+  stopStripeRecovery,
+  stripeRecoveryEndedByDecline,
+} from "./services/subscriptionTruth";
 import { uploadUserCardImage, uploadMainSetThumbnail, downloadAndUploadToCloudinary, isCloudinaryUrl } from "./cloudinary";
 import { registerMarketplaceRoutes } from "./marketplace-routes";
 import { optimizedStorage, tokenizeSearch } from "./optimized-storage";
@@ -71,6 +82,17 @@ import {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+async function stripeSubscriptionCurrentlyGrantsAccess(subscriptionId: string | null | undefined): Promise<boolean> {
+  if (!subscriptionId) return false;
+  try {
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    return ['active', 'trialing', 'past_due', 'unpaid'].includes(subscription.status);
+  } catch (error) {
+    console.error(`[Subscription Truth] Could not verify Stripe subscription ${subscriptionId}:`, error);
+    throw error;
+  }
+}
 
 // Configure multer for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
@@ -989,8 +1011,17 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   app.get("/api/admin/funnel-stats", authenticateUser, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
-      const stats = await storage.getAdminFunnelStats();
-      res.json(stats);
+      const [stats, truth] = await Promise.all([
+        storage.getAdminFunnelStats(),
+        getSubscriptionTruthOverview(),
+      ]);
+      res.json({
+        ...stats,
+        upgraded: truth.summary.paying + truth.summary.paymentDeclined,
+        cancelled: truth.summary.churnedCanceled + truth.summary.churnedDeclined,
+        complimentary: truth.summary.complimentary,
+        subscriptionUnknown: truth.summary.unknown,
+      });
     } catch (err) {
       console.error('[Admin] funnel-stats error:', err);
       res.status(500).json({ message: 'Failed to fetch funnel stats' });
@@ -1078,15 +1109,6 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       const cardsResult = await db.execute(sql`SELECT COUNT(*) as total FROM cards`);
       const totalCards = parseInt((cardsResult.rows[0] as any).total) || 0;
 
-      // Get paid users (users on SUPER_HERO plan). Exclude the internal system
-      // account — it is granted SUPER_HERO for messaging but is not a customer.
-      const paidUsersResult = await db.execute(sql`
-        SELECT COUNT(*) as total FROM users 
-        WHERE plan = 'SUPER_HERO'
-          AND (firebase_uid IS NULL OR firebase_uid != ${SYSTEM_USER_FIREBASE_UID})
-      `);
-      const paidUsers = parseInt((paidUsersResult.rows[0] as any).total) || 0;
-
       // Get cards without images
       const cardsWithoutImagesResult = await db.execute(sql`
         SELECT COUNT(*) as total FROM cards 
@@ -1100,13 +1122,22 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       const mauPercent = totalUsers > 0 ? Math.round((monthlyActiveUsers / totalUsers) * 100) : 0;
 
       // Exact, reconciling subscriber breakdown (cached; RC only for no-Stripe group)
-      const breakdown = await getSubscriberBreakdown();
+      const truth = await getSubscriptionTruthOverview();
+      const breakdown = {
+        payingTotal: truth.summary.paying,
+        comped: truth.summary.complimentary,
+        cancellationScheduled: truth.summary.cancellationScheduled,
+        paymentDeclined: truth.summary.paymentDeclined,
+        churnedCanceled: truth.summary.churnedCanceled,
+        churnedDeclined: truth.summary.churnedDeclined,
+        unknown: truth.summary.unknown,
+      };
 
       res.json({
         totalUsers,
         monthlyActiveUsers,
         mauPercent,
-        paidUsers, // legacy: all real SUPER_HERO members (paying + comped)
+        paidUsers: truth.summary.paying, // legacy field, now honest provider-verified payers
         totalSets,
         totalCards,
         cardsWithoutImages,
@@ -1115,6 +1146,16 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
     } catch (error) {
       console.error('Admin stats error:', error);
       res.status(500).json({ message: "Failed to fetch stats" });
+    }
+  });
+
+  app.get("/api/admin/subscription-truth", authenticateUser, async (req: any, res) => {
+    try {
+      if (!req.user.isAdmin) return res.status(403).json({ message: "Admin access required" });
+      res.json(await getSubscriptionTruthOverview());
+    } catch (error) {
+      console.error("[Subscription Truth] overview error:", error);
+      res.status(500).json({ message: "Failed to fetch subscription truth" });
     }
   });
 
@@ -7840,6 +7881,21 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
             }
             const linkUserId = resolvedUserId;
             console.log(`Linking subscription ${session.subscription} to user ${linkUserId} via ${resolvedVia}`);
+            const checkoutSubscription = await stripe.subscriptions.retrieve(session.subscription as string);
+            if (!['active', 'trialing'].includes(checkoutSubscription.status) || checkoutSubscription.cancel_at_period_end || checkoutSubscription.cancel_at) {
+              console.log(`Checkout ${session.id} is no longer an active renewing subscription; not granting access`);
+              break;
+            }
+            const transition = await recordSubscriptionTransition({
+              provider: 'stripe',
+              providerEventId: event.id,
+              userId: linkUserId,
+              type: 'activated',
+              status: 'paying',
+              reason: 'Stripe checkout completed and subscription verified active',
+              occurredAt: new Date(event.created * 1000),
+            });
+            if (!transition.applied) break;
             // Update user to Super Hero plan
             await storage.updateUser(linkUserId, {
               plan: 'SUPER_HERO',
@@ -7921,8 +7977,46 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
           const subscribedUser = users.find(u => u.stripeSubscriptionId === subscription.id);
           
           if (subscribedUser) {
-            if (subscribedUser.appleOriginalTransactionId) {
-              console.log(`User ${subscribedUser.id} has Apple IAP subscription, skipping Stripe downgrade`);
+            const endedByDecline = await stripeRecoveryEndedByDecline(subscription.id);
+            const transition = await recordSubscriptionTransition({
+              provider: 'stripe',
+              providerEventId: event.id,
+              userId: subscribedUser.id,
+              type: 'canceled',
+              status: endedByDecline ? 'churned_declined' : 'churned_canceled',
+              reason: endedByDecline
+                ? 'Stripe payment recovery ended without payment'
+                : `Stripe subscription ended (${subscription.cancellation_details?.reason || subscription.status})`,
+              occurredAt: new Date(event.created * 1000),
+            });
+            if (!transition.applied) break;
+            await stopStripeRecovery(subscription.id, 'canceled');
+            const apple = subscribedUser.firebaseUid
+              ? await verifyRcEntitlement(subscribedUser.firebaseUid)
+              : { ok: true, entitlement: null };
+            if (!apple.ok) throw new Error(`Could not verify Apple access before Stripe downgrade: ${(apple as any).error}`);
+            if (apple.entitlement) {
+              // The Stripe subscription is authoritatively deleted. Remove only
+              // that exact stale link while preserving Apple-backed access.
+              await db.update(users).set({
+                plan: 'SUPER_HERO',
+                subscriptionStatus: 'active',
+                stripeSubscriptionId: null,
+              }).where(and(
+                eq(users.id, subscribedUser.id),
+                eq(users.stripeSubscriptionId, subscription.id),
+              ));
+              invalidateUserById(subscribedUser.id);
+              await recordSubscriptionTransition({
+                provider: 'apple',
+                providerEventId: `cross-provider:${event.id}`,
+                userId: subscribedUser.id,
+                type: 'active',
+                status: 'paying',
+                reason: 'Active Apple entitlement verified when Stripe subscription ended',
+                occurredAt: new Date(event.created * 1000),
+              });
+              console.log(`User ${subscribedUser.id} has a live Apple entitlement, skipping Stripe downgrade`);
             } else {
               await storage.updateUser(subscribedUser.id, {
                 plan: 'SIDE_KICK',
@@ -7943,43 +8037,117 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
           }
           break;
 
-        case 'invoice.payment_failed': {
-          // Lifecycle v3: transactional payment-failed email. ONLY reads the
-          // event — never touches billing/subscription state. Subscription
-          // invoices only; deduped per invoice inside the sender. Fully
-          // isolated: email plumbing must NEVER fail the webhook (Stripe
-          // needs a 200 or it retries).
-          try {
-            const invoice = event.data.object as Stripe.Invoice;
-            // Stripe SDK v18: subscription lives at invoice.parent.subscription_details.subscription
-            // (string or expanded object). Older payloads had invoice.subscription.
-            const rawSub = (invoice as any).parent?.subscription_details?.subscription
-              ?? (invoice as any).subscription;
-            const invoiceSubId: string | null =
-              typeof rawSub === 'string' ? rawSub : rawSub?.id ?? null;
-            if (!invoiceSubId || !invoice.id) {
-              console.log('invoice.payment_failed without subscription — ignoring (not a Super Hero billing issue)');
+        case 'customer.subscription.updated': {
+          const payload = event.data.object as Stripe.Subscription;
+          const allUsers = await storage.getAllUsers();
+          const owner = allUsers.find(u => u.stripeSubscriptionId === payload.id);
+          if (!owner) break;
+          // Webhooks can arrive out of order (and Stripe timestamps are only
+          // second precision), so side effects use the authoritative object.
+          const changed = await stripe.subscriptions.retrieve(payload.id);
+          if (changed.cancel_at_period_end || changed.cancel_at) {
+            if (
+              !changed.cancel_at_period_end
+              && await isStripeRecoveryDeadline(changed.id, changed.cancel_at)
+            ) {
+              console.log(`Subscription ${changed.id} cancel_at is the recovery deadline; recovery remains active`);
               break;
             }
-            const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id;
-            const allUsers = await storage.getAllUsers();
-            const billedUser = allUsers.find(u =>
-              (customerId && u.stripeCustomerId === customerId) || u.stripeSubscriptionId === invoiceSubId
-            );
-            if (!billedUser) {
-              console.log(`invoice.payment_failed: no user matched customer ${customerId} / sub ${invoiceSubId} — skipping email`);
-              break;
-            }
-            import('./jobs/lifecycleEmails').then(m =>
-              m.sendPaymentFailedEmail({
-                id: billedUser.id,
-                email: billedUser.email,
-                displayName: billedUser.displayName,
-              }, invoice.id!)
-            ).catch(err => console.error('Payment-failed email hook failed:', err));
-          } catch (err) {
-            console.error('Payment-failed email hook failed (webhook still acknowledged):', err);
+            // A requested cancellation immediately stops application recovery,
+            // while Stripe keeps already-paid access through the period end.
+            const transition = await recordSubscriptionTransition({
+              provider: 'stripe',
+              providerEventId: event.id,
+              userId: owner.id,
+              type: 'cancellation_scheduled',
+              status: 'cancellation_scheduled',
+              reason: 'Stripe cancellation scheduled; no further recovery attempts',
+              occurredAt: new Date(event.created * 1000),
+            });
+            if (!transition.applied) break;
+            await stopStripeRecovery(changed.id, 'canceled');
+          } else if (changed.status === 'active' || changed.status === 'trialing') {
+            await recordSubscriptionTransition({
+              provider: 'stripe',
+              providerEventId: event.id,
+              userId: owner.id,
+              type: 'active',
+              status: 'paying',
+              reason: `Stripe subscription is ${changed.status}`,
+              occurredAt: new Date(event.created * 1000),
+            });
           }
+          break;
+        }
+
+        case 'invoice.paid':
+        case 'invoice.payment_succeeded': {
+          const paidInvoice = event.data.object as Stripe.Invoice;
+          const rawSub = (paidInvoice as any).parent?.subscription_details?.subscription
+            ?? (paidInvoice as any).subscription;
+          const subId = typeof rawSub === 'string' ? rawSub : rawSub?.id;
+          if (!subId) break;
+          const allUsers = await storage.getAllUsers();
+          const owner = allUsers.find(u => u.stripeSubscriptionId === subId);
+          if (!owner) break;
+          await finalizePaidStripeRecovery({
+            invoiceId: paidInvoice.id!,
+            subscriptionId: subId,
+            stripeClient: stripe,
+            mutateBilling: process.env.NODE_ENV === 'production',
+          });
+          if (await hasActiveStripeRecovery(subId)) {
+            console.log(`invoice.paid ${paidInvoice.id}: another invoice still owns recovery for ${subId}`);
+            break;
+          }
+          await recordSubscriptionTransition({
+            provider: 'stripe',
+            providerEventId: event.id,
+            userId: owner.id,
+            type: 'payment_recovered',
+            status: 'paying',
+            reason: 'Stripe invoice paid',
+            occurredAt: new Date(event.created * 1000),
+          });
+          break;
+        }
+
+        case 'invoice.payment_failed': {
+          const invoice = event.data.object as Stripe.Invoice;
+          const rawSub = (invoice as any).parent?.subscription_details?.subscription
+            ?? (invoice as any).subscription;
+          const invoiceSubId: string | null =
+            typeof rawSub === 'string' ? rawSub : rawSub?.id ?? null;
+          if (!invoiceSubId || !invoice.id) {
+            console.log('invoice.payment_failed without subscription — ignoring (not a Super Hero billing issue)');
+            break;
+          }
+          const allUsers = await storage.getAllUsers();
+          const billedUser = allUsers.find(u => u.stripeSubscriptionId === invoiceSubId);
+          if (!billedUser) {
+            console.log(`invoice.payment_failed: no user exactly mapped to subscription ${invoiceSubId}`);
+            break;
+          }
+          const failedAt = new Date(event.created * 1000);
+          const result = await processStripePaymentFailure({
+            eventId: event.id,
+            occurredAt: failedAt,
+            invoiceId: invoice.id,
+            subscriptionId: invoiceSubId,
+            userId: billedUser.id,
+            stripeClient: stripe,
+            mutateBilling: process.env.NODE_ENV === 'production',
+          });
+          if (result.ignored) break;
+          // Critical failures above propagate to the outer webhook catch and
+          // return 500, so Stripe redelivers. Only email remains best-effort.
+          import('./jobs/lifecycleEmails').then(m =>
+            m.sendPaymentFailedEmail({
+              id: billedUser.id,
+              email: billedUser.email,
+              displayName: billedUser.displayName,
+            }, invoice.id!)
+          ).catch(err => console.error('Payment-failed email hook failed:', err));
           break;
         }
 
@@ -8411,6 +8579,14 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
 
       const grantTypes = ['INITIAL_PURCHASE', 'NON_RENEWING_PURCHASE', 'RENEWAL', 'PRODUCT_CHANGE', 'UNCANCELLATION', 'SUBSCRIPTION_EXTENDED'];
       const revokeTypes = ['EXPIRATION', 'SUBSCRIPTION_PAUSED'];
+      const rcEventId = String(event.id || `${event.type}:${event.original_transaction_id || event.transaction_id || event.app_user_id}:${event.event_timestamp_ms || event.purchased_at_ms || 0}`);
+      const rcOccurredAt = new Date(Number(event.event_timestamp_ms || event.purchased_at_ms || Date.now()));
+      let truthStatus: import('./services/subscriptionTruth').SubscriptionTruthStatus | null = null;
+      let truthType = event.type.toLowerCase();
+      let truthReason = `RevenueCat ${event.type}`;
+      let truthRecoveryEndsAt: Date | null = null;
+      let grantMembership = false;
+      let revokeMembership = false;
 
       if (grantTypes.includes(event.type)) {
         // Re-verify entitlement is actually active before granting.
@@ -8421,10 +8597,9 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
           return res.status(500).json({ message: 'Verification temporarily unavailable' });
         }
         if (verify.entitlement) {
-          if (user.plan !== 'SUPER_HERO' || user.subscriptionStatus !== 'active') {
-            await storage.updateUser(user.id, { plan: 'SUPER_HERO', subscriptionStatus: 'active' });
-            console.log(`[RevenueCat Webhook] ${event.type}: upgraded user ${user.id} to SUPER_HERO`);
-          }
+          truthStatus = 'paying';
+          truthReason = 'Active Apple entitlement verified by RevenueCat';
+          grantMembership = true;
         } else {
           console.warn(`[RevenueCat Webhook] ${event.type}: no active entitlement for user ${user.id} — no change`);
         }
@@ -8437,24 +8612,66 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         }
         // Only downgrade when RC confirms no active entitlement AND the user isn't on
         // a Stripe subscription (cross-platform: never let one platform revoke the other).
-        if (!verify.entitlement && !user.stripeSubscriptionId) {
-          if (user.plan === 'SUPER_HERO') {
-            await storage.updateUser(user.id, { plan: 'SIDE_KICK', subscriptionStatus: 'cancelled' });
-            console.log(`[RevenueCat Webhook] ${event.type}: downgraded user ${user.id} to SIDE_KICK`);
-          }
-        } else {
-          console.log(`[RevenueCat Webhook] ${event.type}: kept user ${user.id} (still entitled or has Stripe sub)`);
+        if (!verify.entitlement) {
+          truthStatus = event.type === 'EXPIRATION' && event.expiration_reason === 'BILLING_ERROR'
+            ? 'churned_declined'
+            : 'churned_canceled';
+          truthReason = event.type === 'EXPIRATION'
+            ? `Apple entitlement expired (${event.expiration_reason || 'expired'})`
+            : 'Apple subscription paused';
         }
+        const stripeStillActive = !verify.entitlement
+          ? await stripeSubscriptionCurrentlyGrantsAccess(user.stripeSubscriptionId)
+          : false;
+        if (!verify.entitlement && !stripeStillActive) {
+          revokeMembership = true;
+        } else {
+          console.log(`[RevenueCat Webhook] ${event.type}: kept user ${user.id} (still entitled or has live Stripe access)`);
+        }
+      } else if (event.type === 'CANCELLATION') {
+        // App Store cancellation means "will not renew", not immediate loss of
+        // already-paid access. Apple/RevenueCat own all billing and recovery.
+        truthStatus = 'cancellation_scheduled';
+        truthReason = 'Apple renewal canceled; access remains through paid expiry';
+      } else if (event.type === 'BILLING_ISSUE') {
+        truthStatus = 'payment_declined';
+        truthReason = 'Apple billing issue; recovery is managed by Apple';
+        truthRecoveryEndsAt = event.expiration_at_ms ? new Date(Number(event.expiration_at_ms)) : null;
       } else {
         // CANCELLATION (will not renew but still active), BILLING_ISSUE, TRANSFER, etc. — no plan change here.
         console.log(`[RevenueCat Webhook] ${event.type}: no plan change for user ${user.id}`);
       }
 
+      if (truthStatus) {
+        const transition = await recordSubscriptionTransition({
+          provider: 'apple',
+          providerEventId: rcEventId,
+          userId: user.id,
+          type: truthType,
+          status: truthStatus,
+          reason: truthReason,
+          occurredAt: rcOccurredAt,
+          recoveryEndsAt: truthRecoveryEndsAt,
+        });
+        if (!transition.applied) {
+          return res.status(200).json({ received: true, note: 'stale event recorded without side effects' });
+        }
+        if (grantMembership && (user.plan !== 'SUPER_HERO' || user.subscriptionStatus !== 'active')) {
+          await storage.updateUser(user.id, { plan: 'SUPER_HERO', subscriptionStatus: 'active' });
+          console.log(`[RevenueCat Webhook] ${event.type}: upgraded user ${user.id} to SUPER_HERO`);
+        }
+        if (revokeMembership && user.plan === 'SUPER_HERO') {
+          await storage.updateUser(user.id, { plan: 'SIDE_KICK', subscriptionStatus: 'cancelled' });
+          console.log(`[RevenueCat Webhook] ${event.type}: downgraded user ${user.id} to SIDE_KICK`);
+        }
+      }
+
       return res.status(200).json({ received: true });
     } catch (error: any) {
       console.error('[RevenueCat Webhook] error:', error);
-      // Return 200 so RC doesn't hammer retries on our bugs; the daily reconcile is the safety net.
-      return res.status(200).json({ received: true, error: 'processing error' });
+      // Non-2xx preserves durable delivery: RevenueCat retries transient DB/app
+      // failures, while provider-event uniqueness makes every replay safe.
+      return res.status(500).json({ message: 'Webhook processing failed' });
     }
   });
 
@@ -13328,6 +13545,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   if (process.env.REPLIT_DEPLOYMENT) {
     // Daily RevenueCat reconciliation safety net (upgrades any stuck iOS payer).
     startRevenueCatReconcileCron();
+    startStripeRecoveryCron();
     try {
       const { startStripeReconcileCron } = await import('./services/stripeReconcile');
       startStripeReconcileCron();

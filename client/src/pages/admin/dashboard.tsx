@@ -33,6 +33,20 @@ interface AdminStats {
   breakdown?: SubscriberBreakdown;
 }
 
+interface SubscriptionTruthSummary {
+  paying: number;
+  complimentary: number;
+  cancellationScheduled: number;
+  paymentDeclined: number;
+  churnedCanceled: number;
+  churnedDeclined: number;
+  unknown: number;
+}
+
+interface SubscriptionTruthResponse {
+  summary: SubscriptionTruthSummary;
+}
+
 type ToolStatus = "active" | "legacy" | "advanced" | "dangerous" | "needs_review" | "coming_soon";
 
 interface AdminTool {
@@ -76,8 +90,8 @@ const ADMIN_SECTIONS: AdminSection[] = [
         status: ["active"],
       },
       {
-        title: "Conversion Funnel",
-        description: "Signups → card adds → returning users → upgrades → churn, plus upgrade-modal analytics",
+        title: "Subscription Truth & Conversion",
+        description: "Current provider-confirmed billing states, recent changes, customer lookup, and acquisition milestones",
         href: "/admin/analytics",
         icon: BarChart2,
         color: "bg-yellow-500",
@@ -300,6 +314,14 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/stats'],
     refetchInterval: 60000, // Refresh every minute
   });
+  const {
+    data: subscriptionTruth,
+    isLoading: subscriptionTruthLoading,
+    isError: subscriptionTruthError,
+  } = useQuery<SubscriptionTruthResponse>({
+    queryKey: ['/api/admin/subscription-truth'],
+    refetchInterval: 60000,
+  });
   const [showSubscribers, setShowSubscribers] = useState(false);
   const [showCardStats, setShowCardStats] = useState(false);
 
@@ -342,7 +364,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Row 1b: Subscriber breakdown (every number reconciles to Total Users) */}
+        {/* Row 1b: provider-confirmed subscription truth */}
         <div className="rounded-lg bg-black/20 border border-white/10 px-4 py-3 mb-3">
           <button
             type="button"
@@ -351,60 +373,49 @@ export default function AdminDashboard() {
             data-testid="button-toggle-subscribers"
           >
             <span className="text-xs font-semibold uppercase tracking-wide text-gray-300 flex items-center gap-2">
-              Subscribers
+              Subscription truth
               <span className="text-sm font-bold normal-case tracking-normal text-green-400">
-                {statsLoading ? '...' : (stats?.breakdown?.payingTotal ?? 0).toLocaleString()} paying
+                {subscriptionTruthLoading
+                  ? 'Loading…'
+                  : subscriptionTruthError || !subscriptionTruth
+                    ? 'Unavailable'
+                    : `${subscriptionTruth.summary.paying.toLocaleString()} paying`}
               </span>
             </span>
             <span className="flex items-center gap-2 shrink-0">
-              {stats?.breakdown && !stats.breakdown.rcCheckOk && showSubscribers && (
-                <span className="text-[10px] text-amber-400 hidden sm:inline">iPhone/comped split approximate (RevenueCat unreachable)</span>
-              )}
               {showSubscribers ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
             </span>
           </button>
           {showSubscribers && (<>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
-            <div>
-              <div className="text-2xl font-bold text-gray-100">
-                {statsLoading ? '...' : (stats?.breakdown?.freeUsers ?? '0').toLocaleString()}
-              </div>
-              <div className="text-xs text-gray-400">Free (Side Kick)</div>
+          {subscriptionTruthLoading ? (
+            <div className="mt-3 text-sm text-gray-400">Loading current billing states…</div>
+          ) : subscriptionTruthError || !subscriptionTruth ? (
+            <div className="mt-3 rounded border border-red-400/40 bg-red-950/30 px-3 py-2 text-sm text-red-200">
+              Subscription truth is unavailable. Totals are hidden rather than shown as zero.
             </div>
-            <div>
-              <div className="text-2xl font-bold text-green-400">
-                {statsLoading ? '...' : (stats?.breakdown?.payingTotal ?? '0').toLocaleString()}
+          ) : (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mt-2">
+                {[
+                  { label: "Paying (includes scheduled)", value: subscriptionTruth.summary.paying, color: "text-green-400" },
+                  { label: "Complimentary", value: subscriptionTruth.summary.complimentary, color: "text-blue-300" },
+                  { label: "Cancellation scheduled (subset of paying)", value: subscriptionTruth.summary.cancellationScheduled, color: "text-amber-300" },
+                  { label: "Payment declined — recovering", value: subscriptionTruth.summary.paymentDeclined, color: "text-orange-300" },
+                  { label: "Churned — canceled", value: subscriptionTruth.summary.churnedCanceled, color: "text-red-300" },
+                  { label: "Churned — payment declined", value: subscriptionTruth.summary.churnedDeclined, color: "text-red-300" },
+                  { label: "Unknown", value: subscriptionTruth.summary.unknown, color: "text-gray-300" },
+                ].map(item => (
+                  <div key={item.label}>
+                    <div className={`text-2xl font-bold ${item.color}`}>{item.value.toLocaleString()}</div>
+                    <div className="text-xs text-gray-400 leading-tight">{item.label}</div>
+                  </div>
+                ))}
               </div>
-              <div className="text-xs text-gray-400">
-                Paying
-                {stats?.breakdown && (
-                  <span className="text-gray-500"> · {stats.breakdown.payingStripe} web · {stats.breakdown.payingApple} iPhone</span>
-                )}
+              <div className="mt-2 text-[11px] text-gray-500">
+                Paying includes cancellation scheduled; do not add those totals together. Payment status and feature access are tracked separately.
+                <Link href="/admin/analytics"><span className="ml-1 text-blue-400 hover:underline">View customers and recent changes →</span></Link>
               </div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-yellow-400">
-                {statsLoading ? '...' : (stats?.breakdown?.comped ?? '0').toLocaleString()}
-              </div>
-              <div className="text-xs text-gray-400">
-                Comped (free grants)
-                {stats?.breakdown && stats.breakdown.unknown > 0 && (
-                  <span className="text-amber-400"> · {stats.breakdown.unknown} unverified</span>
-                )}
-              </div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-400">
-                {statsLoading ? '...' : (stats?.breakdown?.systemAccounts ?? '0').toLocaleString()}
-              </div>
-              <div className="text-xs text-gray-400">System account</div>
-            </div>
-          </div>
-          {stats?.breakdown && (
-            <div className="mt-2 text-[11px] text-gray-500">
-              {stats.breakdown.freeUsers.toLocaleString()} free + {stats.breakdown.payingTotal} paying + {stats.breakdown.comped} comped
-              {stats.breakdown.unknown > 0 && ` + ${stats.breakdown.unknown} unverified`} + {stats.breakdown.systemAccounts} system = {stats.breakdown.totalUsers.toLocaleString()} total
-            </div>
+            </>
           )}
           </>)}
         </div>

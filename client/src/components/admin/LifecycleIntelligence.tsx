@@ -5,8 +5,16 @@ import { Badge } from "@/components/ui/badge";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
-import { Clock, Rocket, Info, TrendingDown } from "lucide-react";
+import { Clock, Rocket, Info, TrendingDown, RefreshCw, Search } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import {
+  SUBSCRIPTION_STATUSES,
+  matchesSubscriptionFilter,
+  SubscriptionStatusBadge,
+  SubscriptionTruthUnavailable,
+  type SubscriptionCustomerFilter,
+  type SubscriptionStatus,
+} from "./subscription-truth-presentation";
 
 interface LifecycleOverview {
   stages: Array<{ stage: string; count: number }>;
@@ -36,6 +44,240 @@ interface Heatmap {
   byHour: number[];
   quietestWindows: Array<{ startHour: number; endHour: number; actions: number }>;
   busiestWindows: Array<{ startHour: number; endHour: number; actions: number }>;
+}
+
+interface SubscriptionTruth {
+  summary: {
+    paying: number;
+    complimentary: number;
+    cancellationScheduled: number;
+    paymentDeclined: number;
+    churnedCanceled: number;
+    churnedDeclined: number;
+    unknown: number;
+  };
+  customers: Array<{
+    userId: number;
+    username: string | null;
+    email: string | null;
+    provider: "stripe" | "apple" | "complimentary" | "unknown";
+    status: SubscriptionStatus;
+    reason: string | null;
+    changedAt: string | null;
+    recoveryEndsAt: string | null;
+  }>;
+  events: Array<{
+    id: string | number;
+    userId: number;
+    username: string | null;
+    type: string;
+    reason: string | null;
+    occurredAt: string;
+    provider: "stripe" | "apple" | "complimentary" | "unknown";
+  }>;
+}
+
+function formatTruthDate(value: string | null | undefined) {
+  if (!value) return "Time not recorded";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Time not recorded";
+  return date.toLocaleString(undefined, {
+    month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit",
+  });
+}
+
+function SubscriptionTruthPanel() {
+  const [statusFilter, setStatusFilter] = useState<SubscriptionCustomerFilter>("all");
+  const [search, setSearch] = useState("");
+  const {
+    data,
+    isLoading,
+    isError,
+    isFetching,
+    refetch,
+  } = useQuery<SubscriptionTruth>({
+    queryKey: ["/api/admin/subscription-truth"],
+    queryFn: () => apiRequest("GET", "/api/admin/subscription-truth").then(r => r.json()),
+  });
+
+  const summaryCards: Array<{ status: SubscriptionStatus; value: number }> = data ? [
+    { status: "paying", value: data.summary.paying },
+    { status: "complimentary", value: data.summary.complimentary },
+    { status: "cancellation_scheduled", value: data.summary.cancellationScheduled },
+    { status: "payment_declined", value: data.summary.paymentDeclined },
+    { status: "churned_canceled", value: data.summary.churnedCanceled },
+    { status: "churned_declined", value: data.summary.churnedDeclined },
+    { status: "unknown", value: data.summary.unknown },
+  ] : [];
+  const normalizedSearch = search.trim().toLowerCase();
+  const visibleCustomers = (data?.customers ?? []).filter(customer => {
+    if (!matchesSubscriptionFilter(customer.status, statusFilter)) return false;
+    if (!normalizedSearch) return true;
+    return [customer.username, customer.email, customer.provider, customer.reason, String(customer.userId)]
+      .some(value => value?.toLowerCase().includes(normalizedSearch));
+  });
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-lg">Subscription truth</CardTitle>
+            <p className="text-xs text-gray-500 font-normal mt-1">
+              Current provider-confirmed billing state. Paying, complimentary access, recovery, and terminal churn are separate.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="h-28 flex items-center justify-center text-gray-400 text-sm">Loading subscription truth…</div>
+        ) : isError || !data ? (
+          <SubscriptionTruthUnavailable />
+        ) : (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+              {summaryCards.map(({ status, value }) => {
+                const definition = SUBSCRIPTION_STATUSES[status];
+                const filter: SubscriptionCustomerFilter = status === "paying" ? "paying_including_scheduled" : status;
+                return (
+                  <button
+                    type="button"
+                    key={status}
+                    onClick={() => setStatusFilter(current => current === filter ? "all" : filter)}
+                    className={`text-left rounded-lg border p-2.5 transition-shadow hover:shadow-sm ${definition.className} ${
+                      statusFilter === filter ? "ring-2 ring-blue-500 ring-offset-1" : ""
+                    }`}
+                    title={definition.help}
+                  >
+                    <p className="text-xl font-bold">{value.toLocaleString()}</p>
+                    <p className="text-[11px] font-semibold leading-tight mt-0.5">
+                      {status === "paying" ? "Paying (includes scheduled)" : definition.label}
+                    </p>
+                    {status === "cancellation_scheduled" && (
+                      <p className="text-[10px] leading-tight mt-0.5">subset of paying</p>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 mb-2">Recent billing changes</h3>
+              {data.events.length === 0 ? (
+                <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-500">No billing changes recorded yet.</p>
+              ) : (
+                <div className="divide-y rounded-lg border">
+                  {data.events.slice(0, 20).map(event => (
+                    <div key={event.id} className="p-3 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-4">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900">
+                          {event.username || `User ${event.userId}`}
+                          <span className="font-normal text-gray-500"> · {event.type.replaceAll("_", " ")}</span>
+                        </p>
+                        <p className="text-xs text-gray-600 mt-0.5">{event.reason || "No reason supplied by provider"}</p>
+                      </div>
+                      <div className="text-xs text-gray-500 sm:text-right shrink-0">
+                        <p className="capitalize">{event.provider}</p>
+                        <time dateTime={event.occurredAt}>{formatTruthDate(event.occurredAt)}</time>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 mb-2">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900">Customers by current billing state</h3>
+                  <p className="text-xs text-gray-500">{visibleCustomers.length} of {data.customers.length} customers shown</p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <label className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-gray-400" />
+                    <input
+                      type="search"
+                      value={search}
+                      onChange={event => setSearch(event.target.value)}
+                      placeholder="Search name, email, reason…"
+                      className="h-9 w-full sm:w-64 rounded-md border border-gray-300 bg-white pl-8 pr-3 text-sm"
+                    />
+                  </label>
+                  <select
+                    value={statusFilter}
+                    onChange={event => setStatusFilter(event.target.value as SubscriptionCustomerFilter)}
+                    className="h-9 rounded-md border border-gray-300 bg-white px-3 text-sm"
+                    aria-label="Filter customers by billing state"
+                  >
+                    <option value="all">All billing states</option>
+                    <option value="paying_including_scheduled">Paying (includes cancellation scheduled)</option>
+                    {Object.entries(SUBSCRIPTION_STATUSES).map(([status, definition]) => (
+                      status === "paying" ? null :
+                      <option key={status} value={status}>{definition.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="overflow-x-auto rounded-lg border">
+                <table className="w-full min-w-[760px] text-sm">
+                  <thead className="bg-gray-50 text-xs text-gray-600">
+                    <tr>
+                      <th className="text-left font-medium p-2.5">Customer</th>
+                      <th className="text-left font-medium p-2.5">Billing state</th>
+                      <th className="text-left font-medium p-2.5">Provider</th>
+                      <th className="text-left font-medium p-2.5">Reason</th>
+                      <th className="text-left font-medium p-2.5">Changed</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {visibleCustomers.map(customer => {
+                      return (
+                        <tr key={customer.userId}>
+                          <td className="p-2.5">
+                            <p className="font-medium text-gray-900">{customer.username || `User ${customer.userId}`}</p>
+                            <p className="text-xs text-gray-500">{customer.email || `User ID ${customer.userId}`}</p>
+                          </td>
+                          <td className="p-2.5">
+                            <SubscriptionStatusBadge status={customer.status} />
+                            {customer.status === "payment_declined" && (
+                              <p className="text-[11px] text-gray-500 mt-1">
+                                {customer.recoveryEndsAt
+                                  ? `Provider recovery ends by ${formatTruthDate(customer.recoveryEndsAt)}`
+                                  : "Recovery timing not supplied"}
+                              </p>
+                            )}
+                          </td>
+                          <td className="p-2.5 capitalize text-gray-700">{customer.provider}</td>
+                          <td className="p-2.5 text-gray-600 max-w-xs">{customer.reason || "No reason supplied"}</td>
+                          <td className="p-2.5 text-xs text-gray-600">{formatTruthDate(customer.changedAt)}</td>
+                        </tr>
+                      );
+                    })}
+                    {visibleCustomers.length === 0 && (
+                      <tr><td colSpan={5} className="p-6 text-center text-gray-500">No customers match these filters.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-[11px] text-gray-500 mt-2">
+                Payment state does not by itself describe feature access. Apple controls its own billing and retry behavior; no retry countdown is promised here.
+              </p>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 const STAGE_COLORS: Record<string, string> = {
@@ -81,8 +323,7 @@ export default function LifecycleIntelligence() {
     { label: "Added First Card", value: overview.funnel.addedFirstCard },
     { label: "Returning (3+ logins)", value: overview.funnel.returning },
     { label: "Engaged", value: overview.funnel.engaged },
-    { label: "Upgraded (paying)", value: overview.funnel.upgraded },
-    { label: "Cancelled", value: overview.funnel.cancelled },
+    { label: "Ever upgraded", value: overview.funnel.upgraded },
     { label: "Deleted Accounts", value: overview.funnel.deleted },
   ] : [];
 
@@ -101,13 +342,15 @@ export default function LifecycleIntelligence() {
 
   return (
     <>
+      <SubscriptionTruthPanel />
+
       {/* ── Compact conversion funnel ── */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Conversion Journey</CardTitle>
+          <CardTitle className="text-lg">Acquisition &amp; upgrade milestones</CardTitle>
           <p className="text-xs text-gray-400 font-normal">
-            Cumulative: each step counts every user who has ever reached that milestone, so one user
-            appears in multiple steps. Percentages show conversion from the previous step.
+            Historical cumulative milestones, not current subscription totals. Each user may appear in
+            multiple steps; use Subscription truth above for current paying and churn states.
           </p>
         </CardHeader>
         <CardContent>
@@ -117,28 +360,22 @@ export default function LifecycleIntelligence() {
             <>
               <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
                 {funnelSteps.map((step, i) => {
-                  const isCancelled = step.label === "Cancelled";
                   const isDeleted = step.label === "Deleted Accounts";
                   const base = funnelSteps[0]?.value ?? 0;
-                  const stepPct = i > 0 && !isCancelled && !isDeleted && base > 0 ? Math.round((step.value / base) * 100) : null;
+                  const stepPct = i > 0 && !isDeleted && base > 0 ? Math.round((step.value / base) * 100) : null;
                   return (
                     <div
                       key={step.label}
                       className={`rounded-lg border px-2.5 py-2 ${
-                        isDeleted ? "border-gray-300 bg-gray-100" : isCancelled ? "border-red-200 bg-red-50" : "bg-gray-50"
+                        isDeleted ? "border-gray-300 bg-gray-100" : "bg-gray-50"
                       }`}
                     >
-                      <p className={`text-xl font-bold ${isCancelled ? "text-red-600" : "text-gray-900"}`}>
+                      <p className="text-xl font-bold text-gray-900">
                         {step.value.toLocaleString()}
                       </p>
                       <p className="text-[11px] font-medium text-gray-600 leading-tight mt-0.5">{step.label}</p>
                       {stepPct !== null && (
                         <p className="text-[11px] font-semibold text-blue-600 mt-0.5">{stepPct}% of signups</p>
-                      )}
-                      {isCancelled && (
-                        <p className="text-[11px] font-semibold text-red-500 mt-0.5">
-                          {overview.conversion.churnRate}% churn
-                        </p>
                       )}
                       {isDeleted && (
                         <p className="text-[11px] font-semibold text-gray-500 mt-0.5">completed deletions</p>
@@ -166,9 +403,9 @@ export default function LifecycleIntelligence() {
       {/* ── Days to upgrade ── */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Time to Upgrade</CardTitle>
+          <CardTitle className="text-lg">Time to recorded upgrade</CardTitle>
           <p className="text-xs text-gray-400 font-normal">
-            How many days between signing up and becoming a paying subscriber.
+            Historical time between signup and the legacy upgrade date. This is not a current paying-customer count.
           </p>
         </CardHeader>
         <CardContent>
@@ -188,21 +425,21 @@ export default function LifecycleIntelligence() {
                   90% upgrade within {daysToUpgrade.p90Days} days
                 </Badge>
                 <Badge className="bg-gray-100 text-gray-700 border-gray-300">
-                  {daysToUpgrade.knownUpgrades} subscribers with known dates
+                  {daysToUpgrade.knownUpgrades} upgraded accounts with known dates
                 </Badge>
               </div>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={daysToUpgrade.buckets} margin={{ left: 0, right: 8 }}>
                   <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={0} />
                   <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                  <Tooltip formatter={(v: any) => [`${v} subscribers`, "Upgraded"]} />
+                  <Tooltip formatter={(v: any) => [`${v} accounts`, "Recorded upgrade"]} />
                   <Bar dataKey="count" fill="#22c55e" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
               {daysToUpgrade.unknownDates > 0 && (
                 <p className="text-[11px] text-gray-400 mt-2">
-                  {daysToUpgrade.unknownDates} active subscriber{daysToUpgrade.unknownDates === 1 ? "" : "s"} excluded
-                  (no upgrade date on record — e.g. Apple subscriptions from before tracking started).
+                  {daysToUpgrade.unknownDates} upgraded account{daysToUpgrade.unknownDates === 1 ? "" : "s"} excluded
+                  because no upgrade date is recorded.
                 </p>
               )}
             </>

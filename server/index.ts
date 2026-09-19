@@ -151,6 +151,61 @@ server.listen({
     // spam post cleaned up — both mean retro; genuine live awards always
     // have their (idempotent) feed event. Marker-gated + advisory-locked.
     await db.execute(sql`CREATE TABLE IF NOT EXISTS startup_migrations (name text PRIMARY KEY, run_at timestamp NOT NULL DEFAULT now())`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS subscription_truth_events (
+        id serial PRIMARY KEY,
+        provider text NOT NULL,
+        provider_event_id text NOT NULL,
+        user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        type text NOT NULL,
+        reason text NOT NULL,
+        occurred_at timestamp NOT NULL,
+        applied boolean NOT NULL DEFAULT false,
+        created_at timestamp NOT NULL DEFAULT now(),
+        UNIQUE(provider, provider_event_id)
+      )`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS subscription_truth_event_user_occurred_idx ON subscription_truth_events(user_id, occurred_at DESC)`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS subscription_truth_snapshots (
+        id serial PRIMARY KEY,
+        user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        provider text NOT NULL,
+        status text NOT NULL,
+        reason text NOT NULL,
+        provider_occurred_at timestamp NOT NULL,
+        recovery_ends_at timestamp,
+        evidence_id text NOT NULL,
+        updated_at timestamp NOT NULL DEFAULT now(),
+        UNIQUE(user_id, provider)
+      )`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS stripe_recovery_claims (
+        invoice_id text PRIMARY KEY,
+        user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        subscription_id text NOT NULL,
+        first_failed_at timestamp NOT NULL,
+        recovery_ends_at timestamp NOT NULL,
+        next_attempt_at timestamp,
+        attempt_count integer NOT NULL DEFAULT 0,
+        status text NOT NULL DEFAULT 'pending',
+        claim_token text,
+        claimed_at timestamp,
+        last_error text,
+        updated_at timestamp NOT NULL DEFAULT now()
+      )`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS stripe_recovery_due_idx ON stripe_recovery_claims(status, next_attempt_at)`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS stripe_recovery_attempts (
+        id serial PRIMARY KEY,
+        invoice_id text NOT NULL,
+        attempt_number integer NOT NULL,
+        idempotency_key text NOT NULL UNIQUE,
+        status text NOT NULL DEFAULT 'claimed',
+        decline_code text,
+        error text,
+        attempted_at timestamp NOT NULL DEFAULT now(),
+        UNIQUE(invoice_id, attempt_number)
+      )`);
     await db.transaction(async (tx) => {
       await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('retro_badge_flag_backfill_v1'))`);
       const m = await tx.execute(sql`INSERT INTO startup_migrations (name) VALUES ('retro_badge_flag_backfill_v1') ON CONFLICT (name) DO NOTHING RETURNING name`);
