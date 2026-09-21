@@ -72,14 +72,21 @@ export interface StartupGate {
   isReady(): boolean;
 }
 
-export function installStartupGate(app: Express): StartupGate {
+interface StartupGateOptions {
+  checkDependencies?: () => Promise<boolean>;
+}
+
+export function installStartupGate(
+  app: Express,
+  { checkDependencies = async () => true }: StartupGateOptions = {},
+): StartupGate {
   let ready = false;
 
   app.get("/health", (_req, res) => {
     res.setHeader("Cache-Control", "no-store");
     res.status(200).json({
-      status: ready ? "healthy" : "starting",
-      ready,
+      status: "alive",
+      startupComplete: ready,
       message: ready
         ? "Marvelous Card Vault API is running"
         : "Marvelous Card Vault is starting",
@@ -88,9 +95,11 @@ export function installStartupGate(app: Express): StartupGate {
     });
   });
 
-  app.get("/ready", (_req, res) => {
+  app.get("/ready", async (_req, res) => {
     res.setHeader("Cache-Control", "no-store");
-    res.status(ready ? 200 : 503).json({ ready });
+    const dependenciesReady = ready ? await checkDependencies() : false;
+    const fullyReady = ready && dependenciesReady;
+    res.status(fullyReady ? 200 : 503).json({ ready: fullyReady });
   });
 
   app.get("/", (_req, res, next) => {

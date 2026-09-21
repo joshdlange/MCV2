@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import compression from "compression";
 import { createServer } from "http";
 import { installStartupGate } from "./startupGate";
+import { createDependencyHealthProbe, installDependencyHealth } from "./dependencyHealth";
 import { installDataFixWriteGate } from "./dataFixWriteGate";
 import path from "path";
 import fs from "fs";
@@ -88,7 +89,17 @@ if (app.get("env") === "production") {
   }
 }
 
-const startupGate = installStartupGate(app);
+const dependencyHealth = createDependencyHealthProbe({
+  checkDatabase: async () => {
+    const { healthPool } = await import("./db");
+    await healthPool.query("SELECT 1");
+  },
+});
+installDependencyHealth(app, dependencyHealth);
+const startupGate = installStartupGate(app, {
+  checkDependencies: async () =>
+    (await dependencyHealth.check()).database === "available",
+});
 const port = process.env.PORT || 5000;
 
 server.on("error", (error) => {

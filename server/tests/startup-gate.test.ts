@@ -44,7 +44,10 @@ test("startup gate serves a recoverable page, then passes through when ready", a
 
     const startingHealth = await fetch(`${origin}/health`);
     assert.equal(startingHealth.status, 200);
-    assert.equal((await startingHealth.json()).ready, false);
+    const startingHealthBody = await startingHealth.json();
+    assert.equal(startingHealthBody.status, "alive");
+    assert.equal(startingHealthBody.startupComplete, false);
+    assert.equal("ready" in startingHealthBody, false);
 
     const startingReady = await fetch(`${origin}/ready`);
     assert.equal(startingReady.status, 503);
@@ -64,7 +67,10 @@ test("startup gate serves a recoverable page, then passes through when ready", a
     assert.deepEqual(await readyApi.json(), { ok: true });
 
     const readyHealth = await fetch(`${origin}/health`);
-    assert.equal((await readyHealth.json()).ready, true);
+    const readyHealthBody = await readyHealth.json();
+    assert.equal(readyHealthBody.status, "alive");
+    assert.equal(readyHealthBody.startupComplete, true);
+    assert.equal("ready" in readyHealthBody, false);
   } finally {
     await new Promise<void>((resolve, reject) => {
       server.close(error => error ? reject(error) : resolve());

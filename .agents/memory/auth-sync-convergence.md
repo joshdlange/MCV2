@@ -14,3 +14,9 @@ Production startup may recover Firebase-only identities automatically only when 
 **Why:** A production collector successfully authenticated with Firebase but had no `users` row because their email prefix was already another collector's username. The client ignored the 500 sync response and exposed the app anyway, leaving every user-owned action broken. A review also found that trusting request-body identity fields made the old sync endpoint impersonable.
 
 **How to apply:** Keep Firebase UID as the account identity and never merge users based only on username or email prefix. Any new auth provider or login path must use the verified backend-sync gate and must not set the authenticated app user before backend sync succeeds.
+
+Availability acceptance must include an actual database read and recovery after a prolonged outage, not only a running process or a short retry window. External alert delivery must be verified separately from implementing a health endpoint.
+
+**Why:** On September 21, 2026, production returned “endpoint has been disabled” across an observed span of nearly three hours while process readiness appeared healthy. Existing collectors were shown an account-setup error. Connectivity returned without establishing why the provider disabled the endpoint.
+
+**How to apply:** Do not equate restored connectivity with a root-cause fix, or an implemented health URL with active monitoring. Keep initial account access gated and allow explicit temporary outages to recover without requiring collectors to recreate accounts.

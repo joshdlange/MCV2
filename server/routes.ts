@@ -21,8 +21,15 @@ import { uploadImage } from "./cloudinary";
 import { db } from "./db";
 import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userWishlists, badges, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks, blocks, friends, userScanLogs, pcBinders, pcBinderCards, pcBinderShareLinks, PC_BINDER_CATEGORIES, SIDE_KICK_CARD_LIMIT, upcomingSetCandidates, upcomingSets as upcomingSetsTable } from "../shared/schema";
 import { imageContributionXp, computeXpProgress } from "../shared/xp";
-import { createOrGetFirebaseUser, getInitialUsernameSeed } from "./services/firebaseUserSync";
+import { getInitialUsernameSeed, resolveFirebaseUserForSync } from "./services/firebaseUserSync";
 import {
+  AuthDatabaseAvailabilityTracker,
+  DATABASE_UNAVAILABLE_RESPONSE,
+  isDatabaseUnavailableError,
+} from "./services/authDatabaseAvailability";
+import {
+  FirebaseDirectoryIdentityError,
+  FirebaseDirectoryUnavailableError,
   FirebaseSyncAuthError,
   loadCanonicalFirebaseIdentity,
   verifyFirebaseSyncIdentity,
@@ -124,6 +131,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 // Throttle user-platform writes to at most once per user+platform per hour.
 // Swept periodically so it can't grow unbounded in a long-lived process.
 const platformSeenCache = new Map<string, number>();
+const authDatabaseAvailability = new AuthDatabaseAvailabilityTracker();
 setInterval(() => {
   const cutoff = Date.now() - 60 * 60 * 1000;
   for (const [key, ts] of platformSeenCache) {
@@ -273,6 +281,15 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
 
   // Auth Routes - Sync Firebase user with backend
   app.post("/api/auth/sync", async (req, res) => {
+    const suppliedRequestId = req.headers["x-request-id"];
+    const requestId =
+      typeof suppliedRequestId === "string" &&
+      suppliedRequestId.length <= 128 &&
+      /^[a-zA-Z0-9._-]+$/.test(suppliedRequestId)
+        ? suppliedRequestId
+        : crypto.randomUUID();
+    res.setHeader("X-Request-Id", requestId);
+    let verifiedFirebaseUid: string | undefined;
     try {
       const { refShareToken } = req.body;
       const nativeLogin = z.object({
@@ -284,11 +301,9 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         req.headers.authorization,
       );
       const firebaseUid = verifiedIdentity.uid;
+      verifiedFirebaseUid = firebaseUid;
 
-      // Check if user exists
-      let user = await storage.getUserByFirebaseUid(firebaseUid);
-      
-      if (!user) {
+      const syncResult = await resolveFirebaseUserForSync(firebaseUid, async () => {
         const identity = await loadCanonicalFirebaseIdentity(
           admin.auth(),
           verifiedIdentity,
@@ -309,14 +324,12 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
           plan: 'SIDE_KICK',
           subscriptionStatus: 'active'
         };
-        
-        const syncResult = await createOrGetFirebaseUser(userData);
-        user = syncResult.user;
-        if (syncResult.created) {
-          console.log('Created new user:', user.id, 'isAdmin:', user.isAdmin);
-        } else {
-          console.log('Auth sync converged on concurrently-created user:', user.id);
-        }
+        return userData;
+      });
+      let user = syncResult.user;
+
+      if (syncResult.created) {
+        console.log('Created new user:', user.id, 'isAdmin:', user.isAdmin);
 
         // Organic-funnel attribution: if this signup arrived via a shared PC
         // binder link, stamp the token on the new account (creation only —
@@ -342,7 +355,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         // so we have their actual chosen username, not just email prefix
         
         // Auto-friend new users with Joshua (admin user ID: 337)
-        if (syncResult.created && !isAdminEmail && user.id !== 337) {
+        if (!user.isAdmin && user.id !== 337) {
           // Follow system: instant mutual follow so every new collector starts
           // with 1 follower and 1 friend (the creator). Legacy friends row is
           // still written below for the older Social surfaces.
@@ -440,6 +453,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       if (!user) {
         throw new Error("User synchronization did not produce a user");
       }
+      authDatabaseAvailability.recovery(requestId, firebaseUid);
       res.json({ user: toAuthUser(user) });
     } catch (error) {
       if (error instanceof FirebaseSyncAuthError) {
@@ -447,6 +461,32 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
           message: error.message,
           code: error.code,
         });
+      }
+      if (error instanceof FirebaseDirectoryUnavailableError) {
+        res.setHeader("Cache-Control", "no-store");
+        res.setHeader("Retry-After", "2");
+        return res.status(error.status).json({
+          message: error.message,
+          code: error.code,
+          retryable: error.retryable,
+        });
+      }
+      if (error instanceof FirebaseDirectoryIdentityError) {
+        res.setHeader("Cache-Control", "no-store");
+        return res.status(error.status).json({
+          message: error.message,
+          code: error.code,
+          retryable: error.retryable,
+        });
+      }
+      if (
+        verifiedFirebaseUid &&
+        isDatabaseUnavailableError(error)
+      ) {
+        authDatabaseAvailability.failure(requestId, verifiedFirebaseUid, error);
+        res.setHeader("Cache-Control", "no-store");
+        res.setHeader("Retry-After", "2");
+        return res.status(503).json(DATABASE_UNAVAILABLE_RESPONSE);
       }
       console.error('Auth sync error:', error);
       res.status(500).json({ message: 'Failed to sync user' });

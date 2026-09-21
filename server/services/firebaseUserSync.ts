@@ -8,6 +8,11 @@ export interface FirebaseUserSyncResult {
   created: boolean;
 }
 
+interface FirebaseUserSyncDependencies {
+  lookup: (firebaseUid: string) => Promise<User | undefined>;
+  create: (userData: InsertUser) => Promise<FirebaseUserSyncResult>;
+}
+
 export function getInitialUsernameSeed(
   displayName: string | null | undefined,
   email: string,
@@ -69,4 +74,28 @@ export async function createOrGetFirebaseUser(
   }
 
   throw new Error("Could not create a unique collector account");
+}
+
+/**
+ * Keeps the read-before-create boundary explicit: a rejected lookup propagates
+ * and neither canonical identity loading nor a write is attempted.
+ */
+export async function resolveFirebaseUserForSync(
+  firebaseUid: string,
+  loadNewUserData: () => Promise<InsertUser>,
+  dependencies: FirebaseUserSyncDependencies = {
+    lookup: async uid => {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.firebaseUid, uid))
+        .limit(1);
+      return user;
+    },
+    create: createOrGetFirebaseUser,
+  },
+): Promise<FirebaseUserSyncResult> {
+  const existing = await dependencies.lookup(firebaseUid);
+  if (existing) return { user: existing, created: false };
+  return dependencies.create(await loadNewUserData());
 }

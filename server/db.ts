@@ -19,6 +19,25 @@ export const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
+// Health traffic is isolated from application work. Coalescing in the health
+// probe plus max=1 prevents monitor bursts from growing the connection count,
+// while client/server timeouts ensure a disabled endpoint cannot hang a check.
+export const healthPool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 1,
+  idleTimeoutMillis: 10_000,
+  connectionTimeoutMillis: 1_500,
+  statement_timeout: 1_500,
+  query_timeout: 1_800,
+  allowExitOnIdle: false,
+  application_name: "mcv_dependency_health",
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
+
+healthPool.on('error', (err) => {
+  console.error('Unexpected database health pool error:', err);
+});
+
 export const db = drizzle(pool, { schema });
 
 pool.on('error', (err) => {

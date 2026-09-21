@@ -21,6 +21,7 @@ import { Login } from "@/components/auth/Login";
 import { Onboarding, HeardAboutPrompt } from "@/components/auth/Onboarding";
 import { ProfileCustomization } from "@/components/profile/ProfileCustomization";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { CONNECTION_UNAVAILABLE_COPY } from "@/lib/backendUserSync";
 
 function RouteErrorBoundary({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -267,16 +268,20 @@ function AuthenticatedApp() {
   }
 
   if (syncError) {
+    const temporary = syncError === 'temporary';
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-        <div className="w-full max-w-md rounded-2xl border border-red-900/70 bg-zinc-950 p-7 text-center shadow-2xl">
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-red-950 text-red-400">
+        <div className={`w-full max-w-md rounded-2xl border bg-zinc-950 p-7 text-center shadow-2xl ${temporary ? 'border-amber-900/70' : 'border-red-900/70'}`}>
+          <div className={`mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full ${temporary ? 'bg-amber-950 text-amber-400' : 'bg-red-950 text-red-400'}`}>
             <AlertTriangle className="h-7 w-7" />
           </div>
-          <h1 className="text-2xl font-bold">We couldn't finish setting up your Vault</h1>
+          <h1 className="text-2xl font-bold">
+            {temporary ? CONNECTION_UNAVAILABLE_COPY.title : "We couldn't finish setting up your Vault"}
+          </h1>
           <p className="mt-3 text-sm leading-6 text-zinc-400">
-            Your sign-in succeeded, but your collector account is not ready yet.
-            Retry now, or sign out and try another account.
+            {temporary
+              ? CONNECTION_UNAVAILABLE_COPY.body
+              : "Your sign-in succeeded, but your collector account is not ready yet. Retry now, or sign out and try another account."}
           </p>
           <div className="mt-6 grid gap-3">
             <button
@@ -285,7 +290,7 @@ function AuthenticatedApp() {
               className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 font-semibold hover:bg-red-500"
             >
               <RefreshCw className="h-4 w-4" />
-              Retry account setup
+              {temporary ? CONNECTION_UNAVAILABLE_COPY.retry : 'Retry account setup'}
             </button>
             <button
               type="button"

@@ -12,7 +12,6 @@ import {
   type Auth,
   type User,
 } from "firebase/auth";
-import { syncFirebaseUserWithBackend } from "./backendUserSync";
 
 // Detect if running in native Capacitor app (Android/iOS)
 function isNativeApp(): boolean {
@@ -55,46 +54,6 @@ export { auth };
 
 const provider = new GoogleAuthProvider();
 
-// Sync user with backend after authentication
-const syncUserWithBackend = async (user: User) => {
-  try {
-    const backendUser = await syncFirebaseUserWithBackend(user);
-      
-    // Update app store with backend user data
-    const { useAppStore } = await import('@/lib/store');
-    useAppStore.getState().setCurrentUser({
-      id: backendUser.id,
-      name: backendUser.displayName || backendUser.username,
-      email: backendUser.email,
-      avatar: backendUser.photoURL || '',
-      isAdmin: backendUser.isAdmin,
-      imageAdmin: backendUser.imageAdmin || false,
-      plan: backendUser.plan,
-      subscriptionStatus: backendUser.subscriptionStatus,
-      onboardingComplete: backendUser.onboardingComplete,
-      totalLogins: backendUser.totalLogins || 0,
-      username: backendUser.username
-    });
-
-    // Check if user selected Super Hero plan during login
-    const selectedPlan = localStorage.getItem('selectedPlan');
-    if (selectedPlan === 'SUPER_HERO' && backendUser.plan === 'SIDE_KICK') {
-      localStorage.removeItem('selectedPlan');
-      // Store a flag to show upgrade modal on next render
-      // This lets the app handle the upgrade flow properly through the UI
-      sessionStorage.setItem('showUpgradeOnLoad', 'true');
-      // Navigate to profile which has the upgrade button visible
-      setTimeout(() => {
-        window.location.href = '/profile';
-      }, 500);
-    } else if (selectedPlan) {
-      localStorage.removeItem('selectedPlan');
-    }
-  } catch (error) {
-    console.error('Error syncing user:', error);
-  }
-};
-
 export const signInWithGoogle = async () => {
   try {
     console.log('Starting Google sign-in...');
@@ -106,7 +65,6 @@ export const signInWithGoogle = async () => {
       const result = await signInWithGoogleUnified();
       if (result.user) {
         console.log('User signed in via native:', result.user.displayName);
-        await syncUserWithBackend(result.user);
       }
       return;
     }
@@ -116,7 +74,6 @@ export const signInWithGoogle = async () => {
       const result = await signInWithPopup(auth, provider);
       if (result.user) {
         console.log('User signed in via popup:', result.user.displayName);
-        await syncUserWithBackend(result.user);
       }
     } catch (popupError: any) {
       // If popup fails (blocked, closed, etc.), use redirect
@@ -156,7 +113,6 @@ export const signUpWithEmail = async (email: string, password: string, displayNa
     // Update the user's display name
     if (result.user) {
       await updateProfile(result.user, { displayName });
-      await syncUserWithBackend(result.user);
     }
     
     return result;
@@ -169,10 +125,6 @@ export const signUpWithEmail = async (email: string, password: string, displayNa
 export const signInWithEmail = async (email: string, password: string) => {
   try {
     const result = await signInWithEmailAndPassword(auth, email, password);
-    
-    if (result.user) {
-      await syncUserWithBackend(result.user);
-    }
     
     return result;
   } catch (error: any) {
