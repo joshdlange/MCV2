@@ -37,7 +37,7 @@ export default function VaultPreview() {
         </button>
         <p role="status" style={{ color: '#a4adba', fontSize: 13 }}>{playing ? 'Playing · maximum 4 seconds' : 'Ready to preview'}</p>
         <a href={vaultClip.video} download="vault-entry.mp4" style={{ color: '#fca5a5', fontSize: 13 }}>Download optimized clip</a>
-        <p style={{ color: '#a4adba', fontSize: 12, marginTop: 16 }}>Silent · 3.6-second video → full black → quick app reveal. The real native app skips or takes a short exit when startup is ready.</p>
+        <p style={{ color: '#a4adba', fontSize: 12, marginTop: 16 }}>Silent · Full 3.6-second video → full black → quick app reveal. Startup continues underneath; being ready early never interrupts playback.</p>
         <p style={{ color: '#717d90', fontSize: 12, marginTop: 20 }}>Your OS reduced-motion setting is respected. The dark surface revealed afterward is a preview backdrop, not an imitation of your account.</p>
       </section>
       <div style={{ width: `min(${width}px, calc((100dvh - 64px) * ${width / height}))`, aspectRatio: `${width} / ${height}`, maxWidth: '100%', flexShrink: 0, position: 'relative', transform: 'translateZ(0)', overflow: 'hidden', borderRadius: 28, border: '1px solid #354052', background: '#0b1018' }}>

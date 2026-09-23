@@ -15,11 +15,18 @@ No admin setting, API, or database change is needed. Vite hashes the imported
 assets, so replacing them produces fresh URLs while repeat launches can cache
 the same clip. Ordinary web startup never imports the visual chunk.
 
-This runs during initial native session restoration, not after every sign-in,
-route change, or resume. Readiness exits in 300ms (80ms to black, 40ms hold,
-180ms reveal), without waiting for the clip; an initially ready app skips it.
-Errors and the hard deadline still dismiss immediately. The studio
-intentionally previews the full clip against a neutral backdrop.
+This runs once at the native application's stable React root, outside auth and
+route providers, not after every sign-in, route change, or resume. The whole
+clip plays even if authentication is already ready or becomes ready mid-clip.
+The final 200ms fades to black using actual media time. Media `ended` plus the
+completed footage fade starts the 40ms black hold; only the completed 180ms
+overlay animation normally removes the overlay. Auth readiness is never an
+exit signal. Errors and the four-second deadline still dismiss immediately.
+The studio previews the same sequence against a neutral backdrop.
+Normal loading overhead is absorbed by a modest playback-rate adjustment
+(1–1.25× maximum), preserving all footage and reserving 350ms for the completed
+black handoff plus scheduling margin. An excessively slow start fails open
+instead of cutting a normal reveal short or extending the four-second bound.
 
 Source for the current clip:
 `attached_assets/video_1790202730621_1f360421_1790202841148.mp4`.

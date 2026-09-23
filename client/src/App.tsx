@@ -22,14 +22,15 @@ import { Onboarding, HeardAboutPrompt } from "@/components/auth/Onboarding";
 import { ProfileCustomization } from "@/components/profile/ProfileCustomization";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { CONNECTION_UNAVAILABLE_COPY } from "@/lib/backendUserSync";
-import { NativeVaultLaunch } from "@/components/vault-launch/NativeVaultLaunch";
+import { warmNativeDashboard } from "@/lib/nativeDashboardStartup";
 
 function RouteErrorBoundary({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   return <ErrorBoundary key={location}>{children}</ErrorBoundary>;
 }
 
-const Dashboard = lazy(() => import("@/pages/dashboard"));
+const loadDashboard = () => import("@/pages/dashboard");
+const Dashboard = lazy(loadDashboard);
 const BrowseCards = lazy(() => import("@/pages/browse-cards"));
 const MyCollection = lazy(() => import("@/pages/my-collection"));
 const PcBinders = lazy(() => import("@/pages/pc-binders"));
@@ -326,6 +327,14 @@ function AuthenticatedApp() {
 function App() {
   const [location] = useLocation();
 
+  // Fetch/evaluate the dashboard chunk during native session restoration, not
+  // afterwards. Its existing parallel queries still mount only behind auth.
+  useEffect(() => {
+    warmNativeDashboard(Capacitor, location, loadDashboard)?.catch(error => {
+      console.warn('Dashboard code warmup failed; normal route loading will retry', error);
+    });
+  }, [location]);
+
   // Start Apple IAP store warm-up — only when native IAP is enabled (legacy path)
   useEffect(() => {
     if (isAppleIAP() && APPLE_IAP_ENABLED) {
@@ -412,7 +421,6 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <NativeVaultLaunch />
           <Toaster />
           <AuthenticatedApp />
         </AuthProvider>

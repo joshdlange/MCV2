@@ -6,7 +6,7 @@
   pointer-events: none;
   contain: strict;
   background: #000;
-  animation: vault-deadline 3900ms linear both;
+  animation: vault-deadline 4000ms linear both;
 }
 .vault-launch__surface {
   position: absolute;
@@ -15,13 +15,15 @@
   background: #02070b;
   opacity: 1;
 }
-.vault-launch--exiting {
-  animation: vault-deadline 3900ms linear both,
-    vault-reveal 180ms ease-out calc(var(--vault-fade) + 40ms) forwards;
+.vault-launch--revealing {
+  animation: vault-deadline 4000ms linear both,
+    vault-reveal 180ms ease-out forwards;
 }
-.vault-launch--exiting .vault-launch__surface {
+.vault-launch--blackening .vault-launch__surface {
   animation: vault-to-black var(--vault-fade) ease-in forwards;
 }
+.vault-launch--black .vault-launch__surface,
+.vault-launch--revealing .vault-launch__surface { opacity: 0; }
 @keyframes vault-to-black { to { opacity: 0; } }
 @keyframes vault-reveal { from { opacity: 1; } to { opacity: 0; } }
 .vault-launch__media {

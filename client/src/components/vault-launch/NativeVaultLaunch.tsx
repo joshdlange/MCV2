@@ -1,6 +1,5 @@
 import { Component, Suspense, lazy, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { useAuth } from '@/contexts/AuthContext';
 import { createLaunchClaim, guardVaultLaunch, isNativeVaultPlatform } from './lifecycle';
 
 // No frame import or download occurs unless the native gate actually opens.
@@ -15,9 +14,9 @@ class FailOpen extends Component<{ children: ReactNode; onFailure: () => void },
 }
 
 export function NativeVaultLaunch() {
-  const { loading } = useAuth();
   const [visible, setVisible] = useState(false);
   const cleanup = useRef<(() => void) | undefined>();
+  const deadline = useRef(0);
   const finish = useCallback(() => {
     cleanup.current?.();
     cleanup.current = undefined;
@@ -26,8 +25,9 @@ export function NativeVaultLaunch() {
 
   useEffect(() => {
     if (!isNativeVaultPlatform(Capacitor) || !claimLaunch()) return;
-    // A restored session/login screen already ready is more valuable than a splash.
-    if (!loading || document.hidden || window.innerWidth > window.innerHeight) return;
+    // Playback is independent of authentication and route readiness.
+    if (document.hidden || window.innerWidth > window.innerHeight) return;
+    deadline.current = performance.now() + 4000;
     setVisible(true);
     cleanup.current = guardVaultLaunch(finish, window, document);
     return () => cleanup.current?.();
@@ -37,6 +37,6 @@ export function NativeVaultLaunch() {
 
   if (!visible) return null;
   return <FailOpen onFailure={finish}>
-    <Suspense fallback={null}><VaultScene onFinish={finish} exitRequested={!loading} /></Suspense>
+    <Suspense fallback={null}><VaultScene onFinish={finish} deadline={deadline.current} /></Suspense>
   </FailOpen>;
 }

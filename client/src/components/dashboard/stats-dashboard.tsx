@@ -14,6 +14,10 @@ import { useEffect, useRef, useState } from "react";
 import { XpPowerMeter } from "./xp-power-meter";
 import { MissionCard } from "./mission-control";
 import { useAppStore } from "@/lib/store";
+import { Capacitor } from "@capacitor/core";
+import { isNativeDashboardPlatform } from "@/lib/nativeDashboardStartup";
+
+const nativeDashboard = isNativeDashboardPlatform(Capacitor);
 
 const TILES = [
   {
@@ -59,12 +63,15 @@ const TILES = [
 ] as const;
 
 function useCountUp(target: number, duration = 900) {
-  const [display, setDisplay] = useState(0);
+  const [display, setDisplay] = useState(nativeDashboard ? target : 0);
   const raf = useRef<number | null>(null);
   const start = useRef<number | null>(null);
   const prev = useRef(0);
 
   useEffect(() => {
+    // On native launch show fetched totals immediately, rather than spending
+    // another 900ms counting up from a misleading zero after the splash.
+    if (nativeDashboard) return;
     if (target === prev.current) return;
     const from = prev.current;
     prev.current = target;
@@ -81,7 +88,7 @@ function useCountUp(target: number, duration = 900) {
     return () => { if (raf.current) cancelAnimationFrame(raf.current); };
   }, [target, duration]);
 
-  return display;
+  return nativeDashboard ? target : display;
 }
 
 function PowerTile({
@@ -95,13 +102,13 @@ function PowerTile({
   displayValue: string;
   onClick: () => void;
 }) {
-  const animated = useCountUp(rawValue);
+  const animated = useCountUp(Number.isFinite(rawValue) ? rawValue : 0);
   const formattedCount =
     rawValue >= 10000
       ? `${(animated / 1000).toFixed(1)}K`
       : animated.toLocaleString();
 
-  const shown = tile.key === "value" ? displayValue : formattedCount;
+  const shown = !Number.isFinite(rawValue) ? "—" : tile.key === "value" ? displayValue : formattedCount;
 
   return (
     <motion.div
@@ -250,8 +257,8 @@ export function StatsDashboard() {
 
   const totalCards = stats.totalCards || 0;
   const totalValue = stats.totalValue ? parseFloat(stats.totalValue.toString()) : 0;
-  const wishlistItems = (stats as any).wishlistItems || (stats as any).wishlistCount || 0;
-  const superpowersCount = userBadges?.length || 0;
+  const wishlistItems = (stats as any).wishlistItems ?? (stats as any).wishlistCount ?? NaN;
+  const superpowersCount = userBadges?.length ?? NaN;
 
   const valueDisplay =
     totalValue >= 10000
