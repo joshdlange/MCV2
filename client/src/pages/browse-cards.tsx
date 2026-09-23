@@ -99,10 +99,12 @@ export default function BrowseCards() {
   // All queries
   const { data: cardSets } = useQuery<CardSet[]>({
     queryKey: ["/api/card-sets"],
+    refetchInterval: 30_000,
   });
 
   const { data: mainSets } = useQuery<MainSet[]>({
     queryKey: ["/api/main-sets"],
+    refetchInterval: 30_000,
   });
   const newReleaseSetIds = useMemo(() => getNewReleaseSetIds(mainSets ?? []), [mainSets]);
 

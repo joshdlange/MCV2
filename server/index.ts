@@ -31,6 +31,7 @@ app.use('/api/resend-webhook', express.raw({ type: 'application/json' }));
 // Compress API/JSON and other compressible responses (skips images automatically)
 app.use(compression());
 
+app.use('/api/admin/upcoming-sets', express.json({ limit: '2mb' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

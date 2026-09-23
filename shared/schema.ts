@@ -723,6 +723,9 @@ export const insertMarketTrendItemSchema = createInsertSchema(marketTrendItems).
 
 // Upcoming Sets Table - Enhanced with full spec
 export const upcomingSets = pgTable("upcoming_sets", {
+  stagedChecklist: jsonb("staged_checklist"),
+  publishedMainSetId: integer("published_main_set_id").references(() => mainSets.id),
+  releaseError: text("release_error"),
   id: serial("id").primaryKey(),
   setName: text("set_name").notNull(),
   manufacturer: text("manufacturer"),

@@ -1,4 +1,9 @@
 import type { Express } from "express";
+import { upcomingPublicCatchup } from './services/upcomingSetRelease';
+import { ensureDiscoveryFresh } from './services/upcomingSetsSync';
+import { centralReleaseDate } from '../shared/upcomingRelease';
+import { publicUpcomingSet } from '../shared/upcomingAdmin';
+import { saveUpcomingSet } from './services/upcomingAdmin';
 import express from "express";
 import { createServer, type Server } from "http";
 import { CollectionLimitExceededError, storage } from "./storage";
@@ -226,6 +231,18 @@ function validateCriticalDependencies() {
 }
 
 export async function registerRoutes(app: Express, existingServer?: Server): Promise<Server> {
+  // Reads catch up even on an autoscaled instance that slept through midnight.
+  app.use(['/api/main-sets', '/api/card-sets', '/api/cards', '/api/upcoming-sets'], async (_req, res, next) => {
+    try {
+      await upcomingPublicCatchup();
+      void ensureDiscoveryFresh().catch(error => console.error('[Upcoming discovery catchup]', error));
+      res.setHeader('Cache-Control', 'no-store');
+      next();
+    } catch (error) {
+      console.error('[Upcoming catalog catchup]', error);
+      res.status(503).json({ message: 'Catalog release checks temporarily unavailable. Please retry.' });
+    }
+  });
   
   validateCriticalDependencies();
   
@@ -7337,7 +7354,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         sets = sets.slice(0, limit);
       }
       
-      const sanitized = sets.map(({ sourceUrl, ...rest }) => rest);
+      const sanitized = sets.map(publicUpcomingSet);
       res.json(sanitized);
     } catch (error) {
       console.error('Get upcoming sets error:', error);
@@ -7382,7 +7399,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       }
       
       const sets = await storage.getAllUpcomingSets();
-      res.json(sets);
+      res.json(sets.map(set => ({ ...set, name: set.setName })));
     } catch (error) {
       console.error('Get admin upcoming sets error:', error);
       res.status(500).json({ message: "Failed to fetch upcoming sets" });
@@ -7395,12 +7412,11 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         return res.status(403).json({ message: 'Admin access required' });
       }
       
-      const setData = req.body;
-      const newSet = await storage.createUpcomingSet(setData);
+      const newSet = await saveUpcomingSet(req.body);
       res.json(newSet);
     } catch (error) {
       console.error('Create upcoming set error:', error);
-      res.status(500).json({ message: "Failed to create upcoming set" });
+      res.status(400).json({ message: error instanceof Error ? error.message : "Failed to create upcoming set" });
     }
   });
 
@@ -7410,12 +7426,8 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         return res.status(403).json({ message: 'Admin access required' });
       }
       
-      const setId = parseInt(req.params.id);
-      const updates = { ...req.body };
-      if (updates.releaseDateEstimated && typeof updates.releaseDateEstimated === 'string') {
-        updates.releaseDateEstimated = new Date(updates.releaseDateEstimated);
-      }
-      const updatedSet = await storage.updateUpcomingSet(setId, updates);
+      const setId = z.coerce.number().int().positive().parse(req.params.id);
+      const updatedSet = await saveUpcomingSet(req.body, setId);
       
       if (!updatedSet) {
         return res.status(404).json({ message: "Upcoming set not found" });
@@ -7424,7 +7436,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       res.json(updatedSet);
     } catch (error) {
       console.error('Update upcoming set error:', error);
-      res.status(500).json({ message: "Failed to update upcoming set" });
+      res.status(400).json({ message: error instanceof Error ? error.message : "Failed to update upcoming set" });
     }
   });
 
@@ -7516,7 +7528,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       res.json(updatedSet);
     } catch (error) {
       console.error('Mark set as released error:', error);
-      res.status(500).json({ message: "Failed to mark set as released" });
+      res.status(409).json({ message: error instanceof Error ? error.message : "Failed to mark set as released" });
     }
   });
 
@@ -7656,6 +7668,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       // two concurrent approvals cannot create duplicate upcoming sets, and a
       // failure after creation rolls the claim back too.
       const result = await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('upcoming-candidate-approval'))`);
         const [claimed] = await tx.update(upcomingSetCandidates)
           .set({ status: 'approved', adminNotes: req.body.adminNotes ?? undefined, updatedAt: new Date() })
           .where(and(eq(upcomingSetCandidates.id, id), ne(upcomingSetCandidates.status, 'approved')))
@@ -7664,10 +7677,16 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
 
         const setName = String(req.body.setName || claimed.detectedSetName).trim();
         if (!setName) throw new Error('Set name cannot be empty');
+        const duplicates = await tx.select().from(upcomingSetsTable).where(or(
+          eq(upcomingSetsTable.sourceUrl, claimed.sourceUrl),
+          sql`lower(trim(${upcomingSetsTable.setName})) = lower(trim(${setName}))`
+        ));
+        if (duplicates.length) throw new Error('This product already has an upcoming entry');
+        if (req.body.dateConfidence === 'confirmed' && !req.body.releaseDateEstimated) throw new Error('Enter the verified release date to confirm it');
         const [created] = await tx.insert(upcomingSetsTable).values({
           setName,
           manufacturer: req.body.manufacturer ?? claimed.manufacturer,
-          releaseDateEstimated: req.body.releaseDateEstimated ? new Date(req.body.releaseDateEstimated) : claimed.estimatedReleaseDate,
+          releaseDateEstimated: req.body.releaseDateEstimated ? centralReleaseDate(req.body.releaseDateEstimated) : claimed.estimatedReleaseDate,
           dateConfidence: req.body.dateConfidence === 'confirmed' ? 'confirmed' : 'estimated',
           keyHighlights: req.body.keyHighlights ?? claimed.description,
           checklistUrl: claimed.checklistUrl,

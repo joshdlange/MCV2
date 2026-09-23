@@ -11,9 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Edit, Trash2, Plus, Calendar, Eye, EyeOff, Link as LinkIcon, CheckCircle, Loader2, RefreshCw, Clock } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { parseUpcomingChecklist } from '@/lib/upcomingChecklistCsv';
 import { useToast } from "@/hooks/use-toast";
 
 interface UpcomingSet {
+  stagedChecklist?: unknown;
+  releaseError?: string | null;
+  publishedMainSetId?: number | null;
   id: number;
   name: string;
   manufacturer: string | null;
@@ -51,7 +55,7 @@ function RssSyncButton() {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/upcoming-sets'] });
       toast({
         title: "RSS Sync Complete",
-        description: `Added: ${data.added} | Duplicates: ${data.skippedDuplicate} | Not Marvel: ${data.skippedNotMarvel} | Errors: ${data.errors}`,
+        description: `${data.candidatesCreated} candidates queued for review in Set Intelligence. ${data.sources.filter((s: any) => !s.ok).length} source failures — details are in Set Intelligence.`,
       });
     } catch (error) {
       toast({ title: "RSS sync failed", variant: "destructive" });
@@ -295,7 +299,7 @@ export default function AdminUpcomingSets() {
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center text-gray-600">
                       <Calendar className="w-4 h-4 mr-1" />
-                      {new Date(set.releaseDateEstimated).toLocaleDateString()}
+                      {new Date(set.releaseDateEstimated).toLocaleDateString('en-US', { timeZone: 'America/Chicago' })}
                     </div>
                     {set.dateConfidence && (
                       <Badge variant="outline" className="text-xs">
@@ -788,6 +792,8 @@ function CreateSetForm({ onSubmit, isLoading }: { onSubmit: (data: any) => void;
 }
 
 function EditSetForm({ set, onSubmit, isLoading }: { set: UpcomingSet; onSubmit: (data: any) => void; isLoading: boolean }) {
+  const [checklist, setChecklist] = useState<ReturnType<typeof parseUpcomingChecklist> | null>(null);
+  const [checklistError, setChecklistError] = useState('');
   const [formData, setFormData] = useState({
     name: set.name,
     manufacturer: set.manufacturer || '',
@@ -810,6 +816,9 @@ function EditSetForm({ set, onSubmit, isLoading }: { set: UpcomingSet; onSubmit:
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const submitData: any = { name: formData.name, isActive: formData.isActive };
+    if (checklistError) return;
+    if (checklist) submitData.stagedChecklist = checklist;
+    submitData.releaseDateEstimated = formData.releaseDateEstimated || null;
     
     if (formData.manufacturer) submitData.manufacturer = formData.manufacturer;
     if (formData.productLine) submitData.productLine = formData.productLine;
@@ -831,6 +840,20 @@ function EditSetForm({ set, onSubmit, isLoading }: { set: UpcomingSet; onSubmit:
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <section className="rounded border p-3 space-y-2">
+        <p className="text-sm">Automatic release: confirm the date and upload the complete checklist. Publishes at midnight Central. Delayed sets stay hidden from Browse.</p>
+        <Label>Checklist CSV (Subset, Card Number, Card Name, Is Insert)</Label>
+        <Input type="file" accept=".csv,text/csv" onChange={async e => {
+          setChecklist(null); setChecklistError('');
+          try {
+            const file = e.target.files?.[0];
+            if (file) setChecklist(parseUpcomingChecklist(await file.text()));
+          } catch (error) { setChecklistError(error instanceof Error ? error.message : 'Invalid checklist'); }
+        }} />
+        <p className="text-sm">{checklist ? `${checklist.length} subsets / ${checklist.reduce((n, s) => n + s.cards.length, 0)} cards ready to save`
+          : set.publishedMainSetId ? 'Published to Browse' : set.stagedChecklist ? 'Checklist staged' : 'Awaiting checklist — will remain Coming Soon'}</p>
+        {(checklistError || set.releaseError) && <p role="alert" className="text-red-600 text-sm">{checklistError || set.releaseError}</p>}
+      </section>
       <Tabs defaultValue="basic" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="basic">Basic Info</TabsTrigger>

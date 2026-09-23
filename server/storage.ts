@@ -2800,14 +2800,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async markSetAsReleased(id: number): Promise<UpcomingSet | undefined> {
-    const [updatedSet] = await db.update(upcomingSets)
-      .set({ 
-        status: 'released',
-        updatedAt: new Date()
-      })
-      .where(eq(upcomingSets.id, id))
-      .returning();
-    return updatedSet;
+    const { upcomingPublicCatchup } = await import('./services/upcomingSetRelease');
+    await upcomingPublicCatchup();
+    const set = await this.getUpcomingSetById(id);
+    if (set && !set.publishedMainSetId) throw new Error('Publication requires a confirmed due date, active upcoming status, and staged checklist');
+    return set;
   }
 
   async trackSetInterest(userId: number, upcomingSetId: number): Promise<boolean> {
@@ -2858,21 +2855,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async expireReleasedSets(): Promise<number> {
-    const now = new Date();
-    const result = await db.update(upcomingSets)
-      .set({ 
-        status: 'released',
-        isActive: false,
-        updatedAt: new Date()
-      })
-      .where(
-        and(
-          sql`${upcomingSets.releaseDateEstimated} <= ${now}`,
-          sql`${upcomingSets.status} != 'released'`
-        )
-      )
-      .returning();
-    return result.length;
+    const { upcomingPublicCatchup } = await import('./services/upcomingSetRelease');
+    return upcomingPublicCatchup();
   }
 
   // ── Analytics ────────────────────────────────────────────────────────────────

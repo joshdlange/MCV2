@@ -1,5 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
-import { db } from '../db';
+import { db, pool } from '../db';
 import { upcomingSetCandidates, setIntelScanLogs, upcomingSets, mainSets, cardSets } from '../../shared/schema';
 import { desc, eq, sql, inArray } from 'drizzle-orm';
 
@@ -476,12 +476,17 @@ let scanInProgress = false;
 export async function runSetIntelScan(opts: { dryRun: boolean; trigger?: string }): Promise<ScanReport> {
   if (scanInProgress) throw new Error('A scan is already in progress');
   scanInProgress = true;
+  const scanLock = await pool.connect().catch(error => { scanInProgress = false; throw error; });
+  let lockAcquired = false;
   const startedAt = new Date();
   const sources: SourceResult[] = [];
   const wouldCreate: ScanReport['wouldCreate'] = [];
   let candidatesCreated = 0;
 
   try {
+    const lock = await scanLock.query("SELECT pg_try_advisory_lock(hashtext('set-intelligence-scan')) AS acquired");
+    lockAcquired = lock.rows[0].acquired;
+    if (!lockAcquired) throw new Error('A scan is already running on another instance');
     const { upcoming, existing } = await loadKnownNames();
     const existingCandidates = await db.select({ normalizedName: upcomingSetCandidates.normalizedName, sourceUrl: upcomingSetCandidates.sourceUrl }).from(upcomingSetCandidates);
     const knownCandidateNames = new Set(existingCandidates.map(c => c.normalizedName));
@@ -520,7 +525,7 @@ export async function runSetIntelScan(opts: { dryRun: boolean; trigger?: string 
             continue;
           }
 
-          await db.insert(upcomingSetCandidates).values({
+          const inserted = await db.insert(upcomingSetCandidates).values({
             detectedSetName: item.detectedSetName,
             normalizedName: normalized,
             manufacturer: inferManufacturer(item.detectedSetName),
@@ -535,9 +540,13 @@ export async function runSetIntelScan(opts: { dryRun: boolean; trigger?: string 
             description: item.description ?? null,
             possibleDuplicateOf,
             status,
-          }).onConflictDoNothing({ target: upcomingSetCandidates.normalizedName });
+          }).onConflictDoNothing({ target: upcomingSetCandidates.normalizedName }).returning({ id: upcomingSetCandidates.id });
           knownCandidateNames.add(normalized);
           knownCandidateUrls.add(item.sourceUrl);
+          if (!inserted.length) {
+            result.skippedDuplicate++;
+            continue;
+          }
           result.created++;
           candidatesCreated++;
           wouldCreate.push({ name: item.detectedSetName, source: item.sourceName, confidence, status, possibleDuplicateOf });
@@ -573,7 +582,9 @@ export async function runSetIntelScan(opts: { dryRun: boolean; trigger?: string 
       wouldCreate,
     };
   } finally {
-    scanInProgress = false;
+    try {
+      if (lockAcquired) await scanLock.query("SELECT pg_advisory_unlock(hashtext('set-intelligence-scan'))");
+    } finally { scanLock.release(); scanInProgress = false; }
   }
 }
 

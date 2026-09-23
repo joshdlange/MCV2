@@ -15,8 +15,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAppStore } from "@/lib/store";
 import useEmblaCarousel from 'embla-carousel-react';
 import { formatSetName } from "@/lib/formatTitle";
+import { parseUpcomingChecklist } from '@/lib/upcomingChecklistCsv';
 
 interface UpcomingSet {
+  checklistReady?: boolean;
+  releaseError?: string | null;
+  stagedChecklist?: unknown;
   id: number;
   setName: string;
   name?: string;
@@ -158,6 +162,9 @@ function AdminEditDialog({ set, onClose }: { set: UpcomingSet; onClose: () => vo
   const { toast } = useToast();
   const qc = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const [checklist, setChecklist] = useState<ReturnType<typeof parseUpcomingChecklist> | null>(null);
+  const [checklistError, setChecklistError] = useState('');
+  const [releaseStatus, setReleaseStatus] = useState(set.status);
   const [form, setForm] = useState({
     setName: getSetDisplayName(set),
     manufacturer: set.manufacturer || '',
@@ -172,10 +179,12 @@ function AdminEditDialog({ set, onClose }: { set: UpcomingSet; onClose: () => vo
     setSaving(true);
     try {
       const updates: Record<string, any> = {};
+      updates.status = releaseStatus;
+      if (checklist) updates.stagedChecklist = checklist;
       if (form.setName) updates.setName = form.setName;
       if (form.manufacturer) updates.manufacturer = form.manufacturer;
       updates.thumbnailUrl = form.thumbnailUrl || null;
-      if (form.releaseDateEstimated) updates.releaseDateEstimated = form.releaseDateEstimated;
+      updates.releaseDateEstimated = form.releaseDateEstimated || null;
       updates.dateConfidence = form.dateConfidence;
       if (form.keyHighlights) updates.keyHighlights = form.keyHighlights;
       updates.msrp = form.msrp || null;
@@ -214,7 +223,27 @@ function AdminEditDialog({ set, onClose }: { set: UpcomingSet; onClose: () => vo
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label>Release Date</Label>
+          <p className="text-xs text-gray-500">Publishes at midnight Central on this date, only when confirmed with a checklist.</p>
           <Input type="date" value={form.releaseDateEstimated} onChange={e => setForm({ ...form, releaseDateEstimated: e.target.value })} className="bg-white" />
+          <Label>Release status</Label>
+          <Select value={releaseStatus} onValueChange={v => setReleaseStatus(v as UpcomingSet['status'])}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="upcoming">Upcoming — scheduled</SelectItem>
+              <SelectItem value="delayed">Delayed — pause publication</SelectItem>
+            </SelectContent>
+          </Select>
+          <Label>Stage checklist CSV</Label>
+          <Input type="file" accept=".csv,text/csv" onChange={async e => {
+            setChecklist(null); setChecklistError('');
+            try {
+              const file = e.target.files?.[0];
+              if (file) setChecklist(parseUpcomingChecklist(await file.text()));
+            } catch (error) { setChecklistError(error instanceof Error ? error.message : 'Invalid checklist'); }
+          }} />
+          <p className="text-xs">{checklist ? `${checklist.length} subsets, ${checklist.reduce((n, s) => n + s.cards.length, 0)} cards ready to save`
+            : (set.checklistReady || set.stagedChecklist) ? 'Checklist staged for automatic publication' : 'No checklist staged — will stay Coming Soon'}</p>
+          {(checklistError || set.releaseError) && <p role="alert" className="text-sm text-red-600">{checklistError || set.releaseError}</p>}
         </div>
         <div>
           <Label>Date Confidence</Label>
@@ -436,6 +465,7 @@ function UpcomingSetCarousel({ sets }: { sets: UpcomingSet[] }) {
                           <Calendar className="w-4 h-4 mr-2 text-red-600" />
                           <span className="font-medium">
                             {new Date(set.releaseDateEstimated).toLocaleDateString('en-US', {
+                              timeZone: 'America/Chicago',
                               year: 'numeric',
                               month: 'long',
                               day: 'numeric'
@@ -536,6 +566,7 @@ export default function UpcomingSets() {
 
   const { data: upcomingSets = [], isLoading } = useQuery({
     queryKey: ['/api/upcoming-sets'],
+    refetchInterval: 30_000,
     queryFn: async () => {
       return apiRequest('GET', '/api/upcoming-sets').then(res => res.json());
     }
@@ -636,6 +667,7 @@ export default function UpcomingSets() {
                         <Calendar className="w-4 h-4 mr-2 text-red-600" />
                         <span className="font-medium">
                           {new Date(set.releaseDateEstimated).toLocaleDateString('en-US', {
+                            timeZone: 'America/Chicago',
                             year: 'numeric',
                             month: 'long',
                             day: 'numeric'
