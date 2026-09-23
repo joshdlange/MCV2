@@ -22,6 +22,7 @@ import { Onboarding, HeardAboutPrompt } from "@/components/auth/Onboarding";
 import { ProfileCustomization } from "@/components/profile/ProfileCustomization";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { CONNECTION_UNAVAILABLE_COPY } from "@/lib/backendUserSync";
+import { NativeVaultLaunch } from "@/components/vault-launch/NativeVaultLaunch";
 
 function RouteErrorBoundary({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -411,6 +412,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
+          <NativeVaultLaunch />
           <Toaster />
           <AuthenticatedApp />
         </AuthProvider>

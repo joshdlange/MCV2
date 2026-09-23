@@ -1,0 +1,351 @@
+Build a MOBILE-ONLY Marvel Card Vault animated vault-opening launch experience using the 6 image frames I am providing.
+
+Context:
+I am providing 6 vertical images that represent sequential stages of an X-shaped vault door opening.
+
+The intended sequence is:
+
+Frame 1:
+Vault mostly dormant / minimal red glow.
+
+Frame 2:
+Red energy begins building.
+
+Frame 3:
+X mechanism engages / unlock moment.
+
+Frame 4:
+Vault begins opening.
+
+Frame 5:
+Vault doors visibly separate.
+
+Frame 6:
+Vault fully open with the glowing red chamber visible.
+
+I want this to feel like the user is entering Marvel Card Vault.
+
+CRITICAL:
+This experiment is MOBILE APP ONLY.
+
+It should appear only when Marvel Card Vault is running inside the native iOS or Android Capacitor app.
+
+It must NOT appear:
+- on app.marvelcardvault.com in a normal browser
+- on desktop web
+- on mobile Safari
+- on mobile Chrome
+- in ordinary web/PWA usage
+
+If you cannot reliably distinguish the native Capacitor iOS/Android app from the web app, STOP and explain before implementing.
+
+This is an experiment.
+Keep it extremely isolated and easy to remove.
+
+GOAL
+
+Create a short cinematic startup overlay using the six supplied frames.
+
+Approximate total duration:
+3 to 4 seconds MAXIMUM.
+
+The experience should:
+
+1. Start dark.
+2. Show the dormant vault.
+3. Gradually intensify the red glow.
+4. Make the X/vault mechanism feel like it is activating.
+5. Transition into the vault opening.
+6. Push/zoom slightly toward the open vault.
+7. Fade smoothly into the actual Marvel Card Vault app.
+
+The user should feel like they just entered the vault.
+
+MUST DO
+
+Mobile detection:
+- Use the existing Capacitor/native platform detection if already available.
+- Prefer Capacitor.isNativePlatform() or the project's existing equivalent.
+- Explicitly restrict this to iOS and Android native app sessions.
+- Do not infer mobile based only on screen width or user agent.
+
+Animation implementation:
+- Use the 6 supplied images in the exact upload order unless filenames clearly indicate their intended order.
+- Do not regenerate or modify the artwork.
+- Keep image aspect ratio intact.
+- Use object-fit: cover as needed for differing device ratios.
+- Center the X/vault focal point appropriately.
+- The animation must fill the screen edge-to-edge.
+- Respect safe areas/notches.
+
+Suggested timing:
+
+0.00 - 0.35 sec
+Frame 1 fades in from black.
+
+0.35 - 0.85 sec
+Frame 1 with subtle push-in.
+
+0.85 - 1.30 sec
+Crossfade to Frame 2.
+Red energy appears stronger.
+
+1.30 - 1.75 sec
+Crossfade to Frame 3.
+Subtle scale/pulse to imply the lock engaging.
+
+1.75 - 2.25 sec
+Crossfade to Frame 4.
+
+2.25 - 2.75 sec
+Crossfade to Frame 5.
+Slightly stronger forward camera movement.
+
+2.75 - 3.25 sec
+Crossfade to Frame 6.
+
+3.25 - 3.60 sec
+Push slightly into the red chamber.
+
+3.60 - 3.90 sec
+Fade overlay away and reveal the actual app underneath.
+
+These timings are guidance.
+Polish them if needed, but NEVER make the experience longer than 4 seconds.
+
+Motion:
+- Use subtle scale transforms and opacity crossfades.
+- Small red pulse/glow is okay if lightweight.
+- Do not add heavy particle engines.
+- Do not add WebGL.
+- Do not add Three.js.
+- Do not add a large animation library.
+- Do not use expensive blur animations.
+- Do not create artificial startup lag just to finish the animation.
+
+PERFORMANCE
+
+This is extremely important.
+
+The animation must not materially hurt application startup performance.
+
+Must:
+- Optimize/compress the six supplied images appropriately for mobile.
+- Preserve visual quality.
+- Prefer appropriately sized WebP/JPEG versions.
+- Do not ship enormous original image files if optimized versions can be used.
+- Preload only what is necessary.
+- Avoid downloading the frames repeatedly.
+- Allow browser/app caching.
+- Do not trigger API requests for the animation.
+- Do not wait for backend data just to begin or complete the animation.
+- Do not block authentication/session restoration.
+- Do not delay actual app initialization underneath the overlay.
+- Let the application continue loading normally behind the splash animation.
+
+The splash should be an overlay on top of normal startup, NOT something that pauses the app for four seconds.
+
+FAIL-SAFE BEHAVIOR
+
+This is mandatory.
+
+If:
+- an image fails to load
+- animation code errors
+- the app becomes ready unusually quickly
+- platform detection is uncertain
+- startup takes longer than expected
+
+then fail gracefully and reveal the normal app.
+
+Never leave the user stuck on the vault screen.
+
+Add a hard maximum timeout:
+4 seconds maximum.
+
+At that point:
+- remove the animation overlay
+- reveal the app
+- clean up timers/listeners
+
+Do not allow the splash to trap navigation or block the application.
+
+WHEN IT SHOULD PLAY
+
+Play on a genuine native app cold launch.
+
+Do NOT replay:
+- every route change
+- opening a modal
+- moving between pages
+- returning to Dashboard
+- opening Feed
+- opening a card
+- background API refreshes
+
+For v1:
+Play once per native app launch/session.
+
+If the app is merely navigating internally, do not replay it.
+
+Do not create a database field for this.
+Do not create backend state for this.
+Session/local runtime state is sufficient.
+
+USER EXPERIENCE
+
+There should be:
+- no button
+- no text
+- no loading percentage
+- no fake progress bar
+- no MCV logo added unless already contained in the supplied artwork
+- no additional messaging
+
+This should simply feel like:
+vault activates → vault opens → user enters MCV.
+
+Accessibility:
+- Respect prefers-reduced-motion where practical.
+- For reduced-motion users, use a very short static/fade version rather than the full motion sequence.
+- Never make accessibility users wait four seconds unnecessarily.
+
+MOBILE DEVICE HANDLING
+
+Test multiple aspect ratios.
+
+At minimum verify:
+- modern iPhone portrait
+- smaller iPhone portrait
+- Android phone portrait
+- tall Android phone
+
+Important focal content:
+The circular vault/X must not get cropped badly.
+
+If object-fit: cover crops too aggressively on some devices, adjust object-position responsively.
+
+Do not build landscape support beyond ensuring it fails gracefully.
+Portrait is the priority.
+
+MUST NOT DO
+
+- Do not show this on web.
+- Do not show this on mobile browsers.
+- Do not change the marketing website.
+- Do not modify app.marvelcardvault.com desktop behavior.
+- Do not rebuild the actual native iOS LaunchScreen.
+- Do not rebuild the Android native splash screen.
+- Do not touch native icons.
+- Do not require a new App Store build unless absolutely unavoidable.
+- Do not modify Capacitor native configuration unless required solely to use an existing platform-detection capability.
+- Do not change Android versionCode/versionName.
+- Do not change iOS version/build.
+- Do not change auth.
+- Do not change onboarding.
+- Do not change notifications.
+- Do not change RevenueCat.
+- Do not change Stripe.
+- Do not change subscriptions.
+- Do not change Feed.
+- Do not change Follow/Friends.
+- Do not change Social Hub.
+- Do not change badges or XP.
+- Do not change Scan to Add.
+- Do not change Trade Block.
+- Do not change card data.
+- Do not change lifecycle emails.
+- Do not add new backend endpoints.
+- Do not add database fields.
+- Do not add analytics unless an existing generic event mechanism makes this trivial.
+- Do not add heavy dependencies.
+
+PRESERVE
+
+- Existing native iOS behavior.
+- Existing native Android behavior.
+- Existing web app behavior.
+- Existing startup/authentication flow.
+- Existing session restoration.
+- Existing routes.
+- Existing Dashboard.
+- Existing notification registration.
+- Existing app performance.
+- Existing error handling.
+
+IMPLEMENTATION ISOLATION
+
+Keep this feature isolated.
+
+Preferred:
+- one small reusable splash component
+- one small helper/hook if needed
+- optimized image assets
+
+Avoid spreading splash logic across many unrelated files.
+
+I want this easy to remove if I decide I hate it.
+
+If removing the splash later would require touching numerous unrelated files, simplify the implementation.
+
+QA
+
+Before calling this complete, verify:
+
+NATIVE APP:
+- Animation appears on iOS native app.
+- Animation appears on Android native app.
+- Animation plays once on app launch/session.
+- Images appear in correct order.
+- Vault appears to activate.
+- Vault appears to open.
+- Final frame pushes subtly inward.
+- Animation fades smoothly into MCV.
+- Entire experience is <= 4 seconds.
+- No visible white flash between splash and app.
+- No layout jump when overlay disappears.
+- App loads underneath animation.
+- User cannot become stuck.
+- Missing frame gracefully skips/fails open.
+- Hard timeout reveals app.
+- App navigation works normally afterward.
+
+WEB:
+- Desktop app.marvelcardvault.com does NOT show the vault animation.
+- Mobile Safari does NOT show it.
+- Mobile Chrome does NOT show it.
+- Normal web startup remains unchanged.
+
+PERFORMANCE:
+- Report original and optimized file sizes.
+- Confirm no heavy dependencies were added.
+- Confirm no backend calls were added.
+- Confirm no unnecessary repeated image downloading.
+- Confirm auth/session restoration is not delayed by animation.
+- Confirm splash code cleans itself up after completion.
+
+FINAL RESPONSE
+
+Report:
+
+1. Files changed.
+2. Exact method used to detect native iOS/Android.
+3. Exact frame order.
+4. Final animation duration.
+5. Original and optimized image dimensions/file sizes.
+6. Whether images use WebP/JPEG/etc.
+7. How often the splash plays.
+8. How reduced-motion is handled.
+9. How the 4-second fail-safe works.
+10. Confirmation web is completely unaffected.
+11. Confirmation Android/iOS native configuration was not changed.
+12. Confirmation no unrelated systems were touched.
+13. Confirmation this feature can be removed cleanly if we decide to scrap it.
+14. Whether this requires a new native App Store/Google Play build or only a Replit publish.
+
+IMPORTANT:
+Do not publish this automatically.
+
+Build it in the development environment first and let me visually test it.
+
+If the sequence looks bad, performs poorly, crops incorrectly, or requires a risky native change, STOP. We will scrap this experiment rather than forcing it.
