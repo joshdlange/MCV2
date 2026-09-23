@@ -11,6 +11,39 @@ const base = process.env.VAULT_QA_URL || 'http://127.0.0.1:5000';
 const screenshots = '/tmp/vault-launch-qa';
 await fs.mkdir(screenshots, { recursive: true });
 let checks = 0;
+// Sample computed compositor values, not just timers/classes: footage must
+// disappear against fully opaque black before any underlying app is revealed.
+async function sampleHandoff(page) {
+  await page.evaluate(() => {
+    window.__handoffSamples = [];
+    let seen = false;
+    const sample = () => {
+      const overlay = document.querySelector('[data-vault-launch]');
+      const surface = overlay?.querySelector('.vault-launch__surface');
+      if (!overlay && seen) return;
+      if (surface) {
+        seen = true;
+        window.__handoffSamples.push({
+          time: performance.now(),
+          overlay: Number(getComputedStyle(overlay).opacity),
+          surface: Number(getComputedStyle(surface).opacity),
+          background: getComputedStyle(overlay).backgroundColor,
+        });
+      }
+      requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+}
+async function assertBlackHandoff(page) {
+  const samples = await page.evaluate(() => window.__handoffSamples);
+  const black = samples.findIndex(s => s.surface === 0 && s.overlay === 1 && s.background === 'rgb(0, 0, 0)');
+  assert.ok(black >= 0, 'must paint a fully black frame with no app visible');
+  const reveal = samples.findIndex(s => s.overlay > 0 && s.overlay < 1);
+  assert.ok(reveal > black, 'app reveal must follow the full-black frame');
+  assert.ok(samples.every(s => s.overlay === 1 || s.surface === 0), 'never crossfade footage directly into app');
+  assert.ok(samples.some(s => s.surface > 0 && s.surface < 1 && s.overlay === 1), 'footage fades into opaque black');
+}
 try {
   // Real app, no bridge: both desktop and mobile browser sessions load no frames.
   for (const viewport of [{ width: 1280, height: 800 }, { width: 393, height: 852 }]) {
@@ -28,6 +61,7 @@ try {
   await studio.goto(`${base}/__dev/vault`, { waitUntil: 'networkidle' });
   for (let device = 0; device < 4; device++) {
     await studio.selectOption('#vault-device', String(device));
+    await sampleHandoff(studio);
     await studio.getByRole('button', { name: /Play sequence|Replay sequence/ }).click();
     await studio.waitForTimeout(1000);
     await studio.screenshot({ path: `${screenshots}/device-${device}-unlock.png` });
@@ -41,20 +75,21 @@ try {
     assert.ok(playback.muted && playback.inline && !playback.loop);
     await studio.waitForTimeout(900);
     assert.equal(await studio.locator('[data-vault-launch]').count(), 0);
+    await assertBlackHandoff(studio);
     checks++;
   }
   await studio.close();
 
   // Replace only test responses, never source files or production auth.
   // This isolates the real native gate with a controllable existing loading state.
-  async function nativePage(platform, reducedMotion = 'no-preference', assetFailure = false, slowFrame = false, rejectPlay = false) {
+  async function nativePage(platform, reducedMotion = 'no-preference', assetFailure = false, slowFrame = false, rejectPlay = false, initiallyReady = false) {
     const page = await browser.newPage({ viewport: { width: 393, height: 852 }, reducedMotion });
     page.on('pageerror', error => console.error('Browser error:', error.message));
-    await page.addInitScript(platform => {
+    await page.addInitScript(({ platform, initiallyReady }) => {
       if (platform === 'android') window.androidBridge = {};
       if (platform === 'ios') window.webkit = { messageHandlers: { bridge: {} } };
-      window.__vaultLoading = true;
-    }, platform);
+      window.__vaultLoading = !initiallyReady;
+    }, { platform, initiallyReady });
     if (rejectPlay) await page.addInitScript(() => {
       HTMLMediaElement.prototype.play = () => Promise.reject(new DOMException('Autoplay denied', 'NotAllowedError'));
     });
@@ -101,10 +136,12 @@ try {
     console.log('Testing native bridge:', platform);
     const page = await nativePage(platform);
     await page.locator('[data-vault-launch]').waitFor({ state: 'attached' });
+    await sampleHandoff(page);
     const began = Date.now();
     await page.getByRole('button', { name: 'Underlying app works' }).click();
     await page.waitForFunction(() => !document.querySelector('[data-vault-launch]'), null, { polling: 20, timeout: 4200 });
     assert.ok(Date.now() - began <= 4100, 'deadline exceeded');
+    await assertBlackHandoff(page);
     await page.getByRole('button', { name: 'Underlying app works' }).click();
     assert.equal(await page.locator('[data-vault-launch]').count(), 0);
     assert.ok(await page.evaluate(() => window.__pausedVideos >= 1), 'unmount pauses the decoder');
@@ -112,9 +149,19 @@ try {
   }
   const fast = await nativePage('ios');
   await fast.locator('[data-vault-launch]').waitFor({ state: 'attached' });
+  await fast.waitForFunction(() => document.querySelector('video')?.currentTime > .1);
+  await sampleHandoff(fast);
+  const fastBegan = Date.now();
   await fast.evaluate(() => { window.__vaultLoading = false; window.__vaultRender(); });
   await fast.locator('[data-vault-launch]').waitFor({ state: 'detached', timeout: 500 });
+  assert.ok(Date.now() - fastBegan < 450, 'ready app must not wait for the whole clip');
+  await assertBlackHandoff(fast);
   await fast.close(); checks++;
+  const ready = await nativePage('ios', 'no-preference', false, false, false, true);
+  await ready.waitForTimeout(500);
+  assert.equal(await ready.locator('[data-vault-launch]').count(), 0);
+  assert.equal(await ready.evaluate(() => window.__videoRequests.length), 0);
+  await ready.close(); checks++;
   const reduced = await nativePage('android', 'reduce');
   await reduced.locator('[data-vault-launch]').waitFor({ state: 'attached' });
   assert.equal(await reduced.locator('[data-vault-poster]').count(), 1);

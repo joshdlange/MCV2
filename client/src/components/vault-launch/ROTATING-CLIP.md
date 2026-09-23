@@ -4,8 +4,9 @@
    (`yuv420p`, faststart, preferably 720×1280, at most 3.6 seconds).
 2. Replace `media/vault-poster.webp` with its first frame. This also serves
    reduced-motion users, who never request the video.
-3. Update `durationMs` in `clip.ts` if the clip is shorter. Keep the 300ms fade
-   and independent four-second launch deadline; do not extend startup.
+3. Update `durationMs` in `clip.ts` if the clip is shorter. Keep the final
+   200ms footage-to-black fade, 40ms fully black hold, and 180ms app reveal.
+   The independent four-second launch deadline must not be extended.
 4. Review `/__dev/vault` in development at each phone preset, then run
    `scripts/test-vault-launch.mjs` with an external Playwright installation.
    Test installed iOS/Android apps before release.
@@ -15,7 +16,9 @@ assets, so replacing them produces fresh URLs while repeat launches can cache
 the same clip. Ordinary web startup never imports the visual chunk.
 
 This runs during initial native session restoration, not after every sign-in,
-route change, or resume. It exits immediately when the app is ready. The studio
+route change, or resume. Readiness exits in 300ms (80ms to black, 40ms hold,
+180ms reveal), without waiting for the clip; an initially ready app skips it.
+Errors and the hard deadline still dismiss immediately. The studio
 intentionally previews the full clip against a neutral backdrop.
 
 Source for the current clip:

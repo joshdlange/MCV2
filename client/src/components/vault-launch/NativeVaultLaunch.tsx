@@ -35,10 +35,8 @@ export function NativeVaultLaunch() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { if (!loading) finish(); }, [loading, finish]);
-
-  if (!visible || !loading) return null;
+  if (!visible) return null;
   return <FailOpen onFailure={finish}>
-    <Suspense fallback={null}><VaultScene onFinish={finish} /></Suspense>
+    <Suspense fallback={null}><VaultScene onFinish={finish} exitRequested={!loading} /></Suspense>
   </FailOpen>;
 }

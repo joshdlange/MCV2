@@ -5,6 +5,7 @@
   overflow: hidden;
   pointer-events: none;
   contain: strict;
+  background: #000;
   animation: vault-deadline 3900ms linear both;
 }
 .vault-launch__surface {
@@ -13,9 +14,16 @@
   overflow: hidden;
   background: #02070b;
   opacity: 1;
-  transition: opacity 300ms ease-out;
 }
-.vault-launch__surface--exiting { opacity: 0; }
+.vault-launch--exiting {
+  animation: vault-deadline 3900ms linear both,
+    vault-reveal 180ms ease-out calc(var(--vault-fade) + 40ms) forwards;
+}
+.vault-launch--exiting .vault-launch__surface {
+  animation: vault-to-black var(--vault-fade) ease-in forwards;
+}
+@keyframes vault-to-black { to { opacity: 0; } }
+@keyframes vault-reveal { from { opacity: 1; } to { opacity: 0; } }
 .vault-launch__media {
   position: absolute;
   inset: 0;
@@ -28,12 +36,6 @@
 .vault-launch__video--started { opacity: 1; }
 /* Independent compositor-side fail-open if the main thread stalls. */
 @keyframes vault-deadline {
-  0%, 92% { opacity: 1; }
-  100% { opacity: 0; visibility: hidden; }
-}
-.vault-launch--reduced { animation: vault-reduced 450ms linear both; }
-@keyframes vault-reduced {
-  0% { opacity: 0; }
-  30%, 65% { opacity: 1; }
-  100% { opacity: 0; visibility: hidden; }
+  0%, 99.99% { visibility: visible; }
+  100% { visibility: hidden; }
 }
