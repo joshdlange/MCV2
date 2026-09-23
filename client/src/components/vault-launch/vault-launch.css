@@ -3,56 +3,37 @@
   inset: 0;
   z-index: 2147483000;
   overflow: hidden;
-  background: #02070b;
   pointer-events: none;
   contain: strict;
-  animation: vault-exit 3900ms linear both;
+  animation: vault-deadline 3900ms linear both;
 }
-.vault-launch__camera, .vault-launch__shake { position: absolute; inset: 0; }
-.vault-launch__camera { transform-origin: 50% 52%; }
-.vault-launch--started .vault-launch__camera { animation: vault-push 3650ms cubic-bezier(.2,.1,.5,1) both; }
-.vault-launch--started .vault-launch__shake { animation: vault-unlock 460ms 1270ms both; }
-.vault-launch__frame {
+.vault-launch__surface {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #02070b;
+  opacity: 1;
+  transition: opacity 300ms ease-out;
+}
+.vault-launch__surface--exiting { opacity: 0; }
+.vault-launch__media {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: 50% 50%;
-  opacity: 0;
 }
-.vault-launch--started .vault-launch__frame { animation: vault-frame 370ms var(--frame-delay) ease-in-out both; }
-.vault-launch__energy {
-  position: absolute; inset: 0;
-  background: radial-gradient(ellipse at 50% 51%, #ee170e22 0%, transparent 55%);
-  opacity: 0;
+.vault-launch__video { opacity: 0; transition: opacity 120ms linear; }
+.vault-launch__video--started { opacity: 1; }
+/* Independent compositor-side fail-open if the main thread stalls. */
+@keyframes vault-deadline {
+  0%, 92% { opacity: 1; }
+  100% { opacity: 0; visibility: hidden; }
 }
-.vault-launch--started .vault-launch__energy { animation: vault-energy 1500ms 900ms ease-in-out both; }
-.vault-launch__shade {
-  position: absolute; inset: 0;
-  background: radial-gradient(ellipse at 50% 51%, transparent 36%, #00000048 100%);
-}
-@keyframes vault-frame { from { opacity: 0; } to { opacity: 1; } }
-@keyframes vault-push {
-  0% { transform: scale(1); }
-  36% { transform: scale(1.015); }
-  68% { transform: scale(1.025); }
-  100% { transform: scale(1.075); }
-}
-@keyframes vault-unlock {
-  0%, 100% { transform: translate(0, 0); }
-  16% { transform: translate(-1.5px, .5px); }
-  32% { transform: translate(1.5px, -1px); }
-  48% { transform: translate(-1px, 1px); }
-  64% { transform: translate(.7px, -.5px); }
-  82% { transform: translate(-.3px, .3px); }
-}
-@keyframes vault-energy { 0%, 100% { opacity: 0; } 42% { opacity: .75; } 64% { opacity: .2; } 80% { opacity: .5; } }
-@keyframes vault-exit { 0%, 91% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
 .vault-launch--reduced { animation: vault-reduced 450ms linear both; }
-.vault-launch--reduced .vault-launch__camera,
-.vault-launch--reduced .vault-launch__shake,
-.vault-launch--reduced .vault-launch__energy { animation: none; transform: none; }
-.vault-launch--reduced .vault-launch__energy { display: none; }
-.vault-launch--reduced .vault-launch__frame { animation: none; opacity: 1; }
-@keyframes vault-reduced { 0% { opacity: 0; } 30%, 65% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+@keyframes vault-reduced {
+  0% { opacity: 0; }
+  30%, 65% { opacity: 1; }
+  100% { opacity: 0; visibility: hidden; }
+}

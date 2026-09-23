@@ -16,7 +16,7 @@ try {
   for (const viewport of [{ width: 1280, height: 800 }, { width: 393, height: 852 }]) {
     const page = await browser.newPage({ viewport });
     const frames = [];
-    page.on('request', r => { if (/frame-\d.*webp/.test(r.url())) frames.push(r.url()); });
+    page.on('request', r => { if (/vault-entry\.mp4|vault-poster\.webp|frame-\d.*webp/.test(r.url())) frames.push(r.url()); });
     await page.goto(base, { waitUntil: 'networkidle' });
     assert.equal(await page.locator('[data-vault-launch]').count(), 0);
     assert.equal(frames.length, 0);
@@ -29,10 +29,16 @@ try {
   for (let device = 0; device < 4; device++) {
     await studio.selectOption('#vault-device', String(device));
     await studio.getByRole('button', { name: /Play sequence|Replay sequence/ }).click();
-    await studio.waitForTimeout(3150);
+    await studio.waitForTimeout(1000);
+    await studio.screenshot({ path: `${screenshots}/device-${device}-unlock.png` });
+    await studio.waitForTimeout(2050);
     await studio.screenshot({ path: `${screenshots}/device-${device}-open.png` });
-    assert.deepEqual(await studio.locator('[data-vault-frame]').evaluateAll(nodes =>
-      nodes.map(n => Number(n.getAttribute('data-vault-frame')))), [1, 2, 3, 4, 5, 6]);
+    assert.equal(await studio.locator('[data-vault-video]').count(), 1);
+    const playback = await studio.locator('video').evaluate(v => ({
+      time: v.currentTime, muted: v.muted, inline: v.playsInline, loop: v.loop,
+    }));
+    assert.ok(playback.time > 2, 'continuous footage should advance');
+    assert.ok(playback.muted && playback.inline && !playback.loop);
     await studio.waitForTimeout(900);
     assert.equal(await studio.locator('[data-vault-launch]').count(), 0);
     checks++;
@@ -41,7 +47,7 @@ try {
 
   // Replace only test responses, never source files or production auth.
   // This isolates the real native gate with a controllable existing loading state.
-  async function nativePage(platform, reducedMotion = 'no-preference', assetFailure = false, slowFrame = false) {
+  async function nativePage(platform, reducedMotion = 'no-preference', assetFailure = false, slowFrame = false, rejectPlay = false) {
     const page = await browser.newPage({ viewport: { width: 393, height: 852 }, reducedMotion });
     page.on('pageerror', error => console.error('Browser error:', error.message));
     await page.addInitScript(platform => {
@@ -49,6 +55,24 @@ try {
       if (platform === 'ios') window.webkit = { messageHandlers: { bridge: {} } };
       window.__vaultLoading = true;
     }, platform);
+    if (rejectPlay) await page.addInitScript(() => {
+      HTMLMediaElement.prototype.play = () => Promise.reject(new DOMException('Autoplay denied', 'NotAllowedError'));
+    });
+    await page.addInitScript(() => {
+      window.__videoRequests = [];
+      window.__pausedVideos = 0;
+      const original = HTMLMediaElement.prototype.pause;
+      HTMLMediaElement.prototype.pause = function() {
+        window.__pausedVideos++;
+        return original.call(this);
+      };
+    });
+    page.on('request', r => {
+      // Vite's ?import request is a tiny JS URL export, not video data.
+      if (/vault-entry\.mp4/.test(r.url()) && !new URL(r.url()).searchParams.has('import')) {
+        page.evaluate(() => window.__videoRequests.push(true)).catch(() => {});
+      }
+    });
     await page.route('**/src/contexts/AuthContext.tsx*', route => route.fulfill({
       contentType: 'application/javascript',
       body: 'export function useAuth(){return {loading: window.__vaultLoading}}',
@@ -65,8 +89,8 @@ try {
             React.createElement(NativeVaultLaunch));
         }`,
     }));
-    if (assetFailure) await page.route('**/frame-2.webp', route => route.abort());
-    if (slowFrame) await page.route('**/frame-1.webp', async route => {
+    if (assetFailure) await page.route('**/vault-entry.mp4', route => route.abort());
+    if (slowFrame) await page.route('**/vault-entry.mp4', async route => {
       await new Promise(resolve => setTimeout(resolve, 5500));
       await route.abort().catch(() => {});
     });
@@ -83,6 +107,7 @@ try {
     assert.ok(Date.now() - began <= 4100, 'deadline exceeded');
     await page.getByRole('button', { name: 'Underlying app works' }).click();
     assert.equal(await page.locator('[data-vault-launch]').count(), 0);
+    assert.ok(await page.evaluate(() => window.__pausedVideos >= 1), 'unmount pauses the decoder');
     await page.close(); checks++;
   }
   const fast = await nativePage('ios');
@@ -92,13 +117,25 @@ try {
   await fast.close(); checks++;
   const reduced = await nativePage('android', 'reduce');
   await reduced.locator('[data-vault-launch]').waitFor({ state: 'attached' });
-  assert.equal(await reduced.locator('[data-vault-frame]').count(), 1);
+  assert.equal(await reduced.locator('[data-vault-poster]').count(), 1);
+  assert.equal(await reduced.locator('video').count(), 0);
   await reduced.locator('[data-vault-launch]').waitFor({ state: 'detached', timeout: 650 });
+  assert.equal(await reduced.evaluate(() => window.__videoRequests.length), 0);
   await reduced.close(); checks++;
   const failed = await nativePage('ios', 'no-preference', true);
   await failed.waitForTimeout(1000);
   assert.equal(await failed.locator('[data-vault-launch]').count(), 0);
   await failed.close(); checks++;
+  const rejected = await nativePage('ios', 'no-preference', false, false, true);
+  await rejected.waitForTimeout(800);
+  assert.equal(await rejected.locator('[data-vault-launch]').count(), 0);
+  await rejected.close(); checks++;
+  const stalled = await nativePage('android');
+  await stalled.locator('video').waitFor({ state: 'attached' });
+  await stalled.waitForFunction(() => document.querySelector('video')?.currentTime > .1);
+  await stalled.locator('video').evaluate(v => { v.pause(); v.dispatchEvent(new Event('stalled')); });
+  await stalled.locator('[data-vault-launch]').waitFor({ state: 'detached', timeout: 700 });
+  await stalled.close(); checks++;
   const landscape = await nativePage('android');
   await landscape.locator('[data-vault-launch]').waitFor({ state: 'attached' });
   await landscape.setViewportSize({ width: 852, height: 393 });

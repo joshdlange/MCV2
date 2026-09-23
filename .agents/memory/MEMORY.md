@@ -1,3 +1,4 @@
+- [Native vault direction](native-vault-direction.md) — user rejected still-image crossfades; prefers continuous footage and a replayable phone-size preview for periodic replacements.
 - [Marketplace scrapped](marketplace-scrapped.md) — MCV is a companion to eBay/Whatnot, not a competitor; don't extend marketplace code or propose selling features.
 - [Two separate profile pages](profile-hub.md) — /collectors/:username is PUBLIC; /profile is PRIVATE Account Settings. Don't re-merge.
 - [Scan-to-Add architecture](scan-to-add.md) — uses GPT-4o-mini vision (not Tesseract); free users get 10 scans/month tracked in user_scan_logs table
