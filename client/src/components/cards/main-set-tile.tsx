@@ -9,6 +9,7 @@ import { formatSetName } from "@/lib/formatTitle";
 interface MainSetTileProps {
   mainSet: MainSet;
   assignedSets: CardSet[];
+  isNewRelease?: boolean;
 }
 
 const isPlaceholderImage = (url: string | null | undefined): boolean => {
@@ -45,7 +46,7 @@ const getProxiedUrl = (url: string): string => {
   return url;
 };
 
-export function MainSetTile({ mainSet, assignedSets }: MainSetTileProps) {
+export function MainSetTile({ mainSet, assignedSets, isNewRelease = false }: MainSetTileProps) {
   const [totalCards, setTotalCards] = useState<number>(0);
 
   // Calculate total cards when assignedSets changes
@@ -80,8 +81,13 @@ export function MainSetTile({ mainSet, assignedSets }: MainSetTileProps) {
                 target.classList.add('grayscale', 'opacity-60');
               }}
             />
-            <div className="absolute top-1.5 right-1.5">
-              <Badge variant="secondary" className="bg-black/70 text-white border-none text-xs px-1.5 py-0.5">
+            <div className="absolute top-1.5 inset-x-1.5 flex items-start justify-between gap-1 pointer-events-none">
+              {isNewRelease && (
+                <Badge className="bg-red-600 text-white border-none shadow-sm text-[10px] sm:text-xs px-1.5 py-0.5 whitespace-nowrap">
+                  New Release
+                </Badge>
+              )}
+              <Badge variant="secondary" className="ml-auto shrink-0 bg-black/70 text-white border-none text-xs px-1.5 py-0.5">
                 <Layers className="w-2.5 h-2.5 mr-1" />
                 {assignedSets.length}
               </Badge>

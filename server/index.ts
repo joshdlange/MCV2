@@ -644,6 +644,10 @@ server.listen({
   const dataFixWriteGate = installDataFixWriteGate(app);
 
   const runDataFixSeeds = async () => {
+    // Add-only catalog import; includes all checklist rows and the supplied thumbnail.
+    const { importToppsVaultMarvel2026 } = await import('./seeds/importToppsVaultMarvel2026');
+    await importToppsVaultMarvel2026();
+
     // Idempotent duplicate/relocation repair: consolidate legacy set twins and
     // repoint every live card reference before archived source cards disappear
     // from normal browsing. This must be awaited under the write gate above.

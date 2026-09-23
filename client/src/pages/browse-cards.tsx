@@ -13,6 +13,7 @@ import { CardGrid } from "@/components/cards/card-grid";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { SetThumbnail } from "@/components/cards/set-thumbnail";
 import { MainSetTile } from "@/components/cards/main-set-tile";
+import { getNewReleaseSetIds } from "@/lib/newReleaseSets";
 import { UpgradeModal } from "@/components/subscription/upgrade-modal";
 import { useToast } from "@/hooks/use-toast";
 import { useAppStore } from "@/lib/store";
@@ -103,6 +104,7 @@ export default function BrowseCards() {
   const { data: mainSets } = useQuery<MainSet[]>({
     queryKey: ["/api/main-sets"],
   });
+  const newReleaseSetIds = useMemo(() => getNewReleaseSetIds(mainSets ?? []), [mainSets]);
 
   const [editingMainSet, setEditingMainSet] = useState<MainSet | null>(null);
   const [mainSetThumbnailFile, setMainSetThumbnailFile] = useState<File | null>(null);
@@ -974,6 +976,7 @@ export default function BrowseCards() {
                     key={mainSet.id}
                     mainSet={mainSet}
                     assignedSets={assignedSets}
+                    isNewRelease={newReleaseSetIds.has(mainSet.id)}
                   />
                 ))}
               </div>
