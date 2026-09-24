@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
-import { vaultClip } from './clip';
+import { vaultClip, vaultHandoff } from './clip';
 import './vault-launch.css';
 
 /** Playback owns completion; app readiness never truncates the footage. */
 export default function VaultScene({ onFinish, deadline }: { onFinish: () => void; deadline?: number }) {
   const finishBy = useRef(deadline ?? performance.now() + 4000);
   const [reduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const handoff = reduced ? vaultHandoff.reduced : vaultHandoff.normal;
   const [started, setStarted] = useState(false);
   const [phase, setPhase] = useState<'playing' | 'blackening' | 'black' | 'revealing'>('playing');
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -20,8 +21,8 @@ export default function VaultScene({ onFinish, deadline }: { onFinish: () => voi
     if (!mediaEnded.current || !fadeComplete.current || holding.current) return;
     holding.current = true;
     setPhase('black');
-    handoffTimer.current = window.setTimeout(() => setPhase('revealing'), 40);
-  }, []);
+    handoffTimer.current = window.setTimeout(() => setPhase('revealing'), handoff.holdMs);
+  }, [handoff.holdMs]);
   const fadeToBlack = useCallback(() => {
     if (fadeStarted.current) return;
     fadeStarted.current = true;
@@ -54,7 +55,8 @@ export default function VaultScene({ onFinish, deadline }: { onFinish: () => voi
       // A modest rate adjustment absorbs normal chunk/decode startup cost without
       // skipping media or allowing the safety guard to cut the handoff short.
       const remaining = vaultClip.durationMs - video!.currentTime * 1000;
-      const budget = finishBy.current - performance.now() - 350;
+      const reservation = handoff.holdMs + handoff.revealMs + vaultHandoff.schedulingMarginMs;
+      const budget = finishBy.current - performance.now() - reservation;
       const rate = Math.max(1, remaining / budget);
       if (budget <= 0 || rate > 1.25) { finish(); return; }
       video!.playbackRate = rate;
@@ -98,10 +100,13 @@ export default function VaultScene({ onFinish, deadline }: { onFinish: () => voi
         video.load();
       }
     };
-  }, [onFinish, reduced, fadeToBlack, holdBlack]);
+  }, [onFinish, reduced, fadeToBlack, holdBlack, handoff]);
 
   return <div className={`vault-launch vault-launch--${phase}`}
-    style={{ '--vault-fade': `${reduced ? 80 : vaultClip.fadeMs}ms` } as CSSProperties}
+    style={{
+      '--vault-fade': `${reduced ? 80 : vaultClip.fadeMs}ms`,
+      '--vault-reveal': `${handoff.revealMs}ms`,
+    } as CSSProperties}
     onAnimationEnd={event => {
       if (event.target === event.currentTarget && event.animationName === 'vault-reveal') onFinish();
     }}

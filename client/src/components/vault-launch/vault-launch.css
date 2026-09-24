@@ -17,7 +17,7 @@
 }
 .vault-launch--revealing {
   animation: vault-deadline 4000ms linear both,
-    vault-reveal 180ms ease-out forwards;
+    vault-reveal var(--vault-reveal) ease-out forwards;
 }
 .vault-launch--blackening .vault-launch__surface {
   animation: vault-to-black var(--vault-fade) ease-in forwards;

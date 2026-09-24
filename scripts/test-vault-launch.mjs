@@ -30,6 +30,8 @@ async function sampleHandoff(page) {
           background: getComputedStyle(overlay).backgroundColor,
           mediaTime: overlay.querySelector('video')?.currentTime,
           ended: overlay.querySelector('video')?.ended,
+          phase: overlay.dataset.vaultPhase,
+          revealDuration: getComputedStyle(overlay).getPropertyValue('--vault-reveal').trim(),
         });
       }
       requestAnimationFrame(sample);
@@ -46,6 +48,11 @@ async function assertBlackHandoff(page) {
   assert.ok(samples.every(s => s.overlay === 1 || s.surface === 0), 'never crossfade footage directly into app');
   assert.ok(samples.some(s => s.surface > 0 && s.surface < 1 && s.overlay === 1), 'footage fades into opaque black');
   if (samples.some(s => s.mediaTime !== undefined)) {
+    const holdSamples = samples.filter(s => s.phase === 'black');
+    const revealSamples = samples.filter(s => s.phase === 'revealing');
+    assert.ok(holdSamples.at(-1).time - holdSamples[0].time >= 80, 'longer full-black hold must be visible');
+    assert.ok(revealSamples.at(-1).time - revealSamples[0].time >= 240, 'app fade-up must not be cut short');
+    assert.ok(revealSamples.every(s => s.revealDuration === '300ms'), 'normal app reveal is 300ms');
     assert.ok(samples.some(s => s.ended && s.mediaTime >= 3.55), 'whole media must end before removal');
     assert.ok(samples.filter(s => s.overlay < 1).every(s => s.ended), 'reveal waits for media ended');
     assert.ok(samples.some(s => s.overlay > 0 && s.overlay < .2), 'reveal must finish, not be truncated');
@@ -235,7 +242,7 @@ try {
   });
   await pixels.waitForFunction(() => window.__reveal, null, { polling: 10 });
   const blackImage = await pixels.screenshot({ path: `${screenshots}/real-app-black.png` });
-  await pixels.evaluate(() => { window.__reveal.currentTime = 90; });
+  await pixels.evaluate(() => { window.__reveal.currentTime = 150; });
   const middleImage = await pixels.screenshot({ path: `${screenshots}/real-app-fade.png` });
   await pixels.evaluate(() => { window.__reveal.play(); });
   await pixels.locator('[data-vault-launch]').waitFor({ state: 'detached', timeout: 500 });
