@@ -19,6 +19,7 @@ import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { BadgeImage } from "@/components/badges/BadgeImage";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppStore } from "@/lib/store";
+import { CollectorPerks } from "@/components/CollectorPerks";
 import whatnotLogo from "@/assets/whatnot-logo.png";
 
 function getInitialSocialTab() {
@@ -662,6 +663,7 @@ export default function Social() {
           </span>
         </a>
       </div>
+      <CollectorPerks />
 
       {/* Modern segmented pill tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
