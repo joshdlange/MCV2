@@ -100,3 +100,17 @@ mtime_ms = 1790202926911
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/29a39f58-a11a-4640-936e-017f8a68b7c1/73da628e-b861-4615-a2fd-21f3412f9a32"
 storage_version_token = "1790203430405436"
 content_type = "video/mp4"
+
+[[outputs]]
+id = "_ZcHykJwrPulujO6jWzX0"
+uri = "file://screenshots/vault-fade-preview.mp4"
+type = "video"
+title = "Vault → black → app fade preview"
+description = "Real-time recording of the development preview, revealing the actual sign-in screen. Uses the same transition code as the native splash."
+logical_id = "7f105ef2-2c16-42bf-baac-8b1c3dce149c"
+content_hash = "sha256:0eac71f9f5b84ef33538d2234939b0a1d1b7a112c0da5f0dbe80aff68e5be719"
+size = 1097643
+mtime_ms = 1790212430917
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/7f105ef2-2c16-42bf-baac-8b1c3dce149c/e10522e8-1514-45f0-88a6-703064c3ba1c"
+storage_version_token = "1790212483413926"
+content_type = "video/mp4"

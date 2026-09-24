@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import VaultScene from './VaultScene';
 import { vaultClip } from './clip';
 
@@ -12,7 +12,15 @@ export default function VaultPreview() {
   const [device, setDevice] = useState(0);
   const [take, setTake] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const phone = useRef<HTMLDivElement>(null);
+  const [phoneWidth, setPhoneWidth] = useState(0);
   const finish = useCallback(() => setPlaying(false), []);
+  useEffect(() => {
+    if (!phone.current) return;
+    const observer = new ResizeObserver(([entry]) => setPhoneWidth(entry.contentRect.width));
+    observer.observe(phone.current);
+    return () => observer.disconnect();
+  }, []);
   useEffect(() => {
     if (!playing) return;
     const id = setTimeout(finish, 4000);
@@ -38,10 +46,11 @@ export default function VaultPreview() {
         <p role="status" style={{ color: '#a4adba', fontSize: 13 }}>{playing ? 'Playing · maximum 4 seconds' : 'Ready to preview'}</p>
         <a href={vaultClip.video} download="vault-entry.mp4" style={{ color: '#fca5a5', fontSize: 13 }}>Download optimized clip</a>
         <p style={{ color: '#a4adba', fontSize: 12, marginTop: 16 }}>Silent · Full 3.6-second video → full black → quick app reveal. Startup continues underneath; being ready early never interrupts playback.</p>
-        <p style={{ color: '#717d90', fontSize: 12, marginTop: 20 }}>Your OS reduced-motion setting is respected. The dark surface revealed afterward is a preview backdrop, not an imitation of your account.</p>
+        <p style={{ color: '#717d90', fontSize: 12, marginTop: 20 }}>The fade reveals the live app below: your current session, or the real sign-in screen if you are signed out. No sample account or collection numbers. Your OS reduced-motion setting is respected.</p>
       </section>
-      <div style={{ width: `min(${width}px, calc((100dvh - 64px) * ${width / height}))`, aspectRatio: `${width} / ${height}`, maxWidth: '100%', flexShrink: 0, position: 'relative', transform: 'translateZ(0)', overflow: 'hidden', borderRadius: 28, border: '1px solid #354052', background: '#0b1018' }}>
-        <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: '#728096', textAlign: 'center', padding: 24 }}>App revealed<br />The real app continues loading underneath.</div>
+      <div ref={phone} data-vault-preview-phone="" style={{ width: `min(${width}px, calc((100dvh - 64px) * ${width / height}))`, aspectRatio: `${width} / ${height}`, maxWidth: '100%', flexShrink: 0, position: 'relative', transform: 'translateZ(0)', overflow: 'hidden', borderRadius: 28, border: '1px solid #354052', background: '#0b1018' }}>
+        <iframe src="/" title="Live app beneath the vault transition"
+          style={{ position: 'absolute', top: 0, left: 0, width, height, border: 0, transformOrigin: 'top left', transform: `scale(${phoneWidth / width})` }} />
         {take === 0 && <img src={vaultClip.poster} alt="Vault before opening" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
         {playing && <VaultScene key={take} onFinish={finish} />}
       </div>
