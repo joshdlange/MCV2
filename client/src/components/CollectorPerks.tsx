@@ -1,6 +1,9 @@
 import { useState, type MouseEvent } from "react";
 import { Capacitor } from "@capacitor/core";
-import { Check, Copy, ExternalLink, Sticker } from "lucide-react";
+import { Check, Copy, ExternalLink } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+// Official header logo: actualprints.com/cdn/shop/files/ActualPrintsDesigns.png
+import actualPrintsLogo from "@/assets/actual-prints-logo.webp";
 
 const ACTUAL_PRINTS_URL = "https://actualprints.com/";
 const ACTUAL_PRINTS_CODE = "MARVELCARDVAULT";
@@ -37,21 +40,26 @@ export function CollectorPerks() {
   };
 
   return (
-    <section aria-labelledby="collector-perks-heading" className="mb-6 rounded-xl border border-red-200 bg-gradient-to-br from-red-50/80 to-white p-4 dark:border-red-900/70 dark:from-red-950/30 dark:to-gray-900">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-6">
-        <div className="min-w-0">
-          <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-200">
-            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300">
-              <Sticker className="h-4 w-4" aria-hidden="true" />
-            </span>
-            Actual Prints <span className="font-normal text-gray-500 dark:text-gray-400">· Collector perk</span>
+    <Dialog onOpenChange={() => { setCopyState("idle"); setShopError(false); }}>
+      <DialogTrigger asChild>
+        <button type="button" aria-label="Actual Prints: $10 off One Touch stickers"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-1.5 py-1 text-xs text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white">
+          <img src={actualPrintsLogo} alt="" className="h-7 w-5 object-contain" />
+          <span><span className="font-semibold">$10 off</span> One Touch stickers</span>
+        </button>
+      </DialogTrigger>
+      <DialogContent className="w-[calc(100%-2rem)] max-w-sm rounded-xl bg-white text-gray-900 dark:bg-gray-900 dark:text-white">
+        <DialogHeader className="text-left">
+          <div className="mb-3 flex items-center gap-3">
+            <img src={actualPrintsLogo} alt="Actual Prints logo" className="h-14 w-10 object-contain" />
+            <span className="text-sm font-semibold">Actual Prints</span>
           </div>
-          <h2 id="collector-perks-heading" className="text-lg font-bold tracking-tight text-gray-900 dark:text-white">$10 off One Touch stickers</h2>
-          <p className="mt-1 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
-            Custom stickers for your One Touch holders.
-          </p>
-        </div>
-        <div className="w-full shrink-0 md:w-72">
+          <DialogTitle>$10 off One Touch stickers</DialogTitle>
+          <DialogDescription className="leading-relaxed">
+            Custom stickers for your One Touch holders. Use your collector code at checkout.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed border-red-200 bg-white px-3 py-2">
             <div>
               <p className="text-[11px] font-medium text-gray-500">Use code at checkout</p>
@@ -75,7 +83,7 @@ export function CollectorPerks() {
           </a>
           {shopError && <p role="alert" className="mt-2 text-xs text-red-700 dark:text-red-300">Couldn't open the shop. Please try again or visit actualprints.com in your browser.</p>}
         </div>
-      </div>
-    </section>
+      </DialogContent>
+    </Dialog>
   );
 }

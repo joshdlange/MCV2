@@ -643,11 +643,12 @@ export default function Social() {
   return (
     <div className="container mx-auto p-6 max-w-6xl">
       {/* Clean minimal header */}
-      <div className="mb-6 flex items-start justify-between gap-4">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Social Hub</h1>
           <p className="text-gray-500 text-sm mt-1">Connect with friends and share your collection</p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
         {/* Unobtrusive Whatnot referral link */}
         <a
           href="https://www.whatnot.com/invite/joshdlange045"
@@ -662,8 +663,9 @@ export default function Social() {
             $25 bonus
           </span>
         </a>
+        <CollectorPerks />
+        </div>
       </div>
-      <CollectorPerks />
 
       {/* Modern segmented pill tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

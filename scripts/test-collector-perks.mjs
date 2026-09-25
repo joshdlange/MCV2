@@ -92,7 +92,15 @@ try {
   };
   await send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 950, deviceScaleFactor: 1, mobile: false });
   await send("Page.navigate", { url: `${base}/social` });
+  const trigger = `document.querySelector('button[aria-label="Actual Prints: $10 off One Touch stickers"]')`;
+  await until(`!!${trigger}`);
+  assert.equal(await evaluate(`document.querySelector('code')`), null, "coupon hidden until opened");
+  assert.equal(await evaluate(`document.querySelector('a[href="https://actualprints.com/"]')`), null, "shop hidden until opened");
+  await until(`${trigger}.querySelector('img').naturalWidth===160`);
+  assert.ok(await evaluate(`${trigger}.getBoundingClientRect().height<=40`), "compact pill, not a banner");
+  await evaluate(`${trigger}.focus();${trigger}.click()`);
   await until(`!!document.querySelector('a[href="https://actualprints.com/"]')`);
+  assert.ok(await evaluate(`document.querySelector('[role="dialog"]')?.getAttribute('aria-labelledby')`), "accessible dialog title");
   assert.equal(await evaluate(`document.querySelector('code').textContent`), "MARVELCARDVAULT");
   assert.equal(await evaluate(`document.querySelector('a[href="https://actualprints.com/"]').rel`), "noopener noreferrer");
   assert.equal(await evaluate(`document.querySelector('a[href="https://actualprints.com/"]').target`), "_blank");
@@ -122,21 +130,36 @@ try {
     const { data } = await send("Page.captureScreenshot", { format: "png" });
     await writeFile(`/tmp/collector-perks-${name}.png`, Buffer.from(data, "base64"));
   };
-  await screenshot("desktop");
-  for (const width of [375, 393, 768]) {
+  await screenshot("desktop-dialog");
+  for (const width of [320, 375, 393, 768]) {
     await send("Emulation.setDeviceMetricsOverride", { width, height: 1000, deviceScaleFactor: 1, mobile: false });
     await new Promise(resolve => setTimeout(resolve, 200));
     assert.ok(await evaluate(`document.documentElement.scrollWidth<=innerWidth`), `no overflow at ${width}px`);
     assert.ok(await evaluate(`document.querySelector('code').getBoundingClientRect().right<=innerWidth`));
-    await screenshot(`${width}`);
+    await screenshot(`${width}-dialog`);
   }
   await evaluate(`document.documentElement.classList.add('dark')`);
+  await screenshot("dark-dialog");
+  await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await until(`!document.querySelector('[role="dialog"]')`);
+  assert.equal(await evaluate(`document.activeElement===${trigger}`), true, "Escape restores trigger focus");
+  assert.equal(await evaluate(`document.querySelector('code')`), null, "coupon unmounted when closed");
+  await evaluate(`${trigger}.blur()`);
   await screenshot("dark");
+  await evaluate(`document.documentElement.classList.remove('dark')`);
+  for (const width of [320, 375, 393, 768, 1280]) {
+    await send("Emulation.setDeviceMetricsOverride", { width, height: 950, deviceScaleFactor: 1, mobile: false });
+    await new Promise(resolve => setTimeout(resolve, 200));
+    assert.ok(await evaluate(`document.documentElement.scrollWidth<=innerWidth`), `closed header no overflow at ${width}px`);
+    assert.ok(await evaluate(`${trigger}.getBoundingClientRect().right<=innerWidth`));
+    await screenshot(`${width}`);
+  }
   assert.deepEqual(errors, [], "no page runtime errors");
-  console.log("PASS: actual Social page, exact code/link, Whatnot preservation, clipboard success/failure, native shop success/failure, responsive layouts and dark mode. Screenshots /tmp/collector-perks-*.png");
+  console.log("PASS: compact official-logo pill, hidden coupon, accessible dialog, Escape/focus return, exact code/link, Whatnot preservation, clipboard success/failure, native shop success/failure, 320–1280px layouts and dark mode. Screenshots /tmp/collector-perks-*.png");
 } finally {
   socket?.close();
   chrome.kill();
   await new Promise(resolve => chrome.once("exit", resolve));
-  await rm(profile, { recursive: true, force: true });
+  await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }
