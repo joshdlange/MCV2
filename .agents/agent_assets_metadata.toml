@@ -114,3 +114,17 @@ mtime_ms = 1790212743098
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/7f105ef2-2c16-42bf-baac-8b1c3dce149c/9a851ca2-3b28-4602-a224-c98ebda7c930"
 storage_version_token = "1790212788014396"
 content_type = "video/mp4"
+
+[[outputs]]
+id = "NNUVNlDCYGL9gyCvu51aa"
+uri = "file://docs/scan-accuracy-audit.md"
+type = "text"
+title = "Scan to Add: pipeline and benchmark readiness audit"
+description = "Exact scoring, visual comparison limits, production data availability, repeatable benchmark instructions, and unmeasured recognition results."
+logical_id = "ea6cfb19-7437-4753-aa0e-34970d194ba9"
+content_hash = "sha256:019e30a467d16ae0f9cc5fa608db818b5c483e4b980ddefb3409511d9505cc04"
+size = 13149
+mtime_ms = 1790366747533
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/ea6cfb19-7437-4753-aa0e-34970d194ba9/912591d5-7545-4b44-acb5-d6ee5149c618"
+storage_version_token = "1790366757337029"
+content_type = "text/markdown"

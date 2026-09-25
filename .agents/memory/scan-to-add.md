@@ -20,3 +20,9 @@ Treat visual artwork similarity as supporting evidence, never proof of an exact 
 **Why:** Many catalog entries share artwork, and some have no reference image. A visually convincing result can otherwise override metadata ambiguity and falsely identify a specific print.
 
 **How to apply:** Preserve metadata confidence ceilings through visual reranking. Missing images are not negative identity evidence. Validate accuracy against reviewed real scans before claiming improvements in recognition rates.
+
+Do not treat engineering tests or collector selections as proof that recognition accuracy is fixed.
+
+**Why:** The user explicitly requires representative real-photo evaluation, prioritizing false high-confidence errors, before accepting v1 as ready. Feedback can repeat a wrong suggestion and is not independently verified ground truth.
+
+**How to apply:** Distinguish available scan volume from reviewed benchmark labels. Report unmeasured rates as unavailable, not zero; preserve a frozen labeled sample for before/after comparisons.

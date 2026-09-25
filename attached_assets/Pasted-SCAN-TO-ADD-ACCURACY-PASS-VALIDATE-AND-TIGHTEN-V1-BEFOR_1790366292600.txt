@@ -1,0 +1,380 @@
+SCAN TO ADD ACCURACY PASS — VALIDATE AND TIGHTEN V1 BEFORE PUBLISH
+
+Context:
+
+The recent Scan to Add changes are directionally useful:
+- card-only cropping
+- optional back image
+- checks across card number/year/set/subset
+- catalog-image visual comparison
+- explicit confirmation
+- ownership remains independent from image submission
+
+However, the original problem has NOT yet been proven fixed.
+
+The problem we are trying to solve is:
+
+MCV frequently identifies a scanned card as a completely different card, year, set, subset, or parallel, sometimes with misleading confidence.
+
+Passing unit tests and confirming crop behavior does not prove recognition accuracy.
+
+Do NOT add more features yet.
+
+Before we publish this, I want a focused recognition audit and refinement against representative REAL card scans.
+
+==================================================
+MUST DO
+==================================================
+
+1. DOCUMENT THE ACTUAL MATCHING PIPELINE
+
+Before changing anything else, report exactly how a scanned card becomes a candidate today.
+
+For each stage explain:
+- what information is extracted from the front image
+- what information is extracted from the optional back image
+- whether OCR is used
+- whether AI/vision is used
+- whether card number is explicitly extracted
+- whether year is explicitly extracted
+- whether set/product is explicitly extracted
+- whether subset/parallel is explicitly extracted
+- how candidate DB records are shortlisted
+- how catalog-image visual comparison works
+- what technology/model/algorithm performs visual similarity
+- how each signal contributes to final score/confidence
+- what happens when signals disagree
+
+I want the real code path, not a conceptual description.
+
+2. METADATA MUST NARROW BEFORE VISUAL MATCHING
+
+Visual similarity should primarily compare candidates that are already plausible based on reliable metadata.
+
+Example:
+If the scan strongly indicates:
+2025
+Topps Chrome Marvel
+#37
+
+do not allow a visually similar:
+2024 Upper Deck
+#37
+Spider-Man
+
+to become the winner simply because the artwork looks similar.
+
+Use reliable extracted metadata as hard constraints or strong penalties where appropriate.
+
+3. HANDLE CONTRADICTIONS EXPLICITLY
+
+Examples:
+
+If:
+- OCR/card number indicates #37
+- candidate is #73
+
+that candidate should receive a severe penalty or be eliminated unless OCR confidence is extremely poor.
+
+If:
+- scan indicates 2025
+- candidate is 2024
+
+do not present it as high confidence.
+
+If:
+- main set evidence conflicts
+- subset evidence conflicts
+- visual image resembles another parallel
+
+reduce confidence.
+
+Do NOT average contradictory evidence into a misleading high-confidence result.
+
+4. PARALLEL / SUBSET DISAMBIGUATION
+
+This is especially important.
+
+Many Marvel cards:
+- share artwork
+- share card number
+- differ only by parallel/subset
+- use color/foil/border/background treatment as the differentiator
+
+The visual comparison should help distinguish these AFTER the correct family of cards is identified.
+
+Specifically evaluate:
+- border color
+- foil/color treatment
+- background pattern
+- card layout
+- logos/marks
+- numbering/location of printed identifiers
+- front design differences
+
+Do not rely mostly on character/artwork similarity.
+
+5. CONFIDENCE SHOULD MEAN SOMETHING
+
+Audit the current confidence calculation.
+
+High confidence should require strong agreement among multiple reliable signals.
+
+Suggested philosophy:
+
+HIGH:
+- card number agrees
+- year/set strongly agree
+- subset/parallel agrees or visual comparison strongly supports it
+- catalog image is a strong match
+- no major conflicting evidence
+
+MEDIUM:
+- likely family identified
+- one or more important fields uncertain
+- multiple plausible parallel/subset candidates remain
+
+LOW:
+- weak OCR
+- weak visual match
+- conflicting metadata
+- missing catalog imagery
+- multiple plausible candidates
+
+If the system is unsure, SAY IT IS UNSURE.
+
+A low-confidence shortlist is better than confidently adding the wrong card.
+
+6. REAL-WORLD BENCHMARK
+
+Create a repeatable Scan to Add accuracy benchmark.
+
+Do not claim success based only on automated tests.
+
+Use a representative test set of real card photographs if they already exist in our test data/uploads.
+
+If sufficient real images are not currently available:
+- build the benchmark harness/report first
+- tell me exactly what real card photos you need from me
+- DO NOT fabricate an accuracy percentage
+
+The benchmark should cover, where available:
+
+- different years
+- different manufacturers/products
+- base cards
+- parallels
+- chase subsets
+- same character across different sets
+- same card number across different sets
+- same artwork across different parallels
+- foil/refractor/color variants
+- cards with complete catalog images
+- cards with missing catalog images
+- good photographs
+- imperfect photographs
+- angled cards
+- glare
+- sleeves/top loaders where realistic
+
+Target at least 50 representative real scans if the dataset exists.
+
+100 would be better.
+
+7. REPORT RESULTS BY ERROR TYPE
+
+For each benchmark scan report:
+
+- known correct DB card
+- top prediction
+- confidence
+- whether correct
+- top 3 candidates
+- card number extracted
+- year extracted
+- set extracted
+- subset extracted
+- visual-match result
+- major conflicting signals
+- reason the winner won
+
+Aggregate:
+
+- exact-card top-1 accuracy
+- correct card in top 3
+- wrong year count
+- wrong main set count
+- wrong subset/parallel count
+- wrong card number count
+- false HIGH-confidence errors
+- cases where system correctly admitted uncertainty
+
+The MOST IMPORTANT metric is:
+
+FALSE HIGH-CONFIDENCE MATCHES.
+
+I would rather have:
+“Not sure — choose from these 3”
+
+than:
+“98% confidence”
+on the wrong card.
+
+8. REVIEW THE CROP UX
+
+Do not assume manual cropping is automatically an improvement.
+
+Assess:
+- how many extra taps it adds
+- whether the user must manually crop every scan
+- whether crop defaults already frame most card photos correctly
+- whether front/back workflow feels burdensome
+
+The goal is faster AND more accurate.
+
+Manual cropping should help when necessary, not make every collector perform image editing before scanning.
+
+If possible:
+- start with a sensible default crop
+- let users adjust when needed
+- do not require excessive interaction
+
+Do not build automatic edge detection yet unless it is clearly a small safe improvement.
+
+9. BACK PHOTO SHOULD REMAIN OPTIONAL
+
+Do not make photographing the back mandatory.
+
+Use it when:
+- front result is ambiguous
+- back contains useful numbering/set/copyright/product evidence
+- user voluntarily adds it
+
+If a confident result can be reached from the front, do not add unnecessary friction.
+
+10. PERFORMANCE
+
+Measure whether the new matching steps materially slow Scan to Add.
+
+Report:
+- average recognition time before if measurable
+- average recognition time now
+- time spent OCR/vision
+- time spent DB shortlist
+- time spent catalog image comparison
+
+Do not trade a moderate accuracy improvement for an unusably slow scan experience.
+
+==================================================
+MUST NOT DO
+==================================================
+
+- Do not publish.
+- Do not build nine-card/binder scanning.
+- Do not build bulk scanning.
+- Do not redesign Scan to Add.
+- Do not automatically add matched cards.
+- Do not remove explicit user confirmation.
+- Do not make back-photo capture mandatory.
+- Do not make every scan require tedious manual cropping.
+- Do not create fake benchmark data.
+- Do not claim an accuracy percentage without real-card testing.
+- Do not treat character recognition as card identification.
+- Do not allow visual similarity alone to override strong contradictory metadata.
+- Do not modify collection ownership behavior.
+- Do not modify photo approval behavior.
+- Do not modify XP.
+- Do not modify badges.
+- Do not modify PC Binders.
+- Do not modify Feed/social.
+- Do not modify subscriptions, Stripe, or RevenueCat.
+- Do not modify Android/iOS release configuration.
+- Do not touch unrelated systems.
+
+==================================================
+PRESERVE
+==================================================
+
+- Existing single-card Scan to Add entry point.
+- Existing explicit confirmation before adding.
+- Existing ownership behavior.
+- Card ownership saves independently of optional image submission.
+- Rejected image submissions never remove ownership.
+- Existing image approval workflow.
+- Existing card database.
+- Existing card-limit enforcement.
+- Existing mobile navigation.
+- Existing web behavior unless Scan to Add already shares this code.
+- Current crop feature unless benchmarking shows a specific UX problem.
+
+==================================================
+QA
+==================================================
+
+Engineering QA:
+- Existing focused tests continue passing.
+- Production build passes.
+- Ownership regression tests pass.
+- Photo submission remains independent.
+- Missing catalog images do not crash matching.
+- Visual comparison failure gracefully falls back.
+- Contradictory metadata lowers confidence.
+- No false “high confidence” caused solely by visual similarity.
+
+Recognition QA:
+Produce a benchmark report with real examples.
+
+I want to specifically see examples of:
+
+A. SAME CHARACTER / DIFFERENT SET
+Can MCV correctly distinguish Spider-Man cards from different years/products?
+
+B. SAME CARD NUMBER / DIFFERENT SET
+Does set/year evidence prevent wrong-family matches?
+
+C. SAME ART / DIFFERENT PARALLEL
+Can visual comparison help distinguish the parallel instead of just recognizing the artwork?
+
+D. CHASE SUBSET
+Does the system identify the proper subset rather than dumping the card into the parent set?
+
+E. LOW-QUALITY PHOTO
+Does confidence correctly fall instead of hallucinating certainty?
+
+F. MISSING CATALOG IMAGE
+Does text/metadata matching still work without inventing visual certainty?
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Do NOT simply tell me the tests passed.
+
+Give me:
+
+1. Exact matching pipeline currently implemented.
+2. Exact scoring/confidence formula or logic.
+3. What constitutes hard constraint vs soft signal.
+4. How visual similarity is actually calculated.
+5. How parallel/subset matching works.
+6. Real-card benchmark size.
+7. Top-1 exact accuracy.
+8. Top-3 accuracy.
+9. Number of false high-confidence matches.
+10. Wrong-year errors.
+11. Wrong-set errors.
+12. Wrong-subset/parallel errors.
+13. Wrong-card-number errors.
+14. Recognition latency.
+15. UX impact of crop/front/back changes.
+16. Five representative successes.
+17. Five representative failures/ambiguous cases.
+18. Remaining weaknesses.
+19. Your recommendation:
+   - publish as-is
+   - refine further
+   - or revert specific portions
+
+If there are not enough real card photos to benchmark this properly, STOP and tell me exactly what sample set you need from me.
+
+Do not make an accuracy claim without evidence.
