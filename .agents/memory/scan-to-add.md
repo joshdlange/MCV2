@@ -1,34 +1,16 @@
 ---
-name: Scan-to-Add Architecture
-description: How the Scan to Add card identification feature works — AI model, rate limiting, and DB table
+name: Scan-to-Add product constraints
+description: Collector confirmation, photo review independence, and binder-page direction.
 ---
 
-# Scan-to-Add Architecture
+Collection ownership and shared-catalog photo approval must remain independent, including when a collector identifies the card manually.
 
-## AI Model
-- Uses **GPT-4o-mini** with vision (`detail: "high"`) via the `openai` npm package
-- `OPENAI_API_KEY` must be set as a secret
-- If key is missing, vision returns all nulls gracefully (no crash)
-- Cost: ~$0.0002–0.0005 per scan (sub-cent)
+**Why:** The user wants the confirmed card added even when an administrator rejects its photo because a better catalog image already exists. Image rejection is not rejection of ownership.
 
-## Rate Limiting
-- Free (SIDE_KICK) users: **10 scans per calendar month**
-- SUPER_HERO users: unlimited
-- Tracked in `user_scan_logs` table (userId + createdAt), counted per calendar month
-- 429 response when limit reached includes `{ limitReached: true, limit: 10 }`
+**How to apply:** Save the explicitly confirmed card independently of optional image submission. Keep collection limits/errors visible. Review outcomes must not gate or undo ownership, and UI copy must distinguish card-add success from photo-submission/review status.
 
-**Why:** Keeps OpenAI costs predictable; incentivizes upgrade.
+Build reliable single-card recognition before expanding to nine-card binder pages, with collector confirmation before additions.
 
-## Key Files
-- `server/services/scanService.ts` — GPT-4o-mini vision call + DB matching logic
-- `server/routes.ts` — `GET /api/cards/scan/usage` + `POST /api/cards/scan` (with limit check)
-- `client/src/pages/scan.tsx` — idle page shows usage meter; blocks upload if at limit
-- `shared/schema.ts` — `userScanLogs` table (created via direct SQL, not db:push — drizzle interactive prompt doesn't accept piped input)
+**Why:** The user considers current recognition unreliable and wants eventual binder-page scanning with each card confirmed.
 
-## DB Table
-`user_scan_logs (id SERIAL, user_id INTEGER FK users, created_at TIMESTAMP DEFAULT NOW)`
-Created directly with SQL (drizzle-kit push prompt is interactive, doesn't accept stdin pipe).
-
-## How to Apply
-- Any change to scan limits: update `FREE_SCAN_LIMIT_PER_MONTH` constant in `scanService.ts`
-- The `uploadImage` from `./cloudinary` MUST be imported in `routes.ts` — it was missing before and caused silent failures
+**How to apply:** Preserve manual identification and explicit confirmation. Reuse improved single-card matching for individual page crops rather than treating a whole binder page as one card.

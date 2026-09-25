@@ -1,7 +1,7 @@
 - [Native vault direction](native-vault-direction.md) — user rejected still-image crossfades; prefers continuous footage and a replayable phone-size preview for periodic replacements.
 - [Marketplace scrapped](marketplace-scrapped.md) — MCV is a companion to eBay/Whatnot, not a competitor; don't extend marketplace code or propose selling features.
 - [Two separate profile pages](profile-hub.md) — /collectors/:username is PUBLIC; /profile is PRIVATE Account Settings. Don't re-merge.
-- [Scan-to-Add architecture](scan-to-add.md) — uses GPT-4o-mini vision (not Tesseract); free users get 10 scans/month tracked in user_scan_logs table
+- [Scan-to-Add constraints](scan-to-add.md) — confirmed ownership must be independent of photo approval; reliable single-card recognition precedes binder-page scanning.
 - [Postgres LIMIT without ORDER BY](scan-matching-nondeterminism.md) — paginated candidate queries need explicit ORDER BY or results vary between runs.
 - [XP / Collector Power system](xp-system.md) — single source of truth computeUserXp; hybrid model (badge/image derived, card_added from decoupled no-FK xp_events ledger); farm-proof unique index
 - [Repo tooling quirks](env-quirks.md) — db:push prompt needs a TTY & aborts ALL changes at first prompt (users.email dupes block it permanently); no root tsconfig so tsc never checks the server
