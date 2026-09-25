@@ -645,6 +645,9 @@ server.listen({
   const dataFixWriteGate = installDataFixWriteGate(app);
 
   const runDataFixSeeds = async () => {
+    const { importSkyboxWizardChromium1996 } = await import('./seeds/importSkyboxWizardChromium1996');
+    await importSkyboxWizardChromium1996();
+
     // Add-only catalog import; includes all checklist rows and the supplied thumbnail.
     const { importToppsVaultMarvel2026 } = await import('./seeds/importToppsVaultMarvel2026');
     await importToppsVaultMarvel2026();
