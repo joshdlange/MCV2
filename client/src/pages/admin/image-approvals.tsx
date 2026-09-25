@@ -234,7 +234,7 @@ export default function AdminImageApprovals() {
   // Reject mutation
   const rejectMutation = useMutation({
     mutationFn: async ({ submissionId, reason }: { submissionId: number; reason: string }) => {
-      return apiRequest('POST', `/api/admin/pending-images/${submissionId}/reject`, { reason });
+      return apiRequest('POST', `/api/admin/pending-images/${submissionId}/reject`, { rejectionReason: reason });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/pending-images'] });

@@ -9118,16 +9118,19 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   });
 
   // POST /api/cards/scan — AI vision card identification
-  app.post("/api/cards/scan", authenticateUser, upload.single('image'), async (req: any, res) => {
+  app.post("/api/cards/scan", authenticateUser, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'backImage', maxCount: 1 }]), async (req: any, res) => {
     try {
-      const file = req.file;
+      const file = req.files?.image?.[0];
+      const backImage = req.files?.backImage?.[0];
       if (!file) return res.status(400).json({ message: "Image file is required" });
 
       const MAX_SIZE = 10 * 1024 * 1024;
-      if (file.size > MAX_SIZE) return res.status(400).json({ message: "Image too large (max 10MB)" });
+      if ([file, backImage].filter(Boolean).some(image => image.size > MAX_SIZE)) {
+        return res.status(400).json({ message: "Image too large (max 10MB per photo)" });
+      }
 
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-      if (!allowedTypes.includes(file.mimetype)) {
+      if ([file, backImage].filter(Boolean).some(image => !allowedTypes.includes(image.mimetype))) {
         return res.status(400).json({ message: "Invalid file type. Use JPEG, PNG, or WebP." });
       }
 
@@ -9165,7 +9168,9 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
 
       // ── AI vision identification ──────────────────────────────────────────────
       const { scanCard } = await import('./services/scanService');
-      const scanResult = await scanCard(file.buffer, file.mimetype);
+      const scanResult = await scanCard(file.buffer, file.mimetype, backImage
+        ? { buffer: backImage.buffer, mimeType: backImage.mimetype }
+        : undefined);
 
       // ── Persist scan upload for analytics/debugging/feedback ──────────────────
       let scanUploadId: number | null = null;
@@ -9205,6 +9210,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
 
       const scanUpload = await storage.getScanUpload(scanUploadId);
       if (!scanUpload) return res.status(404).json({ message: "Scan upload not found" });
+      if (scanUpload.userId !== req.user.id) return res.status(403).json({ message: "This scan belongs to another collector" });
 
       const feedback = await storage.createScanFeedback({
         scanUploadId,

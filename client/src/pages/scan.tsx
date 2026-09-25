@@ -9,6 +9,9 @@ import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
 import { useHardwareBackHandler } from "@/hooks/useBackButton";
+import { CardCrop } from "@/components/CardCrop";
+import { scanCorrection, submitScanPhoto, type PhotoSubmissionStatus } from "@/lib/scanConfirmation";
+import { useAppStore } from "@/lib/store";
 import {
   Camera,
   Upload,
@@ -67,6 +70,8 @@ interface ScanResult {
   matches: ScanMatch[];
   confidenceLevel: "high" | "medium" | "low" | "none";
   preprocessed?: boolean;
+  visualVerification?: "verified" | "uncertain" | "abstained" | "unavailable";
+  warnings?: string[];
 }
 
 interface PickerSet {
@@ -96,6 +101,9 @@ interface PickerCard {
 
 type Stage =
   | "idle"
+  | "crop"
+  | "crop-back-choice"
+  | "crop-back"
   | "scanning"
   | "results"
   | "picker-year"
@@ -302,14 +310,21 @@ function ScanDebugPanel({ scanResult }: { scanResult: ScanResult }) {
 
 export default function ScanToAdd() {
   const { user } = useAuth();
+  const isAdmin = useAppStore((state) => state.currentUser?.isAdmin);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const backInputRef = useRef<HTMLInputElement>(null);
 
   // Core scan state
   const [stage, setStage] = useState<Stage>("idle");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [sourceFile, setSourceFile] = useState<File | null>(null);
+  const [backSourceFile, setBackSourceFile] = useState<File | null>(null);
+  const [frontCropped, setFrontCropped] = useState<File | null>(null);
+  const previewObjectUrl = useRef<string | null>(null);
+  const [photoSubmission, setPhotoSubmission] = useState<PhotoSubmissionStatus>("idle");
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [selectedCard, setSelectedCard] = useState<ScanMatch | null>(null);
   const [submitImage, setSubmitImage] = useState(false);
@@ -318,7 +333,13 @@ export default function ScanToAdd() {
   // Reset the broken-image flag whenever a different card is selected
   useEffect(() => {
     setDbImageBroken(false);
+    setSubmitImage(false);
+    setPhotoSubmission("idle");
   }, [selectedCard?.cardId]);
+
+  useEffect(() => () => {
+    if (previewObjectUrl.current) URL.revokeObjectURL(previewObjectUrl.current);
+  }, []);
 
   // Picker state
   const [pickerYear, setPickerYear] = useState<number | null>(null);
@@ -332,9 +353,10 @@ export default function ScanToAdd() {
   // ── Mutations ──
 
   const scanMutation = useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async ({ front, back }: { front: File; back?: File }) => {
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append("image", front);
+      if (back) formData.append("backImage", back);
       const token = await user?.getIdToken();
       const res = await fetch("/api/cards/scan", {
         method: "POST",
@@ -394,44 +416,42 @@ export default function ScanToAdd() {
 
   function sendFeedback(feedbackType: "correct" | "wrong" | "not_found", selectedCardId?: number | null) {
     if (!scanResult?.scanUploadId || feedbackGiven) return;
-    feedbackMutation.mutate({ feedbackType, selectedCardId });
-    setFeedbackGiven(true);
-    toast({ title: "Thanks for the feedback!" });
+    feedbackMutation.mutate({ feedbackType, selectedCardId }, {
+      onSuccess: () => setFeedbackGiven(true),
+      onError: () => toast({ title: "Feedback could not be saved", variant: "destructive" }),
+    });
   }
 
   const addToCollectionMutation = useMutation({
     mutationFn: async (cardId: number) => {
+      // Snapshot the confirmed card and review choice before awaiting the save.
+      const wantsPhoto = submitImage;
+      const imageUrl = scanResult?.imageUrl;
       const res = await apiRequest("POST", "/api/collection", {
         cardId,
         condition: "Near Mint",
         acquiredVia: "scan",
       });
-      return res.json();
+      return { saved: await res.json(), cardId, wantsPhoto, imageUrl };
     },
-    onSuccess: async () => {
+    onSuccess: async ({ cardId, wantsPhoto, imageUrl }) => {
       qc.invalidateQueries({ queryKey: ["/api/collection"] });
       qc.invalidateQueries({ queryKey: ["/api/user/stats"] });
 
-      if (scanResult?.scanUploadId && !feedbackGiven) {
-        feedbackMutation.mutate({ feedbackType: "correct", selectedCardId: selectedCard?.cardId ?? null });
-        setFeedbackGiven(true);
-      }
-
-      if (submitImage && scanResult?.imageUrl && selectedCard) {
-        try {
-          const res = await apiRequest(
-            "POST",
-            `/api/cards/${selectedCard.cardId}/submit-scan-image`,
-            { imageUrl: scanResult.imageUrl }
-          );
-          if (res.ok) {
-            toast({ title: "Image submitted!", description: "Your photo is pending admin review." });
-          }
-        } catch {
-          // non-fatal
-        }
-      }
       setStage("success");
+      if (!wantsPhoto) return;
+      if (!imageUrl) {
+        setPhotoSubmission("failed");
+        toast({ title: "Photo was not submitted", description: "The scan photo was not saved, but your card was added.", variant: "destructive" });
+        return;
+      }
+      setPhotoSubmission("pending");
+      const status = await submitScanPhoto(async () => {
+        const res = await apiRequest("POST", `/api/cards/${cardId}/submit-scan-image`, { imageUrl });
+        return res.json() as Promise<{ autoApproved?: boolean }>;
+      });
+      setPhotoSubmission(status);
+      if (status === "failed") toast({ title: "Photo was not submitted", description: "Your card was added, but its photo could not be sent for review.", variant: "destructive" });
     },
     onError: (err: Error) => {
       if (err.message?.toLowerCase().includes("limit")) {
@@ -521,15 +541,40 @@ export default function ScanToAdd() {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => setPreviewUrl(ev.target?.result as string);
-    reader.readAsDataURL(file);
-    setStage("scanning");
+    e.target.value = "";
+    setSourceFile(file);
+    setFrontCropped(null);
+    setBackSourceFile(null);
+    if (previewObjectUrl.current) URL.revokeObjectURL(previewObjectUrl.current);
+    previewObjectUrl.current = null;
+    setPreviewUrl(null);
+    setStage("crop");
     setScanResult(null);
     setSelectedCard(null);
     setSubmitImage(false);
+    setPhotoSubmission("idle");
     setFeedbackGiven(false);
-    scanMutation.mutate(file);
+  }
+
+  function startScan(front: File, back?: File) {
+    setStage("scanning");
+    scanMutation.mutate({ front, back });
+  }
+
+  function confirmCard() {
+    if (!selectedCard || addToCollectionMutation.isPending) return;
+    if (scanResult?.scanUploadId) {
+      sendFeedback(scanCorrection(scanResult.matches[0]?.cardId, selectedCard.cardId), selectedCard.cardId);
+    }
+    addToCollectionMutation.mutate(selectedCard.cardId);
+  }
+
+  function handleBackFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setBackSourceFile(file);
+    setStage("crop-back");
   }
 
   function handlePickerCardSelect(card: PickerCard) {
@@ -608,10 +653,16 @@ export default function ScanToAdd() {
 
   function handleReset() {
     setStage("idle");
+    setSourceFile(null);
+    setBackSourceFile(null);
+    setFrontCropped(null);
+    if (previewObjectUrl.current) URL.revokeObjectURL(previewObjectUrl.current);
+    previewObjectUrl.current = null;
     setPreviewUrl(null);
     setScanResult(null);
     setSelectedCard(null);
     setSubmitImage(false);
+    setPhotoSubmission("idle");
     setFeedbackGiven(false);
     setPickerYear(null);
     setPickerSet(null);
@@ -630,6 +681,16 @@ export default function ScanToAdd() {
     switch (stage) {
       case "idle":
         return false;
+      case "crop":
+        handleReset();
+        return true;
+      case "crop-back":
+        setBackSourceFile(null);
+        setStage("crop-back-choice");
+        return true;
+      case "crop-back-choice":
+        handleReset();
+        return true;
       case "scanning":
         return true; // swallow back while a scan is in flight
       case "results":
@@ -695,6 +756,14 @@ export default function ScanToAdd() {
           capture="environment"
           className="hidden"
           onChange={handleFileChange}
+        />
+        <input
+          ref={backInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleBackFileChange}
         />
 
         {/* ── IDLE: Full Hero ── */}
@@ -893,6 +962,48 @@ export default function ScanToAdd() {
         )}
 
         {/* ── SCANNING ── */}
+        {stage === "crop" && sourceFile && (
+          <CardCrop
+            file={sourceFile}
+            onCancel={handleReset}
+            onConfirm={(file, preview) => {
+              if (previewObjectUrl.current) URL.revokeObjectURL(previewObjectUrl.current);
+              previewObjectUrl.current = preview;
+              setPreviewUrl(preview);
+              setSourceFile(null);
+              setFrontCropped(file);
+              setStage("crop-back-choice");
+            }}
+          />
+        )}
+        {stage === "crop-back-choice" && frontCropped && (
+          <div className="space-y-4">
+            <h2 className="font-semibold text-gray-900 dark:text-white">Front crop ready</h2>
+            {previewUrl && <img src={previewUrl} alt="Cropped card front" className="max-h-64 mx-auto rounded-lg border object-contain" />}
+            <p className="text-sm text-gray-500">You can add a cropped photo of the back to help identify card numbers and parallel details. It's optional and counts as the same scan.</p>
+            <Button variant="outline" className="w-full" onClick={() => backInputRef.current?.click()}>
+              <Camera className="w-4 h-4 mr-2" /> Add card back
+            </Button>
+            <Button className="w-full bg-red-600 hover:bg-red-700" onClick={() => startScan(frontCropped)}>
+              Scan front only
+            </Button>
+            <Button variant="ghost" className="w-full" onClick={handleReset}>Cancel</Button>
+          </div>
+        )}
+        {stage === "crop-back" && backSourceFile && frontCropped && (
+          <CardCrop
+            file={backSourceFile}
+            side="back"
+            onCancel={() => { setBackSourceFile(null); setStage("crop-back-choice"); }}
+            onConfirm={(back, backPreview) => {
+              URL.revokeObjectURL(backPreview);
+              setBackSourceFile(null);
+              startScan(frontCropped, back);
+            }}
+          />
+        )}
+
+        {/* ── SCANNING ── */}
         {stage === "scanning" && (
           <div className="space-y-4">
             {previewUrl && (
@@ -927,6 +1038,19 @@ export default function ScanToAdd() {
                 <ConfidencePill level={scanResult.confidenceLevel} />
               </div>
             </div>
+            <p className="text-sm text-amber-700 dark:text-amber-400">
+              {scanResult.confidenceLevel === "high"
+                ? "Check the card number, set, and parallel before confirming. A photo match is not a verified identification."
+                : "Identification is uncertain. Similar cards and parallel variants may look nearly identical — compare the card number, set, and finish, or choose manually."}
+            </p>
+            {scanResult.visualVerification && scanResult.visualVerification !== "verified" && (
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                Artwork comparison: {scanResult.visualVerification}. Check the printed details yourself.
+              </p>
+            )}
+            {scanResult.warnings?.map((warning, index) => (
+              <p key={index} role="alert" className="text-xs rounded-lg bg-amber-50 dark:bg-amber-950/20 p-2 text-amber-800 dark:text-amber-300">{warning}</p>
+            ))}
 
             <div className="space-y-2">
               {scanResult.matches.map((card) => (
@@ -947,7 +1071,6 @@ export default function ScanToAdd() {
               variant="outline"
               className="w-full text-sm"
               onClick={() => {
-                sendFeedback("not_found");
                 setStage("picker-year");
               }}
             >
@@ -955,25 +1078,7 @@ export default function ScanToAdd() {
               Not listed? Choose card manually
             </Button>
 
-            {!feedbackGiven && (
-              <div className="flex items-center justify-center gap-2 pt-1">
-                <p className="text-xs text-gray-400">Are these matches accurate?</p>
-                <button
-                  onClick={() => sendFeedback("correct", selectedCard?.cardId ?? scanResult.matches[0]?.cardId ?? null)}
-                  className="text-xs px-2 py-1 rounded-full bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 hover:bg-green-100 transition-colors"
-                >
-                  Yes
-                </button>
-                <button
-                  onClick={() => sendFeedback("wrong")}
-                  className="text-xs px-2 py-1 rounded-full bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 hover:bg-red-100 transition-colors"
-                >
-                  No
-                </button>
-              </div>
-            )}
-
-            {user?.isAdmin && (
+            {isAdmin && (
               <ScanDebugPanel scanResult={scanResult} />
             )}
           </div>
@@ -982,6 +1087,14 @@ export default function ScanToAdd() {
         {/* ── PICKER: YEAR ── */}
         {stage === "picker-year" && (
           <div className="space-y-4">
+            {scanResult?.confidenceLevel === "none" && (
+              <p className="text-sm rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 p-3 text-amber-800 dark:text-amber-300">
+                We couldn't identify this card reliably. Please choose its exact set and parallel manually.
+              </p>
+            )}
+            {scanResult?.warnings?.map((warning, index) => (
+              <p key={index} role="alert" className="text-xs rounded-lg bg-amber-50 dark:bg-amber-950/20 p-2 text-amber-800 dark:text-amber-300">{warning}</p>
+            ))}
             {previewUrl && (
               <div className="rounded-xl overflow-hidden border bg-white dark:bg-gray-900 max-h-36 flex items-center justify-center">
                 <img src={previewUrl} alt="Scanned card" className="max-h-36 object-contain" />
@@ -1217,6 +1330,9 @@ export default function ScanToAdd() {
         {/* ── CONFIRMED ── */}
         {stage === "confirmed" && selectedCard && (
           <div className="space-y-4">
+            <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 p-3 text-sm text-amber-800 dark:text-amber-300">
+              Confirm the exact card, set, number and parallel/finish before adding. Scanning never adds a card automatically.
+            </div>
             {/* Side-by-side photo comparison */}
             {previewUrl && (
               <div className="bg-white dark:bg-gray-900 rounded-xl border p-4 space-y-2">
@@ -1321,11 +1437,15 @@ export default function ScanToAdd() {
                 </div>
               </label>
             )}
+            {photoSubmission === "pending" && <p className="text-xs text-blue-600">Submitting photo for review…</p>}
+            {photoSubmission === "submitted" && <p className="text-xs text-blue-600">Photo submitted for admin review.</p>}
+            {photoSubmission === "approved" && <p className="text-xs text-green-600">Photo submitted and approved.</p>}
+            {photoSubmission === "failed" && <p role="alert" className="text-xs text-red-600">Photo submission failed. Confirm again to retry.</p>}
 
             <div className="space-y-2">
               <Button
                 className="w-full bg-red-600 hover:bg-red-700 text-white"
-                onClick={() => addToCollectionMutation.mutate(selectedCard.cardId)}
+                onClick={confirmCard}
                 disabled={addToCollectionMutation.isPending}
               >
                 {addToCollectionMutation.isPending ? (
@@ -1341,9 +1461,6 @@ export default function ScanToAdd() {
                 variant="outline"
                 className="w-full"
                 onClick={() => {
-                  if (scanResult?.matches.some((m) => m.cardId === selectedCard.cardId)) {
-                    sendFeedback("wrong", selectedCard.cardId);
-                  }
                   setSelectedCard(null);
                   if (isPickerStage || pickerCardSetId) {
                     setStage("picker-card");
@@ -1371,11 +1488,10 @@ export default function ScanToAdd() {
               <p className="text-sm text-gray-500 mt-1">
                 <span className="font-medium">{selectedCard.name}</span> is now in your vault.
               </p>
-              {submitImage && (
-                <p className="text-xs text-blue-500 mt-2">
-                  Your photo has been submitted for admin review.
-                </p>
-              )}
+              {photoSubmission === "pending" && <p className="text-xs text-blue-500 mt-2">Submitting your photo…</p>}
+              {photoSubmission === "submitted" && <p className="text-xs text-blue-500 mt-2">Your photo was submitted for admin review.</p>}
+              {photoSubmission === "approved" && <p className="text-xs text-green-600 mt-2">Your photo was submitted and approved.</p>}
+              {photoSubmission === "failed" && <p role="alert" className="text-xs text-red-600 mt-2">Your photo was not submitted. Your card was still added to your collection.</p>}
             </div>
             <div className="flex flex-col gap-2">
               <Button

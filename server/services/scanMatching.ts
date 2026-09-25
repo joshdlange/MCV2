@@ -3,8 +3,8 @@
 // scoring used to turn noisy vision/OCR output into ranked card matches.
 
 import { db } from '../db';
-import { cards, cardSets } from '../../shared/schema';
-import { ilike, or, eq, inArray } from 'drizzle-orm';
+import { cards, cardSets, mainSets } from '../../shared/schema';
+import { ilike, or, eq, and, sql, type SQL } from 'drizzle-orm';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -30,6 +30,9 @@ export interface ScanCandidateRow {
   isInsert: boolean;
   setName: string;
   setYear: number;
+  /** Cards in insert subsets can belong to a separate card_sets row. */
+  mainSetName?: string | null;
+  isInsertSubset?: boolean;
 }
 
 export interface ScoredMatch {
@@ -82,7 +85,7 @@ export function normalizeCardNumber(input: string | null | undefined): string {
   return s;
 }
 
-/** Digits-only version of a card number, useful as a loose fallback signal. */
+/** Digits-only version of a card number, for candidate retrieval only (not identity). */
 export function cardNumberDigits(input: string | null | undefined): string {
   return (input || '').replace(/\D/g, '');
 }
@@ -167,78 +170,112 @@ export function extractHintsFromText(raw: string): {
 
 // ── Staged candidate retrieval ───────────────────────────────────────────────
 
+const likeLiteral = (value: string) => value.replace(/[\\%_]/g, '\\$&');
+
 /**
- * Retrieve candidate rows using staged narrowing instead of one giant fuzzy
- * search: prioritize card number > set name > year > character name, then
- * merge/dedupe. This keeps the query set small and relevant.
+ * Search intersections first. A common character, set, or number alone can
+ * have hundreds of rows, so limiting those independent queries by ID loses
+ * the actual card before scoring even begins.
  */
-async function retrieveCandidates(parsed: ParsedScan): Promise<ScanCandidateRow[]> {
-  const stageResults: ScanCandidateRow[][] = [];
-
-  const baseSelect = () =>
-    db
-      .select({
-        id: cards.id,
-        name: cards.name,
-        cardNumber: cards.cardNumber,
-        frontImageUrl: cards.frontImageUrl,
-        variation: cards.variation,
-        isInsert: cards.isInsert,
-        setName: cardSets.name,
-        setYear: cardSets.year,
-      })
-      .from(cards)
-      .innerJoin(cardSets, eq(cards.setId, cardSets.id));
-
-  // Stage 1: card number (strongest signal — narrow first if present)
-  if (parsed.cardNumber) {
-    const normNum = normalizeCardNumber(parsed.cardNumber);
-    const digitsNum = cardNumberDigits(parsed.cardNumber);
-    const conditions = [ilike(cards.cardNumber, normNum)];
-    if (digitsNum) {
-      conditions.push(ilike(cards.cardNumber, `%${digitsNum}`));
-      conditions.push(ilike(cards.cardNumber, `${digitsNum}%`));
-    }
-    const rows = await baseSelect().where(or(...conditions)).orderBy(cards.id).limit(80);
-    stageResults.push(rows as ScanCandidateRow[]);
-  }
-
-  // Stage 2: set name (alias-resolved) — search sets first, then join cards
-  if (parsed.setName) {
-    const resolvedSet = resolveSetAlias(normalizeText(parsed.setName));
-    const setWords = resolvedSet.split(' ').filter(w => w.length > 3);
-    if (setWords.length > 0) {
-      const setConditions = setWords.slice(0, 4).map(w => ilike(cardSets.name, `%${w}%`));
-      const rows = await baseSelect().where(or(...setConditions)).orderBy(cards.id).limit(80);
-      stageResults.push(rows as ScanCandidateRow[]);
-    }
-  }
-
-  // Stage 3: character/card name
-  if (parsed.characterName) {
-    const nameConditions = [ilike(cards.name, `%${parsed.characterName}%`)];
-    const firstWord = parsed.characterName.split(/[-\s]/)[0];
-    if (firstWord.length > 3 && firstWord !== parsed.characterName) {
-      nameConditions.push(ilike(cards.name, `%${firstWord}%`));
-    }
-    const rows = await baseSelect().where(or(...nameConditions)).orderBy(cards.id).limit(80);
-    stageResults.push(rows as ScanCandidateRow[]);
-  }
-
-  // Stage 4: keyword fallback if nothing structured was found at all
-  if (stageResults.length === 0 && parsed.keywords.length > 0) {
-    const kwConditions = parsed.keywords.slice(0, 5).map(kw => ilike(cards.name, `%${kw}%`));
-    if (kwConditions.length > 0) {
-      const rows = await baseSelect().where(or(...kwConditions)).orderBy(cards.id).limit(80);
-      stageResults.push(rows as ScanCandidateRow[]);
-    }
-  }
-
-  // Merge + dedupe by card id
+export async function retrieveCandidates(
+  parsed: ParsedScan,
+  fetchRows: (condition: SQL, limit: number) => Promise<ScanCandidateRow[]> = async (condition, limit) =>
+    db.select({
+      id: cards.id,
+      name: cards.name,
+      cardNumber: cards.cardNumber,
+      frontImageUrl: cards.frontImageUrl,
+      variation: cards.variation,
+      isInsert: cards.isInsert,
+      setName: cardSets.name,
+      setYear: cardSets.year,
+      mainSetName: mainSets.name,
+      isInsertSubset: cardSets.isInsertSubset,
+    }).from(cards)
+      .innerJoin(cardSets, eq(cards.setId, cardSets.id))
+      .leftJoin(mainSets, eq(cardSets.mainSetId, mainSets.id))
+      .where(condition).orderBy(cards.id).limit(limit),
+): Promise<ScanCandidateRow[]> {
   const merged = new Map<number, ScanCandidateRow>();
-  for (const stage of stageResults) {
-    for (const row of stage) {
-      if (!merged.has(row.id)) merged.set(row.id, row);
+
+  const number = parsed.cardNumber ? normalizeCardNumber(parsed.cardNumber) : '';
+  // Exact normalized numeric identity without converting a prefixed number
+  // (AV-1) to plain 1. This handles stored 001, #001 and No. 001 alike.
+  const strippedNumber = sql<string>`btrim(regexp_replace(upper(btrim(${cards.cardNumber})), '^(NO\\.?[[:space:]]*|#[[:space:]]*)', ''))`;
+  const normalizedStoredNumber = sql<string>`case when ${strippedNumber} ~ '^[0-9]+$'
+    then coalesce(nullif(ltrim(${strippedNumber}, '0'), ''), '0')
+    else regexp_replace(regexp_replace(${strippedNumber}, '[[:space:]]*-[[:space:]]*', '-', 'g'),
+      '^([A-Z]{1,4})[[:space:]]+([0-9]+)$', ${'\\1-\\2'}) end`;
+  const numberCondition = number
+    ? or(
+        ilike(cards.cardNumber, likeLiteral(number)),
+        ilike(cards.cardNumber, likeLiteral(parsed.cardNumber!.trim().replace(/^(?:NO\.?\s*|#\s*)/i, ''))),
+        eq(normalizedStoredNumber, number),
+      )
+    : undefined;
+  const setWords = resolveSetAlias(normalizeText(parsed.setName)).split(' ').filter(w => w.length > 3);
+  const setCondition = setWords.length
+    ? or(...setWords.map(w => or(
+        ilike(cardSets.name, `%${likeLiteral(w)}%`),
+        ilike(mainSets.name, `%${likeLiteral(w)}%`),
+      )))
+    : undefined;
+  const name = normalizeText(parsed.characterName);
+  // Wildcards between words account for printed hyphens and punctuation:
+  // Spider-Man, Spider Man and Spider/Man are all retrieval candidates.
+  const nameCondition = name ? ilike(cards.name, `%${name.split(/[\s-]+/).filter(Boolean).map(likeLiteral).join('%')}%`) : undefined;
+  const year = parsed.year && /^\d{4}$/.test(parsed.year) ? eq(cardSets.year, Number(parsed.year)) : undefined;
+  const subset = normalizeText(parsed.subsetName || parsed.variant);
+  const subsetCondition = subset.length > 2
+    ? or(ilike(cards.variation, `%${likeLiteral(subset)}%`), ilike(cardSets.name, `%${likeLiteral(subset)}%`))
+    : undefined;
+
+  const probes = [
+    [numberCondition, setCondition, year, nameCondition, subsetCondition],
+    [numberCondition, setCondition, year, nameCondition],
+    [numberCondition, setCondition, year],
+    [numberCondition, setCondition, nameCondition],
+    [numberCondition, year, nameCondition],
+    [setCondition, year, nameCondition, subsetCondition],
+    [setCondition, year, nameCondition],
+    [numberCondition, setCondition],
+    [numberCondition, year],
+    [numberCondition, nameCondition],
+    [setCondition, nameCondition],
+    [numberCondition],
+    [nameCondition, year],
+    [setCondition, year],
+    [nameCondition],
+    [setCondition],
+  ];
+  const fallbackKey = numberCondition ? 'number' : nameCondition ? 'name' : setCondition ? 'set' : '';
+  const seenProbes = new Set<string>();
+  let foundSelective = false;
+  for (const probe of probes) {
+    const conditions = probe.filter((c): c is NonNullable<typeof c> => !!c);
+    if (!conditions.length) continue;
+    const key = conditions.map((c) =>
+      c === numberCondition ? 'number' : c === setCondition ? 'set' :
+      c === nameCondition ? 'name' : c === year ? 'year' : 'subset'
+    ).sort().join('|');
+    if (seenProbes.has(key)) continue;
+    seenProbes.add(key);
+    // Once an intersection finds a candidate, only one broad escape hatch is
+    // needed to find alternatives when the OCR supplied a wrong extra hint.
+    if (foundSelective && key !== fallbackKey) continue;
+    const rows = await fetchRows(and(...conditions)!, 300);
+    for (const row of rows) merged.set(row.id, row);
+    if (rows.length && key !== fallbackKey) foundSelective = true;
+    if (key === fallbackKey && merged.size) break;
+    // Broad single-field searches are a last resort; never let them crowd out
+    // the results of more selective intersections.
+    if (merged.size >= 600) break;
+  }
+  if (!merged.size && parsed.keywords.length) {
+    const words = parsed.keywords.map(normalizeText).filter(w => w.length > 3).slice(0, 5);
+    if (words.length) {
+      const rows = await fetchRows(or(...words.map(w => ilike(cards.name, `%${likeLiteral(w)}%`)))!, 100);
+      for (const row of rows) merged.set(row.id, row);
     }
   }
   return [...merged.values()];
@@ -246,9 +283,11 @@ async function retrieveCandidates(parsed: ParsedScan): Promise<ScanCandidateRow[
 
 // ── Scoring ───────────────────────────────────────────────────────────────
 
-function scoreCandidate(row: ScanCandidateRow, parsed: ParsedScan): { score: number; reasons: string[] } {
+function scoreCandidate(row: ScanCandidateRow, parsed: ParsedScan): { score: number; reasons: string[]; exactNumber: boolean; identitySignals: number } {
   let score = 0;
   const reasons: string[] = [];
+  let exactNumber = false;
+  let identitySignals = 0;
 
   // Card number — exact normalized match is the strongest single signal.
   if (parsed.cardNumber) {
@@ -256,14 +295,11 @@ function scoreCandidate(row: ScanCandidateRow, parsed: ParsedScan): { score: num
     const rowNorm = normalizeCardNumber(row.cardNumber);
     if (parsedNorm && rowNorm === parsedNorm) {
       score += 50;
+      exactNumber = true;
       reasons.push(`Exact card number match (${rowNorm})`);
-    } else {
-      const parsedDigits = cardNumberDigits(parsed.cardNumber);
-      const rowDigits = cardNumberDigits(row.cardNumber);
-      if (parsedDigits && rowDigits === parsedDigits) {
-        score += 30;
-        reasons.push(`Card number digits match (${rowDigits})`);
-      }
+    } else if (parsedNorm) {
+      score -= 45;
+      reasons.push(`Card number conflicts (${row.cardNumber})`);
     }
   }
 
@@ -271,41 +307,54 @@ function scoreCandidate(row: ScanCandidateRow, parsed: ParsedScan): { score: num
   if (parsed.year && row.setYear?.toString() === parsed.year) {
     score += 25;
     reasons.push(`Year matched ${parsed.year}`);
+  } else if (parsed.year && /^\d{4}$/.test(parsed.year)) {
+    score -= 20;
+    reasons.push(`Year conflicts (${row.setYear})`);
   }
 
   // Set name — alias resolved comparison
   if (parsed.setName) {
     const parsedSet = resolveSetAlias(normalizeText(parsed.setName));
-    const rowSet = resolveSetAlias(normalizeText(row.setName));
-    if (parsedSet && (rowSet === parsedSet || rowSet.includes(parsedSet) || parsedSet.includes(rowSet))) {
+    const rowSet = resolveSetAlias(normalizeText(row.mainSetName || row.setName));
+    const rowSubset = normalizeText(row.setName);
+    if (parsedSet && (rowSet === parsedSet || rowSet.includes(parsedSet) || parsedSet.includes(rowSet) || rowSubset.includes(parsedSet))) {
       score += 30;
+      identitySignals++;
       reasons.push(`Set alias matched "${row.setName}"`);
     } else {
-      const parsedWords = parsedSet.split(' ').filter(w => w.length > 3);
-      const matchedWords = parsedWords.filter(w => rowSet.includes(w));
+      const parsedWords = parsedSet.split(' ').filter(w => w.length > 3 && w !== 'marvel');
+      const matchedWords = parsedWords.filter(w => rowSet.split(' ').includes(w) || rowSubset.split(' ').includes(w));
       if (matchedWords.length > 0) {
-        score += matchedWords.length * 8;
+        score += Math.min(matchedWords.length * 8, 16);
         reasons.push(`Set name partially matched (${matchedWords.join(', ')})`);
+      } else if (parsedWords.length) {
+        score -= 25;
+        reasons.push(`Set conflicts (${row.setName})`);
       }
     }
   }
 
-  // Subset/insert name
-  if (parsed.subsetName && row.variation) {
-    const parsedSub = normalizeText(parsed.subsetName);
-    const rowSub = normalizeText(row.variation);
-    if (parsedSub && (rowSub.includes(parsedSub) || parsedSub.includes(rowSub))) {
+  // Subsets can be a separate set row, not just a card variation.
+  for (const hint of [...new Set([parsed.subsetName, parsed.variant].map(normalizeText).filter(Boolean))]) {
+    const rowVariation = normalizeText(row.variation);
+    const rowSubset = row.isInsertSubset ? normalizeText(row.setName) : '';
+    if ([rowVariation, rowSubset].some(value => value && (value.includes(hint) || (hint.length > 4 && hint.includes(value))))) {
       score += 20;
-      reasons.push(`Subset/insert matched "${row.variation}"`);
+      identitySignals++;
+      reasons.push(`Subset/variant matched "${row.variation || row.setName}"`);
+    } else {
+      score -= 25;
+      reasons.push(`Subset/variant conflicts (${row.variation || (row.isInsertSubset ? row.setName : 'base')})`);
     }
   }
 
   // Character/card name — strong signal, with partial fallback
   if (parsed.characterName) {
-    const parsedName = normalizeText(parsed.characterName);
-    const rowName = normalizeText(row.name);
-    if (rowName.includes(parsedName) || parsedName.includes(rowName)) {
+    const parsedName = normalizeText(parsed.characterName).replace(/-/g, ' ');
+    const rowName = normalizeText(row.name).replace(/-/g, ' ');
+    if (parsedName && rowName && (rowName.includes(parsedName) || parsedName.includes(rowName))) {
       score += 40;
+      identitySignals++;
       reasons.push(`Character/card name matched "${row.name}"`);
     } else {
       const firstWord = parsedName.split(' ')[0];
@@ -330,12 +379,12 @@ function scoreCandidate(row: ScanCandidateRow, parsed: ParsedScan): { score: num
     const rowText = normalizeText(`${row.name} ${row.setName} ${row.variation || ''}`);
     const hitCount = parsed.keywords.filter(kw => rowText.includes(kw)).length;
     if (hitCount > 0) {
-      score += hitCount * 4;
+      score += Math.min(hitCount * 4, 12);
       reasons.push(`${hitCount} OCR keyword${hitCount > 1 ? 's' : ''} matched`);
     }
   }
 
-  return { score, reasons: [...new Set(reasons)] };
+  return { score, reasons: [...new Set(reasons)], exactNumber, identitySignals };
 }
 
 export function getConfidenceLevel(topScore: number): 'high' | 'medium' | 'low' | 'none' {
@@ -343,6 +392,43 @@ export function getConfidenceLevel(topScore: number): 'high' | 'medium' | 'low' 
   if (topScore >= 45) return 'medium';
   if (topScore > 0) return 'low';
   return 'none';
+}
+
+/** Pure ranking step, shared with deterministic tests and the DB-backed matcher. */
+export function rankScanCandidates(candidates: ScanCandidateRow[], parsed: ParsedScan): ScoredMatch[] {
+  const scored = candidates.map(row => {
+    const { score, reasons, exactNumber, identitySignals } = scoreCandidate(row, parsed);
+    // A familiar character alone is not a unique print. Even an exact number
+    // must have independent set/subset/name corroboration to be "high".
+    const highEligible = exactNumber && identitySignals >= 2 &&
+      !reasons.some(reason => reason.includes('conflicts')) &&
+      (!!parsed.setName || !!parsed.subsetName || !!parsed.variant);
+    const level = getConfidenceLevel(score);
+    return {
+      cardId: row.id,
+      name: row.name,
+      setName: row.setName,
+      subsetName: row.variation || (row.isInsertSubset ? row.setName : null),
+      cardNumber: row.cardNumber,
+      year: row.setYear ?? null,
+      imageUrl: row.frontImageUrl || null,
+      confidence: score,
+      confidenceLevel: level === 'high' && !highEligible ? 'medium' as const : level,
+      matchReasons: reasons,
+    };
+  }).filter(m => m.confidence > 0).sort((a, b) =>
+    b.confidence - a.confidence || b.matchReasons.length - a.matchReasons.length || a.cardId - b.cardId
+  );
+
+  // A near-tie is not an exact identification, even when the numeric score
+  // clears the high threshold. Preserve scores and ranked alternatives.
+  if (scored.length > 1 && scored[0].confidence - scored[1].confidence < 15) {
+    for (const match of scored) {
+      if (scored[0].confidence - match.confidence >= 15) break;
+      if (match.confidenceLevel === 'high') match.confidenceLevel = 'medium';
+    }
+  }
+  return scored.slice(0, 5);
 }
 
 /**
@@ -357,33 +443,5 @@ export async function matchCandidates(parsed: ParsedScan): Promise<ScoredMatch[]
   const candidates = await retrieveCandidates(parsed);
   if (candidates.length === 0) return [];
 
-  const scored = candidates.map(row => {
-    const { score, reasons } = scoreCandidate(row, parsed);
-    return {
-      cardId: row.id,
-      name: row.name,
-      setName: row.setName,
-      subsetName: row.variation || null,
-      cardNumber: row.cardNumber,
-      year: row.setYear ?? null,
-      imageUrl: row.frontImageUrl || null,
-      confidence: score,
-      confidenceLevel: getConfidenceLevel(score),
-      matchReasons: reasons,
-    };
-  });
-
-  return scored
-    .filter(m => m.confidence > 0)
-    .sort((a, b) => {
-      if (b.confidence !== a.confidence) return b.confidence - a.confidence;
-      // Deterministic tiebreakers: more corroborating reasons wins, then
-      // lower cardId (older/more canonical entries) so results are stable
-      // across runs instead of depending on unordered DB row order.
-      if (b.matchReasons.length !== a.matchReasons.length) {
-        return b.matchReasons.length - a.matchReasons.length;
-      }
-      return a.cardId - b.cardId;
-    })
-    .slice(0, 5);
+  return rankScanCandidates(candidates, parsed);
 }
