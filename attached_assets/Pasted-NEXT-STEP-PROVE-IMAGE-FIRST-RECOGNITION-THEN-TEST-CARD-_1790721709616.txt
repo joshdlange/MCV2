@@ -1,0 +1,345 @@
+NEXT STEP: PROVE IMAGE-FIRST RECOGNITION, THEN TEST CARD NORMALIZATION
+
+We now have enough known labels to stop expanding the admin review tool and start testing whether the new image-first approach actually improves recognition.
+
+Current state:
+- 60 historical Scan to Add uploads exist.
+- We have approximately 23 accepted labels from a mix of historical collector selections and manual review.
+- The old review page candidates were frozen historical matcher results, NOT fresh DINO results.
+- DINO has not yet been meaningfully benchmarked against these accepted labels.
+- Full indexing remains paused.
+- Production remains untouched.
+- Automatic card-boundary detection / perspective correction / 2:3 normalization has NOT been implemented yet.
+
+Goal:
+Answer two questions with evidence:
+
+1. Does fresh image-only DINO retrieval put the correct card near the top for the labels we already know?
+2. Does automatically isolating and normalizing the card improve retrieval versus using the raw photo?
+
+Do NOT ask me to manually label the remaining scans before answering these questions.
+
+==================================================
+MUST DO
+==================================================
+
+1. USE ONLY ACCEPTED LABELS
+
+Use the currently accepted known labels only.
+
+Include labels from:
+- reliable historical collector selections
+- my manual confirmations
+
+Exclude:
+- unresolved scans
+- skipped scans
+- conflicting historical/manual cases unless equivalence is already verified
+- known back-photo-only cases from front-image accuracy
+- exact-byte/self-reference cases already flagged as invalid for front-image scoring
+
+Do not invent labels.
+Do not infer missing identities.
+
+Report the exact number of usable labeled front-image cases before running anything.
+
+2. RUN FRESH DINO IMAGE-ONLY RETRIEVAL
+
+For each eligible labeled scan:
+- use the original saved scan bytes
+- generate a fresh query embedding
+- run fresh visual retrieval
+- do NOT use frozen historical candidates
+- do NOT use OCR
+- do NOT use year/set/card-number metadata for candidate generation
+- do NOT use the old matcher
+
+This must be a true image-only test.
+
+For each scan record:
+- correct card ID
+- top 10 DINO candidates
+- similarity score for each
+- rank of correct card
+- top-1 margin vs runner-up
+- query embedding latency
+- search latency
+
+3. REPORT IMAGE-ONLY RESULTS
+
+Report:
+- exact-card Top-1 accuracy
+- exact-card Top-3 accuracy
+- exact-card Top-10 accuracy
+- correct physical-card-equivalent Top-1/3/10 where archived/duplicate equivalence is verified
+- number of misses
+- number of cases where correct card was not in indexed coverage
+- number of false-high-confidence wrong matches
+- average query embedding latency
+- average search latency
+- average total visual retrieval latency
+
+Do NOT hide failures caused by incomplete index coverage.
+Report coverage separately.
+
+4. SHOW ME THE ACTUAL CASES
+
+For every tested scan, provide a compact result table:
+- scan ID
+- correct card
+- DINO top result
+- correct-card rank
+- top similarity
+- runner-up similarity
+- pass/fail
+
+I want to see whether this is actually working.
+
+5. DO NOT CHANGE THE MODEL YET
+
+Do not switch DINO models.
+Do not change pooling.
+Do not change embedding dimensionality.
+Do not add ANN.
+Do not resume full indexing.
+
+First establish the baseline.
+
+==================================================
+AUTOMATIC CARD DETECTION + 2:3 NORMALIZATION
+==================================================
+
+6. BUILD A DEVELOPMENT-ONLY CARD NORMALIZATION PIPELINE
+
+After the raw-photo DINO baseline is complete, implement automatic card isolation for development testing only.
+
+Goal:
+Given a real card photo, identify the actual rectangular trading card and remove irrelevant surroundings before recognition.
+
+The system should:
+
+- detect the card rectangle
+- identify the four corners where possible
+- exclude surrounding:
+  - hand
+  - fingers
+  - table
+  - playmat
+  - background
+  - nearby objects
+- perspective-correct the detected card
+- rotate it upright
+- preserve artwork proportions
+- normalize the result to an approximately 2:3 portrait trading-card canvas
+- do NOT stretch the artwork
+
+Important:
+The physical card boundary should be detected FIRST.
+
+Then:
+- perspective rectify
+- preserve natural proportions
+- normalize/pad/crop conservatively to 2:3
+
+Do not simply force-resize the whole image to 2:3.
+
+7. SLEEVE / TOPLOADER HANDLING
+
+If a sleeve or top loader is present:
+- try to detect the inner actual card boundary, not just the outer plastic
+- if inner-card detection is unreliable, do not guess aggressively
+- fall back safely
+
+Do not let a top loader become the recognized “card rectangle” if the actual card can be identified inside it.
+
+8. SAFE FALLBACK
+
+If automatic boundary detection confidence is poor:
+- preserve the raw image
+- preserve existing manual crop capability
+- do not silently cut off part of the card
+- mark normalization as low-confidence/failed for that case
+
+The normalization pipeline must fail safe.
+
+9. KEEP THIS LIGHTWEIGHT
+
+Do not add a heavy vision framework unless there is measured evidence it is required.
+
+Prefer a lightweight approach first using available image-processing/computer-vision methods:
+- edge detection
+- contour detection
+- quadrilateral detection
+- perspective transform
+
+If Sharp alone is insufficient, explain the smallest safe dependency required before adding it.
+
+Do not add a large ML detection model just to find rectangles unless the lightweight approach clearly fails.
+
+10. CREATE RAW VS NORMALIZED COMPARISON
+
+For each eligible labeled front scan, run TWO retrieval tests:
+
+A. RAW ORIGINAL PHOTO
+B. AUTO-DETECTED / PERSPECTIVE-CORRECTED / 2:3 NORMALIZED CARD IMAGE
+
+Use the exact same DINO embedding/search pipeline for both.
+
+Compare:
+- Top-1
+- Top-3
+- Top-10
+- similarity score of correct card
+- runner-up margin
+- query latency
+- normalization latency
+- total latency
+
+This is the important experiment.
+
+Do not assume normalization helps.
+Measure it.
+
+11. SAVE DEVELOPMENT DEBUG PREVIEWS
+
+For each tested normalization, generate development-only visual previews showing:
+- original photo
+- detected card outline
+- normalized card crop
+
+This is for inspection only.
+
+Do not modify original uploads.
+Do not overwrite Cloudinary assets.
+
+12. CLASSIFY NORMALIZATION RESULTS
+
+For each scan mark:
+- successful card detection
+- partial/uncertain detection
+- failed detection
+
+Also note whether:
+- hand was removed
+- table/background was removed
+- perspective was corrected
+- sleeve/toploader complicated detection
+- important card content was accidentally cropped
+
+13. LATENCY TARGET
+
+Measure the full fast path:
+
+- card detection/normalization
+- DINO embedding
+- visual search
+
+Report whether a useful first result can realistically be produced in:
+- under 1 second
+- under 2 seconds
+- under 3 seconds
+
+Do not include OpenAI/OCR latency in this fast-path timing.
+
+==================================================
+MUST NOT DO
+==================================================
+
+- Do not ask me to manually review more scans yet.
+- Do not expand the admin review tool.
+- Do not run a full catalog indexing job.
+- Do not publish.
+- Do not touch production.
+- Do not modify DINO model choice.
+- Do not change embedding dimensions.
+- Do not change pooling strategy.
+- Do not add ANN/HNSW yet.
+- Do not modify ownership.
+- Do not modify image approval.
+- Do not change Scan to Add production behavior.
+- Do not overwrite original scan images.
+- Do not overwrite Cloudinary images.
+- Do not use frozen historical matcher candidates as DINO results.
+- Do not use OCR or metadata in the image-only baseline.
+- Do not fabricate missing labels.
+- Do not count back-only cases as failed front-image retrieval.
+
+==================================================
+PRESERVE
+==================================================
+
+- Existing accepted labels
+- Existing manual decisions
+- Existing historical selections
+- Existing review notes
+- Existing Cloudinary originals
+- Existing scan uploads
+- Existing catalog
+- Existing DINO implementation
+- Existing manual crop fallback
+- Indexing paused
+- Production untouched
+
+==================================================
+QA
+==================================================
+
+Before calling this complete, verify:
+
+IMAGE-ONLY BASELINE:
+- fresh DINO results are actually generated
+- frozen historical candidates are not reused
+- OCR is not used
+- metadata is not used for initial retrieval
+- correct-card rank is recorded
+- incomplete index coverage is explicit
+
+NORMALIZATION:
+- card rectangle is detected where possible
+- hand/table/background are removed when outside card boundaries
+- tilted cards are perspective-corrected
+- cards are rotated upright
+- output is approximately 2:3
+- artwork is not stretched
+- bad detections fail safely
+- original image remains untouched
+- manual crop fallback remains available
+
+COMPARISON:
+- same labeled cases tested raw and normalized
+- exact same DINO pipeline used after preprocessing
+- results are reported side-by-side
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Give me a concise results report with:
+
+1. Number of usable accepted front-image labels.
+2. Number excluded and why.
+3. Fresh raw-photo DINO Top-1 / Top-3 / Top-10.
+4. Number of correct cards outside current index coverage.
+5. False-high-confidence wrong-match count.
+6. Average raw-photo embedding latency.
+7. Average raw-photo search latency.
+8. Automatic card-detection success rate.
+9. Number of partial/failed detections.
+10. Normalization latency.
+11. Normalized-image DINO Top-1 / Top-3 / Top-10.
+12. Whether normalization improved or hurt retrieval.
+13. Five examples where normalization helped most.
+14. Five examples where normalization failed or hurt.
+15. Whether hand/table/background removal worked reliably.
+16. Whether sleeve/toploader cases remain problematic.
+17. Whether the full visual fast path is realistically under 1, 2, or 3 seconds.
+18. Recommendation:
+   - continue with current DINO approach
+   - improve normalization
+   - change visual representation/model
+   - or stop and reconsider architecture
+19. Confirm full indexing is still paused.
+20. Confirm nothing was published.
+21. Confirm production was untouched.
+
+Do not ask me for more manual labeling until this experiment tells us whether the image-first system is actually promising.
