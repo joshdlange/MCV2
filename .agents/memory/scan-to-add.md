@@ -57,6 +57,12 @@ Separate review-tool/catalog problems, front/back input type, and metadata defec
 
 **How to apply:** Preserve raw history and confirmed identities; store classifications and issue flags independently. Require explicit front/back evidence, report uncertain inputs separately, and reserve independently labeled untouched photos before final accuracy claims.
 
+Reference-guided card isolation must distinguish the physical card boundary from the catalog photo's outer rectangle.
+
+**Why:** Stronger generic edge detection accepted internal artwork and binder pockets as cards. Local-feature homographies were more useful, but projecting a slab, watermark, or scene-sized reference silently retains surroundings or clips content.
+
+**How to apply:** Use only Stage 1 candidates, never the known label, to guide isolation. Require trustworthy reference-card extents and geometric safety gates; preserve raw/manual fallback. Report usable isolation separately from tight card-only crops and disclose offline reference preparation.
+
 Use attributable, unambiguous historical collector confirmations as sourced labels instead of requiring redundant manual review; preserve manual decisions and surface conflicts.
 
 **Why:** The user rejected repeated labeling and a permanent engineering-heavy admin workflow. Historical selected IDs can record explicit confirmation, whereas stored top predictions cannot. Confirmation before an ownership request does not prove that ownership was added.

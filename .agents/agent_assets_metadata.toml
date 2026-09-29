@@ -170,3 +170,17 @@ mtime_ms = 1790723562555
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/72964555-5264-4c6e-bbd8-3462158167eb/11b85448-7e2a-4e4b-9760-7ff17f06b686"
 storage_version_token = "1790723623687683"
 content_type = "text/html"
+
+[[outputs]]
+id = "zg54QQwnY56dtiNIfUzSG"
+uri = "file://attached_assets/detail-reranker-orb-report.html"
+type = "html"
+title = "Two-stage recognition and card-isolation results"
+description = "Controlled nine-card experiment: DINO, detail reranking, and reference-guided isolation. Includes per-case scores, crop previews, failures, and measured latency."
+logical_id = "f14f41bc-dd68-4024-b115-789f58195216"
+content_hash = "sha256:f19a119b264c732f8138e382156de0031e0eecadd9f5c18e973b37c60017d006"
+size = 668378
+mtime_ms = 1790725306911
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/f14f41bc-dd68-4024-b115-789f58195216/43c82d3d-0467-429a-a0c8-f3827dc62909"
+storage_version_token = "1790725386125010"
+content_type = "text/html"

@@ -5,3 +5,6 @@ server/public
 vite.config.ts.*
 *.tar.gz
 .local/scan-review/
+.pythonlibs/
+__pycache__/
+*.py[cod]
