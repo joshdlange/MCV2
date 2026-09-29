@@ -31,7 +31,7 @@ Validate stability, real-photo retrieval, and latency before further bulk ingest
 
 **Why:** The user brought an external review to stop speculative optimization and requested independently labeled evidence before scaling. Another rewrite or a large index does not establish recognition quality.
 
-**How to apply:** Keep full indexing and publication paused. Require at least 50 independently labeled real photos before architectural accuracy claims; collector selections alone are not ground truth. If these are unavailable, report the data gap and request the photos rather than inventing benchmark results.
+**How to apply:** Keep full indexing and publication paused. The user superseded the earlier 50-photo prerequisite: run bounded development experiments on current accepted labels without requesting more labeling first. Report sample size, selection bias, conflicts, leakage, and index coverage; a small exploratory experiment is not a general architectural accuracy claim.
 
 Keep reference and query inference numerically equivalent; do not assume quantized model tensor batches equal single-image inference.
 

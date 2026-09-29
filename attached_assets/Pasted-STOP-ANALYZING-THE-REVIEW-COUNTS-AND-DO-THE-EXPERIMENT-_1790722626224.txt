@@ -1,0 +1,181 @@
+STOP ANALYZING THE REVIEW COUNTS AND DO THE EXPERIMENT NOW.
+
+We have enough confirmed labels to run a bounded development test.
+
+Current saved state:
+- 31 manual decisions
+- 19 confirmed
+- 12 unresolved
+
+Use the CURRENT saved decisions, not an old count.
+
+I do not want another provenance report, another review-tool redesign, or another explanation of what you plan to do.
+
+I want working results.
+
+==================================================
+TASK 1: RUN FRESH IMAGE-ONLY RETRIEVAL
+==================================================
+
+Take every currently confirmed scan that is valid for front-image testing.
+
+Exclude only:
+- confirmed back-photo cases
+- exact self-reference/reference-copy cases
+- known conflicting labels that cannot be resolved safely
+
+For every remaining confirmed scan:
+
+1. Load the original scan image.
+2. Generate a fresh DINO embedding using the existing canonical single-image pipeline.
+3. Search the CURRENT available visual index.
+4. Return the top 10 visually closest catalog references.
+
+Do NOT use:
+- old saved candidate lists
+- OCR
+- year
+- card number
+- set
+- historical matcher results
+
+This must be fresh image-only retrieval.
+
+Actually run it.
+
+Then report:
+- number of eligible confirmed scans
+- Top-1 accuracy
+- Top-3 accuracy
+- Top-10 accuracy
+- correct-card rank for every scan
+- scans where correct card is outside current indexed coverage
+- average embedding time
+- average search time
+
+If the available index is incomplete, that is fine.
+Report the coverage honestly and still run the test.
+
+Do not stop because coverage is incomplete.
+
+==================================================
+TASK 2: BUILD AUTOMATIC CARD CROPPING
+==================================================
+
+After the raw-image test finishes, implement a DEVELOPMENT-ONLY preprocessing step.
+
+Goal:
+Automatically identify the physical trading-card rectangle inside the photo.
+
+The system should:
+
+1. Detect the card edges / four corners.
+2. Remove surrounding:
+   - hand
+   - fingers
+   - table
+   - background
+   - playmat
+3. Perspective-correct the card.
+4. Rotate it upright.
+5. Produce a clean card-only image.
+6. Normalize it to approximately 2:3 portrait trading-card proportions.
+7. NEVER stretch the artwork.
+
+Important:
+
+Do not simply resize the full photograph to 2:3.
+
+The sequence must be:
+
+detect card boundary
+→ perspective correct
+→ rotate
+→ preserve card proportions
+→ normalize to 2:3 canvas if needed
+
+Use a lightweight edge/contour/quadrilateral approach first.
+
+If the card rectangle cannot be detected confidently:
+- mark detection failed
+- use the raw image
+- do not guess
+
+Save development preview images showing:
+- original
+- detected outline
+- corrected card crop
+
+==================================================
+TASK 3: RUN THE SAME TEST AGAIN
+==================================================
+
+For the SAME eligible confirmed scans:
+
+Run DINO retrieval using the normalized card-only image.
+
+Use the same:
+- model
+- embeddings
+- visual index
+- cosine search
+
+Then compare:
+
+RAW PHOTO
+vs
+NORMALIZED CARD CROP
+
+Report:
+
+RAW:
+- Top-1
+- Top-3
+- Top-10
+
+NORMALIZED:
+- Top-1
+- Top-3
+- Top-10
+
+Also report:
+- card detection success count
+- card detection failure count
+- average crop/perspective-processing time
+- examples where cropping improved rank
+- examples where cropping made rank worse
+
+==================================================
+IMPORTANT
+==================================================
+
+This is a DEVELOPMENT EXPERIMENT.
+
+You are AUTHORIZED to:
+- run fresh DINO query embeddings
+- query the existing development visual index
+- implement development-only card boundary detection
+- generate temporary normalized images
+- run the comparison test
+
+You are NOT authorized to:
+- publish
+- change production
+- run the full 77k indexing job
+- change DINO models
+- overwrite Cloudinary assets
+- modify user collections
+- modify ownership
+- modify the review labels
+
+Do not ask me to label more cards before doing this.
+
+Do not respond with what you intend to do.
+
+Do the work first.
+
+Your next response should contain ACTUAL EXPERIMENT RESULTS.
+
+If something technically prevents you from running it, tell me the exact technical blocker and the exact failing command/error.
+
+Do not substitute another analysis report.

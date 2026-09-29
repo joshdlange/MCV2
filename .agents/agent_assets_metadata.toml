@@ -142,3 +142,17 @@ mtime_ms = 1790706860001
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/98c0ca27-733e-4174-9bb2-9e9cc5fe5f88/b3ffd011-61ad-4b0c-a3fc-cb1f20d8c65a"
 storage_version_token = "1790707023477045"
 content_type = "text/html"
+
+[[outputs]]
+id = "8nshuJ3l9J2RtQz3T1i6w"
+uri = "file://attached_assets/image-first-experiment-report.html"
+type = "html"
+title = "Image-first experiment: raw vs automatic crop"
+description = "Actual 16-scan DINO results, top-10 candidates, coverage, timings, and original/outline/crop previews. All 16 correct cards were outside the current index."
+logical_id = "1420678b-50b1-4d31-b80d-0bef23cd6130"
+content_hash = "sha256:42c570ffdf92ed2acc4d0aca7710e892ff3aac361e834095ef9248adf52ddec8"
+size = 1042672
+mtime_ms = 1790722940255
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/1420678b-50b1-4d31-b80d-0bef23cd6130/d8469a4c-9c3b-413c-8aa5-949ab4086e05"
+storage_version_token = "1790722994858244"
+content_type = "text/html"
