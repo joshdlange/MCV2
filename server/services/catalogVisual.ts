@@ -195,7 +195,8 @@ let nextBatchAt: number | undefined;
  * batches on a slow network/CPU. Missing schema backs off until explicitly migrated.
  */
 export function startCatalogVisualIndexWorker(): void {
-  if (workerStarted || process.env.CATALOG_VISUAL_INDEX_ENABLED === 'false') return;
+  // Keep ingestion frozen until the real-photo evaluation supports this pipeline.
+  if (workerStarted || process.env.CATALOG_VISUAL_INDEX_ENABLED !== 'true') return;
   workerStarted = true;
   const schedule = (delay: number) => {
     nextBatchAt = Date.now() + delay;

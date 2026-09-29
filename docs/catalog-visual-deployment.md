@@ -21,7 +21,9 @@
    from active catalog front references, not scans, 16 references per batch with
    a 30-second pause after each batch. Missing schema backs off; the worker does
    not create it or duplicate the parent-owned initialization.
-   `CATALOG_VISUAL_INDEX_ENABLED=false` disables backfill.
+   Backfill is disabled by default while recognition is being validated.
+   Only `CATALOG_VISUAL_INDEX_ENABLED=true` explicitly enables it; do not enable
+   automatic or full bulk indexing until the real-photo evaluation is reviewed.
    Replicas share the database advisory lock but have independent model/cache RAM.
 4. Model availability is not index completeness. A new deployment starts with
    whatever reference vectors exist in its own database; development vectors are

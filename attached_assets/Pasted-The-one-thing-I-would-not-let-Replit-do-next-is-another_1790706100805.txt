@@ -1,0 +1,6 @@
+The one thing I would not let Replit do next is another giant architecture rewrite.
+You’re actually closer than it feels. The useful pieces are there. The next job is to stop experimenting and answer three questions with data:
+Does the embedding stay stable?
+Does it actually find the right card from a phone photo?
+Can it do that fast enough?
+If those three come back yes, then bulk indexing becomes an engineering problem rather than a research problem.

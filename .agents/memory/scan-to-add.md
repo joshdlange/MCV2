@@ -27,6 +27,12 @@ Image-first recognition is the product goal, not OCR-first candidate lookup.
 
 **How to apply:** Search catalog images independently of readable text. Use text as corroboration and to distinguish variants, not as a prerequisite for retrieving artwork. Report incomplete image-index coverage and distinguish transformed-reference tests from real-photo accuracy.
 
+Validate stability, real-photo retrieval, and latency before further bulk ingestion or architecture expansion.
+
+**Why:** The user brought an external review to stop speculative optimization and requested independently labeled evidence before scaling. Another rewrite or a large index does not establish recognition quality.
+
+**How to apply:** Keep full indexing and publication paused. Require at least 50 independently labeled real photos before architectural accuracy claims; collector selections alone are not ground truth. If these are unavailable, report the data gap and request the photos rather than inventing benchmark results.
+
 Keep reference and query inference numerically equivalent; do not assume quantized model tensor batches equal single-image inference.
 
 **Why:** The pinned DINO q8 model produced batch-composition-dependent embeddings in actual tests, despite identical per-image preprocessing. Strict parity caught the mismatch before full indexing.
