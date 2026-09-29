@@ -9,6 +9,8 @@ import {
 } from './services/scanReview';
 import { legacyReviewEvidence, readReviewFlags, updateReviewFlags } from './services/scanReviewFlags';
 import { auditReviewEquivalence, searchReviewCatalog } from './services/scanReviewSearch';
+import { loadHistoricalEvidence, resolveHistoricalLabel } from './services/scanReviewHistorical';
+import { loadPhotoOriginAudit, type PhotoAuditRow } from './services/scanReviewPhotoAudit';
 import {
   cardNumberEvidence, effectiveClassification, REVIEW_DEVELOPMENT_CASES,
   readReviewClassifications, sanitizeOcr, sanitizeVision, saveReviewClassification,
@@ -16,6 +18,7 @@ import {
 
 type Candidate = { cardId: number; name: string; year: number | null; mainSetName: string | null;
   subsetName: string | null; cardNumber: string | null; imageUrl: string | null;
+  candidateSource?: 'historical-matcher-snapshot';
   confidence?: number; confidenceLevel?: string; similarity?: number; matchReasons?: string[];
   isArchived?: boolean | null; status?: 'active' | 'archived' | null; hasUsableVisualReference?: boolean;
   canonicalActiveId?: number | null; equivalentIds?: number[] };
@@ -48,9 +51,10 @@ async function catalogCards(ids: number[]) {
   });
   return map;
 }
-function reviewEligibility(scanId: number, decision: { status: string; cardId: number | null; note: string } | null,
+export function reviewEligibility(scanId: number, decision: { status: string; cardId: number | null; note: string } | null,
   classification: ReturnType<typeof effectiveClassification>,
-  flags: Awaited<ReturnType<typeof readReviewFlags>>, cards: Map<number, Candidate>) {
+  flags: Awaited<ReturnType<typeof readReviewFlags>>, cards: Map<number, Candidate>,
+  photoAudit: Map<number, PhotoAuditRow>) {
   const selected = decision?.cardId ? cards.get(decision.cardId) : null;
   const target = selected?.isArchived ? cards.get(selected.canonicalActiveId ?? -1) : selected;
   const searchBlocked = flags.searchBlocked[scanId]?.blocked ||
@@ -61,16 +65,19 @@ function reviewEligibility(scanId: number, decision: { status: string; cardId: n
   const excludedDueToToolCatalogIssue = !!(searchBlocked || catalogImageIssue ||
     (decision?.status === 'confirmed' && !target?.hasUsableVisualReference));
   const identityConfirmed = decision?.status === 'confirmed' && !!target;
+  const referenceLeakage = photoAudit.get(scanId)?.overlap === 'exact-self-linked-scan-upload';
   return {
     frontImageRetrieval: identityConfirmed && classification.side === 'front'
-      && !!target?.hasUsableVisualReference && !excludedDueToToolCatalogIssue,
+      && !!target?.hasUsableVisualReference && !excludedDueToToolCatalogIssue && !referenceLeakage,
     backOcr: identityConfirmed && classification.side === 'back' &&
       classification.ocrTag !== 'empty' && !excludedDueToToolCatalogIssue,
     metadataParsing: identityConfirmed && classification.ocrTag !== 'empty' &&
       classification.metadataParsing.status === 'supported' &&
       !!classification.metadataParsing.reason && !excludedDueToToolCatalogIssue,
     excludedDueToToolCatalogIssue,
+    excludedDueToReferenceLeakage: referenceLeakage,
     reasons: [
+      ...(referenceLeakage ? ['self-linked-scan-upload-reference-excluded-from-front-accuracy'] : []),
       ...(searchBlocked ? ['search-tool-blocked'] : []),
       ...(catalogImageIssue ? ['catalog-image-issue'] : []),
       ...(decision?.status === 'confirmed' && !target?.hasUsableVisualReference
@@ -83,7 +90,7 @@ function reviewEligibility(scanId: number, decision: { status: string; cardId: n
 function dataQuality(rows: { scanId: number }[], decisions: Record<string, { status: string; cardId: number | null; note: string }>,
   flags: Awaited<ReturnType<typeof readReviewFlags>>, cards: Map<number, Candidate>,
   classifications: Awaited<ReturnType<typeof readReviewClassifications>>,
-  metadata: Awaited<ReturnType<typeof loadScanMetadata>>) {
+  metadata: Awaited<ReturnType<typeof loadScanMetadata>>, photoAudit: Map<number, PhotoAuditRow>) {
   const progress = reviewProgress(decisions as any, rows.length);
   const blocked = rows.filter(row => flags.searchBlocked[row.scanId]?.blocked ||
     legacyReviewEvidence(decisions[row.scanId] ?? null).suspectedSearchBlocked).length;
@@ -102,6 +109,7 @@ function dataQuality(rows: { scanId: number }[], decisions: Record<string, { sta
     const card = cards.get(decisions[row.scanId].cardId!);
     const target = card?.isArchived ? cards.get(card.canonicalActiveId ?? -1) : card;
     return target && target.hasUsableVisualReference
+      && photoAudit.get(row.scanId)?.overlap !== 'exact-self-linked-scan-upload'
       && !flagged.includes(row) && !missing.includes(row);
   });
   const classified = rows.map(row => {
@@ -110,7 +118,7 @@ function dataQuality(rows: { scanId: number }[], decisions: Record<string, { sta
     const classification = effectiveClassification(row.scanId, decision,
       classifications.classifications[row.scanId], saved?.ocr ?? null);
     return { row, decision, classification,
-      eligibility: reviewEligibility(row.scanId, decision, classification, flags, cards),
+      eligibility: reviewEligibility(row.scanId, decision, classification, flags, cards, photoAudit),
     };
   });
   const reviewedClassified = classified.filter(item =>
@@ -133,11 +141,13 @@ function dataQuality(rows: { scanId: number }[], decisions: Record<string, { sta
     backOcrEligible: classified.filter(item => item.eligibility.backOcr).length,
     metadataParsingEligible: classified.filter(item => item.eligibility.metadataParsing).length,
     excludedDueToToolCatalogIssue: classified.filter(item => item.eligibility.excludedDueToToolCatalogIssue).length,
+    excludedDueToReferenceLeakage: classified.filter(item =>
+      item.eligibility.excludedDueToReferenceLeakage).length,
     confirmedOcrEmpty: classified.filter(item => item.decision?.status === 'confirmed'
       && item.classification.ocrTag === 'empty').length,
     regressionDevelopmentScans: Object.keys(REVIEW_DEVELOPMENT_CASES).map(Number),
     holdoutAssigned: 0,
-    suitabilityCriteria: 'Confirmed, selected active card or archived card with one exact-identity active equivalent, HTTPS/HTTP non-Drive front reference, no reported/flagged image issue. Exact identity requires matching name, year, main set, subset, card number and variation.',
+    suitabilityCriteria: 'Confirmed, selected active card or archived card with one exact-identity active equivalent, HTTPS/HTTP non-Drive front reference, no reported/flagged image issue, no self-linked original-as-reference leakage. Exact identity requires matching name, year, main set, subset, card number and variation.',
     provenance: 'Legacy note matches are reported separately as suspected/reviewer-reported, not edited or verified flags.',
   };
 }
@@ -146,14 +156,19 @@ async function response() {
   const metadata = await loadScanMetadata();
   const flags = await readReviewFlags(dataset.datasetHash);
   const classifications = await readReviewClassifications(dataset.datasetHash);
+  const historical = await loadHistoricalEvidence(dataset);
+  const photoAudit = await loadPhotoOriginAudit(dataset.rows.map(row => row.scanId));
   const ids = [...new Set([
     ...[...metadata.values()].flatMap(row => row.candidates.map(c => c.cardId)),
     ...dataset.rows.flatMap(row => [row.candidate?.cardId, row.prediction?.cardId]),
     ...Object.values(decisions).map(decision => decision.cardId),
+    ...[...historical.values()].map(item => item.candidateHistoricalCardId),
   ].filter((id): id is number => typeof id === 'number' && Number.isSafeInteger(id)))];
   const cards = await catalogCards(ids);
-  const audit = await auditReviewEquivalence([...new Set(Object.values(decisions)
-    .map(decision => decision.cardId)
+  const audit = await auditReviewEquivalence([...new Set([
+    ...Object.values(decisions).map(decision => decision.cardId),
+    ...[...historical.values()].map(item => item.candidateHistoricalCardId),
+  ]
     .filter((id): id is number => typeof id === 'number'))]);
   const canonicalIds = [...audit.values()].map(value => value.canonicalActiveId)
     .filter((id): id is number => id !== null && !cards.has(id));
@@ -163,8 +178,61 @@ async function response() {
     record.equivalentIds = equivalent?.equivalentIds ?? [];
     record.canonicalActiveId = record.isArchived ? equivalent?.canonicalActiveId ?? null : id;
   }
+  const provenance = dataset.rows.map(row => {
+    const evidence = historical.get(row.scanId);
+    if (!evidence) throw new ReviewError(`Missing historical provenance for scan ${row.scanId}`, 503);
+    const classification = effectiveClassification(row.scanId, decisions[row.scanId] ?? null,
+      classifications.classifications[row.scanId], metadata.get(row.scanId)?.ocr ?? null);
+    return resolveHistoricalLabel(evidence, decisions[row.scanId] ?? null, classification.side,
+      new Set(cards.keys()), audit, id => !!cards.get(id)?.isArchived);
+  });
+  const provenanceById = new Map(provenance.map(item => [item.scanId, item]));
+  const categoryNames = [
+    'CONFIRMED HISTORICAL LABEL AVAILABLE',
+    'POSSIBLE HISTORICAL LABEL BUT AMBIGUOUS',
+    'NO HISTORICAL LABEL',
+    'BACK PHOTO / SPECIAL CASE',
+    'DATA INCONSISTENT',
+  ];
+  const categoryCounts = Object.fromEntries(categoryNames.map(name =>
+    [name, provenance.filter(item => item.category === name).length]));
+  const provenanceSummary = {
+    origin: '60 historical scan_uploads records with matching Cloudinary scan_uploads URLs, sourced in a bounded private read-only extract; review serves SHA256-verified local original-byte copies.',
+    sourceTables: ['scan_uploads', 'scan_feedback'],
+    collectorConfirmation: 'Same-owner, scan-linked selected_card_id recorded on Confirm before collection POST; not proof that ownership save succeeded.',
+    collectionLink: 'user_collections has acquired_via=scan but no scan_upload_id FK: collection timing cannot identify a scan.',
+    candidateOrigin: 'Frozen old historical matcher snapshots, not DINO retrieval or combined rerank.',
+    imageTypeAssessment: {
+      auditSha256: photoAudit.sha256,
+      verifiedPhonePhotos: null, unknownDeviceOrigin: 60,
+      visiblePhotoContext: photoAudit.counts.visiblePhotoContext,
+      indeterminateVisualContext: photoAudit.counts.indeterminateVisualContext,
+      verifiedOriginalHashes: photoAudit.counts.integrityVerified,
+      fetchedLinkedCloudinaryReferences: photoAudit.counts.uniqueFetchedLinkedCloudinaryUrls,
+      scansWithComparedLinkedReferences: photoAudit.counts.scansWithFetchedLinkedCloudinaryReference,
+      scansWithoutComparedLinkedReferences: photoAudit.counts.scansWithoutFetchedLinkedCloudinaryReference,
+      exactSelfLinkedScanUpload: photoAudit.counts.exactBytesSelfLinkedScanUpload,
+      exactIndependentCatalogReferenceAmongCompared: photoAudit.counts.exactBytesIndependentCatalogReference,
+      additionalNearExactFlagsAmongCompared: photoAudit.counts.nearExactNonidenticalByPixelScreen,
+      note: 'Visible capture context is NOT authenticated phone/customer provenance. Scan 3029 links its own original scan upload as a reference; no independent catalog-reference equality is verified. Linked-reference heuristic does not assess unlinked images.',
+    },
+    categoryCounts,
+    manualConfirmed: Object.values(decisions).filter(item => item.status === 'confirmed').length,
+    historicalAccepted: provenance.filter(item => item.historicalAdmitted).length,
+    additionalHistoricalLabels: provenance.filter(item =>
+      item.effectiveLabel?.source === 'historical-user-confirmation').length,
+    effectiveLabels: provenance.filter(item => item.effectiveLabel).length,
+    manualLabelStillNeeded: provenance.filter(item => !item.effectiveLabel).length,
+    manualHistoricalAgreements: provenance.filter(item => item.comparison === 'exact-id').length,
+    manualHistoricalVerifiedEquivalences: provenance.filter(item =>
+      item.comparison === 'verified-exact-catalog-equivalence').length,
+    manualHistoricalConflicts: provenance.filter(item =>
+      item.comparison === 'different-identity-or-parallel').length,
+    benchmark: 'hard-blocked; no benchmark run or retrieval evaluation',
+  };
   return {
     datasetHash: dataset.datasetHash,
+    provenanceReport: provenanceSummary,
     items: await Promise.all(dataset.rows.map(async row => {
       const saved = metadata.get(row.scanId)!;
       const classification = effectiveClassification(row.scanId, decisions[row.scanId] ?? null,
@@ -200,6 +268,10 @@ async function response() {
       return {
         scanId: row.scanId, imageHash: row.imageHash, filename: path.basename(row.originalPhotoFile),
         imageUrl: `${base}/image/scan/${row.scanId}`,
+        imageProvenance: { sourceTable: 'scan_uploads', originalStorage: 'Cloudinary scan_uploads',
+          reviewDelivery: 'authenticated SHA256-verified local original-byte copy',
+          originalCreatedAt: provenanceById.get(row.scanId)?.createdAt,
+          deviceOrigin: 'unknown', photoAudit: photoAudit.rows.get(row.scanId) },
         topCardId: saved.topCardId ?? row.candidate?.cardId ?? row.prediction?.cardId ?? null,
         candidates: suggestions.map(candidate => {
           const live = cards.get(candidate.cardId);
@@ -219,6 +291,7 @@ async function response() {
             ...(candidate.matchReasons == null ? {} : { matchReasons: candidate.matchReasons }),
             ...(candidate.similarity == null ? {} : { similarity: candidate.similarity }),
             isArchived: live?.isArchived ?? null,
+            candidateSource: 'historical-matcher-snapshot',
             status: live?.status ?? null,
             canonicalActiveId: live?.canonicalActiveId ?? null,
             equivalentIds: live?.equivalentIds ?? [],
@@ -233,13 +306,15 @@ async function response() {
           note: 'Historical OCR/vision/ranking are preserved unchanged; sanitized review evidence must not constrain catalog search.',
         },
         decision: decisions[row.scanId] ?? null,
+        historicalProvenance: provenanceById.get(row.scanId),
         selectedCard: decisions[row.scanId]?.cardId ? cards.get(decisions[row.scanId].cardId!) ?? null : null,
         imageIssues: Object.values(flags.issues).filter(issue => issue.scanId === row.scanId),
         searchBlocked: flags.searchBlocked[row.scanId] ?? null,
         legacyEvidence: legacyReviewEvidence(decisions[row.scanId] ?? null),
         classification,
         imageOnlyCase: classification.ocrTag === 'empty',
-        eligibility: reviewEligibility(row.scanId, decisions[row.scanId] ?? null, classification, flags, cards),
+        eligibility: reviewEligibility(row.scanId, decisions[row.scanId] ?? null,
+          classification, flags, cards, photoAudit.rows),
         evaluationCohort: REVIEW_DEVELOPMENT_CASES[row.scanId] ? {
           cohort: 'development', reason: REVIEW_DEVELOPMENT_CASES[row.scanId],
         } : { cohort: 'unassigned', reason: null },
@@ -247,8 +322,12 @@ async function response() {
     })),
     progress: reviewProgress(decisions, dataset.rows.length),
     benchmark: { status: 'blocked', message: 'Benchmark is disabled pending explicit user authorization.',
-      confirmedLabels: approvedLabels(dataset.rows, decisions).length },
-    dataQuality: dataQuality(dataset.rows, decisions, flags, cards, classifications, metadata),
+      confirmedLabels: approvedLabels(dataset.rows, decisions).length,
+      historicalAdditionalLabels: provenanceSummary.additionalHistoricalLabels,
+      provenanceResolvedLabels: provenanceSummary.effectiveLabels,
+      note: 'Historical labels are a separate provenance source, not manual decisions; no benchmark is running.' },
+    dataQuality: { ...dataQuality(dataset.rows, decisions, flags, cards, classifications, metadata, photoAudit.rows),
+      historicalProvenance: provenanceSummary },
   };
 }
 export function registerScanReviewRoutes(app: Express, authenticateUser: RequestHandler) {

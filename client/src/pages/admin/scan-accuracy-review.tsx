@@ -32,6 +32,7 @@ type Candidate = {
   equivalentIds?: number[];
   possibleMatches?: number[];
   equivalenceBasis?: string | null;
+  candidateSource?: "historical-matcher-snapshot";
   imageIssues?: ImageIssue[];
 };
 type ImageIssue = { id?: number | string; cardId?: number; type: string; note?: string | null; createdAt?: string };
@@ -59,6 +60,32 @@ type Scan = {
   imageHash: string;
   filename: string;
   imageUrl: string;
+  imageProvenance?: {
+    sourceTable: string;
+    originalStorage: string;
+    reviewDelivery: string;
+    originalCreatedAt?: string | null;
+    deviceOrigin?: string;
+    photoAudit?: {
+      overlap: string;
+      context: string;
+      bestReferenceCardId: number | null;
+      mae: number | null;
+      correlation: number | null;
+      referenceSource?: string;
+    };
+  };
+  historicalProvenance?: {
+    category: string;
+    candidateHistoricalCardId: number | null;
+    historicalCardId?: number | null;
+    historicalAdmitted: boolean;
+    manualCardId: number | null;
+    comparison: string;
+    sourceReason?: string;
+    evidenceLimit?: string;
+    effectiveLabel: { cardId: number; source: "historical-user-confirmation" | "manual-review" } | null;
+  } | null;
   topCardId: number | null;
   candidates: Candidate[];
   selectedCard?: Candidate | null;
@@ -87,6 +114,34 @@ type ReviewData = {
   progress: { total: number; reviewed: number; confirmed: number; unresolved: number; skipped?: number; remaining: number; percent: number };
   benchmark: Record<string, unknown> | null;
   dataQuality?: Record<string, unknown> | null;
+  provenanceReport?: {
+    origin: string;
+    collectorConfirmation: string;
+    collectionLink: string;
+    candidateOrigin: string;
+    imageTypeAssessment: {
+      verifiedPhonePhotos: number | null;
+      unknownDeviceOrigin: number;
+      visiblePhotoContext: number;
+      indeterminateVisualContext: number;
+      verifiedOriginalHashes: number;
+      fetchedLinkedCloudinaryReferences: number;
+      scansWithComparedLinkedReferences: number;
+      scansWithoutComparedLinkedReferences: number;
+      exactSelfLinkedScanUpload: number;
+      exactIndependentCatalogReferenceAmongCompared: number;
+      additionalNearExactFlagsAmongCompared: number;
+      note: string;
+    };
+    categoryCounts: Record<string, number>;
+    historicalAccepted: number;
+    additionalHistoricalLabels: number;
+    effectiveLabels: number;
+    manualLabelStillNeeded: number;
+    manualHistoricalAgreements: number;
+    manualHistoricalVerifiedEquivalences: number;
+    manualHistoricalConflicts: number;
+  };
 };
 
 // Private scan photos (and any private candidate URLs) need Firebase authorization.
@@ -142,8 +197,11 @@ const UNRESOLVED_REASONS = [
   "insufficient image quality", "other",
 ] as const;
 
-function CandidateRow({ candidate, selected, onSelect, label, issues, onFlag, onClear, flagPending, flagError }: {
+function CandidateRow({ candidate, selected, onSelect, onCorrect, correctPending, compact = false, label, issues, onFlag, onClear, flagPending, flagError }: {
   candidate: Candidate; selected: boolean; onSelect: () => void; label?: string;
+  onCorrect?: () => void;
+  correctPending?: boolean;
+  compact?: boolean;
   issues?: ImageIssue[];
   onFlag?: (type: string, note: string) => void;
   onClear?: () => void;
@@ -159,22 +217,25 @@ function CandidateRow({ candidate, selected, onSelect, label, issues, onFlag, on
   const equivalenceStatus = candidate.equivalence?.status ?? candidate.equivalenceStatus;
   const candidateIssues = issues?.filter(issue => issue.cardId === candidate.cardId) ?? candidate.imageIssues ?? [];
   return (
-    <div className={`w-full rounded-lg border p-3 ${selected ? "border-red-500 bg-red-50 ring-1 ring-red-500" : "border-gray-200"}`}>
+    <div className={`w-full rounded-lg border ${compact ? "p-2" : "p-3"} ${selected ? "border-red-500 bg-red-50 ring-1 ring-red-500" : "border-gray-200"}`}>
+      <div className="flex items-center gap-2">
       <button type="button" onClick={onSelect} aria-pressed={selected}
-        className="w-full flex gap-3 text-left transition-colors hover:opacity-80">
-        <ReviewImage url={candidate.imageUrl} alt={`Reference: ${candidate.name}`} className="w-28 h-40 shrink-0 rounded object-contain bg-gray-100" />
+        className="min-w-0 flex-1 flex items-center gap-3 text-left transition-colors hover:opacity-80">
+        <ReviewImage url={candidate.imageUrl} alt={`Reference: ${candidate.name}`} className={`${compact ? "w-20 h-28" : "w-28 h-40"} shrink-0 rounded object-contain bg-gray-100`} />
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap gap-2 items-center">
             <span className="font-semibold text-gray-900">{candidate.name}</span>
             {label && <Badge variant="secondary">{label}</Badge>}
             {archived && <Badge variant="outline" className="border-orange-400 text-orange-800">Archived</Badge>}
-            {selected && <Badge className="bg-red-600">Selected, not saved</Badge>}
+            {selected && !compact && <Badge className="bg-red-600">Selected, not saved</Badge>}
           </div>
           <p className="text-xs text-gray-600">{candidate.year ?? "Year unavailable"} · {candidate.mainSetName || "Main set unavailable"} · {candidate.subsetName || "Subset unavailable"} · #{candidate.cardNumber || "unavailable"}</p>
-          <p className="text-xs text-gray-500">Card ID {candidate.cardId} · Confidence: {candidate.confidence ?? "Unavailable"} · Similarity: {candidate.similarity ?? "Unavailable"}</p>
-          {candidate.confidenceLevel && <p className="text-xs text-gray-500">Confidence level: {candidate.confidenceLevel}</p>}
-          {candidate.matchReasons != null && <p className="text-xs text-gray-500">Match reasons: {detail(candidate.matchReasons)}</p>}
-          {!!(equivalents?.length || candidate.possibleMatches?.length || (archived && canonicalId)) && <p className="text-xs text-amber-800">
+          {candidate.confidence != null && <p className="text-xs text-gray-500">Historical matcher confidence: {candidate.confidence}</p>}
+          {!compact && <p className="text-xs text-gray-500">Card ID {candidate.cardId} · Historical similarity: {candidate.similarity ?? "Unavailable"}</p>}
+          {!compact && candidate.confidenceLevel && <p className="text-xs text-gray-500">Confidence level: {candidate.confidenceLevel}</p>}
+          {!compact && candidate.matchReasons != null && <p className="text-xs text-gray-500">Historical match reasons: {detail(candidate.matchReasons)}</p>}
+          {compact && !!(equivalents?.length || candidate.possibleMatches?.length || (archived && canonicalId)) && <p className="text-xs text-amber-800">Possible equivalent IDs — not visually verified</p>}
+          {!compact && !!(equivalents?.length || candidate.possibleMatches?.length || (archived && canonicalId)) && <p className="text-xs text-amber-800">
             {equivalenceStatus === "verified" ? "Verified equivalent" : "Possible equivalent — matching catalog metadata only; not visually verified"}
             {canonicalId ? ` · suggested active ID ${canonicalId}` : " · active equivalent unverified"}
             {equivalents?.length ? ` · matching IDs ${equivalents.join(", ")}` : ""}
@@ -182,13 +243,16 @@ function CandidateRow({ candidate, selected, onSelect, label, issues, onFlag, on
             {candidate.equivalenceBasis ? ` · basis: ${candidate.equivalenceBasis.replaceAll("-", " ")}` : ""}
           </p>}
           {archived && !canonicalId && <p className="text-xs text-orange-800">Active equivalent not found or unverified</p>}
+          {compact && candidateIssues.length > 0 && <p className="text-xs text-orange-800">Catalog image issue flagged — see Technical details</p>}
         </div>
       </button>
-      {candidateIssues.length > 0 && <div className="mt-2 flex items-center gap-2">
+      {onCorrect && <Button type="button" size="sm" disabled={correctPending} onClick={onCorrect} className="shrink-0 bg-red-600 hover:bg-red-700">Correct</Button>}
+      </div>
+      {!compact && candidateIssues.length > 0 && <div className="mt-2 flex items-center gap-2">
         <p className="text-xs text-orange-800">Catalog image issue flagged: {candidateIssues.map(issue => `${issue.type.replaceAll("-", " ")}${issue.note ? ` — ${issue.note}` : ""}`).join(", ")}</p>
         {onClear && <Button variant="ghost" size="sm" disabled={flagPending} onClick={onClear}>Clear image issue</Button>}
       </div>}
-      {onFlag && <div className="mt-2 border-t pt-2">
+      {!compact && onFlag && <div className="mt-2 border-t pt-2">
         <Button type="button" variant="outline" size="sm" onClick={() => setFlagOpen(!flagOpen)}>Flag image issue (independent of card label)</Button>
         {flagOpen && <div className="mt-2 space-y-2 rounded bg-amber-50 p-2">
           <label className="block text-xs font-medium" htmlFor={`issue-type-${candidate.cardId}`}>Issue type</label>
@@ -229,7 +293,10 @@ function ScanReview({ scan, datasetHash, onSaved, onUpdated, onPending, actionRe
   const [reason, setReason] = useState(scan.classification?.unresolvedReason ?? "");
   const [classificationMessage, setClassificationMessage] = useState("");
   const [zoom, setZoom] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [alternativesOpen, setAlternativesOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (searchOpen) searchRef.current?.focus(); }, [searchOpen]);
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(search.trim()), 300);
     return () => clearTimeout(timer);
@@ -289,28 +356,47 @@ function ScanReview({ scan, datasetHash, onSaved, onUpdated, onPending, actionRe
     onPending(save.isPending || flag.isPending || blocked.isPending || classification.isPending);
     return () => onPending(false);
   }, [save.isPending, flag.isPending, blocked.isPending, classification.isPending, onPending]);
-  const top = scan.candidates.find(c => c.cardId === scan.topCardId);
   const candidates = scan.candidates.slice(0, 5);
   actionRef.current = action => {
     if (save.isPending || flag.isPending || blocked.isPending || classification.isPending || zoom) return;
-    if (action === "search") { searchRef.current?.focus(); return; }
+    if (action === "search") { setSearchOpen(true); searchRef.current?.focus(); return; }
     if (action === "unresolved") { save.mutate({ status: "unresolved" }); return; }
     const position = Number(action) - 1;
     if (position >= 0 && position < candidates.length) save.mutate({ status: "confirmed", cardId: candidates[position].cardId });
   };
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[minmax(280px,0.85fr)_minmax(360px,1.15fr)] gap-5">
-      <div className="space-y-4">
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(300px,0.9fr)_minmax(440px,1.1fr)] gap-4 items-start">
+      <div className="space-y-3 lg:sticky lg:top-36">
         <Card>
-          <CardHeader><CardTitle className="text-base">Actual saved scan</CardTitle></CardHeader>
-          <CardContent>
+          <CardContent className="p-2">
             <button type="button" onClick={() => setZoom(true)} className="w-full group relative" aria-label="Zoom actual scan">
-              <ReviewImage url={scan.imageUrl} alt={`Saved scan ${scan.filename}`} className="w-full max-h-[620px] min-h-64 rounded object-contain bg-gray-100" />
+              <ReviewImage url={scan.imageUrl} alt={`Saved scan ${scan.filename}`} className="w-full h-[min(61vh,510px)] min-h-64 rounded object-contain bg-gray-100" />
               <span className="absolute right-2 bottom-2 bg-black/75 text-white text-xs rounded px-2 py-1 flex items-center gap-1"><ZoomIn className="h-3 w-3" /> Zoom</span>
             </button>
-            <p className="text-xs text-gray-500 mt-3 break-all">Scan ID: {scan.scanId} · File: {scan.filename}</p>
+            <p className="text-xs text-gray-500 mt-1 break-all">Saved review scan image · Scan ID: {scan.scanId} · File: {scan.filename}
+              {scan.imageProvenance && <> · {scan.imageProvenance.originalStorage} → {scan.imageProvenance.reviewDelivery}</>}
+            </p>
           </CardContent>
         </Card>
+        <details className="rounded-lg border bg-white p-3 text-sm" data-testid="technical-details">
+          <summary className="cursor-pointer font-semibold">Technical details <span className="font-normal text-gray-500">· historical extraction, flags, classification</span></summary>
+          <div className="space-y-3 pt-3">
+        {(scan.historicalProvenance || scan.imageProvenance) && <Card><CardHeader><CardTitle className="text-base">Historical source &amp; label evidence</CardTitle></CardHeader>
+          <CardContent className="space-y-2 text-xs">
+            {scan.imageProvenance && <p>Image: {scan.imageProvenance.sourceTable} · {scan.imageProvenance.originalStorage} · delivered as {scan.imageProvenance.reviewDelivery}
+              {scan.imageProvenance.originalCreatedAt ? ` · uploaded ${scan.imageProvenance.originalCreatedAt}` : ""}
+              {scan.imageProvenance.deviceOrigin ? ` · device origin: ${scan.imageProvenance.deviceOrigin}` : ""}</p>}
+            {scan.imageProvenance?.photoAudit && <p>Linked reference audit: {scan.imageProvenance.photoAudit.overlap} · photo context: {scan.imageProvenance.photoAudit.context}
+              {scan.imageProvenance.photoAudit.bestReferenceCardId ? ` · linked reference ID ${scan.imageProvenance.photoAudit.bestReferenceCardId}` : ""}.
+              This does not verify that a customer phone captured the scan.</p>}
+            {scan.historicalProvenance && <>
+              <p>Historical category: <strong>{scan.historicalProvenance.category}</strong></p>
+              <p>Collector-selected ID: {scan.historicalProvenance.candidateHistoricalCardId ?? "not established"} · manual confirmed ID: {scan.historicalProvenance.manualCardId ?? "none"} · comparison: {scan.historicalProvenance.comparison}</p>
+              {scan.historicalProvenance.sourceReason && <p>{scan.historicalProvenance.sourceReason}</p>}
+              {scan.historicalProvenance.evidenceLimit && <p>{scan.historicalProvenance.evidenceLimit}</p>}
+            </>}
+          </CardContent>
+        </Card>}
         <Card><CardHeader><CardTitle className="text-base">Historical extraction — evidence only</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             <p className="text-xs text-amber-800">Saved OCR/vision guesses may be wrong. They do not constrain catalog search or the correct card label.</p>
@@ -402,22 +488,97 @@ function ScanReview({ scan, datasetHash, onSaved, onUpdated, onPending, actionRe
             </div>}
           </CardContent>
         </Card>
-      </div>
-      <div className="space-y-4">
-        <Card><CardHeader><CardTitle className="text-base">Historical suggested matches — evidence only</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-gray-600">Historical top match: {top ? `${top.name} (ID ${top.cardId})` : scan.topCardId ? `Card ID ${scan.topCardId} — details unavailable` : "Unavailable"}. Saved rankings may contain old OCR errors. Select a candidate to review it; selection alone does not save.</p>
-            {candidates.length ? candidates.map((candidate, i) =>
-              <CandidateRow key={candidate.cardId} candidate={candidate} label={candidate.cardId === scan.topCardId ? "Top suggestion" : `Candidate ${i + 1}`}
-                selected={selected?.cardId === candidate.cardId} onSelect={() => setSelected(candidate)}
-                issues={scan.imageIssues} onFlag={(type, note) => flag.mutate({ cardId: candidate.cardId, type, note })}
-                onClear={() => flag.mutate({ cardId: candidate.cardId, remove: true })}
-                flagPending={flag.isPending && flagCardId === candidate.cardId}
-                flagError={flag.isError && flagCardId === candidate.cardId ? flag.error.message : undefined} />
-            ) : <p className="text-sm text-amber-700">No candidates available. Search the catalog or mark unresolved.</p>}
+        <Card><CardHeader><CardTitle className="text-base">Historical candidate details and image flags</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            {candidates.map((candidate, i) => <CandidateRow key={candidate.cardId} candidate={candidate}
+              selected={selected?.cardId === candidate.cardId} onSelect={() => setSelected(candidate)}
+              label={`Historical matcher ${i + 1}`} issues={scan.imageIssues}
+              onFlag={(type, note) => flag.mutate({ cardId: candidate.cardId, type, note })}
+              onClear={() => flag.mutate({ cardId: candidate.cardId, remove: true })}
+              flagPending={flag.isPending && flagCardId === candidate.cardId}
+              flagError={flag.isError && flagCardId === candidate.cardId ? flag.error.message : undefined} />)}
+            {scan.decision?.status === "confirmed" && scan.selectedCard && !scan.candidates.some(candidate => candidate.cardId === scan.selectedCard?.cardId) &&
+              <div><p className="mb-2 text-xs font-semibold">Saved correct card</p>
+                <CandidateRow candidate={scan.selectedCard} selected={false} onSelect={() => setSelected(scan.selectedCard!)}
+                  issues={scan.imageIssues} onFlag={(type, note) => flag.mutate({ cardId: scan.selectedCard!.cardId, type, note })}
+                  onClear={() => flag.mutate({ cardId: scan.selectedCard!.cardId, remove: true })}
+                  flagPending={flag.isPending && flagCardId === scan.selectedCard.cardId}
+                  flagError={flag.isError && flagCardId === scan.selectedCard.cardId ? flag.error.message : undefined} />
+              </div>}
           </CardContent>
         </Card>
-        <Card><CardHeader><CardTitle className="text-base">Search catalog for correct card</CardTitle></CardHeader>
+        <Card><CardHeader><CardTitle className="text-base">Decision notes and review-tool issues</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <label htmlFor="review-note" className="text-sm font-medium">Optional decision note</label>
+            <Input id="review-note" value={note} onChange={e => setNote(e.target.value)} maxLength={500} placeholder="Saved with your next decision" />
+            <label className="block text-xs font-medium">Optional unresolved reason (separate from card identity)
+              <select aria-label="Unresolved reason" value={reason} onChange={e => setReason(e.target.value)}
+                className="w-full rounded border bg-white p-2 text-sm">
+                <option value="">No reason selected</option>
+                {UNRESOLVED_REASONS.map(value => <option key={value} value={value}>{value}</option>)}
+              </select>
+            </label>
+            {scan.decision?.status === "unresolved" && <Button variant="outline" size="sm" disabled={classification.isPending}
+              onClick={() => classification.mutate({ unresolvedReason: reason || null })}>
+              {classification.isPending ? "Saving reason…" : "Save / clear unresolved reason only"}
+            </Button>}
+            <div className="rounded border border-amber-200 bg-amber-50 p-3 space-y-2">
+              <p className="text-xs text-amber-900">Blocked by search is a separate review-tool issue, not a card identity label.</p>
+              <Input value={blockedNote} onChange={e => setBlockedNote(e.target.value)} maxLength={500} aria-label="Search blocker note" placeholder="Optional search blocker note" />
+              <Button variant="outline" size="sm" disabled={blocked.isPending} onClick={() => blocked.mutate()}>
+                {blocked.isPending ? "Saving…" : scan.searchBlocked?.blocked ? "Clear blocked by search" : "Mark blocked by search"}
+              </Button>
+              {scan.searchBlocked?.blocked && <p className="text-xs text-amber-900">Blocked by search is saved. {scan.searchBlocked.note}</p>}
+              {blocked.isError && <p role="alert" className="text-xs text-red-700">Search blocker save failed: {blocked.error.message}</p>}
+            </div>
+          </CardContent>
+        </Card>
+          </div>
+        </details>
+      </div>
+      <div className="space-y-3 min-w-0">
+        {scan.historicalProvenance?.effectiveLabel?.source === "historical-user-confirmation" && !scan.decision && <div className="rounded-lg border border-emerald-300 bg-emerald-50 p-2 text-sm text-emerald-900" role="status">
+          <strong>Historical user confirmation · Card ID {scan.historicalProvenance.effectiveLabel.cardId}</strong>
+          <p className="text-xs">Collector selected this card in the original Scan to Add flow. This is not a manual admin review or proof the collection add succeeded. No repeat labeling needed.</p>
+        </div>}
+        {scan.historicalProvenance?.comparison === "different-identity-or-parallel" && <div className="rounded-lg border border-amber-400 bg-amber-50 p-2 text-xs text-amber-950" role="alert">
+          <strong>Manual / historical conflict</strong> · manually confirmed ID {scan.historicalProvenance.manualCardId ?? "unavailable"} vs collector-selected ID {scan.historicalProvenance.candidateHistoricalCardId ?? "unavailable"}. No identity was overwritten; inspect source evidence in Technical details.
+        </div>}
+        {scan.historicalProvenance?.comparison === "verified-exact-catalog-equivalence" && <div className="rounded-lg border border-blue-300 bg-blue-50 p-2 text-xs text-blue-900">
+          Manual ID {scan.historicalProvenance.manualCardId} and historical ID {scan.historicalProvenance.candidateHistoricalCardId} differ but have verified exact catalog identity fields; visual equivalence is not claimed.
+        </div>}
+        <Card><CardContent className="p-3 space-y-2">
+            <div><h2 className="text-base font-semibold">{candidates.every(candidate => candidate.candidateSource === "historical-matcher-snapshot")
+              ? "Historical matcher · saved suggestions" : "Saved suggestions · source unverified"}</h2>
+              <p className="text-xs text-amber-800">These are saved historical suggestions, not a new DINO visual retrieval run or a current accuracy result. Verify against the scan.</p>
+            </div>
+            {candidates.length ? candidates.slice(0, alternativesOpen ? 5 : 3).map((candidate, i) =>
+              <CandidateRow key={candidate.cardId} candidate={candidate} compact label={candidate.candidateSource === "historical-matcher-snapshot"
+                ? i === 0 ? "Historical matcher · top" : `Historical matcher · ${i + 1}` : "Source unverified"}
+                selected={selected?.cardId === candidate.cardId} onSelect={() => setSelected(candidate)}
+                onCorrect={() => save.mutate({ status: "confirmed", cardId: candidate.cardId })} correctPending={save.isPending} />
+            ) : <p className="text-sm text-amber-700">No historical suggestions. Search the catalog or mark unresolved.</p>}
+          </CardContent>
+        </Card>
+        <Card><CardContent className="p-3 space-y-2">
+            {scan.decision ? <div className="rounded bg-green-50 border border-green-200 p-2 text-sm text-green-900">
+              Saved: {scan.decision.status === "confirmed" ? `Confirmed card ID ${scan.decision.cardId}${scan.selectedCard ? ` · ${scan.selectedCard.name}` : ""}` : scan.decision.status === "skipped" ? "Skipped for now" : "Unresolved"}
+              {scan.decision.note && <span> · Note: {scan.decision.note}</span>}
+            </div> : <p className="text-xs text-gray-600">No card identity decision saved yet.</p>}
+            {selected && <p className="text-xs text-gray-700">Selected: <strong>{selected.name} (ID {selected.cardId})</strong> · not saved</p>}
+            <div className="flex flex-wrap gap-2">
+              {selected && <Button size="sm" disabled={save.isPending} onClick={() => save.mutate({ status: "confirmed", cardId: selected.cardId })}>Correct — selected card</Button>}
+              <Button type="button" variant="outline" size="sm" onClick={() => { setAlternativesOpen(true); setSearchOpen(true); }}>Choose another</Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => { setSearchOpen(true); searchRef.current?.focus(); }}>Search catalog</Button>
+              <Button type="button" variant="outline" size="sm" disabled={save.isPending} onClick={() => save.mutate({ status: "unresolved" })}>Unresolved</Button>
+              <Button type="button" variant="ghost" size="sm" disabled={save.isPending} onClick={() => save.mutate({ status: "skipped" })}>Skip for now</Button>
+            </div>
+            <p className="text-xs text-gray-500">Correct saves this card and advances. Arrow keys move scans; 1–5 confirm a historical candidate, U unresolved, S search.</p>
+            {flagMessage && <p role="status" className="text-xs text-amber-800">{flagMessage}</p>}
+            {save.isPending && <p role="status" className="text-xs text-blue-700">Saving decision…</p>}
+            {save.isError && <p role="alert" className="text-xs text-red-700">Save failed: {save.error.message}</p>}
+          </CardContent></Card>
+        {searchOpen && <Card><CardHeader className="py-3"><CardTitle className="text-base">Search catalog for correct card</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <div className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
               <Input ref={searchRef} value={search} onChange={e => setSearch(e.target.value)} placeholder="Combined terms: 2026 Cyclops, Topps Chrome Invisible Woman…" className="pl-9" aria-label="Search catalog" />
@@ -462,64 +623,7 @@ function ScanReview({ scan, datasetHash, onSaved, onUpdated, onPending, actionRe
               <Button variant="outline" size="sm" disabled={catalog.isFetching || !(catalog.data.hasMore ?? ((page + 1) * 30 < catalog.data.total))} onClick={() => setPage(n => n + 1)}>Next results</Button>
             </div>}
           </CardContent>
-        </Card>
-        <Card><CardHeader><CardTitle className="text-base">Review decision</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            {scan.decision ? <div className="text-sm rounded bg-green-50 border border-green-200 p-3 text-green-900">
-              Saved: {scan.decision.status === "confirmed" ? `Confirmed card ID ${scan.decision.cardId}` : scan.decision.status === "skipped" ? "Skipped for now" : "Unresolved"} · Reviewer {scan.decision.reviewerId} · {scan.decision.reviewedAt ? new Date(scan.decision.reviewedAt).toLocaleString() : "Timestamp unavailable"}
-              {scan.decision.note && <p className="mt-1">Note: {scan.decision.note}</p>}
-              {scan.decision.status === "confirmed" && scan.selectedCard && (
-                <div className="mt-3 rounded bg-white p-2 text-gray-900">
-                  <p className="text-xs font-semibold mb-2">Saved correct card</p>
-                  <CandidateRow candidate={scan.selectedCard} selected={false} onSelect={() => setSelected(scan.selectedCard!)}
-                    issues={scan.imageIssues} onFlag={(type, note) => flag.mutate({ cardId: scan.selectedCard!.cardId, type, note })}
-                    onClear={() => flag.mutate({ cardId: scan.selectedCard!.cardId, remove: true })}
-                    flagPending={flag.isPending && flagCardId === scan.selectedCard.cardId}
-                    flagError={flag.isError && flagCardId === scan.selectedCard.cardId ? flag.error.message : undefined} />
-                </div>
-              )}
-            </div> : <p className="text-sm text-amber-700">Not reviewed yet.</p>}
-            {selected && !scan.candidates.some(candidate => candidate.cardId === selected.cardId) && !catalog.data?.cards.some(candidate => candidate.cardId === selected.cardId) &&
-              <CandidateRow candidate={selected} label="Selected from catalog" selected onSelect={() => {}}
-                issues={scan.imageIssues} onFlag={(type, note) => flag.mutate({ cardId: selected.cardId, type, note })}
-                onClear={() => flag.mutate({ cardId: selected.cardId, remove: true })}
-                flagPending={flag.isPending && flagCardId === selected.cardId}
-                flagError={flag.isError && flagCardId === selected.cardId ? flag.error.message : undefined} />}
-            <label htmlFor="review-note" className="text-sm font-medium">Optional note / reason</label>
-            <Input id="review-note" value={note} onChange={e => setNote(e.target.value)} maxLength={500} placeholder="Short reason (saved with your decision)" />
-            <label className="block text-xs font-medium">Optional unresolved reason (separate from card identity)
-              <select aria-label="Unresolved reason" value={reason} onChange={e => setReason(e.target.value)}
-                className="w-full rounded border bg-white p-2 text-sm">
-                <option value="">No reason selected</option>
-                {UNRESOLVED_REASONS.map(value => <option key={value} value={value}>{value}</option>)}
-              </select>
-            </label>
-            {scan.decision?.status === "unresolved" && <Button variant="outline" size="sm" disabled={classification.isPending}
-              onClick={() => classification.mutate({ unresolvedReason: reason || null })}>
-              {classification.isPending ? "Saving reason…" : "Save / clear unresolved reason only"}
-            </Button>}
-            <div className="flex flex-wrap gap-2">
-              <Button disabled={!top || save.isPending} onClick={() => save.mutate({ status: "confirmed", cardId: scan.topCardId! })}>Confirm top match</Button>
-              <Button variant="outline" disabled={!selected || save.isPending} onClick={() => selected && save.mutate({ status: "confirmed", cardId: selected.cardId })}>Confirm selected card{selected ? ` (ID ${selected.cardId})` : ""}</Button>
-              <Button variant="outline" disabled={save.isPending} onClick={() => save.mutate({ status: "unresolved" })}>Mark unresolved</Button>
-              <Button variant="outline" disabled={save.isPending} onClick={() => save.mutate({ status: "skipped" })}>Skip for now</Button>
-            </div>
-            <div className="rounded border border-amber-200 bg-amber-50 p-3 space-y-2">
-              <p className="text-xs text-amber-900">Blocked by search is a separate review-tool issue, not a card identity label. Mark this if you cannot find the correct catalog record.</p>
-              <Input value={blockedNote} onChange={e => setBlockedNote(e.target.value)} maxLength={500} aria-label="Search blocker note" placeholder="Optional search blocker note" />
-              <Button variant="outline" size="sm" disabled={blocked.isPending} onClick={() => blocked.mutate()}>
-                {blocked.isPending ? "Saving…" : scan.searchBlocked?.blocked ? "Clear blocked by search" : "Mark blocked by search"}
-              </Button>
-              {scan.searchBlocked?.blocked && <p className="text-xs text-amber-900">Blocked by search is saved. {scan.searchBlocked.note}</p>}
-              {blocked.isError && <p role="alert" className="text-xs text-red-700">Search blocker save failed: {blocked.error.message}</p>}
-            </div>
-            {flagMessage && <p role="status" className="text-sm text-amber-800">{flagMessage}</p>}
-            {save.isPending && <p role="status" className="text-sm text-blue-700 flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Saving decision…</p>}
-            {save.isSuccess && !save.isPending && <p role="status" className="text-sm text-green-700">Decision saved to the server.</p>}
-            {save.isError && <p role="alert" className="text-sm text-red-700">Save failed: {save.error.message}</p>}
-            <p className="text-xs text-gray-500">Shortcuts: 1–5 confirm candidate at that position, U unresolved, S focus search, ←/→ change scan. Shortcuts pause while typing or a dialog is open. Choosing a card alone never saves.</p>
-          </CardContent>
-        </Card>
+        </Card>}
       </div>
       <Dialog open={zoom} onOpenChange={setZoom}><DialogContent className="max-w-5xl bg-white text-gray-900">
         <DialogHeader><DialogTitle>Actual scan — {scan.filename}</DialogTitle></DialogHeader>
@@ -546,7 +650,9 @@ export default function AdminScanAccuracyReview() {
   const data = review.data;
   const items = data?.items ?? [];
   const filtered = items.filter(item => statusFilter === "all" ||
-    (statusFilter === "unreviewed" ? !item.decision : item.decision?.status === statusFilter));
+    (statusFilter === "historical" ? item.historicalProvenance?.effectiveLabel?.source === "historical-user-confirmation"
+      : statusFilter === "unreviewed" ? !item.decision && item.historicalProvenance?.effectiveLabel?.source !== "historical-user-confirmation"
+        : item.decision?.status === statusFilter));
   const currentIndex = filtered.findIndex(item => item.scanId === activeScanId);
   const effectiveIndex = currentIndex >= 0 ? currentIndex : 0;
   const current = filtered[effectiveIndex];
@@ -577,7 +683,8 @@ export default function AdminScanAccuracyReview() {
     update(updated);
     setSavedMessage(`Saved scan ${current.scanId}.`);
     const oldIndex = items.findIndex(item => item.scanId === current.scanId);
-    const next = [...updated.items.slice(oldIndex + 1), ...updated.items.slice(0, oldIndex + 1)].find(item => !item.decision);
+    const next = [...updated.items.slice(oldIndex + 1), ...updated.items.slice(0, oldIndex + 1)]
+      .find(item => !item.decision && item.historicalProvenance?.effectiveLabel?.source !== "historical-user-confirmation");
     if (next) {
       setStatusFilter("unreviewed");
       setActiveScanId(next.scanId);
@@ -596,23 +703,69 @@ export default function AdminScanAccuracyReview() {
     }, {}) ?? {};
   const results = data?.benchmark?.results && typeof data.benchmark.results === "object"
     ? data.benchmark.results as Record<string, unknown> : null;
-  return <div className="p-4 md:p-6 space-y-5 bg-slate-50 text-gray-900">
-    <div className="flex flex-wrap justify-between gap-3 items-start">
-      <div><Link href="/admin/data-quality" className="text-sm text-red-700 hover:underline">← Data Quality</Link>
-        <h1 className="text-2xl font-bebas tracking-wide text-gray-900">Scan Accuracy Review</h1>
-        <p className="text-sm text-gray-600">Development-only saved scan review. Identity labels, search blockers, and catalog-image issues are separate. No catalog or indexing changes.</p>
+  return <div className="p-3 md:p-4 flex flex-col gap-3 bg-slate-50 text-gray-900">
+    <div className="order-1 sticky top-0 z-30 rounded-lg border bg-slate-50/95 px-3 py-2 shadow-sm backdrop-blur">
+    <div className="flex flex-wrap justify-between gap-2 items-center">
+      <div><Link href="/admin/data-quality" className="text-xs text-red-700 hover:underline">← Data Quality</Link>
+        <h1 className="text-xl font-bebas tracking-wide text-gray-900 leading-5">Scan Accuracy Review</h1>
       </div>
-      <Button variant="outline" onClick={() => void review.refetch()} disabled={review.isFetching}><RefreshCw className={`h-4 w-4 mr-2 ${review.isFetching ? "animate-spin" : ""}`} />Refresh</Button>
+      <Button variant="outline" size="sm" onClick={() => void review.refetch()} disabled={review.isFetching}><RefreshCw className={`h-4 w-4 mr-2 ${review.isFetching ? "animate-spin" : ""}`} />Refresh</Button>
+    </div>
+    {data && <div aria-label="Review progress" className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
+      <strong className="text-gray-900">{data.progress.reviewed} of {data.progress.total} reviewed</strong>
+      <div role="progressbar" aria-valuenow={data.progress.reviewed} aria-valuemin={0} aria-valuemax={data.progress.total} className="h-1.5 w-28 rounded-full bg-gray-200">
+        <div className="h-full rounded-full bg-red-600" style={{ width: `${data.progress.percent}%` }} />
+      </div>
+      <span>{data.progress.confirmed} manual confirmed · {data.progress.unresolved} unresolved · {data.progress.skipped ?? 0} skipped · {data.progress.remaining} without manual decision</span>
+      {data.provenanceReport && <span className="text-emerald-800">
+        {data.provenanceReport.additionalHistoricalLabels} additional historical confirmations · {data.provenanceReport.effectiveLabels} effective labels · {data.provenanceReport.manualLabelStillNeeded} without effective label
+      </span>}
+    </div>}
     </div>
     {review.isLoading && <p role="status" className="flex gap-2 text-gray-600"><Loader2 className="animate-spin h-5 w-5" />Loading saved scans…</p>}
     {review.isError && <Card><CardContent className="py-5 text-red-700" role="alert">Could not load saved scans: {review.error.message} <Button variant="outline" className="ml-3" onClick={() => void review.refetch()}>Retry</Button></CardContent></Card>}
     {data && <>
-      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-2" aria-label="Review progress">
-        {(["total", "reviewed", "confirmed", "unresolved", "skipped", "remaining", "percent"] as const).map(key =>
-          <Card key={key}><CardContent className="pt-4 pb-3"><p className="text-2xl font-bold text-gray-900">{data.progress[key] ?? 0}{key === "percent" ? "%" : ""}</p><p className="text-xs capitalize text-gray-500">{key === "percent" ? "Complete" : key}</p></CardContent></Card>
-        )}
-      </div>
-      {savedMessage && <div role="status" className="rounded border border-green-300 bg-green-50 p-3 text-sm text-green-900">{savedMessage} Showing next unreviewed scan, if any.</div>}
+      {savedMessage && <div role="status" className="order-2 rounded border border-green-300 bg-green-50 px-3 py-1 text-sm text-green-900">{savedMessage} Showing next unreviewed scan, if any.</div>}
+      <details className="order-5 rounded-lg border bg-white p-3" data-testid="data-quality-details">
+        <summary className="cursor-pointer text-sm font-semibold">Technical details · data quality &amp; benchmark status</summary>
+        <div className="space-y-3 pt-3">
+      {data.provenanceReport && <Card><CardHeader><CardTitle className="text-base">All 60 scans · historical sourcing and label provenance</CardTitle></CardHeader>
+        <CardContent className="space-y-2 text-xs">
+          <p>{data.provenanceReport.origin}</p>
+          <p><strong>Collector confirmation:</strong> {data.provenanceReport.collectorConfirmation}</p>
+          <p><strong>Collection linkage limitation:</strong> {data.provenanceReport.collectionLink}</p>
+          <p><strong>Suggested candidates:</strong> {data.provenanceReport.candidateOrigin}</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {([
+              ["historicalAccepted", "Accepted historical confirmations"],
+              ["additionalHistoricalLabels", "Additional non-manual labels"],
+              ["effectiveLabels", "Effective labels (manual + historical)"],
+              ["manualLabelStillNeeded", "Without effective label"],
+              ["manualHistoricalAgreements", "Manual / historical exact ID"],
+              ["manualHistoricalVerifiedEquivalences", "Structurally verified equivalent ID"],
+              ["manualHistoricalConflicts", "Manual / historical conflicts"],
+            ] as const).map(([key, label]) => <p key={key} className="rounded bg-gray-50 p-2"><strong>{data.provenanceReport?.[key]}</strong> · {label}</p>)}
+          </div>
+          <p><strong>60-scan categories:</strong> {Object.entries(data.provenanceReport.categoryCounts).map(([name, count]) => `${name}: ${count}`).join(" · ")}</p>
+          <p><strong>Photo origin:</strong> verified phone/customer photos {data.provenanceReport.imageTypeAssessment.verifiedPhonePhotos ?? "not established"} · unknown device origin {data.provenanceReport.imageTypeAssessment.unknownDeviceOrigin} · visible photo context {data.provenanceReport.imageTypeAssessment.visiblePhotoContext} · indeterminate visual context {data.provenanceReport.imageTypeAssessment.indeterminateVisualContext}.</p>
+          <p><strong>Reference overlap (bounded linked-reference audit):</strong> {data.provenanceReport.imageTypeAssessment.scansWithComparedLinkedReferences} scans compared, {data.provenanceReport.imageTypeAssessment.scansWithoutComparedLinkedReferences} without linked comparison · {data.provenanceReport.imageTypeAssessment.exactIndependentCatalogReferenceAmongCompared} independent catalog-reference byte matches · {data.provenanceReport.imageTypeAssessment.exactSelfLinkedScanUpload} self-linked scan upload · {data.provenanceReport.imageTypeAssessment.additionalNearExactFlagsAmongCompared} additional near-exact flags. {data.provenanceReport.imageTypeAssessment.note}</p>
+          <details className="rounded border p-2"><summary className="cursor-pointer font-semibold">Per-scan historical provenance audit (all {items.length})</summary>
+            <div className="mt-2 max-h-80 overflow-auto">
+              <table className="w-full text-left text-xs">
+                <thead><tr><th className="p-1">Scan</th><th className="p-1">Category</th><th className="p-1">Collector ID</th><th className="p-1">Manual ID</th><th className="p-1">Effective source / ID</th><th className="p-1">Comparison</th></tr></thead>
+                <tbody>{items.map(item => <tr key={item.scanId} className="border-t">
+                  <td className="p-1">{item.scanId}</td>
+                  <td className="p-1">{item.historicalProvenance?.category ?? "Unavailable"}</td>
+                  <td className="p-1">{item.historicalProvenance?.candidateHistoricalCardId ?? "—"}</td>
+                  <td className="p-1">{item.historicalProvenance?.manualCardId ?? "—"}</td>
+                  <td className="p-1">{item.historicalProvenance?.effectiveLabel ? `${item.historicalProvenance.effectiveLabel.source} / ${item.historicalProvenance.effectiveLabel.cardId}` : "—"}</td>
+                  <td className="p-1">{item.historicalProvenance?.comparison ?? "—"}</td>
+                </tr>)}</tbody>
+              </table>
+            </div>
+          </details>
+        </CardContent>
+      </Card>}
       <Card><CardHeader><CardTitle className="text-base">Pre-benchmark data quality</CardTitle></CardHeader><CardContent>
         {report ? <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
           {([
@@ -670,13 +823,16 @@ export default function AdminScanAccuracyReview() {
           <pre className="mt-2 whitespace-pre-wrap break-words">{detail(data.benchmark)}</pre>
         </div> : <p className="text-xs text-gray-500">No benchmark result yet. Index coverage unavailable.</p>}
       </CardContent></Card>
+        </div>
+      </details>
       {items.length ? <>
-        <div className="flex flex-wrap gap-2 items-center">
+        <div className="order-3 sticky top-[84px] z-20 flex flex-wrap gap-2 items-center rounded-lg border bg-white/95 p-2 shadow-sm backdrop-blur">
           <label htmlFor="status-filter" className="text-sm font-medium">Show</label>
           <select id="status-filter" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setActiveScanId(null); setSavedMessage(""); }}
             className="rounded-md border border-gray-300 bg-white text-gray-900 p-2 text-sm">
             <option value="unreviewed">Unreviewed</option><option value="confirmed">Confirmed</option>
-            <option value="unresolved">Unresolved</option><option value="skipped">Skipped</option><option value="all">All 60 scans</option>
+            <option value="unresolved">Unresolved</option><option value="skipped">Skipped</option>
+            <option value="historical">Historical confirmations</option><option value="all">All 60 scans</option>
           </select>
           <Button variant="outline" size="sm" disabled={effectiveIndex <= 0 || saving || !current} onClick={() => navigate(-1)}><ChevronLeft className="h-4 w-4" /> Previous</Button>
           <label htmlFor="scan-picker" className="text-sm font-medium">Scan {filtered.length ? effectiveIndex + 1 : 0} of {filtered.length} shown ({items.length} total)</label>
@@ -686,9 +842,9 @@ export default function AdminScanAccuracyReview() {
           </select>
           <Button variant="outline" size="sm" disabled={effectiveIndex >= filtered.length - 1 || saving || !current} onClick={() => navigate(1)}>Next <ChevronRight className="h-4 w-4" /></Button>
         </div>
-        {current ? <ScanReview key={current.scanId} scan={current} datasetHash={data.datasetHash}
-          onSaved={saveDecision} onUpdated={update} onPending={onPending} actionRef={actionRef} /> :
-          <p className="rounded border bg-white p-5 text-gray-600">No scans in this filter. Choose All to reach every saved scan, including skipped ones.</p>}
+        {current ? <div className="order-4"><ScanReview key={current.scanId} scan={current} datasetHash={data.datasetHash}
+          onSaved={saveDecision} onUpdated={update} onPending={onPending} actionRef={actionRef} />
+          </div> : <p className="order-4 rounded border bg-white p-5 text-gray-600">No scans in this filter. Choose All to reach every saved scan, including skipped ones.</p>}
       </> : <p className="text-sm text-amber-700">No saved scans available in this development dataset.</p>}
     </>}
   </div>;

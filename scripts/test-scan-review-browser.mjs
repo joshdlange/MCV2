@@ -61,10 +61,17 @@ const css = cssName ? await readFile(`dist/public/assets/${cssName}`, 'utf8') : 
 const scans = Array.from({ length: 60 }, (_, i) => ({
   scanId: i + 1, imageHash: `image-${i + 1}`, filename: `scan-${i + 1}.jpg`,
   imageUrl: `/api/admin/scan-review/image/scan/${i + 1}`, topCardId: 100 + i * 10,
-  candidates: [0, 1, 2].map(j => ({
+  imageProvenance: {
+    sourceTable: 'scan_uploads', originalStorage: 'Cloudinary scan_uploads',
+    reviewDelivery: 'authenticated SHA256-verified local original-byte copy',
+    originalCreatedAt: '2025-04-01T00:00:00Z', deviceOrigin: 'unknown',
+    photoAudit: { overlap: 'no-linked-cloudinary-reference', context: 'indeterminate', bestReferenceCardId: null, mae: null, correlation: null },
+  },
+  candidates: [0, 1, 2, 3, 4].map(j => ({
     cardId: 100 + i * 10 + j, name: `Card ${100 + i * 10 + j}`, year: 2024,
     mainSetName: 'Fixture Set', subsetName: 'Base', cardNumber: String(j + 1),
     imageUrl: `/api/admin/scan-review/image/card/${100 + i * 10 + j}`, confidence: 0.9 - j * 0.1,
+    candidateSource: 'historical-matcher-snapshot',
   })),
   ocr: { text: '2024' }, vision: null, reviewEvidence: { ocr: '2024', vision: null, note: 'Sanitized review evidence, historical untouched' },
   classification: {
@@ -75,6 +82,13 @@ const scans = Array.from({ length: 60 }, (_, i) => ({
   evaluationCohort: i === 2 ? { cohort: 'development', reason: 'fixture regression' } : { cohort: 'unassigned', reason: null },
   decision: null, selectedCard: null,
 }));
+scans[58].historicalProvenance = {
+  category: 'CONFIRMED HISTORICAL LABEL AVAILABLE', candidateHistoricalCardId: 680,
+  historicalAdmitted: true, manualCardId: null, comparison: 'not-manually-confirmed',
+  effectiveLabel: { cardId: 680, source: 'historical-user-confirmation' },
+  sourceReason: 'Same-collector scan-linked selected_card_id recorded on confirmation.',
+  evidenceLimit: 'Collector confirmation does not prove collection add succeeded.',
+};
 const searchedCard = {
   cardId: 9999, name: 'Manually Found Card', year: 2023, mainSetName: 'Catalog Set',
   subsetName: 'Search Result', cardNumber: '42', imageUrl: null, isArchived: true,
@@ -90,7 +104,33 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="550" vi
   <rect x="38" y="65" width="324" height="335" fill="#315391"/><text x="200" y="235" font-size="35" text-anchor="middle" fill="white">SCAN FIXTURE</text>
   <text x="200" y="460" font-size="25" text-anchor="middle" fill="#222">Synthetic photo only</text></svg>`;
 const response = () => ({
-  datasetHash: 'isolated-fixture-dataset', items: scans, progress: {
+  datasetHash: 'isolated-fixture-dataset', items: scans,
+  provenanceReport: {
+    origin: '60 historical scan_uploads records from Cloudinary; local original-byte review copies.',
+    collectorConfirmation: 'Same-owner scan-linked selected_card_id on Confirm; not proof collection save succeeded.',
+    collectionLink: 'No scan_upload_id FK on user_collections; timing is not identity evidence.',
+    candidateOrigin: 'Frozen old historical matcher snapshots, not DINO retrieval or combined rerank.',
+    imageTypeAssessment: {
+      verifiedPhonePhotos: null, unknownDeviceOrigin: 60, visiblePhotoContext: 0, indeterminateVisualContext: 60,
+      verifiedOriginalHashes: 60, fetchedLinkedCloudinaryReferences: 0,
+      scansWithComparedLinkedReferences: 0, scansWithoutComparedLinkedReferences: 60,
+      exactSelfLinkedScanUpload: 0, exactIndependentCatalogReferenceAmongCompared: 0,
+      additionalNearExactFlagsAmongCompared: 0, note: 'Synthetic fixture; device origin not authenticated.',
+    },
+    categoryCounts: {
+      'CONFIRMED HISTORICAL LABEL AVAILABLE': 1,
+      'POSSIBLE HISTORICAL LABEL BUT AMBIGUOUS': 0,
+      'NO HISTORICAL LABEL': scans[2].historicalProvenance ? 58 : 59,
+      'BACK PHOTO / SPECIAL CASE': 0,
+      'DATA INCONSISTENT': scans[2].historicalProvenance ? 1 : 0,
+    },
+    historicalAccepted: 1, additionalHistoricalLabels: 1,
+    effectiveLabels: scans.filter(s => s.decision?.status === 'confirmed').length + 1,
+    manualLabelStillNeeded: 60 - scans.filter(s => s.decision?.status === 'confirmed').length - 1,
+    manualHistoricalAgreements: 0, manualHistoricalVerifiedEquivalences: 0,
+    manualHistoricalConflicts: scans[2].historicalProvenance ? 1 : 0,
+  },
+  progress: {
     total: 60, reviewed: scans.filter(s => ['confirmed', 'unresolved'].includes(s.decision?.status)).length,
     confirmed: scans.filter(s => s.decision?.status === 'confirmed').length,
     unresolved: scans.filter(s => s.decision?.status === 'unresolved').length,
@@ -121,7 +161,7 @@ const response = () => ({
 const browser = await chromium.launch({
   executablePath: '/repl/tools/bin/chromium', headless: true, args: ['--no-sandbox'],
 });
-const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 await page.route('http://fixture.test/**', async route => {
@@ -201,6 +241,13 @@ await page.route('http://fixture.test/**', async route => {
     };
     scan.selectedCard = body.status === 'confirmed'
       ? [...scan.candidates, searchedCard].find(card => card.cardId === body.cardId) : null;
+    if (scan.scanId === 3 && body.status === 'confirmed') scan.historicalProvenance = {
+      category: 'DATA INCONSISTENT', candidateHistoricalCardId: 8888,
+      historicalAdmitted: false, manualCardId: body.cardId,
+      comparison: 'different-identity-or-parallel',
+      effectiveLabel: { cardId: body.cardId, source: 'manual-review' },
+      sourceReason: 'Collector-selected ID differs from manual selection; no automatic overwrite.',
+    };
     if (scan.scanId === 2) await new Promise(resolve => setTimeout(resolve, 250));
     return route.fulfill({ contentType: 'application/json', body: JSON.stringify(response()) });
   }
@@ -208,25 +255,42 @@ await page.route('http://fixture.test/**', async route => {
 });
 try {
   await page.goto('http://fixture.test/');
-  await page.getByText('Scan 1 of 60 shown (60 total)').waitFor({ timeout: 8000 }).catch(async error => {
+  await page.getByText('Scan 1 of 59 shown (60 total)').waitFor({ timeout: 8000 }).catch(async error => {
     console.error('Fixture failed:', errors, (await page.locator('body').innerText()).slice(0, 1600));
     throw error;
   });
   assert.equal(writes.length, 0);
   assert.equal(classificationWrites.length, 0, 'default uncertain/weak display must not save classification');
-  await page.getByText('unknown-default-uncertain').waitFor();
-  await page.getByRole('button', { name: 'Confirm top match' }).click();
+  assert.equal(await page.getByTestId('technical-details').evaluate(el => el.open), false, 'per-scan technical details start closed');
+  assert.equal(await page.getByTestId('data-quality-details').evaluate(el => el.open), false, 'data quality starts closed');
+  assert.equal(await page.getByRole('button', { name: 'Correct', exact: true }).count(), 3, 'top three candidates each have a Correct action');
+  for (const [name, locator] of [
+    ['scan image', page.getByRole('button', { name: 'Zoom actual scan' })],
+    ['third candidate', page.getByRole('button', { name: 'Correct', exact: true }).nth(2)],
+    ['main action', page.getByRole('button', { name: 'Unresolved', exact: true })],
+  ]) {
+    const box = await locator.boundingBox();
+    assert.ok(box && box.y >= 0 && box.y + box.height <= 800, `${name} should fit within 1280×800 initial viewport`);
+  }
+  await page.getByRole('button', { name: 'Search catalog', exact: true }).isVisible().then(visible => assert.equal(visible, true));
+  await mkdir('screenshots', { recursive: true });
+  await page.screenshot({ path: 'screenshots/scan-review-compact-mock.png' });
+  await page.getByRole('button', { name: 'Correct', exact: true }).first().click();
   await page.getByText('Saved scan 1.').waitFor();
   assert.equal(writes.at(-1).cardId, 100);
   await page.locator('p').filter({ hasText: 'Scan ID: 2 · File: scan-2.jpg' }).waitFor();
-  await page.getByRole('button', { name: /Card 111.*Candidate 2/ }).click();
+  await page.getByRole('button', { name: /Card 111.*Historical matcher/ }).click();
   assert.equal(writes.length, 1, 'candidate selection must not auto-save');
-  await page.getByRole('button', { name: /Confirm selected card/ }).click();
+  await page.getByRole('button', { name: /Correct — selected card/ }).click();
   await page.getByText('Saving decision…').waitFor();
   await page.keyboard.press('ArrowRight');
   await page.locator('p').filter({ hasText: 'Scan ID: 2 · File: scan-2.jpg' }).waitFor();
   await page.getByText('Saved scan 2.').waitFor();
   await page.locator('p').filter({ hasText: 'Scan ID: 3 · File: scan-3.jpg' }).waitFor();
+  assert.equal(await page.getByRole('button', { name: 'Correct', exact: true }).count(), 3);
+  await page.getByRole('button', { name: 'Choose another' }).click();
+  assert.equal(await page.getByRole('button', { name: 'Correct', exact: true }).count(), 5, 'additional historical choices stay behind Choose another');
+  await page.getByRole('button', { name: 'Search catalog', exact: true }).click();
   for (const query of ['2026 Cyclops', 'Cyclops 2026', 'Topps Chrome Invisible Woman', '1993 Phoenix 41', 'Marvel Masterpieces Phoenix 85']) {
     await page.getByRole('textbox', { name: 'Search catalog' }).fill(query);
     await page.waitForFunction(text => document.querySelector('input[aria-label="Search catalog"]')?.value === text, query);
@@ -276,7 +340,7 @@ try {
   await page.getByText(/showing 1–30/).waitFor();
   await page.getByText('Archived', { exact: true }).waitFor();
   await page.getByText(/Possible equivalent — matching catalog metadata only/).first().waitFor();
-  await page.getByRole('button', { name: /Manually Found Card.*Catalog/ }).locator('..')
+  await page.getByRole('button', { name: /Manually Found Card.*Catalog/ }).locator('../..')
     .getByRole('button', { name: 'Flag image issue (independent of card label)' }).click();
   await page.locator('#issue-type-9999').selectOption('wrong-card-image');
   await page.getByRole('textbox', { name: 'Image issue note for card 9999' }).fill('Incorrect stored reference');
@@ -287,32 +351,34 @@ try {
   await page.getByRole('textbox', { name: 'Search catalog' }).fill('Manually');
   await page.getByRole('button', { name: /Manually Found Card.*Catalog/ }).click();
   assert.equal(writes.length, 2, 'catalog selection must not auto-save');
-  await page.getByRole('button', { name: /Confirm selected card/ }).click();
+  await page.getByRole('button', { name: /Correct — selected card/ }).click();
   await page.getByText('Saved scan 3.').waitFor();
   assert.equal(writes.at(-1).cardId, 9999);
   await page.locator('p').filter({ hasText: 'Scan ID: 4 · File: scan-4.jpg' }).waitFor();
+  await page.getByTestId('technical-details').locator('summary').click();
   await page.getByRole('combobox', { name: 'Unresolved reason' }).selectOption('search tool could not find card');
   assert.deepEqual(await page.getByRole('combobox', { name: 'Unresolved reason' }).locator('option').allTextContents(), [
     'No reason selected', 'cannot identify exact card', 'search tool could not find card',
     'only back image available', 'bad/missing catalog image', 'duplicate/archived catalog ambiguity',
     'insufficient image quality', 'other',
   ]);
-  await page.getByRole('button', { name: 'Mark unresolved' }).click();
+  await page.getByRole('button', { name: 'Unresolved', exact: true }).click();
   await page.getByText('Saved scan 4.').waitFor();
   assert.equal(writes.at(-1).status, 'unresolved');
   assert.equal(classificationWrites.at(-1).unresolvedReason, 'search tool could not find card');
   await page.getByRole('button', { name: 'Skip for now' }).click();
   await page.getByText('Saved scan 5.').waitFor();
   assert.equal(writes.at(-1).status, 'skipped');
+  await page.getByTestId('technical-details').locator('summary').click();
   await page.getByRole('textbox', { name: 'Search blocker note' }).fill('Could not locate exact card');
   await page.getByRole('button', { name: 'Mark blocked by search' }).click();
   await page.getByText('Blocked by search is saved.').waitFor();
   assert.equal(writes.length, 5, 'search blocker must not create a card label');
   assert.equal(blockedWrites.at(-1).note, 'Could not locate exact card');
-  await page.getByRole('textbox', { name: 'Optional note / reason' }).fill('');
+  await page.getByRole('textbox', { name: 'Optional decision note' }).fill('');
   await page.keyboard.press('1');
   assert.equal(writes.length, 5, 'shortcuts do not fire while typing');
-  assert.equal(await page.getByRole('textbox', { name: 'Optional note / reason' }).inputValue(), '1');
+  assert.equal(await page.getByRole('textbox', { name: 'Optional decision note' }).inputValue(), '1');
   await page.getByRole('heading', { name: 'Scan Accuracy Review' }).click();
   await page.keyboard.press('1');
   await page.getByText('Saved scan 6.').waitFor();
@@ -341,10 +407,11 @@ try {
   await page.locator('#scan-picker').selectOption('60');
   await page.locator('p').filter({ hasText: 'Scan ID: 60 · File: scan-60.jpg' }).waitFor();
   await page.reload();
-  await page.getByText('Scan 1 of 53 shown (60 total)').waitFor();
+  await page.getByText('Scan 1 of 52 shown (60 total)').waitFor();
   await page.locator('#status-filter').selectOption('all');
   await page.locator('#scan-picker').selectOption('1');
   await page.getByText('Saved: Confirmed card ID 100').waitFor();
+  await page.getByTestId('technical-details').locator('summary').click();
   await page.getByRole('combobox', { name: 'Actual photo side' }).selectOption('front');
   await page.getByRole('combobox', { name: 'OCR evidence quality' }).selectOption('empty');
   await page.getByRole('button', { name: 'Save classification only' }).click();
@@ -356,7 +423,7 @@ try {
   await page.getByText('OCR: 2024').waitFor();
   await page.getByText(/Historical OCR/).first().waitFor();
   assert.equal(writes.length, 7, 'classification must not overwrite card identity');
-  await page.getByRole('button', { name: /Card 101.*Candidate 2/ }).locator('..')
+  await page.getByRole('button', { name: /Card 101.*Historical matcher/ }).first().locator('../..')
     .getByRole('button', { name: 'Flag image issue (independent of card label)' }).click();
   await page.locator('#issue-type-101').selectOption('poor-crop');
   await page.getByRole('button', { name: 'Save image issue only' }).click();
@@ -366,6 +433,7 @@ try {
   assert.equal(writes.length, 7, 'candidate image flag must not change confirmed label');
   await page.locator('#scan-picker').selectOption('2');
   await page.getByText('Saved: Confirmed card ID 111').waitFor();
+  await page.getByTestId('technical-details').locator('summary').click();
   await page.getByRole('combobox', { name: 'Actual photo side' }).selectOption('back');
   await page.getByRole('combobox', { name: 'OCR evidence quality' }).selectOption('useful');
   await page.getByRole('button', { name: 'Save classification only' }).click();
@@ -373,13 +441,16 @@ try {
   await page.getByText('A · Front image retrieval: No').waitFor();
   await page.locator('#scan-picker').selectOption('4');
   await page.getByText('Saved: Unresolved').waitFor();
+  await page.getByTestId('technical-details').locator('summary').click();
   await page.getByRole('combobox', { name: 'Unresolved reason' }).waitFor();
   assert.equal(await page.getByRole('combobox', { name: 'Unresolved reason' }).inputValue(), 'search tool could not find card');
   await page.locator('#scan-picker').selectOption('5');
   await page.getByText('Skipped for now').waitFor();
   await page.locator('#scan-picker').selectOption('6');
+  await page.getByTestId('technical-details').locator('summary').click();
   await page.getByText('Blocked by search is saved.').waitFor();
   await page.locator('#scan-picker').selectOption('3');
+  await page.getByTestId('technical-details').locator('summary').click();
   await page.getByText('Saved correct card').waitFor();
   await page.getByRole('combobox', { name: 'Metadata parsing evidence' }).selectOption('supported');
   await page.getByRole('button', { name: 'Save classification only' }).isDisabled().then(disabled => assert.equal(disabled, true, 'supported metadata needs evidence reason'));
@@ -393,29 +464,58 @@ try {
   await page.getByText(/Engineering regression examples are not untouched holdout scans/).waitFor();
   await page.getByText(/Catalog image issue flagged: wrong card image/).first().waitFor();
   await page.getByText('Manually Found Card').first().waitFor();
-  assert.equal((await page.locator('[aria-label="Review progress"]').innerText()).includes('Skipped'), true);
+  assert.equal((await page.locator('[aria-label="Review progress"]').innerText()).includes('skipped'), true);
   await mkdir('screenshots', { recursive: true });
   await page.screenshot({ path: 'screenshots/scan-review-browser-mock.png', fullPage: true });
   await page.reload();
   await page.locator('#status-filter').selectOption('all');
   await page.locator('#scan-picker').selectOption('1');
+  await page.getByTestId('technical-details').locator('summary').click();
   await page.getByText('Current side: front').waitFor();
   await page.getByText('Current OCR tag: empty').waitFor();
   await page.getByText('Saved: Confirmed card ID 100').waitFor();
   await page.locator('#scan-picker').selectOption('2');
+  await page.getByTestId('technical-details').locator('summary').click();
   await page.getByText('Current side: back').waitFor();
   await page.getByText('Saved: Confirmed card ID 111').waitFor();
   await page.locator('#scan-picker').selectOption('3');
+  await page.getByTestId('technical-details').locator('summary').click();
   assert.equal(await page.getByRole('combobox', { name: 'Metadata parsing evidence' }).inputValue(), 'supported');
   assert.equal(await page.getByRole('textbox', { name: 'Classification note' }).inputValue(), 'Independently checked metadata');
   await page.getByText('Saved: Confirmed card ID 9999').waitFor();
   await page.locator('#scan-picker').selectOption('4');
+  await page.getByTestId('technical-details').locator('summary').click();
   assert.equal(await page.getByRole('combobox', { name: 'Unresolved reason' }).inputValue(), 'search tool could not find card');
   await page.getByText('Saved: Unresolved').waitFor();
+  await page.getByTestId('data-quality-details').locator(':scope > summary').click();
+  await page.getByText('All 60 scans · historical sourcing and label provenance').waitFor();
+  await page.getByText(/verified phone/).waitFor();
+  await page.getByText('Per-scan historical provenance audit (all 60)').click();
+  assert.equal(await page.getByTestId('data-quality-details').locator('tbody tr').count(), 60);
+  await page.getByText('historical-user-confirmation / 680').waitFor();
   assert.equal(await page.getByRole('button', { name: 'Run benchmark (disabled)' }).isDisabled(), true);
+  await page.locator('#status-filter').selectOption('confirmed');
+  await page.getByText('Scan 1 of 4 shown (60 total)').waitFor();
+  await page.locator('#status-filter').selectOption('unresolved');
+  await page.getByText('Scan 1 of 2 shown (60 total)').waitFor();
+  await page.locator('#status-filter').selectOption('historical');
+  await page.getByText('Scan 1 of 1 shown (60 total)').waitFor();
+  await page.getByText(/Historical user confirmation · Card ID 680/).waitFor();
+  assert.equal(scans[58].decision, null, 'collector confirmation must not fabricate a manual admin decision');
+  await page.locator('#status-filter').selectOption('all');
+  await page.locator('#scan-picker').selectOption('3');
+  await page.getByText('Manual / historical conflict', { exact: true }).waitFor();
+  await page.getByText('Saved: Confirmed card ID 9999').waitFor();
+  await page.locator('#status-filter').selectOption('unreviewed');
+  await page.locator('#scan-picker').selectOption('58');
+  await page.getByRole('button', { name: 'Skip for now' }).click();
+  await page.getByText('Saved scan 58.').waitFor();
+  await page.locator('p').filter({ hasText: 'Scan ID: 60 · File: scan-60.jpg' }).waitFor();
+  assert.equal(writes.at(-1).scanId, 58, 'auto-advance skips historically labeled scan 59 without rewriting it');
+  assert.equal(scans[58].decision, null);
   assert.deepEqual(errors, []);
-  assert.equal(writes.length, 7);
-  console.log('PASS isolated scan review browser: strict years, search/filters/pagination, 60 navigation, shortcuts, skip, separate classification/reasons/flags, refresh restore, authenticated images; benchmark never run.');
+  assert.equal(writes.length, 8);
+  console.log('PASS isolated scan review browser: 1280x800 scan/top-three/actions, collapsed technical details, historical label exclusion/conflict, strict year search/pagination, 60 navigation, shortcuts, classification/flags, refresh persistence; benchmark never run.');
 } finally {
   await browser.close();
 }

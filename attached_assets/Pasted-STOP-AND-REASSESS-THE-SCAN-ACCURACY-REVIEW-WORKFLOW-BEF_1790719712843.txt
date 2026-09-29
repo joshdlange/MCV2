@@ -1,0 +1,312 @@
+STOP AND REASSESS THE SCAN ACCURACY REVIEW WORKFLOW BEFORE I DO MORE MANUAL REVIEW.
+
+The current admin review page is becoming too complicated and I am not convinced we are using the best source of ground truth.
+
+There are two major issues:
+
+1. The admin UI is overloaded with technical classification/debug information.
+2. These are historical scans. If the collector ultimately selected/confirmed a card during the original Scan to Add flow, we may already have the correct card identity associated with the scan.
+
+Before asking me to manually identify dozens of cards, investigate the provenance of these 60 scans.
+
+==================================================
+MUST DO
+==================================================
+
+1. DETERMINE EXACTLY WHERE THESE 60 SCANS CAME FROM
+
+For the current 60 saved review scans, report:
+
+- source database table / storage
+- original scan ID
+- when the scan occurred
+- whether the image is currently coming from:
+  - Cloudinary
+  - database URL
+  - local development copy
+  - another source
+- whether the current review page is displaying the original uploaded image or a copied snapshot
+
+Do not guess.
+
+I specifically want to know:
+ARE THESE 60 IMAGES HISTORICAL REAL USER SCANS FROM THE EXISTING SCAN TO ADD FLOW?
+
+2. CHECK WHETHER THE CORRECT CARD IS ALREADY KNOWN
+
+For every one of the 60 scans, inspect existing historical data for evidence of what card the collector ultimately confirmed.
+
+Look for:
+- confirmed card ID
+- selected card ID
+- ownership/add-to-collection event
+- scan result selection
+- collection record created immediately after the scan
+- audit/event history connecting scan → selected card
+- any other existing field that records the final collector choice
+
+Do NOT assume top_match_card_id equals the confirmed card.
+
+We specifically need to distinguish:
+
+A. AI/model suggestion
+B. user-confirmed final card
+
+If a reliable user-confirmed final card already exists, THAT should become the benchmark ground truth instead of making me manually identify it again.
+
+3. BUILD A PROVENANCE REPORT
+
+For all 60 scans classify them as:
+
+- CONFIRMED HISTORICAL LABEL AVAILABLE
+- POSSIBLE HISTORICAL LABEL BUT AMBIGUOUS
+- NO HISTORICAL LABEL
+- BACK PHOTO / SPECIAL CASE
+- DATA INCONSISTENT
+
+Report counts and explain exactly what evidence establishes each label.
+
+Do not modify my existing manual reviews yet.
+
+4. CROSS-CHECK MY CURRENT MANUAL CONFIRMATIONS
+
+For the cards I have already manually confirmed:
+
+compare my selection against any historical confirmed-card identity that exists.
+
+Report:
+- manual review card ID
+- historical confirmed card ID
+- whether they agree
+- whether duplicate/archived equivalent IDs explain any mismatch
+
+This will tell us whether historical confirmation is trustworthy enough to use for the rest.
+
+5. DO NOT ASK ME TO MANUALLY LABEL DATA WE ALREADY KNOW
+
+If the historical scan already has a reliable collector-confirmed card:
+
+- automatically mark it as benchmark-labeled from HISTORICAL USER CONFIRMATION
+- clearly record the source of that label
+- do not pretend I manually reviewed it
+- preserve auditability
+
+Manual review should only be required for scans where the true card is genuinely unknown or ambiguous.
+
+==================================================
+SIMPLIFY THE ADMIN UI
+==================================================
+
+The current page is much too dense.
+
+The primary task should be visually simple:
+
+LEFT / TOP:
+Large original scan image.
+
+RIGHT / BELOW:
+Top candidate cards with large catalog images.
+
+Each candidate should show only:
+- image
+- card name
+- year
+- set
+- subset
+- card number
+- similarity/confidence if useful
+
+Primary actions:
+- Correct
+- Choose another
+- Search catalog
+- Unresolved
+- Next
+
+That is the main workflow.
+
+6. MOVE TECHNICAL DEBUG INFORMATION OUT OF THE PRIMARY WORKFLOW
+
+The following does NOT need to dominate every review:
+
+- OCR evidence quality
+- metadata parsing evidence
+- benchmark eligibility A/B/C/D
+- assessment reasons
+- regression/holdout provenance
+- technical confidence explanations
+
+Put all of this behind a collapsed:
+
+“Technical details”
+
+section.
+
+Default it CLOSED.
+
+I should not have to scroll through engineering diagnostics for every card.
+
+7. REDUCE SCROLLING
+
+Design the review page so that, on a normal desktop screen, I can ideally see:
+
+- scan image
+- top 3 candidates
+- main action buttons
+
+without scrolling.
+
+Use:
+- two-column layout on desktop
+- sticky scan image if helpful
+- sticky progress/header
+- compact controls
+- candidate image cards
+
+Do not stack huge blocks of explanatory text vertically.
+
+8. MAKE REVIEW FAST
+
+Preserve:
+- keyboard shortcuts
+- save and auto-advance
+- Unreviewed / Confirmed / Unresolved filters
+- catalog search
+- progress indicator
+
+After a decision:
+save → advance immediately.
+
+9. SEARCH MUST REMAIN STRUCTURED
+
+Keep the improved search behavior:
+- character/name
+- year
+- main set
+- subset
+- card number
+
+Explicit year filters must remain strict.
+
+Do not regress search while simplifying the UI.
+
+==================================================
+IMPORTANT RECOGNITION QUESTION
+==================================================
+
+10. REPORT WHETHER WE ARE ACTUALLY TESTING IMAGE RECOGNITION YET
+
+Right now the first suggestions still feel like guesses.
+
+Before doing additional model work, tell me:
+
+For each candidate currently displayed, is it coming from:
+
+- the OLD historical text/OCR matcher
+- the NEW DINO image retrieval system
+- both
+- something else
+
+This must be visually labeled in the admin tool.
+
+Example:
+
+Historical matcher
+or
+DINO visual retrieval
+or
+Combined rerank
+
+I need to know what system I am actually evaluating.
+
+If the current top candidates are still primarily old saved historical suggestions, then my manual review is NOT yet testing the new image-first system.
+
+Make that explicit.
+
+11. DO NOT CONFUSE REFERENCE MATCHING WITH REAL-WORLD RECOGNITION
+
+If a saved scan is literally identical or nearly identical to the catalog Cloudinary image, identify that in the benchmark.
+
+We ultimately care about recognition from:
+- real phone photos
+- perspective
+- glare
+- hands
+- background/table
+- sleeves/toploaders
+
+not merely matching one stored image against another copy of itself.
+
+Report how many of these 60 are:
+- real phone/customer photos
+- exact/near-exact catalog/reference images
+- unknown
+
+==================================================
+NEXT IMAGE NORMALIZATION STEP — DOCUMENT ONLY FOR NOW
+==================================================
+
+Do NOT implement this yet, but record it as the next planned recognition step:
+
+The scan pipeline should automatically detect the actual trading-card rectangle inside the photo, remove surrounding hand/table/background, perspective-correct it, rotate it upright, and normalize it to approximately a 2:3 card-shaped image without stretching the artwork.
+
+This should eventually be benchmarked against raw-photo retrieval.
+
+Do not implement it during this task.
+
+==================================================
+MUST NOT DO
+==================================================
+
+- Do not run the benchmark yet.
+- Do not resume full indexing.
+- Do not modify DINO.
+- Do not modify embeddings.
+- Do not publish.
+- Do not touch production.
+- Do not overwrite my existing 21 reviews.
+- Do not invent historical confirmed labels.
+- Do not assume top_match_card_id means user confirmation.
+- Do not auto-merge duplicate cards.
+- Do not change ownership.
+- Do not change Scan to Add production behavior.
+
+==================================================
+PRESERVE
+==================================================
+
+- All existing scans
+- All existing manual decisions
+- Reviewer notes
+- Historical OCR
+- Historical candidates
+- Current improved catalog search
+- Existing catalog
+- Existing Cloudinary images
+- Production untouched
+- Indexing paused
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Before asking me to review another card, report:
+
+1. Exactly where the 60 scan images came from.
+2. Whether they are Cloudinary images, local copies, or another source.
+3. How many are genuine historical user scan photos.
+4. How many already have a reliable user-confirmed final card identity.
+5. How that historical confirmed identity was determined.
+6. How many have ambiguous historical identity.
+7. How many truly require manual labeling.
+8. Whether my existing manual labels agree with historical confirmations.
+9. Whether duplicate/archived IDs explain disagreements.
+10. Whether the current candidate cards are from the old matcher, DINO, or both.
+11. How many images are real phone photos versus exact/near-exact reference images.
+12. What UI was simplified.
+13. Confirm technical/debug sections are collapsed by default.
+14. Confirm benchmark was NOT run.
+15. Confirm indexing remains paused.
+16. Confirm production remains untouched.
+
+Do not ask me to continue manual labeling until these questions are answered.

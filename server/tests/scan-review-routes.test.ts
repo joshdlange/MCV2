@@ -8,7 +8,7 @@ import express from 'express';
 
 process.env.NODE_ENV = 'development';
 const { pool } = await import('../db');
-const { registerScanReviewRoutes } = await import('../scan-review-routes');
+const { registerScanReviewRoutes, reviewEligibility } = await import('../scan-review-routes');
 const { loadScanReviewDataset, loadScanMetadata, originalScanBytes } = await import('../services/scanReview');
 const root = path.resolve('.local/scan-review');
 const dataset = await loadScanReviewDataset();
@@ -57,6 +57,22 @@ test('GET returns all 60 frozen scans; each private image returns original authe
   assert.equal(state.datasetHash, dataset.datasetHash);
   assert.equal(state.progress.total, 60);
   assert.equal(state.benchmark.status, 'blocked');
+  assert.equal(state.provenanceReport.imageTypeAssessment.unknownDeviceOrigin, 60);
+  assert.equal(state.provenanceReport.imageTypeAssessment.verifiedPhonePhotos, null);
+  assert.equal(state.provenanceReport.imageTypeAssessment.visiblePhotoContext, 50);
+  assert.equal(state.provenanceReport.imageTypeAssessment.indeterminateVisualContext, 10);
+  assert.equal(state.provenanceReport.imageTypeAssessment.scansWithComparedLinkedReferences, 48);
+  assert.equal(state.provenanceReport.imageTypeAssessment.fetchedLinkedCloudinaryReferences, 57);
+  assert.equal(state.provenanceReport.imageTypeAssessment.exactSelfLinkedScanUpload, 1);
+  assert.equal(state.items.find((item: any) => item.scanId === 3029)
+    .imageProvenance.photoAudit.overlap, 'exact-self-linked-scan-upload');
+  assert.equal(state.items.find((item: any) => item.scanId === 3029)
+    .eligibility.excludedDueToReferenceLeakage, true);
+  assert.equal(state.provenanceReport.candidateOrigin.includes('not DINO'), true);
+  assert.equal(state.items.find((item: any) => item.scanId === 2683)
+    .historicalProvenance.candidateHistoricalCardId, 20408);
+  assert.equal(state.items.find((item: any) => item.scanId === 2683)
+    .candidates.every((candidate: any) => candidate.candidateSource === 'historical-matcher-snapshot'), true);
   assert.equal(state.items.find((item: any) => item.scanId === 3084).classification.side, 'back');
   assert.equal(state.items.find((item: any) => item.scanId === 3094).imageOnlyCase, true);
   for (const id of [3082, 3120]) {
@@ -107,4 +123,20 @@ test('GET/PUT/catalog/image/benchmark routes reject missing auth, nonadmin, and 
 });
 test.after(async () => {
   await new Promise<void>((resolve, reject) => server.close(err => err ? reject(err) : resolve()));
+});
+test('3029 self-linked original is excluded from future front accuracy even with a usable confirmed catalog card', () => {
+  const decision = { status: 'confirmed', cardId: 315908, note: '' };
+  const classification = { side: 'front', ocrTag: 'useful',
+    metadataParsing: { status: 'supported', reason: 'independently reviewed' } } as any;
+  const cards = new Map([[315908, { cardId: 315908, isArchived: false,
+    hasUsableVisualReference: true }]]) as any;
+  const flags = { issues: {}, searchBlocked: {} } as any;
+  const ordinary = reviewEligibility(3029, decision, classification, flags, cards, new Map());
+  assert.equal(ordinary.frontImageRetrieval, true);
+  const audit = new Map([[3029, { overlap: 'exact-self-linked-scan-upload' }]]) as any;
+  const guarded = reviewEligibility(3029, decision, classification, flags, cards, audit);
+  assert.equal(guarded.frontImageRetrieval, false);
+  assert.equal(guarded.excludedDueToReferenceLeakage, true);
+  assert.equal(guarded.excludedDueToToolCatalogIssue, false);
+  assert.equal(guarded.reasons.includes('self-linked-scan-upload-reference-excluded-from-front-accuracy'), true);
 });

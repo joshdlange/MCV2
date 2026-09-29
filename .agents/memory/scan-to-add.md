@@ -56,3 +56,9 @@ Separate review-tool/catalog problems, front/back input type, and metadata defec
 **Why:** Collector review exposed literal missing-value tokens, artist text mistaken for card numbers, back-only photos, blocked searches, and reported wrong reference images. Combining these into one accuracy rate would misrepresent retrieval performance.
 
 **How to apply:** Preserve raw history and confirmed identities; store classifications and issue flags independently. Require explicit front/back evidence, report uncertain inputs separately, and reserve independently labeled untouched photos before final accuracy claims.
+
+Use attributable, unambiguous historical collector confirmations as sourced labels instead of requiring redundant manual review; preserve manual decisions and surface conflicts.
+
+**Why:** The user rejected repeated labeling and a permanent engineering-heavy admin workflow. Historical selected IDs can record explicit confirmation, whereas stored top predictions cannot. Confirmation before an ownership request does not prove that ownership was added.
+
+**How to apply:** Keep label source/audit evidence explicit, prioritize manual labels, and never equate possible duplicate IDs automatically. Keep technical review diagnostics collapsed and identify frozen historical suggestions as historical—not fresh DINO results.
