@@ -592,6 +592,21 @@ test("Lenticular LEN merge wiring preserves references and target images", async
         await mergeExactLenDuplicateRows(tx, refreshedSubset, 2, "LEN fixture"),
         { merged: 0, frontImagesCopied: 0, backImagesCopied: 0 },
       );
+      // A repeat run must leave the entire completed state unchanged, not
+      // merely report zero merges (especially quantities and archive dates).
+      const repeatedCards = await tx.select().from(cards)
+        .where(eq(cards.setId, subset.id));
+      assert.deepEqual(
+        repeatedCards.sort((a, b) => a.id - b.id),
+        remainingCards.sort((a, b) => a.id - b.id),
+      );
+      assert.deepEqual(
+        await tx.select().from(userCollections).where(eq(userCollections.userId, user.id)),
+        [mergedCollection],
+      );
+      const [repeatedSubset] = await tx.select().from(cardSets)
+        .where(eq(cardSets.id, subset.id));
+      assert.deepEqual(repeatedSubset, refreshedSubset);
 
       throw new FixtureRollback();
     }),
