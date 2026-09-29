@@ -1,0 +1,136 @@
+YES — RUN THE NEXT BOUNDED DINO TEST.
+
+The previous experiment cannot tell us whether DINO works because none of the 16 correct card references were present in the frozen 958-reference index.
+
+We now need a coverage-controlled recognition test.
+
+Do the experiment. Do not create another planning report first.
+
+MUST DO
+
+1. Use the same 16 confirmed scan photos from the last experiment.
+
+2. For each of the 16 correct cards:
+- locate its actual catalog FRONT image
+- verify the reference image visually/structurally belongs to that card
+- specifically investigate any known bad-image case such as scan 3130
+- do not use the uploaded scan itself as the catalog reference
+- do not use an exact copy of the query image
+
+If a correct catalog reference is missing or clearly wrong:
+- exclude that case from scoring
+- report it separately
+- do not substitute a fake reference
+
+3. Create a temporary DEVELOPMENT-ONLY bounded index containing:
+
+A. The verified correct catalog references for the eligible labeled cards.
+
+B. The existing 958 distractor references.
+
+C. HARD NEGATIVES for each correct card where available, including:
+- same character
+- same year/set
+- same subset family
+- nearby card numbers
+- same artwork
+- different parallels
+- visually similar variants
+
+The purpose is NOT to make an artificially easy test where the correct image is surrounded only by unrelated cards.
+
+Do not modify the permanent index.
+Do not start full indexing.
+
+4. Run FRESH image-only retrieval.
+
+For each original scan:
+- generate fresh DINO query embedding
+- search the temporary bounded index
+- no OCR
+- no year
+- no set metadata
+- no card-number metadata
+- no historical matcher candidates
+
+Report:
+- correct-card rank
+- top 1
+- top 3
+- top 10
+- similarity to correct card
+- similarity to #1 candidate
+- margin
+- whether a same-art/parallels case beat the correct card
+
+5. Run TWO comparisons:
+
+TEST A:
+Correct references + existing 958 distractors
+
+TEST B:
+Correct references + 958 distractors + hard negatives
+
+Test B matters most.
+
+6. DO NOT USE THE CURRENT AUTOMATIC CROP FOR THIS TEST.
+
+The current geometry prototype only detected 1 of 16 real scans reliably.
+
+Use the original scan images for this DINO test.
+
+Do not spend more time improving normalization yet.
+
+7. GIVE ME RESULTS, NOT ANOTHER ARCHITECTURE REPORT.
+
+Report:
+
+- eligible cases with verified correct reference
+- cases excluded because correct catalog image is missing/wrong
+- Test A Top-1 / Top-3 / Top-10
+- Test B Top-1 / Top-3 / Top-10
+- correct rank for every scan
+- same-art/parallel confusion cases
+- average warm embedding latency
+- average search latency
+
+Then make ONE recommendation:
+
+A. DINO is promising enough to continue
+B. DINO retrieves the right family but struggles with parallels, so use it for candidate retrieval plus another discriminator
+C. DINO is not performing well enough even with known coverage, so stop and test another visual representation/model
+
+MUST NOT DO
+
+- Do not publish.
+- Do not touch production.
+- Do not full-index 77k cards.
+- Do not change the model yet.
+- Do not modify labels.
+- Do not modify catalog images.
+- Do not continue expanding the admin review tool.
+- Do not ask me to manually label more scans.
+- Do not work further on automatic cropping during this task.
+
+PRESERVE
+
+- existing 16-query cohort
+- existing manual decisions
+- existing catalog
+- existing DINO configuration
+- Cloudinary originals
+- indexing paused
+- production untouched
+
+FINAL RESPONSE
+
+Keep it concise.
+
+Tell me:
+1. How many of the 16 had a verified correct catalog reference.
+2. Test A Top-1 / Top-3 / Top-10.
+3. Test B Top-1 / Top-3 / Top-10.
+4. Biggest failure pattern.
+5. Whether DINO is worth continuing with.
+6. Confirm full indexing remains paused.
+7. Confirm production was untouched.

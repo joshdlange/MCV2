@@ -156,3 +156,17 @@ mtime_ms = 1790722940255
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/1420678b-50b1-4d31-b80d-0bef23cd6130/d8469a4c-9c3b-413c-8aa5-949ab4086e05"
 storage_version_token = "1790722994858244"
 content_type = "text/html"
+
+[[outputs]]
+id = "DhY0Y7KyCYiHQv_Q1nasz"
+uri = "file://attached_assets/bounded-dino-report.html"
+type = "html"
+title = "Coverage-controlled DINO results: Test A vs Test B"
+description = "Actual raw-photo results, per-scan ranks and top-10 scores, verified references, excluded cases, and hard-negative comparisons."
+logical_id = "72964555-5264-4c6e-bbd8-3462158167eb"
+content_hash = "sha256:df6f1fe04dda7489615ed9df7687e595fb3bdff72d9219c230ac01bb756d4bdd"
+size = 1368139
+mtime_ms = 1790723562555
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/72964555-5264-4c6e-bbd8-3462158167eb/11b85448-7e2a-4e4b-9760-7ff17f06b686"
+storage_version_token = "1790723623687683"
+content_type = "text/html"
