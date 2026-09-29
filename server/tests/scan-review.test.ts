@@ -9,6 +9,7 @@ const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'scan-review-test-'));
 process.env.NODE_ENV = 'test';
 process.env.SCAN_REVIEW_TEST_DIR = dir;
 const review = await import('../services/scanReview');
+const flags = await import('../services/scanReviewFlags');
 const bytes = Buffer.from('unaltered original bytes');
 const hash = createHash('sha256').update(bytes).digest('hex');
 const rows = Array.from({ length: 60 }, (_, i) => ({
@@ -57,7 +58,7 @@ test('60 frozen scans, persistent atomic decisions, dataset guard and unresolved
   assert.equal(stored.decisions[2].cardId, null);
   assert.equal((await review.scanReviewState()).decisions[1].note, 'Verified');
   assert.deepEqual(review.reviewProgress(stored.decisions), {
-    total: 60, reviewed: 2, confirmed: 1, unresolved: 1, remaining: 58, percent: 3,
+    total: 60, reviewed: 2, confirmed: 1, unresolved: 1, skipped: 0, remaining: 58, percent: 3,
   });
   assert.equal(review.approvedLabels(rows, stored.decisions).length, 1);
   assert.throws(() => review.requireBenchmarkLabels(rows, stored.decisions), /At least 50/);
@@ -77,6 +78,18 @@ test('60 frozen scans, persistent atomic decisions, dataset guard and unresolved
   await review.saveScanBenchmark(datasetHash, artifact);
   await assert.rejects(review.readScanBenchmark('different-hash'), /does not match/);
   await assert.rejects(review.saveScanDecision(2, { datasetHash, status: 'unresolved', cardId: 99 }, 8, exists), /cannot have/);
+  await review.saveScanDecision(3, { datasetHash, status: 'skipped', note: 'Later' }, 8, exists);
+  assert.equal(review.approvedLabels(rows, (await review.scanReviewState()).decisions).length, 1);
+  await flags.updateReviewFlags(datasetHash, { datasetHash, type: 'wrong-card-image', note: 'Wrong stored picture' },
+    8, { scanId: 1, cardId: 99 });
+  await flags.updateReviewFlags(datasetHash, { datasetHash, blocked: true, note: 'Could not find card' },
+    8, { scanId: 2 });
+  assert.equal((await flags.readReviewFlags(datasetHash)).issues['1:99'].type, 'wrong-card-image');
+  assert.equal((await flags.readReviewFlags(datasetHash)).searchBlocked[2].blocked, true);
+  assert.equal((await review.scanReviewState()).decisions[1].cardId, 99);
+  assert.equal((await review.scanReviewState()).decisions[3].status, 'skipped');
+  assert.equal(flags.legacyReviewEvidence({ status: 'confirmed', note: 'Wrong image stored' }).reviewerReportedImageIssue, true);
+  assert.equal(flags.legacyReviewEvidence({ status: 'unresolved', note: 'The search sucks' }).suspectedSearchBlocked, true);
   assert.equal((await fs.readdir(dir)).filter(name => name.endsWith('.tmp')).length, 0);
 });
 test.after(async () => { await fs.rm(dir, { recursive: true, force: true }); });

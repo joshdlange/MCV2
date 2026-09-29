@@ -56,7 +56,7 @@ test('GET returns all 60 frozen scans; each private image returns original authe
   assert.equal(state.items.length, 60);
   assert.equal(state.datasetHash, dataset.datasetHash);
   assert.equal(state.progress.total, 60);
-  assert.equal(state.benchmark.minimumConfirmed, 50);
+  assert.equal(state.benchmark.status, 'blocked');
   for (const row of dataset.rows) {
     const item = state.items.find((item: any) => item.scanId === row.scanId);
     assert.ok(item, `Missing scan ${row.scanId}`);
@@ -79,6 +79,9 @@ test('GET/PUT/catalog/image/benchmark routes reject missing auth, nonadmin, and 
     ['/api/admin/scan-review', 'GET'],
     [`/api/admin/scan-review/${dataset.rows[0].scanId}`, 'PUT'],
     ['/api/admin/scan-review/catalog?q=spider', 'GET'],
+    ['/api/admin/scan-review/data-quality', 'GET'],
+    [`/api/admin/scan-review/${dataset.rows[0].scanId}/search-blocked`, 'PUT'],
+    [`/api/admin/scan-review/${dataset.rows[0].scanId}/image-issues/198`, 'PUT'],
     [`/api/admin/scan-review/image/scan/${dataset.rows[0].scanId}`, 'GET'],
     ['/api/admin/scan-review/benchmark', 'POST'],
   ];
@@ -89,12 +92,9 @@ test('GET/PUT/catalog/image/benchmark routes reject missing auth, nonadmin, and 
     try { assert.equal((await request(route, 'admin', method)).status, 404, `${method} ${route} production`); }
     finally { process.env.NODE_ENV = 'development'; }
   }
-  if (!decisionsBefore || Object.values(JSON.parse(decisionsBefore.toString()).decisions)
-    .filter((decision: any) => decision.status === 'confirmed').length < 50) {
-    const denied = await request('/api/admin/scan-review/benchmark', 'admin', 'POST');
-    assert.equal(denied.status, 409);
-    assert.match((await denied.json()).message, /At least 50 confirmed labels/);
-  }
+  const denied = await request('/api/admin/scan-review/benchmark', 'admin', 'POST');
+  assert.equal(denied.status, 423);
+  assert.match((await denied.json()).message, /disabled pending explicit user authorization/);
 });
 test.after(async () => {
   await new Promise<void>((resolve, reject) => server.close(err => err ? reject(err) : resolve()));

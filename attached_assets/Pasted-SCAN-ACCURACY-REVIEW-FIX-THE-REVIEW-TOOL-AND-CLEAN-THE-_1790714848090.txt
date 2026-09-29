@@ -1,0 +1,271 @@
+SCAN ACCURACY REVIEW — FIX THE REVIEW TOOL AND CLEAN THE BENCHMARK INPUTS
+
+We now have enough evidence that the current review workflow is limiting our ability to create reliable ground-truth labels.
+
+Do NOT run the benchmark yet.
+
+Current known issues:
+1. Review search is too limited.
+2. Some exact cards exist under duplicate/archived catalog IDs.
+3. Some catalog records may have the wrong stored reference image.
+4. Historical OCR/year extraction is sometimes wrong.
+5. Those issues must be separated from the actual image-retrieval benchmark.
+
+Goal:
+Make it easy for me to identify the correct card for each scan without the review tool itself becoming the blocker.
+
+==================================================
+MUST DO
+==================================================
+
+1. FIX CATALOG SEARCH IN THE REVIEW TOOL
+
+The current phrase-only search is not acceptable.
+
+Support combined structured search across:
+- character/card name
+- year
+- main set
+- subset
+- card number
+
+Examples that should work:
+- 2026 Cyclops
+- Cyclops 2026
+- 2025 Topps Chrome Invisible Woman
+- Thor Topps Chrome
+- 1993 Phoenix #41
+- Marvel Masterpieces Phoenix 85
+
+Search terms should combine intelligently rather than being treated as one exact phrase.
+
+2. ADD STRUCTURED FILTERS
+
+Add filters for:
+- Year
+- Main Set
+- Subset
+- Card Number
+- Active / Archived / All
+
+The user should be able to search text and then narrow with filters.
+
+3. REMOVE THE 30-RESULT DEAD END
+
+Do not silently stop at 30.
+
+Implement:
+- pagination
+OR
+- Load More
+
+Show:
+- result count
+- current range
+- whether more results exist
+
+Do not order broad results purely by card ID.
+
+Use relevance first.
+
+4. SEARCH ACTIVE AND ARCHIVED RECORDS
+
+Because duplicate/archived IDs may represent the same physical card, the review tool needs to find them.
+
+If an archived record appears:
+- clearly label it Archived
+- show whether there is an active equivalent
+- do not hide it
+
+5. IDENTIFY DUPLICATE/EQUIVALENT CARD RECORDS
+
+Add a non-destructive indicator in the review UI when multiple catalog records appear to represent the same physical card.
+
+Possible equivalence signals:
+- same year
+- same main set
+- same subset
+- same card number
+- same card name
+- same or equivalent image
+
+Do NOT merge anything automatically.
+
+For benchmarking, establish a canonical-card-equivalence concept so a retrieval result using an archived duplicate is not incorrectly scored as a total miss if it represents the same physical card.
+
+Report:
+- canonical active ID
+- equivalent/archived IDs
+
+6. SEPARATE CARD IDENTITY FROM IMAGE QUALITY
+
+If I confirm:
+“This is the correct card, but our stored image is wrong”
+
+then save TWO separate facts:
+
+A. Ground-truth card identity = confirmed
+B. Catalog image issue = flagged
+
+Do not invalidate the card label because the catalog image is bad.
+
+Add image issue types:
+- wrong card image
+- wrong parallel image
+- front/back swapped
+- poor crop
+- missing image
+- low quality
+- other
+
+7. ADD A SIMPLE “CATALOG IMAGE ISSUE” FLAG
+
+On each candidate/card:
+- Flag image issue
+- optional short note
+
+This should be stored separately from the benchmark label.
+
+Do not modify Cloudinary or catalog images automatically.
+
+8. PRESERVE HISTORICAL OCR AS EVIDENCE ONLY
+
+Show the saved OCR/vision extraction, but clearly label it as historical extraction.
+
+Do not use it to constrain what I can search for.
+
+The fact that OCR guessed:
+- 1995 instead of 1993
+- 1989 instead of 1993
+
+is exactly why search and ground-truth labeling must remain independent.
+
+9. IMPROVE REVIEW SPEED
+
+Keep the usability improvements already requested:
+- keyboard shortcuts
+- auto-advance after save
+- Unreviewed / Confirmed / Unresolved / All filters
+- prominent progress
+- larger scan/candidate images
+- manual search
+- no auto-confirm
+
+10. ADD “SKIP FOR NOW”
+
+Separate from Unresolved.
+
+Statuses should be:
+- Confirmed
+- Unresolved
+- Skipped
+
+Use:
+Unresolved = I reviewed it and genuinely cannot identify the exact card
+Skipped = I want to come back later
+
+Do not count Skipped as a benchmark label.
+
+11. BENCHMARK LABEL RULES
+
+Only use confidently Confirmed labels.
+
+Do not use:
+- unresolved
+- skipped
+
+For confirmed labels:
+- resolve equivalent/archived duplicate IDs to canonical card identity for scoring
+- preserve original selected ID for auditability
+
+12. BUILD A PRE-BENCHMARK DATA QUALITY REPORT
+
+Before running recognition accuracy, report:
+
+- total scans
+- confirmed
+- unresolved
+- skipped
+- scans blocked by search
+- confirmed cards with duplicate/equivalent IDs
+- confirmed cards with flagged catalog-image issues
+- confirmed cards missing usable reference images
+- confirmed labels suitable for visual benchmark
+
+This will tell us whether the benchmark itself is clean enough.
+
+==================================================
+MUST NOT DO
+==================================================
+
+- Do not run the benchmark yet.
+- Do not resume indexing.
+- Do not publish.
+- Do not touch production.
+- Do not merge duplicate cards automatically.
+- Do not delete archived records.
+- Do not repair catalog images automatically.
+- Do not change Scan to Add matching logic.
+- Do not change DINO embeddings.
+- Do not fabricate canonical equivalence.
+- Do not force unresolved cards into a label.
+- Do not treat bad OCR as ground truth.
+- Do not change ownership or photo approval.
+
+==================================================
+PRESERVE
+==================================================
+
+- Existing 60 saved scans
+- Existing 10 review decisions
+- Existing notes
+- Existing candidate history
+- Existing OCR/vision snapshots
+- Existing catalog
+- Existing Cloudinary assets
+- Indexing paused
+- Production untouched
+
+==================================================
+QA
+==================================================
+
+Test these searches specifically:
+
+- 2026 Cyclops
+- Cyclops 2026
+- Topps Chrome Invisible Woman
+- 1993 Phoenix 41
+- Marvel Masterpieces Phoenix 85
+
+Verify:
+- year filtering works
+- card number filtering works
+- main set filtering works
+- subset filtering works
+- active/archived filtering works
+- more than 30 results can be browsed
+- relevance ordering makes sense
+- archived duplicates are visible and labeled
+- image issue flags save independently
+- confirmed card identity remains valid if image issue is flagged
+- saved progress survives refresh
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Tell me:
+
+1. What changed in search.
+2. Whether combined year + character search works.
+3. Whether set/subset/card-number filters work.
+4. How many results can now be browsed.
+5. How active/archived records are handled.
+6. How duplicate/equivalent cards are represented.
+7. How catalog image issues are stored separately.
+8. How many of the current 10 decisions remain valid.
+9. How many of the 60 scans are now reviewable without search limitations.
+10. Confirm benchmark has NOT been run.
+11. Confirm indexing remains paused.
+12. Confirm production remains untouched.

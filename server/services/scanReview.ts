@@ -12,7 +12,7 @@ type SourceRow = {
   scanId: number; imageHash: string; originalPhotoFile: string;
   candidate: Suggestion | null; prediction: Suggestion | null; references: (string | null)[];
 };
-export type ReviewDecision = { status: 'confirmed' | 'unresolved'; cardId: number | null; note: string; reviewerId: number; reviewedAt: string };
+export type ReviewDecision = { status: 'confirmed' | 'unresolved' | 'skipped'; cardId: number | null; note: string; reviewerId: number; reviewedAt: string };
 type Dataset = { datasetHash: string; rows: SourceRow[] };
 type ScanMetadataRow = { scanId: number; ocr: string | null; vision: unknown; topCardId: number | null;
   confidence?: string | number | null;
@@ -31,7 +31,7 @@ export const requireDevelopmentAdmin: RequestHandler = (req: any, res, next) => 
 };
 let datasetPromise: Promise<Dataset> | undefined;
 let writes: Promise<unknown> = Promise.resolve();
-async function atomicJson(filename: string, value: unknown) {
+export async function atomicReviewJson(filename: string, value: unknown) {
   const temporary = path.join(REVIEW_DIR, `${filename}.${process.pid}.${createHash('sha256').update(String(Math.random())).digest('hex')}.tmp`);
   const handle = await fs.open(temporary, 'wx', 0o600);
   try {
@@ -45,7 +45,7 @@ async function atomicJson(filename: string, value: unknown) {
   } catch (e) { await fs.unlink(temporary).catch(() => {}); throw e; }
 }
 export async function saveScanBenchmark(datasetHash: string, benchmark: unknown) {
-  await atomicJson('benchmark.json', { datasetHash, benchmark });
+  await atomicReviewJson('benchmark.json', { datasetHash, benchmark });
 }
 export async function readScanBenchmark(datasetHash: string): Promise<any | null> {
   try {
@@ -127,8 +127,10 @@ export async function scanReviewState() {
 export function reviewProgress(decisions: Record<string, ReviewDecision>, total = 60) {
   const confirmed = Object.values(decisions).filter(d => d.status === 'confirmed').length;
   const unresolved = Object.values(decisions).filter(d => d.status === 'unresolved').length;
+  const skipped = Object.values(decisions).filter(d => d.status === 'skipped').length;
   const reviewed = confirmed + unresolved;
-  return { total, reviewed, confirmed, unresolved, remaining: total - reviewed, percent: Math.round(reviewed / total * 100) };
+  return { total, reviewed, confirmed, unresolved, skipped, remaining: total - reviewed - skipped,
+    percent: Math.round(reviewed / total * 100) };
 }
 export function approvedLabels(rows: SourceRow[], decisions: Record<string, ReviewDecision>) {
   return rows.filter(row => decisions[row.scanId]?.status === 'confirmed'
@@ -150,13 +152,13 @@ export async function saveScanDecision(scanId: number, body: unknown, reviewerId
     if (!dataset.rows.some(row => row.scanId === scanId)) throw new ReviewError('Unknown scan ID', 404);
     const input = body as Record<string, unknown>;
     if (!input || input.datasetHash !== dataset.datasetHash) throw new ReviewError('Dataset hash mismatch', 409);
-    if (input.status !== 'confirmed' && input.status !== 'unresolved')
+    if (input.status !== 'confirmed' && input.status !== 'unresolved' && input.status !== 'skipped')
       throw new ReviewError('Invalid review status', 400);
     const note = input.note === undefined ? '' : input.note;
     if (typeof note !== 'string' || note.length > 500) throw new ReviewError('Note must be at most 500 characters', 400);
     const cardId = input.status === 'confirmed' ? input.cardId : null;
-    if (input.status === 'unresolved' && input.cardId != null)
-      throw new ReviewError('Unresolved scans cannot have a card ID', 400);
+    if (input.status !== 'confirmed' && input.cardId != null)
+      throw new ReviewError('Unresolved or skipped scans cannot have a card ID', 400);
     if (input.status === 'confirmed' && (!Number.isSafeInteger(cardId) || (cardId as number) <= 0
       || !await cardExists(cardId as number))) throw new ReviewError('Selected card does not exist in the catalog', 400);
     const file = await readDecisions(dataset.datasetHash);
@@ -164,7 +166,7 @@ export async function saveScanDecision(scanId: number, body: unknown, reviewerId
       status: input.status, cardId: cardId as number | null, note: note.trim(),
       reviewerId, reviewedAt: new Date().toISOString(),
     };
-    await atomicJson('decisions.json', file);
+    await atomicReviewJson('decisions.json', file);
   });
   writes = task.catch(() => {});
   await task;
