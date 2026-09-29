@@ -6,9 +6,12 @@ import {
   extractKeywords,
   normalizeCardNumber,
   normalizeText,
+  retrieveImageCandidateRows,
+  rankImageCandidates,
   type ParsedScan,
   type ScoredMatch,
 } from './scanMatching';
+import type { queryCatalogByImage } from './catalogVisual';
 
 export const FREE_SCAN_LIMIT_PER_MONTH = 25;
 
@@ -51,6 +54,13 @@ export interface ScanResult {
   /** Diagnostic only; an unavailable comparison never removes text-only matches. */
   visualVerification: 'verified' | 'uncertain' | 'abstained' | 'unavailable';
   warnings: string[];
+  imageIndex: {
+    status: 'ready' | 'partial' | 'unavailable';
+    indexedCount: number;
+    totalEligible: number;
+    fallback: 'none' | 'text-only' | 'no-candidates';
+  };
+  timings: { visualRetrievalMs: number; ocrMs: number; dbMs: number; rerankMs: number; totalMs: number };
 }
 
 const EMPTY_VISION: CardVisionResult = {
@@ -267,8 +277,27 @@ export function rerankVisualMatches(
     // can corroborate ordering, but cannot restore eligibility it never had.
     const numericLevel = confidence >= 85 ? 'high' : confidence >= 45 ? 'medium'
       : confidence > 0 ? 'low' : 'none';
-    const confidenceLevel = numericLevel === 'high' && match.confidenceLevel !== 'high'
+    let confidenceLevel: ScanMatch['confidenceLevel'] = numericLevel === 'high' && match.confidenceLevel !== 'high'
       ? 'medium' : numericLevel;
+    if (match.retrievalSource) {
+      const conflicts = match.metadataConflicts?.length
+        || match.matchReasons.some(reason => reason.includes('conflicts'));
+      const otherFamilySimilarity = Math.max(-1, ...matches
+        .filter(other => other.cardId !== match.cardId && other.familyKey !== match.familyKey)
+        .map(other => other.imageSimilarity ?? -1));
+      const familyAmbiguous = matches.some(other => other.cardId !== match.cardId
+        && other.familyKey === match.familyKey && !variantConfirmed);
+      // An exact checklist number is NOT required. Strong picture retrieval,
+      // independent artwork verification and separation are required instead.
+      const highEligible = match.retrievalSource === 'image'
+        && judgement === 'strong' && !conflicts && !familyAmbiguous
+        && (match.imageSimilarity ?? 0) >= 0.85
+        && (match.imageSimilarity ?? 0) - otherFamilySimilarity >= 0.08;
+      confidenceLevel = highEligible ? 'high'
+        : confidence >= 45 ? 'medium' : confidence > 0 ? 'low' : 'none';
+      if (match.retrievalSource === 'metadata') confidenceLevel = confidence > 0 ? 'low' : 'none';
+      if (judgement === 'mismatch') confidenceLevel = confidence > 0 ? 'low' : 'none';
+    }
     return {
       ...match, confidence, confidenceLevel,
       matchReasons: judgement && judgement !== 'uncertain'
@@ -278,7 +307,9 @@ export function rerankVisualMatches(
         : match.matchReasons,
     };
   });
-  result.sort((a, b) => b.confidence - a.confidence || a.cardId - b.cardId);
+  result.sort((a, b) =>
+    Number(a.retrievalSource === 'metadata') - Number(b.retrievalSource === 'metadata')
+    || b.confidence - a.confidence || a.cardId - b.cardId);
   // Recheck ambiguity after visual score changes as well: a promoted or
   // previously decisive top match can become a near-tie.
   if (result.length > 1 && result[0].confidence - result[1].confidence < 15) {
@@ -366,8 +397,18 @@ async function imageWarnings(buffer: Buffer): Promise<string[]> {
 export async function scanCard(
   imageBuffer: Buffer,
   mimeType: string = 'image/jpeg',
-  backImage?: { buffer: Buffer; mimeType: string }
+  backImage?: { buffer: Buffer; mimeType: string },
+  dependencies: {
+    queryImage?: typeof queryCatalogByImage;
+    identify?: typeof identifyCardWithVision;
+    retrieveImageRows?: typeof retrieveImageCandidateRows;
+    matchMetadata?: typeof matchCandidates;
+    verify?: typeof verifyCandidateArt;
+  } = {},
 ): Promise<ScanResult> {
+  const started = Date.now();
+  const timings = { visualRetrievalMs: 0, ocrMs: 0, dbMs: 0, rerankMs: 0, totalMs: 0 };
+  const warnings: string[] = [];
   const { buffer: processedBuffer, preprocessed } = await preprocessImage(imageBuffer);
   const outputMime = preprocessed ? 'image/jpeg' : mimeType;
   const backProcessed = backImage ? await preprocessImage(backImage.buffer) : null;
@@ -375,14 +416,49 @@ export async function scanCard(
     buffer: backProcessed.buffer, mimeType: backProcessed.preprocessed ? 'image/jpeg' : backImage.mimeType,
   } : undefined;
 
-  const vision = await identifyCardWithVision(processedBuffer, outputMime, preparedBack);
-  console.log('[Scan] Vision result:', JSON.stringify(vision));
+  // Run independent picture retrieval even when OCR yields no readable text.
+  const [vision, imageResult] = await Promise.all([
+    (async () => {
+      const start = Date.now();
+      try {
+        return await (dependencies.identify ?? identifyCardWithVision)(processedBuffer, outputMime, preparedBack);
+      } finally { timings.ocrMs = Date.now() - start; }
+    })(),
+    (async () => {
+      const start = Date.now();
+      try {
+        return await (dependencies.queryImage ?? (async (buffer: Buffer) =>
+          (await import('./catalogVisual')).queryCatalogByImage(buffer)))(processedBuffer);
+      } catch (error) {
+        console.warn('[Scan] Catalog image retrieval unavailable:', error);
+        return { status: 'unavailable' as const, matches: [], indexedCount: 0, totalEligible: 0 };
+      } finally { timings.visualRetrievalMs = Date.now() - start; }
+    })(),
+  ]);
 
   const parsed = buildParsedScan(vision);
-  const textMatches = await matchCandidates(parsed);
-  const comparison = await verifyCandidateArt(processedBuffer, outputMime, textMatches, parsed);
+  const dbStart = Date.now();
+  const [textMatches, imageRows] = await Promise.all([
+    (dependencies.matchMetadata ?? matchCandidates)(parsed),
+    (dependencies.retrieveImageRows ?? retrieveImageCandidateRows)(imageResult.matches.map(hit => hit.cardId)),
+  ]);
+  timings.dbMs = Date.now() - dbStart;
+  const rerankStart = Date.now();
+  const candidates = rankImageCandidates(imageRows, imageResult.matches, parsed, textMatches);
+  const comparison = await (dependencies.verify ?? verifyCandidateArt)(processedBuffer, outputMime, candidates, parsed);
+  timings.rerankMs = Date.now() - rerankStart;
   const matches = comparison.matches;
   const confidenceLevel = matches.length > 0 ? matches[0].confidenceLevel : 'none';
+  const hasImageMatches = candidates.some(match => match.retrievalSource !== 'metadata');
+  const fallback = hasImageMatches ? 'none' : matches.length ? 'text-only' : 'no-candidates';
+  if (imageResult.status === 'partial') warnings.push('Catalog image index is incomplete; cards not yet indexed may be missed.');
+  if (imageResult.status === 'unavailable') warnings.push('Catalog image search is unavailable. Any suggestions are text-only fallbacks, not picture matches.');
+  if (!hasImageMatches && imageResult.status !== 'unavailable') warnings.push('No catalog image candidates were found. Any suggestions below use text only.');
+  if (!vision.ocrText && !parsed.characterName && !parsed.cardNumber && !parsed.setName) {
+    warnings.push('No readable identifying text was extracted. Picture candidates can still be reviewed; a back photo may help distinguish variants.');
+  }
+  if (comparison.status !== 'verified') warnings.push('Artwork verification was inconclusive or unavailable; review candidate images before confirming.');
+  if (matches.some(match => !usableImageUrl(match.imageUrl))) warnings.push('Some candidates have no usable reference image and could not be visually verified.');
 
   const ocrText = vision.ocrText || [
     vision.characterName,
@@ -392,6 +468,8 @@ export async function scanCard(
     vision.variant || vision.subsetName,
   ].filter(Boolean).join(' ');
 
+  warnings.push(...await imageWarnings(imageBuffer));
+  timings.totalMs = Date.now() - started;
   return {
     ocrText,
     parsed: {
@@ -410,6 +488,11 @@ export async function scanCard(
     confidenceLevel,
     preprocessed,
     visualVerification: comparison.status,
-    warnings: await imageWarnings(imageBuffer),
+    warnings,
+    imageIndex: {
+      status: imageResult.status, indexedCount: imageResult.indexedCount,
+      totalEligible: imageResult.totalEligible, fallback,
+    },
+    timings,
   };
 }

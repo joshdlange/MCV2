@@ -72,6 +72,12 @@ interface ScanResult {
   preprocessed?: boolean;
   visualVerification?: "verified" | "uncertain" | "abstained" | "unavailable";
   warnings?: string[];
+  imageIndex?: {
+    status: "ready" | "partial" | "unavailable";
+    indexedCount: number;
+    totalEligible: number;
+    fallback: "none" | "text-only" | "no-candidates";
+  };
 }
 
 interface PickerSet {
@@ -781,7 +787,7 @@ export default function ScanToAdd() {
                 </h1>
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto leading-relaxed">
-                Take a photo of your Marvel card and we'll try to identify it instantly.
+                Take a photo of your Marvel card to find similar catalog images, then confirm the match.
               </p>
             </div>
 
@@ -835,7 +841,7 @@ export default function ScanToAdd() {
                       Snap a photo of your card
                     </p>
                     <p className="text-sm text-gray-400 dark:text-gray-500 max-w-xs leading-relaxed">
-                      We'll search thousands of Marvel cards and try to find an exact match.
+                      We'll compare the artwork with indexed catalog images. Printed details help check the match.
                     </p>
                   </div>
 
@@ -1014,7 +1020,7 @@ export default function ScanToAdd() {
             <div className="flex flex-col items-center gap-3 py-8">
               <Loader2 className="w-10 h-10 animate-spin text-red-500" />
               <p className="font-medium text-gray-700 dark:text-gray-200">Scanning card…</p>
-              <p className="text-sm text-gray-400">Reading card details, this may take a moment</p>
+              <p className="text-sm text-gray-400">Searching catalog images and checking card details…</p>
             </div>
           </div>
         )}
@@ -1046,6 +1052,16 @@ export default function ScanToAdd() {
             {scanResult.visualVerification && scanResult.visualVerification !== "verified" && (
               <p className="text-xs text-amber-700 dark:text-amber-400">
                 Artwork comparison: {scanResult.visualVerification}. Check the printed details yourself.
+              </p>
+            )}
+            {scanResult.imageIndex && (
+              <p className="text-xs text-gray-500">
+                {scanResult.imageIndex.fallback === "text-only"
+                  ? "Text-only suggestions — no picture match was retrieved. "
+                  : "Picture search uses catalog reference images. "}
+                {scanResult.imageIndex.status === "unavailable"
+                  ? "Image index unavailable."
+                  : `${scanResult.imageIndex.indexedCount.toLocaleString()} of ${scanResult.imageIndex.totalEligible.toLocaleString()} eligible cards indexed${scanResult.imageIndex.status === "partial" ? " — incomplete coverage" : ""}.`}
               </p>
             )}
             {scanResult.warnings?.map((warning, index) => (

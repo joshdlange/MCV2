@@ -7,6 +7,24 @@ import { z } from "zod";
 // Single source of truth — used by server enforcement and all client checks/copy.
 export const SIDE_KICK_CARD_LIMIT = 500;
 
+// Catalog references only. Publish manages this additive schema; no startup DDL.
+// A reference URL is shared by all eligible cards pointing to it.
+export const catalogVisualReferences = pgTable("catalog_visual_references", {
+  key: text("key").primaryKey(),
+  modelVersion: text("model_version").notNull(),
+  referenceUrl: text("reference_url").notNull(),
+  contentDigest: text("content_digest"),
+  embedding: jsonb("embedding").$type<number[]>(),
+  status: text("status").default("pending").notNull(),
+  attempts: integer("attempts").default(0).notNull(),
+  lastError: text("last_error"),
+  retryAt: timestamp("retry_at"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  modelStatusIdx: index("catalog_visual_model_status_idx").on(table.modelVersion, table.status),
+  digestIdx: index("catalog_visual_digest_idx").on(table.modelVersion, table.contentDigest),
+}));
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   firebaseUid: text("firebase_uid").notNull().unique(),

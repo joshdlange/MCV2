@@ -4,7 +4,7 @@
 
 import { db } from '../db';
 import { cards, cardSets, mainSets } from '../../shared/schema';
-import { ilike, or, eq, and, sql, type SQL } from 'drizzle-orm';
+import { ilike, or, eq, and, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -46,6 +46,10 @@ export interface ScoredMatch {
   confidence: number;
   confidenceLevel: 'high' | 'medium' | 'low' | 'none';
   matchReasons: string[];
+  retrievalSource?: 'image' | 'image-family' | 'metadata';
+  imageSimilarity?: number;
+  familyKey?: string;
+  metadataConflicts?: string[];
 }
 
 // ── Normalization helpers ────────────────────────────────────────────────────
@@ -283,7 +287,7 @@ export async function retrieveCandidates(
 
 // ── Scoring ───────────────────────────────────────────────────────────────
 
-function scoreCandidate(row: ScanCandidateRow, parsed: ParsedScan): { score: number; reasons: string[]; exactNumber: boolean; identitySignals: number } {
+export function scoreCandidate(row: ScanCandidateRow, parsed: ParsedScan): { score: number; reasons: string[]; exactNumber: boolean; identitySignals: number } {
   let score = 0;
   const reasons: string[] = [];
   let exactNumber = false;
@@ -361,6 +365,9 @@ function scoreCandidate(row: ScanCandidateRow, parsed: ParsedScan): { score: num
       if (firstWord.length > 3 && rowName.includes(firstWord)) {
         score += 15;
         reasons.push(`Character name partially matched ("${firstWord}")`);
+      } else if (parsedName && rowName) {
+        score -= 25;
+        reasons.push(`Character/card name conflicts (${row.name})`);
       }
     }
   }
@@ -444,4 +451,88 @@ export async function matchCandidates(parsed: ParsedScan): Promise<ScoredMatch[]
   if (candidates.length === 0) return [];
 
   return rankScanCandidates(candidates, parsed);
+}
+
+/** Family identity is deliberately independent of extracted scan text. */
+export function scanFamilyKey(row: ScanCandidateRow): string {
+  return [
+    resolveSetAlias(normalizeText(row.mainSetName || row.setName)),
+    row.setYear, normalizeText(row.name), normalizeCardNumber(row.cardNumber),
+  ].join('|');
+}
+
+/** Fetch image hits directly by ID, then retain checklist-family alternatives.
+ * No OCR predicate is allowed to filter these rows, including negative hints.
+ */
+export async function retrieveImageCandidateRows(cardIds: number[]): Promise<ScanCandidateRow[]> {
+  if (!cardIds.length) return [];
+  const selectRows = (condition: SQL) => db.select({
+    id: cards.id, name: cards.name, cardNumber: cards.cardNumber,
+    frontImageUrl: cards.frontImageUrl, variation: cards.variation,
+    isInsert: cards.isInsert, setName: cardSets.name, setYear: cardSets.year,
+    mainSetName: mainSets.name, isInsertSubset: cardSets.isInsertSubset,
+  }).from(cards).innerJoin(cardSets, eq(cards.setId, cardSets.id))
+    .leftJoin(mainSets, eq(cardSets.mainSetId, mainSets.id)).where(and(
+      condition, isNull(cards.archivedAt), isNull(cardSets.archivedAt), eq(cardSets.isActive, true),
+      or(isNull(mainSets.id), and(isNull(mainSets.archivedAt), eq(mainSets.isActive, true))),
+    ));
+  const hits = await selectRows(inArray(cards.id, [...new Set(cardIds)]));
+  if (!hits.length) return [];
+  const families = [...new Map(hits.map(row => [scanFamilyKey(row), row])).values()];
+  const relatives = await selectRows(or(...families.map(row => and(
+    eq(cards.name, row.name), eq(cards.cardNumber, row.cardNumber),
+    eq(cardSets.year, row.setYear),
+    row.mainSetName ? eq(mainSets.name, row.mainSetName) : eq(cardSets.name, row.setName),
+  )))!);
+  return [...new Map([...hits, ...relatives].map(row => [row.id, row])).values()];
+}
+
+/** Image similarity drives retrieval/rank; text only corroborates or flags it.
+ * Scores are ordering heuristics, never calibrated probabilities.
+ */
+export function rankImageCandidates(
+  rows: ScanCandidateRow[],
+  imageHits: { cardId: number; similarity: number }[],
+  parsed: ParsedScan,
+  metadataMatches: ScoredMatch[] = [],
+): ScoredMatch[] {
+  const similarities = new Map(imageHits.filter(hit => Number.isFinite(hit.similarity))
+    .map(hit => [hit.cardId, hit.similarity]));
+  const familySimilarity = new Map<string, number>();
+  for (const row of rows) {
+    const similarity = similarities.get(row.id);
+    if (similarity !== undefined) familySimilarity.set(scanFamilyKey(row),
+      Math.max(similarity, familySimilarity.get(scanFamilyKey(row)) ?? -1));
+  }
+  const visual: ScoredMatch[] = rows.flatMap(row => {
+    const familyKey = scanFamilyKey(row);
+    const direct = similarities.get(row.id);
+    const similarity = direct ?? familySimilarity.get(familyKey);
+    if (similarity === undefined) return [];
+    const { score, reasons } = scoreCandidate(row, parsed);
+    const conflicts = reasons.filter(reason => reason.includes('conflicts'));
+    return [{
+      cardId: row.id, name: row.name, cardNumber: row.cardNumber,
+      setName: row.setName, subsetName: row.variation || (row.isInsertSubset ? row.setName : null),
+      year: row.setYear, imageUrl: row.frontImageUrl,
+      // Keep metadata influence bounded so text cannot replace picture retrieval.
+      confidence: Math.max(1, similarity * 100 + Math.max(-12, Math.min(6, score / 20))),
+      confidenceLevel: similarity >= 0.65 ? 'medium' as const : 'low' as const,
+      retrievalSource: direct === undefined ? 'image-family' as const : 'image' as const,
+      imageSimilarity: similarity, familyKey, metadataConflicts: conflicts,
+      matchReasons: [direct === undefined
+        ? 'Checklist-family alternative; artwork alone cannot resolve the variant'
+        : 'Retrieved by catalog image similarity', ...reasons],
+    }];
+  });
+  const visualIds = new Set(visual.map(match => match.cardId));
+  return [
+    ...visual.sort((a, b) => b.confidence - a.confidence || a.cardId - b.cardId),
+    ...metadataMatches.filter(match => !visualIds.has(match.cardId)).map(match => ({
+      ...match, retrievalSource: 'metadata' as const,
+      confidence: Math.min(match.confidence, 44),
+      confidenceLevel: 'low' as const,
+      matchReasons: [...match.matchReasons, 'Text-only fallback; not retrieved by image similarity'],
+    })),
+  ];
 }

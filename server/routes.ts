@@ -2252,6 +2252,19 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
     }
   });
 
+  app.get("/api/admin/scan-image-index/status", authenticateUser, async (req: any, res) => {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    try {
+      const { getCatalogVisualStatus } = await import('./services/catalogVisual');
+      res.json(await getCatalogVisualStatus());
+    } catch (error) {
+      console.error('Scan image index status error:', error);
+      res.status(503).json({ message: 'Scan image index status is unavailable' });
+    }
+  });
+
   // Retired connector: keep legacy endpoints explicit, without loading Drive code
   // or touching the preserved Cloudinary images and import history.
   app.all("/api/admin/drive-sync/*", authenticateUser, (req: any, res) => {
