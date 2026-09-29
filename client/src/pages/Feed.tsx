@@ -429,7 +429,9 @@ function FeedDetailDialog({ detail, onClose }: { detail: FeedDetail | null; onCl
   const { data: rawCard, isLoading: cardIsLoading, isError: cardFailed } = useQuery<CardWithSet & { cardSet?: CardWithSet["set"] }>({
     queryKey: [`/api/cards/${event?.relatedId}`],
     enabled: detail?.kind === "card" && !!event?.relatedId,
-    staleTime: 5 * 60 * 1000,
+    // A newly imported front image can replace a missing/dead image at any
+    // time; don't keep a stale card snapshot when the details are reopened.
+    staleTime: 0,
   });
   const card = rawCard
     ? ({ ...rawCard, set: rawCard.set ?? rawCard.cardSet } as CardWithSet)
@@ -972,20 +974,23 @@ function GroupedBadgeCard({ group, pending, onReact, followState, onOpenDetail }
 
 function ActivityTab() {
   const [filter, setFilter] = useState<FeedFilter>("everyone");
-  const [extraEvents, setExtraEvents] = useState<FeedEvent[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
+  const [pagination, setPagination] = useState<{ key: string; events: FeedEvent[]; cursor: string | null }>({
+    key: "", events: [], cursor: null,
+  });
   const [loadingMore, setLoadingMore] = useState(false);
   const [pendingFollowUsername, setPendingFollowUsername] = useState<string | null>(null);
   const [detail, setDetail] = useState<FeedDetail | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery<FeedResponse>({
+  const { data, dataUpdatedAt, isLoading } = useQuery<FeedResponse>({
     queryKey: ["/api/feed", filter],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/feed?filter=${filter}`);
       return res.json();
     },
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const { data: followingData } = useQuery<FollowingResponse>({
@@ -1021,8 +1026,14 @@ function ActivityTab() {
       }
     : null;
 
+  // A fresh first page (including a privacy change or imported card image)
+  // invalidates *all* older local pages immediately, not only the query cache.
+  const pageKey = `${filter}:${dataUpdatedAt}`;
+  const extraEvents = pagination.key === pageKey ? pagination.events : [];
+  const nextCursor = pagination.key === pageKey
+    ? pagination.cursor ?? data?.nextCursor ?? null
+    : data?.nextCursor ?? null;
   const events = [...(data?.events ?? []), ...extraEvents];
-  const nextCursor = cursor ?? data?.nextCursor ?? null;
   const groups = useMemo(() => {
     const g = groupEvents(events);
     // "Me" keeps strict history order; Everyone (and other filters) prioritize variety.
@@ -1036,22 +1047,27 @@ function ActivityTab() {
   const changeFilter = (f: FeedFilter) => {
     pageSessionRef.current++;
     setFilter(f);
-    setExtraEvents([]);
-    setCursor(null);
+    setPagination({ key: "", events: [], cursor: null });
     setLoadingMore(false);
   };
 
   const loadMore = async () => {
     if (!nextCursor || loadingMore) return;
     const session = pageSessionRef.current;
+    const requestedPageKey = pageKey;
     setLoadingMore(true);
     try {
       const res = await apiRequest("GET", `/api/feed?filter=${filter}&before=${encodeURIComponent(nextCursor)}`);
       const page: FeedResponse = await res.json();
-      if (session !== pageSessionRef.current) return; // filter changed mid-flight
-      setExtraEvents(prev => [...prev, ...page.events]);
-      setCursor(page.nextCursor ?? "");
-      if (!page.nextCursor) setCursor("");
+      // A refetch may replace the first page while this older cursor is in
+      // flight. Never append that stale page to the fresh feed.
+      if (session !== pageSessionRef.current
+          || `${filter}:${queryClient.getQueryState(["/api/feed", filter])?.dataUpdatedAt ?? 0}` !== requestedPageKey) return;
+      setPagination(prev => ({
+        key: requestedPageKey,
+        events: [...(prev.key === requestedPageKey ? prev.events : []), ...page.events],
+        cursor: page.nextCursor ?? "",
+      }));
     } catch {
       if (session === pageSessionRef.current) {
         toast({ title: "Could not load more", variant: "destructive" });
@@ -1090,8 +1106,7 @@ function ActivityTab() {
     if (refreshing) return;
     setRefreshing(true);
     pageSessionRef.current++; // cancel any in-flight loadMore append
-    setExtraEvents([]);
-    setCursor(null);
+    setPagination({ key: "", events: [], cursor: null });
     setLoadingMore(false);
     try {
       await Promise.all([
@@ -1139,7 +1154,10 @@ function ActivityTab() {
       queryClient.setQueryData<FeedResponse>(["/api/feed", filter], (old) =>
         old ? { ...old, events: old.events.map(patch) } : old,
       );
-      setExtraEvents(prev => prev.map(patch));
+      const updatedPageKey = `${filter}:${queryClient.getQueryState(["/api/feed", filter])?.dataUpdatedAt ?? 0}`;
+      setPagination(prev => prev.key === pageKey
+        ? { ...prev, key: updatedPageKey, events: prev.events.map(patch) }
+        : prev);
       if (result.xpAwarded > 0) {
         toast({ title: `+${result.xpAwarded} XP`, description: "Thanks for cheering on a fellow collector!" });
       }

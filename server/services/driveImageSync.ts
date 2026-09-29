@@ -161,6 +161,19 @@ async function getFolderMeta(folderId: string): Promise<DriveItem> {
   return driveFetch(url, `Get folder metadata (${folderId})`);
 }
 
+/** Read-only folder visibility diagnostic using exactly the importer's service-account auth.
+ * A missing child means "not visible under this parent", not "does not exist in Drive".
+ */
+export async function listDriveFolderForDiagnosis(folderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID): Promise<{
+  folder: DriveItem;
+  children: DriveItem[];
+}> {
+  if (!folderId) throw new Error('GOOGLE_DRIVE_ROOT_FOLDER_ID is not configured');
+  const folder = await getFolderMeta(folderId);
+  if (folder.mimeType !== FOLDER_MIME) throw new Error(`Drive item "${folder.name}" is not a folder`);
+  return { folder, children: await listChildren(folderId) };
+}
+
 // ---------- Durable job status/progress (DB-backed) ----------
 // Progress survives autoscale instance changes and restarts. The report
 // endpoints read from these rows, not only from process memory.
@@ -600,6 +613,26 @@ function normalize(s: string): string {
   return s.toLowerCase().replace(/[’']/g, "'").replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * Visibility is scoped to the configured root and the service account.
+ * An unseen DB set might live elsewhere, be nested under a wrapper, or not
+ * be shared with the service account; this is NOT an existence check.
+ */
+export function describeDirectRootSetVisibility(
+  rootFolders: Array<{ name: string }>,
+  databaseMainSets: Array<{ id: number; name: string }>,
+): {
+  visibleUnmatchedRootFolders: string[];
+  databaseMainSetsNotVisibleAsDirectChildren: Array<{ id: number; name: string }>;
+} {
+  const visible = new Set(rootFolders.map(f => normalize(f.name)));
+  const known = new Set(databaseMainSets.map(s => normalize(s.name)));
+  return {
+    visibleUnmatchedRootFolders: rootFolders.filter(f => !known.has(normalize(f.name))).map(f => f.name),
+    databaseMainSetsNotVisibleAsDirectChildren: databaseMainSets.filter(s => !visible.has(normalize(s.name))),
+  };
+}
+
 function normalizeCardNumber(s: string): string {
   // "Card 53", "#53", "053" style folder names → strict-comparable form
   const cleaned = s.trim().replace(/^card\s+/i, '').replace(/^#/, '').trim();
@@ -693,6 +726,8 @@ export interface DriveDryRunReport {
   mode: 'incremental' | 'full_audit';
   batchId?: string;
   rootFolder: { id: string; name: string };
+  // Root-direct visibility only; unseen sets are NOT asserted absent from Drive.
+  rootVisibility: ReturnType<typeof describeDirectRootSetVisibility>;
   truncated: boolean;
   incomplete: boolean; // true if any scan error forced an unsafe subtree to be skipped
   scanErrors: ScanError[];
@@ -813,6 +848,7 @@ export async function runDriveImageSyncDryRun(opts: DriveScanOptions = {}): Prom
       throw new Error(`Failed to list root folder "${rootMeta.name}": ${scanErrors[scanErrors.length - 1]?.error || 'unknown'}`);
     }
     const firstLevel = rootListing.items.filter(i => i.mimeType === FOLDER_MIME);
+    const rootVisibility = describeDirectRootSetVisibility(firstLevel, allMainSets);
 
     const report: DriveDryRunReport = {
       ranAt: new Date().toISOString(),
@@ -820,6 +856,7 @@ export async function runDriveImageSyncDryRun(opts: DriveScanOptions = {}): Prom
       mode,
       batchId: tracker?.batchId,
       rootFolder: { id: rootMeta.id, name: rootMeta.name.trim() },
+      rootVisibility,
       truncated: false,
       incomplete: false,
       scanErrors,

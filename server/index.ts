@@ -914,46 +914,6 @@ server.listen({
       console.error('Failed to start image migration cron:', error);
     });
 
-    // TEMP (dev-only): run Drive Image Sync dry-run at boot when the flag file
-    // exists. Read-only scan; report written to /tmp. Remove after v1 review.
-    if (process.env.NODE_ENV === 'development') {
-      try {
-        if (fs.existsSync('/tmp/run_drive_dryrun')) {
-          fs.unlinkSync('/tmp/run_drive_dryrun');
-          import('./services/driveImageSync').then(async ({ runDriveImageSyncDryRun }) => {
-            const report = await runDriveImageSyncDryRun();
-            fs.writeFileSync('/tmp/drive_dryrun_report.json', JSON.stringify(report, null, 2));
-            console.log('[DriveSync] Dry-run report written to /tmp/drive_dryrun_report.json');
-          }).catch((error) => {
-            console.error('[DriveSync] Dev boot dry-run failed:', error);
-          });
-        }
-        if (fs.existsSync('/tmp/run_drive_cleanup')) {
-          fs.unlinkSync('/tmp/run_drive_cleanup');
-          import('./services/driveImageSync').then(async ({ buildDriveCleanupReport }) => {
-            const cleanup = await buildDriveCleanupReport();
-            fs.writeFileSync('/tmp/drive_cleanup_report.json', JSON.stringify(cleanup, null, 2));
-            console.log('[DriveSync] Cleanup report written to /tmp/drive_cleanup_report.json');
-          }).catch((error) => {
-            console.error('[DriveSync] Dev boot cleanup report failed:', error);
-          });
-        }
-        if (fs.existsSync('/tmp/run_drive_import_test')) {
-          fs.unlinkSync('/tmp/run_drive_import_test');
-          import('./services/driveImageSync').then(async ({ runDriveImageImport }) => {
-            const report = await runDriveImageImport({ maxFolders: 5, overwrite: false });
-            fs.writeFileSync('/tmp/drive_import_test_report.json', JSON.stringify(report, null, 2));
-            console.log('[DriveImport] Test import report written to /tmp/drive_import_test_report.json');
-          }).catch((error) => {
-            console.error('[DriveImport] Dev boot test import failed:', error);
-          });
-        }
-      } catch (e) {
-        console.error('[DriveSync] Dev boot trigger check failed:', e);
-      }
-    }
-    
-
   // Handle uncaught exceptions and unhandled rejections to prevent crashes
   process.on('uncaughtException', (error) => {
     console.error('Uncaught Exception:', error);

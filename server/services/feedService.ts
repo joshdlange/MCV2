@@ -60,7 +60,9 @@ export function resolveVisibleFeedRelation(args: {
   if (args.relatedType === 'card' && args.relatedId) {
     return { relatedType: 'card', relatedId: args.relatedId };
   }
-  if (args.eventType === 'first_card' && args.firstCardId) {
+  // A fallback is only valid for truly relation-less legacy events. Never
+  // replace another persisted relationship with the collector's current card.
+  if (args.eventType === 'first_card' && !args.relatedType && !args.relatedId && args.firstCardId) {
     return { relatedType: 'card', relatedId: args.firstCardId };
   }
   return { relatedType: args.relatedType, relatedId: args.relatedId };
@@ -273,7 +275,6 @@ export async function getFeedPage(opts: {
 
   // Visual enrichment (read time, so backfilled events get images too).
   // Only public-safe imagery: badge icons, card fronts from the shared card DB.
-  const imageByEvent: Record<number, string | null> = {};
   const badgeIds = Array.from(new Set(rows.filter(r => r.relatedType === 'badge' && r.relatedId).map(r => r.relatedId as number)));
   const canExposeCard = (row: typeof rows[number]) =>
     row.userId === opts.viewerId || row.showCollection === true;
@@ -282,14 +283,14 @@ export async function getFeedPage(opts: {
       .filter(r => r.relatedType === 'card' && r.relatedId && canExposeCard(r))
       .map(r => r.relatedId as number),
   ));
-  const firstCardUserIds = Array.from(new Set(
+  const legacyFirstCardEventIds = Array.from(new Set(
     rows
       .filter(r =>
         r.eventType === 'first_card'
-        && !(r.relatedType === 'card' && r.relatedId)
+        && !r.relatedType && !r.relatedId
         && canExposeCard(r),
       )
-      .map(r => r.userId),
+      .map(r => r.id),
   ));
 
   const [badgeIcons, cardImages, firstCards] = await Promise.all([
@@ -299,15 +300,27 @@ export async function getFeedPage(opts: {
     cardIds.length > 0
       ? db.execute(sql`SELECT id, front_image_url FROM cards WHERE id IN (${sql.join(cardIds.map(id => sql`${id}`), sql`, `)})`)
       : Promise.resolve({ rows: [] } as any),
-    firstCardUserIds.length > 0
+    legacyFirstCardEventIds.length > 0
       ? db.execute(sql`
-          SELECT DISTINCT ON (uc.user_id) uc.user_id, c.id AS card_id, c.front_image_url
-          FROM user_collections uc
-          JOIN cards c ON c.id = uc.card_id
-          JOIN users u ON u.id = uc.user_id
-          WHERE uc.user_id IN (${sql.join(firstCardUserIds.map(id => sql`${id}`), sql`, `)})
-            AND (u.show_collection = true OR uc.user_id = ${opts.viewerId})
-          ORDER BY uc.user_id, uc.id ASC`)
+          SELECT fe.id AS event_id, c.id AS card_id, c.front_image_url
+          FROM feed_events fe
+          JOIN users u ON u.id = fe.user_id
+          JOIN LATERAL (
+            SELECT card_id, created_at FROM xp_events
+            WHERE user_id = fe.user_id AND event_type = 'card_added'
+            ORDER BY created_at ASC, id ASC LIMIT 1
+          ) xp ON xp.created_at BETWEEN fe.created_at - INTERVAL '30 seconds'
+                                      AND fe.created_at
+          JOIN cards c ON c.id = xp.card_id
+          WHERE fe.id IN (${sql.join(legacyFirstCardEventIds.map(id => sql`${id}`), sql`, `)})
+            AND (u.show_collection = true OR fe.user_id = ${opts.viewerId})
+            AND NOT EXISTS (
+              SELECT 1 FROM xp_events other
+              WHERE other.user_id = fe.user_id AND other.event_type = 'card_added'
+                AND other.card_id IS DISTINCT FROM xp.card_id
+                AND other.created_at BETWEEN fe.created_at - INTERVAL '30 seconds'
+                                         AND fe.created_at + INTERVAL '30 seconds'
+            )`)
       : Promise.resolve({ rows: [] } as any),
   ]);
 
@@ -367,26 +380,21 @@ export async function getFeedPage(opts: {
       ? c.front_image_url
       : null;
   }
-  const firstCardByUser: Record<number, { image: string | null; cardId: number | null }> = {};
+  const firstCardByEvent: Record<number, { image: string | null; cardId: number | null }> = {};
   for (const f of (firstCards as any).rows ?? []) {
-    firstCardByUser[Number(f.user_id)] = {
+    firstCardByEvent[Number(f.event_id)] = {
       image: isDisplayableCardImageUrl(f.front_image_url) ? f.front_image_url : null,
       cardId: f.card_id ? Number(f.card_id) : null,
     };
   }
 
-  for (const r of rows) {
-    if (r.relatedType === 'badge' && r.relatedId) imageByEvent[r.id] = badgeIconById[r.relatedId] ?? null;
-    else if (r.relatedType === 'card' && r.relatedId && canExposeCard(r)) imageByEvent[r.id] = cardImageById[r.relatedId] ?? null;
-    else if (r.eventType === 'first_card') imageByEvent[r.id] = firstCardByUser[r.userId]?.image ?? null;
-    else imageByEvent[r.id] = null;
-  }
-
   return rows.map(r => {
-    // first_card events don't store the card at emit time — surface the
-    // resolved first card as the related entity so the client can open the
-    // same card-detail popup used everywhere else.
-    const firstCard = r.eventType === 'first_card' ? firstCardByUser[r.userId] : undefined;
+    // Persisted relationships win. Relation-less historical events use the
+    // earliest surviving card-added ledger entry only if it predates this
+    // event by at most 30 seconds and has no nearby competing card evidence.
+    // The ledger is best-effort/backfilled for old users: when it cannot prove
+    // identity, leave the card unresolved rather than guessing.
+    const firstCard = r.eventType === 'first_card' ? firstCardByEvent[r.id] : undefined;
     const relation = resolveVisibleFeedRelation({
       eventType: r.eventType,
       relatedType: r.relatedType,
@@ -394,6 +402,11 @@ export async function getFeedPage(opts: {
       firstCardId: firstCard?.cardId,
       canExposeCard: canExposeCard(r),
     });
+    const image = relation.relatedType === 'badge' && relation.relatedId
+      ? badgeIconById[relation.relatedId] ?? null
+      : relation.relatedType === 'card' && relation.relatedId
+        ? (r.relatedType === 'card' ? cardImageById[relation.relatedId] : firstCard?.image) ?? null
+        : null;
     const binderId = binderIdByEvent[r.id];
     return {
     id: r.id,
@@ -402,7 +415,7 @@ export async function getFeedPage(opts: {
     metadata: r.metadata ? safeParse(r.metadata) : null,
     relatedType: relation.relatedType,
     relatedId: relation.relatedId,
-    image: imageByEvent[r.id] ?? null,
+    image,
     previewImages: binderId ? (previewsByBinder[binderId] ?? null) : null,
     createdAt: r.createdAt,
     user: {
@@ -769,25 +782,15 @@ export async function setFeedEventHidden(id: number, hidden: boolean): Promise<b
 
 /**
  * Backfill: last 90 days of badges/binders/shares/approved images + all-time
- * collection milestones (first card, reliably reconstructable
- * from user_collections ordered by created date). Dedupe keys make the confirm
+ * historical achievements. First-card events are not backfilled: editable
+ * acquired_date and removed cards cannot prove which card was actually first.
+ * Dedupe keys make the confirm
  * run idempotent; dry run writes NOTHING and only counts what a real run would
  * insert. Privacy is enforced at read time, so backfill inserts for everyone
  * but hidden/private users never appear publicly.
  */
 export async function runFeedBackfill(dryRun: boolean): Promise<Record<string, number>> {
   const candidates: { key: string; sql: ReturnType<typeof sql> }[] = [
-    {
-      key: 'first_card',
-      sql: sql`
-        SELECT user_id, 'first_card' AS event_type,
-          'added their first card to the Vault' AS title,
-          NULL AS metadata, NULL AS related_type, NULL::int AS related_id,
-          'first_card:' || user_id AS dedupe_key,
-          min(acquired_date) AS created_at
-        FROM user_collections GROUP BY user_id
-      `,
-    },
     // collection_milestone intentionally absent: every threshold now has a
     // real badge whose badge_earned post covers the moment.
     {

@@ -1,9 +1,11 @@
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { db } from "../db";
 import { storage } from "../storage";
 import { CollectionLimitExceededError } from "../storage";
+import { getFeedPage } from "../services/feedService";
+import { isDisplayableCardImageUrl } from "../../shared/cardImageUrls";
 import {
   cards,
   feedEvents,
@@ -118,4 +120,80 @@ test("feed card actions are idempotent and owner-scoped", async () => {
 
   assert.equal(await storage.removeFromCollection(collectionA.id, ownerId), true);
   assert.equal(await storage.removeFromWishlist(wishlistA.id, ownerId), true);
+});
+
+test("feed images and exact card IDs are resolved at read time and collection privacy is enforced", async () => {
+  const [imageCard] = await db
+    .select({ id: cards.id, frontImageUrl: cards.frontImageUrl })
+    .from(cards)
+    .where(and(isNull(cards.archivedAt), isNotNull(cards.frontImageUrl)))
+    .limit(1);
+  if (!imageCard || !isDisplayableCardImageUrl(imageCard.frontImageUrl)) {
+    throw new Error("An active card with a usable image is required for feed enrichment tests");
+  }
+  const acquiredDate = new Date();
+  await db.insert(userCollections).values({ userId: ownerId, cardId: imageCard.id, acquiredDate });
+  await db.insert(userCollections).values({ userId: otherUserId, cardId: imageCard.id, acquiredDate });
+  await db.insert(xpEvents).values({
+    userId: otherUserId, eventType: "card_added", cardId: imageCard.id, points: 1, createdAt: acquiredDate,
+  });
+  const [legacy] = await db.insert(feedEvents).values({
+    userId: otherUserId,
+    eventType: "first_card",
+    title: "added their first card",
+    dedupeKey: `${tag}-legacy`,
+    createdAt: acquiredDate,
+  }).returning({ id: feedEvents.id });
+  const [exact] = await db.insert(feedEvents).values({
+    userId: ownerId,
+    eventType: "image_approved",
+    title: "contributed an image",
+    relatedType: "card",
+    relatedId: imageCard.id,
+    dedupeKey: `${tag}-exact`,
+  }).returning({ id: feedEvents.id });
+
+  const asOther = await getFeedPage({ viewerId: ownerId, filter: "everyone" });
+  for (const id of [legacy.id, exact.id]) {
+    const event = asOther.find(e => e.id === id);
+    assert.equal(event?.relatedId, imageCard.id);
+    assert.equal(event?.image, imageCard.frontImageUrl);
+  }
+
+  await db.update(users).set({ showCollection: false }).where(eq(users.id, ownerId));
+  await db.update(users).set({ showCollection: false }).where(eq(users.id, otherUserId));
+  const hidden = await getFeedPage({ viewerId: otherUserId, filter: "me" });
+  const hiddenExact = (await getFeedPage({ viewerId: otherUserId, filter: "everyone" })).find(e => e.id === exact.id);
+  assert.equal(hiddenExact?.relatedId, null);
+  assert.equal(hiddenExact?.image, null);
+  const ownerEvents = await getFeedPage({ viewerId: ownerId, filter: "me" });
+  assert.equal(ownerEvents.find(e => e.id === exact.id)?.relatedId, imageCard.id);
+  assert.equal(hidden.find(e => e.id === legacy.id)?.relatedId, imageCard.id);
+  const hiddenLegacy = (await getFeedPage({ viewerId: ownerId, filter: "everyone" })).find(e => e.id === legacy.id);
+  assert.equal(hiddenLegacy?.relatedId, null);
+  assert.equal(hiddenLegacy?.image, null);
+
+  const competingCardId = otherCardId !== imageCard.id ? otherCardId : cardId;
+  if (competingCardId === imageCard.id) throw new Error("A distinct card is required to test ambiguous legacy events");
+  await db.insert(xpEvents).values({
+    userId: otherUserId, eventType: "card_added", cardId: competingCardId, points: 1,
+    createdAt: new Date(acquiredDate.getTime() + 5000),
+  });
+  const ambiguous = (await getFeedPage({ viewerId: otherUserId, filter: "me" })).find(e => e.id === legacy.id);
+  assert.equal(ambiguous?.relatedId, null);
+  assert.equal(ambiguous?.image, null);
+
+  // A surviving card acquired well after a legacy event isn't evidence that
+  // it was the first card shown in that event.
+  const [staleLegacy] = await db.insert(feedEvents).values({
+    userId: otherUserId,
+    eventType: "first_card",
+    title: "added their first card",
+    dedupeKey: `${tag}-stale-legacy`,
+    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+  }).returning({ id: feedEvents.id });
+  const [unresolved] = (await getFeedPage({ viewerId: otherUserId, filter: "me" }))
+    .filter(e => e.id === staleLegacy.id);
+  assert.equal(unresolved?.relatedId, null);
+  assert.equal(unresolved?.image, null);
 });

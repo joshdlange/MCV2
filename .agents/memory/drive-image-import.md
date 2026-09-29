@@ -2,6 +2,9 @@
 name: Drive image import safety pattern
 description: Rules approved for the Drive → Cloudinary card image importer and its idempotency ledger
 ---
+- **Retired product direction:** The user explicitly replaced Ali's Drive import workflow with Image Admin. Do not resume archive recovery or require Drive access for Scan to Add.
+- **Why:** A legacy restoration task distracted from shipping collector-facing scan improvements after the image work was already addressed through Image Admin.
+- **How to apply:** Preserve existing imported images and history. Treat the importer safety notes below as historical maintenance guidance, not authorization to reconnect or run imports.
 - Front/back rule (user-approved): with exactly 2 images, a filename marked FRONT/BACK wins its side and the unmarked file is the opposite side. Sort order alone is NOT an approved basis — never use it without explicit new approval.
 - **Why:** Alphabetical order put BACK files first in real data; wrong proposals were caught in review.
 - One-image rule (user-approved): a card folder containing exactly one image means that image is the card front, even when the filename itself is unlabelled.

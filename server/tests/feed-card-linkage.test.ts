@@ -38,6 +38,24 @@ test("a persisted first-card ID wins over the legacy fallback", () => {
   assert.deepEqual(relation, { relatedType: "card", relatedId: 535657 });
 });
 
+test("legacy resolution never substitutes a different persisted relationship", () => {
+  assert.deepEqual(resolveVisibleFeedRelation({
+    eventType: "first_card",
+    relatedType: "badge",
+    relatedId: 16,
+    firstCardId: 79703,
+    canExposeCard: true,
+  }), { relatedType: "badge", relatedId: 16 });
+
+  assert.deepEqual(resolveVisibleFeedRelation({
+    eventType: "first_card",
+    relatedType: null,
+    relatedId: null,
+    firstCardId: null,
+    canExposeCard: true,
+  }), { relatedType: null, relatedId: null });
+});
+
 test("card relationships remain visible to their owner when collection sharing is off", () => {
   const relation = resolveVisibleFeedRelation({
     eventType: "first_card",
@@ -59,4 +77,14 @@ test("card relationships are removed for other viewers when collection sharing i
   });
 
   assert.deepEqual(relation, { relatedType: null, relatedId: null });
+});
+
+test("a hidden legacy first card never exposes its fallback ID", () => {
+  assert.deepEqual(resolveVisibleFeedRelation({
+    eventType: "first_card",
+    relatedType: null,
+    relatedId: null,
+    firstCardId: 79703,
+    canExposeCard: false,
+  }), { relatedType: null, relatedId: null });
 });
