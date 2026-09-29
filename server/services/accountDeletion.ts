@@ -565,6 +565,29 @@ async function finalizeAccountDataDeletion(job: AccountDeletionJob): Promise<Acc
     await tx.delete(schema.userWishlists).where(eq(schema.userWishlists.userId, userId));
     await tx.delete(schema.userCollections).where(eq(schema.userCollections.userId, userId));
 
+    // PowerBlast's absorbed collection rows were copied into text JSON audit
+    // notes before their original rows were removed. These snapshots contain
+    // private notes, serials and values; adminUserId is not their owner.
+    // Parse the text rather than casting it to jsonb in SQL so malformed
+    // historical notes cannot abort account deletion.
+    const foldAudits = await tx
+      .select({ id: schema.adminAuditLogs.id, notes: schema.adminAuditLogs.notes })
+      .from(schema.adminAuditLogs)
+      .where(eq(schema.adminAuditLogs.actionType, "legacy_powerblast_collection_fold"));
+    const ownedFoldIds = foldAudits.flatMap(({ id, notes }) => {
+      if (!notes) return [];
+      try {
+        const detail: unknown = JSON.parse(notes);
+        return detail !== null && typeof detail === "object" && !Array.isArray(detail)
+          && "ownerId" in detail && detail.ownerId === userId ? [id] : [];
+      } catch {
+        return [];
+      }
+    });
+    if (ownedFoldIds.length > 0) {
+      await tx.delete(schema.adminAuditLogs).where(inArray(schema.adminAuditLogs.id, ownedFoldIds));
+    }
+
     // Preserve operational records without retaining a foreign-key link to a
     // deleted administrator.
     await tx

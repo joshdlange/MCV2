@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { eq, or } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { db } from "../db";
+import { repair1994FlairPowerBlast } from "../seeds/mergeDuplicateLegacySets";
 import {
   AccountDeletionPendingError,
   accountDeletionRecipientHash,
@@ -11,6 +12,135 @@ import {
   type DeleteAccountOptions,
 } from "../services/accountDeletion";
 import * as schema from "../../shared/schema";
+
+test("PowerBlast fold snapshots are removed only for the deleted collection owner", async () => {
+  const sourceSlug = "1994-1994-flair-marvel-annual-flair-marvel-universe-powerblast";
+  const targetSlug = "1994-flair-marvel-annual-flair-marvel-universe-powerblast";
+  const tag = `deletion-powerblast-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const names = [
+    "Cable", "Cyclops", "Iron Man", "Magneto", "Phoenix", "Storm",
+    "Venom", "Wolverine", "Ghost Rider", "Punisher", "Captain America",
+    "Gambit", "Thor", "Silver Surfer", "Spider-Man", "Deadpool",
+    "Invisible Woman", "Dr. Doom",
+  ];
+  let fixture: {
+    ownerId: number; otherId: number; email: string;
+    setIds: number[]; sourceCardIds: number[]; collectionIds: number[];
+    renamedSets: Array<{ id: number; slug: string }>;
+    privateAuditId: number; otherAuditId: number; malformedAuditId: number;
+  } | undefined;
+
+  try {
+    fixture = await db.transaction(async (tx) => {
+      const originalSets = await tx.select({ id: schema.cardSets.id, slug: schema.cardSets.slug })
+        .from(schema.cardSets).where(inArray(schema.cardSets.slug, [sourceSlug, targetSlug]));
+      for (const set of originalSets) {
+        await tx.update(schema.cardSets).set({ slug: `${tag}-${set.slug}` })
+          .where(eq(schema.cardSets.id, set.id));
+      }
+      const [source, target] = await tx.insert(schema.cardSets).values([
+        { slug: sourceSlug, name: `${tag} source`, year: 1994, totalCards: 20 },
+        { slug: targetSlug, name: `${tag} target`, year: 1994, totalCards: 18 },
+      ]).returning();
+      const targets = await tx.insert(schema.cards).values(names.map((name, index) => ({
+        setId: target.id, cardNumber: String(index + 1), name, rarity: "Common",
+      }))).returning();
+      const sources = await tx.insert(schema.cards).values([
+        ...names.map((name, index) => ({
+          setId: source.id, cardNumber: String(index + 1), name, rarity: "Common",
+        })),
+        { setId: source.id, cardNumber: "2", name: "Punisher", rarity: "Common" },
+        { setId: source.id, cardNumber: "6", name: "Spider-Man", rarity: "Common" },
+      ]).returning();
+      const [owner, other] = await tx.insert(schema.users).values([
+        { firebaseUid: `${tag}-owner`, username: `owner_${tag}`.slice(0, 40),
+          email: `${tag}-owner@example.test` },
+        { firebaseUid: `${tag}-other`, username: `other_${tag}`.slice(0, 40),
+          email: `${tag}-other@example.test` },
+      ]).returning();
+      const collections = await tx.insert(schema.userCollections).values([
+        { userId: owner.id, cardId: targets[9].id, quantity: 1 },
+        { userId: owner.id, cardId: sources[18].id, quantity: 2,
+          notes: "PRIVATE-owner-note", serialNumber: "PRIVATE-owner-serial",
+          personalValue: "987.65" },
+        { userId: other.id, cardId: targets[14].id, quantity: 1 },
+        { userId: other.id, cardId: sources[19].id, quantity: 3,
+          notes: "PRIVATE-other-note", serialNumber: "PRIVATE-other-serial",
+          personalValue: "123.45" },
+      ]).returning();
+      await repair1994FlairPowerBlast(tx);
+      const audits = await tx.select().from(schema.adminAuditLogs)
+        .where(eq(schema.adminAuditLogs.actionType, "legacy_powerblast_collection_fold"));
+      const privateAudit = audits.find(a => a.entityId === collections[1].id);
+      const otherAudit = audits.find(a => a.entityId === collections[3].id);
+      assert.ok(privateAudit?.notes?.includes("PRIVATE-owner-note"));
+      assert.ok(privateAudit.notes.includes("PRIVATE-owner-serial"));
+      assert.ok(privateAudit.notes.includes("987.65"));
+      assert.ok(otherAudit?.notes?.includes("PRIVATE-other-note"));
+      const [malformed] = await tx.insert(schema.adminAuditLogs).values({
+        actionType: "legacy_powerblast_collection_fold", entityType: "user_collection",
+        entityId: collections[1].id, notes: `{"ownerId":${owner.id},"absorbedRow":`,
+      }).returning();
+      return {
+        ownerId: owner.id, otherId: other.id, email: owner.email,
+        setIds: [source.id, target.id], sourceCardIds: sources.map(c => c.id),
+        collectionIds: collections.map(c => c.id),
+        renamedSets: originalSets,
+        privateAuditId: privateAudit.id, otherAuditId: otherAudit.id,
+        malformedAuditId: malformed.id,
+      };
+    });
+
+    const result = await deleteAccountPermanently({
+      userId: fixture.ownerId, source: "self_service",
+      dependencies: {
+        deleteFirebaseUser: async () => {},
+        sendNotificationEmail: async () => "sent",
+      },
+    });
+    assert.equal(result.status, "completed");
+    const [privateAudit, otherAudit, malformedAudit, mergeAudits] = await Promise.all([
+      db.select().from(schema.adminAuditLogs).where(eq(schema.adminAuditLogs.id, fixture.privateAuditId)),
+      db.select().from(schema.adminAuditLogs).where(eq(schema.adminAuditLogs.id, fixture.otherAuditId)),
+      db.select().from(schema.adminAuditLogs).where(eq(schema.adminAuditLogs.id, fixture.malformedAuditId)),
+      db.select().from(schema.adminAuditLogs).where(
+        inArray(schema.adminAuditLogs.entityId, fixture.sourceCardIds)),
+    ]);
+    assert.equal(privateAudit.length, 0, "Deleted owner's absorbed private snapshot must be gone");
+    assert.equal(otherAudit.length, 1);
+    assert.ok(otherAudit[0].notes?.includes("PRIVATE-other-serial"));
+    assert.ok(otherAudit[0].notes?.includes("123.45"));
+    assert.equal(malformedAudit.length, 1, "Malformed text JSON must not abort deletion");
+    assert.equal(mergeAudits.filter(a => a.actionType === "legacy_powerblast_card_merge").length, 20,
+      "Nonpersonal merge audit must remain");
+  } finally {
+    if (fixture) {
+      await db.transaction(async (tx) => {
+        await tx.delete(schema.adminAuditLogs).where(inArray(schema.adminAuditLogs.id,
+          [fixture!.privateAuditId, fixture!.otherAuditId, fixture!.malformedAuditId]));
+        await tx.delete(schema.adminAuditLogs).where(
+          inArray(schema.adminAuditLogs.entityId, fixture!.sourceCardIds));
+        await tx.delete(schema.adminAuditLogs).where(and(
+          eq(schema.adminAuditLogs.actionType, "delete_user_account"),
+          eq(schema.adminAuditLogs.entityId, fixture!.ownerId),
+        ));
+        await tx.delete(schema.userCollections).where(eq(schema.userCollections.userId, fixture!.otherId));
+        await tx.delete(schema.users).where(inArray(schema.users.id, [fixture!.ownerId, fixture!.otherId]));
+        await tx.delete(schema.cards).where(inArray(schema.cards.setId, fixture!.setIds));
+        await tx.delete(schema.cardSets).where(inArray(schema.cardSets.id, fixture!.setIds));
+        for (const { id, slug } of fixture!.renamedSets) {
+          await tx.update(schema.cardSets).set({ slug }).where(eq(schema.cardSets.id, id));
+        }
+      });
+      await db.delete(schema.accountDeletionJobs).where(
+        eq(schema.accountDeletionJobs.userId, fixture.ownerId));
+      await db.delete(schema.accountDeletionEmailSuppressions).where(eq(
+        schema.accountDeletionEmailSuppressions.recipientHash,
+        accountDeletionRecipientHash(fixture.email),
+      ));
+    }
+  }
+});
 
 test("permanent account deletion removes linked and decoupled user data", async () => {
   const suffix = `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;

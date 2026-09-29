@@ -2336,9 +2336,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
           cs.description as "setDescription", cs.image_url as "setImageUrl",
           cs.total_cards as "setTotalCards", cs.main_set_id as "setMainSetId"
         FROM cards c
-        LEFT JOIN card_sets cs ON c.set_id = cs.id
+        JOIN card_sets cs ON c.set_id = cs.id
         WHERE c.set_id = ${setId}
           AND c.archived_at IS NULL
+          AND cs.is_active = true AND cs.archived_at IS NULL
         ORDER BY
           ${cardNumberNaturalSortKey(sql`c.card_number`)},
           lower(c.card_number), c.id
@@ -2347,8 +2348,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       
       const countResult = await db.execute(sql`
         SELECT COUNT(*)::int as total
-        FROM cards
-        WHERE set_id = ${setId} AND archived_at IS NULL
+        FROM cards c
+        JOIN card_sets cs ON c.set_id = cs.id
+        WHERE c.set_id = ${setId} AND c.archived_at IS NULL
+          AND cs.is_active = true AND cs.archived_at IS NULL
       `);
       
       const cards = result.rows.map((row: any) => ({
@@ -3889,7 +3892,6 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       const search = req.query.search as string;
 
       
-      
       const result = await optimizedStorage.getCardsPaginated(page, pageSize, {
         setId,
         rarity,
@@ -3916,7 +3918,6 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       const page = parseInt(req.query.page as string) || 1;
       const pageSize = Math.min(parseInt(req.query.pageSize as string) || 50, 100);
 
-      
       
       const result = await optimizedStorage.getUserCollectionPaginated(
         req.user.id,
@@ -4013,7 +4014,6 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       }
 
       
-      
       const results = await optimizedStorage.searchCardsOptimized(query, limit, {
         setId,
         isInsert
@@ -4037,7 +4037,6 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       const limit = Math.min(parseInt(req.query.limit as string) || 10, 20);
 
       
-      
       const results = await optimizedStorage.getTrendingCardsOptimized(limit);
 
       const performanceDuration = Date.now() - performanceStart;
@@ -4057,7 +4056,6 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
     try {
       const limit = Math.min(parseInt(req.query.limit as string) || 10, 20);
 
-      
       
       const results = await optimizedStorage.getRecentCardsOptimized(req.user.id, limit);
 
@@ -6910,7 +6908,6 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       }
       
       
-      
       const results = [];
       
       // Test 1: Cold performance
@@ -8924,20 +8921,24 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       const search = ((req.query.search as string) || "").trim();
       const result = search
         ? await db.execute(sql`
-            SELECT id, name, card_number AS "cardNumber", front_image_url AS "frontImageUrl",
-                   variation, is_insert AS "isInsert"
-            FROM cards
-            WHERE set_id = ${setId}
-              AND (name ILIKE ${'%' + search + '%'} OR card_number ILIKE ${'%' + search + '%'})
-            ORDER BY ${cardNumberNaturalSortKey(sql`card_number`)}, lower(card_number), id
+            SELECT c.id, c.name, c.card_number AS "cardNumber", c.front_image_url AS "frontImageUrl",
+                   c.variation, c.is_insert AS "isInsert"
+            FROM cards c
+            JOIN card_sets cs ON cs.id = c.set_id
+            WHERE c.set_id = ${setId} AND c.archived_at IS NULL
+              AND cs.is_active = true AND cs.archived_at IS NULL
+              AND (c.name ILIKE ${'%' + search + '%'} OR c.card_number ILIKE ${'%' + search + '%'})
+            ORDER BY ${cardNumberNaturalSortKey(sql`c.card_number`)}, lower(c.card_number), c.id
             LIMIT 100
           `)
         : await db.execute(sql`
-            SELECT id, name, card_number AS "cardNumber", front_image_url AS "frontImageUrl",
-                   variation, is_insert AS "isInsert"
-            FROM cards
-            WHERE set_id = ${setId}
-            ORDER BY ${cardNumberNaturalSortKey(sql`card_number`)}, lower(card_number), id
+            SELECT c.id, c.name, c.card_number AS "cardNumber", c.front_image_url AS "frontImageUrl",
+                   c.variation, c.is_insert AS "isInsert"
+            FROM cards c
+            JOIN card_sets cs ON cs.id = c.set_id
+            WHERE c.set_id = ${setId} AND c.archived_at IS NULL
+              AND cs.is_active = true AND cs.archived_at IS NULL
+            ORDER BY ${cardNumberNaturalSortKey(sql`c.card_number`)}, lower(c.card_number), c.id
             LIMIT 100
           `);
       res.json(result.rows);

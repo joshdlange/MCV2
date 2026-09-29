@@ -12,3 +12,7 @@ The idempotent slug-based merge seed (`server/seeds/mergeDuplicateLegacySets.ts`
 - **`listings.user_collection_id` is a NOT NULL FK** — repoint listings to the surviving collection row before deleting duplicate collection rows.
 - **Why:** merge ran in dev Aug 2026 (1992/1993 Masterpieces, 1994 Hildebrandt, 1995 Fleer, 2023 UD Platinum, ~950 owned rows repointed); ships to prod automatically on republish; row IDs differ between dev and prod so everything resolves by slug + number/name.
 - **How to apply:** any future duplicate-subset cleanup (Feb-2026 "-base" duplicates remain) should reuse this seed's matching tiers and batch applier.
+
+For collector metadata conflicts, keep the surviving row's editable values and retain lossless absorbed-row snapshots in the private admin audit ledger, never in survivor notes.
+**Why:** distinct physical copies can have conflicting metadata even when they map to one catalog card; survivor notes may be shared through a listing and would expose an unlisted copy's private details.
+**How to apply:** use this policy for narrowly authorized catalog merges, preserving total quantity without adding XP. Any private audit snapshot must also participate in account erasure; audit text has no user foreign key to provide automatic cleanup.

@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { mainSets, cardSets, cards } from '../../shared/schema';
+import { mainSets, cardSets, cards, adminAuditLogs } from '../../shared/schema';
 import { eq, and, inArray, sql, isNull } from 'drizzle-orm';
 // Reference transfer is done set-based below (a batched version of
 // dataQualityAudit's transferReferencesAndArchive) so ~1,100 card merges
@@ -56,7 +56,8 @@ import { eq, and, inArray, sql, isNull } from 'drizzle-orm';
  *  - Unmatched cards with zero references are soft-archived.
  *  - Legacy cards are soft-archived (never deleted); legacy subsets/main sets
  *    are deactivated + archived, not deleted.
- *  - Runs under an advisory lock; already-retired sources make it a no-op.
+ *  - Runs under an advisory lock; retired sources are skipped except for the
+ *    strict PowerBlast terminal/reference validation.
  */
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -345,18 +346,6 @@ const GROUPS: MergeGroup[] = [
     numberOnlyFallback: true,
   },
   {
-    label: '1994 Flair PowerBlast',
-    sourceSubsetSlugs: ['1994-1994-flair-marvel-annual-flair-marvel-universe-powerblast'],
-    targetSubsetSlugs: ['1994-flair-marvel-annual-flair-marvel-universe-powerblast'],
-    nameOnlyFallback: true,
-    targetMetadata: {
-      isCanonical: true,
-      isInsertSubset: true,
-      canonicalSource: 'manual_verified',
-      cardsAreInserts: true,
-    },
-  },
-  {
     label: '2023 What If 1990 Marvel Universe',
     sourceSubsetSlugs: ['2023-upper-deck-marvel-what-if-1990-marvel-universe'],
     targetSubsetSlugs: ['2023-2023-upper-deck-marvel-what-if-1990-marvel-universe'],
@@ -364,6 +353,16 @@ const GROUPS: MergeGroup[] = [
 ];
 
 const PLATINUM_MAIN_SLUG = '2023-upper-deck-marvel-platinum';
+const FLAIR_POWERBLAST_SOURCE_SLUG = '1994-1994-flair-marvel-annual-flair-marvel-universe-powerblast';
+const FLAIR_POWERBLAST_TARGET_SLUG = '1994-flair-marvel-annual-flair-marvel-universe-powerblast';
+// The 18 identities in Marvel_Cards_with_Images.csv, not inferred from the
+// legacy source (which contains two additional, wrongly numbered duplicates).
+const FLAIR_POWERBLAST_CHECKLIST = [
+  'Cable', 'Cyclops', 'Iron Man', 'Magneto', 'Phoenix', 'Storm',
+  'Venom', 'Wolverine', 'Ghost Rider', 'Punisher', 'Captain America',
+  'Gambit', 'Thor', 'Silver Surfer', 'Spider-Man', 'Deadpool',
+  'Invisible Woman', 'Dr. Doom',
+] as const;
 const PLATINUM_BASE_SLUG = '2023-2023-upper-deck-marvel-platinum-base';
 const EMPTY_ORPHAN_SLUG = '2020-upper-deck-marvel-avengers-endgame-captain-marvel';
 const LOST_MARVEL_SOURCE_SLUG = '1994-1994-flair-marvel-annual-base';
@@ -446,8 +445,23 @@ async function applyPairBatch(
   tx: Tx,
   archiveReason: string,
   imageTransferMode: ImageTransferMode,
+  preserveCollectionMetadata: boolean,
 ): Promise<void> {
   // --- user_collections (unique user_id+card_id; quantities merge) ---
+  // Only PowerBlast opts in. Never place absorbed private metadata in survivor
+  // notes: listings can expose those notes. Audit each row about to be deleted
+  // in the admin-only ledger; leave all survivor scalar metadata unchanged.
+  if (preserveCollectionMetadata) {
+    await tx.execute(sql`
+      INSERT INTO admin_audit_logs (action_type, entity_type, entity_id, notes)
+      SELECT 'legacy_powerblast_collection_fold', 'user_collection', d.id,
+        jsonb_build_object(
+          'ownerId', d.user_id, 'survivorCollectionId', s.id,
+          'survivorCardId', p.surv_id, 'absorbedRow', to_jsonb(d)
+        )::text
+      FROM user_collections d JOIN merge_pairs p ON d.card_id = p.dup_id
+      JOIN user_collections s ON s.user_id = d.user_id AND s.card_id = p.surv_id`);
+  }
   await tx.execute(sql`
     UPDATE user_collections uc SET quantity = uc.quantity + agg.q
     FROM (SELECT d.user_id, p.surv_id, sum(d.quantity) q
@@ -469,6 +483,23 @@ async function applyPairBatch(
     WHERE d.card_id = p.dup_id
       AND EXISTS (SELECT 1 FROM user_collections s WHERE s.user_id = d.user_id AND s.card_id = p.surv_id)`);
   // Fold multiple remaining dup rows per (user, survivor) into one keeper row
+  if (preserveCollectionMetadata) {
+    await tx.execute(sql`
+      WITH ranked AS (
+        SELECT d.*, p.surv_id,
+          row_number() OVER (PARTITION BY d.user_id, p.surv_id ORDER BY d.id) rn,
+          first_value(d.id) OVER (PARTITION BY d.user_id, p.surv_id ORDER BY d.id) keeper_id
+        FROM user_collections d JOIN merge_pairs p ON d.card_id = p.dup_id
+      )
+      INSERT INTO admin_audit_logs (action_type, entity_type, entity_id, notes)
+      SELECT 'legacy_powerblast_collection_fold', 'user_collection', r.id,
+        jsonb_build_object(
+          'ownerId', r.user_id, 'survivorCollectionId', r.keeper_id,
+          'survivorCardId', r.surv_id,
+          'absorbedRow', to_jsonb(r) - 'rn' - 'keeper_id' - 'surv_id'
+        )::text
+      FROM ranked r WHERE r.rn > 1`);
+  }
   await tx.execute(sql`
     WITH ranked AS (
       SELECT d.id, d.user_id, d.quantity, p.surv_id,
@@ -576,14 +607,14 @@ async function applyPairBatch(
   await tx.execute(sql`
     UPDATE cards c SET archived_at = now(),
       archive_reason = ${archiveReason} || ' (merged into card ' || p.surv_id || ')'
-    FROM merge_pairs p WHERE c.id = p.dup_id`);
+    FROM merge_pairs p WHERE c.id = p.dup_id AND c.archived_at IS NULL`);
 }
 
 export async function applyCardMergePairs(
   tx: Tx,
   pairs: Array<{ dup: number; surv: number }>,
   archiveReason: string,
-  options: { imageTransferMode?: ImageTransferMode } = {},
+  options: { imageTransferMode?: ImageTransferMode; preserveCollectionMetadata?: boolean } = {},
 ): Promise<void> {
   if (pairs.length === 0) return;
 
@@ -599,7 +630,152 @@ export async function applyCardMergePairs(
       INSERT INTO merge_pairs (dup_id, surv_id)
       VALUES ${sql.join(chunk.map((pair) => sql`(${pair.dup}, ${pair.surv})`), sql`, `)}`);
   }
-  await applyPairBatch(tx, archiveReason, options.imageTransferMode ?? 'prefer-curated');
+  await applyPairBatch(tx, archiveReason, options.imageTransferMode ?? 'prefer-curated',
+    options.preserveCollectionMetadata ?? false);
+}
+
+/**
+ * Strict PowerBlast-only remediation. The archived source is deliberately
+ * included: old runs may have retired it without repointing newer references.
+ * Can be called with a caller-owned transaction (e.g. rollback fixtures), or
+ * without one to run in its own advisory-locked transaction.
+ */
+export async function repair1994FlairPowerBlast(tx?: Tx): Promise<void> {
+  if (!tx) {
+    await db.transaction(async (transaction) => {
+      await repair1994FlairPowerBlast(transaction);
+    });
+    return;
+  }
+
+  const label = '1994 Flair PowerBlast';
+  // The caller-owned transaction must obey the same lock protocol as the
+  // standalone entry point and startup integration. Block concurrent inserts
+  // into reference tables until the transfer and terminal check commit.
+  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('merge_duplicate_legacy_sets'))`);
+  await tx.execute(sql`
+    LOCK TABLE user_collections, user_wishlists, pc_binder_cards,
+      listings, pending_card_images, xp_events,
+      scan_uploads, scan_feedback, feed_events, card_price_cache
+    IN SHARE ROW EXCLUSIVE MODE`);
+  await tx.execute(sql`
+    SELECT id FROM card_sets
+    WHERE slug IN (${FLAIR_POWERBLAST_SOURCE_SLUG}, ${FLAIR_POWERBLAST_TARGET_SLUG})
+    ORDER BY id FOR UPDATE`);
+  const [source] = await tx.select().from(cardSets)
+    .where(eq(cardSets.slug, FLAIR_POWERBLAST_SOURCE_SLUG));
+  const [target] = await tx.select().from(cardSets)
+    .where(eq(cardSets.slug, FLAIR_POWERBLAST_TARGET_SLUG));
+  if (!source || !target || source.id === target.id || !target.isActive || target.archivedAt) {
+    throw new Error(`${label}: source and active canonical target must both resolve by slug`);
+  }
+  await tx.execute(sql`
+    SELECT id FROM cards WHERE set_id IN (${source.id}, ${target.id})
+    ORDER BY id FOR UPDATE`);
+  const sourceCards = await tx.select().from(cards).where(eq(cards.setId, source.id));
+  const targetCards = await tx.select().from(cards)
+    .where(and(eq(cards.setId, target.id), isNull(cards.archivedAt)));
+  if (sourceCards.length !== 20) {
+    throw new Error(`${label}: expected exactly 20 source rows, found ${sourceCards.length}`);
+  }
+  if (targetCards.length !== FLAIR_POWERBLAST_CHECKLIST.length) {
+    throw new Error(`${label}: expected exactly 18 active canonical rows, found ${targetCards.length}`);
+  }
+  const targetByNumber = new Map<string, CardRow>();
+  for (const card of targetCards) {
+    const number = card.cardNumber.trim();
+    if (!/^(?:[1-9]|1[0-8])$/.test(number) || targetByNumber.has(number)) {
+      throw new Error(`${label}: invalid or duplicate canonical number "${card.cardNumber}"`);
+    }
+    if (normName(card.name) !== normName(FLAIR_POWERBLAST_CHECKLIST[Number(number) - 1])) {
+      throw new Error(`${label}: unexpected canonical identity #${number} ${card.name}`);
+    }
+    targetByNumber.set(number, card);
+  }
+  for (let n = 1; n <= 18; n++) {
+    if (!targetByNumber.has(String(n))) throw new Error(`${label}: missing canonical #${n}`);
+  }
+  const seenRegular = new Set<string>();
+  const seenExtras = new Set<string>();
+  const pairs: Array<{ dup: number; surv: number }> = [];
+  for (const card of sourceCards) {
+    const number = card.cardNumber.trim();
+    const name = normName(card.name);
+    let survivor = targetByNumber.get(number);
+    // These are the ONLY permitted bad-number exceptions; no generic
+    // name-only fallback can silently swallow a foreign source identity.
+    const exception = number === '2' && name === 'punisher' ? '10'
+      : number === '6' && name === 'spiderman' ? '15' : null;
+    if (exception) {
+      if (seenExtras.has(exception)) throw new Error(`${label}: repeated extra #${number} ${card.name}`);
+      seenExtras.add(exception);
+      survivor = targetByNumber.get(exception);
+    } else {
+      if (!survivor || seenRegular.has(number) || normName(survivor.name) !== name) {
+        throw new Error(`${label}: unexpected source identity #${number} ${card.name}`);
+      }
+      seenRegular.add(number);
+    }
+    pairs.push({ dup: card.id, surv: survivor!.id });
+  }
+  if (seenRegular.size !== 18 || seenExtras.size !== 2) {
+    throw new Error(`${label}: expected all 18 regular identities and both bad-number exceptions`);
+  }
+
+  const actionable: typeof pairs = [];
+  for (let i = 0; i < sourceCards.length; i++) {
+    if (!sourceCards[i].archivedAt || await refCount(tx, sourceCards[i].id) > 0) {
+      actionable.push(pairs[i]);
+    }
+  }
+  if (actionable.length) {
+    await applyCardMergePairs(tx, actionable, `Legacy duplicate set merged (${label})`,
+      { imageTransferMode: 'missing-only', preserveCollectionMetadata: true });
+    for (const pair of actionable) {
+      const card = sourceCards.find((row) => row.id === pair.dup)!;
+      await tx.insert(adminAuditLogs).values({
+        actionType: 'legacy_powerblast_card_merge',
+        entityType: 'card',
+        entityId: pair.dup,
+        entityName: card.name,
+        notes: JSON.stringify({ sourceSlug: source.slug, targetSlug: target.slug,
+          sourceNumber: card.cardNumber, survivorId: pair.surv, previouslyArchived: !!card.archivedAt }),
+      });
+    }
+  }
+
+  if (source.isActive || source.isCanonical || !source.archivedAt) {
+    await tx.update(cardSets).set({
+      isActive: false, isCanonical: false, archivedAt: source.archivedAt ?? new Date(),
+    }).where(eq(cardSets.id, source.id));
+  }
+  if (!target.isCanonical || !target.isInsertSubset || target.canonicalSource !== 'manual_verified'
+    || target.totalCards !== 18) {
+    await tx.update(cardSets).set({
+      isCanonical: true, isInsertSubset: true, canonicalSource: 'manual_verified', totalCards: 18,
+    }).where(eq(cardSets.id, target.id));
+  }
+  await tx.update(cards).set({ isInsert: true })
+    .where(and(eq(cards.setId, target.id), isNull(cards.archivedAt),
+      sql`${cards.isInsert} IS DISTINCT FROM TRUE`));
+
+  const [finalSource] = await tx.select().from(cardSets).where(eq(cardSets.id, source.id));
+  const [finalTarget] = await tx.select().from(cardSets).where(eq(cardSets.id, target.id));
+  const finalSourceCards = await tx.select().from(cards).where(eq(cards.setId, source.id));
+  const finalTargets = await tx.select().from(cards)
+    .where(and(eq(cards.setId, target.id), isNull(cards.archivedAt)));
+  if (finalSource!.isActive || finalSource!.isCanonical || !finalSource!.archivedAt
+    || !finalTarget!.isActive || finalTarget!.archivedAt || !finalTarget!.isCanonical || !finalTarget!.isInsertSubset
+    || finalTarget!.canonicalSource !== 'manual_verified' || finalTarget!.totalCards !== 18
+    || finalTargets.length !== 18 || finalTargets.some((card) => !card.isInsert)
+    || finalSourceCards.some((card) => !card.archivedAt)) {
+    throw new Error(`${label}: terminal metadata or archive validation failed`);
+  }
+  for (const card of finalSourceCards) {
+    if (await refCount(tx, card.id) !== 0) {
+      throw new Error(`${label}: residual reference to source card ${card.id}`);
+    }
+  }
 }
 
 export async function mergeExactLenDuplicateRows(
@@ -1294,6 +1470,9 @@ export async function mergeDuplicateLegacySets(): Promise<void> {
   const [lenticular2024Subset] = await db.select({ id: cardSets.id }).from(cardSets)
     .where(eq(cardSets.slug, LENTICULAR_2024_SLUG));
   const needs2024LenticularValidation = Boolean(lenticular2024Subset);
+  // Validate PowerBlast even after the legacy source has been archived.
+  const [powerBlastSource] = await db.select({ id: cardSets.id }).from(cardSets)
+    .where(eq(cardSets.slug, FLAIR_POWERBLAST_SOURCE_SLUG));
   if (
     active.length === 0
     && !orphan
@@ -1302,6 +1481,7 @@ export async function mergeDuplicateLegacySets(): Promise<void> {
     && !needs2023FlairRelocation
     && !needsHildebrandtRepair
     && !needs2024LenticularValidation
+    && !powerBlastSource
   ) {
     console.log(`${LOG} Nothing to do — all legacy duplicate sets already retired`);
     return;
@@ -1328,6 +1508,7 @@ export async function mergeDuplicateLegacySets(): Promise<void> {
     for (const group of GROUPS) {
       await mergeGroup(tx, group);
     }
+    if (powerBlastSource) await repair1994FlairPowerBlast(tx);
     await relocateLostMarvelBonusCards(tx);
     await relocate2023FlairSubsetCards(tx);
     await merge2024LenticularLenDuplicates(tx);

@@ -91,8 +91,12 @@ export class OptimizedStorage {
       pageSize = Math.min(pageSize, 100);
       const offset = (page - 1) * pageSize;
 
-      // Build conditions array (archived/merged duplicates are always hidden)
-      const conditions: any[] = [sql`${cards.archivedAt} IS NULL`];
+      // Normal browse excludes retired cards and their retired subsets, with or without search.
+      const conditions: any[] = [
+        isNull(cards.archivedAt),
+        eq(cardSets.isActive, true),
+        isNull(cardSets.archivedAt),
+      ];
 
       if (filters.setId) {
         conditions.push(eq(cards.setId, filters.setId));
@@ -123,8 +127,6 @@ export class OptimizedStorage {
           // Punctuation-only query: match nothing rather than everything
           conditions.push(sql`false`);
         }
-        // Searches only surface cards from active sets (parity with binder bulk-add)
-        conditions.push(eq(cardSets.isActive, true));
         for (const t of tokens) {
           conditions.push(
             or(

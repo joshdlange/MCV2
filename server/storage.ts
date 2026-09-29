@@ -542,7 +542,7 @@ export class DatabaseStorage implements IStorage {
           createdAt: cardSets.createdAt
         })
         .from(cardSets)
-        .where(eq(cardSets.isActive, true))
+        .where(and(eq(cardSets.isActive, true), isNull(cardSets.archivedAt)))
         .orderBy(desc(cardSets.year), cardSets.name);
       
       return setsWithCounts;
