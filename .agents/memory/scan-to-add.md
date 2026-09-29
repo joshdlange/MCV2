@@ -27,6 +27,12 @@ Image-first recognition is the product goal, not OCR-first candidate lookup.
 
 **How to apply:** Search catalog images independently of readable text. Use text as corroboration and to distinguish variants, not as a prerequisite for retrieving artwork. Report incomplete image-index coverage and distinguish transformed-reference tests from real-photo accuracy.
 
+Keep reference and query inference numerically equivalent; do not assume quantized model tensor batches equal single-image inference.
+
+**Why:** The pinned DINO q8 model produced batch-composition-dependent embeddings in actual tests, despite identical per-image preprocessing. Strict parity caught the mismatch before full indexing.
+
+**How to apply:** Pipeline downloads independently of inference; use the same single-image path for reference and query vectors unless an alternative passes strict parity or receives a new model version with validated retrieval behavior. Never reuse experimental incompatible vectors under the existing model version.
+
 Do not treat engineering tests or collector selections as proof that recognition accuracy is fixed.
 
 **Why:** The user explicitly requires representative real-photo evaluation, prioritizing false high-confidence errors, before accepting v1 as ready. Feedback can repeat a wrong suggestion and is not independently verified ground truth.

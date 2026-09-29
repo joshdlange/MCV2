@@ -37,3 +37,45 @@
 Development may download the same pinned model on demand. To exercise only the
 build artifact in development, set `CATALOG_VISUAL_OFFLINE=true`. The bounded
 development CLI is `npm run catalog:visual:index -- --batch-size=16 --sanity`.
+
+## Development bulk CLI (single-image inference)
+
+`catalog:visual:bulk` requires `NODE_ENV=development`, a local development
+database, and no deployment flag. There is no production override. It takes one
+eligible/current-model snapshot, holds the normal worker's session advisory lock
+for the run, downloads at concurrency four with one bounded batch ahead, and
+emits JSON progress and a final summary. `--batch-size=8|16` controls download
+windows only: every new vector uses **the exact single-image query embedding
+function**. Tensor-batched q8 inference was removed because dynamic quantization
+changed vectors. The sequential convenience wrapper retains strict `1e-5`
+parity tests; it does not run tensor batches. Waiting scans take priority between
+individual inference calls. CPU inference remains capped at two threads.
+
+```sh
+NODE_ENV=development CATALOG_VISUAL_OFFLINE=true npm run catalog:visual:bulk -- --status
+NODE_ENV=development CATALOG_VISUAL_OFFLINE=true npm run catalog:visual:bulk -- --dry-run --limit=128
+NODE_ENV=development CATALOG_VISUAL_OFFLINE=true npm run catalog:visual:bulk -- --write --limit=128
+```
+
+The corrected development pilot indexed 128 references: 128 successful downloads,
+78 successful individual inferences, 50 digest reuses, zero failures. Work time
+was 13.252 seconds; complete CLI wall time was 14.359 seconds. This bounded
+sample is not a full-catalog throughput guarantee. No full import was launched.
+
+The narrowly scoped repair command is `--write --repair-ready` (no `--limit`).
+It snapshots **all** ready references, including currently ineligible ones,
+re-downloads and individually embeds every reference without any digest reuse,
+and atomically replaces derived vectors only after successful inference.
+Failed repairs become failed references, not searchable/reusable ready vectors.
+It rejects ready vectors from a different model version for separate review.
+The completed development repair replaced all 734 ready vectors individually,
+with zero failures/reuses and zero pending unsafe ready vectors, in 77.507
+seconds. No catalog images were modified. Normal retries retain existing
+five-minute exponential backoff and the five-attempt ceiling.
+
+Verification:
+`NODE_ENV=development CATALOG_VISUAL_REAL_TEST=true npm run test:catalog-visual`.
+All eight tests passed, including strict parity on 16 real references and eight
+synthetic inputs (observed maximum component error zero). Repair/pilot/test logs
+are under `/tmp/catalog-visual-bulk/` (`repair-ready.jsonl`,
+`corrected-pilot-128.jsonl`, `repaired-parity-tests.log`).

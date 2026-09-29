@@ -1,0 +1,326 @@
+STOP OPTIMIZING BULK INGESTION.
+
+We need to stabilize and validate the Scan to Add image-retrieval architecture before doing any more large indexing or performance work.
+
+Context:
+We now have a DINOv2-small visual retrieval prototype, but we discovered that the current quantized tensor-batched inference can produce different embeddings for the same image depending on its batch companions.
+
+That means the experimental bulk vectors cannot be trusted to be equivalent to the single-image query vectors.
+
+Do not continue the current bulk implementation.
+
+Goal:
+Prove that we have a deterministic, accurate visual-retrieval foundation before indexing the full catalog.
+
+MUST DO
+
+1. Freeze the current experiment
+- Do not launch a full catalog indexing run.
+- Do not publish.
+- Do not write more potentially contaminated vectors.
+- Identify exactly which development vectors may have been written using tensor-batched inference.
+
+2. Establish a canonical embedding pipeline
+There must be ONE canonical function used by:
+- catalog indexing
+- live query scans
+- benchmark tests
+
+The exact same:
+- model
+- dtype/quantization
+- preprocessing
+- resize/crop
+- normalization
+- pooling
+- output normalization
+
+must be used everywhere.
+
+3. Determinism test
+For at least 25 reference images:
+
+Run each image:
+- individually 5 times
+- after model warmup
+- in different execution orders
+
+The resulting normalized embedding should be effectively identical within a very tight numerical tolerance.
+
+Report:
+- max cosine difference
+- max per-dimension difference
+- whether results are deterministic
+
+Do NOT use tensor batching until this passes.
+
+4. Investigate quantization
+Compare the current quantized DINOv2-small inference against a non-quantized/fp32 or supported higher-precision version for a bounded sample.
+
+Measure:
+- determinism
+- inference latency
+- retrieval ranking consistency
+- memory cost
+
+Do not switch models blindly.
+Report whether quantization appears to be the source of the batch-dependent behavior.
+
+5. Repair development index
+Once the canonical embedding path is selected:
+- invalidate all potentially contaminated development vectors
+- do not reuse their content-digest cache entries
+- recompute them using the canonical single-image pipeline
+- do not touch production
+
+6. Compare TWO retrieval representations
+
+A. Current whole-card representation
+B. Artwork-focused representation
+
+For B:
+- derive a central/artwork-region crop from the normalized card image
+- do not destroy the original card image
+- use the same DINOv2-small model
+- test a sensible artwork crop only
+- optionally compare CLS versus CLS + mean patch pooling if practical
+
+The purpose is to determine whether artwork-focused retrieval better handles:
+- foil
+- glare
+- borders
+- parallels
+- sleeves/toploaders
+
+Do not assume one is better.
+Benchmark both.
+
+7. Build a real evaluation set before full indexing
+
+We need independently known answers.
+
+Create a benchmark format containing:
+- query photo
+- known correct card_id
+- known set
+- known year
+- known subset/parallel where available
+
+Use real phone photos wherever available.
+
+Target:
+- minimum 50 real photos before making architectural claims
+- preferably 100+
+
+Include:
+- different years
+- different sets
+- base cards
+- chase cards
+- parallels
+- same artwork across parallels
+- same character across unrelated sets
+- glare
+- sleeves/toploaders
+- slight perspective
+- rotations
+- weak lighting
+
+If we do not currently have enough labeled phone photos:
+STOP and tell me exactly what photos I need to provide.
+
+Do not fabricate a benchmark.
+
+8. Benchmark visual retrieval independently of OCR/AI
+
+For each query:
+- visual embedding only
+- search the full AVAILABLE indexed evaluation corpus
+- record top 1, top 3, top 10
+- record similarity and runner-up margin
+
+Metrics:
+- exact-card top-1
+- exact-card top-3
+- correct card-family top-1
+- correct card-family top-3
+- false high-confidence rate
+- parallel/subset errors
+- set errors
+- year errors
+
+This benchmark must run without OpenAI/OCR influencing candidate retrieval.
+
+9. Then test metadata reranking
+
+Once visual retrieval produces top candidates:
+use extracted:
+- card number
+- year
+- set
+- subset
+- manufacturer/product clues
+
+only to rerank or reject contradictory candidates.
+
+The correct card must not be excluded from visual retrieval because OCR failed.
+
+Report improvement from:
+A. visual only
+B. visual + metadata rerank
+
+10. Simplify search architecture
+
+Do not build ANN prematurely.
+
+First benchmark exact search at our real scale.
+
+We have roughly 77k eligible front-image references.
+
+Measure:
+- exact cosine search time
+- memory usage
+- concurrent query behavior
+
+If exact search meets our latency target, keep it for v1.
+
+If it does not:
+evaluate pgvector exact search first, then HNSW if needed.
+
+Do not add a new vector database unless there is measured evidence we need one.
+
+11. Fast-result architecture
+
+The target UX is 1–3 seconds.
+
+Redesign the request flow conceptually as:
+
+FAST PATH:
+- crop/normalize
+- image embedding
+- visual retrieval
+- return/show first plausible candidates
+
+PARALLEL VERIFICATION:
+- OCR/vision extraction
+- metadata rerank
+- parallel/subset verification
+- confidence update
+
+Do not require two sequential AI calls before the user sees useful results.
+
+Report what can realistically be shown at:
+- < 1 second
+- < 2 seconds
+- < 3 seconds
+
+12. Initial indexing architecture
+
+Initial catalog indexing should NOT run inside the normal web-request process.
+
+Keep:
+- resumable state
+- shared lock
+- failure logging
+- overlapping downloads
+
+Use:
+- one catalog-selection query
+- bounded download concurrency
+- canonical SINGLE-IMAGE inference
+
+No tensor batching unless equivalence is proven.
+
+Report realistic throughput from a clean pilot with NO digest-vector reuse.
+
+Run:
+- 128 fresh references
+- then 500 fresh references if stable
+
+Report:
+- refs/sec
+- failures
+- CPU
+- memory
+- projected full-index time
+
+13. Cloudinary check
+
+Do not assume Cloudinary cannot help.
+
+Document:
+- our current Cloudinary plan if known
+- whether Cloudinary Visual Search is available on it
+- whether it requires Enterprise
+- whether it can search by uploaded/query image against our Cloudinary catalog
+- whether pricing/contact is required
+
+Do not change plans or contact vendors automatically.
+
+MUST NOT DO
+
+- Do not publish.
+- Do not launch full indexing.
+- Do not index production.
+- Do not keep tensor-batched vectors under the same model version.
+- Do not guess an accuracy percentage.
+- Do not add nine-card scanning.
+- Do not build binder scanning.
+- Do not redesign the user flow yet.
+- Do not make back-photo capture mandatory.
+- Do not add another AI model without benchmarking it.
+- Do not add pgvector/HNSW unless measured search performance justifies it.
+- Do not modify ownership logic.
+- Do not modify image approval logic.
+- Do not modify catalog images.
+- Do not touch Drive Sync.
+- Do not touch Feed, XP, subscriptions, billing, Android, or iOS.
+
+PRESERVE
+
+- explicit collector confirmation before adding
+- existing ownership behavior
+- confirmed card ownership independent of photo approval
+- Cloudinary originals
+- current catalog
+- existing crop/rotation front-photo flow
+- optional back photo
+- production untouched
+
+QA
+
+The review is not complete merely because unit tests pass.
+
+I need evidence.
+
+FINAL RESPONSE
+
+Give me:
+
+1. Canonical embedding configuration selected
+2. Determinism test results
+3. Quantized vs higher-precision comparison
+4. Number of contaminated dev vectors invalidated/rebuilt
+5. Whole-card vs artwork-crop benchmark
+6. CLS vs alternate pooling result if tested
+7. Number of real labeled query photos
+8. Visual-only top-1/top-3 accuracy
+9. Visual + metadata-rerank top-1/top-3 accuracy
+10. False-high-confidence count
+11. Parallel/subset error count
+12. Exact search latency at realistic index size
+13. Query embedding latency
+14. OCR/AI verification latency
+15. Clean initial-index pilot throughput with no reused vectors
+16. Estimated clean full-index duration
+17. Peak CPU and memory
+18. Whether pgvector/ANN is actually needed
+19. Cloudinary Visual Search availability/cost status
+20. Recommended architecture for a 1–3 second user experience
+21. Remaining risks
+22. Clear recommendation:
+   - continue with this architecture
+   - change embedding representation/model
+   - or stop and use a managed recognition/search service
+
+Do not tell me this is ready until the real-photo benchmark supports that conclusion.

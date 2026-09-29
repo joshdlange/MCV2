@@ -117,3 +117,14 @@ export async function embedCatalogVisualImage(buffer: Buffer, priority: 'scan' |
     return normalizeVisualVector(output.data.slice(0, VECTOR_DIMENSIONS));
   }, priority);
 }
+
+/** Convenience wrapper only: q8 inference MUST remain single-image because
+ * tensor batches change dynamic quantization scales. Yield to scans per image.
+ */
+export async function embedCatalogVisualImages(buffers: Buffer[], priority: 'scan' | 'background' = 'background'): Promise<number[][]> {
+  if (!buffers.length || buffers.length > 16) throw new Error('Visual batch must contain 1–16 images');
+  if (buffers.some(buffer => !buffer.length || buffer.length > 12 * 1024 * 1024)) throw new Error('Visual image must be 1 byte–12 MB');
+  const vectors: number[][] = [];
+  for (const buffer of buffers) vectors.push(await embedCatalogVisualImage(buffer, priority));
+  return vectors;
+}

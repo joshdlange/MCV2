@@ -14,9 +14,9 @@ export type CatalogVisualResult = {
 };
 
 // Eligibility is independent of OCR, card number, name and user-upload history.
-const CATALOG = `FROM cards c JOIN card_sets s ON s.id=c.set_id
+export const CATALOG = `FROM cards c JOIN card_sets s ON s.id=c.set_id
   LEFT JOIN main_sets m ON m.id=s.main_set_id`;
-const ELIGIBLE = `c.archived_at IS NULL AND s.is_active AND s.archived_at IS NULL
+export const ELIGIBLE = `c.archived_at IS NULL AND s.is_active AND s.archived_at IS NULL
   AND (m.id IS NULL OR (m.is_active AND m.archived_at IS NULL))
   AND c.front_image_url ~ '^https?://'
   AND c.front_image_url !~* '^https?://([^/]*\\.)?(drive\\.google\\.com|docs\\.google\\.com|googleusercontent\\.com)(/|:)'`;
@@ -31,6 +31,30 @@ let activeQueries = 0;
 let lastError: string | undefined;
 let lastBatch = { attempted: 0, indexed: 0, failed: 0 };
 const message = (error: unknown) => error instanceof Error ? error.message.slice(0, 300) : 'Catalog visual operation failed';
+export const VISUAL_INDEX_LOCK = 734822019;
+export const visualReferenceKey = (url: string) => createHash('sha256').update(`${MODEL_VERSION}\n${url}`).digest('hex');
+export const visualContentDigest = (buffer: Buffer) => createHash('sha256').update(buffer).digest('hex');
+
+export async function saveVisualReference(client: PoolClient, url: string, digest: string, embedding: number[]) {
+  await client.query(`INSERT INTO catalog_visual_references
+    (key,model_version,reference_url,content_digest,embedding,status,attempts)
+    VALUES ($1,$2,$3,$4,$5::jsonb,'ready',1)
+    ON CONFLICT (key) DO UPDATE SET content_digest=EXCLUDED.content_digest,
+      embedding=EXCLUDED.embedding,status='ready',attempts=catalog_visual_references.attempts+1,
+      last_error=NULL,retry_at=NULL,updated_at=now()`,
+  [visualReferenceKey(url), MODEL_VERSION, url, digest, JSON.stringify(embedding)]);
+}
+
+export async function failVisualReference(client: PoolClient, url: string, error: unknown) {
+  const reason = message(error).replace(/https?:\/\/\S+/g, '[reference URL]');
+  await client.query(`INSERT INTO catalog_visual_references
+    (key,model_version,reference_url,status,attempts,last_error,retry_at)
+    VALUES ($1,$2,$3,'failed',1,$4,now()+interval '5 minutes')
+    ON CONFLICT (key) DO UPDATE SET status='failed',attempts=catalog_visual_references.attempts+1,
+      last_error=EXCLUDED.last_error,updated_at=now(),
+      retry_at=now()+interval '5 minutes'*power(2,least(catalog_visual_references.attempts,8))`,
+  [visualReferenceKey(url), MODEL_VERSION, url, reason]);
+}
 
 async function loadCache() {
   if (cache && Date.now() - cache.at < CACHE_TTL_MS) return cache;
@@ -113,7 +137,7 @@ export async function buildCatalogVisualIndexBatch(batchSize = 16) {
   let locked = false;
   try {
     client = await pool.connect();
-    locked = (await client.query("SELECT pg_try_advisory_lock(734822019) AS locked")).rows[0].locked;
+    locked = (await client.query("SELECT pg_try_advisory_lock($1) AS locked", [VISUAL_INDEX_LOCK])).rows[0].locked;
     if (!locked) return { ...stats, busy: true };
     const size = Number.isFinite(batchSize) ? Math.min(MAX_BATCH, Math.max(1, Math.floor(batchSize))) : 16;
     const candidates = await client.query(`SELECT c.front_image_url AS url, min(c.id) AS first_id
@@ -123,32 +147,18 @@ export async function buildCatalogVisualIndexBatch(batchSize = 16) {
         (r.status='failed' AND r.attempts < 5 AND r.retry_at <= now()))
       GROUP BY c.front_image_url ORDER BY min(c.id) LIMIT $2`, [MODEL_VERSION, size]);
     for (const { url } of candidates.rows) {
-      const key = createHash('sha256').update(`${MODEL_VERSION}\n${url}`).digest('hex');
       stats.attempted++;
       try {
         const buffer = await downloadCatalogReference(url);
-        const digest = createHash('sha256').update(buffer).digest('hex');
+        const digest = visualContentDigest(buffer);
         const shared = await client.query(`SELECT embedding FROM catalog_visual_references
           WHERE model_version=$1 AND content_digest=$2 AND status='ready' LIMIT 1`, [MODEL_VERSION, digest]);
         const embedding = shared.rows[0]?.embedding ?? await embedCatalogVisualImage(buffer, 'background');
-        await client.query(`INSERT INTO catalog_visual_references
-          (key,model_version,reference_url,content_digest,embedding,status,attempts)
-          VALUES ($1,$2,$3,$4,$5::jsonb,'ready',1)
-          ON CONFLICT (key) DO UPDATE SET content_digest=EXCLUDED.content_digest,
-            embedding=EXCLUDED.embedding,status='ready',attempts=catalog_visual_references.attempts+1,
-            last_error=NULL,retry_at=NULL,updated_at=now()`,
-        [key, MODEL_VERSION, url, digest, JSON.stringify(embedding)]);
+        await saveVisualReference(client, url, digest, embedding);
         stats.indexed++;
       } catch (error) {
         // Do not persist arbitrary URLs or credentials from network error text.
-        const reason = message(error).replace(/https?:\/\/\S+/g, '[reference URL]');
-        await client.query(`INSERT INTO catalog_visual_references
-          (key,model_version,reference_url,status,attempts,last_error,retry_at)
-          VALUES ($1,$2,$3,'failed',1,$4,now()+interval '5 minutes')
-          ON CONFLICT (key) DO UPDATE SET status='failed',attempts=catalog_visual_references.attempts+1,
-            last_error=EXCLUDED.last_error,updated_at=now(),
-            retry_at=now()+interval '5 minutes'*power(2,least(catalog_visual_references.attempts,8))`,
-        [key, MODEL_VERSION, url, reason]);
+        await failVisualReference(client, url, error);
         stats.failed++;
         lastError = message(error);
       }
@@ -161,7 +171,7 @@ export async function buildCatalogVisualIndexBatch(batchSize = 16) {
     throw error;
   } finally {
     if (client) {
-      try { if (locked) await client.query('SELECT pg_advisory_unlock(734822019)'); }
+      try { if (locked) await client.query('SELECT pg_advisory_unlock($1)', [VISUAL_INDEX_LOCK]); }
       finally { client.release(); }
     }
     running = false;
