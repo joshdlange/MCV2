@@ -128,3 +128,17 @@ mtime_ms = 1790366747533
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/ea6cfb19-7437-4753-aa0e-34970d194ba9/912591d5-7545-4b44-acb5-d6ee5149c618"
 storage_version_token = "1790366757337029"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "y4VtGQGCjszvF8Q4jkfvI"
+uri = "file://.local/scan-review/review.html"
+type = "html"
+title = "Review 60 saved card scans"
+description = "Private, offline review file with 60 original-photo previews, unverified card suggestions, and exportable identity decisions. Download and open in a browser; export your review JSON and upload it back here."
+logical_id = "98c0ca27-733e-4174-9bb2-9e9cc5fe5f88"
+content_hash = "sha256:7c64ea132f32a7a28fa9f566675125bf0adc47dddb81af8f82810e517bb6dbfa"
+size = 13661206
+mtime_ms = 1790706860001
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/98c0ca27-733e-4174-9bb2-9e9cc5fe5f88/b3ffd011-61ad-4b0c-a3fc-cb1f20d8c65a"
+storage_version_token = "1790707023477045"
+content_type = "text/html"

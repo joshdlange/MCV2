@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Private offline scan identity review</title>
+<style>
+:root{font:16px/1.45 system-ui,sans-serif;color:#eaf1fa;background:#101923}
+*{box-sizing:border-box}body{margin:0 auto;padding:14px;max-width:1100px}
+h1{font-size:1.35rem;margin:0 0 6px}h2{font-size:1.08rem}p{margin:6px 0 12px}
+.warning{background:#45331c;border:1px solid #bd944e;padding:10px;border-radius:8px}
+.panel{background:#1b2938;border:1px solid #3b5168;border-radius:10px;padding:14px;margin:12px 0}
+.photo{display:block;max-width:100%;max-height:70vh;margin:auto;object-fit:contain;cursor:zoom-in}
+.photoWrap{background:#0a1018;min-height:220px;display:grid;place-items:center}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}
+button,.button{background:#304b6c;color:white;border:1px solid #7594b2;border-radius:6px;padding:10px 12px;cursor:pointer;font:inherit}
+button:hover,.button:hover{background:#406488}button:disabled{opacity:.4;cursor:default}
+input,textarea{background:#0c1723;color:white;border:1px solid #7690a8;border-radius:5px;padding:9px;font:inherit;max-width:100%}
+input[type=text],input[type=url],textarea{width:100%}textarea{min-height:75px}
+label{display:block;margin:10px 0}label.inline{display:flex;gap:9px;align-items:start}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:12px}
+.card{border:1px solid #46617b;border-radius:7px;padding:10px}
+.card img{max-width:100%;max-height:340px;object-fit:contain;display:block;margin:8px auto}
+.muted{color:#b6c7d9}.status{color:#f5d894;min-height:25px}.error{color:#ffb4a8}
+dialog{background:#09111b;border:1px solid #8baac6;color:white;max-width:98vw;max-height:98vh;padding:8px}
+dialog img{max-width:95vw;max-height:88vh;object-fit:contain;display:block}
+</style>
+</head>
+<body>
+<h1>Private offline identity review</h1>
+<p class="warning"><strong>UNVERIFIED suggestions, not labels.</strong> Inspect the original photo first. Reveal references only after forming your own impression. Same art, missing references, and suspected sets do not prove identity. Do not share this private pack publicly.</p>
+<p><strong>Download/export JSON and upload it back to chat.</strong> Browser storage may be unavailable or cleared; export often. This is not the scan-accuracy manifest or benchmark ground truth.</p>
+<div class="panel">
+<div class="toolbar"><label>Reviewer identifier <input id="reviewer" type="text" placeholder="Required when exporting verified decisions" autocomplete="off"></label>
+<button id="export" type="button">Export review JSON</button><label class="button" for="import">Import review JSON</label><input id="import" type="file" accept=".json,application/json" hidden></div>
+<div id="storage" class="status" role="alert"></div><div id="message" class="status" role="status"></div>
+</div>
+<div class="panel">
+<div class="toolbar"><button id="prev" type="button">← Previous</button><strong id="position"></strong><button id="next" type="button">Next →</button><span id="progress"></span></div>
+<div class="photoWrap"><img id="photo" class="photo" alt="Original scan photo; tap to zoom" title="Tap to zoom"></div>
+<div class="toolbar"><button id="reveal" type="button">Reveal unverified suggestions and reference images</button></div>
+<div id="suggestions" hidden></div>
+</div>
+<div class="panel">
+<h2>Independent review decision</h2>
+<p>Default is unresolved. No suggestion is selected automatically. To verify, select an identity, give concrete visual evidence, and confirm explicitly. Corrections require later catalog resolution.</p>
+<label>Decision
+<select id="decision">
+<option value="unresolved">Unresolved / skip</option>
+<option value="verified">Independently verified exact card</option>
+<option value="corrected">Corrected ID / link — NEEDS CATALOG RESOLUTION</option>
+<option value="excluded">Exclude invalid photo / non-card</option>
+</select></label>
+<div id="identityControls" hidden>
+<label>Identity choice <select id="identity"><option value="">Select a suggestion or enter correction</option><option value="candidate">Candidate suggestion</option><option value="prediction">Prediction suggestion</option><option value="manual">Manually entered card ID / link</option></select></label>
+<label>Corrected card ID or catalog link (required for manual/corrected decision)<input id="correction" type="text" placeholder="Card ID or catalog link"></label>
+<label>Visual evidence (required for verified or corrected decision)<textarea id="evidence" placeholder="What visible details establish the exact identity?"></textarea></label>
+<label id="confirmLabel" class="inline"><input id="confirm" type="checkbox"> I independently checked this exact card identity against the photo; I am not accepting a suggestion by default.</label>
+</div>
+<label>Optional review note <textarea id="note" placeholder="Why unresolved / excluded, or other context"></textarea></label>
+<div class="toolbar"><button id="save" type="button">Save this decision</button><span id="saved" class="status"></span></div>
+</div>
+<dialog id="zoom"><button id="closeZoom" type="button">Close zoom</button><img id="zoomImg" alt="Enlarged scan photo"></dialog>
+<!-- DATASET -->
+<script>
+(() => {
+'use strict';
+const data = JSON.parse(document.getElementById('dataset').textContent);
+const key = 'scan-review:' + data.datasetHash;
+const $ = id => document.getElementById(id);
+const rows = data.rows;
+let reviews = {}, index = 0, revealed = false;
+function warn(text) { $('storage').textContent = text; $('storage').classList.add('error'); }
+function message(text, bad = false) { $('message').textContent = text; $('message').classList.toggle('error', bad); }
+function persist() {
+  try { localStorage.setItem(key, JSON.stringify({ schema:data.schema, datasetHash:data.datasetHash, reviewer:$('reviewer').value, reviews })); }
+  catch (e) { warn('Browser storage failed (' + e.message + '). Export JSON now: decisions may be lost on reload.'); }
+}
+function valid(payload, requireReviewer = true) {
+  if (!payload || payload.schema !== data.schema || payload.datasetHash !== data.datasetHash ||
+      typeof payload.reviewer !== 'string' || !payload.reviews || typeof payload.reviews !== 'object' ||
+      Array.isArray(payload.reviews)) throw Error('Schema or dataset hash mismatch');
+  const known = new Map(rows.map(r => [String(r.scanId), r]));
+  for (const [id, d] of Object.entries(payload.reviews)) {
+    const r = known.get(id);
+    if (!r || !d || d.scanId !== r.scanId || d.imageHash !== r.imageHash ||
+        d.originalPhotoFile !== r.originalPhotoFile ||
+        !['unresolved','verified','corrected','excluded'].includes(d.decision) ||
+        typeof d.evidence !== 'string' || typeof d.note !== 'string' ||
+        typeof d.reviewedAt !== 'string' || isNaN(Date.parse(d.reviewedAt)) ||
+        typeof d.reviewer !== 'string') throw Error('Invalid review entry for scan ' + id);
+    if (d.decision === 'verified' || d.decision === 'corrected') {
+      if (!d.evidence.trim() || (requireReviewer && !d.reviewer.trim()) || !d.confirmed ||
+          !['candidate','prediction','manual'].includes(d.identitySource)) throw Error('Missing evidence, reviewer, confirmation, or identity for scan ' + id);
+      if (d.identitySource === 'manual' || d.decision === 'corrected') {
+        if (typeof d.correctedIdOrLink !== 'string' || !d.correctedIdOrLink.trim()) throw Error('Missing corrected ID/link for scan ' + id);
+      }
+      if (d.identitySource === 'candidate' || d.identitySource === 'prediction') {
+        if (!r[d.identitySource] || d.selectedIdentity?.cardId !== r[d.identitySource].cardId) throw Error('Suggestion identity mismatch for scan ' + id);
+      } else if (d.selectedIdentity !== null) throw Error('Manual identity cannot be assumed resolved');
+    }
+  }
+}
+try {
+  const stored = localStorage.getItem(key);
+  if (stored) { const p = JSON.parse(stored); valid(p, false); reviews = p.reviews; $('reviewer').value = p.reviewer; }
+} catch (e) { warn('Could not restore browser storage: ' + e.message + '. Import a previously exported JSON if available.'); }
+function el(tag, text, parent) { const n = document.createElement(tag); if (text != null) n.textContent = String(text); parent.appendChild(n); return n; }
+function controls() {
+  const active = ['verified','corrected'].includes($('decision').value);
+  $('identityControls').hidden = !active;
+  $('confirmLabel').hidden = $('decision').value !== 'verified';
+}
+function drawSuggestions() {
+  const box = $('suggestions'); box.replaceChildren();
+  if (!revealed) { box.hidden = true; return; }
+  box.hidden = false;
+  const grid = el('div', null, box); grid.className = 'cards';
+  ['candidate','prediction'].forEach((type, i) => {
+    const r = rows[index], card = el('div', null, grid); card.className = 'card';
+    el('h2', type + ' — UNVERIFIED', card);
+    const c = r[type];
+    if (!c) { el('p', 'No suggestion available', card); return; }
+    for (const [label, value] of Object.entries(c)) el('div', label + ': ' + (value == null ? '—' : value), card);
+    if (r.references[i]) { const img = el('img', null, card); img.src = r.references[i]; img.alt = 'Offline unverified ' + type + ' reference'; }
+    else el('p', 'Reference image unavailable in offline pack (missing, relative, or download failed).', card).className = 'muted';
+  });
+}
+function render() {
+  const r = rows[index], d = reviews[r.scanId];
+  $('position').textContent = (index + 1) + ' / ' + rows.length + ' · scan ' + r.scanId;
+  $('progress').textContent = Object.keys(reviews).length + ' reviewed / ' + rows.length;
+  $('prev').disabled = index === 0; $('next').disabled = index === rows.length - 1;
+  $('photo').src = r.photo;
+  $('decision').value = d?.decision || 'unresolved';
+  $('identity').value = d?.identitySource || '';
+  $('correction').value = d?.correctedIdOrLink || '';
+  $('evidence').value = d?.evidence || '';
+  $('note').value = d?.note || '';
+  $('confirm').checked = !!d?.confirmed;
+  $('saved').textContent = d ? 'Saved ' + d.decision : 'Not reviewed';
+  revealed = false; $('reveal').textContent = 'Reveal unverified suggestions and reference images';
+  controls(); drawSuggestions(); message('');
+}
+$('prev').onclick = () => { if (index > 0) { index--; render(); } };
+$('next').onclick = () => { if (index < rows.length - 1) { index++; render(); } };
+$('reveal').onclick = () => { revealed = !revealed; $('reveal').textContent = revealed ? 'Hide suggestions' : 'Reveal unverified suggestions and reference images'; drawSuggestions(); };
+$('decision').onchange = controls;
+$('reviewer').onchange = persist;
+$('photo').onclick = () => { $('zoomImg').src = rows[index].photo; $('zoom').showModal(); };
+$('closeZoom').onclick = () => $('zoom').close();
+$('save').onclick = () => {
+  const r = rows[index], decision = $('decision').value, source = $('identity').value;
+  const evidence = $('evidence').value.trim(), correctedIdOrLink = $('correction').value.trim();
+  if (decision === 'verified' || decision === 'corrected') {
+    if (!source || !evidence) return message('Select an identity AND enter visual evidence.', true);
+    if (!['candidate','prediction','manual'].includes(source) || (source !== 'manual' && !r[source])) return message('Selected suggestion is unavailable.', true);
+    if ((source === 'manual' || decision === 'corrected') && !correctedIdOrLink) return message('Enter a corrected card ID or catalog link.', true);
+    if (decision === 'verified' && !$('confirm').checked) return message('Explicit independent verification confirmation is required.', true);
+    if (decision === 'verified' && source === 'manual') return message('Manual IDs require catalog resolution; choose corrected instead.', true);
+  }
+  reviews[r.scanId] = {
+    scanId:r.scanId, imageHash:r.imageHash, originalPhotoFile:r.originalPhotoFile,
+    decision, identitySource: ['verified','corrected'].includes(decision) ? source : null,
+    selectedIdentity: ['verified','corrected'].includes(decision) && source !== 'manual' ? r[source] : null,
+    correctedIdOrLink: decision === 'corrected' ? correctedIdOrLink : null,
+    needsCatalogResolution: decision === 'corrected',
+    evidence: ['verified','corrected'].includes(decision) ? evidence : '',
+    confirmed: decision === 'verified' ? $('confirm').checked : decision === 'corrected',
+    note:$('note').value.trim(), reviewedAt:new Date().toISOString(), reviewer:$('reviewer').value.trim()
+  };
+  persist(); $('saved').textContent = 'Saved ' + decision; $('progress').textContent = Object.keys(reviews).length + ' reviewed / ' + rows.length;
+  message('Decision saved. Export JSON regularly.');
+};
+$('export').onclick = () => {
+  if (Object.values(reviews).some(d => ['verified','corrected'].includes(d.decision)) && !$('reviewer').value.trim())
+    return message('Enter a reviewer identifier before exporting verified/corrected decisions.', true);
+  const copy = Object.fromEntries(Object.entries(reviews).map(([id,d]) => [id, { ...d, reviewer:$('reviewer').value.trim() }]));
+  const payload = { schema:data.schema, datasetHash:data.datasetHash, reviewer:$('reviewer').value.trim(), exportedAt:new Date().toISOString(), reviews:copy };
+  try { valid(payload); } catch (e) { return message('Export blocked: ' + e.message, true); }
+  const url = URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)], { type:'application/json' }));
+  const a = document.createElement('a'); a.href = url; a.download = 'scan-identity-review-' + data.datasetHash.slice(0,12) + '.json'; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  message('Downloaded review JSON. Upload it back to chat; do not share publicly.');
+};
+$('import').onchange = async e => {
+  const file = e.target.files[0]; if (!file) return;
+  try {
+    if (file.size > 2_000_000) throw Error('Review JSON exceeds 2 MB');
+    const payload = JSON.parse(await file.text()); valid(payload);
+    if (Object.keys(reviews).length && !confirm('Replace all current local reviews with imported reviews?')) return;
+    reviews = payload.reviews; $('reviewer').value = payload.reviewer; persist(); render();
+    message('Imported ' + Object.keys(reviews).length + ' validated reviews.');
+  } catch (err) { message('Import rejected: ' + err.message, true); }
+  finally { e.target.value = ''; }
+};
+render();
+})();
+</script>
+</body></html>
