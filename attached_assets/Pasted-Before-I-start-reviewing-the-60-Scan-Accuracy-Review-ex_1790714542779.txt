@@ -1,0 +1,97 @@
+Before I start reviewing the 60 Scan Accuracy Review examples, do one final usability pass to make this review extremely fast.
+
+Do NOT change the benchmark, scan matching, indexing, or production.
+
+Goal:
+I should be able to review all 60 examples quickly without excessive clicking.
+
+Must do:
+- Keep the existing Admin → Data Quality → Scan Accuracy Review page.
+- Keep all existing saved scans/candidates/OCR/reference images.
+- Keep persistent decisions.
+- Keep production untouched.
+- Keep indexing paused.
+
+Improve review efficiency:
+
+1. Keyboard shortcuts
+- 1 = confirm candidate 1
+- 2 = confirm candidate 2
+- 3 = confirm candidate 3
+- 4/5 if those candidates exist
+- U = unresolved
+- S = focus manual catalog search
+- Left arrow = previous scan
+- Right arrow = next scan
+
+2. After I confirm or mark unresolved:
+- save immediately
+- automatically advance to the next unreviewed scan
+- show a brief saved confirmation
+- do not require another Next button click
+
+3. Make candidate comparison visually obvious
+For each candidate show:
+- catalog card image
+- card name
+- year
+- main set
+- subset
+- card number
+- confidence/similarity if available
+
+The scan image and candidate images should be large enough to visually compare without opening multiple pages.
+
+4. Add quick filters
+- Unreviewed
+- Confirmed
+- Unresolved
+- All
+
+Default to Unreviewed while I am working.
+
+5. Show progress prominently
+Example:
+37 / 60 reviewed
+34 confirmed
+3 unresolved
+23 remaining
+
+6. Do NOT pre-confirm anything.
+A candidate can be visually selected/highlighted, but nothing is saved until I explicitly confirm it.
+
+7. Do not hide difficult examples.
+I want the benchmark to include failures, not just easy cards.
+
+8. If the same exact scan/card appears more than once:
+Do not automatically copy my prior answer.
+Flag it as a possible duplicate so I can decide.
+
+Must not do:
+- Do not run indexing.
+- Do not run the benchmark yet.
+- Do not publish.
+- Do not change production.
+- Do not modify scan matching.
+- Do not modify DINO embeddings.
+- Do not modify ownership/photo approval.
+- Do not fabricate labels.
+- Do not auto-confirm candidates.
+
+QA:
+- Keyboard shortcuts work.
+- Confirming saves and advances.
+- Unresolved saves and advances.
+- Refresh restores progress.
+- Filters work.
+- Manual search still works.
+- All 60 scans remain available.
+- Production untouched.
+- Indexing paused.
+
+Final response:
+Tell me only:
+- what usability changes were made
+- where the review page is
+- confirmation that production is untouched
+- confirmation that indexing is paused
