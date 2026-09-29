@@ -57,6 +57,7 @@ const AdminNotifications = lazy(() => import("@/pages/admin/notifications"));
 const AdminPushNotifications = lazy(() => import("@/pages/admin/push-notifications"));
 const AdminLegacyTools = lazy(() => import("@/pages/admin/legacy-tools"));
 const AdminDataQuality = lazy(() => import("@/pages/admin/data-quality"));
+const AdminScanAccuracyReview = lazy(() => import("@/pages/admin/scan-accuracy-review"));
 const AdminFeed = lazy(() => import("@/pages/admin/feed"));
 const CardSearch = lazy(() => import("@/pages/card-search"));
 const MarketTrends = lazy(() => import("@/pages/market-trends"));
@@ -240,6 +241,7 @@ function Router() {
           <Route path="/admin/push-notifications" component={AdminPushNotifications} />
           <Route path="/admin/legacy-tools" component={AdminLegacyTools} />
           <Route path="/admin/data-quality" component={AdminDataQuality} />
+          <Route path="/admin/scan-accuracy-review" component={AdminScanAccuracyReview} />
           <Route path="/admin/feed" component={AdminFeed} />
           <Route path="/scan" component={ScanToAdd} />
           <Route path="/collectors/:username" component={CollectorProfile} />

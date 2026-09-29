@@ -83,6 +83,7 @@ import {
 } from "./services/subscriptionTruth";
 import { uploadUserCardImage, uploadMainSetThumbnail, downloadAndUploadToCloudinary, isCloudinaryUrl } from "./cloudinary";
 import { registerMarketplaceRoutes } from "./marketplace-routes";
+import { registerScanReviewRoutes } from "./scan-review-routes";
 import { optimizedStorage, tokenizeSearch } from "./optimized-storage";
 import {
   AccountDeletionPendingError,
@@ -171,7 +172,8 @@ const authenticateUser = async (req: any, res: any, next: any) => {
 
     // Record which platform this user is on (fire-and-forget, throttled).
     const platform = req.headers["x-app-platform"];
-    if (typeof platform === "string" && ["web", "ios", "android"].includes(platform)) {
+    if (!req.path.startsWith("/api/admin/scan-review") &&
+        typeof platform === "string" && ["web", "ios", "android"].includes(platform)) {
       const key = `${user.id}:${platform}`;
       const now = Date.now();
       const last = platformSeenCache.get(key);
@@ -2264,6 +2266,8 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       res.status(503).json({ message: 'Scan image index status is unavailable' });
     }
   });
+
+  registerScanReviewRoutes(app, authenticateUser);
 
   // Retired connector: keep legacy endpoints explicit, without loading Drive code
   // or touching the preserved Cloudinary images and import history.

@@ -1,0 +1,111 @@
+STOP requiring me to download an offline review pack, manually export JSON, and upload it back to you.
+
+You already have access to the saved scans, the catalog, the candidate matches, and the app/admin environment.
+
+I want this review process built directly into the existing admin interface so I can review the 60 saved scans in place.
+
+Goal:
+Create an admin-only Scan Accuracy Review tool inside Marvel Card Vault.
+
+Must do:
+- Use the 60 saved scans you already prepared.
+- Do not require me to download anything.
+- Do not require me to export JSON manually.
+- Do not require me to re-upload review files.
+- Store my review decisions directly in the app/database or in a development-only review table/file that you can read automatically.
+- Keep production untouched unless explicitly approved.
+
+Admin review UI:
+Create a simple admin page, for example:
+Admin → Data Quality → Scan Accuracy Review
+
+For each saved scan, show:
+- the actual scan image
+- scan ID / filename
+- current top suggested match
+- top 3 to 5 candidate matches
+- candidate card images where available
+- year
+- main set
+- subset
+- card number
+- card name
+- confidence/similarity
+- any extracted OCR/vision details
+- clear indication if a reference image is unavailable
+
+Review controls:
+- Confirm top match
+- Select another candidate as correct
+- Search catalog for correct card
+- Mark unresolved
+- Optional short note/reason
+
+When I confirm a card:
+- save the selected correct card_id directly
+- record reviewer/admin user
+- record timestamp
+- record optional note
+- mark that scan as independently labeled
+
+When I mark unresolved:
+- save unresolved status
+- do not force a guess
+
+Progress:
+Show:
+- total scans
+- reviewed
+- confirmed
+- unresolved
+- remaining
+- percentage complete
+
+Important:
+The review should persist automatically.
+I should be able to leave and come back later without losing progress.
+No manual JSON export/import should be required for the normal workflow.
+
+Benchmark integration:
+Once at least 50 scans are confidently labeled:
+- use those labels directly as the benchmark ground truth
+- run the retrieval benchmark against them
+- do not ask me to export/re-upload anything
+
+Development safety:
+- keep indexing paused
+- do not publish
+- do not touch production data
+- do not launch full indexing
+- do not change card ownership
+- do not change image approval
+- do not change Scan to Add user flow yet
+- do not change Android or iOS
+
+Preserve:
+- the 60 saved scans already prepared
+- existing candidate generation
+- existing catalog
+- existing image assets
+- existing benchmark work
+- all current experimental results
+
+QA:
+- all 60 saved scans load in the admin review page
+- candidate cards display correctly
+- I can confirm a match
+- I can choose a different candidate
+- I can search for a card manually
+- I can mark unresolved
+- progress persists after refresh
+- no JSON download/upload is required
+- no production data is modified
+- indexing remains paused
+
+Final response:
+- tell me where the new review page lives
+- confirm how review decisions are stored
+- confirm the 60 scans are available there
+- confirm no download/re-upload workflow is required
+- confirm indexing is still paused
+- confirm production is untouched

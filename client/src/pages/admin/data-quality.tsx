@@ -11,6 +11,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAppStore } from "@/lib/store";
+import { Link } from "wouter";
 import {
   ShieldAlert, Download, RefreshCw, ChevronDown, ChevronRight, Loader2, AlertTriangle, CheckCircle2, Search,
 } from "lucide-react";
@@ -647,6 +648,9 @@ export default function AdminDataQuality() {
           </p>
         </div>
         <div className="flex gap-2">
+          {import.meta.env.DEV && <Link href="/admin/scan-accuracy-review">
+            <Button variant="outline">Scan Accuracy Review →</Button>
+          </Link>}
           <Button variant="outline" onClick={() => refetch()} disabled={isFetching} data-testid="button-refresh">
             <RefreshCw className={`h-4 w-4 mr-1 ${isFetching ? "animate-spin" : ""}`} /> Re-run analysis
           </Button>

@@ -44,3 +44,9 @@ Do not treat engineering tests or collector selections as proof that recognition
 **Why:** The user explicitly requires representative real-photo evaluation, prioritizing false high-confidence errors, before accepting v1 as ready. Feedback can repeat a wrong suggestion and is not independently verified ground truth.
 
 **How to apply:** Distinguish available scan volume from reviewed benchmark labels. Report unmeasured rates as unavailable, not zero; preserve a frozen labeled sample for before/after comparisons.
+
+Keep scan identity review inside the existing admin interface, with server-persisted decisions consumed directly by benchmarking.
+
+**Why:** The user rejected downloading an offline HTML pack and manually exporting/re-uploading JSON. Explicit admin confirmation is the labeling action; notes are optional, and uncertain scans must remain unresolved.
+
+**How to apply:** Preserve the prepared original photos and historical suggestions. Keep this experimental review development-only until production use is explicitly approved; do not make file transfers a prerequisite for review or benchmarking.

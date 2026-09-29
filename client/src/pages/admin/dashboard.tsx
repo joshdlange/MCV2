@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Users, FolderOpen, Edit, PlusCircle, Settings, Calendar, Image, ArrowLeftRight,
   Copy, TrendingUp, Layers, CreditCard, ImageOff, BarChart2, Mail, Plug, Database,
-  Archive, AlertTriangle, ChevronDown, ChevronUp, LucideIcon
+  Archive, AlertTriangle, ChevronDown, ChevronUp, LucideIcon, ScanLine
 } from "lucide-react";
 
 interface SubscriberBreakdown {
@@ -251,6 +251,15 @@ const ADMIN_SECTIONS: AdminSection[] = [
         status: ["active", "dangerous"],
         warning: "Analysis is read-only. Fixes/merges require explicit confirmation and are audit-logged; duplicates are archived, never deleted.",
       },
+      ...(import.meta.env.DEV ? [{
+        title: "Scan Accuracy Review",
+        description: "Label saved collector scans against the catalog and run a development-only retrieval benchmark",
+        href: "/admin/scan-accuracy-review",
+        icon: ScanLine,
+        color: "bg-violet-600",
+        status: ["active" as ToolStatus],
+        warning: "Development-only review. No catalog, ownership, or indexing changes.",
+      }] : []),
     ],
   },
   {
