@@ -1,0 +1,204 @@
+SCAN REVIEW CLEANUP PASS BEFORE ANY MODEL CHANGES
+
+The latest 21 reviews exposed several concrete preprocessing/evaluation bugs.
+
+Do NOT change the DINO model yet.
+Do NOT resume indexing.
+Do NOT run the benchmark yet.
+
+Fix the obvious data-quality issues first.
+
+MUST DO
+
+1. REMOVE NULL CONTAMINATION
+
+The literal string "null" must never enter:
+- OCR keyword arrays
+- search terms
+- candidate queries
+- card-name matching
+- card-number matching
+- set matching
+
+If a field is missing, store/use:
+- null
+- undefined
+- empty value
+
+but never the string "null".
+
+Audit all OCR/vision normalization paths.
+
+Add regression cases for scans 3082 and 3120.
+
+2. CLASSIFY FRONT VS BACK
+
+Add an evaluation/input classification:
+- front
+- back
+- uncertain
+
+Do not silently discard back photos.
+
+For review:
+- show the classification
+- let admin correct it
+
+For benchmarking:
+- front-artwork accuracy must be reported separately
+- back-photo accuracy must be reported separately
+- do not mix backs into front visual-retrieval accuracy
+
+Scan 3084 should remain preserved as a back-photo case.
+
+3. FIX CARD-NUMBER EXTRACTION
+
+The parser must not create card numbers from artist/signature/copyright strings.
+
+Example:
+"DAVID MACK · 95 FLEER ULTRA"
+
+must not become:
+"MACK-95"
+
+Audit how card numbers are inferred.
+
+Card-number confidence should be reduced or rejected when the token is clearly part of:
+- artist names
+- copyright lines
+- manufacturer text
+- year text
+- printed credits
+
+Add scan 3088 as a regression case.
+
+4. PRESERVE OCR AS EVIDENCE, NOT AUTHORITY
+
+Historical OCR/vision output should remain visible for diagnosis.
+
+But:
+- bad OCR must not force candidate retrieval
+- missing OCR must not prevent visual retrieval
+- contradictory OCR should lower metadata confidence, not eliminate visually plausible cards
+
+Scan 3094 is an important case:
+no useful text, but the card was still identifiable by a human.
+
+Keep it in the evaluation set.
+
+5. COMPLETE REVIEW SEARCH FIX
+
+Verify that review search actually supports structured constraints.
+
+Examples:
+"1993" must restrict to year 1993.
+"1993 Phoenix" must prioritize Phoenix cards from 1993.
+"2026 Cyclops" must constrain to 2026 + Cyclops.
+
+Do not treat the entire query as one phrase.
+
+6. ADD REVIEW REASON CODES
+
+For unresolved/review notes, allow optional reason tags:
+
+- search_blocked
+- back_photo
+- wrong_catalog_image
+- OCR_failure
+- no_candidates
+- ambiguous_parallel
+- poor_photo
+- unknown_card
+- other
+
+This will help separate review-tool failures from recognition failures.
+
+7. BENCHMARK BUCKETS
+
+When the benchmark eventually runs, report separately:
+
+A. Front-image visual retrieval
+B. Back-photo identification
+C. Cases with usable OCR
+D. Cases with no useful OCR
+E. Same-art / parallel cases
+F. Catalog-image-problem cases
+G. Search-blocked reviews excluded from benchmark until resolved
+
+Do not collapse all of these into one accuracy number.
+
+8. PROTECT AGAINST OVERFITTING
+
+These reviewed examples are evaluation data.
+
+Do not tune thresholds or special-case individual scan IDs based on their known answers and then score the same examples as if they were untouched.
+
+If we later use reviewed examples for tuning:
+- create a separate holdout set
+- keep holdout labels unseen by tuning logic
+- report validation and holdout separately
+
+MUST NOT DO
+
+- Do not change the visual model.
+- Do not train on these 21 reviews.
+- Do not hardcode scan-specific fixes.
+- Do not run the benchmark yet.
+- Do not resume indexing.
+- Do not publish.
+- Do not modify production.
+- Do not change ownership.
+- Do not change photo approval.
+
+PRESERVE
+
+- all 21 existing review decisions
+- all review notes
+- original scan images
+- historical OCR/vision output
+- candidate history
+- production untouched
+- indexing paused
+
+QA
+
+Specifically verify:
+
+Scan 3082:
+- "null" cannot become a keyword or candidate term.
+
+Scan 3120:
+- same null protection.
+
+Scan 3084:
+- can be classified as back photo and excluded from front-artwork scoring.
+
+Scan 3088:
+- DAVID MACK / 95 FLEER ULTRA does not become card number MACK-95.
+
+Scan 3094:
+- remains valid for image-only evaluation despite empty OCR.
+
+Scan 3080:
+- year search for 1993 actually restricts to 1993.
+
+FINAL RESPONSE
+
+Tell me:
+
+1. Where literal null contamination came from.
+2. What was changed to prevent it.
+3. How front/back classification now works.
+4. How card-number extraction was tightened.
+5. Whether review search now truly constrains year.
+6. How many of the 21 current reviews are:
+   - confirmed
+   - unresolved
+   - search-blocked
+   - back photos
+   - catalog-image issues
+   - OCR failures
+7. Confirm no model changes were made.
+8. Confirm benchmark has not run.
+9. Confirm indexing remains paused.
+10. Confirm production remains untouched.

@@ -21,6 +21,23 @@ export interface ParsedScan {
   keywords: string[];
 }
 
+/** Safe boundary for historical matcher inputs as well as fresh vision results. */
+export function sanitizeParsedScan(parsed: ParsedScan): ParsedScan {
+  return {
+    characterName: normalizeScanField(parsed.characterName),
+    setName: normalizeScanField(parsed.setName),
+    subsetName: normalizeScanField(parsed.subsetName),
+    cardNumber: normalizeScanField(parsed.cardNumber),
+    year: normalizeScanField(parsed.year),
+    brand: normalizeScanField(parsed.brand),
+    variant: normalizeScanField(parsed.variant),
+    copyrightLine: normalizeScanField(parsed.copyrightLine),
+    serialIndicator: normalizeScanField(parsed.serialIndicator),
+    keywords: [...new Set((Array.isArray(parsed.keywords) ? parsed.keywords : [])
+      .flatMap(value => extractKeywords(value)))],
+  };
+}
+
 export interface ScanCandidateRow {
   id: number;
   name: string;
@@ -54,10 +71,24 @@ export interface ScoredMatch {
 
 // ── Normalization helpers ────────────────────────────────────────────────────
 
+/** Vision APIs sometimes return missing fields as quoted placeholder words. */
+export function normalizeScanField(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed && !/^(?:null|undefined|none)$/i.test(trimmed) ? trimmed : null;
+}
+
+/** Remove only whole placeholder tokens, never substrings of real names (Knull, Nullifier). */
+export function normalizeOcrText(value: unknown): string {
+  const text = normalizeScanField(value);
+  return text ? text.replace(/\b(?:null|undefined|none)\b/gi, ' ').replace(/\s+/g, ' ').trim() : '';
+}
+
 /** Lowercase, strip punctuation, collapse whitespace. */
 export function normalizeText(input: string | null | undefined): string {
-  if (!input) return '';
-  return input
+  const text = normalizeOcrText(input);
+  if (!text) return '';
+  return text
     .toLowerCase()
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '') // strip accents
@@ -71,8 +102,9 @@ export function normalizeText(input: string | null | undefined): string {
  * standardize hyphen spacing (e.g. "MM 23" -> "MM-23", "No. 23" -> "23").
  */
 export function normalizeCardNumber(input: string | null | undefined): string {
-  if (!input) return '';
-  let s = input.trim().toUpperCase();
+  const field = normalizeScanField(input);
+  if (!field) return '';
+  let s = field.toUpperCase();
   s = s.replace(/^NO\.?\s*/i, '');
   s = s.replace(/^#\s*/, '');
   s = s.replace(/\s+/g, ' ').trim();
@@ -91,7 +123,7 @@ export function normalizeCardNumber(input: string | null | undefined): string {
 
 /** Digits-only version of a card number, for candidate retrieval only (not identity). */
 export function cardNumberDigits(input: string | null | undefined): string {
-  return (input || '').replace(/\D/g, '');
+  return (normalizeScanField(input) || '').replace(/\D/g, '');
 }
 
 // Common Marvel set name aliases -> canonical form. Keys and values are
@@ -133,11 +165,9 @@ export function extractKeywords(text: string | null | undefined): string[] {
 // ── Field extraction helpers (used to enrich raw OCR text) ──────────────────
 
 const CARD_NUMBER_PATTERNS = [
-  /#\s?\d+/g, // #12
-  /\bno\.?\s?\d+\b/gi, // No. 12
-  /\b\d{1,3}\s?\/\s?\d{2,4}\b/g, // 12/100
-  /\b[A-Z]{1,4}-\d{1,3}\b/g, // MM-23, AV-17, SP-5
-  /\b[A-Z]{1,4}\s\d{1,3}\b/g, // MM 23
+  /#\s*[A-Z]{0,8}-?\d{1,5}\b/gi, // #12, #MM-23
+  /\bno\.?\s*[A-Z]{0,8}-?\d{1,5}\b/gi, // No. 12
+  /\b[A-Z]{1,8}-\d{1,5}\b/g, // explicitly printed MM-23, AV-17
 ];
 
 const YEAR_PATTERN = /\b(19[5-9]\d|20[0-4]\d)\b/g;
@@ -154,15 +184,16 @@ export function extractHintsFromText(raw: string): {
   yearCandidates: string[];
   setNameCandidates: string[];
 } {
+  const cleanRaw = normalizeOcrText(raw);
   const cardNumberCandidates = new Set<string>();
   for (const pattern of CARD_NUMBER_PATTERNS) {
-    const found = raw.match(pattern) || [];
+    const found = cleanRaw.match(pattern) || [];
     found.forEach(f => cardNumberCandidates.add(normalizeCardNumber(f)));
   }
 
-  const yearCandidates = [...new Set((raw.match(YEAR_PATTERN) || []))];
+  const yearCandidates = [...new Set((cleanRaw.match(YEAR_PATTERN) || []))];
 
-  const lowerRaw = normalizeText(raw);
+  const lowerRaw = normalizeText(cleanRaw);
   const setNameCandidates = KNOWN_SET_NAMES.filter(name => lowerRaw.includes(name));
 
   return {
@@ -200,6 +231,7 @@ export async function retrieveCandidates(
       .leftJoin(mainSets, eq(cardSets.mainSetId, mainSets.id))
       .where(condition).orderBy(cards.id).limit(limit),
 ): Promise<ScanCandidateRow[]> {
+  parsed = sanitizeParsedScan(parsed);
   const merged = new Map<number, ScanCandidateRow>();
 
   const number = parsed.cardNumber ? normalizeCardNumber(parsed.cardNumber) : '';
@@ -288,6 +320,7 @@ export async function retrieveCandidates(
 // ── Scoring ───────────────────────────────────────────────────────────────
 
 export function scoreCandidate(row: ScanCandidateRow, parsed: ParsedScan): { score: number; reasons: string[]; exactNumber: boolean; identitySignals: number } {
+  parsed = sanitizeParsedScan(parsed);
   let score = 0;
   const reasons: string[] = [];
   let exactNumber = false;
@@ -403,6 +436,7 @@ export function getConfidenceLevel(topScore: number): 'high' | 'medium' | 'low' 
 
 /** Pure ranking step, shared with deterministic tests and the DB-backed matcher. */
 export function rankScanCandidates(candidates: ScanCandidateRow[], parsed: ParsedScan): ScoredMatch[] {
+  parsed = sanitizeParsedScan(parsed);
   const scored = candidates.map(row => {
     const { score, reasons, exactNumber, identitySignals } = scoreCandidate(row, parsed);
     // A familiar character alone is not a unique print. Even an exact number
@@ -444,6 +478,7 @@ export function rankScanCandidates(candidates: ScanCandidateRow[], parsed: Parse
  * match reasons for the debug panel / UX.
  */
 export async function matchCandidates(parsed: ParsedScan): Promise<ScoredMatch[]> {
+  parsed = sanitizeParsedScan(parsed);
   const hasSignal = parsed.characterName || parsed.cardNumber || parsed.setName || parsed.keywords.length > 0;
   if (!hasSignal) return [];
 
@@ -496,6 +531,7 @@ export function rankImageCandidates(
   parsed: ParsedScan,
   metadataMatches: ScoredMatch[] = [],
 ): ScoredMatch[] {
+  parsed = sanitizeParsedScan(parsed);
   const similarities = new Map(imageHits.filter(hit => Number.isFinite(hit.similarity))
     .map(hit => [hit.cardId, hit.similarity]));
   const familySimilarity = new Map<string, number>();

@@ -12,6 +12,20 @@ test('development catalog structured search, paging, relevance, archived and fil
         assert.ok(result.total > 0, q);
         assert.ok(result.cards.length > 0, q);
       }
+      for (const year of ['1993', '2025', '2026']) {
+        const standalone = await searchReviewCatalog({ q: year, status: 'all' });
+        assert.ok(standalone.total > 0, year);
+        assert.ok(standalone.cards.every(card => card.year === Number(year)), `standalone ${year}`);
+        const filtered = await searchReviewCatalog({ q: 'Phoenix', year, status: 'all' });
+        assert.ok(filtered.cards.every(card => card.year === Number(year)), `filtered ${year}`);
+      }
+      for (const q of ['1993 Phoenix', '1993 Marvel Masterpieces', '1993 Phoenix 85']) {
+        const result = await searchReviewCatalog({ q, status: 'all' });
+        assert.ok(result.cards.length, q);
+        assert.ok(result.cards.every(card => card.year === 1993), q);
+      }
+      await assert.rejects(searchReviewCatalog({ q: 'null' }), /Missing-value tokens/);
+      await assert.rejects(searchReviewCatalog({ q: '1993 null' }), /Missing-value tokens/);
       const cyclops = await searchReviewCatalog({ q: '2026 Cyclops', year: '2026' });
       assert.ok(cyclops.total > 30);
       assert.ok(cyclops.cards.every(card => card.year === 2026));

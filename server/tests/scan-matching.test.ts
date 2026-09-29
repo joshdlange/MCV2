@@ -7,7 +7,7 @@ import { Pool } from 'pg';
 // Ranking tests need no database connection or external vision service.
 const databaseUrl = process.env.DATABASE_URL;
 process.env.DATABASE_URL ||= 'postgres://unused:unused@localhost:5432/unused';
-const { rankScanCandidates, normalizeCardNumber, retrieveCandidates } = await import('../services/scanMatching');
+const { rankScanCandidates, normalizeCardNumber, retrieveCandidates, extractKeywords, normalizeText } = await import('../services/scanMatching');
 
 const parsed: ParsedScan = {
   characterName: 'Spider-Man', setName: 'Marvel Masterpieces', subsetName: null,
@@ -18,6 +18,24 @@ const row = (id: number, overrides: Partial<ScanCandidateRow> = {}): ScanCandida
   id, name: 'Spider-Man', cardNumber: '7', frontImageUrl: null,
   variation: null, isInsert: false, setName: 'Marvel Masterpieces',
   setYear: 2024, ...overrides,
+});
+
+test('historical missing-value strings cannot retrieve or score null-themed cards', async () => {
+  const missing = { ...parsed, characterName: 'null', setName: 'undefined',
+    subsetName: 'none', cardNumber: 'null', year: 'none',
+    keywords: ['null', 'undefined', 'none', ''] };
+  assert.equal(normalizeText('null'), '');
+  assert.equal(normalizeCardNumber('undefined'), '');
+  assert.deepEqual(extractKeywords('null undefined none'), []);
+  const matches = rankScanCandidates([
+    row(1, { name: 'Knull', cardNumber: '1' }),
+    row(2, { name: 'Ultimate Nullifier', cardNumber: '2' }),
+  ], missing);
+  assert.ok(matches.every(match => !match.matchReasons.some(reason => /matched/i.test(reason))));
+  let calls = 0;
+  const retrieved = await retrieveCandidates(missing, async () => { calls++; return []; });
+  assert.deepEqual(retrieved, []);
+  assert.equal(calls, 0);
 });
 
 test('normalized number is precise; shared digits across prefixes are contradictions', () => {

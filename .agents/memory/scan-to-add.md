@@ -50,3 +50,9 @@ Keep scan identity review inside the existing admin interface, with server-persi
 **Why:** The user rejected downloading an offline HTML pack and manually exporting/re-uploading JSON. Explicit admin confirmation is the labeling action; notes are optional, and uncertain scans must remain unresolved.
 
 **How to apply:** Preserve the prepared original photos and historical suggestions. Keep this experimental review development-only until production use is explicitly approved; do not make file transfers a prerequisite for review or benchmarking.
+
+Separate review-tool/catalog problems, front/back input type, and metadata defects from visual recognition accuracy. Bug-investigation examples are development cases, not an untouched holdout.
+
+**Why:** Collector review exposed literal missing-value tokens, artist text mistaken for card numbers, back-only photos, blocked searches, and reported wrong reference images. Combining these into one accuracy rate would misrepresent retrieval performance.
+
+**How to apply:** Preserve raw history and confirmed identities; store classifications and issue flags independently. Require explicit front/back evidence, report uncertain inputs separately, and reserve independently labeled untouched photos before final accuracy claims.

@@ -9,6 +9,10 @@ import {
 } from './services/scanReview';
 import { legacyReviewEvidence, readReviewFlags, updateReviewFlags } from './services/scanReviewFlags';
 import { auditReviewEquivalence, searchReviewCatalog } from './services/scanReviewSearch';
+import {
+  cardNumberEvidence, effectiveClassification, REVIEW_DEVELOPMENT_CASES,
+  readReviewClassifications, sanitizeOcr, sanitizeVision, saveReviewClassification,
+} from './services/scanReviewClassification';
 
 type Candidate = { cardId: number; name: string; year: number | null; mainSetName: string | null;
   subsetName: string | null; cardNumber: string | null; imageUrl: string | null;
@@ -44,8 +48,42 @@ async function catalogCards(ids: number[]) {
   });
   return map;
 }
-function dataQuality(rows: { scanId: number }[], decisions: Record<string, { status: string; cardId: number | null; note: string }>,
+function reviewEligibility(scanId: number, decision: { status: string; cardId: number | null; note: string } | null,
+  classification: ReturnType<typeof effectiveClassification>,
   flags: Awaited<ReturnType<typeof readReviewFlags>>, cards: Map<number, Candidate>) {
+  const selected = decision?.cardId ? cards.get(decision.cardId) : null;
+  const target = selected?.isArchived ? cards.get(selected.canonicalActiveId ?? -1) : selected;
+  const searchBlocked = flags.searchBlocked[scanId]?.blocked ||
+    legacyReviewEvidence(decision).suspectedSearchBlocked;
+  const catalogImageIssue = Object.values(flags.issues).some(issue =>
+    issue.scanId === scanId && issue.cardId === decision?.cardId) ||
+    legacyReviewEvidence(decision).reviewerReportedImageIssue;
+  const excludedDueToToolCatalogIssue = !!(searchBlocked || catalogImageIssue ||
+    (decision?.status === 'confirmed' && !target?.hasUsableVisualReference));
+  const identityConfirmed = decision?.status === 'confirmed' && !!target;
+  return {
+    frontImageRetrieval: identityConfirmed && classification.side === 'front'
+      && !!target?.hasUsableVisualReference && !excludedDueToToolCatalogIssue,
+    backOcr: identityConfirmed && classification.side === 'back' &&
+      classification.ocrTag !== 'empty' && !excludedDueToToolCatalogIssue,
+    metadataParsing: identityConfirmed && classification.ocrTag !== 'empty' &&
+      classification.metadataParsing.status === 'supported' &&
+      !!classification.metadataParsing.reason && !excludedDueToToolCatalogIssue,
+    excludedDueToToolCatalogIssue,
+    reasons: [
+      ...(searchBlocked ? ['search-tool-blocked'] : []),
+      ...(catalogImageIssue ? ['catalog-image-issue'] : []),
+      ...(decision?.status === 'confirmed' && !target?.hasUsableVisualReference
+        ? ['missing-or-unsupported-active-reference'] : []),
+      ...(classification.side !== 'front' ? [`side-${classification.side}`] : []),
+      ...(decision?.status !== 'confirmed' ? ['identity-not-confirmed'] : []),
+    ],
+  };
+}
+function dataQuality(rows: { scanId: number }[], decisions: Record<string, { status: string; cardId: number | null; note: string }>,
+  flags: Awaited<ReturnType<typeof readReviewFlags>>, cards: Map<number, Candidate>,
+  classifications: Awaited<ReturnType<typeof readReviewClassifications>>,
+  metadata: Awaited<ReturnType<typeof loadScanMetadata>>) {
   const progress = reviewProgress(decisions as any, rows.length);
   const blocked = rows.filter(row => flags.searchBlocked[row.scanId]?.blocked ||
     legacyReviewEvidence(decisions[row.scanId] ?? null).suspectedSearchBlocked).length;
@@ -66,6 +104,17 @@ function dataQuality(rows: { scanId: number }[], decisions: Record<string, { sta
     return target && target.hasUsableVisualReference
       && !flagged.includes(row) && !missing.includes(row);
   });
+  const classified = rows.map(row => {
+    const decision = decisions[row.scanId] ?? null;
+    const saved = metadata.get(row.scanId);
+    const classification = effectiveClassification(row.scanId, decision,
+      classifications.classifications[row.scanId], saved?.ocr ?? null);
+    return { row, decision, classification,
+      eligibility: reviewEligibility(row.scanId, decision, classification, flags, cards),
+    };
+  });
+  const reviewedClassified = classified.filter(item =>
+    item.decision?.status === 'confirmed' || item.decision?.status === 'unresolved');
   return {
     ...progress, scansBlockedBySearch: blocked,
     legacySuspectedSearchBlocked: rows.filter(row =>
@@ -77,6 +126,17 @@ function dataQuality(rows: { scanId: number }[], decisions: Record<string, { sta
       legacyReviewEvidence(decisions[row.scanId]).reviewerReportedImageIssue).length,
     confirmedCardsMissingUsableReferenceImages: missing.length,
     confirmedLabelsSuitableForVisualBenchmark: suitable.length,
+    reviewedFront: reviewedClassified.filter(item => item.classification.side === 'front').length,
+    reviewedBack: reviewedClassified.filter(item => item.classification.side === 'back').length,
+    reviewedUncertain: reviewedClassified.filter(item => item.classification.side === 'uncertain').length,
+    frontImageRetrievalEligible: classified.filter(item => item.eligibility.frontImageRetrieval).length,
+    backOcrEligible: classified.filter(item => item.eligibility.backOcr).length,
+    metadataParsingEligible: classified.filter(item => item.eligibility.metadataParsing).length,
+    excludedDueToToolCatalogIssue: classified.filter(item => item.eligibility.excludedDueToToolCatalogIssue).length,
+    confirmedOcrEmpty: classified.filter(item => item.decision?.status === 'confirmed'
+      && item.classification.ocrTag === 'empty').length,
+    regressionDevelopmentScans: Object.keys(REVIEW_DEVELOPMENT_CASES).map(Number),
+    holdoutAssigned: 0,
     suitabilityCriteria: 'Confirmed, selected active card or archived card with one exact-identity active equivalent, HTTPS/HTTP non-Drive front reference, no reported/flagged image issue. Exact identity requires matching name, year, main set, subset, card number and variation.',
     provenance: 'Legacy note matches are reported separately as suspected/reviewer-reported, not edited or verified flags.',
   };
@@ -85,6 +145,7 @@ async function response() {
   const { dataset, decisions } = await scanReviewState();
   const metadata = await loadScanMetadata();
   const flags = await readReviewFlags(dataset.datasetHash);
+  const classifications = await readReviewClassifications(dataset.datasetHash);
   const ids = [...new Set([
     ...[...metadata.values()].flatMap(row => row.candidates.map(c => c.cardId)),
     ...dataset.rows.flatMap(row => [row.candidate?.cardId, row.prediction?.cardId]),
@@ -104,8 +165,30 @@ async function response() {
   }
   return {
     datasetHash: dataset.datasetHash,
-    items: dataset.rows.map(row => {
+    items: await Promise.all(dataset.rows.map(async row => {
       const saved = metadata.get(row.scanId)!;
+      const classification = effectiveClassification(row.scanId, decisions[row.scanId] ?? null,
+        classifications.classifications[row.scanId], saved.ocr);
+      const numberEvidence = await cardNumberEvidence(saved.ocr, saved.vision, async (number, year, hint) => {
+        const historicalCandidate = saved.candidates.some(candidate =>
+          candidate.cardNumber?.toLowerCase() === number.toLowerCase() &&
+          (year === null || candidate.year === year) &&
+          (!hint || /fleer|ultra|topps|skybox|impe[l]/i.test(hint) &&
+            hint.toLowerCase().split(/\s+/).filter(token => token.length > 3)
+              .some(token => (candidate.setName ?? '').toLowerCase().includes(token))));
+        if (historicalCandidate) return true;
+        // A surprising artist-number pattern requires independent live catalog evidence,
+        // rather than being promoted to a hard number from an OCR surname and year.
+        if (!/^[A-Z]{3,}-\d{2,4}$/i.test(number)) return false;
+        const terms = (hint ?? '').toLowerCase().split(/\s+/).filter(token => /^[a-z]{4,}$/.test(token));
+        const result = await pool.query(`SELECT 1 FROM cards c JOIN card_sets s ON s.id=c.set_id
+          LEFT JOIN main_sets m ON m.id=s.main_set_id
+          WHERE lower(c.card_number)=lower($1) AND ($2::int IS NULL OR s.year=$2)
+          AND ($3::text[]='{}'::text[] OR EXISTS (SELECT 1 FROM unnest($3::text[]) term
+            WHERE strpos(lower(concat_ws(' ', s.name,m.name)), term)>0))
+          LIMIT 1`, [number, year, terms]);
+        return result.rows.length > 0;
+      });
       // The older prepared pack contains actual saved suggestions for two scans
       // without historical ranked candidates. Do not synthesize missing rankings.
       const suggestions = [...saved.candidates];
@@ -142,17 +225,30 @@ async function response() {
           } satisfies Candidate;
         }),
         ocr: saved.ocr, vision: saved.vision, confidence: saved.confidence ?? null,
+        reviewEvidence: {
+          ocr: sanitizeOcr(saved.ocr),
+          vision: sanitizeVision(saved.vision),
+          cardNumber: numberEvidence,
+          historicalCandidateRankingContaminated: [3082, 3120].includes(row.scanId),
+          note: 'Historical OCR/vision/ranking are preserved unchanged; sanitized review evidence must not constrain catalog search.',
+        },
         decision: decisions[row.scanId] ?? null,
         selectedCard: decisions[row.scanId]?.cardId ? cards.get(decisions[row.scanId].cardId!) ?? null : null,
         imageIssues: Object.values(flags.issues).filter(issue => issue.scanId === row.scanId),
         searchBlocked: flags.searchBlocked[row.scanId] ?? null,
         legacyEvidence: legacyReviewEvidence(decisions[row.scanId] ?? null),
+        classification,
+        imageOnlyCase: classification.ocrTag === 'empty',
+        eligibility: reviewEligibility(row.scanId, decisions[row.scanId] ?? null, classification, flags, cards),
+        evaluationCohort: REVIEW_DEVELOPMENT_CASES[row.scanId] ? {
+          cohort: 'development', reason: REVIEW_DEVELOPMENT_CASES[row.scanId],
+        } : { cohort: 'unassigned', reason: null },
       };
-    }),
+    })),
     progress: reviewProgress(decisions, dataset.rows.length),
     benchmark: { status: 'blocked', message: 'Benchmark is disabled pending explicit user authorization.',
       confirmedLabels: approvedLabels(dataset.rows, decisions).length },
-    dataQuality: dataQuality(dataset.rows, decisions, flags, cards),
+    dataQuality: dataQuality(dataset.rows, decisions, flags, cards, classifications, metadata),
   };
 }
 export function registerScanReviewRoutes(app: Express, authenticateUser: RequestHandler) {
@@ -173,6 +269,17 @@ export function registerScanReviewRoutes(app: Express, authenticateUser: Request
   });
   app.get(`${base}/data-quality`, authenticateUser, middleware, async (_req, res) => {
     try { res.json((await response()).dataQuality); } catch (e) { failure(res, e); }
+  });
+  app.put(`${base}/:scanId/classification`, authenticateUser, middleware, async (req: any, res) => {
+    try {
+      const { dataset, decisions } = await scanReviewState();
+      const scanId = validId(req.params.scanId);
+      if (!scanId || !dataset.rows.some(row => row.scanId === scanId))
+        throw new ReviewError('Unknown scan ID', 404);
+      await saveReviewClassification(dataset.datasetHash, scanId, req.body, req.user.id,
+        decisions[scanId]?.status ?? null);
+      res.json(await response());
+    } catch (e) { failure(res, e); }
   });
   app.put(`${base}/:scanId/search-blocked`, authenticateUser, middleware, async (req: any, res) => {
     try {

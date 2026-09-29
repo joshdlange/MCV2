@@ -35,6 +35,17 @@ type Candidate = {
   imageIssues?: ImageIssue[];
 };
 type ImageIssue = { id?: number | string; cardId?: number; type: string; note?: string | null; createdAt?: string };
+type Classification = {
+  side: "front" | "back" | "uncertain";
+  sideEvidence?: string;
+  ocrTag: "empty" | "weak" | "contradictory" | "useful";
+  ocrEvidence?: string;
+  unresolvedReason?: string | null;
+  metadataParsing?: { status: "unreviewed" | "supported" | "contradictory"; reason: string };
+  note?: string;
+  reviewerId?: number | null;
+  classifiedAt?: string | null;
+};
 type Decision = {
   status: "confirmed" | "unresolved" | "skipped";
   cardId: number | null;
@@ -54,6 +65,17 @@ type Scan = {
   imageIssues?: ImageIssue[];
   searchBlocked?: { blocked: boolean; note?: string };
   legacyEvidence?: { suspectedSearchBlocked?: boolean; reviewerReportedImageIssue?: boolean };
+  classification?: Classification;
+  eligibility?: Record<string, unknown>;
+  reviewEvidence?: {
+    ocr?: unknown;
+    vision?: unknown;
+    cardNumber?: unknown;
+    historicalCandidateRankingContaminated?: boolean;
+    note?: string;
+  };
+  imageOnlyCase?: boolean;
+  evaluationCohort?: { cohort: string; reason: string | null };
   ocr: unknown;
   vision: unknown;
   confidence?: unknown;
@@ -113,6 +135,11 @@ const ISSUE_TYPES = [
   ["wrong-card-image", "Wrong card image"], ["wrong-parallel-image", "Wrong parallel image"],
   ["front-back-swapped", "Front/back swapped"], ["poor-crop", "Poor crop"],
   ["missing-image", "Missing image"], ["low-quality", "Low quality"], ["other", "Other"],
+] as const;
+const UNRESOLVED_REASONS = [
+  "cannot identify exact card", "search tool could not find card", "only back image available",
+  "bad/missing catalog image", "duplicate/archived catalog ambiguity",
+  "insufficient image quality", "other",
 ] as const;
 
 function CandidateRow({ candidate, selected, onSelect, label, issues, onFlag, onClear, flagPending, flagError }: {
@@ -194,6 +221,13 @@ function ScanReview({ scan, datasetHash, onSaved, onUpdated, onPending, actionRe
   const [flagCardId, setFlagCardId] = useState<number | null>(null);
   const [flagMessage, setFlagMessage] = useState("");
   const [blockedNote, setBlockedNote] = useState("");
+  const [side, setSide] = useState(scan.classification?.sideEvidence === "admin-classification" ? scan.classification.side : "");
+  const [ocrTag, setOcrTag] = useState(scan.classification?.ocrEvidence === "admin-classification" ? scan.classification.ocrTag : "");
+  const [parsingStatus, setParsingStatus] = useState(scan.classification?.metadataParsing?.status ?? "unreviewed");
+  const [parsingReason, setParsingReason] = useState(scan.classification?.metadataParsing?.reason ?? "");
+  const [classificationNote, setClassificationNote] = useState(scan.classification?.note ?? "");
+  const [reason, setReason] = useState(scan.classification?.unresolvedReason ?? "");
+  const [classificationMessage, setClassificationMessage] = useState("");
   const [zoom, setZoom] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -212,6 +246,8 @@ function ScanReview({ scan, datasetHash, onSaved, onUpdated, onPending, actionRe
     queryFn: async () => (await apiRequest("GET", `/api/admin/scan-review/catalog?${query}`)).json(),
     enabled: hasSearch && validYear,
   });
+  const outOfYearCount = filters.year ? (catalog.data?.cards ?? []).filter(card => String(card.year) !== filters.year).length : 0;
+  const displayedCards = (catalog.data?.cards ?? []).filter(card => !filters.year || String(card.year) === filters.year);
   const flag = useMutation({
     mutationFn: async ({ cardId, type, note, remove }: { cardId: number; type?: string; note?: string; remove?: boolean }) =>
       (await apiRequest(remove ? "DELETE" : "PUT", `/api/admin/scan-review/${scan.scanId}/image-issues/${cardId}`,
@@ -224,24 +260,39 @@ function ScanReview({ scan, datasetHash, onSaved, onUpdated, onPending, actionRe
       (await apiRequest("PUT", `/api/admin/scan-review/${scan.scanId}/search-blocked`, { datasetHash, blocked: !scan.searchBlocked?.blocked, note: blockedNote.trim() })).json() as Promise<ReviewData>,
     onSuccess: result => onUpdated(result),
   });
+  const classification = useMutation({
+    mutationFn: async (fields: Record<string, unknown>) =>
+      (await apiRequest("PUT", `/api/admin/scan-review/${scan.scanId}/classification`, { datasetHash, ...fields })).json() as Promise<ReviewData>,
+    onSuccess: result => { onUpdated(result); setClassificationMessage("Classification saved independently of card identity."); },
+  });
   const save = useMutation({
-    mutationFn: async ({ status, cardId }: { status: "confirmed" | "unresolved" | "skipped"; cardId?: number }) =>
-      (await apiRequest("PUT", `/api/admin/scan-review/${encodeURIComponent(scan.scanId)}`, {
+    mutationFn: async ({ status, cardId }: { status: "confirmed" | "unresolved" | "skipped"; cardId?: number }) => {
+      const labeled = await (await apiRequest("PUT", `/api/admin/scan-review/${encodeURIComponent(scan.scanId)}`, {
         datasetHash, status, ...(status === "confirmed" ? { cardId } : {}), note: note.trim(),
-      })).json() as Promise<ReviewData>,
+      })).json() as ReviewData;
+      if (status !== "unresolved" || !reason) return labeled;
+      // The optional reason has its own persisted record; never mix it into the identity decision.
+      try {
+        return (await apiRequest("PUT", `/api/admin/scan-review/${scan.scanId}/classification`,
+          { datasetHash, unresolvedReason: reason })).json() as Promise<ReviewData>;
+      } catch (error) {
+        onUpdated(labeled);
+        throw new Error(`Unresolved decision saved, but reason was not saved: ${error instanceof Error ? error.message : String(error)}. Save the reason separately below.`);
+      }
+    },
     onSuccess: data => {
       onSaved(data);
       setSelected(null);
     },
   });
   useEffect(() => {
-    onPending(save.isPending || flag.isPending || blocked.isPending);
+    onPending(save.isPending || flag.isPending || blocked.isPending || classification.isPending);
     return () => onPending(false);
-  }, [save.isPending, flag.isPending, blocked.isPending, onPending]);
+  }, [save.isPending, flag.isPending, blocked.isPending, classification.isPending, onPending]);
   const top = scan.candidates.find(c => c.cardId === scan.topCardId);
   const candidates = scan.candidates.slice(0, 5);
   actionRef.current = action => {
-    if (save.isPending || flag.isPending || blocked.isPending || zoom) return;
+    if (save.isPending || flag.isPending || blocked.isPending || classification.isPending || zoom) return;
     if (action === "search") { searchRef.current?.focus(); return; }
     if (action === "unresolved") { save.mutate({ status: "unresolved" }); return; }
     const position = Number(action) - 1;
@@ -268,13 +319,94 @@ function ScanReview({ scan, datasetHash, onSaved, onUpdated, onPending, actionRe
             <div><strong>Overall confidence:</strong> {detail(scan.confidence)}</div>
             <div><strong>Historical OCR</strong><pre className="mt-1 whitespace-pre-wrap break-words rounded bg-gray-50 p-2 text-xs">{detail(scan.ocr)}</pre></div>
             <div><strong>Historical vision</strong><pre className="mt-1 whitespace-pre-wrap break-words rounded bg-gray-50 p-2 text-xs">{detail(scan.vision)}</pre></div>
+            {scan.reviewEvidence && <div className="rounded border border-blue-200 bg-blue-50 p-3">
+              <strong>Sanitized extraction (separate from historical snapshot)</strong>
+              {scan.reviewEvidence.ocr !== undefined && <pre className="mt-1 whitespace-pre-wrap break-words text-xs">OCR: {detail(scan.reviewEvidence.ocr)}</pre>}
+              {scan.reviewEvidence.vision !== undefined && <pre className="mt-1 whitespace-pre-wrap break-words text-xs">Vision: {detail(scan.reviewEvidence.vision)}</pre>}
+              {scan.reviewEvidence.cardNumber !== undefined && <pre className="mt-1 whitespace-pre-wrap break-words text-xs">Card-number evidence: {detail(scan.reviewEvidence.cardNumber)}</pre>}
+              {scan.reviewEvidence.historicalCandidateRankingContaminated && <p className="mt-2 text-amber-900">Historical candidate rankings may contain null-token contamination; preserved for audit, not used as ground truth.</p>}
+              {scan.reviewEvidence.note && <p className="mt-1 text-blue-900">{scan.reviewEvidence.note}</p>}
+            </div>}
+          </CardContent>
+        </Card>
+        <Card><CardHeader><CardTitle className="text-base">Scan classification · separate from correct-card label</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <p className="text-xs text-gray-600">Classify the actual photo and text evidence explicitly. A default “uncertain” or derived OCR tag is not an admin classification. Empty OCR is a valid image-only case.</p>
+            <div className="rounded bg-gray-50 p-2 text-xs">
+              Current side: <strong>{scan.classification?.side ?? "Not classified"}</strong>
+              {" · "}{scan.classification?.sideEvidence ?? "No evidence recorded"}
+              <br />Current OCR tag: <strong>{scan.classification?.ocrTag ?? "Not classified"}</strong>
+              {" · "}{scan.classification?.ocrEvidence ?? "No evidence recorded"}
+            </div>
+            {scan.imageOnlyCase && <p className="rounded border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900">
+              Image-only case: OCR is empty, not a failure or a forced metadata fallback. Front visual eligibility still depends on identity, photo side and catalog quality.
+            </p>}
+            <label className="block text-xs font-medium">Actual photo side
+              <select aria-label="Actual photo side" value={side} onChange={e => setSide(e.target.value as typeof side)}
+                className="w-full rounded border bg-white p-2 text-sm">
+                <option value="">No new side classification</option>
+                <option value="front">Front</option><option value="back">Back</option><option value="uncertain">Uncertain</option>
+              </select>
+            </label>
+            <label className="block text-xs font-medium">OCR evidence quality
+              <select aria-label="OCR evidence quality" value={ocrTag} onChange={e => setOcrTag(e.target.value as typeof ocrTag)}
+                className="w-full rounded border bg-white p-2 text-sm">
+                <option value="">No new OCR classification</option>
+                <option value="empty">Empty (valid image-only)</option><option value="weak">Weak</option>
+                <option value="contradictory">Contradictory</option><option value="useful">Useful</option>
+              </select>
+            </label>
+            <label className="block text-xs font-medium">Metadata parsing evidence
+              <select aria-label="Metadata parsing evidence" value={parsingStatus} onChange={e => setParsingStatus(e.target.value as typeof parsingStatus)}
+                className="w-full rounded border bg-white p-2 text-sm">
+                <option value="unreviewed">Unreviewed</option><option value="supported">Supported by scan/catalog</option>
+                <option value="contradictory">Contradictory / misparsed</option>
+              </select>
+            </label>
+            {parsingStatus !== "unreviewed" && <Input aria-label="Metadata parsing reason" maxLength={500} value={parsingReason}
+              onChange={e => setParsingReason(e.target.value)} placeholder="Required evidence: what was supported or contradicted?" />}
+            <Input aria-label="Classification note" maxLength={500} value={classificationNote}
+              onChange={e => setClassificationNote(e.target.value)} placeholder="Optional classification note" />
+            <Button variant="outline" disabled={classification.isPending || (!side && !ocrTag && parsingStatus === "unreviewed" && !classificationNote.trim()) ||
+              (parsingStatus !== "unreviewed" && !parsingReason.trim())}
+              onClick={() => {
+                setClassificationMessage("");
+                classification.mutate({
+                  ...(side ? { side } : {}), ...(ocrTag ? { ocrTag } : {}),
+                  ...(parsingStatus !== "unreviewed" || scan.classification?.metadataParsing?.status !== "unreviewed" && scan.classification?.metadataParsing?.status !== undefined
+                    ? { metadataParsing: { status: parsingStatus, reason: parsingStatus === "unreviewed" ? "" : parsingReason.trim() } } : {}),
+                  ...(classificationNote.trim() ? { note: classificationNote.trim() } : {}),
+                });
+              }}>{classification.isPending ? "Saving classification…" : "Save classification only"}</Button>
+            {classificationMessage && <p role="status" className="text-xs text-green-700">{classificationMessage}</p>}
+            {classification.isError && <p role="alert" className="text-xs text-red-700">Classification save failed: {classification.error.message}</p>}
+            <div className="rounded border bg-gray-50 p-2 text-xs">
+              <strong>Server-assessed benchmark eligibility (not an accuracy score)</strong>
+              {scan.eligibility ? <div className="mt-1 space-y-1">
+                {([
+                  ["frontImageRetrieval", "A · Front image retrieval"],
+                  ["backOcr", "B · Back/OCR"],
+                  ["metadataParsing", "C · Metadata parsing"],
+                  ["excludedDueToToolCatalogIssue", "D · Excluded: review tool/catalog"],
+                ] as const).map(([key, label]) => <p key={key}>{label}: <strong>
+                  {typeof scan.eligibility?.[key] === "boolean" ? scan.eligibility[key] ? "Yes" : "No" : "Unavailable"}
+                </strong></p>)}
+                {Array.isArray(scan.eligibility.reasons) && scan.eligibility.reasons.length > 0 &&
+                  <p>Assessment reasons: {scan.eligibility.reasons.join(", ")}</p>}
+              </div> : <p className="mt-1 text-gray-600">Eligibility unavailable until assessed by the server. Nothing is inferred from OCR or a guessed side.</p>}
+            </div>
+            {scan.evaluationCohort && <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs">
+              <strong>Regression / holdout provenance</strong>
+              <p className="mt-1">Cohort: {scan.evaluationCohort.cohort}{scan.evaluationCohort.reason ? ` · ${scan.evaluationCohort.reason}` : ""}</p>
+              <p>Engineering regression examples are not untouched holdout scans. No holdout is claimed from reviewed examples.</p>
+            </div>}
           </CardContent>
         </Card>
       </div>
       <div className="space-y-4">
-        <Card><CardHeader><CardTitle className="text-base">Suggested matches</CardTitle></CardHeader>
+        <Card><CardHeader><CardTitle className="text-base">Historical suggested matches — evidence only</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-gray-600">Top match: {top ? `${top.name} (ID ${top.cardId})` : scan.topCardId ? `Card ID ${scan.topCardId} — details unavailable` : "Unavailable"}. Select a candidate to review it; selection alone does not save.</p>
+            <p className="text-sm text-gray-600">Historical top match: {top ? `${top.name} (ID ${top.cardId})` : scan.topCardId ? `Card ID ${scan.topCardId} — details unavailable` : "Unavailable"}. Saved rankings may contain old OCR errors. Select a candidate to review it; selection alone does not save.</p>
             {candidates.length ? candidates.map((candidate, i) =>
               <CandidateRow key={candidate.cardId} candidate={candidate} label={candidate.cardId === scan.topCardId ? "Top suggestion" : `Candidate ${i + 1}`}
                 selected={selected?.cardId === candidate.cardId} onSelect={() => setSelected(candidate)}
@@ -309,12 +441,15 @@ function ScanReview({ scan, datasetHash, onSaved, onUpdated, onPending, actionRe
             <p className="text-xs text-gray-500">Text and filters combine across name, year, set, subset and card number. Archived records are searchable. Results ordered by relevance.</p>
             {catalog.isFetching && <p className="text-sm text-gray-500">Searching…</p>}
             {catalog.isError && <p role="alert" className="text-sm text-red-700">Catalog search failed: {(catalog.error as Error).message}</p>}
+            {outOfYearCount > 0 && <p role="alert" className="text-sm text-red-700">
+              Search returned {outOfYearCount} out-of-year record(s); hidden. Year {filters.year} is strict. Server count/range may be unreliable until this is fixed.
+            </p>}
             {hasSearch && catalog.data && <p role="status" className="text-sm font-medium text-gray-700">
               {catalog.data.total} results · showing {catalog.data.total ? page * 30 + 1 : 0}–{Math.min((page * 30) + catalog.data.cards.length, catalog.data.total)}
               {" · "}{catalog.data.hasMore ?? (page * 30 + catalog.data.cards.length < catalog.data.total) ? "more available" : "no more results"}
             </p>}
             {hasSearch && !catalog.isFetching && catalog.data?.cards.length === 0 && <p className="text-sm text-gray-500">No cards found. Try another spelling, remove a filter, or include archived records.</p>}
-            {catalog.data?.cards.map(candidate => (
+            {displayedCards.map(candidate => (
               <CandidateRow key={candidate.cardId} candidate={candidate} label="Catalog" selected={selected?.cardId === candidate.cardId}
                 onSelect={() => setSelected(candidate)} issues={scan.imageIssues}
                 onFlag={(type, note) => flag.mutate({ cardId: candidate.cardId, type, note })}
@@ -352,6 +487,17 @@ function ScanReview({ scan, datasetHash, onSaved, onUpdated, onPending, actionRe
                 flagError={flag.isError && flagCardId === selected.cardId ? flag.error.message : undefined} />}
             <label htmlFor="review-note" className="text-sm font-medium">Optional note / reason</label>
             <Input id="review-note" value={note} onChange={e => setNote(e.target.value)} maxLength={500} placeholder="Short reason (saved with your decision)" />
+            <label className="block text-xs font-medium">Optional unresolved reason (separate from card identity)
+              <select aria-label="Unresolved reason" value={reason} onChange={e => setReason(e.target.value)}
+                className="w-full rounded border bg-white p-2 text-sm">
+                <option value="">No reason selected</option>
+                {UNRESOLVED_REASONS.map(value => <option key={value} value={value}>{value}</option>)}
+              </select>
+            </label>
+            {scan.decision?.status === "unresolved" && <Button variant="outline" size="sm" disabled={classification.isPending}
+              onClick={() => classification.mutate({ unresolvedReason: reason || null })}>
+              {classification.isPending ? "Saving reason…" : "Save / clear unresolved reason only"}
+            </Button>}
             <div className="flex flex-wrap gap-2">
               <Button disabled={!top || save.isPending} onClick={() => save.mutate({ status: "confirmed", cardId: scan.topCardId! })}>Confirm top match</Button>
               <Button variant="outline" disabled={!selected || save.isPending} onClick={() => selected && save.mutate({ status: "confirmed", cardId: selected.cardId })}>Confirm selected card{selected ? ` (ID ${selected.cardId})` : ""}</Button>
@@ -370,7 +516,7 @@ function ScanReview({ scan, datasetHash, onSaved, onUpdated, onPending, actionRe
             {flagMessage && <p role="status" className="text-sm text-amber-800">{flagMessage}</p>}
             {save.isPending && <p role="status" className="text-sm text-blue-700 flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Saving decision…</p>}
             {save.isSuccess && !save.isPending && <p role="status" className="text-sm text-green-700">Decision saved to the server.</p>}
-            {save.isError && <p role="alert" className="text-sm text-red-700">Save failed: {save.error.message}. Your decision was not saved; retry.</p>}
+            {save.isError && <p role="alert" className="text-sm text-red-700">Save failed: {save.error.message}</p>}
             <p className="text-xs text-gray-500">Shortcuts: 1–5 confirm candidate at that position, U unresolved, S focus search, ←/→ change scan. Shortcuts pause while typing or a dialog is open. Choosing a card alone never saves.</p>
           </CardContent>
         </Card>
@@ -442,6 +588,12 @@ export default function AdminScanAccuracyReview() {
   };
   if (!import.meta.env.DEV || !currentUser?.isAdmin) return <div className="p-6"><Card><CardContent className="py-12 text-center text-gray-700"><ShieldAlert className="h-10 w-10 mx-auto text-red-500 mb-3" />{!import.meta.env.DEV ? "Scan review is only available in development" : "Admin access required"}</CardContent></Card></div>;
   const report = data?.dataQuality;
+  const unresolvedReasons = data?.items.filter(item => item.decision?.status === "unresolved")
+    .reduce<Record<string, number>>((counts, item) => {
+      const name = item.classification?.unresolvedReason ?? "No reason recorded";
+      counts[name] = (counts[name] ?? 0) + 1;
+      return counts;
+    }, {}) ?? {};
   const results = data?.benchmark?.results && typeof data.benchmark.results === "object"
     ? data.benchmark.results as Record<string, unknown> : null;
   return <div className="p-4 md:p-6 space-y-5 bg-slate-50 text-gray-900">
@@ -465,14 +617,39 @@ export default function AdminScanAccuracyReview() {
         {report ? <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
           {([
             ["total", "Total scans"], ["confirmed", "Confirmed"], ["unresolved", "Unresolved"], ["skipped", "Skipped"],
-            ["scansBlockedBySearch", "Blocked by search"], ["confirmedCardsWithEquivalentIds", "Confirmed with equivalent IDs"],
-            ["confirmedCardsWithFlaggedCatalogImageIssues", "Confirmed with image issues"],
+            ["scansBlockedBySearch", "Search-blocked or suspected"], ["confirmedCardsWithEquivalentIds", "Confirmed with equivalent IDs"],
+            ["confirmedCardsWithFlaggedCatalogImageIssues", "Confirmed with flagged/reported image issues"],
             ["confirmedCardsMissingUsableReferenceImages", "Confirmed missing usable references"],
             ["confirmedLabelsSuitableForVisualBenchmark", "Suitable visual labels"],
           ] as const).map(([key, label]) => <div key={key} className="rounded bg-gray-50 p-2">
             <strong className="block text-lg">{detail(report[key])}</strong><span className="text-gray-600">{label}</span>
           </div>)}
         </div> : <p className="text-sm text-gray-600">Data quality report unavailable; do not infer benchmark readiness.</p>}
+        {report && <div className="mt-4 space-y-3 text-sm">
+          <div className="grid grid-cols-3 gap-2">
+            {([["reviewedFront", "Front"], ["reviewedBack", "Back"], ["reviewedUncertain", "Uncertain / not explicitly classified"]] as const)
+              .map(([key, label]) => <div className="rounded border border-blue-200 bg-blue-50 p-2" key={key}>
+                <strong className="block text-xl">{detail(report[key])}</strong>{label}
+              </div>)}
+          </div>
+          <p className="text-xs text-gray-600">Side counts include source-labeled defaults (e.g. uncertain without admin classification); review each scan’s evidence source. Back scans are not scored as failed front artwork matches.</p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+            {([
+              ["frontImageRetrievalEligible", "A · Front visual retrieval"],
+              ["backOcrEligible", "B · Back/OCR"],
+              ["metadataParsingEligible", "C · Metadata parsing"],
+              ["excludedDueToToolCatalogIssue", "D · Excluded: review tool/catalog"],
+            ] as const).map(([key, label]) => <div key={key} className="rounded border p-2"><strong className="block text-lg">{detail(report[key])}</strong>{label}</div>)}
+          </div>
+          <p className="text-xs text-gray-600">Confirmed empty-OCR image-only cases: {detail(report.confirmedOcrEmpty)}. Empty OCR does not invalidate image-first cases.</p>
+          <div className="rounded border p-3"><strong>Unresolved reasons (optional reviewer classification)</strong>
+            {Object.entries(unresolvedReasons).length ? <ul className="mt-1 text-xs text-gray-600">
+              {Object.entries(unresolvedReasons).map(([name, count]) => <li key={name}>{name}: {count}</li>)}
+            </ul> : <p className="text-xs text-gray-600">No unresolved decisions.</p>}
+            <p className="mt-1 text-xs text-amber-800">Search-blocked or suspected: {detail(report.scansBlockedBySearch)} (including legacy note suspicions: {detail(report.legacySuspectedSearchBlocked)}). Legacy notes are not verified flags; neither indicates a retrieval failure.</p>
+          </div>
+          <p className="text-xs text-gray-600">Development regression examples: {Array.isArray(report.regressionDevelopmentScans) ? report.regressionDevelopmentScans.join(", ") : "Unavailable"} · untouched holdout assigned: {detail(report.holdoutAssigned)}. Do not report tuned examples as holdout accuracy.</p>
+        </div>}
         {typeof report?.suitabilityCriteria === "string" && <p className="mt-3 text-xs text-gray-600">{report.suitabilityCriteria}</p>}
         {typeof report?.provenance === "string" && <p className="mt-1 text-xs text-gray-600">{report.provenance}</p>}
       </CardContent></Card>

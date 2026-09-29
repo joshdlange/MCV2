@@ -57,6 +57,14 @@ test('GET returns all 60 frozen scans; each private image returns original authe
   assert.equal(state.datasetHash, dataset.datasetHash);
   assert.equal(state.progress.total, 60);
   assert.equal(state.benchmark.status, 'blocked');
+  assert.equal(state.items.find((item: any) => item.scanId === 3084).classification.side, 'back');
+  assert.equal(state.items.find((item: any) => item.scanId === 3094).imageOnlyCase, true);
+  for (const id of [3082, 3120]) {
+    const safe = state.items.find((item: any) => item.scanId === id).reviewEvidence;
+    assert.equal((safe.vision?.keywords ?? []).includes('null'), false);
+  }
+  assert.equal(state.items.find((item: any) => item.scanId === 3088).reviewEvidence.cardNumber.validatedCardNumber, null);
+  assert.equal(state.dataQuality.holdoutAssigned, 0);
   for (const row of dataset.rows) {
     const item = state.items.find((item: any) => item.scanId === row.scanId);
     assert.ok(item, `Missing scan ${row.scanId}`);
@@ -80,6 +88,7 @@ test('GET/PUT/catalog/image/benchmark routes reject missing auth, nonadmin, and 
     [`/api/admin/scan-review/${dataset.rows[0].scanId}`, 'PUT'],
     ['/api/admin/scan-review/catalog?q=spider', 'GET'],
     ['/api/admin/scan-review/data-quality', 'GET'],
+    [`/api/admin/scan-review/${dataset.rows[0].scanId}/classification`, 'PUT'],
     [`/api/admin/scan-review/${dataset.rows[0].scanId}/search-blocked`, 'PUT'],
     [`/api/admin/scan-review/${dataset.rows[0].scanId}/image-issues/198`, 'PUT'],
     [`/api/admin/scan-review/image/scan/${dataset.rows[0].scanId}`, 'GET'],

@@ -1,0 +1,206 @@
+PAUSE MODEL CHANGES. FIX REVIEW/METADATA CONTAMINATION FIRST.
+
+The latest 21 reviews exposed specific bugs that need to be corrected before we continue building the benchmark.
+
+Do NOT change DINO, embeddings, retrieval architecture, indexing, or production yet.
+
+MUST DO
+
+1. REMOVE NULL / EMPTY TOKEN CONTAMINATION
+
+Missing values must never become literal searchable strings such as:
+- "null"
+- "undefined"
+- "none"
+- empty strings
+
+Audit:
+- OCR output normalization
+- parsed vision fields
+- keyword generation
+- historical matcher inputs
+- search tokens
+
+If a field is missing, omit it completely.
+
+Specifically verify that a missing card name can never cause matches to:
+- Knull
+- Ultimate Nullifier
+- any card containing "null"
+
+Add regression tests using scans 3082 and 3120 if available.
+
+2. CLASSIFY FRONT VS BACK
+
+Before scoring artwork retrieval, classify each saved scan as:
+- front
+- back
+- uncertain
+
+Do not silently mix back photos into front-artwork accuracy.
+
+For benchmark reporting:
+- front scans contribute to front visual-retrieval metrics
+- back scans are reported separately
+- uncertain scans are reported separately
+
+Do not delete or ignore back scans. They may still be useful for OCR/metadata evaluation.
+
+Scan 3084 should be preserved as a known back-photo example.
+
+3. FIX CARD-NUMBER EXTRACTION VALIDATION
+
+The parser must not blindly turn arbitrary OCR text into card numbers.
+
+Example:
+"RANDOM · DAVID MACK · 95 FLEER ULTRA"
+
+should not automatically become:
+"MACK-95"
+
+Add sanity checks around candidate card-number extraction.
+
+Consider:
+- actual known card-number formats in our catalog
+- proximity to explicit number markers where available
+- whether parsed value exists in plausible catalog records
+- rejecting artist-name + number combinations unless the catalog strongly supports that format
+
+Treat weakly parsed numbers as low-confidence evidence, not hard constraints.
+
+Use scan 3088 as a regression case.
+
+4. PRESERVE IMAGE-FIRST TEST CASES WITH NO TEXT
+
+Scans like 3094 are especially valuable.
+
+If OCR is empty:
+- do not treat that as failure
+- do not force metadata fallback
+- preserve the scan as a pure image-retrieval benchmark case
+
+Explicitly tag benchmark cases where:
+- OCR empty
+- OCR weak
+- OCR contradictory
+- OCR useful
+
+This will let us measure whether image-first retrieval actually solves the original problem.
+
+5. FIX REVIEW SEARCH YEAR FILTERING
+
+The review tool still appears unreliable for searches like "1993".
+
+If a user explicitly enters/selects a year:
+- year must behave as a real filter
+- results outside that year should not appear unless the user removes the filter
+
+Verify:
+- 1993
+- 2025
+- 2026
+- year + character
+- year + set
+- year + card number
+
+Do not call a review unresolved because the admin search tool failed to surface the card.
+
+6. ADD REVIEW REASON CATEGORIES
+
+Each unresolved review should optionally carry one of these reasons:
+- cannot identify exact card
+- search tool could not find card
+- only back image available
+- bad/missing catalog image
+- duplicate/archived catalog ambiguity
+- insufficient image quality
+- other
+
+This is important because "unresolved" currently mixes very different failure types.
+
+7. CREATE BENCHMARK ELIGIBILITY FLAGS
+
+Each reviewed scan should track whether it is eligible for:
+
+A. Front image-retrieval benchmark
+B. Back/OCR benchmark
+C. Metadata parsing benchmark
+D. Excluded from accuracy due to review-tool/catalog issue
+
+Do not discard the scan. Just classify it correctly.
+
+8. DO NOT USE THESE 21 REVIEWS TO TUNE AND TEST THE SAME SYSTEM
+
+These examples can help us fix obvious bugs.
+
+But before claiming final accuracy:
+- create a separate untouched holdout set
+- do not tune thresholds against all labeled examples and then report performance on those same examples
+
+For now, document which scans were used to identify/fix bugs.
+
+MUST NOT DO
+
+- Do not change DINO model.
+- Do not change embedding representation.
+- Do not resume indexing.
+- Do not run full benchmark yet.
+- Do not publish.
+- Do not touch production.
+- Do not modify confirmed labels.
+- Do not auto-resolve unresolved scans.
+- Do not treat search-tool failures as recognition failures.
+- Do not treat back photos as failed front-artwork retrieval.
+
+PRESERVE
+
+- All 21 current review decisions.
+- Reviewer notes.
+- Original scan images.
+- Historical OCR/vision output.
+- Historical candidate rankings.
+- Existing catalog.
+- Indexing paused.
+- Production untouched.
+
+QA
+
+Verify specifically:
+
+Scan 3082:
+- "null" is no longer generated as a keyword.
+
+Scan 3120:
+- same null contamination is removed.
+
+Scan 3084:
+- identified as back-photo category and excluded from front-art benchmark.
+
+Scan 3088:
+- "DAVID MACK · 95" does not automatically become MACK-95 without strong evidence.
+
+Scan 3094:
+- remains valid as an image-only case despite empty OCR.
+
+Scan 3080:
+- a 1993 year filter returns only 1993 records.
+
+FINAL RESPONSE
+
+Report:
+1. Where literal null contamination originated.
+2. What was changed to prevent it.
+3. How front/back classification now works.
+4. How card-number parsing was tightened.
+5. How many current reviews are:
+   - front
+   - back
+   - uncertain
+6. How many unresolved reviews were actually search-tool blocked.
+7. Whether year filtering is now strict.
+8. How benchmark eligibility is categorized.
+9. Which scans are now considered regression cases.
+10. Confirm DINO was not changed.
+11. Confirm benchmark was not run.
+12. Confirm indexing remains paused.
+13. Confirm production remains untouched.

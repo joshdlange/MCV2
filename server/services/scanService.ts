@@ -5,6 +5,8 @@ import {
   extractHintsFromText,
   extractKeywords,
   normalizeCardNumber,
+  normalizeOcrText,
+  normalizeScanField,
   normalizeText,
   retrieveImageCandidateRows,
   rankImageCandidates,
@@ -175,7 +177,10 @@ Return ONLY the JSON object. No explanation, no markdown, no code fences.`,
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
-      return { ...EMPTY_VISION, ...parsed };
+      const fields = Object.keys(EMPTY_VISION) as (keyof CardVisionResult)[];
+      return Object.fromEntries(fields.map(field => [field,
+        field === 'ocrText' ? normalizeOcrText(parsed[field]) || null : normalizeScanField(parsed[field]),
+      ])) as unknown as CardVisionResult;
     }
   } catch (err) {
     console.error('[Scan] Vision API error:', err);
@@ -185,37 +190,49 @@ Return ONLY the JSON object. No explanation, no markdown, no code fences.`,
 }
 
 export function buildParsedScan(vision: CardVisionResult): ParsedScan {
-  const rawText = vision.ocrText || '';
+  const rawText = normalizeOcrText(vision.ocrText);
   const hints = extractHintsFromText(rawText);
 
-  // Prefer the model's structured cardNumber field, but fall back to a
-  // regex-extracted candidate from the raw OCR text if the model missed it.
-  // A numbered print run is NOT the checklist number. OCR can also extract
-  // "23/100", so exclude it from both the structured field and OCR fallback.
+  // Structured numbers still require a plausible checklist shape. A model
+  // joining an artist surname and a nearby year/number is not printed evidence.
+  // OCR fallback accepts only explicit #/No. or already-hyphenated identifiers,
+  // not loose "NAME 95" pairs. Never elevate serial fractions to checklist IDs.
   const isSerial = (value: string) => /^\s*#?\s*\d{1,5}\s*\/\s*\d{1,6}\s*$/.test(value);
-  const cardNumber = (vision.cardNumber && !isSerial(vision.cardNumber) ? vision.cardNumber : null)
-    || hints.cardNumberCandidates.find(value => !isSerial(value)) || null;
-  const year = vision.year || hints.yearCandidates[0] || null;
-  const setName = vision.setName || hints.setNameCandidates[0] || null;
+  const proposed = normalizeScanField(vision.cardNumber);
+  const normalizedNumber = normalizeCardNumber(proposed);
+  const plausibleNumber = /^(?:\d{1,5}|[A-Z]{1,8}-?\d{1,5})$/.test(normalizedNumber);
+  const artistSynthesis = !!proposed && /[A-Z]/i.test(proposed)
+    && rawText.length > 0
+    && !rawText.toUpperCase().includes(normalizedNumber)
+    && !new RegExp(`\\b(?:#|NO\\.?\\s*)${normalizedNumber.replace('-', '[- ]?')}\\b`, 'i').test(rawText);
+  // A bare number immediately following a printed artist credit is weak
+  // evidence, not an exact-number retrieval constraint.
+  const creditNumber = !!proposed && /^\d+$/.test(normalizedNumber)
+    && new RegExp(`\\b(?:BY|ARTIST|ILLUSTRATED|DAVID)\\s+[A-Z]+\\s*[·,\\-]?\\s*${normalizedNumber}\\b`, 'i').test(rawText)
+    && !new RegExp(`(?:#|\\bNO\\.?\\s+)\\s*${normalizedNumber}\\b`, 'i').test(rawText);
+  const cardNumber = proposed && plausibleNumber && !isSerial(proposed) && !artistSynthesis && !creditNumber
+    ? proposed : hints.cardNumberCandidates.find(value => !isSerial(value)) || null;
+  const year = normalizeScanField(vision.year) || hints.yearCandidates[0] || null;
+  const setName = normalizeScanField(vision.setName) || hints.setNameCandidates[0] || null;
 
   const keywordSource = [
-    vision.characterName,
-    vision.setName,
-    vision.subsetName,
-    vision.variant,
+    normalizeScanField(vision.characterName),
+    setName,
+    normalizeScanField(vision.subsetName),
+    normalizeScanField(vision.variant),
     rawText,
   ].filter(Boolean).join(' ');
 
   return {
-    characterName: vision.characterName,
+    characterName: normalizeScanField(vision.characterName),
     setName,
-    subsetName: vision.subsetName,
+    subsetName: normalizeScanField(vision.subsetName),
     cardNumber,
     year,
-    brand: vision.brand,
-    variant: vision.variant,
-    copyrightLine: vision.copyrightLine,
-    serialIndicator: vision.serialIndicator,
+    brand: normalizeScanField(vision.brand),
+    variant: normalizeScanField(vision.variant),
+    copyrightLine: normalizeScanField(vision.copyrightLine),
+    serialIndicator: normalizeScanField(vision.serialIndicator),
     keywords: extractKeywords(keywordSource),
   };
 }
@@ -454,18 +471,18 @@ export async function scanCard(
   if (imageResult.status === 'partial') warnings.push('Catalog image index is incomplete; cards not yet indexed may be missed.');
   if (imageResult.status === 'unavailable') warnings.push('Catalog image search is unavailable. Any suggestions are text-only fallbacks, not picture matches.');
   if (!hasImageMatches && imageResult.status !== 'unavailable') warnings.push('No catalog image candidates were found. Any suggestions below use text only.');
-  if (!vision.ocrText && !parsed.characterName && !parsed.cardNumber && !parsed.setName) {
+  if (!normalizeOcrText(vision.ocrText) && !parsed.characterName && !parsed.cardNumber && !parsed.setName) {
     warnings.push('No readable identifying text was extracted. Picture candidates can still be reviewed; a back photo may help distinguish variants.');
   }
   if (comparison.status !== 'verified') warnings.push('Artwork verification was inconclusive or unavailable; review candidate images before confirming.');
   if (matches.some(match => !usableImageUrl(match.imageUrl))) warnings.push('Some candidates have no usable reference image and could not be visually verified.');
 
-  const ocrText = vision.ocrText || [
-    vision.characterName,
-    vision.setName,
-    vision.year,
-    vision.cardNumber ? `#${vision.cardNumber}` : null,
-    vision.variant || vision.subsetName,
+  const ocrText = normalizeOcrText(vision.ocrText) || [
+    parsed.characterName,
+    parsed.setName,
+    parsed.year,
+    parsed.cardNumber ? `#${parsed.cardNumber}` : null,
+    parsed.variant || parsed.subsetName,
   ].filter(Boolean).join(' ');
 
   warnings.push(...await imageWarnings(imageBuffer));

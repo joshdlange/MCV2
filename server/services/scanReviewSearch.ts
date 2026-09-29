@@ -1,5 +1,6 @@
 import { pool } from '../db';
 import { ReviewError } from './scanReview';
+import { isMissingToken } from './scanReviewClassification';
 
 const statusSql = `(c.archived_at IS NOT NULL OR s.archived_at IS NOT NULL OR NOT s.is_active
   OR (m.id IS NOT NULL AND (m.archived_at IS NOT NULL OR NOT m.is_active)))`;
@@ -46,6 +47,8 @@ export async function searchReviewCatalog(query: CatalogSearch) {
   const mainSet = short(query.mainSet, 'mainSet');
   const subset = short(query.subset, 'subset');
   const cardNumber = short(query.cardNumber, 'cardNumber').replace(/^#/, '');
+  if ([mainSet, subset, cardNumber].some(value => value && isMissingToken(value)))
+    throw new ReviewError('Missing-value filters are not searchable', 400);
   const yearString = short(query.year, 'year');
   if (yearString && !/^\d{4}$/.test(yearString)) throw new ReviewError('year must be four digits', 400);
   const status = query.status ?? 'active';
@@ -55,6 +58,7 @@ export async function searchReviewCatalog(query: CatalogSearch) {
       !Number.isSafeInteger(limit) || limit < 1 || limit > 100)
     throw new ReviewError('page must be 1–10000 and limit must be 1–100', 400);
   const tokens = q.replace(/#/g, ' ').split(/\s+/).filter(Boolean);
+  if (tokens.some(isMissingToken)) throw new ReviewError('Missing-value tokens are not searchable', 400);
   if (tokens.length > 15) throw new ReviewError('Too many search terms', 400);
   const years = tokens.filter(token => /^(19|20)\d{2}$/.test(token)).map(Number);
   const numbers = tokens.filter(token => /^\d{1,3}$/.test(token));
@@ -64,7 +68,7 @@ export async function searchReviewCatalog(query: CatalogSearch) {
   const where = `WHERE
     NOT EXISTS (SELECT 1 FROM unnest($1::text[]) token WHERE
       strpos(lower(concat_ws(' ', c.name, s.name, m.name, c.card_number)),lower(token))=0)
-    AND NOT EXISTS (SELECT 1 FROM unnest($2::int[]) y WHERE s.year<>y)
+    AND NOT EXISTS (SELECT 1 FROM unnest($2::int[]) y WHERE s.year IS DISTINCT FROM y)
     AND NOT EXISTS (SELECT 1 FROM unnest($3::text[]) n WHERE
       lower(regexp_replace(c.card_number,'[^a-zA-Z0-9]','','g')) <> lower(n)
       AND c.id::text<>n)
