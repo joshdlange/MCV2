@@ -212,3 +212,17 @@ mtime_ms = 1790786103801
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/aeb37ec5-5358-4390-a6c3-041895d2127f/8a90ba4f-d40c-4200-b69c-2dddd7ff6472"
 storage_version_token = "1790786177870929"
 content_type = "text/html"
+
+[[outputs]]
+id = "EqjTzFihdy2G29_S6_h2-"
+uri = "file://attached_assets/dev-broad-readonly-production-report.html"
+type = "html"
+title = "Frozen recognition validation — 100 extracted, 41 verified scans"
+description = "Actual accuracy, reference coverage, timing, exclusions and cleanup verification. Sanitized report contains no photographs, image URLs or account details."
+logical_id = "20874ff2-ae0f-4002-aed0-4bb7ce8561db"
+content_hash = "sha256:4222d892285a644b3d9e0e4140e0baaac4083a0d7530b6ab69643b5b969c7eca"
+size = 171945
+mtime_ms = 1790787779037
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/20874ff2-ae0f-4002-aed0-4bb7ce8561db/0f53c54d-5436-4071-b04a-3a5ad46e71bf"
+storage_version_token = "1790787971606695"
+content_type = "text/html"

@@ -1,0 +1,5209 @@
+{
+  "title": "Read-only historical-scan validation of frozen DINO + base reranker",
+  "status": "COMPLETED_WITH_41_ELIGIBLE_CASES",
+  "createdAt": "2026-09-30T17:02:58.109Z",
+  "source": "One authorized READ ONLY production-replica SELECT export, capped at100 historical scans; all inference and temporary indexing local development only.",
+  "productionAccess": {
+    "scanExportCalls": 1,
+    "scanRecordsExported": 100,
+    "catalogMetadataReadCalls": 1,
+    "distinctSelectedCatalogIds": 93,
+    "productionWrites": 0,
+    "accountIdentifiersExported": 0,
+    "accountNamesEmailsFreeTextOCRExported": 0,
+    "replacementPagination": false,
+    "filtering": "Same-owner equality and conflicting selected IDs handled inside SQL; null-after-selection and invalid flow excluded. Matcher predictions are never labels. Explicit selected_card_id only. No successful-ownership claim."
+  },
+  "sourceFunnel": {
+    "scans_with_feedback": 2601,
+    "same_owner_nonconflicting_explicit": 1095,
+    "eligible_after_known_exclusions": 1079,
+    "distinct_image_eligible": 1079,
+    "exported": 100
+  },
+  "evaluationFunnel": {
+    "exported": 100,
+    "downloadedQueries": 100,
+    "independentReferenceCandidatesAvailable": 74,
+    "initialReferenceUnavailability": {
+      "missing-url": 4,
+      "inactive-identity": 22
+    },
+    "exactOrNearPriorQueryDuplicates": 0,
+    "initialWithinExportNearDuplicateFlags": 8,
+    "queryReferenceByteOrNarrowNearCopyFlags": 0,
+    "primaryVisualAndReferenceOutcomes": {
+      "verified-independent-exact-front": 41,
+      "historical-exact-identity-or-parallel-conflict": 7,
+      "unusable-no-visible-card": 15,
+      "independent-positive-reference-unavailable": 2,
+      "archived-identity-unresolved": 22,
+      "same-card-capture-cluster-or-prior-exposure": 6,
+      "exact-printing-unresolved": 5,
+      "back-image": 1,
+      "capture-origin-indeterminate": 1
+    },
+    "visibleFrontCandidates": 84,
+    "eligiblePreviouslyUnqueriedVerifiedExactFronts": 41,
+    "correctIndependentReferencesPresentInIndex": 41,
+    "strictParallelCases": 0,
+    "printedInsertCases": 17,
+    "uniqueAccuracyCases": 41,
+    "warmRepeatCases": 41
+  },
+  "index": {
+    "targetReusedCardIds": 2938,
+    "actualCardIds": 3046,
+    "uniqueReferenceEmbeddings": 2785,
+    "reusedEmbeddings": 2678,
+    "newTemporaryEmbeddings": 107,
+    "additionalReferencePlanIds": 110,
+    "additionalReferenceFailures": 0,
+    "referenceLeakageRemovals": 0,
+    "correctReferenceCoverage": "41/41 eligible cases,100%; eligibility is conditional on independent exact reference availability, not all100 exported scans.",
+    "selectionPolicy": "Single bounded100-record production replica SELECT export, newest reliable explicit choices after known-exclusion/same-owner/conflict/URL-dedup filters. No replacements. Visually verified independent exact fronts only; active historical IDs only; no alias guessing. Keep all safe2938 prior stratified index IDs; add positives and up to4 same-family same-number +2 same-character metadata hard negatives per case, hash-ID order. Index/QA frozen before fresh inference. No foil-parallel guessing; printed inserts are not counted as parallels.",
+    "permanentIndexWrites": 0,
+    "fullIndexRun": false,
+    "referenceQALimit": "All positive fronts verified visually/structurally before inference; the several-thousand distractors are metadata-stratified catalog images, not individually exact-card visually audited. Shared images across multiple catalog IDs remain potential ambiguity."
+  },
+  "frozenPipeline": {
+    "model": "dinov2-small:c2bb04a51fab207c420665f1946016107bffc701:q8:cls:rgb-fit224-v1",
+    "basePolicy": {
+      "version": "detail-v1-preregistered",
+      "dinoWeight": 0.65,
+      "detailWeight": 0.35,
+      "detailWeights": {
+        "borderColor": 0.35,
+        "regionalColor": 0.25,
+        "edgeLayout": 0.25,
+        "luminanceStructure": 0.15
+      },
+      "minimumAlignmentNCC": 0.48,
+      "minimumAlignmentGap": 0.012,
+      "selection": "NCC of mean-centered grayscale at multiple scales/translations and 0/90/180/270 reference rotations; coarse-to-fine, no labels or metadata",
+      "warning": "Scores are heuristic, not probabilities. Template alignment may fail with glare, sleeves, severe perspective and card-background contamination."
+    },
+    "rerankBreadths": [
+      10,
+      20
+    ],
+    "newChroma": false,
+    "modelPoolingQuantizationChanged": false,
+    "canonicalSingleImage": true,
+    "optionalCrop": "Original ORB/RANSAC gates and existing34-reference physical-boundary whitelist unchanged. No newly inferred card boundaries or per-query corners."
+  },
+  "dinoOnly": {
+    "n": 41,
+    "top1": 29,
+    "top3": 32,
+    "top10": 35
+  },
+  "metrics": [
+    {
+      "input": "raw",
+      "breadth": 10,
+      "n": 41,
+      "top1": 28,
+      "top3": 29,
+      "top10": 35,
+      "wrongTop1": 13,
+      "wrongTop1WithMarginAtLeast003": 1,
+      "timing": {
+        "coldFirstCaseMs": 1518.9973339999979,
+        "coldCaseScanId": 3173,
+        "warmMeanMs": 258.0013018048765,
+        "warmMedianMs": 272.0935399999871,
+        "warmP95Ms": 306.72636000000057,
+        "warmN": 41
+      }
+    },
+    {
+      "input": "raw",
+      "breadth": 20,
+      "n": 41,
+      "top1": 28,
+      "top3": 29,
+      "top10": 33,
+      "wrongTop1": 13,
+      "wrongTop1WithMarginAtLeast003": 1,
+      "timing": {
+        "coldFirstCaseMs": 1664.483648999998,
+        "coldCaseScanId": 3173,
+        "warmMeanMs": 404.29434973170675,
+        "warmMedianMs": 431.46017800000845,
+        "warmP95Ms": 490.51818900000944,
+        "warmN": 41
+      }
+    },
+    {
+      "input": "optionalCrop",
+      "breadth": 10,
+      "n": 41,
+      "top1": 28,
+      "top3": 29,
+      "top10": 35,
+      "wrongTop1": 13,
+      "wrongTop1WithMarginAtLeast003": 1,
+      "timing": {
+        "coldFirstCaseMs": 1735.5336120001066,
+        "coldCaseScanId": 3173,
+        "warmMeanMs": 407.88410073183013,
+        "warmMedianMs": 410.9594189999334,
+        "warmP95Ms": 512.358819999863,
+        "warmN": 41
+      }
+    },
+    {
+      "input": "optionalCrop",
+      "breadth": 20,
+      "n": 41,
+      "top1": 28,
+      "top3": 29,
+      "top10": 33,
+      "wrongTop1": 13,
+      "wrongTop1WithMarginAtLeast003": 1,
+      "timing": {
+        "coldFirstCaseMs": 1896.6983270001056,
+        "coldCaseScanId": 3173,
+        "warmMeanMs": 572.8070746098807,
+        "warmMedianMs": 586.7628579999218,
+        "warmP95Ms": 703.2763740001901,
+        "warmN": 41
+      }
+    }
+  ],
+  "strictParallelSubgroup": {
+    "n": 0,
+    "top1": null,
+    "top3": null,
+    "top10": null,
+    "note": "Five candidate exact printings were unresolved and excluded; accepted distinct printed inserts are NOT counted as exact parallels."
+  },
+  "printedInsertSubgroup": [
+    {
+      "input": "raw",
+      "breadth": 10,
+      "n": 17,
+      "top1": 15,
+      "top3": 15,
+      "top10": 17
+    },
+    {
+      "input": "raw",
+      "breadth": 20,
+      "n": 17,
+      "top1": 15,
+      "top3": 15,
+      "top10": 17
+    },
+    {
+      "input": "optionalCrop",
+      "breadth": 10,
+      "n": 17,
+      "top1": 15,
+      "top3": 15,
+      "top10": 17
+    },
+    {
+      "input": "optionalCrop",
+      "breadth": 20,
+      "n": 17,
+      "top1": 15,
+      "top3": 15,
+      "top10": 17
+    }
+  ],
+  "optionalCrop": {
+    "accepted": 0,
+    "n": 41,
+    "acceptanceRate": 0,
+    "verifiedBoundaryCandidates": 0,
+    "fallbackBytesIdentical": true,
+    "limitation": "No Stage1top10 reference belonged to the frozen verified-boundary whitelist. All41 abstained to raw; this measures fallback, not successful crop generalization. Optional arm therefore adds overhead without new image evidence."
+  },
+  "timing": {
+    "units": "milliseconds",
+    "accuracyPasses": 1,
+    "warmRepetitionPasses": 1,
+    "interpretation": "Cold column is the FIRST query only, not41 independent cold starts. Warm mean/median/p95 use one repeated pass of the same41 cases. Processing is DINO+in-memory exact search+query raster+reranker, plus isolation/second embedding for optional crop. Index I/O and reference preparation excluded. Model-only and harness preparation costs separately reported.",
+    "indexLoadMs": 7773.674488000001,
+    "referenceFeaturePreparationMs": 3321.3089770000042,
+    "firstRawDinoColdMs": 1296.9200219999984,
+    "warmRawDinoMeanMs": 87.88112507317153,
+    "optionalHarnessPreparation": [
+      {
+        "pass": 0,
+        "pngPrepWallMs": 9860.992219,
+        "queryPngPrepMs": 1933.656966999988,
+        "referencePngPrepMs": 7919.067231000045,
+        "orbProcessWallMs": 8174.794663000001,
+        "orbReferencePrecomputeMs": 0.03316899983474286,
+        "orbVerifiedReferences": 0,
+        "guidedIsolationSumMs": 789.953491002052
+      },
+      {
+        "pass": 1,
+        "pngPrepWallMs": 9829.278961000004,
+        "queryPngPrepMs": 1942.94350199998,
+        "referencePngPrepMs": 7877.413224999924,
+        "orbProcessWallMs": 1790.2577040000033,
+        "orbReferencePrecomputeMs": 0.04085300042788731,
+        "orbVerifiedReferences": 0,
+        "guidedIsolationSumMs": 931.7315980051717
+      }
+    ],
+    "optionalWarmHarnessAmortizedExtraMsPerQuery": 260.6781723657277,
+    "warning": "Offline batch harness startup and PNG staging are NOT included in kernel processing figures; extra measured costs above prevent implying those figures are deployment end-to-end latency."
+  },
+  "ambiguity": {
+    "marginThreshold": 0.03,
+    "meaning": "Frozen descriptive score-margin flag only, not calibrated confidence or an automatic acceptance threshold. Wrong clear-margin counts are not a validated false-high-confidence probability."
+  },
+  "perCase": [
+    {
+      "scanId": 3173,
+      "confirmedCardId": 18232,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 26,
+      "optionalCropDinoRank": 26,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": null,
+          "top1CardId": 20430,
+          "top1Score": 0.6669786212169808,
+          "margin": 0.004152973952155303,
+          "warmProcessingMs": 291.74977099998796,
+          "top10CardIds": [
+            20430,
+            548384,
+            17189,
+            58663,
+            17510,
+            17419,
+            18056,
+            19912,
+            336619,
+            16659
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": null,
+          "top1CardId": 20430,
+          "top1Score": 0.6669786212169808,
+          "margin": 0.004152973952155303,
+          "warmProcessingMs": 454.0994709999941,
+          "top10CardIds": [
+            20430,
+            548384,
+            17189,
+            16586,
+            317752,
+            342793,
+            337635,
+            39058,
+            18323,
+            18684
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": null,
+          "top1CardId": 20430,
+          "top1Score": 0.6669786212169808,
+          "margin": 0.004152973952155303,
+          "warmProcessingMs": 512.358819999863,
+          "top10CardIds": [
+            20430,
+            548384,
+            17189,
+            58663,
+            17510,
+            17419,
+            18056,
+            19912,
+            336619,
+            16659
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": null,
+          "top1CardId": 20430,
+          "top1Score": 0.6669786212169808,
+          "margin": 0.004152973952155303,
+          "warmProcessingMs": 743.6748709998501,
+          "top10CardIds": [
+            20430,
+            548384,
+            17189,
+            16586,
+            317752,
+            342793,
+            337635,
+            39058,
+            18323,
+            18684
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 3169,
+      "confirmedCardId": 16868,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 144,
+      "optionalCropDinoRank": 144,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": null,
+          "top1CardId": 521998,
+          "top1Score": 0.7022252591061068,
+          "margin": 0.001669687195593128,
+          "warmProcessingMs": 137.67373800001224,
+          "top10CardIds": [
+            521998,
+            521240,
+            15847,
+            18636,
+            337644,
+            337645,
+            337646,
+            60827,
+            17465,
+            533624
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": null,
+          "top1CardId": 521998,
+          "top1Score": 0.7022252591061068,
+          "margin": 0.001669687195593128,
+          "warmProcessingMs": 174.62574100001075,
+          "top10CardIds": [
+            521998,
+            521240,
+            15847,
+            18636,
+            337644,
+            337645,
+            337646,
+            60827,
+            15836,
+            84790
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": null,
+          "top1CardId": 521998,
+          "top1Score": 0.7022252591061068,
+          "margin": 0.001669687195593128,
+          "warmProcessingMs": 271.86218100073165,
+          "top10CardIds": [
+            521998,
+            521240,
+            15847,
+            18636,
+            337644,
+            337645,
+            337646,
+            60827,
+            17465,
+            533624
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": null,
+          "top1CardId": 521998,
+          "top1Score": 0.7022252591061068,
+          "margin": 0.001669687195593128,
+          "warmProcessingMs": 322.86010300072667,
+          "top10CardIds": [
+            521998,
+            521240,
+            15847,
+            18636,
+            337644,
+            337645,
+            337646,
+            60827,
+            15836,
+            84790
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 3108,
+      "confirmedCardId": 15640,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 15640,
+          "top1Score": 0.744433334107415,
+          "margin": 0.001978854901798943,
+          "warmProcessingMs": 270.03952999998,
+          "top10CardIds": [
+            15640,
+            337252,
+            196854,
+            69671,
+            15517,
+            185412,
+            15424,
+            15422,
+            15457,
+            61894
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 15640,
+          "top1Score": 0.744433334107415,
+          "margin": 0.001978854901798943,
+          "warmProcessingMs": 430.7707809999847,
+          "top10CardIds": [
+            15640,
+            337252,
+            196854,
+            69671,
+            15517,
+            185412,
+            15424,
+            15422,
+            15457,
+            61894
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 15640,
+          "top1Score": 0.744433334107415,
+          "margin": 0.001978854901798943,
+          "warmProcessingMs": 494.3691630001922,
+          "top10CardIds": [
+            15640,
+            337252,
+            196854,
+            69671,
+            15517,
+            185412,
+            15424,
+            15422,
+            15457,
+            61894
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 15640,
+          "top1Score": 0.744433334107415,
+          "margin": 0.001978854901798943,
+          "warmProcessingMs": 703.2763740001901,
+          "top10CardIds": [
+            15640,
+            337252,
+            196854,
+            69671,
+            15517,
+            185412,
+            15424,
+            15422,
+            15457,
+            61894
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 3104,
+      "confirmedCardId": 15623,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 9,
+          "top1CardId": 17515,
+          "top1Score": 0.7430545249777674,
+          "margin": 0.005767406787896112,
+          "warmProcessingMs": 252.9364260000002,
+          "top10CardIds": [
+            17515,
+            15517,
+            17750,
+            61894,
+            348694,
+            348741,
+            348770,
+            87852,
+            15623,
+            19910
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 19,
+          "top1CardId": 17515,
+          "top1Score": 0.7430545249777674,
+          "margin": 0.005767406787896112,
+          "warmProcessingMs": 457.46262900000147,
+          "top10CardIds": [
+            17515,
+            15517,
+            17750,
+            61894,
+            348694,
+            348741,
+            348770,
+            87852,
+            17759,
+            185412
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 9,
+          "top1CardId": 17515,
+          "top1Score": 0.7430545249777674,
+          "margin": 0.005767406787896112,
+          "warmProcessingMs": 447.9021389999616,
+          "top10CardIds": [
+            17515,
+            15517,
+            17750,
+            61894,
+            348694,
+            348741,
+            348770,
+            87852,
+            15623,
+            19910
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 19,
+          "top1CardId": 17515,
+          "top1Score": 0.7430545249777674,
+          "margin": 0.005767406787896112,
+          "warmProcessingMs": 693.0860009999669,
+          "top10CardIds": [
+            17515,
+            15517,
+            17750,
+            61894,
+            348694,
+            348741,
+            348770,
+            87852,
+            17759,
+            185412
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 3100,
+      "confirmedCardId": 15634,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 15634,
+          "top1Score": 0.8584714351129673,
+          "margin": 0.15458592664368465,
+          "warmProcessingMs": 266.39299200000823,
+          "top10CardIds": [
+            15634,
+            15400,
+            18006,
+            17402,
+            18004,
+            15847,
+            530884,
+            17823,
+            250432,
+            183698
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 15634,
+          "top1Score": 0.8584714351129673,
+          "margin": 0.15458592664368465,
+          "warmProcessingMs": 447.842181,
+          "top10CardIds": [
+            15634,
+            15400,
+            18006,
+            17402,
+            18004,
+            15847,
+            530884,
+            17823,
+            250432,
+            183698
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 15634,
+          "top1Score": 0.8584714351129673,
+          "margin": 0.15458592664368465,
+          "warmProcessingMs": 463.0512480004909,
+          "top10CardIds": [
+            15634,
+            15400,
+            18006,
+            17402,
+            18004,
+            15847,
+            530884,
+            17823,
+            250432,
+            183698
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 15634,
+          "top1Score": 0.8584714351129673,
+          "margin": 0.15458592664368465,
+          "warmProcessingMs": 682.4874420004853,
+          "top10CardIds": [
+            15634,
+            15400,
+            18006,
+            17402,
+            18004,
+            15847,
+            530884,
+            17823,
+            250432,
+            183698
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 3098,
+      "confirmedCardId": 15647,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 8,
+      "optionalCropDinoRank": 8,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 7,
+          "top1CardId": 337252,
+          "top1Score": 0.7531298833013176,
+          "margin": 0.009353953842185736,
+          "warmProcessingMs": 296.3714489999984,
+          "top10CardIds": [
+            337252,
+            61894,
+            60827,
+            527881,
+            15836,
+            15418,
+            15647,
+            531714,
+            15457,
+            528691
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 7,
+          "top1CardId": 337252,
+          "top1Score": 0.7531298833013176,
+          "margin": 0.009353953842185736,
+          "warmProcessingMs": 451.4739649999974,
+          "top10CardIds": [
+            337252,
+            61894,
+            60827,
+            527881,
+            15836,
+            15418,
+            15647,
+            531714,
+            15457,
+            185412
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 7,
+          "top1CardId": 337252,
+          "top1Score": 0.7531298833013176,
+          "margin": 0.009353953842185736,
+          "warmProcessingMs": 456.8599700007326,
+          "top10CardIds": [
+            337252,
+            61894,
+            60827,
+            527881,
+            15836,
+            15418,
+            15647,
+            531714,
+            15457,
+            528691
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 7,
+          "top1CardId": 337252,
+          "top1Score": 0.7531298833013176,
+          "margin": 0.009353953842185736,
+          "warmProcessingMs": 649.3641500007507,
+          "top10CardIds": [
+            337252,
+            61894,
+            60827,
+            527881,
+            15836,
+            15418,
+            15647,
+            531714,
+            15457,
+            185412
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 3097,
+      "confirmedCardId": 15626,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 15626,
+          "top1Score": 0.6792792710544994,
+          "margin": 0.05866538927209508,
+          "warmProcessingMs": 272.0935399999871,
+          "top10CardIds": [
+            15626,
+            528691,
+            548363,
+            548384,
+            15367,
+            531714,
+            332772,
+            67357,
+            65076,
+            17510
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 15626,
+          "top1Score": 0.6792792710544994,
+          "margin": 0.05866538927209508,
+          "warmProcessingMs": 433.30299699997704,
+          "top10CardIds": [
+            15626,
+            528691,
+            548363,
+            548384,
+            86172,
+            19753,
+            17478,
+            15367,
+            531714,
+            332772
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 15626,
+          "top1Score": 0.6792792710544994,
+          "margin": 0.05866538927209508,
+          "warmProcessingMs": 460.7200529999827,
+          "top10CardIds": [
+            15626,
+            528691,
+            548363,
+            548384,
+            15367,
+            531714,
+            332772,
+            67357,
+            65076,
+            17510
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 15626,
+          "top1Score": 0.6792792710544994,
+          "margin": 0.05866538927209508,
+          "warmProcessingMs": 668.3775889999815,
+          "top10CardIds": [
+            15626,
+            528691,
+            548363,
+            548384,
+            86172,
+            19753,
+            17478,
+            15367,
+            531714,
+            332772
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 3090,
+      "confirmedCardId": 20330,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 147,
+      "optionalCropDinoRank": 147,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": null,
+          "top1CardId": 58663,
+          "top1Score": 0.6512247809645366,
+          "margin": 0.007302269859838284,
+          "warmProcessingMs": 279.25651599997946,
+          "top10CardIds": [
+            58663,
+            12399,
+            528691,
+            58890,
+            12759,
+            331472,
+            333742,
+            58975,
+            18684,
+            59900
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": null,
+          "top1CardId": 58663,
+          "top1Score": 0.6512247809645366,
+          "margin": 0.007302269859838284,
+          "warmProcessingMs": 463.79558899998665,
+          "top10CardIds": [
+            58663,
+            12399,
+            528691,
+            58890,
+            12759,
+            331472,
+            333742,
+            58975,
+            532125,
+            18684
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": null,
+          "top1CardId": 58663,
+          "top1Score": 0.6512247809645366,
+          "margin": 0.007302269859838284,
+          "warmProcessingMs": 446.46770300062053,
+          "top10CardIds": [
+            58663,
+            12399,
+            528691,
+            58890,
+            12759,
+            331472,
+            333742,
+            58975,
+            18684,
+            59900
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": null,
+          "top1CardId": 58663,
+          "top1Score": 0.6512247809645366,
+          "margin": 0.007302269859838284,
+          "warmProcessingMs": 686.7404110006246,
+          "top10CardIds": [
+            58663,
+            12399,
+            528691,
+            58890,
+            12759,
+            331472,
+            333742,
+            58975,
+            532125,
+            18684
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 3087,
+      "confirmedCardId": 20329,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 3,
+      "optionalCropDinoRank": 3,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 20329,
+          "top1Score": 0.6772602325560905,
+          "margin": 0.001990627687215585,
+          "warmProcessingMs": 275.6190459999925,
+          "top10CardIds": [
+            20329,
+            331472,
+            530581,
+            39058,
+            343593,
+            193627,
+            66037,
+            35319,
+            188248,
+            65292
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 20329,
+          "top1Score": 0.6772602325560905,
+          "margin": 0.001990627687215585,
+          "warmProcessingMs": 416.6726740000013,
+          "top10CardIds": [
+            20329,
+            331472,
+            530581,
+            39058,
+            343593,
+            193627,
+            66037,
+            35319,
+            188248,
+            65292
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 20329,
+          "top1Score": 0.6772602325560905,
+          "margin": 0.001990627687215585,
+          "warmProcessingMs": 431.7591460001204,
+          "top10CardIds": [
+            20329,
+            331472,
+            530581,
+            39058,
+            343593,
+            193627,
+            66037,
+            35319,
+            188248,
+            65292
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 20329,
+          "top1Score": 0.6772602325560905,
+          "margin": 0.001990627687215585,
+          "warmProcessingMs": 625.7236080001239,
+          "top10CardIds": [
+            20329,
+            331472,
+            530581,
+            39058,
+            343593,
+            193627,
+            66037,
+            35319,
+            188248,
+            65292
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 3086,
+      "confirmedCardId": 20327,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 498,
+      "optionalCropDinoRank": 498,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": null,
+          "top1CardId": 37729,
+          "top1Score": 0.6524485232553223,
+          "margin": 0.002600366252895281,
+          "warmProcessingMs": 266.3642209999962,
+          "top10CardIds": [
+            37729,
+            528691,
+            337635,
+            60849,
+            337675,
+            337678,
+            343042,
+            12759,
+            19341,
+            337231
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": null,
+          "top1CardId": 37729,
+          "top1Score": 0.6524485232553223,
+          "margin": 0.002600366252895281,
+          "warmProcessingMs": 429.5217510000075,
+          "top10CardIds": [
+            37729,
+            528691,
+            337635,
+            60849,
+            336617,
+            337675,
+            337678,
+            343593,
+            65791,
+            60602
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": null,
+          "top1CardId": 37729,
+          "top1Score": 0.6524485232553223,
+          "margin": 0.002600366252895281,
+          "warmProcessingMs": 429.7194349999045,
+          "top10CardIds": [
+            37729,
+            528691,
+            337635,
+            60849,
+            337675,
+            337678,
+            343042,
+            12759,
+            19341,
+            337231
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": null,
+          "top1CardId": 37729,
+          "top1Score": 0.6524485232553223,
+          "margin": 0.002600366252895281,
+          "warmProcessingMs": 658.2596079998912,
+          "top10CardIds": [
+            37729,
+            528691,
+            337635,
+            60849,
+            336617,
+            337675,
+            337678,
+            343593,
+            65791,
+            60602
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 3078,
+      "confirmedCardId": 15845,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 15845,
+          "top1Score": 0.7809451117815611,
+          "margin": 0.02817937222181266,
+          "warmProcessingMs": 312.3937560000195,
+          "top10CardIds": [
+            15845,
+            521240,
+            60827,
+            337251,
+            337254,
+            60849,
+            19341,
+            195145,
+            69671,
+            17510
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 15845,
+          "top1Score": 0.7809451117815611,
+          "margin": 0.02817937222181266,
+          "warmProcessingMs": 501.97073000001546,
+          "top10CardIds": [
+            15845,
+            521240,
+            60827,
+            337251,
+            337254,
+            60849,
+            19341,
+            195145,
+            69671,
+            17510
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 15845,
+          "top1Score": 0.7809451117815611,
+          "margin": 0.02817937222181266,
+          "warmProcessingMs": 471.9720039999884,
+          "top10CardIds": [
+            15845,
+            521240,
+            60827,
+            337251,
+            337254,
+            60849,
+            19341,
+            195145,
+            69671,
+            17510
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 15845,
+          "top1Score": 0.7809451117815611,
+          "margin": 0.02817937222181266,
+          "warmProcessingMs": 689.1661849999873,
+          "top10CardIds": [
+            15845,
+            521240,
+            60827,
+            337251,
+            337254,
+            60849,
+            19341,
+            195145,
+            69671,
+            17510
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 3056,
+      "confirmedCardId": 16844,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 400,
+      "optionalCropDinoRank": 400,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": null,
+          "top1CardId": 337252,
+          "top1Score": 0.7188448727337862,
+          "margin": 0.00779405436675451,
+          "warmProcessingMs": 165.86835699999938,
+          "top10CardIds": [
+            337252,
+            337251,
+            337254,
+            19341,
+            15423,
+            69671,
+            17510,
+            17515,
+            15457,
+            17140
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": null,
+          "top1CardId": 337252,
+          "top1Score": 0.7188448727337862,
+          "margin": 0.00779405436675451,
+          "warmProcessingMs": 210.26176100000157,
+          "top10CardIds": [
+            337252,
+            337251,
+            337254,
+            19341,
+            15423,
+            69671,
+            17510,
+            17515,
+            15457,
+            196854
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": null,
+          "top1CardId": 337252,
+          "top1Score": 0.7188448727337862,
+          "margin": 0.00779405436675451,
+          "warmProcessingMs": 297.89311499969335,
+          "top10CardIds": [
+            337252,
+            337251,
+            337254,
+            19341,
+            15423,
+            69671,
+            17510,
+            17515,
+            15457,
+            17140
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": null,
+          "top1CardId": 337252,
+          "top1Score": 0.7188448727337862,
+          "margin": 0.00779405436675451,
+          "warmProcessingMs": 374.20802299969364,
+          "top10CardIds": [
+            337252,
+            337251,
+            337254,
+            19341,
+            15423,
+            69671,
+            17510,
+            17515,
+            15457,
+            196854
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 3014,
+      "confirmedCardId": 15590,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 15590,
+          "top1Score": 0.6277497364469028,
+          "margin": 0.021037194237768397,
+          "warmProcessingMs": 285.9940590000042,
+          "top10CardIds": [
+            15590,
+            12759,
+            533562,
+            77971,
+            12399,
+            528691,
+            531509,
+            337250,
+            528130,
+            30078
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 15590,
+          "top1Score": 0.6277497364469028,
+          "margin": 0.021037194237768397,
+          "warmProcessingMs": 451.2005780000036,
+          "top10CardIds": [
+            15590,
+            12759,
+            533562,
+            77971,
+            12399,
+            528691,
+            205155,
+            531509,
+            337250,
+            528130
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 15590,
+          "top1Score": 0.6277497364469028,
+          "margin": 0.021037194237768397,
+          "warmProcessingMs": 434.5532959999473,
+          "top10CardIds": [
+            15590,
+            12759,
+            533562,
+            77971,
+            12399,
+            528691,
+            531509,
+            337250,
+            528130,
+            30078
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 15590,
+          "top1Score": 0.6277497364469028,
+          "margin": 0.021037194237768397,
+          "warmProcessingMs": 670.4368939999476,
+          "top10CardIds": [
+            15590,
+            12759,
+            533562,
+            77971,
+            12399,
+            528691,
+            205155,
+            531509,
+            337250,
+            528130
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 3012,
+      "confirmedCardId": 19270,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": true,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19270,
+          "top1Score": 0.728096908653483,
+          "margin": 0.04486853270432967,
+          "warmProcessingMs": 277.9518199999875,
+          "top10CardIds": [
+            19270,
+            26436,
+            15845,
+            16642,
+            185009,
+            185099,
+            88549,
+            526902,
+            525551,
+            184989
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19270,
+          "top1Score": 0.728096908653483,
+          "margin": 0.04486853270432967,
+          "warmProcessingMs": 442.81498399998236,
+          "top10CardIds": [
+            19270,
+            26436,
+            15845,
+            16642,
+            185009,
+            185099,
+            88549,
+            526902,
+            525551,
+            184989
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19270,
+          "top1Score": 0.728096908653483,
+          "margin": 0.04486853270432967,
+          "warmProcessingMs": 560.2131050006647,
+          "top10CardIds": [
+            19270,
+            26436,
+            15845,
+            16642,
+            185009,
+            185099,
+            88549,
+            526902,
+            525551,
+            184989
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19270,
+          "top1Score": 0.728096908653483,
+          "margin": 0.04486853270432967,
+          "warmProcessingMs": 766.8100790006501,
+          "top10CardIds": [
+            19270,
+            26436,
+            15845,
+            16642,
+            185009,
+            185099,
+            88549,
+            526902,
+            525551,
+            184989
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2984,
+      "confirmedCardId": 20280,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 3,
+      "optionalCropDinoRank": 3,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 8,
+          "top1CardId": 530527,
+          "top1Score": 0.7251077347155003,
+          "margin": 0.053731270696136035,
+          "warmProcessingMs": 149.87605400000757,
+          "top10CardIds": [
+            530527,
+            530528,
+            88660,
+            20281,
+            67072,
+            336618,
+            185219,
+            20280,
+            11346,
+            22497
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 8,
+          "top1CardId": 530527,
+          "top1Score": 0.7251077347155003,
+          "margin": 0.053731270696136035,
+          "warmProcessingMs": 186.21237799999653,
+          "top10CardIds": [
+            530527,
+            530528,
+            88660,
+            20281,
+            67072,
+            336618,
+            185219,
+            20280,
+            11346,
+            19268
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 8,
+          "top1CardId": 530527,
+          "top1Score": 0.7251077347155003,
+          "margin": 0.053731270696136035,
+          "warmProcessingMs": 283.72727900028985,
+          "top10CardIds": [
+            530527,
+            530528,
+            88660,
+            20281,
+            67072,
+            336618,
+            185219,
+            20280,
+            11346,
+            22497
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 8,
+          "top1CardId": 530527,
+          "top1Score": 0.7251077347155003,
+          "margin": 0.053731270696136035,
+          "warmProcessingMs": 328.3135680002888,
+          "top10CardIds": [
+            530527,
+            530528,
+            88660,
+            20281,
+            67072,
+            336618,
+            185219,
+            20280,
+            11346,
+            19268
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2983,
+      "confirmedCardId": 20279,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 2,
+      "optionalCropDinoRank": 2,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 10,
+          "top1CardId": 530526,
+          "top1Score": 0.6231048889826163,
+          "margin": 0.013976834856290643,
+          "warmProcessingMs": 159.46968800001196,
+          "top10CardIds": [
+            530526,
+            189876,
+            337312,
+            337313,
+            337314,
+            337315,
+            337316,
+            337317,
+            337318,
+            20279
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 20,
+          "top1CardId": 530526,
+          "top1Score": 0.6231048889826163,
+          "margin": 0.013976834856290643,
+          "warmProcessingMs": 176.39813900001172,
+          "top10CardIds": [
+            530526,
+            189876,
+            337312,
+            337313,
+            337314,
+            337315,
+            337316,
+            337317,
+            337318,
+            337319
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 10,
+          "top1CardId": 530526,
+          "top1Score": 0.6231048889826163,
+          "margin": 0.013976834856290643,
+          "warmProcessingMs": 273.8033160001505,
+          "top10CardIds": [
+            530526,
+            189876,
+            337312,
+            337313,
+            337314,
+            337315,
+            337316,
+            337317,
+            337318,
+            20279
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 20,
+          "top1CardId": 530526,
+          "top1Score": 0.6231048889826163,
+          "margin": 0.013976834856290643,
+          "warmProcessingMs": 305.32712800014997,
+          "top10CardIds": [
+            530526,
+            189876,
+            337312,
+            337313,
+            337314,
+            337315,
+            337316,
+            337317,
+            337318,
+            337319
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2981,
+      "confirmedCardId": 20281,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 39,
+      "optionalCropDinoRank": 39,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": null,
+          "top1CardId": 336622,
+          "top1Score": 0.6725919647372226,
+          "margin": 0.022842485961451442,
+          "warmProcessingMs": 142.24315399999614,
+          "top10CardIds": [
+            336622,
+            336621,
+            530528,
+            337587,
+            20620,
+            17512,
+            88660,
+            22497,
+            521995,
+            521998
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": null,
+          "top1CardId": 336622,
+          "top1Score": 0.6725919647372226,
+          "margin": 0.022842485961451442,
+          "warmProcessingMs": 231.03810900001554,
+          "top10CardIds": [
+            336622,
+            336621,
+            530528,
+            337587,
+            20620,
+            17512,
+            88660,
+            89837,
+            342709,
+            336695
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": null,
+          "top1CardId": 336622,
+          "top1Score": 0.6725919647372226,
+          "margin": 0.022842485961451442,
+          "warmProcessingMs": 259.7453089993942,
+          "top10CardIds": [
+            336622,
+            336621,
+            530528,
+            337587,
+            20620,
+            17512,
+            88660,
+            22497,
+            521995,
+            521998
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": null,
+          "top1CardId": 336622,
+          "top1Score": 0.6725919647372226,
+          "margin": 0.022842485961451442,
+          "warmProcessingMs": 314.3140999993775,
+          "top10CardIds": [
+            336622,
+            336621,
+            530528,
+            337587,
+            20620,
+            17512,
+            88660,
+            89837,
+            342709,
+            336695
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2969,
+      "confirmedCardId": 19820,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19820,
+          "top1Score": 0.8175291031569685,
+          "margin": 0.05774894663529606,
+          "warmProcessingMs": 240.900112000003,
+          "top10CardIds": [
+            19820,
+            336668,
+            19962,
+            22426,
+            22498,
+            16634,
+            190537,
+            337605,
+            20620,
+            317468
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19820,
+          "top1Score": 0.8175291031569685,
+          "margin": 0.05774894663529606,
+          "warmProcessingMs": 431.46017800000845,
+          "top10CardIds": [
+            19820,
+            336668,
+            19962,
+            22426,
+            22498,
+            16634,
+            190537,
+            337605,
+            20620,
+            216357
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19820,
+          "top1Score": 0.8175291031569685,
+          "margin": 0.05774894663529606,
+          "warmProcessingMs": 401.42537100014306,
+          "top10CardIds": [
+            19820,
+            336668,
+            19962,
+            22426,
+            22498,
+            16634,
+            190537,
+            337605,
+            20620,
+            317468
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19820,
+          "top1Score": 0.8175291031569685,
+          "margin": 0.05774894663529606,
+          "warmProcessingMs": 615.5966770001469,
+          "top10CardIds": [
+            19820,
+            336668,
+            19962,
+            22426,
+            22498,
+            16634,
+            190537,
+            337605,
+            20620,
+            216357
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2965,
+      "confirmedCardId": 17215,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": true,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 17215,
+          "top1Score": 0.8847878958360089,
+          "margin": 0.19970171414970783,
+          "warmProcessingMs": 302.81443499999295,
+          "top10CardIds": [
+            17215,
+            16636,
+            15868,
+            185181,
+            21399,
+            18257,
+            22402,
+            17998,
+            184440,
+            184461
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 17215,
+          "top1Score": 0.8847878958360089,
+          "margin": 0.19970171414970783,
+          "warmProcessingMs": 497.85543899999175,
+          "top10CardIds": [
+            17215,
+            16636,
+            15868,
+            185181,
+            21399,
+            18257,
+            22402,
+            17998,
+            184440,
+            184461
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 17215,
+          "top1Score": 0.8847878958360089,
+          "margin": 0.19970171414970783,
+          "warmProcessingMs": 418.2504360001403,
+          "top10CardIds": [
+            17215,
+            16636,
+            15868,
+            185181,
+            21399,
+            18257,
+            22402,
+            17998,
+            184440,
+            184461
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 17215,
+          "top1Score": 0.8847878958360089,
+          "margin": 0.19970171414970783,
+          "warmProcessingMs": 586.9118910001343,
+          "top10CardIds": [
+            17215,
+            16636,
+            15868,
+            185181,
+            21399,
+            18257,
+            22402,
+            17998,
+            184440,
+            184461
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2950,
+      "confirmedCardId": 15844,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 15844,
+          "top1Score": 0.6993790288912831,
+          "margin": 0.018024526781674655,
+          "warmProcessingMs": 269.0444520000019,
+          "top10CardIds": [
+            15844,
+            78791,
+            78657,
+            531522,
+            337635,
+            342793,
+            24156,
+            19341,
+            17510,
+            65565
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 15844,
+          "top1Score": 0.6993790288912831,
+          "margin": 0.018024526781674655,
+          "warmProcessingMs": 465.52538799999456,
+          "top10CardIds": [
+            15844,
+            78791,
+            78657,
+            531522,
+            337635,
+            342793,
+            24156,
+            527367,
+            337614,
+            19341
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 15844,
+          "top1Score": 0.6993790288912831,
+          "margin": 0.018024526781674655,
+          "warmProcessingMs": 410.9594189999334,
+          "top10CardIds": [
+            15844,
+            78791,
+            78657,
+            531522,
+            337635,
+            342793,
+            24156,
+            19341,
+            17510,
+            65565
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 15844,
+          "top1Score": 0.6993790288912831,
+          "margin": 0.018024526781674655,
+          "warmProcessingMs": 590.932823999945,
+          "top10CardIds": [
+            15844,
+            78791,
+            78657,
+            531522,
+            337635,
+            342793,
+            24156,
+            527367,
+            337614,
+            19341
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2939,
+      "confirmedCardId": 533958,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 533958,
+          "top1Score": 0.8725126311115665,
+          "margin": 0.15286974512027152,
+          "warmProcessingMs": 288.7774580000114,
+          "top10CardIds": [
+            533958,
+            17750,
+            17419,
+            18323,
+            19909,
+            16624,
+            66431,
+            198972,
+            22362,
+            45590
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 533958,
+          "top1Score": 0.8725126311115665,
+          "margin": 0.15286974512027152,
+          "warmProcessingMs": 449.9676279999985,
+          "top10CardIds": [
+            533958,
+            17750,
+            17419,
+            18323,
+            19909,
+            16624,
+            66431,
+            198972,
+            22362,
+            45590
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 533958,
+          "top1Score": 0.8725126311115665,
+          "margin": 0.15286974512027152,
+          "warmProcessingMs": 405.12614200013195,
+          "top10CardIds": [
+            533958,
+            17750,
+            17419,
+            18323,
+            19909,
+            16624,
+            66431,
+            198972,
+            22362,
+            45590
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 533958,
+          "top1Score": 0.8725126311115665,
+          "margin": 0.15286974512027152,
+          "warmProcessingMs": 558.3633310001387,
+          "top10CardIds": [
+            533958,
+            17750,
+            17419,
+            18323,
+            19909,
+            16624,
+            66431,
+            198972,
+            22362,
+            45590
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2910,
+      "confirmedCardId": 19959,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": true,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19959,
+          "top1Score": 0.7893684513214899,
+          "margin": 0.10893409841165425,
+          "warmProcessingMs": 271.9686999999976,
+          "top10CardIds": [
+            19959,
+            521927,
+            527566,
+            336670,
+            20521,
+            22799,
+            16507,
+            16947,
+            19055,
+            336723
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19959,
+          "top1Score": 0.7893684513214899,
+          "margin": 0.10893409841165425,
+          "warmProcessingMs": 432.9013939999859,
+          "top10CardIds": [
+            19959,
+            521927,
+            527566,
+            336670,
+            185028,
+            185118,
+            20521,
+            22799,
+            16507,
+            19913
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19959,
+          "top1Score": 0.7893684513214899,
+          "margin": 0.10893409841165425,
+          "warmProcessingMs": 393.1390960002391,
+          "top10CardIds": [
+            19959,
+            521927,
+            527566,
+            336670,
+            20521,
+            22799,
+            16507,
+            16947,
+            19055,
+            336723
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19959,
+          "top1Score": 0.7893684513214899,
+          "margin": 0.10893409841165425,
+          "warmProcessingMs": 561.9598010002446,
+          "top10CardIds": [
+            19959,
+            521927,
+            527566,
+            336670,
+            185028,
+            185118,
+            20521,
+            22799,
+            16507,
+            19913
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2909,
+      "confirmedCardId": 19957,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": true,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19957,
+          "top1Score": 0.7204689821583804,
+          "margin": 0.08136920089936384,
+          "warmProcessingMs": 286.4339439999894,
+          "top10CardIds": [
+            19957,
+            336670,
+            58975,
+            16507,
+            16947,
+            19807,
+            184978,
+            185068,
+            19919,
+            253712
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19957,
+          "top1Score": 0.7204689821583804,
+          "margin": 0.08060087555874662,
+          "warmProcessingMs": 481.94767700000375,
+          "top10CardIds": [
+            19957,
+            19958,
+            336670,
+            58975,
+            16507,
+            16947,
+            19807,
+            20769,
+            213305,
+            528709
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19957,
+          "top1Score": 0.7204689821583804,
+          "margin": 0.08136920089936384,
+          "warmProcessingMs": 429.19209399991814,
+          "top10CardIds": [
+            19957,
+            336670,
+            58975,
+            16507,
+            16947,
+            19807,
+            184978,
+            185068,
+            19919,
+            253712
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19957,
+          "top1Score": 0.7204689821583804,
+          "margin": 0.08060087555874662,
+          "warmProcessingMs": 586.7628579999218,
+          "top10CardIds": [
+            19957,
+            19958,
+            336670,
+            58975,
+            16507,
+            16947,
+            19807,
+            20769,
+            213305,
+            528709
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2906,
+      "confirmedCardId": 19950,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": true,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19950,
+          "top1Score": 0.6885192138626303,
+          "margin": 0.001832810895676551,
+          "warmProcessingMs": 233.72643900000548,
+          "top10CardIds": [
+            19950,
+            19958,
+            17750,
+            336670,
+            188792,
+            337662,
+            39058,
+            17515,
+            336735,
+            17455
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19950,
+          "top1Score": 0.6885192138626303,
+          "margin": 0.001832810895676551,
+          "warmProcessingMs": 416.6120820000069,
+          "top10CardIds": [
+            19950,
+            19958,
+            17750,
+            336670,
+            188792,
+            17507,
+            337662,
+            533553,
+            17759,
+            19912
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19950,
+          "top1Score": 0.6885192138626303,
+          "margin": 0.001832810895676551,
+          "warmProcessingMs": 404.81489400047576,
+          "top10CardIds": [
+            19950,
+            19958,
+            17750,
+            336670,
+            188792,
+            337662,
+            39058,
+            17515,
+            336735,
+            17455
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19950,
+          "top1Score": 0.6885192138626303,
+          "margin": 0.001832810895676551,
+          "warmProcessingMs": 565.967076000481,
+          "top10CardIds": [
+            19950,
+            19958,
+            17750,
+            336670,
+            188792,
+            17507,
+            337662,
+            533553,
+            17759,
+            19912
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2903,
+      "confirmedCardId": 19947,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": true,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19947,
+          "top1Score": 0.6529833203267925,
+          "margin": 0.006961189597435968,
+          "warmProcessingMs": 236.31054099998437,
+          "top10CardIds": [
+            19947,
+            84108,
+            19908,
+            180328,
+            22262,
+            528706,
+            19599,
+            18991,
+            11416,
+            186407
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19947,
+          "top1Score": 0.6529833203267925,
+          "margin": 0.006961189597435968,
+          "warmProcessingMs": 390.19699499999115,
+          "top10CardIds": [
+            19947,
+            84108,
+            19908,
+            180328,
+            22262,
+            528706,
+            19599,
+            18991,
+            11416,
+            337633
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19947,
+          "top1Score": 0.6529833203267925,
+          "margin": 0.006961189597435968,
+          "warmProcessingMs": 425.83345300046494,
+          "top10CardIds": [
+            19947,
+            84108,
+            19908,
+            180328,
+            22262,
+            528706,
+            19599,
+            18991,
+            11416,
+            186407
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19947,
+          "top1Score": 0.6529833203267925,
+          "margin": 0.006961189597435968,
+          "warmProcessingMs": 585.3657190004742,
+          "top10CardIds": [
+            19947,
+            84108,
+            19908,
+            180328,
+            22262,
+            528706,
+            19599,
+            18991,
+            11416,
+            337633
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2902,
+      "confirmedCardId": 19946,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": true,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19946,
+          "top1Score": 0.7632340432991469,
+          "margin": 0.1303198287307119,
+          "warmProcessingMs": 275.9400500000047,
+          "top10CardIds": [
+            19946,
+            20554,
+            108939,
+            16507,
+            18009,
+            19912,
+            184644,
+            20604,
+            22262,
+            525831
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19946,
+          "top1Score": 0.7632340432991469,
+          "margin": 0.1303198287307119,
+          "warmProcessingMs": 423.8752999999997,
+          "top10CardIds": [
+            19946,
+            20554,
+            108939,
+            16507,
+            18009,
+            19912,
+            184644,
+            20604,
+            22262,
+            522039
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19946,
+          "top1Score": 0.7632340432991469,
+          "margin": 0.1303198287307119,
+          "warmProcessingMs": 380.94273400051316,
+          "top10CardIds": [
+            19946,
+            20554,
+            108939,
+            16507,
+            18009,
+            19912,
+            184644,
+            20604,
+            22262,
+            525831
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19946,
+          "top1Score": 0.7632340432991469,
+          "margin": 0.1303198287307119,
+          "warmProcessingMs": 551.3774650005143,
+          "top10CardIds": [
+            19946,
+            20554,
+            108939,
+            16507,
+            18009,
+            19912,
+            184644,
+            20604,
+            22262,
+            522039
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2901,
+      "confirmedCardId": 19945,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": true,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 6,
+          "top1CardId": 20613,
+          "top1Score": 0.6851068813479525,
+          "margin": 0.0026858182250957263,
+          "warmProcessingMs": 257.97216400000616,
+          "top10CardIds": [
+            20613,
+            19795,
+            20604,
+            22492,
+            108939,
+            19945,
+            26436,
+            183908,
+            526567,
+            242400
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 6,
+          "top1CardId": 20613,
+          "top1Score": 0.6851068813479525,
+          "margin": 0.0026858182250957263,
+          "warmProcessingMs": 404.16818700000294,
+          "top10CardIds": [
+            20613,
+            19795,
+            20604,
+            22492,
+            108939,
+            19945,
+            26436,
+            20620,
+            22473,
+            22433
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 6,
+          "top1CardId": 20613,
+          "top1Score": 0.6851068813479525,
+          "margin": 0.0026858182250957263,
+          "warmProcessingMs": 373.41076399971644,
+          "top10CardIds": [
+            20613,
+            19795,
+            20604,
+            22492,
+            108939,
+            19945,
+            26436,
+            183908,
+            526567,
+            242400
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 6,
+          "top1CardId": 20613,
+          "top1Score": 0.6851068813479525,
+          "margin": 0.0026858182250957263,
+          "warmProcessingMs": 548.1733279997206,
+          "top10CardIds": [
+            20613,
+            19795,
+            20604,
+            22492,
+            108939,
+            19945,
+            26436,
+            20620,
+            22473,
+            22433
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2900,
+      "confirmedCardId": 19944,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": true,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19944,
+          "top1Score": 0.7205272814020511,
+          "margin": 0.08388468085405743,
+          "warmProcessingMs": 287.04365200000757,
+          "top10CardIds": [
+            19944,
+            185405,
+            19950,
+            19913,
+            19896,
+            18008,
+            184967,
+            185057,
+            184963,
+            22647
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19944,
+          "top1Score": 0.7205272814020511,
+          "margin": 0.08388468085405743,
+          "warmProcessingMs": 466.28520800000115,
+          "top10CardIds": [
+            19944,
+            185405,
+            19950,
+            19913,
+            19896,
+            18008,
+            336621,
+            184967,
+            185057,
+            20599
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19944,
+          "top1Score": 0.7205272814020511,
+          "margin": 0.08388468085405743,
+          "warmProcessingMs": 399.8506279998328,
+          "top10CardIds": [
+            19944,
+            185405,
+            19950,
+            19913,
+            19896,
+            18008,
+            184967,
+            185057,
+            184963,
+            22647
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19944,
+          "top1Score": 0.7205272814020511,
+          "margin": 0.08388468085405743,
+          "warmProcessingMs": 580.4825679998248,
+          "top10CardIds": [
+            19944,
+            185405,
+            19950,
+            19913,
+            19896,
+            18008,
+            336621,
+            184967,
+            185057,
+            20599
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2899,
+      "confirmedCardId": 19943,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": true,
+      "rawDinoRank": 5,
+      "optionalCropDinoRank": 5,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 5,
+          "top1CardId": 17750,
+          "top1Score": 0.7212980257245487,
+          "margin": 0.02582277194859528,
+          "warmProcessingMs": 284.65772499998275,
+          "top10CardIds": [
+            17750,
+            18323,
+            522039,
+            19958,
+            19943,
+            336621,
+            65403,
+            198972,
+            19935,
+            17839
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 6,
+          "top1CardId": 17750,
+          "top1Score": 0.7212980257245487,
+          "margin": 0.02582277194859528,
+          "warmProcessingMs": 412.2148979999911,
+          "top10CardIds": [
+            17750,
+            18323,
+            522039,
+            19958,
+            22799,
+            19943,
+            17759,
+            336621,
+            213305,
+            65403
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 5,
+          "top1CardId": 17750,
+          "top1Score": 0.7212980257245487,
+          "margin": 0.02582277194859528,
+          "warmProcessingMs": 386.6704860007885,
+          "top10CardIds": [
+            17750,
+            18323,
+            522039,
+            19958,
+            19943,
+            336621,
+            65403,
+            198972,
+            19935,
+            17839
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 6,
+          "top1CardId": 17750,
+          "top1Score": 0.7212980257245487,
+          "margin": 0.02582277194859528,
+          "warmProcessingMs": 550.4974550007755,
+          "top10CardIds": [
+            17750,
+            18323,
+            522039,
+            19958,
+            22799,
+            19943,
+            17759,
+            336621,
+            213305,
+            65403
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2871,
+      "confirmedCardId": 17763,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 17763,
+          "top1Score": 0.7403966968745439,
+          "margin": 0.051050010366573306,
+          "warmProcessingMs": 306.72636000000057,
+          "top10CardIds": [
+            17763,
+            337649,
+            183899,
+            337644,
+            337645,
+            337646,
+            18537,
+            18582,
+            84790,
+            334339
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 17763,
+          "top1Score": 0.7403966968745439,
+          "margin": 0.051050010366573306,
+          "warmProcessingMs": 457.98801000000094,
+          "top10CardIds": [
+            17763,
+            337649,
+            183899,
+            337644,
+            337645,
+            337646,
+            18537,
+            18582,
+            84790,
+            22500
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 17763,
+          "top1Score": 0.7403966968745439,
+          "margin": 0.051050010366573306,
+          "warmProcessingMs": 451.657662999678,
+          "top10CardIds": [
+            17763,
+            337649,
+            183899,
+            337644,
+            337645,
+            337646,
+            18537,
+            18582,
+            84790,
+            334339
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 17763,
+          "top1Score": 0.7403966968745439,
+          "margin": 0.051050010366573306,
+          "warmProcessingMs": 601.474592999708,
+          "top10CardIds": [
+            17763,
+            337649,
+            183899,
+            337644,
+            337645,
+            337646,
+            18537,
+            18582,
+            84790,
+            22500
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2869,
+      "confirmedCardId": 17768,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 17768,
+          "top1Score": 0.6541186941763724,
+          "margin": 0.05084541612023774,
+          "warmProcessingMs": 317.26202300000296,
+          "top10CardIds": [
+            17768,
+            60827,
+            65403,
+            19919,
+            183697,
+            196852,
+            18370,
+            334339,
+            17759,
+            17754
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 17768,
+          "top1Score": 0.6541186941763724,
+          "margin": 0.05084541612023774,
+          "warmProcessingMs": 446.58378400001675,
+          "top10CardIds": [
+            17768,
+            60827,
+            65403,
+            19919,
+            183697,
+            196852,
+            18370,
+            334339,
+            17759,
+            17754
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 17768,
+          "top1Score": 0.6541186941763724,
+          "margin": 0.05084541612023774,
+          "warmProcessingMs": 514.5169420005695,
+          "top10CardIds": [
+            17768,
+            60827,
+            65403,
+            19919,
+            183697,
+            196852,
+            18370,
+            334339,
+            17759,
+            17754
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 17768,
+          "top1Score": 0.6541186941763724,
+          "margin": 0.05084541612023774,
+          "warmProcessingMs": 675.9323640005896,
+          "top10CardIds": [
+            17768,
+            60827,
+            65403,
+            19919,
+            183697,
+            196852,
+            18370,
+            334339,
+            17759,
+            17754
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2866,
+      "confirmedCardId": 17759,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 4,
+      "optionalCropDinoRank": 4,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 3,
+          "top1CardId": 66037,
+          "top1Score": 0.6738483142788159,
+          "margin": 0.016044123351477313,
+          "warmProcessingMs": 273.2625229999976,
+          "top10CardIds": [
+            66037,
+            65565,
+            17759,
+            336748,
+            66079,
+            60827,
+            336622,
+            17515,
+            337251,
+            343593
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 3,
+          "top1CardId": 66037,
+          "top1Score": 0.6738483142788159,
+          "margin": 0.016044123351477313,
+          "warmProcessingMs": 430.5001510000002,
+          "top10CardIds": [
+            66037,
+            65565,
+            17759,
+            336748,
+            66079,
+            60827,
+            336622,
+            17515,
+            337251,
+            337254
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 3,
+          "top1CardId": 66037,
+          "top1Score": 0.6738483142788159,
+          "margin": 0.016044123351477313,
+          "warmProcessingMs": 439.6010780002907,
+          "top10CardIds": [
+            66037,
+            65565,
+            17759,
+            336748,
+            66079,
+            60827,
+            336622,
+            17515,
+            337251,
+            343593
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 3,
+          "top1CardId": 66037,
+          "top1Score": 0.6738483142788159,
+          "margin": 0.016044123351477313,
+          "warmProcessingMs": 611.7584630002893,
+          "top10CardIds": [
+            66037,
+            65565,
+            17759,
+            336748,
+            66079,
+            60827,
+            336622,
+            17515,
+            337251,
+            337254
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2838,
+      "confirmedCardId": 19271,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": true,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19271,
+          "top1Score": 0.7886501416024997,
+          "margin": 0.048113767877156266,
+          "warmProcessingMs": 268.44828799998504,
+          "top10CardIds": [
+            19271,
+            17223,
+            22491,
+            521240,
+            27668,
+            22469,
+            19599,
+            22397,
+            193707,
+            16634
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19271,
+          "top1Score": 0.7886501416024997,
+          "margin": 0.048113767877156266,
+          "warmProcessingMs": 432.23532899998827,
+          "top10CardIds": [
+            19271,
+            17223,
+            22491,
+            521240,
+            27668,
+            22469,
+            19599,
+            22397,
+            193707,
+            189281
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19271,
+          "top1Score": 0.7886501416024997,
+          "margin": 0.048113767877156266,
+          "warmProcessingMs": 408.56958199941437,
+          "top10CardIds": [
+            19271,
+            17223,
+            22491,
+            521240,
+            27668,
+            22469,
+            19599,
+            22397,
+            193707,
+            16634
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19271,
+          "top1Score": 0.7886501416024997,
+          "margin": 0.048113767877156266,
+          "warmProcessingMs": 591.6908459994011,
+          "top10CardIds": [
+            19271,
+            17223,
+            22491,
+            521240,
+            27668,
+            22469,
+            19599,
+            22397,
+            193707,
+            189281
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2836,
+      "confirmedCardId": 19265,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": true,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19265,
+          "top1Score": 0.7074981635922143,
+          "margin": 0.0044207364864443655,
+          "warmProcessingMs": 195.44556200000807,
+          "top10CardIds": [
+            19265,
+            22497,
+            88660,
+            190056,
+            85547,
+            189796,
+            16943,
+            526919,
+            86455,
+            189876
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19265,
+          "top1Score": 0.7074981635922143,
+          "margin": 0.0044207364864443655,
+          "warmProcessingMs": 254.03029999999853,
+          "top10CardIds": [
+            19265,
+            22497,
+            88660,
+            190056,
+            85547,
+            189796,
+            16943,
+            526919,
+            86455,
+            521880
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19265,
+          "top1Score": 0.7074981635922143,
+          "margin": 0.0044207364864443655,
+          "warmProcessingMs": 315.8078700001206,
+          "top10CardIds": [
+            19265,
+            22497,
+            88660,
+            190056,
+            85547,
+            189796,
+            16943,
+            526919,
+            86455,
+            189876
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19265,
+          "top1Score": 0.7074981635922143,
+          "margin": 0.0044207364864443655,
+          "warmProcessingMs": 405.87552600014897,
+          "top10CardIds": [
+            19265,
+            22497,
+            88660,
+            190056,
+            85547,
+            189796,
+            16943,
+            526919,
+            86455,
+            521880
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2835,
+      "confirmedCardId": 19268,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": true,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19268,
+          "top1Score": 0.8621439026244121,
+          "margin": 0.13000664441062948,
+          "warmProcessingMs": 210.36392399999022,
+          "top10CardIds": [
+            19268,
+            242400,
+            208128,
+            21098,
+            22486,
+            185150,
+            17465,
+            17199,
+            88660,
+            250807
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19268,
+          "top1Score": 0.8621439026244121,
+          "margin": 0.13000664441062948,
+          "warmProcessingMs": 280.7362040000007,
+          "top10CardIds": [
+            19268,
+            242400,
+            208128,
+            21098,
+            22486,
+            185150,
+            17465,
+            17199,
+            88660,
+            250807
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19268,
+          "top1Score": 0.8621439026244121,
+          "margin": 0.13000664441062948,
+          "warmProcessingMs": 321.2231320006031,
+          "top10CardIds": [
+            19268,
+            242400,
+            208128,
+            21098,
+            22486,
+            185150,
+            17465,
+            17199,
+            88660,
+            250807
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19268,
+          "top1Score": 0.8621439026244121,
+          "margin": 0.13000664441062948,
+          "warmProcessingMs": 408.251375000611,
+          "top10CardIds": [
+            19268,
+            242400,
+            208128,
+            21098,
+            22486,
+            185150,
+            17465,
+            17199,
+            88660,
+            250807
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2826,
+      "confirmedCardId": 19954,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": true,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19954,
+          "top1Score": 0.6886530900040886,
+          "margin": 0.012978185628851113,
+          "warmProcessingMs": 270.6363439999841,
+          "top10CardIds": [
+            19954,
+            20618,
+            527537,
+            16496,
+            19935,
+            336695,
+            22434,
+            20610,
+            21396,
+            18805
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19954,
+          "top1Score": 0.6886530900040886,
+          "margin": 0.012978185628851113,
+          "warmProcessingMs": 407.1925599999813,
+          "top10CardIds": [
+            19954,
+            20618,
+            527537,
+            16496,
+            19935,
+            336695,
+            22434,
+            20610,
+            337670,
+            19599
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19954,
+          "top1Score": 0.6886530900040886,
+          "margin": 0.012978185628851113,
+          "warmProcessingMs": 422.7156960000939,
+          "top10CardIds": [
+            19954,
+            20618,
+            527537,
+            16496,
+            19935,
+            336695,
+            22434,
+            20610,
+            21396,
+            18805
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19954,
+          "top1Score": 0.6886530900040886,
+          "margin": 0.012978185628851113,
+          "warmProcessingMs": 566.4557250001017,
+          "top10CardIds": [
+            19954,
+            20618,
+            527537,
+            16496,
+            19935,
+            336695,
+            22434,
+            20610,
+            337670,
+            19599
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2825,
+      "confirmedCardId": 19951,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": true,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19951,
+          "top1Score": 0.6695501236307166,
+          "margin": 0.02389508915106542,
+          "warmProcessingMs": 274.49763499999244,
+          "top10CardIds": [
+            19951,
+            531184,
+            18457,
+            337159,
+            19912,
+            19957,
+            19958,
+            17929,
+            16507,
+            188952
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19951,
+          "top1Score": 0.6695501236307166,
+          "margin": 0.02389508915106542,
+          "warmProcessingMs": 418.0204759999906,
+          "top10CardIds": [
+            19951,
+            531184,
+            18457,
+            337159,
+            19912,
+            19957,
+            19958,
+            17929,
+            16507,
+            188952
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19951,
+          "top1Score": 0.6695501236307166,
+          "margin": 0.02389508915106542,
+          "warmProcessingMs": 380.8627080002407,
+          "top10CardIds": [
+            19951,
+            531184,
+            18457,
+            337159,
+            19912,
+            19957,
+            19958,
+            17929,
+            16507,
+            188952
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19951,
+          "top1Score": 0.6695501236307166,
+          "margin": 0.02389508915106542,
+          "warmProcessingMs": 536.1661010002499,
+          "top10CardIds": [
+            19951,
+            531184,
+            18457,
+            337159,
+            19912,
+            19957,
+            19958,
+            17929,
+            16507,
+            188952
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2824,
+      "confirmedCardId": 19910,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": true,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19910,
+          "top1Score": 0.7663704947900345,
+          "margin": 0.019015661978146525,
+          "warmProcessingMs": 283.79606599999534,
+          "top10CardIds": [
+            19910,
+            22441,
+            337675,
+            337678,
+            20620,
+            60849,
+            530912,
+            336822,
+            19909,
+            22397
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19910,
+          "top1Score": 0.7663704947900345,
+          "margin": 0.019015661978146525,
+          "warmProcessingMs": 428.15332100000523,
+          "top10CardIds": [
+            19910,
+            22441,
+            337675,
+            337678,
+            20620,
+            60849,
+            530912,
+            336822,
+            19909,
+            22397
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19910,
+          "top1Score": 0.7663704947900345,
+          "margin": 0.019015661978146525,
+          "warmProcessingMs": 387.22214100010024,
+          "top10CardIds": [
+            19910,
+            22441,
+            337675,
+            337678,
+            20620,
+            60849,
+            530912,
+            336822,
+            19909,
+            22397
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19910,
+          "top1Score": 0.7663704947900345,
+          "margin": 0.019015661978146525,
+          "warmProcessingMs": 554.4058740001128,
+          "top10CardIds": [
+            19910,
+            22441,
+            337675,
+            337678,
+            20620,
+            60849,
+            530912,
+            336822,
+            19909,
+            22397
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2823,
+      "confirmedCardId": 19908,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": true,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19908,
+          "top1Score": 0.8097699521766266,
+          "margin": 0.11713009020193643,
+          "warmProcessingMs": 304.7936590000172,
+          "top10CardIds": [
+            19908,
+            19947,
+            17328,
+            528706,
+            17189,
+            16954,
+            19962,
+            20628,
+            183897,
+            183922
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19908,
+          "top1Score": 0.8097699521766266,
+          "margin": 0.11713009020193643,
+          "warmProcessingMs": 490.51818900000944,
+          "top10CardIds": [
+            19908,
+            19947,
+            17328,
+            528706,
+            17189,
+            16954,
+            19962,
+            20628,
+            183897,
+            183922
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 19908,
+          "top1Score": 0.8097699521766266,
+          "margin": 0.11713009020193643,
+          "warmProcessingMs": 448.90948099960224,
+          "top10CardIds": [
+            19908,
+            19947,
+            17328,
+            528706,
+            17189,
+            16954,
+            19962,
+            20628,
+            183897,
+            183922
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 19908,
+          "top1Score": 0.8097699521766266,
+          "margin": 0.11713009020193643,
+          "warmProcessingMs": 643.645639999595,
+          "top10CardIds": [
+            19908,
+            19947,
+            17328,
+            528706,
+            17189,
+            16954,
+            19962,
+            20628,
+            183897,
+            183922
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2813,
+      "confirmedCardId": 17765,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 17765,
+          "top1Score": 0.7323512716719631,
+          "margin": 0.09730372215905136,
+          "warmProcessingMs": 275.8185999999987,
+          "top10CardIds": [
+            17765,
+            65403,
+            188861,
+            22453,
+            184927,
+            184933,
+            22428,
+            337677,
+            188768,
+            22499
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 17765,
+          "top1Score": 0.7323512716719631,
+          "margin": 0.09730372215905136,
+          "warmProcessingMs": 488.86298800000804,
+          "top10CardIds": [
+            17765,
+            65403,
+            188861,
+            22453,
+            184927,
+            184933,
+            22428,
+            22774,
+            337677,
+            188768
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 17765,
+          "top1Score": 0.7323512716719631,
+          "margin": 0.09730372215905136,
+          "warmProcessingMs": 407.307554999541,
+          "top10CardIds": [
+            17765,
+            65403,
+            188861,
+            22453,
+            184927,
+            184933,
+            22428,
+            337677,
+            188768,
+            22499
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 17765,
+          "top1Score": 0.7323512716719631,
+          "margin": 0.09730372215905136,
+          "warmProcessingMs": 566.7604009995412,
+          "top10CardIds": [
+            17765,
+            65403,
+            188861,
+            22453,
+            184927,
+            184933,
+            22428,
+            22774,
+            337677,
+            188768
+          ]
+        }
+      ]
+    },
+    {
+      "scanId": 2790,
+      "confirmedCardId": 18457,
+      "verifiedFront": true,
+      "independentExactReferencePresent": true,
+      "parallel": false,
+      "printedInsert": false,
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "cropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 18457,
+          "top1Score": 0.8176726639817584,
+          "margin": 0.06589436660627956,
+          "warmProcessingMs": 259.1186010000092,
+          "top10CardIds": [
+            18457,
+            184978,
+            185068,
+            22770,
+            17750,
+            198972,
+            22740,
+            17176,
+            242435,
+            22799
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 18457,
+          "top1Score": 0.8176726639817584,
+          "margin": 0.06589436660627956,
+          "warmProcessingMs": 408.7721950000123,
+          "top10CardIds": [
+            18457,
+            184978,
+            185068,
+            22770,
+            17750,
+            198972,
+            22740,
+            17176,
+            242435,
+            22799
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top1CardId": 18457,
+          "top1Score": 0.8176726639817584,
+          "margin": 0.06589436660627956,
+          "warmProcessingMs": 398.26148299975466,
+          "top10CardIds": [
+            18457,
+            184978,
+            185068,
+            22770,
+            17750,
+            198972,
+            22740,
+            17176,
+            242435,
+            22799
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top1CardId": 18457,
+          "top1Score": 0.8176726639817584,
+          "margin": 0.06589436660627956,
+          "warmProcessingMs": 557.8560239997532,
+          "top10CardIds": [
+            18457,
+            184978,
+            185068,
+            22770,
+            17750,
+            198972,
+            22740,
+            17176,
+            242435,
+            22799
+          ]
+        }
+      ]
+    }
+  ],
+  "eligibilityDecisions": [
+    {
+      "scanId": 3173,
+      "confirmedCardId": 18232,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3169,
+      "confirmedCardId": 16868,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3167,
+      "confirmedCardId": 11592,
+      "accepted": false,
+      "reason": "historical-exact-identity-or-parallel-conflict",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3162,
+      "confirmedCardId": 533952,
+      "accepted": false,
+      "reason": "unusable-no-visible-card",
+      "side": "not-visible",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3161,
+      "confirmedCardId": 533897,
+      "accepted": false,
+      "reason": "unusable-no-visible-card",
+      "side": "not-visible",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3160,
+      "confirmedCardId": 533847,
+      "accepted": false,
+      "reason": "unusable-no-visible-card",
+      "side": "not-visible",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3159,
+      "confirmedCardId": 548838,
+      "accepted": false,
+      "reason": "unusable-no-visible-card",
+      "side": "not-visible",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3158,
+      "confirmedCardId": 533962,
+      "accepted": false,
+      "reason": "unusable-no-visible-card",
+      "side": "not-visible",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3157,
+      "confirmedCardId": 533877,
+      "accepted": false,
+      "reason": "unusable-no-visible-card",
+      "side": "not-visible",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3156,
+      "confirmedCardId": 533787,
+      "accepted": false,
+      "reason": "unusable-no-visible-card",
+      "side": "not-visible",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3155,
+      "confirmedCardId": 533850,
+      "accepted": false,
+      "reason": "unusable-no-visible-card",
+      "side": "not-visible",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3154,
+      "confirmedCardId": 533927,
+      "accepted": false,
+      "reason": "unusable-no-visible-card",
+      "side": "not-visible",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3153,
+      "confirmedCardId": 533915,
+      "accepted": false,
+      "reason": "unusable-no-visible-card",
+      "side": "not-visible",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3152,
+      "confirmedCardId": 533933,
+      "accepted": false,
+      "reason": "unusable-no-visible-card",
+      "side": "not-visible",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3151,
+      "confirmedCardId": 533800,
+      "accepted": false,
+      "reason": "unusable-no-visible-card",
+      "side": "not-visible",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3150,
+      "confirmedCardId": 533949,
+      "accepted": false,
+      "reason": "unusable-no-visible-card",
+      "side": "not-visible",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3148,
+      "confirmedCardId": 543126,
+      "accepted": false,
+      "reason": "unusable-no-visible-card",
+      "side": "not-visible",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3147,
+      "confirmedCardId": 543127,
+      "accepted": false,
+      "reason": "unusable-no-visible-card",
+      "side": "not-visible",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3143,
+      "confirmedCardId": 537702,
+      "accepted": false,
+      "reason": "independent-positive-reference-unavailable",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3128,
+      "confirmedCardId": 300,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3117,
+      "confirmedCardId": 119,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3112,
+      "confirmedCardId": 15625,
+      "accepted": false,
+      "reason": "same-card-capture-cluster-or-prior-exposure",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3108,
+      "confirmedCardId": 15640,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3107,
+      "confirmedCardId": 15640,
+      "accepted": false,
+      "reason": "same-card-capture-cluster-or-prior-exposure",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3104,
+      "confirmedCardId": 15623,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3103,
+      "confirmedCardId": 15623,
+      "accepted": false,
+      "reason": "same-card-capture-cluster-or-prior-exposure",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3102,
+      "confirmedCardId": 15623,
+      "accepted": false,
+      "reason": "same-card-capture-cluster-or-prior-exposure",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3100,
+      "confirmedCardId": 15634,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3098,
+      "confirmedCardId": 15647,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3097,
+      "confirmedCardId": 15626,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3090,
+      "confirmedCardId": 20330,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3089,
+      "confirmedCardId": 20602,
+      "accepted": false,
+      "reason": "exact-printing-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3087,
+      "confirmedCardId": 20329,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3086,
+      "confirmedCardId": 20327,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3078,
+      "confirmedCardId": 15845,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3067,
+      "confirmedCardId": 12021,
+      "accepted": false,
+      "reason": "historical-exact-identity-or-parallel-conflict",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3056,
+      "confirmedCardId": 16844,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3053,
+      "confirmedCardId": 18047,
+      "accepted": false,
+      "reason": "exact-printing-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3044,
+      "confirmedCardId": 95,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3043,
+      "confirmedCardId": 297,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3020,
+      "confirmedCardId": 404,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3017,
+      "confirmedCardId": 507,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3016,
+      "confirmedCardId": 511,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3014,
+      "confirmedCardId": 15590,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3013,
+      "confirmedCardId": 19336,
+      "accepted": false,
+      "reason": "exact-printing-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 3012,
+      "confirmedCardId": 19270,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": true,
+      "parallel": false
+    },
+    {
+      "scanId": 2991,
+      "confirmedCardId": 11809,
+      "accepted": false,
+      "reason": "historical-exact-identity-or-parallel-conflict",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2984,
+      "confirmedCardId": 20280,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2983,
+      "confirmedCardId": 20279,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2981,
+      "confirmedCardId": 20281,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2977,
+      "confirmedCardId": 20869,
+      "accepted": false,
+      "reason": "back-image",
+      "side": "back",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2969,
+      "confirmedCardId": 19820,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2965,
+      "confirmedCardId": 17215,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": true,
+      "parallel": false
+    },
+    {
+      "scanId": 2964,
+      "confirmedCardId": 146,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2950,
+      "confirmedCardId": 15844,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2939,
+      "confirmedCardId": 533958,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2938,
+      "confirmedCardId": 533912,
+      "accepted": false,
+      "reason": "capture-origin-indeterminate",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2910,
+      "confirmedCardId": 19959,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": true,
+      "parallel": false
+    },
+    {
+      "scanId": 2909,
+      "confirmedCardId": 19957,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": true,
+      "parallel": false
+    },
+    {
+      "scanId": 2907,
+      "confirmedCardId": 22266,
+      "accepted": false,
+      "reason": "independent-positive-reference-unavailable",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2906,
+      "confirmedCardId": 19950,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": true,
+      "parallel": false
+    },
+    {
+      "scanId": 2903,
+      "confirmedCardId": 19947,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": true,
+      "parallel": false
+    },
+    {
+      "scanId": 2902,
+      "confirmedCardId": 19946,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": true,
+      "parallel": false
+    },
+    {
+      "scanId": 2901,
+      "confirmedCardId": 19945,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": true,
+      "parallel": false
+    },
+    {
+      "scanId": 2900,
+      "confirmedCardId": 19944,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": true,
+      "parallel": false
+    },
+    {
+      "scanId": 2899,
+      "confirmedCardId": 19943,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": true,
+      "parallel": false
+    },
+    {
+      "scanId": 2895,
+      "confirmedCardId": 79,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2891,
+      "confirmedCardId": 162,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2890,
+      "confirmedCardId": 154,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2889,
+      "confirmedCardId": 142,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2888,
+      "confirmedCardId": 158,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2886,
+      "confirmedCardId": 190,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2885,
+      "confirmedCardId": 118,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2871,
+      "confirmedCardId": 17763,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2869,
+      "confirmedCardId": 17768,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2866,
+      "confirmedCardId": 17759,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2864,
+      "confirmedCardId": 342,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2863,
+      "confirmedCardId": 17,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2861,
+      "confirmedCardId": 15365,
+      "accepted": false,
+      "reason": "historical-exact-identity-or-parallel-conflict",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2838,
+      "confirmedCardId": 19271,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": true,
+      "parallel": false
+    },
+    {
+      "scanId": 2836,
+      "confirmedCardId": 19265,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": true,
+      "parallel": false
+    },
+    {
+      "scanId": 2835,
+      "confirmedCardId": 19268,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": true,
+      "parallel": false
+    },
+    {
+      "scanId": 2831,
+      "confirmedCardId": 19746,
+      "accepted": false,
+      "reason": "exact-printing-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2830,
+      "confirmedCardId": 19702,
+      "accepted": false,
+      "reason": "exact-printing-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2829,
+      "confirmedCardId": 19943,
+      "accepted": false,
+      "reason": "same-card-capture-cluster-or-prior-exposure",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2828,
+      "confirmedCardId": 19959,
+      "accepted": false,
+      "reason": "same-card-capture-cluster-or-prior-exposure",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2826,
+      "confirmedCardId": 19954,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": true,
+      "parallel": false
+    },
+    {
+      "scanId": 2825,
+      "confirmedCardId": 19951,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": true,
+      "parallel": false
+    },
+    {
+      "scanId": 2824,
+      "confirmedCardId": 19910,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": true,
+      "parallel": false
+    },
+    {
+      "scanId": 2823,
+      "confirmedCardId": 19908,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": true,
+      "parallel": false
+    },
+    {
+      "scanId": 2813,
+      "confirmedCardId": 17765,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2803,
+      "confirmedCardId": 17682,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2799,
+      "confirmedCardId": 95,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2798,
+      "confirmedCardId": 18181,
+      "accepted": false,
+      "reason": "historical-exact-identity-or-parallel-conflict",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2793,
+      "confirmedCardId": 10,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2791,
+      "confirmedCardId": 11460,
+      "accepted": false,
+      "reason": "historical-exact-identity-or-parallel-conflict",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2790,
+      "confirmedCardId": 18457,
+      "accepted": true,
+      "reason": "verified-independent-exact-front",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2789,
+      "confirmedCardId": 95,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2788,
+      "confirmedCardId": 36,
+      "accepted": false,
+      "reason": "archived-identity-unresolved",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    },
+    {
+      "scanId": 2787,
+      "confirmedCardId": 11461,
+      "accepted": false,
+      "reason": "historical-exact-identity-or-parallel-conflict",
+      "side": "front",
+      "printedInsert": false,
+      "parallel": false
+    }
+  ],
+  "integrity": {
+    "baselineFilesUnchanged": 735,
+    "allVectorsFiniteUnit384": 2785,
+    "freshProcessReferenceParity": [
+      {
+        "cardId": 18232,
+        "cosine": 1,
+        "maxAbsDifference": 0
+      },
+      {
+        "cardId": 16868,
+        "cosine": 0.9999999999999998,
+        "maxAbsDifference": 0
+      },
+      {
+        "cardId": 15640,
+        "cosine": 1,
+        "maxAbsDifference": 0
+      }
+    ],
+    "warmRankStability": true,
+    "sourceHashes": {
+      "scripts/dev-broad-private-plan.ts": "6abef489d937e86a6897df5e59fedd6efe1c3eb5881ea1a192b6c67702a6cbb4",
+      "scripts/dev-detail-vision.ts": "71de24faaf9b61fd65298bfe0458cd7583ceb0a1f0debd4e530233b353269a95",
+      "scripts/dev-orb-isolation.py": "5efed94dad1c7a7976501e480de9dd1b8e016bd486ce27596d9b4de695df6a7b",
+      "server/services/catalogVisualModel.ts": "6bf550efefa26d4b85cb25c5a4fda7a9488a5ca2bfc6afe59b7b83fa052bce2a"
+    },
+    "runSourceHashes": {
+      "scripts/dev-broad-private-run.ts": "240fc7e3c210b76c03dd1b132850cb5d1c93c650bd80bb4abad77be728abe790",
+      "scripts/dev-broad-private-orb.py": "b28a63e86cdfd55b6500f402f688a3cbe191a09f3fd0a6466ae4e0b675505693"
+    },
+    "frozenHashes": {
+      "extraction": "5b8ca87e3cf7df790feddd66555e0ec1d85e90a9589b4287db4656d37534b0a3",
+      "positiveCatalogSnapshot": "74b301faad5a1ada3fc6597f4f5a9711d3f885e158635b339befb69369a18549",
+      "selection": "4797c627d1ceeec86143c7f93a1bc15e6f1793db79781376742c8fc566d365bb",
+      "index": "8fca15e8fa7018115fca0a60fc910ec9bdc26ce573bc2b86212564dc2742eb09",
+      "runFreeze": "b2ee46c7de4090b243a6de2d9d967ffabe6bc7e1f5196005ed53842d6348d474",
+      "results": "0c03f0a85a9a85cf596ab164f9c27a57bee5c26079eeb2fbb2fb53d15be5443c",
+      "baseline": "6ff3b2ad3a4e7c432720e8887bfe7a18cbe4ccc8a48d3109c1d16cb711bf3171"
+    }
+  },
+  "limitations": [
+    "41 cases, below requested50–100; no additional scans exported to replace rejects.",
+    "Newest reliably linked historical selections, conditioned on reference availability and visual verifiability; not representative population sampling or an unseen-by-humans holdout.",
+    "Historical collector selections can be wrong: explicit feedback was not treated as sufficient exact-card truth.",
+    "All17 prior experimentally queried scans excluded, plus known local conflicts. Narrow byte/dHash screens and visual same-card capture-cluster exclusions applied; arbitrary crop/edit or same-session independence cannot be proven from available metadata.",
+    "22 archived identities were excluded without guessing active aliases or changing saved historical/manual labels.",
+    "No independently verified exact parallel survived. Printed insert performance must not be presented as parallel-discrimination accuracy.",
+    "No thresholds, model, pooling, chroma, reranker or candidate filtering were tuned after outcomes."
+  ],
+  "readiness": "Insufficient for production readiness. Base reranker reduced top1 versus the same frozen DINO first stage; broader20 breadth did not improve top1 and reduced top10. Further exact-parallel and representative validation still required.",
+  "cleanup": {
+    "status": "verified-deleted",
+    "privateWorkspaceOwned": true,
+    "preDeletion": {
+      "files": 757,
+      "directories": 7,
+      "bytes": 388324669,
+      "permissionsCorrect": true
+    },
+    "retained": "Only sanitized aggregate metrics, scan/card IDs, ranks, technical SQL templates and hashes; no photographs, image URLs, account data, timestamps, feature vectors or free-form source records.",
+    "workspaceExistsAfter": false,
+    "deletionVerifiedAt": "2026-09-30T17:02:59.029Z",
+    "priorBaselineFilesStillUnchanged": 735,
+    "newImagesUrlsVectorsRetainedInDeliverables": false
+  }
+}
