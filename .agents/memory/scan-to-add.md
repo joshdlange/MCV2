@@ -3,6 +3,12 @@ name: Scan-to-Add product constraints
 description: Collector confirmation, photo review independence, and binder-page direction.
 ---
 
+Use canonical single-image DINO alone for the next development recognition evaluation; do not run the historical reranker or reference-guided optional crop.
+
+**Why:** The frozen reranker did not improve retrieval. Approved-reference-boundary dependence does not demonstrate independent card isolation. Historical production photos were deliberately deleted, so retained ranks cannot establish visual failure causes.
+
+**How to apply:** Use `scripts/dev-dino-next-evaluation.mjs` as the next-experiment policy guard/default, not the historical frozen harnesses. Keep the DINO model and historical evidence/source hashes unchanged. No tuning, publication, production access, database writes, full indexing, or redownloading/reconstructing deleted photos is authorized. Analyze sanitized evidence only, mark unsupported visual causes unknown, and require explicitly supplied local evidence before another image evaluation. Investigate independent isolation separately; do not enable guided cropping or depend on approved catalog boundaries. These are experiment constraints, not changes to live application matching.
+
 Collection ownership and shared-catalog photo approval must remain independent, including when a collector identifies the card manually.
 
 **Why:** The user wants the confirmed card added even when an administrator rejects its photo because a better catalog image already exists. Image rejection is not rejection of ownership.

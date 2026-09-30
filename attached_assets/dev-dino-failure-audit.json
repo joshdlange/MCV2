@@ -1,0 +1,475 @@
+{
+  "title": "Sanitized DINO-only failure audit — retained evidence only",
+  "sourcePath": "attached_assets/dev-broad-readonly-production-results.json",
+  "sourceSha256": "2e4af691881486d35794f7b8008a4d6125279fdb32e338044b883662b7488faf",
+  "newInferenceExecuted": false,
+  "newImageOrDatabaseAccess": false,
+  "historicalSourceModified": false,
+  "sample": {
+    "n": 41,
+    "top1": 29,
+    "top3": 32,
+    "top10": 35,
+    "top1Misses": 12,
+    "top10MissesSubsetOfTop1Misses": 6,
+    "top1MissesStillWithinTop10": 6
+  },
+  "interpretation": "This audits the DINO baseline, not the 13 historical reranker top1 misses. No visual causal category can be faithfully assigned from ranks/IDs alone. Large rank is not proof of intrinsically poor embeddings; acquisition/reference effects remain unobserved.",
+  "categoryCounts": {
+    "wrong-looking-reference": {
+      "confirmedTop1Misses": 0,
+      "confirmedTop10Misses": 0,
+      "unassessableTop1Misses": 12,
+      "unassessableTop10Misses": 6
+    },
+    "same-or-similar-art": {
+      "confirmedTop1Misses": 0,
+      "confirmedTop10Misses": 0,
+      "unassessableTop1Misses": 12,
+      "unassessableTop10Misses": 6
+    },
+    "parallel-or-variant-ambiguity": {
+      "confirmedTop1Misses": 0,
+      "confirmedTop10Misses": 0,
+      "unassessableTop1Misses": 12,
+      "unassessableTop10Misses": 6
+    },
+    "perspective-glare-background": {
+      "confirmedTop1Misses": 0,
+      "confirmedTop10Misses": 0,
+      "unassessableTop1Misses": 12,
+      "unassessableTop10Misses": 6
+    },
+    "too-small": {
+      "confirmedTop1Misses": 0,
+      "confirmedTop10Misses": 0,
+      "unassessableTop1Misses": 12,
+      "unassessableTop10Misses": 6
+    },
+    "crop-hand-obstruction": {
+      "confirmedTop1Misses": 0,
+      "confirmedTop10Misses": 0,
+      "unassessableTop1Misses": 12,
+      "unassessableTop10Misses": 6
+    },
+    "genuinely-poor-visual-retrieval": {
+      "confirmedTop1Misses": 0,
+      "confirmedTop10Misses": 0,
+      "unassessableTop1Misses": 12,
+      "unassessableTop10Misses": 6
+    }
+  },
+  "countWarning": "Category unassessable counts overlap; they are not 84 distinct failures. Zero confirmed means absent evidence, not absence of the cause.",
+  "uniqueCauseCounts": {
+    "confirmed": 0,
+    "unknown": 12,
+    "top10SubsetConfirmed": 0,
+    "top10SubsetUnknown": 6
+  },
+  "limitations": [
+    "Prior visual acceptance supports exact front identity, not proof of ideal framing or absence of glare, occlusion, small card area or confusing references.",
+    "No independently verified parallel cases were admitted. That does not rule out a variant-like distractor, nor establish ambiguity.",
+    "Catalog distractors were not individually visually audited; shared catalog images can create ambiguity, but no particular miss is attributed to this.",
+    "Card names/artwork descriptions cannot be recovered from numeric IDs and were not looked up."
+  ],
+  "minimumMissingLocalEvidence": [
+    "For each of the 12 misses: a user-provided local query photo linked to its scan ID and the independent positive reference linked to its card ID.",
+    "For each miss: a user-provided local DINO-ordered candidate list (at least top10 IDs/scores) and the corresponding candidate reference images. For ranks beyond10, include the positive and its score/rank as well.",
+    "Only where exact-print ambiguity is suspected: local trustworthy printing/variant labels and visible distinguishing-detail evidence. Do not guess from artwork.",
+    "Supply local evidence explicitly if a causal review is desired; this audit does not request or authorize any production export, URL fetch, rerun or reconstruction."
+  ],
+  "nextEvaluation": {
+    "baseline": "canonical-single-image-dino",
+    "reranker": false,
+    "optionalGuidedCrop": false,
+    "approvedBoundaryDependence": false,
+    "policyGuard": "scripts/dev-dino-next-evaluation.mjs",
+    "status": "Policy-only gate. No new image evaluation authorized or executed; historical harnesses preserved, not invoked."
+  },
+  "cases": [
+    {
+      "scanId": 3173,
+      "confirmedCardId": 18232,
+      "dinoRank": 26,
+      "top10Miss": true,
+      "description": "Verified positive present in index but outside DINO top10 (rank 26); retrieval miss is measured, visual cause is unknown.",
+      "printedInsert": false,
+      "verifiedExactParallelCase": false,
+      "verifiedEvidence": [
+        "independently verified exact front",
+        "independent positive reference present",
+        "warm rankings stable at cohort level"
+      ],
+      "retainedCandidateIdsUnordered": [
+        16659,
+        17189,
+        17419,
+        17510,
+        18056,
+        19912,
+        20430,
+        58663,
+        336619,
+        548384
+      ],
+      "candidateEvidence": "The historical breadth10 reranker permuted exactly the raw DINO top10 pool without filtering. IDs therefore recover pool membership only, NOT DINO order, top1 identity, scores, artwork descriptions or causal similarity.",
+      "dinoTop1CandidateId": null,
+      "cause": "unknown",
+      "confirmedCauseCategories": [],
+      "hypothesizedCauseCategories": [],
+      "evidenceAvailability": "Photos, vectors, detailed visual QA and original DINO candidate ordering were deleted. Retained QA records certify front identity/reference presence, not imaging conditions or distractor appearance. No case-specific causal visual notes survive in the available sanitized evidence/context."
+    },
+    {
+      "scanId": 3169,
+      "confirmedCardId": 16868,
+      "dinoRank": 144,
+      "top10Miss": true,
+      "description": "Verified positive present in index but outside DINO top10 (rank 144); retrieval miss is measured, visual cause is unknown.",
+      "printedInsert": false,
+      "verifiedExactParallelCase": false,
+      "verifiedEvidence": [
+        "independently verified exact front",
+        "independent positive reference present",
+        "warm rankings stable at cohort level"
+      ],
+      "retainedCandidateIdsUnordered": [
+        15847,
+        17465,
+        18636,
+        60827,
+        337644,
+        337645,
+        337646,
+        521240,
+        521998,
+        533624
+      ],
+      "candidateEvidence": "The historical breadth10 reranker permuted exactly the raw DINO top10 pool without filtering. IDs therefore recover pool membership only, NOT DINO order, top1 identity, scores, artwork descriptions or causal similarity.",
+      "dinoTop1CandidateId": null,
+      "cause": "unknown",
+      "confirmedCauseCategories": [],
+      "hypothesizedCauseCategories": [],
+      "evidenceAvailability": "Photos, vectors, detailed visual QA and original DINO candidate ordering were deleted. Retained QA records certify front identity/reference presence, not imaging conditions or distractor appearance. No case-specific causal visual notes survive in the available sanitized evidence/context."
+    },
+    {
+      "scanId": 3098,
+      "confirmedCardId": 15647,
+      "dinoRank": 8,
+      "top10Miss": false,
+      "description": "Verified positive retrieved within DINO top10 at rank 8, but not first; ordering error is measured, visual cause is unknown.",
+      "printedInsert": false,
+      "verifiedExactParallelCase": false,
+      "verifiedEvidence": [
+        "independently verified exact front",
+        "independent positive reference present",
+        "warm rankings stable at cohort level"
+      ],
+      "retainedCandidateIdsUnordered": [
+        15418,
+        15457,
+        15647,
+        15836,
+        60827,
+        61894,
+        337252,
+        527881,
+        528691,
+        531714
+      ],
+      "candidateEvidence": "The historical breadth10 reranker permuted exactly the raw DINO top10 pool without filtering. IDs therefore recover pool membership only, NOT DINO order, top1 identity, scores, artwork descriptions or causal similarity.",
+      "dinoTop1CandidateId": null,
+      "cause": "unknown",
+      "confirmedCauseCategories": [],
+      "hypothesizedCauseCategories": [],
+      "evidenceAvailability": "Photos, vectors, detailed visual QA and original DINO candidate ordering were deleted. Retained QA records certify front identity/reference presence, not imaging conditions or distractor appearance. No case-specific causal visual notes survive in the available sanitized evidence/context."
+    },
+    {
+      "scanId": 3090,
+      "confirmedCardId": 20330,
+      "dinoRank": 147,
+      "top10Miss": true,
+      "description": "Verified positive present in index but outside DINO top10 (rank 147); retrieval miss is measured, visual cause is unknown.",
+      "printedInsert": false,
+      "verifiedExactParallelCase": false,
+      "verifiedEvidence": [
+        "independently verified exact front",
+        "independent positive reference present",
+        "warm rankings stable at cohort level"
+      ],
+      "retainedCandidateIdsUnordered": [
+        12399,
+        12759,
+        18684,
+        58663,
+        58890,
+        58975,
+        59900,
+        331472,
+        333742,
+        528691
+      ],
+      "candidateEvidence": "The historical breadth10 reranker permuted exactly the raw DINO top10 pool without filtering. IDs therefore recover pool membership only, NOT DINO order, top1 identity, scores, artwork descriptions or causal similarity.",
+      "dinoTop1CandidateId": null,
+      "cause": "unknown",
+      "confirmedCauseCategories": [],
+      "hypothesizedCauseCategories": [],
+      "evidenceAvailability": "Photos, vectors, detailed visual QA and original DINO candidate ordering were deleted. Retained QA records certify front identity/reference presence, not imaging conditions or distractor appearance. No case-specific causal visual notes survive in the available sanitized evidence/context."
+    },
+    {
+      "scanId": 3087,
+      "confirmedCardId": 20329,
+      "dinoRank": 3,
+      "top10Miss": false,
+      "description": "Verified positive retrieved within DINO top10 at rank 3, but not first; ordering error is measured, visual cause is unknown.",
+      "printedInsert": false,
+      "verifiedExactParallelCase": false,
+      "verifiedEvidence": [
+        "independently verified exact front",
+        "independent positive reference present",
+        "warm rankings stable at cohort level"
+      ],
+      "retainedCandidateIdsUnordered": [
+        20329,
+        35319,
+        39058,
+        65292,
+        66037,
+        188248,
+        193627,
+        331472,
+        343593,
+        530581
+      ],
+      "candidateEvidence": "The historical breadth10 reranker permuted exactly the raw DINO top10 pool without filtering. IDs therefore recover pool membership only, NOT DINO order, top1 identity, scores, artwork descriptions or causal similarity.",
+      "dinoTop1CandidateId": null,
+      "cause": "unknown",
+      "confirmedCauseCategories": [],
+      "hypothesizedCauseCategories": [],
+      "evidenceAvailability": "Photos, vectors, detailed visual QA and original DINO candidate ordering were deleted. Retained QA records certify front identity/reference presence, not imaging conditions or distractor appearance. No case-specific causal visual notes survive in the available sanitized evidence/context."
+    },
+    {
+      "scanId": 3086,
+      "confirmedCardId": 20327,
+      "dinoRank": 498,
+      "top10Miss": true,
+      "description": "Verified positive present in index but outside DINO top10 (rank 498); retrieval miss is measured, visual cause is unknown.",
+      "printedInsert": false,
+      "verifiedExactParallelCase": false,
+      "verifiedEvidence": [
+        "independently verified exact front",
+        "independent positive reference present",
+        "warm rankings stable at cohort level"
+      ],
+      "retainedCandidateIdsUnordered": [
+        12759,
+        19341,
+        37729,
+        60849,
+        337231,
+        337635,
+        337675,
+        337678,
+        343042,
+        528691
+      ],
+      "candidateEvidence": "The historical breadth10 reranker permuted exactly the raw DINO top10 pool without filtering. IDs therefore recover pool membership only, NOT DINO order, top1 identity, scores, artwork descriptions or causal similarity.",
+      "dinoTop1CandidateId": null,
+      "cause": "unknown",
+      "confirmedCauseCategories": [],
+      "hypothesizedCauseCategories": [],
+      "evidenceAvailability": "Photos, vectors, detailed visual QA and original DINO candidate ordering were deleted. Retained QA records certify front identity/reference presence, not imaging conditions or distractor appearance. No case-specific causal visual notes survive in the available sanitized evidence/context."
+    },
+    {
+      "scanId": 3056,
+      "confirmedCardId": 16844,
+      "dinoRank": 400,
+      "top10Miss": true,
+      "description": "Verified positive present in index but outside DINO top10 (rank 400); retrieval miss is measured, visual cause is unknown.",
+      "printedInsert": false,
+      "verifiedExactParallelCase": false,
+      "verifiedEvidence": [
+        "independently verified exact front",
+        "independent positive reference present",
+        "warm rankings stable at cohort level"
+      ],
+      "retainedCandidateIdsUnordered": [
+        15423,
+        15457,
+        17140,
+        17510,
+        17515,
+        19341,
+        69671,
+        337251,
+        337252,
+        337254
+      ],
+      "candidateEvidence": "The historical breadth10 reranker permuted exactly the raw DINO top10 pool without filtering. IDs therefore recover pool membership only, NOT DINO order, top1 identity, scores, artwork descriptions or causal similarity.",
+      "dinoTop1CandidateId": null,
+      "cause": "unknown",
+      "confirmedCauseCategories": [],
+      "hypothesizedCauseCategories": [],
+      "evidenceAvailability": "Photos, vectors, detailed visual QA and original DINO candidate ordering were deleted. Retained QA records certify front identity/reference presence, not imaging conditions or distractor appearance. No case-specific causal visual notes survive in the available sanitized evidence/context."
+    },
+    {
+      "scanId": 2984,
+      "confirmedCardId": 20280,
+      "dinoRank": 3,
+      "top10Miss": false,
+      "description": "Verified positive retrieved within DINO top10 at rank 3, but not first; ordering error is measured, visual cause is unknown.",
+      "printedInsert": false,
+      "verifiedExactParallelCase": false,
+      "verifiedEvidence": [
+        "independently verified exact front",
+        "independent positive reference present",
+        "warm rankings stable at cohort level"
+      ],
+      "retainedCandidateIdsUnordered": [
+        11346,
+        20280,
+        20281,
+        22497,
+        67072,
+        88660,
+        185219,
+        336618,
+        530527,
+        530528
+      ],
+      "candidateEvidence": "The historical breadth10 reranker permuted exactly the raw DINO top10 pool without filtering. IDs therefore recover pool membership only, NOT DINO order, top1 identity, scores, artwork descriptions or causal similarity.",
+      "dinoTop1CandidateId": null,
+      "cause": "unknown",
+      "confirmedCauseCategories": [],
+      "hypothesizedCauseCategories": [],
+      "evidenceAvailability": "Photos, vectors, detailed visual QA and original DINO candidate ordering were deleted. Retained QA records certify front identity/reference presence, not imaging conditions or distractor appearance. No case-specific causal visual notes survive in the available sanitized evidence/context."
+    },
+    {
+      "scanId": 2983,
+      "confirmedCardId": 20279,
+      "dinoRank": 2,
+      "top10Miss": false,
+      "description": "Verified positive retrieved within DINO top10 at rank 2, but not first; ordering error is measured, visual cause is unknown.",
+      "printedInsert": false,
+      "verifiedExactParallelCase": false,
+      "verifiedEvidence": [
+        "independently verified exact front",
+        "independent positive reference present",
+        "warm rankings stable at cohort level"
+      ],
+      "retainedCandidateIdsUnordered": [
+        20279,
+        189876,
+        337312,
+        337313,
+        337314,
+        337315,
+        337316,
+        337317,
+        337318,
+        530526
+      ],
+      "candidateEvidence": "The historical breadth10 reranker permuted exactly the raw DINO top10 pool without filtering. IDs therefore recover pool membership only, NOT DINO order, top1 identity, scores, artwork descriptions or causal similarity.",
+      "dinoTop1CandidateId": null,
+      "cause": "unknown",
+      "confirmedCauseCategories": [],
+      "hypothesizedCauseCategories": [],
+      "evidenceAvailability": "Photos, vectors, detailed visual QA and original DINO candidate ordering were deleted. Retained QA records certify front identity/reference presence, not imaging conditions or distractor appearance. No case-specific causal visual notes survive in the available sanitized evidence/context."
+    },
+    {
+      "scanId": 2981,
+      "confirmedCardId": 20281,
+      "dinoRank": 39,
+      "top10Miss": true,
+      "description": "Verified positive present in index but outside DINO top10 (rank 39); retrieval miss is measured, visual cause is unknown.",
+      "printedInsert": false,
+      "verifiedExactParallelCase": false,
+      "verifiedEvidence": [
+        "independently verified exact front",
+        "independent positive reference present",
+        "warm rankings stable at cohort level"
+      ],
+      "retainedCandidateIdsUnordered": [
+        17512,
+        20620,
+        22497,
+        88660,
+        336621,
+        336622,
+        337587,
+        521995,
+        521998,
+        530528
+      ],
+      "candidateEvidence": "The historical breadth10 reranker permuted exactly the raw DINO top10 pool without filtering. IDs therefore recover pool membership only, NOT DINO order, top1 identity, scores, artwork descriptions or causal similarity.",
+      "dinoTop1CandidateId": null,
+      "cause": "unknown",
+      "confirmedCauseCategories": [],
+      "hypothesizedCauseCategories": [],
+      "evidenceAvailability": "Photos, vectors, detailed visual QA and original DINO candidate ordering were deleted. Retained QA records certify front identity/reference presence, not imaging conditions or distractor appearance. No case-specific causal visual notes survive in the available sanitized evidence/context."
+    },
+    {
+      "scanId": 2899,
+      "confirmedCardId": 19943,
+      "dinoRank": 5,
+      "top10Miss": false,
+      "description": "Verified positive retrieved within DINO top10 at rank 5, but not first; ordering error is measured, visual cause is unknown.",
+      "printedInsert": true,
+      "verifiedExactParallelCase": false,
+      "verifiedEvidence": [
+        "independently verified exact front",
+        "independent positive reference present",
+        "warm rankings stable at cohort level"
+      ],
+      "retainedCandidateIdsUnordered": [
+        17750,
+        17839,
+        18323,
+        19935,
+        19943,
+        19958,
+        65403,
+        198972,
+        336621,
+        522039
+      ],
+      "candidateEvidence": "The historical breadth10 reranker permuted exactly the raw DINO top10 pool without filtering. IDs therefore recover pool membership only, NOT DINO order, top1 identity, scores, artwork descriptions or causal similarity.",
+      "dinoTop1CandidateId": null,
+      "cause": "unknown",
+      "confirmedCauseCategories": [],
+      "hypothesizedCauseCategories": [],
+      "evidenceAvailability": "Photos, vectors, detailed visual QA and original DINO candidate ordering were deleted. Retained QA records certify front identity/reference presence, not imaging conditions or distractor appearance. No case-specific causal visual notes survive in the available sanitized evidence/context."
+    },
+    {
+      "scanId": 2866,
+      "confirmedCardId": 17759,
+      "dinoRank": 4,
+      "top10Miss": false,
+      "description": "Verified positive retrieved within DINO top10 at rank 4, but not first; ordering error is measured, visual cause is unknown.",
+      "printedInsert": false,
+      "verifiedExactParallelCase": false,
+      "verifiedEvidence": [
+        "independently verified exact front",
+        "independent positive reference present",
+        "warm rankings stable at cohort level"
+      ],
+      "retainedCandidateIdsUnordered": [
+        17515,
+        17759,
+        60827,
+        65565,
+        66037,
+        66079,
+        336622,
+        336748,
+        337251,
+        343593
+      ],
+      "candidateEvidence": "The historical breadth10 reranker permuted exactly the raw DINO top10 pool without filtering. IDs therefore recover pool membership only, NOT DINO order, top1 identity, scores, artwork descriptions or causal similarity.",
+      "dinoTop1CandidateId": null,
+      "cause": "unknown",
+      "confirmedCauseCategories": [],
+      "hypothesizedCauseCategories": [],
+      "evidenceAvailability": "Photos, vectors, detailed visual QA and original DINO candidate ordering were deleted. Retained QA records certify front identity/reference presence, not imaging conditions or distractor appearance. No case-specific causal visual notes survive in the available sanitized evidence/context."
+    }
+  ]
+}
