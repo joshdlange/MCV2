@@ -184,3 +184,17 @@ mtime_ms = 1790725306911
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/f14f41bc-dd68-4024-b115-789f58195216/43c82d3d-0467-429a-a0c8-f3827dc62909"
 storage_version_token = "1790725386125010"
 content_type = "text/html"
+
+[[outputs]]
+id = "-4jHkXmmP9DJD2s8rJUS6"
+uri = "file://attached_assets/focused-breadth-parallel-report.html"
+type = "html"
+title = "Top 10 vs Top 20 and parallel-discrimination results"
+description = "Actual eight-arm comparison, per-card ranks, regressions, timings, and verification that all baseline artifacts remain unchanged."
+logical_id = "5a644d1b-6478-4940-8487-80ccbccfc67f"
+content_hash = "sha256:21a541ea4e801ba3d1ae38d8510dc250865b0b34fc85b0371f34b9b78c015407"
+size = 1495080
+mtime_ms = 1790783616267
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/5a644d1b-6478-4940-8487-80ccbccfc67f/449e35f6-c58d-4b7f-981e-f2ec7d2751a3"
+storage_version_token = "1790783730843461"
+content_type = "text/html"
