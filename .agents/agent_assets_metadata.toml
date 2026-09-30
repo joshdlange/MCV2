@@ -198,3 +198,17 @@ mtime_ms = 1790783616267
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/5a644d1b-6478-4940-8487-80ccbccfc67f/449e35f6-c58d-4b7f-981e-f2ec7d2751a3"
 storage_version_token = "1790783730843461"
 content_type = "text/html"
+
+[[outputs]]
+id = "psHmqNb6cv8YE5u0hVOP5"
+uri = "file://attached_assets/dev-broad-validation-report.html"
+type = "html"
+title = "Broader validation: actual run and data limitations"
+description = "Temporary 2,938-card index, verified unused-scan results, excluded historical labels/references, processing times, and preserved-baseline integrity checks."
+logical_id = "aeb37ec5-5358-4390-a6c3-041895d2127f"
+content_hash = "sha256:1a51c2f9ab39f4512219117b1ef56cfed36943d4e36743a3604cc91fc82915e0"
+size = 1438861
+mtime_ms = 1790786103801
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/aeb37ec5-5358-4390-a6c3-041895d2127f/8a90ba4f-d40c-4200-b69c-2dddd7ff6472"
+storage_version_token = "1790786177870929"
+content_type = "text/html"

@@ -1,0 +1,1646 @@
+{
+  "title": "Frozen DINO + base reranker: bounded broader-index validation",
+  "status": "COMPLETED_BOUNDED_RUN_BUT_BROAD_COHORT_UNAVAILABLE",
+  "createdAt": "2026-09-30T16:35:02.387Z",
+  "supersedes": "Initial zero-DEV-query blocker report. Parent subsequently authorized already-local historical source evidence and clarified review-only exposure is not experiment-query exposure. DEV remains empty; one eligible unused historical query survived independent verification.",
+  "model": "dinov2-small:c2bb04a51fab207c420665f1946016107bffc701:q8:cls:rgb-fit224-v1",
+  "basePolicy": {
+    "version": "detail-v1-preregistered",
+    "dinoWeight": 0.65,
+    "detailWeight": 0.35,
+    "detailWeights": {
+      "borderColor": 0.35,
+      "regionalColor": 0.25,
+      "edgeLayout": 0.25,
+      "luminanceStructure": 0.15
+    },
+    "minimumAlignmentNCC": 0.48,
+    "minimumAlignmentGap": 0.012,
+    "selection": "NCC of mean-centered grayscale at multiple scales/translations and 0/90/180/270 reference rotations; coarse-to-fine, no labels or metadata",
+    "warning": "Scores are heuristic, not probabilities. Template alignment may fail with glare, sleeves, severe perspective and card-background contamination."
+  },
+  "newChroma": false,
+  "funnel": {
+    "currentDevScanRows": 0,
+    "currentDevFeedbackRows": 0,
+    "localPreparedSourceRecords": 72,
+    "preparedLocalPhotos": 60,
+    "historicalExtractRows": 60,
+    "historicalExplicitSelections": 16,
+    "explicitSelectionsPreviouslyQueried": 4,
+    "explicitSelectionsManualConflict": 3,
+    "unusedHistoricalCandidates": 9,
+    "candidateBacks": 1,
+    "candidateFrontImages": 8,
+    "wrongHistoricalIdentity": 2,
+    "exactParallelUnresolved": 2,
+    "missingCurrentIndependentReferences": 3,
+    "knownSelfReferenceLeakageAmongMissing": 1,
+    "eligibleIndependentExactFronts": 1,
+    "priorActualExperimentQueriesExcluded": 16,
+    "earlierTunedSubsetExcluded": 9,
+    "reviewOnlyPreparedExposureNotAutomaticExclusion": true,
+    "indexTargetCardIds": 3000,
+    "indexSuccessfullyPreparedCardIds": 2938,
+    "uniqueReferenceEmbeddings": 2678,
+    "downloadOrDecodeFailures": 62,
+    "actualAccuracyCases": 1,
+    "warmRepeatPasses": 2
+  },
+  "funnelNotes": "Mutually exclusive primary candidate exclusions: 1 back + 2 wrong historical identities + 2 unresolved exact parallels + 3 missing references + 1 eligible = 9. Known self-reference and red/black discrepancy are additional overlapping warnings. Of16 explicit histories,4 were in prior16 queried IDs,3 conflict with saved manual labels. Source72 has no selected-card feedback fields; its12 records outside historical60 cannot acquire labels from prediction/candidate IDs. None were promoted.",
+  "selection": {
+    "policy": "3000 active DEV catalog card IDs: verified positives; up to30 exact-character hash-ordered hard negatives,15 nearby same-set numbers,all same-family same-number; remainder equal round-robin decade × metadata variant stratum, families round-robin within each stratum, SHA256 ID tie order. Public Cloudinary only. No outcome-based substitution. Failed downloads reduce actual index size.",
+    "availableActivePublicReferenceCards": 82244,
+    "queryExposure": "Prepared for review and historical matcher exposure, but no prior DINO/reranker experiment query. One independently verified eligible front; not a representative untouched human-unseen holdout.",
+    "priorActualQueryIds": [
+      3032,
+      3035,
+      3038,
+      3040,
+      3046,
+      3077,
+      3088,
+      3093,
+      3094,
+      3095,
+      3110,
+      3113,
+      3124,
+      3126,
+      3127,
+      3130
+    ],
+    "preparedOnlyVsUntouched": "Previously prepared for human review / exposed to historical matcher, but first DINO/base-reranker experimental inference for scan2837. Not newly collected DEV data or an entirely unseen holdout.",
+    "hardNegativePlan": [
+      {
+        "scanId": 2837,
+        "group": "same-family-number",
+        "ids": []
+      },
+      {
+        "scanId": 2837,
+        "group": "same-character",
+        "ids": [
+          91613,
+          26606,
+          20544,
+          41785,
+          198185,
+          85643,
+          533546,
+          342591,
+          530394,
+          19136,
+          85215,
+          43901,
+          200908,
+          19749,
+          533544,
+          87484,
+          41986,
+          42525,
+          203359,
+          91611,
+          83304,
+          18534,
+          533624,
+          23926,
+          91608,
+          216171,
+          85395,
+          20610,
+          42840,
+          18262
+        ]
+      },
+      {
+        "scanId": 2837,
+        "group": "same-set-near-number",
+        "ids": [
+          16945,
+          16947,
+          16944,
+          16948,
+          16943,
+          16949,
+          16941,
+          16950,
+          16940,
+          16951,
+          16939,
+          16952,
+          16938,
+          16954,
+          16937
+        ]
+      }
+    ],
+    "successfulRoles": {
+      "metadata-stratified": 2892,
+      "hard-negative:same-set-near-number": 15,
+      "verified-positive": 1,
+      "hard-negative:same-character": 30
+    },
+    "successfulDecades": {
+      "1990s": 743,
+      "2020s": 668,
+      "1960s": 66,
+      "1980s": 23,
+      "2000s": 702,
+      "2010s": 736
+    },
+    "successfulMetadataStrata": {
+      "1990:other": 361,
+      "2020:other": 330,
+      "2020:variant-metadata": 328,
+      "1960:other": 66,
+      "1980:other": 23,
+      "1990:variant-metadata": 359,
+      "forced-positive-or-hard-negative": 46,
+      "2000:other": 362,
+      "2000:variant-metadata": 340,
+      "2010:other": 361,
+      "2010:variant-metadata": 362
+    },
+    "distinctMainFamilies": 199,
+    "distinctSubsets": 889,
+    "queryFailureReplacement": false,
+    "indexFailureReplacement": false
+  },
+  "sourceTrace": [
+    "client/src/pages/scan.tsx confirmCard sends selectedCard.cardId as feedback before asynchronous collection mutation.",
+    "server/routes.ts POST /api/cards/scan persists matcher candidates/topMatchCardId; these are predictions, never labels.",
+    "server/routes.ts POST /api/cards/scan/:scanUploadId/feedback checks scan owner and records selectedCardId.",
+    "shared/schema.ts scan_feedback.scan_upload_id links feedback to scans. Historical selected IDs require same owner, nonconflicting explicit choice, and independent visual exact-front/parallel verification.",
+    "Feedback precedes collection save: no successful ownership inference. Timestamps alone never prove identity. Existing manual decisions remain unchanged."
+  ],
+  "sourceAvailability": {
+    "target": "local DEV hostname allowlist; no credentials logged",
+    "counts": {
+      "scans": "0",
+      "feedback": "0"
+    }
+  },
+  "sourceAudit": {
+    "historicalRows": 60,
+    "source72WithoutFeedback": 12,
+    "manualDecisionsUnchanged": true,
+    "note": "App server/db.ts uses DATABASE_URL. Connection was explicitly restricted to local helium/localhost/127.0.0.1, NODE_ENV nonproduction, repeatable-read READ ONLY transaction. Both built-in DEV and actual local app database have zero scans/feedback. No production connection opened."
+  },
+  "verification": [
+    {
+      "scanId": 2683,
+      "accepted": false,
+      "category": "back",
+      "note": "Query shows sideways Synch biography/back #37, not front.",
+      "secondaryNotes": null
+    },
+    {
+      "scanId": 2780,
+      "accepted": false,
+      "category": "historical-identity-conflict",
+      "note": "Query is Topps Chrome Dane Whitman full-body/lightning; selected label/reference is Upper Deck Eternals blue portrait. Do not replace historical label.",
+      "secondaryNotes": null
+    },
+    {
+      "scanId": 2784,
+      "accepted": false,
+      "category": "historical-identity-conflict",
+      "note": "Query is 1995 Chromium binder page Banshee Generation X artwork; selected label/reference is different 2018 Banshee artwork. Do not relabel.",
+      "secondaryNotes": null
+    },
+    {
+      "scanId": 2801,
+      "accepted": false,
+      "category": "parallel-unresolved",
+      "note": "Carnage front artwork agrees, but binder-page lighting/foil and multiple Power Blast Gold/Rainbow/Silver catalog siblings do not independently establish exact selected printing. No guessed parallel.",
+      "secondaryNotes": null
+    },
+    {
+      "scanId": 2832,
+      "accepted": false,
+      "category": "parallel-unresolved",
+      "note": "Cable front artwork agrees; gold/silver foil under glare cannot independently establish Gold Blasters versus Metal Blasters/Silver Flasher. Reference is also a small card in slab/store scene, not a trustworthy crop extent.",
+      "secondaryNotes": null
+    },
+    {
+      "scanId": 2837,
+      "accepted": true,
+      "category": "verified-front",
+      "parallel": false,
+      "note": "Deadpool 1992 X-Men #43 front: matching red border, SUPER-VILLAINS header, moon, pose, skyline, name and yellow X logo. Unsigned base front; reference is independently framed clean catalog raster, query has physical top-loader and background. Active ID16946; same-URL529346 inactive and excluded.",
+      "secondaryNotes": null
+    },
+    {
+      "scanId": 2882,
+      "accepted": false,
+      "category": "missing-reference",
+      "note": "No front_image_url in authorized current DEV catalog; exact positive reference unavailable.",
+      "secondaryNotes": null
+    },
+    {
+      "scanId": 3029,
+      "accepted": false,
+      "category": "missing-reference",
+      "note": "No front_image_url in authorized current DEV catalog; exact positive reference unavailable.",
+      "secondaryNotes": "Existing photo-origin audit flags exact self-reference leakage in historical candidate URL, independent of absent current catalog reference. Excluded."
+    },
+    {
+      "scanId": 3047,
+      "accepted": false,
+      "category": "missing-reference",
+      "note": "No front_image_url in authorized current DEV catalog; exact positive reference unavailable.",
+      "secondaryNotes": "Visible query is red/checkered Throg while historical selection says Black: additional parallel concern; no label changed."
+    }
+  ],
+  "cases": [
+    {
+      "scanId": 2837,
+      "cardId": 16946,
+      "name": "Deadpool",
+      "cardNumber": "43",
+      "exactSet": "1992 X-Men Series 1",
+      "parallel": false,
+      "queryHash": "a401f37fe2d455c5aec5997cec6e41b536f2d5a2e951a9297dd50356147b75e9",
+      "referenceDigest": "ae278897bfda68843e2ec8f78b0a5219f05f1473eef62226a8e51d2334b83475",
+      "independentReferenceVerified": true,
+      "visibleCaptureContext": "Physical top-loader, surrounding surface and perspective; not a catalog-raster copy. Device/photographer identity not independently proven.",
+      "rawDinoRank": 1,
+      "optionalCropDinoRank": 1,
+      "optionalCropAccepted": false,
+      "arms": [
+        {
+          "input": "raw",
+          "breadth": 10,
+          "rank": 1,
+          "top10": [
+            {
+              "cardId": 16946,
+              "digest": "ae278897bfda68843e2ec8f78b0a5219f05f1473eef62226a8e51d2334b83475",
+              "name": "Deadpool",
+              "setName": "1992 X-Men Series 1",
+              "similarity": 0.8095164069791634,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.2903769974242709,
+                "alignmentGap": 0.08913114888862189,
+                "box": {
+                  "x": 28,
+                  "y": 156,
+                  "w": 117.2093023255814,
+                  "h": 84
+                },
+                "rotation": 90
+              },
+              "rerankScore": 0.8095164069791634
+            },
+            {
+              "cardId": 60827,
+              "digest": "444bc124226165a078250565222758ad2d4d8536db7dc17629c1252041a14cdb",
+              "name": "Frankenstein's Monster",
+              "setName": "2024 SkyBox Marvel Masterpieces XL - What If Silver Spectrum",
+              "similarity": 0.7331610684081045,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.38593464173760095,
+                "alignmentGap": 0.07038390555127155,
+                "box": {
+                  "x": 38,
+                  "y": 4,
+                  "w": 139.0344827586207,
+                  "h": 84
+                },
+                "rotation": 0
+              },
+              "rerankScore": 0.7331610684081045
+            },
+            {
+              "cardId": 19626,
+              "digest": "392aa1d9cb671a6be2e3cbd135b85fe4ae04f79e1241ae79652038643457ceeb",
+              "name": "Magneto",
+              "setName": "1995 Metal Marvel - Silver Flasher",
+              "similarity": 0.7276690892166593,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.3944494838503522,
+                "alignmentGap": 0.02115224808360311,
+                "box": {
+                  "x": 24,
+                  "y": 154,
+                  "w": 102.85714285714286,
+                  "h": 84
+                },
+                "rotation": 270
+              },
+              "rerankScore": 0.7276690892166593
+            },
+            {
+              "cardId": 521240,
+              "digest": "bad35e3073a23859bc74148610f6bb95ab2c4c6533ba317c86900cdcfd494e35",
+              "name": "Drax",
+              "setName": "2025 Kakawow Cosmos Marvel - 2025 Kakawow Cosmos Marvel",
+              "similarity": 0.7210934638486911,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.38725403368137296,
+                "alignmentGap": 0.05675693561772416,
+                "box": {
+                  "x": 92,
+                  "y": 58,
+                  "w": 59.22,
+                  "h": 78.96
+                },
+                "rotation": 180
+              },
+              "rerankScore": 0.7210934638486911
+            },
+            {
+              "cardId": 19679,
+              "digest": "7b46ee8d8032e9d1116c942492b912d3104ab95c83915d709b6b222f1f5d7c82",
+              "name": "Deathlok",
+              "setName": "1995 Metal Marvel - Silver Flasher",
+              "similarity": 0.7247887835707058,
+              "evidence": {
+                "reliable": true,
+                "detailScore": 0.6854375901796446,
+                "signals": {
+                  "borderColor": 0.7023459368695812,
+                  "regionalColor": 0.6924428083665493,
+                  "edgeLayout": 0.6775564944614535,
+                  "luminanceStructure": 0.6474445771219359
+                },
+                "alignmentNCC": 0.6474445771219359,
+                "alignmentGap": 0.09032556846176354,
+                "box": {
+                  "x": 112,
+                  "y": 0,
+                  "w": 48.03399999999999,
+                  "h": 78.96
+                },
+                "rotation": 0
+              },
+              "rerankScore": 0.7110158658838344
+            },
+            {
+              "cardId": 36209,
+              "digest": "800ee40508ab84dc62145d63b52f25d2870d17b95938434abe9065b2d52b7670",
+              "name": "Yellowjacket",
+              "setName": "2022 Fleer Ultra Marvel Avengers - 1st Appearances Red Foil",
+              "similarity": 0.7078935910619737,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.3358423428461941,
+                "alignmentGap": 0.031959624290513466,
+                "box": {
+                  "x": 18,
+                  "y": 9,
+                  "w": 59.85,
+                  "h": 84
+                },
+                "rotation": 180
+              },
+              "rerankScore": 0.7078935910619737
+            },
+            {
+              "cardId": 16944,
+              "digest": "4a78edd9274f05790f5138c79f4beb447114ddc6802ebefd27a2184390629ab7",
+              "name": "Magneto",
+              "setName": "1992 X-Men Series 1",
+              "similarity": 0.6957412761599684,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.3707061998362946,
+                "alignmentGap": 0.050873469916912606,
+                "box": {
+                  "x": 83,
+                  "y": 11,
+                  "w": 56.259,
+                  "h": 78.96
+                },
+                "rotation": 0
+              },
+              "rerankScore": 0.6957412761599684
+            },
+            {
+              "cardId": 84790,
+              "digest": "fd6e5818bc27b9ac029107cd0a4e4b7fc7688763340c11eb0fbcce5ea175eb7d",
+              "name": "Master Strike LEN",
+              "setName": "2015 Upper Deck Marvel 3D - Lenticular 3D",
+              "similarity": 0.6949403746453481,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.29094131974675363,
+                "alignmentGap": 0.026278184845253794,
+                "box": {
+                  "x": 12,
+                  "y": 132,
+                  "w": 80.55,
+                  "h": 108
+                },
+                "rotation": 180
+              },
+              "rerankScore": 0.6949403746453481
+            },
+            {
+              "cardId": 337635,
+              "digest": "bd471db1eb357b049e26c278845001fa08e8a9f5c5ab7e2820a95adaf6751e38",
+              "name": "Brotherhood of Evil Mutants",
+              "setName": "2009 Rittenhouse X-Men Archives - Nemesis",
+              "similarity": 0.6947222052742441,
+              "evidence": {
+                "reliable": true,
+                "detailScore": 0.615312104524402,
+                "signals": {
+                  "borderColor": 0.6630018604032343,
+                  "regionalColor": 0.6406249929892103,
+                  "edgeLayout": 0.5188142120838165,
+                  "luminanceStructure": 0.6226776807667552
+                },
+                "alignmentNCC": 0.6226776807667552,
+                "alignmentGap": 0.04397926334233848,
+                "box": {
+                  "x": 74,
+                  "y": 7,
+                  "w": 63,
+                  "h": 84
+                },
+                "rotation": 0
+              },
+              "rerankScore": 0.6669286700117993
+            },
+            {
+              "cardId": 15847,
+              "digest": "65f82874a77bf5e4a28d4ef930585ed03b27a24c0f655e84018c727c4ca2ab82",
+              "name": "Daredevil",
+              "setName": "1991 Impel Marvel Universe II - 1991 Impel Marvel Universe II",
+              "similarity": 0.7118576447796935,
+              "evidence": {
+                "reliable": true,
+                "detailScore": 0.48736033597316464,
+                "signals": {
+                  "borderColor": 0.46737861591585284,
+                  "regionalColor": 0.509633708881059,
+                  "edgeLayout": 0.48303640947029325,
+                  "luminanceStructure": 0.5040686054318539
+                },
+                "alignmentNCC": 0.5040686054318539,
+                "alignmentGap": 0.09578123448137454,
+                "box": {
+                  "x": 103,
+                  "y": 20,
+                  "w": 61.95,
+                  "h": 84
+                },
+                "rotation": 0
+              },
+              "rerankScore": 0.6332835866974084
+            }
+          ]
+        },
+        {
+          "input": "raw",
+          "breadth": 20,
+          "rank": 1,
+          "top10": [
+            {
+              "cardId": 16946,
+              "digest": "ae278897bfda68843e2ec8f78b0a5219f05f1473eef62226a8e51d2334b83475",
+              "name": "Deadpool",
+              "setName": "1992 X-Men Series 1",
+              "similarity": 0.8095164069791634,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.2903769974242709,
+                "alignmentGap": 0.08913114888862189,
+                "box": {
+                  "x": 28,
+                  "y": 156,
+                  "w": 117.2093023255814,
+                  "h": 84
+                },
+                "rotation": 90
+              },
+              "rerankScore": 0.8095164069791634
+            },
+            {
+              "cardId": 60827,
+              "digest": "444bc124226165a078250565222758ad2d4d8536db7dc17629c1252041a14cdb",
+              "name": "Frankenstein's Monster",
+              "setName": "2024 SkyBox Marvel Masterpieces XL - What If Silver Spectrum",
+              "similarity": 0.7331610684081045,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.38593464173760095,
+                "alignmentGap": 0.07038390555127155,
+                "box": {
+                  "x": 38,
+                  "y": 4,
+                  "w": 139.0344827586207,
+                  "h": 84
+                },
+                "rotation": 0
+              },
+              "rerankScore": 0.7331610684081045
+            },
+            {
+              "cardId": 19626,
+              "digest": "392aa1d9cb671a6be2e3cbd135b85fe4ae04f79e1241ae79652038643457ceeb",
+              "name": "Magneto",
+              "setName": "1995 Metal Marvel - Silver Flasher",
+              "similarity": 0.7276690892166593,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.3944494838503522,
+                "alignmentGap": 0.02115224808360311,
+                "box": {
+                  "x": 24,
+                  "y": 154,
+                  "w": 102.85714285714286,
+                  "h": 84
+                },
+                "rotation": 270
+              },
+              "rerankScore": 0.7276690892166593
+            },
+            {
+              "cardId": 521240,
+              "digest": "bad35e3073a23859bc74148610f6bb95ab2c4c6533ba317c86900cdcfd494e35",
+              "name": "Drax",
+              "setName": "2025 Kakawow Cosmos Marvel - 2025 Kakawow Cosmos Marvel",
+              "similarity": 0.7210934638486911,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.38725403368137296,
+                "alignmentGap": 0.05675693561772416,
+                "box": {
+                  "x": 92,
+                  "y": 58,
+                  "w": 59.22,
+                  "h": 78.96
+                },
+                "rotation": 180
+              },
+              "rerankScore": 0.7210934638486911
+            },
+            {
+              "cardId": 19679,
+              "digest": "7b46ee8d8032e9d1116c942492b912d3104ab95c83915d709b6b222f1f5d7c82",
+              "name": "Deathlok",
+              "setName": "1995 Metal Marvel - Silver Flasher",
+              "similarity": 0.7247887835707058,
+              "evidence": {
+                "reliable": true,
+                "detailScore": 0.6854375901796446,
+                "signals": {
+                  "borderColor": 0.7023459368695812,
+                  "regionalColor": 0.6924428083665493,
+                  "edgeLayout": 0.6775564944614535,
+                  "luminanceStructure": 0.6474445771219359
+                },
+                "alignmentNCC": 0.6474445771219359,
+                "alignmentGap": 0.09032556846176354,
+                "box": {
+                  "x": 112,
+                  "y": 0,
+                  "w": 48.03399999999999,
+                  "h": 78.96
+                },
+                "rotation": 0
+              },
+              "rerankScore": 0.7110158658838344
+            },
+            {
+              "cardId": 36209,
+              "digest": "800ee40508ab84dc62145d63b52f25d2870d17b95938434abe9065b2d52b7670",
+              "name": "Yellowjacket",
+              "setName": "2022 Fleer Ultra Marvel Avengers - 1st Appearances Red Foil",
+              "similarity": 0.7078935910619737,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.3358423428461941,
+                "alignmentGap": 0.031959624290513466,
+                "box": {
+                  "x": 18,
+                  "y": 9,
+                  "w": 59.85,
+                  "h": 84
+                },
+                "rotation": 180
+              },
+              "rerankScore": 0.7078935910619737
+            },
+            {
+              "cardId": 16944,
+              "digest": "4a78edd9274f05790f5138c79f4beb447114ddc6802ebefd27a2184390629ab7",
+              "name": "Magneto",
+              "setName": "1992 X-Men Series 1",
+              "similarity": 0.6957412761599684,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.3707061998362946,
+                "alignmentGap": 0.050873469916912606,
+                "box": {
+                  "x": 83,
+                  "y": 11,
+                  "w": 56.259,
+                  "h": 78.96
+                },
+                "rotation": 0
+              },
+              "rerankScore": 0.6957412761599684
+            },
+            {
+              "cardId": 84790,
+              "digest": "fd6e5818bc27b9ac029107cd0a4e4b7fc7688763340c11eb0fbcce5ea175eb7d",
+              "name": "Master Strike LEN",
+              "setName": "2015 Upper Deck Marvel 3D - Lenticular 3D",
+              "similarity": 0.6949403746453481,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.29094131974675363,
+                "alignmentGap": 0.026278184845253794,
+                "box": {
+                  "x": 12,
+                  "y": 132,
+                  "w": 80.55,
+                  "h": 108
+                },
+                "rotation": 180
+              },
+              "rerankScore": 0.6949403746453481
+            },
+            {
+              "cardId": 15868,
+              "digest": "8f812e2bba41d8198aa479508a0456f8cfb735248ba9d738afc72f9b55848c59",
+              "name": "Ghost Rider",
+              "setName": "1991 Impel Marvel Universe II - 1991 Impel Marvel Universe II",
+              "similarity": 0.6941035316978689,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.4294400944239929,
+                "alignmentGap": 0.054544830916917364,
+                "box": {
+                  "x": 99,
+                  "y": 20,
+                  "w": 61.95,
+                  "h": 84
+                },
+                "rotation": 0
+              },
+              "rerankScore": 0.6941035316978689
+            },
+            {
+              "cardId": 336405,
+              "digest": "e049b97a3771a9f0a9556fa2bcb9834d12a96ffd9c116d20e9c28ec778a7fbef",
+              "name": "Lilandra",
+              "setName": "1992 Impel The Uncanny X-Men - Nelsonic",
+              "similarity": 0.6936569420467326,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.43965859695984877,
+                "alignmentGap": 0.046998195236099216,
+                "box": {
+                  "x": 58,
+                  "y": 18,
+                  "w": 58.562,
+                  "h": 78.96
+                },
+                "rotation": 180
+              },
+              "rerankScore": 0.6936569420467326
+            }
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 10,
+          "rank": 1,
+          "top10": [
+            {
+              "cardId": 16946,
+              "digest": "ae278897bfda68843e2ec8f78b0a5219f05f1473eef62226a8e51d2334b83475",
+              "name": "Deadpool",
+              "setName": "1992 X-Men Series 1",
+              "similarity": 0.8095164069791634,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.2903769974242709,
+                "alignmentGap": 0.08913114888862189,
+                "box": {
+                  "x": 28,
+                  "y": 156,
+                  "w": 117.2093023255814,
+                  "h": 84
+                },
+                "rotation": 90
+              },
+              "rerankScore": 0.8095164069791634
+            },
+            {
+              "cardId": 60827,
+              "digest": "444bc124226165a078250565222758ad2d4d8536db7dc17629c1252041a14cdb",
+              "name": "Frankenstein's Monster",
+              "setName": "2024 SkyBox Marvel Masterpieces XL - What If Silver Spectrum",
+              "similarity": 0.7331610684081045,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.38593464173760095,
+                "alignmentGap": 0.07038390555127155,
+                "box": {
+                  "x": 38,
+                  "y": 4,
+                  "w": 139.0344827586207,
+                  "h": 84
+                },
+                "rotation": 0
+              },
+              "rerankScore": 0.7331610684081045
+            },
+            {
+              "cardId": 19626,
+              "digest": "392aa1d9cb671a6be2e3cbd135b85fe4ae04f79e1241ae79652038643457ceeb",
+              "name": "Magneto",
+              "setName": "1995 Metal Marvel - Silver Flasher",
+              "similarity": 0.7276690892166593,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.3944494838503522,
+                "alignmentGap": 0.02115224808360311,
+                "box": {
+                  "x": 24,
+                  "y": 154,
+                  "w": 102.85714285714286,
+                  "h": 84
+                },
+                "rotation": 270
+              },
+              "rerankScore": 0.7276690892166593
+            },
+            {
+              "cardId": 521240,
+              "digest": "bad35e3073a23859bc74148610f6bb95ab2c4c6533ba317c86900cdcfd494e35",
+              "name": "Drax",
+              "setName": "2025 Kakawow Cosmos Marvel - 2025 Kakawow Cosmos Marvel",
+              "similarity": 0.7210934638486911,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.38725403368137296,
+                "alignmentGap": 0.05675693561772416,
+                "box": {
+                  "x": 92,
+                  "y": 58,
+                  "w": 59.22,
+                  "h": 78.96
+                },
+                "rotation": 180
+              },
+              "rerankScore": 0.7210934638486911
+            },
+            {
+              "cardId": 19679,
+              "digest": "7b46ee8d8032e9d1116c942492b912d3104ab95c83915d709b6b222f1f5d7c82",
+              "name": "Deathlok",
+              "setName": "1995 Metal Marvel - Silver Flasher",
+              "similarity": 0.7247887835707058,
+              "evidence": {
+                "reliable": true,
+                "detailScore": 0.6854375901796446,
+                "signals": {
+                  "borderColor": 0.7023459368695812,
+                  "regionalColor": 0.6924428083665493,
+                  "edgeLayout": 0.6775564944614535,
+                  "luminanceStructure": 0.6474445771219359
+                },
+                "alignmentNCC": 0.6474445771219359,
+                "alignmentGap": 0.09032556846176354,
+                "box": {
+                  "x": 112,
+                  "y": 0,
+                  "w": 48.03399999999999,
+                  "h": 78.96
+                },
+                "rotation": 0
+              },
+              "rerankScore": 0.7110158658838344
+            },
+            {
+              "cardId": 36209,
+              "digest": "800ee40508ab84dc62145d63b52f25d2870d17b95938434abe9065b2d52b7670",
+              "name": "Yellowjacket",
+              "setName": "2022 Fleer Ultra Marvel Avengers - 1st Appearances Red Foil",
+              "similarity": 0.7078935910619737,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.3358423428461941,
+                "alignmentGap": 0.031959624290513466,
+                "box": {
+                  "x": 18,
+                  "y": 9,
+                  "w": 59.85,
+                  "h": 84
+                },
+                "rotation": 180
+              },
+              "rerankScore": 0.7078935910619737
+            },
+            {
+              "cardId": 16944,
+              "digest": "4a78edd9274f05790f5138c79f4beb447114ddc6802ebefd27a2184390629ab7",
+              "name": "Magneto",
+              "setName": "1992 X-Men Series 1",
+              "similarity": 0.6957412761599684,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.3707061998362946,
+                "alignmentGap": 0.050873469916912606,
+                "box": {
+                  "x": 83,
+                  "y": 11,
+                  "w": 56.259,
+                  "h": 78.96
+                },
+                "rotation": 0
+              },
+              "rerankScore": 0.6957412761599684
+            },
+            {
+              "cardId": 84790,
+              "digest": "fd6e5818bc27b9ac029107cd0a4e4b7fc7688763340c11eb0fbcce5ea175eb7d",
+              "name": "Master Strike LEN",
+              "setName": "2015 Upper Deck Marvel 3D - Lenticular 3D",
+              "similarity": 0.6949403746453481,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.29094131974675363,
+                "alignmentGap": 0.026278184845253794,
+                "box": {
+                  "x": 12,
+                  "y": 132,
+                  "w": 80.55,
+                  "h": 108
+                },
+                "rotation": 180
+              },
+              "rerankScore": 0.6949403746453481
+            },
+            {
+              "cardId": 337635,
+              "digest": "bd471db1eb357b049e26c278845001fa08e8a9f5c5ab7e2820a95adaf6751e38",
+              "name": "Brotherhood of Evil Mutants",
+              "setName": "2009 Rittenhouse X-Men Archives - Nemesis",
+              "similarity": 0.6947222052742441,
+              "evidence": {
+                "reliable": true,
+                "detailScore": 0.615312104524402,
+                "signals": {
+                  "borderColor": 0.6630018604032343,
+                  "regionalColor": 0.6406249929892103,
+                  "edgeLayout": 0.5188142120838165,
+                  "luminanceStructure": 0.6226776807667552
+                },
+                "alignmentNCC": 0.6226776807667552,
+                "alignmentGap": 0.04397926334233848,
+                "box": {
+                  "x": 74,
+                  "y": 7,
+                  "w": 63,
+                  "h": 84
+                },
+                "rotation": 0
+              },
+              "rerankScore": 0.6669286700117993
+            },
+            {
+              "cardId": 15847,
+              "digest": "65f82874a77bf5e4a28d4ef930585ed03b27a24c0f655e84018c727c4ca2ab82",
+              "name": "Daredevil",
+              "setName": "1991 Impel Marvel Universe II - 1991 Impel Marvel Universe II",
+              "similarity": 0.7118576447796935,
+              "evidence": {
+                "reliable": true,
+                "detailScore": 0.48736033597316464,
+                "signals": {
+                  "borderColor": 0.46737861591585284,
+                  "regionalColor": 0.509633708881059,
+                  "edgeLayout": 0.48303640947029325,
+                  "luminanceStructure": 0.5040686054318539
+                },
+                "alignmentNCC": 0.5040686054318539,
+                "alignmentGap": 0.09578123448137454,
+                "box": {
+                  "x": 103,
+                  "y": 20,
+                  "w": 61.95,
+                  "h": 84
+                },
+                "rotation": 0
+              },
+              "rerankScore": 0.6332835866974084
+            }
+          ]
+        },
+        {
+          "input": "optionalCrop",
+          "breadth": 20,
+          "rank": 1,
+          "top10": [
+            {
+              "cardId": 16946,
+              "digest": "ae278897bfda68843e2ec8f78b0a5219f05f1473eef62226a8e51d2334b83475",
+              "name": "Deadpool",
+              "setName": "1992 X-Men Series 1",
+              "similarity": 0.8095164069791634,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.2903769974242709,
+                "alignmentGap": 0.08913114888862189,
+                "box": {
+                  "x": 28,
+                  "y": 156,
+                  "w": 117.2093023255814,
+                  "h": 84
+                },
+                "rotation": 90
+              },
+              "rerankScore": 0.8095164069791634
+            },
+            {
+              "cardId": 60827,
+              "digest": "444bc124226165a078250565222758ad2d4d8536db7dc17629c1252041a14cdb",
+              "name": "Frankenstein's Monster",
+              "setName": "2024 SkyBox Marvel Masterpieces XL - What If Silver Spectrum",
+              "similarity": 0.7331610684081045,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.38593464173760095,
+                "alignmentGap": 0.07038390555127155,
+                "box": {
+                  "x": 38,
+                  "y": 4,
+                  "w": 139.0344827586207,
+                  "h": 84
+                },
+                "rotation": 0
+              },
+              "rerankScore": 0.7331610684081045
+            },
+            {
+              "cardId": 19626,
+              "digest": "392aa1d9cb671a6be2e3cbd135b85fe4ae04f79e1241ae79652038643457ceeb",
+              "name": "Magneto",
+              "setName": "1995 Metal Marvel - Silver Flasher",
+              "similarity": 0.7276690892166593,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.3944494838503522,
+                "alignmentGap": 0.02115224808360311,
+                "box": {
+                  "x": 24,
+                  "y": 154,
+                  "w": 102.85714285714286,
+                  "h": 84
+                },
+                "rotation": 270
+              },
+              "rerankScore": 0.7276690892166593
+            },
+            {
+              "cardId": 521240,
+              "digest": "bad35e3073a23859bc74148610f6bb95ab2c4c6533ba317c86900cdcfd494e35",
+              "name": "Drax",
+              "setName": "2025 Kakawow Cosmos Marvel - 2025 Kakawow Cosmos Marvel",
+              "similarity": 0.7210934638486911,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.38725403368137296,
+                "alignmentGap": 0.05675693561772416,
+                "box": {
+                  "x": 92,
+                  "y": 58,
+                  "w": 59.22,
+                  "h": 78.96
+                },
+                "rotation": 180
+              },
+              "rerankScore": 0.7210934638486911
+            },
+            {
+              "cardId": 19679,
+              "digest": "7b46ee8d8032e9d1116c942492b912d3104ab95c83915d709b6b222f1f5d7c82",
+              "name": "Deathlok",
+              "setName": "1995 Metal Marvel - Silver Flasher",
+              "similarity": 0.7247887835707058,
+              "evidence": {
+                "reliable": true,
+                "detailScore": 0.6854375901796446,
+                "signals": {
+                  "borderColor": 0.7023459368695812,
+                  "regionalColor": 0.6924428083665493,
+                  "edgeLayout": 0.6775564944614535,
+                  "luminanceStructure": 0.6474445771219359
+                },
+                "alignmentNCC": 0.6474445771219359,
+                "alignmentGap": 0.09032556846176354,
+                "box": {
+                  "x": 112,
+                  "y": 0,
+                  "w": 48.03399999999999,
+                  "h": 78.96
+                },
+                "rotation": 0
+              },
+              "rerankScore": 0.7110158658838344
+            },
+            {
+              "cardId": 36209,
+              "digest": "800ee40508ab84dc62145d63b52f25d2870d17b95938434abe9065b2d52b7670",
+              "name": "Yellowjacket",
+              "setName": "2022 Fleer Ultra Marvel Avengers - 1st Appearances Red Foil",
+              "similarity": 0.7078935910619737,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.3358423428461941,
+                "alignmentGap": 0.031959624290513466,
+                "box": {
+                  "x": 18,
+                  "y": 9,
+                  "w": 59.85,
+                  "h": 84
+                },
+                "rotation": 180
+              },
+              "rerankScore": 0.7078935910619737
+            },
+            {
+              "cardId": 16944,
+              "digest": "4a78edd9274f05790f5138c79f4beb447114ddc6802ebefd27a2184390629ab7",
+              "name": "Magneto",
+              "setName": "1992 X-Men Series 1",
+              "similarity": 0.6957412761599684,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.3707061998362946,
+                "alignmentGap": 0.050873469916912606,
+                "box": {
+                  "x": 83,
+                  "y": 11,
+                  "w": 56.259,
+                  "h": 78.96
+                },
+                "rotation": 0
+              },
+              "rerankScore": 0.6957412761599684
+            },
+            {
+              "cardId": 84790,
+              "digest": "fd6e5818bc27b9ac029107cd0a4e4b7fc7688763340c11eb0fbcce5ea175eb7d",
+              "name": "Master Strike LEN",
+              "setName": "2015 Upper Deck Marvel 3D - Lenticular 3D",
+              "similarity": 0.6949403746453481,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.29094131974675363,
+                "alignmentGap": 0.026278184845253794,
+                "box": {
+                  "x": 12,
+                  "y": 132,
+                  "w": 80.55,
+                  "h": 108
+                },
+                "rotation": 180
+              },
+              "rerankScore": 0.6949403746453481
+            },
+            {
+              "cardId": 15868,
+              "digest": "8f812e2bba41d8198aa479508a0456f8cfb735248ba9d738afc72f9b55848c59",
+              "name": "Ghost Rider",
+              "setName": "1991 Impel Marvel Universe II - 1991 Impel Marvel Universe II",
+              "similarity": 0.6941035316978689,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.4294400944239929,
+                "alignmentGap": 0.054544830916917364,
+                "box": {
+                  "x": 99,
+                  "y": 20,
+                  "w": 61.95,
+                  "h": 84
+                },
+                "rotation": 0
+              },
+              "rerankScore": 0.6941035316978689
+            },
+            {
+              "cardId": 336405,
+              "digest": "e049b97a3771a9f0a9556fa2bcb9834d12a96ffd9c116d20e9c28ec778a7fbef",
+              "name": "Lilandra",
+              "setName": "1992 Impel The Uncanny X-Men - Nelsonic",
+              "similarity": 0.6936569420467326,
+              "evidence": {
+                "reliable": false,
+                "reason": "Insufficient template alignment evidence; detail evidence disabled",
+                "detailScore": 0,
+                "alignmentNCC": 0.43965859695984877,
+                "alignmentGap": 0.046998195236099216,
+                "box": {
+                  "x": 58,
+                  "y": 18,
+                  "w": 58.562,
+                  "h": 78.96
+                },
+                "rotation": 180
+              },
+              "rerankScore": 0.6936569420467326
+            }
+          ]
+        }
+      ],
+      "historicalFeedbackIds": [
+        2332
+      ]
+    }
+  ],
+  "exactMetrics": [
+    {
+      "input": "raw",
+      "breadth": 10,
+      "n": 1,
+      "top1": 1,
+      "top3": 1,
+      "top10": 1,
+      "coldProcessingMs": 1261.5013400000007,
+      "warmProcessingMeanMs": 292.63425999999527,
+      "coldOfflineHarnessMs": 1261.5013400000007,
+      "warmOfflineHarnessMeanMs": 292.63425999999527
+    },
+    {
+      "input": "raw",
+      "breadth": 20,
+      "n": 1,
+      "top1": 1,
+      "top3": 1,
+      "top10": 1,
+      "coldProcessingMs": 1418.882497999999,
+      "warmProcessingMeanMs": 430.98954149999554,
+      "coldOfflineHarnessMs": 1418.882497999999,
+      "warmOfflineHarnessMeanMs": 430.98954149999554
+    },
+    {
+      "input": "optionalCrop",
+      "breadth": 10,
+      "n": 1,
+      "top1": 1,
+      "top3": 1,
+      "top10": 1,
+      "coldProcessingMs": 1428.0825969995876,
+      "warmProcessingMeanMs": 427.28507649999483,
+      "coldOfflineHarnessMs": 9477.035510999995,
+      "warmOfflineHarnessMeanMs": 871.0604444999954
+    },
+    {
+      "input": "optionalCrop",
+      "breadth": 20,
+      "n": 1,
+      "top1": 1,
+      "top3": 1,
+      "top10": 1,
+      "coldProcessingMs": 1567.4485639995892,
+      "warmProcessingMeanMs": 571.1611224999942,
+      "coldOfflineHarnessMs": 9616.401477999996,
+      "warmOfflineHarnessMeanMs": 1014.9364904999948
+    }
+  ],
+  "parallelSubgroup": {
+    "n": 0,
+    "top1": null,
+    "top3": null,
+    "top10": null,
+    "note": "No exact parallel survived independent verification. No parallel-recognition conclusion."
+  },
+  "optionalCrop": {
+    "accepted": 0,
+    "n": 1,
+    "rate": 0,
+    "verifiedReferenceCandidates": 0,
+    "limitation": "Prior34-reference boundary whitelist reused, not assumed universal. No new label-guided annotations. May fall back for all new candidates.",
+    "note": "All Stage1top10 reference digests were outside the prior verified boundary whitelist. ORB abstained and raw bytes were reused. No evidence that cropping generalizes; frozen safety gate worked as fallback."
+  },
+  "timing": {
+    "protocol": "One cold model pass and two warm repetitions of the SAME single query. Accuracy denominator remains1. Exact in-memory all-card search. Index load and reference download/feature preparation excluded from processing. Optional kernel timing includes guided isolation but excludes PNG staging/subprocess startup; separate offline-harness totals include those measured costs. Offline harness includes disk staging and is not a production latency claim.",
+    "indexLoadMs": 9863.110679,
+    "referenceDownloadWallMs": 118804.538226,
+    "referenceEmbeddingComputeMs": 273962.38836900005,
+    "referenceEmbeddingExecution": "Sequential canonical single-image calls. First bounded shell run timed out after1652 saved embeddings; resumed1026 remaining without changing sample or recomputing saved vectors. Summed per-reference compute time supplied, not an invented uninterrupted wall time.",
+    "referenceFeatureComputeMs": 328.34440699999686,
+    "rawDinoColdMs": 1041.2739419999998,
+    "rawDinoWarmMeanMs": 100.33803099999932,
+    "optionalPreparation": [
+      {
+        "repeat": 0,
+        "cropPrepMs": 518.5633640000015,
+        "orbProcessWallMs": 7603.858151999999,
+        "orbReferencePrecomputeMs": 0.010194999958912376,
+        "orbVerifiedReferenceCount": 0,
+        "guidedIsolationMs": 73.46860199959337
+      },
+      {
+        "repeat": 1,
+        "cropPrepMs": 267.67879900000116,
+        "orbProcessWallMs": 198.61522499999774,
+        "orbReferencePrecomputeMs": 0.007067999831633642,
+        "orbVerifiedReferenceCount": 0,
+        "guidedIsolationMs": 22.56568500024514
+      },
+      {
+        "repeat": 2,
+        "cropPrepMs": 260.23134500000015,
+        "orbProcessWallMs": 214.88476399999854,
+        "orbReferencePrecomputeMs": 0.00679300001138472,
+        "orbVerifiedReferenceCount": 0,
+        "guidedIsolationMs": 31.293711999751395
+      }
+    ]
+  },
+  "leakage": {
+    "exactQueryHashMatches": 0,
+    "queryVsOtherPreparedMinimumRotationDhashDistance": 99,
+    "minimumSampledReferenceToQueryDhashDistance": 81,
+    "policy": "Query SHA256 against all60 saved originals; rotation-aware256-bit dHash versus59 other originals, reject<=12. Reference byte hashes screened against all60 originals, references with dHash<=12 quarantined. Independent positive visually checked: different capture, not query upload. No automatic perceptual score treated as proof of exact identity.",
+    "limitations": "Whole-image dHash is a narrow near-duplicate screen, not proof against arbitrary crops or edits. Only one admitted query; no within-new-cohort capture leakage possible. Capture session metadata unavailable; no timestamp-based independence claim.",
+    "previousPhotoOriginAudit": {
+      "scanId": 2837,
+      "bestReferenceCardId": 16946,
+      "mae": 68.39,
+      "correlation": 0.0182,
+      "overlap": "not-exact",
+      "context": "visible-photo-context"
+    }
+  },
+  "referencePreparation": {
+    "verifiedPositiveCount": 1,
+    "blanketExactReferenceQAPassed": false,
+    "note": "All2938 downloads decoded and were byte-hashed; only the positive was independently exact-card/printing verified. Distractors are metadata-stratified catalog records, not individually visually audited. Wrong distractor images and duplicate shared-reference parallel IDs can distort retrieval; no catalog repairs made.",
+    "sharedDigestCardSurplus": 260,
+    "failures": [
+      {
+        "cardId": 26490,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 26563,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 39714,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 39776,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 39810,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 39894,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 39907,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 40305,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 40314,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 40321,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 40327,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 76091,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 76094,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 76102,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 76551,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 76643,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 76844,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 77628,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 77742,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 77923,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 78314,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 78506,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 78508,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 78862,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 79046,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 79067,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 79375,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 79457,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 79466,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 79467,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 79469,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 79470,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 79472,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 79476,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 79480,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 79636,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 79826,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 79884,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 79918,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 79919,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 79932,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 80040,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 80235,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 80872,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 80921,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 80939,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 81016,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 81392,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 81416,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 81547,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 81549,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 81562,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 81920,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 82151,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 82154,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 104434,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 221607,
+        "error": "Error: VipsJpeg: Corrupt JPEG data: 2 extraneous bytes before marker 0xdb\nVipsJpeg: Corrupt JPEG data: 2 extraneous bytes before marker 0xdb\nVipsJpeg: Corrupt JPEG data: 2 extraneous bytes before marker 0xdb\nVipsJpeg: Corrupt JPEG data: 2 extraneous bytes before marker 0xdb"
+      },
+      {
+        "cardId": 285006,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 285014,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 329253,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 335382,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      },
+      {
+        "cardId": 335773,
+        "error": "Error: Catalog image rejected (HTTP 404 or unsupported raster type)"
+      }
+    ]
+  },
+  "integrity": {
+    "passed": true,
+    "baselineUnchangedFiles": 735,
+    "unitFiniteVectors": 2678,
+    "maxNormError": 1.5543122344752192e-15,
+    "singleImageIndependentProcessParity": [
+      {
+        "cardId": 16946,
+        "digest": "ae278897bfda68843e2ec8f78b0a5219f05f1473eef62226a8e51d2334b83475",
+        "cosine": 1,
+        "maxAbsDifference": 0
+      },
+      {
+        "cardId": 188861,
+        "digest": "00088bcc9b9cb82a2cfc503c6e7c4033b6d76c5ea3f0bd2ae9048d1dd5a0f46e",
+        "cosine": 1,
+        "maxAbsDifference": 0
+      },
+      {
+        "cardId": 246876,
+        "digest": "000d4d5e981ed4e3263056136782dd9bf174f1d25dca0570f148450c2ab737d0",
+        "cosine": 1,
+        "maxAbsDifference": 0
+      },
+      {
+        "cardId": 22125,
+        "digest": "000e2e408faf87a04557ffa97fd2910139b90bd9b85fe75a0d87ad75feb40157",
+        "cosine": 1,
+        "maxAbsDifference": 0
+      }
+    ]
+  },
+  "hashes": {
+    "plan": "b6aa1fc99d7d7a453c447e0703b01085f226578391053ab798b3ea91511aa93a",
+    "catalogSnapshot": "07dd1ae7bbaf5c1ee9b83fd2ab567dc82a43f3161337236d102f8ac8d373a410",
+    "referenceManifest": "deccdd4de270259a6528234e283b78c1f9012d4aa24b5077d7c805a048dd9607",
+    "baselineFreeze": "6ff3b2ad3a4e7c432720e8887bfe7a18cbe4ccc8a48d3109c1d16cb711bf3171",
+    "runFreeze": "18df1df6592f9ac923cbe120e94b753f3bfa582a7db7d16971094ef06dfe4e1c",
+    "queryResults": "03926ec6cffd98bdc83912ed442049a715389cf6c77335c2b49e71b8c10d8fc4"
+  },
+  "limitations": [
+    "Only1 eligible exact front: cannot satisfy50–100 or estimate representative accuracy.",
+    "One base card, zero verified exact parallels; 1/1 is descriptive only, not evidence that recognition is fixed.",
+    "Historic labels include demonstrably wrong selections; unverified selections were not used as truth.",
+    "Metadata-stratified temporary index across catalog families is broader than the old index, but enriched with positive and45 hard negatives, not a deployment-distribution sample.",
+    "No new human annotations, threshold tuning, chroma, metadata retrieval filters, batches, quantization/pooling changes, full-index writes, UI changes, production reads or publish."
+  ],
+  "readiness": "Insufficient evidence for general recognition or production readiness; real exact-parallel performance remains unmeasured."
+}
