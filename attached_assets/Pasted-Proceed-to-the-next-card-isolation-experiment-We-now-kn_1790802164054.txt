@@ -1,0 +1,170 @@
+Proceed to the next card-isolation experiment.
+
+We now know:
+- DINO remains frozen.
+- 10 of the 12 difficult DINO misses had obvious photo/scene problems.
+- The new independent geometry detector safely abstained on all 12.
+- Therefore the current rectangle-detection method is not sufficient for difficult real-world photos.
+
+Do NOT continue hand-tuning the same detector.
+
+MUST DO
+
+1. KEEP DINO COMPLETELY UNCHANGED
+
+Do not change:
+- model
+- embeddings
+- indexing behavior
+- similarity logic
+- reranker
+
+The purpose of this next experiment is only to determine whether a substantially better card-isolation method improves the input to DINO.
+
+2. EVALUATE A STRONGER PHOTO-ONLY CARD DETECTOR
+
+The detector must still use only the user's photograph.
+
+It must NOT depend on:
+- catalog identity
+- DINO candidates
+- reference images
+- OCR
+- metadata
+
+Evaluate a more capable computer-vision approach than the current quadrilateral/edge heuristic.
+
+The detector should identify the complete physical card even when:
+- held in a hand
+- on a busy table
+- inside a binder
+- surrounded by neighboring cards
+- in a sleeve/toploader
+- rotated
+- mildly perspective-distorted
+- affected by glare
+- card edges are partially difficult to see
+
+It must return:
+- four physical card corners
+or
+- abstain
+
+False cropping remains worse than abstaining.
+
+3. DO NOT DISTORT THE CARD
+
+When a card is detected:
+
+photo
+→ detect four corners
+→ perspective rectify
+→ preserve actual card proportions
+→ orient safely where possible
+→ resize/pad for DINO
+
+Do not stretch to 2:3.
+
+A standard card is approximately 5:7.
+
+4. TEST ON A REPRESENTATIVE SAMPLE, NOT ONLY THE 12 FAILURES
+
+The previous 12 are deliberately difficult failures.
+
+Use a bounded, read-only sample of real historical scan photos that includes:
+- easy cards
+- moderate cards
+- difficult cards
+- hands/backgrounds
+- glare
+- sleeves/toploaders
+- binder pages
+- rotated/perspective photos
+
+Target at least 40 independently verified front-card cases if available.
+
+Production access must remain read-only and privacy-minimized exactly as before.
+
+5. MEASURE CARD DETECTION FIRST
+
+Before measuring DINO, report:
+
+- full-card detection rate
+- abstention rate
+- false-detection rate
+- crops cutting off card content
+- approximate corner quality
+- average detection latency
+
+Break these out by:
+- clean/simple photo
+- background/hand clutter
+- glare
+- binder/neighbors
+- sleeve/toploader
+
+6. THEN RUN PAIRED DINO-ONLY TESTING
+
+For every case where a crop is successfully emitted, compare:
+
+A. original raw photo → frozen DINO
+B. isolated/rectified card → frozen DINO
+
+Report:
+- Top-1
+- Top-3
+- Top-10
+
+Also report:
+- how many cases improved
+- how many stayed the same
+- how many became worse
+
+7. INVESTIGATE THE TWO SAME-ART CASES SEPARATELY
+
+For scans 2984 and 2983, determine whether the competing catalog IDs are:
+- true duplicate records
+- alternate printings
+- parallels
+- aliases
+- genuinely separate cards sharing the same artwork
+
+Do not change catalog data yet.
+
+Just report the relationship.
+
+MUST NOT DO
+
+- Do not modify DINO.
+- Do not use the reranker.
+- Do not publish.
+- Do not modify production.
+- Do not resume full indexing.
+- Do not alter catalog records.
+- Do not tune only against the same 12 difficult cases.
+- Do not return another architecture proposal without running the experiment.
+
+FINAL RESPONSE
+
+Keep it concise.
+
+Tell me:
+
+1. Which stronger detector approach was tested.
+2. Number of real photos evaluated.
+3. Overall successful full-card detection rate.
+4. Detection rate on clutter/hand cases.
+5. Detection rate on glare cases.
+6. Detection rate on binder/neighbor cases.
+7. Abstention rate.
+8. False-detection rate.
+9. Number of crops that cut off card content.
+10. Raw DINO Top-1 / Top-3 / Top-10 for paired cases.
+11. Isolated-card DINO Top-1 / Top-3 / Top-10 for paired cases.
+12. Number improved / unchanged / worsened.
+13. What scans 2984 and 2983 appear to represent in the catalog.
+14. Whether stronger card isolation materially improves recognition.
+15. Confirm DINO remained unchanged.
+16. Confirm production access was read-only.
+17. Confirm temporary production images were deleted.
+18. Confirm nothing was published.

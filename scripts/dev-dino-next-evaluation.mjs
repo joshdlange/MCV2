@@ -39,6 +39,21 @@ export function assertAuthorizedFailureAudit(scanIds) {
   });
 }
 
+export function assertAuthorizedMixedIsolationAudit(scanIds, verifiedHistoricalIds) {
+  const authorized=[3173,3169,3108,3104,3100,3098,3097,3090,3087,3086,3078,3056,3014,3012,2984,2983,2981,2969,2965,2950,2939,2910,2909,2906,2903,2902,2901,2900,2899,2871,2869,2866,2838,2836,2835,2826,2825,2824,2823,2813,2790].sort((a,b)=>a-b);
+  assert.equal(verifiedHistoricalIds.length,41);
+  assert.equal(new Set(verifiedHistoricalIds).size,41);
+  assert.deepEqual([...verifiedHistoricalIds].sort((a,b)=>a-b),authorized);
+  assert.deepEqual([...scanIds].sort((a,b)=>a-b), [...verifiedHistoricalIds].sort((a,b)=>a-b));
+  return Object.freeze({...NEXT_EVALUATION_POLICY,
+    input:'explicit-mixed-cohort-read-only-authorization',
+    productionAccess:'SELECT scan ID, original image URL, confirmed card ID only; prior41 verified IDs',
+    network:'authorized originals and bounded catalog references only',
+    independentPhotoOnlyDetector:true,freezeBeforeOutcomes:true,
+    deleteOwnedTemporaryEvidence:true,
+  });
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   assert(process.argv.slice(2).every(arg => arg === '--check'),
     'This policy-only entry point accepts --check; historical reranker/crop harness execution is not authorized.');

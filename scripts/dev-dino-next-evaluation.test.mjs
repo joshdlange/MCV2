@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {NEXT_EVALUATION_POLICY, assertNextEvaluationPolicy, assertAuthorizedFailureAudit} from './dev-dino-next-evaluation.mjs';
+import {NEXT_EVALUATION_POLICY, assertNextEvaluationPolicy, assertAuthorizedFailureAudit, assertAuthorizedMixedIsolationAudit} from './dev-dino-next-evaluation.mjs';
+import fs from 'node:fs';
 
 test('next evaluation defaults are immutable, raw DINO and local only', () => {
   assert(Object.isFrozen(NEXT_EVALUATION_POLICY));
@@ -17,6 +18,17 @@ test('explicit twelve-scan exception is exact and never enables reranking or gui
   assert.equal(policy.independentPhotoOnlyDetector,true);
   assert.throws(()=>assertAuthorizedFailureAudit([...ids,1]));
   assert.throws(()=>assertAuthorizedFailureAudit(ids.slice(1)));
+});
+
+test('mixed cohort exception requires exactly the prior41 verified scan IDs', () => {
+  const ids=JSON.parse(fs.readFileSync('attached_assets/dev-broad-readonly-production-results.json')).perCase.map(c=>c.scanId);
+  const policy=assertAuthorizedMixedIsolationAudit(ids,ids);
+  assert.equal(policy.reranker,false);
+  assert.equal(policy.optionalGuidedCrop,false);
+  assert.equal(policy.freezeBeforeOutcomes,true);
+  assert.throws(()=>assertAuthorizedMixedIsolationAudit(ids.slice(1),ids));
+  const arbitrary=Array.from({length:41},(_,i)=>i);
+  assert.throws(()=>assertAuthorizedMixedIsolationAudit(arbitrary,arbitrary));
 });
 
 test('reject all prohibited experiment overrides and unknown options', () => {

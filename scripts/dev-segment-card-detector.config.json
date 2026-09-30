@@ -1,0 +1,49 @@
+{
+  "version": "photo-sam-vit-b-v1",
+  "modelId": "facebook/segment-anything/sam-vit-b",
+  "modelArchitecture": "vit_b",
+  "modelLicense": "Apache-2.0",
+  "weightsFile": ".local/strong-card-model/sam_vit_b_01ec64.pth",
+  "weightsUrl": "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth",
+  "weightsSha256": "ec2df62732614e57411cdcf32a23ffdf28910380d03139ee0f4fcbe91eb8c912",
+  "cpuThreads": 4,
+  "maxDetectionSide": 1024,
+  "automaticMasks": {
+    "points_per_side": 16,
+    "points_per_batch": 32,
+    "pred_iou_thresh": 0.88,
+    "stability_score_thresh": 0.95,
+    "stability_score_offset": 1.0,
+    "box_nms_thresh": 0.7,
+    "crop_n_layers": 0,
+    "min_mask_region_area": 0,
+    "output_mode": "binary_mask"
+  },
+  "selection": {
+    "minAreaFraction": 0.06,
+    "maxAreaFraction": 0.92,
+    "minObservedAspect": 0.48,
+    "maxObservedAspect": 0.89,
+    "minAngle": 45,
+    "maxAngle": 135,
+    "minConvexFill": 0.96,
+    "minQuadMaskIoU": 0.94,
+    "maxDisconnectedFraction": 0.02,
+    "quadApproximationFractions": [0.015, 0.025, 0.04],
+    "borderMarginFraction": 0.008,
+    "centerRadiusFraction": 0.32,
+    "duplicateIoU": 0.92,
+    "ambiguityRelativeArea": 0.40,
+    "nestedMinRelativeArea": 0.25,
+    "nestedMaxRelativeArea": 0.92,
+    "nestedContainment": 0.96
+  },
+  "rectification": {
+    "nearFrontalParallelDegrees": 7,
+    "nearFrontalOppositeRatio": 1.12,
+    "nearFrontalMinAspect": 0.62,
+    "nearFrontalMaxAspect": 0.81,
+    "physicalAspectPrior": 0.7142857142857143,
+    "maxCropLongSide": 1600
+  }
+}

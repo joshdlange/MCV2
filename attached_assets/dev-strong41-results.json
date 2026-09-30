@@ -1,0 +1,2413 @@
+{
+  "title": "Executed learned photo-only isolation / frozen DINO experiment",
+  "sample": {
+    "photos": 41,
+    "independentlyReverifiedPositiveFronts": 40,
+    "missingPositiveReferences": [
+      {
+        "scanId": 2939,
+        "cardId": 533958
+      }
+    ],
+    "selection": "Reused prior41 verified fronts including29 prior DINO successes and12 failures; bounded convenience sample, not population representative. Scan2939 has no currently available independent positive reference in DEV and is excluded from covered recognition metrics, not from detector evaluation."
+  },
+  "production": {
+    "selectAttempts": 2,
+    "firstAttempt": "tool server disconnected; no returned records",
+    "successfulExports": 1,
+    "exportedRows": 41,
+    "fields": [
+      "scan_id",
+      "image_url",
+      "confirmed_card_id"
+    ],
+    "accountData": false,
+    "writes": 0
+  },
+  "detector": {
+    "freeze": {
+      "detectorHash": "0f29930f8f858153333cbc0e4688884ebc4cbb82d942506d842bc49026d4d57a",
+      "configHash": "0ffe67e3b6f1e8efefeadf4a9f97ffb829749826a5bc316d919a0051ef516447",
+      "weightsHash": "ec2df62732614e57411cdcf32a23ffdf28910380d03139ee0f4fcbe91eb8c912",
+      "modelId": "facebook/segment-anything/sam-vit-b",
+      "policy": "photo-sam-vit-b-v1",
+      "indexHash": "45323e43c1f556c09b4813eff21f4398b6806fff052eeecb734705957fa23069",
+      "frozenBeforeTest": true
+    },
+    "overall": {
+      "n": 41,
+      "fullCard": 5,
+      "fullCardRate": 0.12195121951219512,
+      "abstentions": 35,
+      "falseDetections": 0,
+      "cutoffs": 1,
+      "unsafeEmittedCrops": 1,
+      "goodCorners": 3,
+      "approximateCorners": 2
+    },
+    "byStratum": {
+      "clean/simple": {
+        "n": 5,
+        "fullCard": 2,
+        "fullCardRate": 0.4,
+        "abstentions": 3,
+        "falseDetections": 0,
+        "cutoffs": 0,
+        "unsafeEmittedCrops": 0,
+        "goodCorners": 1,
+        "approximateCorners": 1
+      },
+      "background/hand": {
+        "n": 7,
+        "fullCard": 0,
+        "fullCardRate": 0,
+        "abstentions": 7,
+        "falseDetections": 0,
+        "cutoffs": 0,
+        "unsafeEmittedCrops": 0,
+        "goodCorners": 0,
+        "approximateCorners": 0
+      },
+      "glare": {
+        "n": 16,
+        "fullCard": 3,
+        "fullCardRate": 0.1875,
+        "abstentions": 12,
+        "falseDetections": 0,
+        "cutoffs": 1,
+        "unsafeEmittedCrops": 1,
+        "goodCorners": 2,
+        "approximateCorners": 1
+      },
+      "binder/neighbors": {
+        "n": 12,
+        "fullCard": 0,
+        "fullCardRate": 0,
+        "abstentions": 12,
+        "falseDetections": 0,
+        "cutoffs": 0,
+        "unsafeEmittedCrops": 0,
+        "goodCorners": 0,
+        "approximateCorners": 0
+      },
+      "sleeve/toploader": {
+        "n": 20,
+        "fullCard": 0,
+        "fullCardRate": 0,
+        "abstentions": 20,
+        "falseDetections": 0,
+        "cutoffs": 0,
+        "unsafeEmittedCrops": 0,
+        "goodCorners": 0,
+        "approximateCorners": 0
+      },
+      "rotation/perspective": {
+        "n": 9,
+        "fullCard": 0,
+        "fullCardRate": 0,
+        "abstentions": 9,
+        "falseDetections": 0,
+        "cutoffs": 0,
+        "unsafeEmittedCrops": 0,
+        "goodCorners": 0,
+        "approximateCorners": 0
+      }
+    },
+    "byDifficulty": {
+      "easy": {
+        "n": 5,
+        "fullCard": 2,
+        "fullCardRate": 0.4,
+        "abstentions": 3,
+        "falseDetections": 0,
+        "cutoffs": 0,
+        "unsafeEmittedCrops": 0,
+        "goodCorners": 1,
+        "approximateCorners": 1
+      },
+      "moderate": {
+        "n": 19,
+        "fullCard": 3,
+        "fullCardRate": 0.15789473684210525,
+        "abstentions": 15,
+        "falseDetections": 0,
+        "cutoffs": 1,
+        "unsafeEmittedCrops": 1,
+        "goodCorners": 2,
+        "approximateCorners": 1
+      },
+      "difficult": {
+        "n": 17,
+        "fullCard": 0,
+        "fullCardRate": 0,
+        "abstentions": 17,
+        "falseDetections": 0,
+        "cutoffs": 0,
+        "unsafeEmittedCrops": 0,
+        "goodCorners": 0,
+        "approximateCorners": 0
+      }
+    },
+    "strataNote": "Visually assigned overlapping scene labels; denominators are per stratum and cannot be summed. QA compared query and emitted crop before DINO, without feeding labels/references to detector.",
+    "latency": {
+      "modelInitializationMsTotal": 68404.0576399998,
+      "completedBatchCount": 11,
+      "meanModelInitializationMs": 6218.550694545436,
+      "batchProcessWallMsTotal": 1503052.8926089997,
+      "meanDetectorMs": 34961.12932856095,
+      "scope": "Detection includes read/decode, learned mask inference, mask selection and rectification; excludes crop disk writes and model initialization. Summed process wall excludes interpreter startup. Eleven serial batches of at most4 photos, required by tool process lifetime limits, with unchanged frozen settings. Background launch attempts did not survive the tool session and yielded no retained results. One completed frozen pass across41 photos, not a warm-repeated latency benchmark."
+    },
+    "safetyDefinitions": "False detection means wrong object/internal panel/pocket/slab rather than the physical card. Cutoff is counted separately even for correct-object detection. One unsafe emitted crop trims a thin top-right artwork band; no claim of zero unsafe cropping.",
+    "cornerQuality": "Human approximate visual inspection, not ground-truth annotated corner pixel error. False detections and cutoffs may overlap; no QA failures hidden."
+  },
+  "index": {
+    "ids": 3045,
+    "embeddings": 2784,
+    "hash": "45323e43c1f556c09b4813eff21f4398b6806fff052eeecb734705957fa23069",
+    "queryReferenceByteCollisions": 0,
+    "description": "3045 bounded index reconstructed by same recipe as prior12-case experiment; cannot certify byte-identical to deleted3046 historical index. Positive533958 unavailable; no full/permanent writes. Both arms share one frozen index."
+  },
+  "recognition": {
+    "allEmittedCropsWithAvailablePositive": {
+      "raw": {
+        "n": 6,
+        "top1": 5,
+        "top3": 5,
+        "top10": 6
+      },
+      "isolated": {
+        "n": 6,
+        "top1": 5,
+        "top3": 5,
+        "top10": 6
+      },
+      "improved": 1,
+      "unchanged": 4,
+      "worsened": 1,
+      "top1Gains": 1,
+      "top1Losses": 1
+    },
+    "qaValidCrops": {
+      "raw": {
+        "n": 5,
+        "top1": 4,
+        "top3": 4,
+        "top10": 5
+      },
+      "isolated": {
+        "n": 5,
+        "top1": 4,
+        "top3": 4,
+        "top10": 5
+      },
+      "improved": 1,
+      "unchanged": 3,
+      "worsened": 1,
+      "top1Gains": 1,
+      "top1Losses": 1
+    },
+    "allCoveredWithAbstentionFallback": {
+      "raw": {
+        "n": 40,
+        "top1": 28,
+        "top3": 31,
+        "top10": 34
+      },
+      "isolated": {
+        "n": 40,
+        "top1": 28,
+        "top3": 31,
+        "top10": 34
+      },
+      "improved": 1,
+      "unchanged": 38,
+      "worsened": 1,
+      "top1Gains": 1,
+      "top1Losses": 1
+    },
+    "all41IncludingMissingReference": {
+      "raw": {
+        "n": 41,
+        "top1": 28,
+        "top3": 31,
+        "top10": 34
+      },
+      "isolated": {
+        "n": 41,
+        "top1": 28,
+        "top3": 31,
+        "top10": 34
+      },
+      "improved": 1,
+      "unchanged": 39,
+      "worsened": 1,
+      "top1Gains": 1,
+      "top1Losses": 1
+    },
+    "definition": "Rank improvement means smaller exact-card rank, unchanged means equal, worsened means larger. Top1 gains/losses separately counted. Every emitted crop is evaluated, even manually judged false or clipped. Missing-reference null ranks are not counted as successes."
+  },
+  "catalogRelationships": [
+    {
+      "scanId": 2983,
+      "ids": [
+        20279,
+        530526
+      ],
+      "classification": "apparent duplicate base-card records; not proven formal aliases",
+      "evidence": "Same Rogue artwork, card number146, year1995, main family480, null variation. Both active non-insert canonical base sets;7292 source csv_master versus12179 auto_base_creation. No matching DEV migration mapping. No evidence here of alternate printing or parallel."
+    },
+    {
+      "scanId": 2984,
+      "ids": [
+        20280,
+        530527
+      ],
+      "classification": "apparent duplicate base-card records; not proven formal aliases",
+      "evidence": "Same Scott-and-Jean artwork, number147, year1995, main family480, null variation. Same two active base-set records and sources. Candidate photograph has different framing, not demonstrated print difference. No matching DEV migration mapping."
+    }
+  ],
+  "perCase": [
+    {
+      "scanId": 2790,
+      "cardId": 18457,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 5159.967632,
+        "top10": [
+          18457,
+          184978,
+          185068,
+          22770,
+          17750,
+          198972,
+          22740,
+          17176,
+          242435,
+          22799
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 106.42764999999963,
+        "top10": [
+          18457,
+          184978,
+          185068,
+          22770,
+          17750,
+          198972,
+          22740,
+          17176,
+          242435,
+          22799
+        ]
+      },
+      "qa": {
+        "scanId": 2790,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "clean/simple"
+        ],
+        "positiveReverified": true,
+        "difficulty": "easy",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 2813,
+      "cardId": 17765,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 106.85756399999991,
+        "top10": [
+          17765,
+          65403,
+          188768,
+          22499,
+          188861,
+          22453,
+          184927,
+          184933,
+          22428,
+          337677
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 95.61749899999995,
+        "top10": [
+          17765,
+          65403,
+          188768,
+          22499,
+          188861,
+          22453,
+          184927,
+          184933,
+          22428,
+          337677
+        ]
+      },
+      "qa": {
+        "scanId": 2813,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "clean/simple"
+        ],
+        "positiveReverified": true,
+        "difficulty": "easy",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 2823,
+      "cardId": 19908,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 96.81747500000074,
+        "top10": [
+          19908,
+          19947,
+          17328,
+          528706,
+          17189,
+          16954,
+          19962,
+          20628,
+          183897,
+          183922
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 89.70088399999986,
+        "top10": [
+          19908,
+          19947,
+          17328,
+          528706,
+          17189,
+          16954,
+          19962,
+          20628,
+          183897,
+          183922
+        ]
+      },
+      "qa": {
+        "scanId": 2823,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "glare",
+          "sleeve/toploader"
+        ],
+        "positiveReverified": true,
+        "difficulty": "moderate",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 2824,
+      "cardId": 19910,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 116.44198400000005,
+        "top10": [
+          19910,
+          22441,
+          337675,
+          337678,
+          20620,
+          60849,
+          530912,
+          336822,
+          19909,
+          22397
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 90.38832000000002,
+        "top10": [
+          19910,
+          22441,
+          337675,
+          337678,
+          20620,
+          60849,
+          530912,
+          336822,
+          19909,
+          22397
+        ]
+      },
+      "qa": {
+        "scanId": 2824,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "glare",
+          "sleeve/toploader"
+        ],
+        "positiveReverified": true,
+        "difficulty": "moderate",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 2825,
+      "cardId": 19951,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 92.15281400000003,
+        "top10": [
+          19951,
+          531184,
+          18457,
+          337159,
+          19912,
+          19957,
+          19958,
+          17929,
+          16507,
+          188952
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 120.99099399999977,
+        "top10": [
+          19951,
+          531184,
+          18457,
+          337159,
+          19912,
+          19957,
+          19958,
+          17929,
+          16507,
+          188952
+        ]
+      },
+      "qa": {
+        "scanId": 2825,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "glare",
+          "sleeve/toploader"
+        ],
+        "positiveReverified": true,
+        "difficulty": "moderate",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 2826,
+      "cardId": 19954,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 82.99521900000036,
+        "top10": [
+          19954,
+          19935,
+          20618,
+          527537,
+          16496,
+          336695,
+          18805,
+          22434,
+          20610,
+          21396
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 86.27073699999983,
+        "top10": [
+          19954,
+          19935,
+          20618,
+          527537,
+          16496,
+          336695,
+          18805,
+          22434,
+          20610,
+          21396
+        ]
+      },
+      "qa": {
+        "scanId": 2826,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "sleeve/toploader"
+        ],
+        "positiveReverified": true,
+        "difficulty": "moderate",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 2835,
+      "cardId": 19268,
+      "accepted": true,
+      "raw": {
+        "rank": 1,
+        "ms": 79.22040099999958,
+        "top10": [
+          19268,
+          242400,
+          208128,
+          21098,
+          22486,
+          185150,
+          17465,
+          17199,
+          88660,
+          250807
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 80.0513549999996,
+        "top10": [
+          19268,
+          22486,
+          208128,
+          22497,
+          250807,
+          22362,
+          242400,
+          19271,
+          88660,
+          22467
+        ]
+      },
+      "qa": {
+        "scanId": 2835,
+        "accepted": true,
+        "fullCard": true,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "approximate",
+        "strata": [
+          "clean/simple"
+        ],
+        "positiveReverified": true,
+        "difficulty": "easy",
+        "notes": "Complete physical card retained; corners slightly outside top/left boundary retain a narrow surround. No visible artwork/text cutoff; approximate, not tight pixel-accurate corners."
+      }
+    },
+    {
+      "scanId": 2836,
+      "cardId": 19265,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 77.90004799999952,
+        "top10": [
+          19265,
+          22497,
+          88660,
+          190056,
+          189876,
+          85547,
+          189796,
+          16943,
+          526919,
+          86455
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 88.27007200000025,
+        "top10": [
+          19265,
+          22497,
+          88660,
+          190056,
+          189876,
+          85547,
+          189796,
+          16943,
+          526919,
+          86455
+        ]
+      },
+      "qa": {
+        "scanId": 2836,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "sleeve/toploader"
+        ],
+        "positiveReverified": true,
+        "difficulty": "moderate",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 2838,
+      "cardId": 19271,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 80.19602500000019,
+        "top10": [
+          19271,
+          16634,
+          17223,
+          22491,
+          521240,
+          27668,
+          22469,
+          19599,
+          22397,
+          193707
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 89.24495699999989,
+        "top10": [
+          19271,
+          16634,
+          17223,
+          22491,
+          521240,
+          27668,
+          22469,
+          19599,
+          22397,
+          193707
+        ]
+      },
+      "qa": {
+        "scanId": 2838,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "sleeve/toploader"
+        ],
+        "positiveReverified": true,
+        "difficulty": "moderate",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 2866,
+      "cardId": 17759,
+      "accepted": false,
+      "raw": {
+        "rank": 4,
+        "ms": 91.48576299999968,
+        "top10": [
+          336748,
+          66037,
+          65565,
+          17759,
+          66079,
+          60827,
+          336622,
+          343593,
+          17515,
+          337251
+        ]
+      },
+      "isolated": {
+        "rank": 4,
+        "ms": 92.84892599999966,
+        "top10": [
+          336748,
+          66037,
+          65565,
+          17759,
+          66079,
+          60827,
+          336622,
+          343593,
+          17515,
+          337251
+        ]
+      },
+      "qa": {
+        "scanId": 2866,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "background/hand",
+          "rotation/perspective"
+        ],
+        "positiveReverified": true,
+        "difficulty": "difficult",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 2869,
+      "cardId": 17768,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 84.91662199999973,
+        "top10": [
+          17768,
+          60827,
+          19919,
+          183697,
+          196852,
+          18370,
+          334339,
+          65403,
+          17759,
+          17754
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 101.71165199999996,
+        "top10": [
+          17768,
+          60827,
+          19919,
+          183697,
+          196852,
+          18370,
+          334339,
+          65403,
+          17759,
+          17754
+        ]
+      },
+      "qa": {
+        "scanId": 2869,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "background/hand",
+          "rotation/perspective"
+        ],
+        "positiveReverified": true,
+        "difficulty": "difficult",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 2871,
+      "cardId": 17763,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 88.47609899999952,
+        "top10": [
+          17763,
+          337649,
+          183899,
+          337644,
+          337645,
+          337646,
+          18537,
+          18582,
+          334339,
+          84790
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 93.14996799999972,
+        "top10": [
+          17763,
+          337649,
+          183899,
+          337644,
+          337645,
+          337646,
+          18537,
+          18582,
+          334339,
+          84790
+        ]
+      },
+      "qa": {
+        "scanId": 2871,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "background/hand"
+        ],
+        "positiveReverified": true,
+        "difficulty": "difficult",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 2899,
+      "cardId": 19943,
+      "accepted": true,
+      "raw": {
+        "rank": 5,
+        "ms": 84.59889500000008,
+        "top10": [
+          19958,
+          65403,
+          17750,
+          19935,
+          19943,
+          18323,
+          522039,
+          17839,
+          198972,
+          336621
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 78.83696299999974,
+        "top10": [
+          19943,
+          17839,
+          17750,
+          19958,
+          19935,
+          26436,
+          522039,
+          108939,
+          337662,
+          22799
+        ]
+      },
+      "qa": {
+        "scanId": 2899,
+        "accepted": true,
+        "fullCard": true,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "approximate",
+        "strata": [
+          "glare"
+        ],
+        "positiveReverified": true,
+        "difficulty": "moderate",
+        "notes": "Physical card isolated with complete figure and both bottom labels; tight approximate edge fit. Glare remains in the crop; no significant visible content loss."
+      }
+    },
+    {
+      "scanId": 2900,
+      "cardId": 19944,
+      "accepted": true,
+      "raw": {
+        "rank": 1,
+        "ms": 88.7725389999996,
+        "top10": [
+          19944,
+          19913,
+          19896,
+          18008,
+          185405,
+          184967,
+          185057,
+          19950,
+          22647,
+          184963
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 114.5707339999999,
+        "top10": [
+          19944,
+          19913,
+          178603,
+          337631,
+          20414,
+          20604,
+          527566,
+          19950,
+          18618,
+          184963
+        ]
+      },
+      "qa": {
+        "scanId": 2900,
+        "accepted": true,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": true,
+        "cornerQuality": "poor",
+        "strata": [
+          "glare"
+        ],
+        "positiveReverified": true,
+        "difficulty": "moderate",
+        "notes": "Correct physical card, but top-right boundary crosses slightly inside the actual edge and trims a thin artwork band. Conservatively counted as a cutoff and excluded from strict full-card success; not a wrong-object detection."
+      }
+    },
+    {
+      "scanId": 2901,
+      "cardId": 19945,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 84.69968699999936,
+        "top10": [
+          19945,
+          20613,
+          19795,
+          242400,
+          20604,
+          22492,
+          526567,
+          108939,
+          183908,
+          26436
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 86.94139400000131,
+        "top10": [
+          19945,
+          20613,
+          19795,
+          242400,
+          20604,
+          22492,
+          526567,
+          108939,
+          183908,
+          26436
+        ]
+      },
+      "qa": {
+        "scanId": 2901,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "clean/simple"
+        ],
+        "positiveReverified": true,
+        "difficulty": "easy",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 2902,
+      "cardId": 19946,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 79.44181200000094,
+        "top10": [
+          19946,
+          19912,
+          108939,
+          16507,
+          20554,
+          18009,
+          525831,
+          184644,
+          20604,
+          22262
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 78.55346099999952,
+        "top10": [
+          19946,
+          19912,
+          108939,
+          16507,
+          20554,
+          18009,
+          525831,
+          184644,
+          20604,
+          22262
+        ]
+      },
+      "qa": {
+        "scanId": 2902,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "glare"
+        ],
+        "positiveReverified": true,
+        "difficulty": "moderate",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 2903,
+      "cardId": 19947,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 96.26072999999997,
+        "top10": [
+          19947,
+          19908,
+          84108,
+          22262,
+          528706,
+          19599,
+          180328,
+          18991,
+          11416,
+          186407
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 88.02527499999997,
+        "top10": [
+          19947,
+          19908,
+          84108,
+          22262,
+          528706,
+          19599,
+          180328,
+          18991,
+          11416,
+          186407
+        ]
+      },
+      "qa": {
+        "scanId": 2903,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "glare"
+        ],
+        "positiveReverified": true,
+        "difficulty": "moderate",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 2906,
+      "cardId": 19950,
+      "accepted": true,
+      "raw": {
+        "rank": 1,
+        "ms": 93.0437550000006,
+        "top10": [
+          19950,
+          17515,
+          336735,
+          17455,
+          19958,
+          336670,
+          17750,
+          337662,
+          188792,
+          39058
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 112.26303800000096,
+        "top10": [
+          19950,
+          17759,
+          24318,
+          65403,
+          185412,
+          19149,
+          198274,
+          250807,
+          84790,
+          19958
+        ]
+      },
+      "qa": {
+        "scanId": 2906,
+        "accepted": true,
+        "fullCard": true,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "good",
+        "strata": [
+          "glare"
+        ],
+        "positiveReverified": true,
+        "difficulty": "moderate",
+        "notes": "Corners track outer card boundary and preserve top logo, artwork and bottom labels. No visible content cutoff."
+      }
+    },
+    {
+      "scanId": 2909,
+      "cardId": 19957,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 78.2098960000003,
+        "top10": [
+          19957,
+          336670,
+          19919,
+          184978,
+          185068,
+          58975,
+          16507,
+          253712,
+          16947,
+          19807
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 89.04299899999933,
+        "top10": [
+          19957,
+          336670,
+          19919,
+          184978,
+          185068,
+          58975,
+          16507,
+          253712,
+          16947,
+          19807
+        ]
+      },
+      "qa": {
+        "scanId": 2909,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "glare"
+        ],
+        "positiveReverified": true,
+        "difficulty": "moderate",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 2910,
+      "cardId": 19959,
+      "accepted": true,
+      "raw": {
+        "rank": 1,
+        "ms": 83.8055570000015,
+        "top10": [
+          19959,
+          336670,
+          521927,
+          527566,
+          16947,
+          22799,
+          336723,
+          20521,
+          19055,
+          16507
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 88.37692600000082,
+        "top10": [
+          19959,
+          527566,
+          20521,
+          249534,
+          19055,
+          336670,
+          16605,
+          22714,
+          184978,
+          185068
+        ]
+      },
+      "qa": {
+        "scanId": 2910,
+        "accepted": true,
+        "fullCard": true,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "good",
+        "strata": [
+          "glare"
+        ],
+        "positiveReverified": true,
+        "difficulty": "moderate",
+        "notes": "Corners track physical card; title and artist label retained. Glare remains; no meaningful visible artwork/text cutoff."
+      }
+    },
+    {
+      "scanId": 2939,
+      "cardId": 533958,
+      "accepted": false,
+      "raw": {
+        "rank": null,
+        "ms": 90.92356199999995,
+        "top10": [
+          17750,
+          17419,
+          18323,
+          19909,
+          16624,
+          66431,
+          198972,
+          22362,
+          45590,
+          317752
+        ]
+      },
+      "isolated": {
+        "rank": null,
+        "ms": 88.31704100000024,
+        "top10": [
+          17750,
+          17419,
+          18323,
+          19909,
+          16624,
+          66431,
+          198972,
+          22362,
+          45590,
+          317752
+        ]
+      },
+      "qa": {
+        "scanId": 2939,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "sleeve/toploader"
+        ],
+        "positiveReverified": false,
+        "difficulty": "moderate",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 2950,
+      "cardId": 15844,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 79.8002319999996,
+        "top10": [
+          15844,
+          78791,
+          78657,
+          337635,
+          24156,
+          19341,
+          531522,
+          17510,
+          65565,
+          342793
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 91.11630499999956,
+        "top10": [
+          15844,
+          78791,
+          78657,
+          337635,
+          24156,
+          19341,
+          531522,
+          17510,
+          65565,
+          342793
+        ]
+      },
+      "qa": {
+        "scanId": 2950,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "sleeve/toploader"
+        ],
+        "positiveReverified": true,
+        "difficulty": "difficult",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 2965,
+      "cardId": 17215,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 76.38249200000064,
+        "top10": [
+          17215,
+          16636,
+          15868,
+          185181,
+          21399,
+          18257,
+          22402,
+          17998,
+          184440,
+          184461
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 76.54890200000045,
+        "top10": [
+          17215,
+          16636,
+          15868,
+          185181,
+          21399,
+          18257,
+          22402,
+          17998,
+          184440,
+          184461
+        ]
+      },
+      "qa": {
+        "scanId": 2965,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "glare"
+        ],
+        "positiveReverified": true,
+        "difficulty": "moderate",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 2969,
+      "cardId": 19820,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 85.9182839999994,
+        "top10": [
+          19820,
+          336668,
+          19962,
+          22426,
+          22498,
+          16634,
+          190537,
+          337605,
+          317468,
+          20620
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 86.53641400000015,
+        "top10": [
+          19820,
+          336668,
+          19962,
+          22426,
+          22498,
+          16634,
+          190537,
+          337605,
+          317468,
+          20620
+        ]
+      },
+      "qa": {
+        "scanId": 2969,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "glare"
+        ],
+        "positiveReverified": true,
+        "difficulty": "moderate",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 2981,
+      "cardId": 20281,
+      "accepted": false,
+      "raw": {
+        "rank": 39,
+        "ms": 77.66440200000034,
+        "top10": [
+          336622,
+          530528,
+          22497,
+          337587,
+          20620,
+          336621,
+          17512,
+          521998,
+          88660,
+          521995
+        ]
+      },
+      "isolated": {
+        "rank": 39,
+        "ms": 95.17541599999822,
+        "top10": [
+          336622,
+          530528,
+          22497,
+          337587,
+          20620,
+          336621,
+          17512,
+          521998,
+          88660,
+          521995
+        ]
+      },
+      "qa": {
+        "scanId": 2981,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "background/hand",
+          "rotation/perspective"
+        ],
+        "positiveReverified": true,
+        "difficulty": "difficult",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 2983,
+      "cardId": 20279,
+      "accepted": false,
+      "raw": {
+        "rank": 2,
+        "ms": 76.88691900000049,
+        "top10": [
+          530526,
+          20279,
+          189876,
+          337312,
+          337313,
+          337314,
+          337315,
+          337316,
+          337317,
+          337318
+        ]
+      },
+      "isolated": {
+        "rank": 2,
+        "ms": 73.32978100000037,
+        "top10": [
+          530526,
+          20279,
+          189876,
+          337312,
+          337313,
+          337314,
+          337315,
+          337316,
+          337317,
+          337318
+        ]
+      },
+      "qa": {
+        "scanId": 2983,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "background/hand"
+        ],
+        "positiveReverified": true,
+        "difficulty": "difficult",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 2984,
+      "cardId": 20280,
+      "accepted": false,
+      "raw": {
+        "rank": 3,
+        "ms": 83.46496699999989,
+        "top10": [
+          530527,
+          530528,
+          20280,
+          88660,
+          20281,
+          67072,
+          336618,
+          185219,
+          22497,
+          11346
+        ]
+      },
+      "isolated": {
+        "rank": 3,
+        "ms": 74.63295100000141,
+        "top10": [
+          530527,
+          530528,
+          20280,
+          88660,
+          20281,
+          67072,
+          336618,
+          185219,
+          22497,
+          11346
+        ]
+      },
+      "qa": {
+        "scanId": 2984,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "background/hand"
+        ],
+        "positiveReverified": true,
+        "difficulty": "difficult",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 3012,
+      "cardId": 19270,
+      "accepted": true,
+      "raw": {
+        "rank": 1,
+        "ms": 85.7961209999994,
+        "top10": [
+          19270,
+          26436,
+          15845,
+          16642,
+          185009,
+          185099,
+          88549,
+          526902,
+          525551,
+          184989
+        ]
+      },
+      "isolated": {
+        "rank": 4,
+        "ms": 116.92797999999857,
+        "top10": [
+          185009,
+          185099,
+          88549,
+          19270,
+          26436,
+          185150,
+          18575,
+          16642,
+          526902,
+          22873
+        ]
+      },
+      "qa": {
+        "scanId": 3012,
+        "accepted": true,
+        "fullCard": true,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "good",
+        "strata": [
+          "clean/simple"
+        ],
+        "positiveReverified": true,
+        "difficulty": "easy",
+        "notes": "Outer card rectangle retained including logo and bottom labels; right artwork/name reaches original card edge and is not newly clipped. No visible content cutoff."
+      }
+    },
+    {
+      "scanId": 3014,
+      "cardId": 15590,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 90.11085699999967,
+        "top10": [
+          15590,
+          533562,
+          12759,
+          77971,
+          12399,
+          30078,
+          531509,
+          528691,
+          337250,
+          528130
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 84.7505540000002,
+        "top10": [
+          15590,
+          533562,
+          12759,
+          77971,
+          12399,
+          30078,
+          531509,
+          528691,
+          337250,
+          528130
+        ]
+      },
+      "qa": {
+        "scanId": 3014,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "binder/neighbors",
+          "sleeve/toploader",
+          "rotation/perspective"
+        ],
+        "positiveReverified": true,
+        "difficulty": "difficult",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 3056,
+      "cardId": 16844,
+      "accepted": false,
+      "raw": {
+        "rank": 401,
+        "ms": 87.48079099999995,
+        "top10": [
+          17140,
+          337252,
+          337251,
+          337254,
+          19341,
+          15423,
+          69671,
+          17510,
+          17515,
+          15457
+        ]
+      },
+      "isolated": {
+        "rank": 401,
+        "ms": 85.7994120000003,
+        "top10": [
+          17140,
+          337252,
+          337251,
+          337254,
+          19341,
+          15423,
+          69671,
+          17510,
+          17515,
+          15457
+        ]
+      },
+      "qa": {
+        "scanId": 3056,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "glare",
+          "binder/neighbors",
+          "sleeve/toploader",
+          "rotation/perspective"
+        ],
+        "positiveReverified": true,
+        "difficulty": "difficult",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 3078,
+      "cardId": 15845,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 98.42395000000033,
+        "top10": [
+          15845,
+          521240,
+          60827,
+          337251,
+          337254,
+          60849,
+          19341,
+          195145,
+          69671,
+          17510
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 101.45021600000109,
+        "top10": [
+          15845,
+          521240,
+          60827,
+          337251,
+          337254,
+          60849,
+          19341,
+          195145,
+          69671,
+          17510
+        ]
+      },
+      "qa": {
+        "scanId": 3078,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "binder/neighbors",
+          "sleeve/toploader"
+        ],
+        "positiveReverified": true,
+        "difficulty": "difficult",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 3086,
+      "cardId": 20327,
+      "accepted": false,
+      "raw": {
+        "rank": 498,
+        "ms": 81.42424900000151,
+        "top10": [
+          37729,
+          337635,
+          528691,
+          12759,
+          60849,
+          337231,
+          343042,
+          19341,
+          337675,
+          337678
+        ]
+      },
+      "isolated": {
+        "rank": 498,
+        "ms": 84.96723400000155,
+        "top10": [
+          37729,
+          337635,
+          528691,
+          12759,
+          60849,
+          337231,
+          343042,
+          19341,
+          337675,
+          337678
+        ]
+      },
+      "qa": {
+        "scanId": 3086,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "glare",
+          "binder/neighbors",
+          "sleeve/toploader",
+          "rotation/perspective"
+        ],
+        "positiveReverified": true,
+        "difficulty": "difficult",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 3087,
+      "cardId": 20329,
+      "accepted": false,
+      "raw": {
+        "rank": 3,
+        "ms": 93.7265669999997,
+        "top10": [
+          331472,
+          530581,
+          20329,
+          39058,
+          343593,
+          193627,
+          66037,
+          35319,
+          188248,
+          65292
+        ]
+      },
+      "isolated": {
+        "rank": 3,
+        "ms": 79.88596599999983,
+        "top10": [
+          331472,
+          530581,
+          20329,
+          39058,
+          343593,
+          193627,
+          66037,
+          35319,
+          188248,
+          65292
+        ]
+      },
+      "qa": {
+        "scanId": 3087,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "binder/neighbors",
+          "sleeve/toploader"
+        ],
+        "positiveReverified": true,
+        "difficulty": "difficult",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 3090,
+      "cardId": 20330,
+      "accepted": false,
+      "raw": {
+        "rank": 147,
+        "ms": 77.04837300000145,
+        "top10": [
+          59900,
+          12759,
+          58663,
+          12399,
+          18684,
+          58890,
+          331472,
+          333742,
+          528691,
+          58975
+        ]
+      },
+      "isolated": {
+        "rank": 147,
+        "ms": 90.85285899999872,
+        "top10": [
+          59900,
+          12759,
+          58663,
+          12399,
+          18684,
+          58890,
+          331472,
+          333742,
+          528691,
+          58975
+        ]
+      },
+      "qa": {
+        "scanId": 3090,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "glare",
+          "binder/neighbors",
+          "sleeve/toploader",
+          "rotation/perspective"
+        ],
+        "positiveReverified": true,
+        "difficulty": "difficult",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 3097,
+      "cardId": 15626,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 86.28723999999966,
+        "top10": [
+          15626,
+          65076,
+          548363,
+          528691,
+          548384,
+          17510,
+          15367,
+          531714,
+          332772,
+          67357
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 111.62459600000147,
+        "top10": [
+          15626,
+          65076,
+          548363,
+          528691,
+          548384,
+          17510,
+          15367,
+          531714,
+          332772,
+          67357
+        ]
+      },
+      "qa": {
+        "scanId": 3097,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "binder/neighbors",
+          "sleeve/toploader"
+        ],
+        "positiveReverified": true,
+        "difficulty": "moderate",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 3098,
+      "cardId": 15647,
+      "accepted": false,
+      "raw": {
+        "rank": 8,
+        "ms": 89.85756399999991,
+        "top10": [
+          337252,
+          61894,
+          60827,
+          527881,
+          15836,
+          528691,
+          15418,
+          15647,
+          531714,
+          15457
+        ]
+      },
+      "isolated": {
+        "rank": 8,
+        "ms": 80.03301400000055,
+        "top10": [
+          337252,
+          61894,
+          60827,
+          527881,
+          15836,
+          528691,
+          15418,
+          15647,
+          531714,
+          15457
+        ]
+      },
+      "qa": {
+        "scanId": 3098,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "binder/neighbors",
+          "sleeve/toploader"
+        ],
+        "positiveReverified": true,
+        "difficulty": "difficult",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 3100,
+      "cardId": 15634,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 80.8310390000006,
+        "top10": [
+          15634,
+          15400,
+          18006,
+          17402,
+          18004,
+          15847,
+          530884,
+          17823,
+          250432,
+          183698
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 89.16879900000094,
+        "top10": [
+          15634,
+          15400,
+          18006,
+          17402,
+          18004,
+          15847,
+          530884,
+          17823,
+          250432,
+          183698
+        ]
+      },
+      "qa": {
+        "scanId": 3100,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "binder/neighbors",
+          "sleeve/toploader"
+        ],
+        "positiveReverified": true,
+        "difficulty": "moderate",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 3104,
+      "cardId": 15623,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 113.29367999999886,
+        "top10": [
+          15623,
+          17515,
+          15517,
+          17750,
+          61894,
+          348694,
+          348741,
+          348770,
+          19910,
+          87852
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 88.66120500000034,
+        "top10": [
+          15623,
+          17515,
+          15517,
+          17750,
+          61894,
+          348694,
+          348741,
+          348770,
+          19910,
+          87852
+        ]
+      },
+      "qa": {
+        "scanId": 3104,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "binder/neighbors",
+          "sleeve/toploader",
+          "rotation/perspective"
+        ],
+        "positiveReverified": true,
+        "difficulty": "moderate",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 3108,
+      "cardId": 15640,
+      "accepted": false,
+      "raw": {
+        "rank": 1,
+        "ms": 87.51585100000011,
+        "top10": [
+          15640,
+          337252,
+          196854,
+          69671,
+          15517,
+          185412,
+          15424,
+          15422,
+          15457,
+          61894
+        ]
+      },
+      "isolated": {
+        "rank": 1,
+        "ms": 79.83073800000057,
+        "top10": [
+          15640,
+          337252,
+          196854,
+          69671,
+          15517,
+          185412,
+          15424,
+          15422,
+          15457,
+          61894
+        ]
+      },
+      "qa": {
+        "scanId": 3108,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "binder/neighbors",
+          "sleeve/toploader",
+          "rotation/perspective"
+        ],
+        "positiveReverified": true,
+        "difficulty": "difficult",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 3169,
+      "cardId": 16868,
+      "accepted": false,
+      "raw": {
+        "rank": 144,
+        "ms": 79.63455599999907,
+        "top10": [
+          521998,
+          521240,
+          15847,
+          533624,
+          17465,
+          18636,
+          337644,
+          337645,
+          337646,
+          60827
+        ]
+      },
+      "isolated": {
+        "rank": 144,
+        "ms": 83.09348899999895,
+        "top10": [
+          521998,
+          521240,
+          15847,
+          533624,
+          17465,
+          18636,
+          337644,
+          337645,
+          337646,
+          60827
+        ]
+      },
+      "qa": {
+        "scanId": 3169,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "background/hand"
+        ],
+        "positiveReverified": true,
+        "difficulty": "difficult",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    },
+    {
+      "scanId": 3173,
+      "cardId": 18232,
+      "accepted": false,
+      "raw": {
+        "rank": 26,
+        "ms": 78.79136800000015,
+        "top10": [
+          17510,
+          336619,
+          20430,
+          548384,
+          58663,
+          19912,
+          17419,
+          16659,
+          17189,
+          18056
+        ]
+      },
+      "isolated": {
+        "rank": 26,
+        "ms": 77.7126989999997,
+        "top10": [
+          17510,
+          336619,
+          20430,
+          548384,
+          58663,
+          19912,
+          17419,
+          16659,
+          17189,
+          18056
+        ]
+      },
+      "qa": {
+        "scanId": 3173,
+        "accepted": false,
+        "fullCard": false,
+        "falseDetection": false,
+        "cutoff": false,
+        "cornerQuality": "not-emitted",
+        "strata": [
+          "glare",
+          "binder/neighbors",
+          "sleeve/toploader"
+        ],
+        "positiveReverified": true,
+        "difficulty": "difficult",
+        "notes": "Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping."
+      }
+    }
+  ],
+  "integrity": {
+    "baselineUnchanged": 735,
+    "dinoUnchanged": true,
+    "model": "dinov2-small:c2bb04a51fab207c420665f1946016107bffc701:q8:cls:rgb-fit224-v1",
+    "modelHash": "6bf550efefa26d4b85cb25c5a4fda7a9488a5ca2bfc6afe59b7b83fa052bce2a",
+    "reranker": false,
+    "tuning": false,
+    "published": false,
+    "catalogWrites": false
+  },
+  "conclusion": "No demonstrated material recognition improvement: one crop fixes an exact top1 miss, one previously correct result regresses, and most photographs abstain. Learned segmentation yields some usable physical-card crops but this frozen acceptance policy still fails on all reviewed hand/clutter and binder cases. Do not infer readiness from the small emitted-crop subgroup.",
+  "limitations": [
+    "Convenience sample with repeated card families, not population accuracy.",
+    "Reviewer detection judgments are approximate and unblinded to appearance, but recorded before recognition.",
+    "Catalog duplicate evidence suggests redundant entries, not authority to merge records.",
+    "All accepted bad crops retained in primary emitted-crop comparison."
+  ],
+  "cleanup": {
+    "status": "verified-deleted",
+    "removedFiles": 203,
+    "removedBytes": 119131498,
+    "privateWorkspaceExists": false
+  }
+}

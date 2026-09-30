@@ -254,3 +254,17 @@ mtime_ms = 1790801797406
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/fad8dfbe-ef20-4924-83e6-beb95729606a/1b2d4eb8-b697-4a1e-8add-3e70dd4c8800"
 storage_version_token = "1790801967558909"
 content_type = "text/html"
+
+[[outputs]]
+id = "wHRoZY7uRZQjggaotNr0M"
+uri = "file://attached_assets/dev-strong41-report.html"
+type = "html"
+title = "41-photo SAM isolation experiment — completed results"
+description = "Detection rates by scene, crop safety, paired DINO-only recognition, same-art catalog findings, latency and verified cleanup. No scan photographs or image URLs retained."
+logical_id = "9b7135d4-0313-46af-9ffb-f6f7f4521e86"
+content_hash = "sha256:87ba8a5689561f44c4a1625d35667a155e325b2c056cf33982aeed20a3ee419c"
+size = 87700
+mtime_ms = 1790806273930
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/9b7135d4-0313-46af-9ffb-f6f7f4521e86/7643caca-2bff-43e6-8c73-b00e5a643ac0"
+storage_version_token = "1790806389683946"
+content_type = "text/html"

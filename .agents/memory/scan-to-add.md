@@ -11,6 +11,12 @@ Use canonical single-image DINO alone for the next development recognition evalu
 
 **Scoped supersession, not standing access:** The later explicit twelve-scan failure-audit authorization permits only its named scan IDs and three fields (scan ID, original image URL, confirmed card ID), read-only. It allows temporary visual review and a paired unchanged-DINO test of a detector operating on the photograph alone. No other production records/account data, reranker, guided crop, tuning, publication or writes. Freeze the independent detector before evaluation, report abstentions as raw fallbacks, and delete all newly owned temporary evidence after sanitized results are verified. Reusing that exception for another audit requires fresh authorization; the default remains no production access.
 
+Evaluate stronger learned card isolation on mixed-difficulty real fronts, not by repeatedly tuning geometry on the same failed queries.
+
+**Why:** Safe abstention alone does not establish useful isolation, and a failure-selected sample cannot measure regressions on previously successful photographs.
+
+**How to apply:** Require a separately authorized, privacy-minimized bounded cohort. Freeze photo-only segmentation and geometric acceptance before viewing cohort outcomes; no identity, reference, OCR or DINO guidance. Manually judge physical-card coverage and corners before recognition. Evaluate every emitted crop, including bad ones, with unchanged canonical DINO; separately disclose QA-valid crops, abstention/raw fallback, missing-reference coverage and overlapping scene-stratum denominators. Preserve observed aspect and pad rather than stretching. Keep catalog duplicate investigation read-only and separate from label changes. Delete newly owned photographs/masks/crops/exports/vectors after validating sanitized metrics; no standing production access is granted by a completed experiment.
+
 Collection ownership and shared-catalog photo approval must remain independent, including when a collector identifies the card manually.
 
 **Why:** The user wants the confirmed card added even when an administrator rejects its photo because a better catalog image already exists. Image rejection is not rejection of ownership.

@@ -1,0 +1,2645 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Learned isolation experiment</title><style>body{font:16px/1.5 system-ui;max-width:1150px;margin:auto;padding:28px}pre{white-space:pre-wrap;overflow-wrap:anywhere}td,th{border:1px solid #bbb;padding:10px}table{border-collapse:collapse}</style><h1>Executed learned card-isolation experiment</h1><p>41 real photographs;40 currently covered exact positives. Independent photo-only detector frozen before testing; DINO unchanged; no reranker.</p><h2>Detector results</h2><pre>{
+  &quot;freeze&quot;: {
+    &quot;detectorHash&quot;: &quot;0f29930f8f858153333cbc0e4688884ebc4cbb82d942506d842bc49026d4d57a&quot;,
+    &quot;configHash&quot;: &quot;0ffe67e3b6f1e8efefeadf4a9f97ffb829749826a5bc316d919a0051ef516447&quot;,
+    &quot;weightsHash&quot;: &quot;ec2df62732614e57411cdcf32a23ffdf28910380d03139ee0f4fcbe91eb8c912&quot;,
+    &quot;modelId&quot;: &quot;facebook/segment-anything/sam-vit-b&quot;,
+    &quot;policy&quot;: &quot;photo-sam-vit-b-v1&quot;,
+    &quot;indexHash&quot;: &quot;45323e43c1f556c09b4813eff21f4398b6806fff052eeecb734705957fa23069&quot;,
+    &quot;frozenBeforeTest&quot;: true
+  },
+  &quot;overall&quot;: {
+    &quot;n&quot;: 41,
+    &quot;fullCard&quot;: 5,
+    &quot;fullCardRate&quot;: 0.12195121951219512,
+    &quot;abstentions&quot;: 35,
+    &quot;falseDetections&quot;: 0,
+    &quot;cutoffs&quot;: 1,
+    &quot;unsafeEmittedCrops&quot;: 1,
+    &quot;goodCorners&quot;: 3,
+    &quot;approximateCorners&quot;: 2
+  },
+  &quot;byStratum&quot;: {
+    &quot;clean/simple&quot;: {
+      &quot;n&quot;: 5,
+      &quot;fullCard&quot;: 2,
+      &quot;fullCardRate&quot;: 0.4,
+      &quot;abstentions&quot;: 3,
+      &quot;falseDetections&quot;: 0,
+      &quot;cutoffs&quot;: 0,
+      &quot;unsafeEmittedCrops&quot;: 0,
+      &quot;goodCorners&quot;: 1,
+      &quot;approximateCorners&quot;: 1
+    },
+    &quot;background/hand&quot;: {
+      &quot;n&quot;: 7,
+      &quot;fullCard&quot;: 0,
+      &quot;fullCardRate&quot;: 0,
+      &quot;abstentions&quot;: 7,
+      &quot;falseDetections&quot;: 0,
+      &quot;cutoffs&quot;: 0,
+      &quot;unsafeEmittedCrops&quot;: 0,
+      &quot;goodCorners&quot;: 0,
+      &quot;approximateCorners&quot;: 0
+    },
+    &quot;glare&quot;: {
+      &quot;n&quot;: 16,
+      &quot;fullCard&quot;: 3,
+      &quot;fullCardRate&quot;: 0.1875,
+      &quot;abstentions&quot;: 12,
+      &quot;falseDetections&quot;: 0,
+      &quot;cutoffs&quot;: 1,
+      &quot;unsafeEmittedCrops&quot;: 1,
+      &quot;goodCorners&quot;: 2,
+      &quot;approximateCorners&quot;: 1
+    },
+    &quot;binder/neighbors&quot;: {
+      &quot;n&quot;: 12,
+      &quot;fullCard&quot;: 0,
+      &quot;fullCardRate&quot;: 0,
+      &quot;abstentions&quot;: 12,
+      &quot;falseDetections&quot;: 0,
+      &quot;cutoffs&quot;: 0,
+      &quot;unsafeEmittedCrops&quot;: 0,
+      &quot;goodCorners&quot;: 0,
+      &quot;approximateCorners&quot;: 0
+    },
+    &quot;sleeve/toploader&quot;: {
+      &quot;n&quot;: 20,
+      &quot;fullCard&quot;: 0,
+      &quot;fullCardRate&quot;: 0,
+      &quot;abstentions&quot;: 20,
+      &quot;falseDetections&quot;: 0,
+      &quot;cutoffs&quot;: 0,
+      &quot;unsafeEmittedCrops&quot;: 0,
+      &quot;goodCorners&quot;: 0,
+      &quot;approximateCorners&quot;: 0
+    },
+    &quot;rotation/perspective&quot;: {
+      &quot;n&quot;: 9,
+      &quot;fullCard&quot;: 0,
+      &quot;fullCardRate&quot;: 0,
+      &quot;abstentions&quot;: 9,
+      &quot;falseDetections&quot;: 0,
+      &quot;cutoffs&quot;: 0,
+      &quot;unsafeEmittedCrops&quot;: 0,
+      &quot;goodCorners&quot;: 0,
+      &quot;approximateCorners&quot;: 0
+    }
+  },
+  &quot;byDifficulty&quot;: {
+    &quot;easy&quot;: {
+      &quot;n&quot;: 5,
+      &quot;fullCard&quot;: 2,
+      &quot;fullCardRate&quot;: 0.4,
+      &quot;abstentions&quot;: 3,
+      &quot;falseDetections&quot;: 0,
+      &quot;cutoffs&quot;: 0,
+      &quot;unsafeEmittedCrops&quot;: 0,
+      &quot;goodCorners&quot;: 1,
+      &quot;approximateCorners&quot;: 1
+    },
+    &quot;moderate&quot;: {
+      &quot;n&quot;: 19,
+      &quot;fullCard&quot;: 3,
+      &quot;fullCardRate&quot;: 0.15789473684210525,
+      &quot;abstentions&quot;: 15,
+      &quot;falseDetections&quot;: 0,
+      &quot;cutoffs&quot;: 1,
+      &quot;unsafeEmittedCrops&quot;: 1,
+      &quot;goodCorners&quot;: 2,
+      &quot;approximateCorners&quot;: 1
+    },
+    &quot;difficult&quot;: {
+      &quot;n&quot;: 17,
+      &quot;fullCard&quot;: 0,
+      &quot;fullCardRate&quot;: 0,
+      &quot;abstentions&quot;: 17,
+      &quot;falseDetections&quot;: 0,
+      &quot;cutoffs&quot;: 0,
+      &quot;unsafeEmittedCrops&quot;: 0,
+      &quot;goodCorners&quot;: 0,
+      &quot;approximateCorners&quot;: 0
+    }
+  },
+  &quot;strataNote&quot;: &quot;Visually assigned overlapping scene labels; denominators are per stratum and cannot be summed. QA compared query and emitted crop before DINO, without feeding labels/references to detector.&quot;,
+  &quot;latency&quot;: {
+    &quot;modelInitializationMsTotal&quot;: 68404.0576399998,
+    &quot;completedBatchCount&quot;: 11,
+    &quot;meanModelInitializationMs&quot;: 6218.550694545436,
+    &quot;batchProcessWallMsTotal&quot;: 1503052.8926089997,
+    &quot;meanDetectorMs&quot;: 34961.12932856095,
+    &quot;scope&quot;: &quot;Detection includes read/decode, learned mask inference, mask selection and rectification; excludes crop disk writes and model initialization. Summed process wall excludes interpreter startup. Eleven serial batches of at most4 photos, required by tool process lifetime limits, with unchanged frozen settings. Background launch attempts did not survive the tool session and yielded no retained results. One completed frozen pass across41 photos, not a warm-repeated latency benchmark.&quot;
+  },
+  &quot;safetyDefinitions&quot;: &quot;False detection means wrong object/internal panel/pocket/slab rather than the physical card. Cutoff is counted separately even for correct-object detection. One unsafe emitted crop trims a thin top-right artwork band; no claim of zero unsafe cropping.&quot;,
+  &quot;cornerQuality&quot;: &quot;Human approximate visual inspection, not ground-truth annotated corner pixel error. False detections and cutoffs may overlap; no QA failures hidden.&quot;
+}</pre><h2>Paired DINO results</h2><pre>{
+  &quot;allEmittedCropsWithAvailablePositive&quot;: {
+    &quot;raw&quot;: {
+      &quot;n&quot;: 6,
+      &quot;top1&quot;: 5,
+      &quot;top3&quot;: 5,
+      &quot;top10&quot;: 6
+    },
+    &quot;isolated&quot;: {
+      &quot;n&quot;: 6,
+      &quot;top1&quot;: 5,
+      &quot;top3&quot;: 5,
+      &quot;top10&quot;: 6
+    },
+    &quot;improved&quot;: 1,
+    &quot;unchanged&quot;: 4,
+    &quot;worsened&quot;: 1,
+    &quot;top1Gains&quot;: 1,
+    &quot;top1Losses&quot;: 1
+  },
+  &quot;qaValidCrops&quot;: {
+    &quot;raw&quot;: {
+      &quot;n&quot;: 5,
+      &quot;top1&quot;: 4,
+      &quot;top3&quot;: 4,
+      &quot;top10&quot;: 5
+    },
+    &quot;isolated&quot;: {
+      &quot;n&quot;: 5,
+      &quot;top1&quot;: 4,
+      &quot;top3&quot;: 4,
+      &quot;top10&quot;: 5
+    },
+    &quot;improved&quot;: 1,
+    &quot;unchanged&quot;: 3,
+    &quot;worsened&quot;: 1,
+    &quot;top1Gains&quot;: 1,
+    &quot;top1Losses&quot;: 1
+  },
+  &quot;allCoveredWithAbstentionFallback&quot;: {
+    &quot;raw&quot;: {
+      &quot;n&quot;: 40,
+      &quot;top1&quot;: 28,
+      &quot;top3&quot;: 31,
+      &quot;top10&quot;: 34
+    },
+    &quot;isolated&quot;: {
+      &quot;n&quot;: 40,
+      &quot;top1&quot;: 28,
+      &quot;top3&quot;: 31,
+      &quot;top10&quot;: 34
+    },
+    &quot;improved&quot;: 1,
+    &quot;unchanged&quot;: 38,
+    &quot;worsened&quot;: 1,
+    &quot;top1Gains&quot;: 1,
+    &quot;top1Losses&quot;: 1
+  },
+  &quot;all41IncludingMissingReference&quot;: {
+    &quot;raw&quot;: {
+      &quot;n&quot;: 41,
+      &quot;top1&quot;: 28,
+      &quot;top3&quot;: 31,
+      &quot;top10&quot;: 34
+    },
+    &quot;isolated&quot;: {
+      &quot;n&quot;: 41,
+      &quot;top1&quot;: 28,
+      &quot;top3&quot;: 31,
+      &quot;top10&quot;: 34
+    },
+    &quot;improved&quot;: 1,
+    &quot;unchanged&quot;: 39,
+    &quot;worsened&quot;: 1,
+    &quot;top1Gains&quot;: 1,
+    &quot;top1Losses&quot;: 1
+  },
+  &quot;definition&quot;: &quot;Rank improvement means smaller exact-card rank, unchanged means equal, worsened means larger. Top1 gains/losses separately counted. Every emitted crop is evaluated, even manually judged false or clipped. Missing-reference null ranks are not counted as successes.&quot;
+}</pre><h2>Same-art catalog investigation</h2><pre>[
+  {
+    &quot;scanId&quot;: 2983,
+    &quot;ids&quot;: [
+      20279,
+      530526
+    ],
+    &quot;classification&quot;: &quot;apparent duplicate base-card records; not proven formal aliases&quot;,
+    &quot;evidence&quot;: &quot;Same Rogue artwork, card number146, year1995, main family480, null variation. Both active non-insert canonical base sets;7292 source csv_master versus12179 auto_base_creation. No matching DEV migration mapping. No evidence here of alternate printing or parallel.&quot;
+  },
+  {
+    &quot;scanId&quot;: 2984,
+    &quot;ids&quot;: [
+      20280,
+      530527
+    ],
+    &quot;classification&quot;: &quot;apparent duplicate base-card records; not proven formal aliases&quot;,
+    &quot;evidence&quot;: &quot;Same Scott-and-Jean artwork, number147, year1995, main family480, null variation. Same two active base-set records and sources. Candidate photograph has different framing, not demonstrated print difference. No matching DEV migration mapping.&quot;
+  }
+]</pre><h2>Per-case outcomes</h2><table><tr><th>Scan</th><th>Raw / isolated rank</th><th>Manual detector QA</th></tr><tr><td>2790</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>2813</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>2823</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>2824</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>2825</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>2826</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>2835</td><td>1 / 1</td><td>Complete physical card retained; corners slightly outside top/left boundary retain a narrow surround. No visible artwork/text cutoff; approximate, not tight pixel-accurate corners.</td></tr><tr><td>2836</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>2838</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>2866</td><td>4 / 4</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>2869</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>2871</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>2899</td><td>5 / 1</td><td>Physical card isolated with complete figure and both bottom labels; tight approximate edge fit. Glare remains in the crop; no significant visible content loss.</td></tr><tr><td>2900</td><td>1 / 1</td><td>Correct physical card, but top-right boundary crosses slightly inside the actual edge and trims a thin artwork band. Conservatively counted as a cutoff and excluded from strict full-card success; not a wrong-object detection.</td></tr><tr><td>2901</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>2902</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>2903</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>2906</td><td>1 / 1</td><td>Corners track outer card boundary and preserve top logo, artwork and bottom labels. No visible content cutoff.</td></tr><tr><td>2909</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>2910</td><td>1 / 1</td><td>Corners track physical card; title and artist label retained. Glare remains; no meaningful visible artwork/text cutoff.</td></tr><tr><td>2939</td><td>missing reference / missing reference</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>2950</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>2965</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>2969</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>2981</td><td>39 / 39</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>2983</td><td>2 / 2</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>2984</td><td>3 / 3</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>3012</td><td>1 / 4</td><td>Outer card rectangle retained including logo and bottom labels; right artwork/name reaches original card edge and is not newly clipped. No visible content cutoff.</td></tr><tr><td>3014</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>3056</td><td>401 / 401</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>3078</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>3086</td><td>498 / 498</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>3087</td><td>3 / 3</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>3090</td><td>147 / 147</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>3097</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>3098</td><td>8 / 8</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>3100</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>3104</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>3108</td><td>1 / 1</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>3169</td><td>144 / 144</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr><tr><td>3173</td><td>26 / 26</td><td>Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.</td></tr></table><h2>Cleanup</h2><p>verified-deleted</p><details><summary>Complete sanitized evidence</summary><pre>{
+  &quot;title&quot;: &quot;Executed learned photo-only isolation / frozen DINO experiment&quot;,
+  &quot;sample&quot;: {
+    &quot;photos&quot;: 41,
+    &quot;independentlyReverifiedPositiveFronts&quot;: 40,
+    &quot;missingPositiveReferences&quot;: [
+      {
+        &quot;scanId&quot;: 2939,
+        &quot;cardId&quot;: 533958
+      }
+    ],
+    &quot;selection&quot;: &quot;Reused prior41 verified fronts including29 prior DINO successes and12 failures; bounded convenience sample, not population representative. Scan2939 has no currently available independent positive reference in DEV and is excluded from covered recognition metrics, not from detector evaluation.&quot;
+  },
+  &quot;production&quot;: {
+    &quot;selectAttempts&quot;: 2,
+    &quot;firstAttempt&quot;: &quot;tool server disconnected; no returned records&quot;,
+    &quot;successfulExports&quot;: 1,
+    &quot;exportedRows&quot;: 41,
+    &quot;fields&quot;: [
+      &quot;scan_id&quot;,
+      &quot;image_url&quot;,
+      &quot;confirmed_card_id&quot;
+    ],
+    &quot;accountData&quot;: false,
+    &quot;writes&quot;: 0
+  },
+  &quot;detector&quot;: {
+    &quot;freeze&quot;: {
+      &quot;detectorHash&quot;: &quot;0f29930f8f858153333cbc0e4688884ebc4cbb82d942506d842bc49026d4d57a&quot;,
+      &quot;configHash&quot;: &quot;0ffe67e3b6f1e8efefeadf4a9f97ffb829749826a5bc316d919a0051ef516447&quot;,
+      &quot;weightsHash&quot;: &quot;ec2df62732614e57411cdcf32a23ffdf28910380d03139ee0f4fcbe91eb8c912&quot;,
+      &quot;modelId&quot;: &quot;facebook/segment-anything/sam-vit-b&quot;,
+      &quot;policy&quot;: &quot;photo-sam-vit-b-v1&quot;,
+      &quot;indexHash&quot;: &quot;45323e43c1f556c09b4813eff21f4398b6806fff052eeecb734705957fa23069&quot;,
+      &quot;frozenBeforeTest&quot;: true
+    },
+    &quot;overall&quot;: {
+      &quot;n&quot;: 41,
+      &quot;fullCard&quot;: 5,
+      &quot;fullCardRate&quot;: 0.12195121951219512,
+      &quot;abstentions&quot;: 35,
+      &quot;falseDetections&quot;: 0,
+      &quot;cutoffs&quot;: 1,
+      &quot;unsafeEmittedCrops&quot;: 1,
+      &quot;goodCorners&quot;: 3,
+      &quot;approximateCorners&quot;: 2
+    },
+    &quot;byStratum&quot;: {
+      &quot;clean/simple&quot;: {
+        &quot;n&quot;: 5,
+        &quot;fullCard&quot;: 2,
+        &quot;fullCardRate&quot;: 0.4,
+        &quot;abstentions&quot;: 3,
+        &quot;falseDetections&quot;: 0,
+        &quot;cutoffs&quot;: 0,
+        &quot;unsafeEmittedCrops&quot;: 0,
+        &quot;goodCorners&quot;: 1,
+        &quot;approximateCorners&quot;: 1
+      },
+      &quot;background/hand&quot;: {
+        &quot;n&quot;: 7,
+        &quot;fullCard&quot;: 0,
+        &quot;fullCardRate&quot;: 0,
+        &quot;abstentions&quot;: 7,
+        &quot;falseDetections&quot;: 0,
+        &quot;cutoffs&quot;: 0,
+        &quot;unsafeEmittedCrops&quot;: 0,
+        &quot;goodCorners&quot;: 0,
+        &quot;approximateCorners&quot;: 0
+      },
+      &quot;glare&quot;: {
+        &quot;n&quot;: 16,
+        &quot;fullCard&quot;: 3,
+        &quot;fullCardRate&quot;: 0.1875,
+        &quot;abstentions&quot;: 12,
+        &quot;falseDetections&quot;: 0,
+        &quot;cutoffs&quot;: 1,
+        &quot;unsafeEmittedCrops&quot;: 1,
+        &quot;goodCorners&quot;: 2,
+        &quot;approximateCorners&quot;: 1
+      },
+      &quot;binder/neighbors&quot;: {
+        &quot;n&quot;: 12,
+        &quot;fullCard&quot;: 0,
+        &quot;fullCardRate&quot;: 0,
+        &quot;abstentions&quot;: 12,
+        &quot;falseDetections&quot;: 0,
+        &quot;cutoffs&quot;: 0,
+        &quot;unsafeEmittedCrops&quot;: 0,
+        &quot;goodCorners&quot;: 0,
+        &quot;approximateCorners&quot;: 0
+      },
+      &quot;sleeve/toploader&quot;: {
+        &quot;n&quot;: 20,
+        &quot;fullCard&quot;: 0,
+        &quot;fullCardRate&quot;: 0,
+        &quot;abstentions&quot;: 20,
+        &quot;falseDetections&quot;: 0,
+        &quot;cutoffs&quot;: 0,
+        &quot;unsafeEmittedCrops&quot;: 0,
+        &quot;goodCorners&quot;: 0,
+        &quot;approximateCorners&quot;: 0
+      },
+      &quot;rotation/perspective&quot;: {
+        &quot;n&quot;: 9,
+        &quot;fullCard&quot;: 0,
+        &quot;fullCardRate&quot;: 0,
+        &quot;abstentions&quot;: 9,
+        &quot;falseDetections&quot;: 0,
+        &quot;cutoffs&quot;: 0,
+        &quot;unsafeEmittedCrops&quot;: 0,
+        &quot;goodCorners&quot;: 0,
+        &quot;approximateCorners&quot;: 0
+      }
+    },
+    &quot;byDifficulty&quot;: {
+      &quot;easy&quot;: {
+        &quot;n&quot;: 5,
+        &quot;fullCard&quot;: 2,
+        &quot;fullCardRate&quot;: 0.4,
+        &quot;abstentions&quot;: 3,
+        &quot;falseDetections&quot;: 0,
+        &quot;cutoffs&quot;: 0,
+        &quot;unsafeEmittedCrops&quot;: 0,
+        &quot;goodCorners&quot;: 1,
+        &quot;approximateCorners&quot;: 1
+      },
+      &quot;moderate&quot;: {
+        &quot;n&quot;: 19,
+        &quot;fullCard&quot;: 3,
+        &quot;fullCardRate&quot;: 0.15789473684210525,
+        &quot;abstentions&quot;: 15,
+        &quot;falseDetections&quot;: 0,
+        &quot;cutoffs&quot;: 1,
+        &quot;unsafeEmittedCrops&quot;: 1,
+        &quot;goodCorners&quot;: 2,
+        &quot;approximateCorners&quot;: 1
+      },
+      &quot;difficult&quot;: {
+        &quot;n&quot;: 17,
+        &quot;fullCard&quot;: 0,
+        &quot;fullCardRate&quot;: 0,
+        &quot;abstentions&quot;: 17,
+        &quot;falseDetections&quot;: 0,
+        &quot;cutoffs&quot;: 0,
+        &quot;unsafeEmittedCrops&quot;: 0,
+        &quot;goodCorners&quot;: 0,
+        &quot;approximateCorners&quot;: 0
+      }
+    },
+    &quot;strataNote&quot;: &quot;Visually assigned overlapping scene labels; denominators are per stratum and cannot be summed. QA compared query and emitted crop before DINO, without feeding labels/references to detector.&quot;,
+    &quot;latency&quot;: {
+      &quot;modelInitializationMsTotal&quot;: 68404.0576399998,
+      &quot;completedBatchCount&quot;: 11,
+      &quot;meanModelInitializationMs&quot;: 6218.550694545436,
+      &quot;batchProcessWallMsTotal&quot;: 1503052.8926089997,
+      &quot;meanDetectorMs&quot;: 34961.12932856095,
+      &quot;scope&quot;: &quot;Detection includes read/decode, learned mask inference, mask selection and rectification; excludes crop disk writes and model initialization. Summed process wall excludes interpreter startup. Eleven serial batches of at most4 photos, required by tool process lifetime limits, with unchanged frozen settings. Background launch attempts did not survive the tool session and yielded no retained results. One completed frozen pass across41 photos, not a warm-repeated latency benchmark.&quot;
+    },
+    &quot;safetyDefinitions&quot;: &quot;False detection means wrong object/internal panel/pocket/slab rather than the physical card. Cutoff is counted separately even for correct-object detection. One unsafe emitted crop trims a thin top-right artwork band; no claim of zero unsafe cropping.&quot;,
+    &quot;cornerQuality&quot;: &quot;Human approximate visual inspection, not ground-truth annotated corner pixel error. False detections and cutoffs may overlap; no QA failures hidden.&quot;
+  },
+  &quot;index&quot;: {
+    &quot;ids&quot;: 3045,
+    &quot;embeddings&quot;: 2784,
+    &quot;hash&quot;: &quot;45323e43c1f556c09b4813eff21f4398b6806fff052eeecb734705957fa23069&quot;,
+    &quot;queryReferenceByteCollisions&quot;: 0,
+    &quot;description&quot;: &quot;3045 bounded index reconstructed by same recipe as prior12-case experiment; cannot certify byte-identical to deleted3046 historical index. Positive533958 unavailable; no full/permanent writes. Both arms share one frozen index.&quot;
+  },
+  &quot;recognition&quot;: {
+    &quot;allEmittedCropsWithAvailablePositive&quot;: {
+      &quot;raw&quot;: {
+        &quot;n&quot;: 6,
+        &quot;top1&quot;: 5,
+        &quot;top3&quot;: 5,
+        &quot;top10&quot;: 6
+      },
+      &quot;isolated&quot;: {
+        &quot;n&quot;: 6,
+        &quot;top1&quot;: 5,
+        &quot;top3&quot;: 5,
+        &quot;top10&quot;: 6
+      },
+      &quot;improved&quot;: 1,
+      &quot;unchanged&quot;: 4,
+      &quot;worsened&quot;: 1,
+      &quot;top1Gains&quot;: 1,
+      &quot;top1Losses&quot;: 1
+    },
+    &quot;qaValidCrops&quot;: {
+      &quot;raw&quot;: {
+        &quot;n&quot;: 5,
+        &quot;top1&quot;: 4,
+        &quot;top3&quot;: 4,
+        &quot;top10&quot;: 5
+      },
+      &quot;isolated&quot;: {
+        &quot;n&quot;: 5,
+        &quot;top1&quot;: 4,
+        &quot;top3&quot;: 4,
+        &quot;top10&quot;: 5
+      },
+      &quot;improved&quot;: 1,
+      &quot;unchanged&quot;: 3,
+      &quot;worsened&quot;: 1,
+      &quot;top1Gains&quot;: 1,
+      &quot;top1Losses&quot;: 1
+    },
+    &quot;allCoveredWithAbstentionFallback&quot;: {
+      &quot;raw&quot;: {
+        &quot;n&quot;: 40,
+        &quot;top1&quot;: 28,
+        &quot;top3&quot;: 31,
+        &quot;top10&quot;: 34
+      },
+      &quot;isolated&quot;: {
+        &quot;n&quot;: 40,
+        &quot;top1&quot;: 28,
+        &quot;top3&quot;: 31,
+        &quot;top10&quot;: 34
+      },
+      &quot;improved&quot;: 1,
+      &quot;unchanged&quot;: 38,
+      &quot;worsened&quot;: 1,
+      &quot;top1Gains&quot;: 1,
+      &quot;top1Losses&quot;: 1
+    },
+    &quot;all41IncludingMissingReference&quot;: {
+      &quot;raw&quot;: {
+        &quot;n&quot;: 41,
+        &quot;top1&quot;: 28,
+        &quot;top3&quot;: 31,
+        &quot;top10&quot;: 34
+      },
+      &quot;isolated&quot;: {
+        &quot;n&quot;: 41,
+        &quot;top1&quot;: 28,
+        &quot;top3&quot;: 31,
+        &quot;top10&quot;: 34
+      },
+      &quot;improved&quot;: 1,
+      &quot;unchanged&quot;: 39,
+      &quot;worsened&quot;: 1,
+      &quot;top1Gains&quot;: 1,
+      &quot;top1Losses&quot;: 1
+    },
+    &quot;definition&quot;: &quot;Rank improvement means smaller exact-card rank, unchanged means equal, worsened means larger. Top1 gains/losses separately counted. Every emitted crop is evaluated, even manually judged false or clipped. Missing-reference null ranks are not counted as successes.&quot;
+  },
+  &quot;catalogRelationships&quot;: [
+    {
+      &quot;scanId&quot;: 2983,
+      &quot;ids&quot;: [
+        20279,
+        530526
+      ],
+      &quot;classification&quot;: &quot;apparent duplicate base-card records; not proven formal aliases&quot;,
+      &quot;evidence&quot;: &quot;Same Rogue artwork, card number146, year1995, main family480, null variation. Both active non-insert canonical base sets;7292 source csv_master versus12179 auto_base_creation. No matching DEV migration mapping. No evidence here of alternate printing or parallel.&quot;
+    },
+    {
+      &quot;scanId&quot;: 2984,
+      &quot;ids&quot;: [
+        20280,
+        530527
+      ],
+      &quot;classification&quot;: &quot;apparent duplicate base-card records; not proven formal aliases&quot;,
+      &quot;evidence&quot;: &quot;Same Scott-and-Jean artwork, number147, year1995, main family480, null variation. Same two active base-set records and sources. Candidate photograph has different framing, not demonstrated print difference. No matching DEV migration mapping.&quot;
+    }
+  ],
+  &quot;perCase&quot;: [
+    {
+      &quot;scanId&quot;: 2790,
+      &quot;cardId&quot;: 18457,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 5159.967632,
+        &quot;top10&quot;: [
+          18457,
+          184978,
+          185068,
+          22770,
+          17750,
+          198972,
+          22740,
+          17176,
+          242435,
+          22799
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 106.42764999999963,
+        &quot;top10&quot;: [
+          18457,
+          184978,
+          185068,
+          22770,
+          17750,
+          198972,
+          22740,
+          17176,
+          242435,
+          22799
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2790,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;clean/simple&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;easy&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2813,
+      &quot;cardId&quot;: 17765,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 106.85756399999991,
+        &quot;top10&quot;: [
+          17765,
+          65403,
+          188768,
+          22499,
+          188861,
+          22453,
+          184927,
+          184933,
+          22428,
+          337677
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 95.61749899999995,
+        &quot;top10&quot;: [
+          17765,
+          65403,
+          188768,
+          22499,
+          188861,
+          22453,
+          184927,
+          184933,
+          22428,
+          337677
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2813,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;clean/simple&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;easy&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2823,
+      &quot;cardId&quot;: 19908,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 96.81747500000074,
+        &quot;top10&quot;: [
+          19908,
+          19947,
+          17328,
+          528706,
+          17189,
+          16954,
+          19962,
+          20628,
+          183897,
+          183922
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 89.70088399999986,
+        &quot;top10&quot;: [
+          19908,
+          19947,
+          17328,
+          528706,
+          17189,
+          16954,
+          19962,
+          20628,
+          183897,
+          183922
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2823,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;glare&quot;,
+          &quot;sleeve/toploader&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;moderate&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2824,
+      &quot;cardId&quot;: 19910,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 116.44198400000005,
+        &quot;top10&quot;: [
+          19910,
+          22441,
+          337675,
+          337678,
+          20620,
+          60849,
+          530912,
+          336822,
+          19909,
+          22397
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 90.38832000000002,
+        &quot;top10&quot;: [
+          19910,
+          22441,
+          337675,
+          337678,
+          20620,
+          60849,
+          530912,
+          336822,
+          19909,
+          22397
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2824,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;glare&quot;,
+          &quot;sleeve/toploader&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;moderate&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2825,
+      &quot;cardId&quot;: 19951,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 92.15281400000003,
+        &quot;top10&quot;: [
+          19951,
+          531184,
+          18457,
+          337159,
+          19912,
+          19957,
+          19958,
+          17929,
+          16507,
+          188952
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 120.99099399999977,
+        &quot;top10&quot;: [
+          19951,
+          531184,
+          18457,
+          337159,
+          19912,
+          19957,
+          19958,
+          17929,
+          16507,
+          188952
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2825,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;glare&quot;,
+          &quot;sleeve/toploader&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;moderate&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2826,
+      &quot;cardId&quot;: 19954,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 82.99521900000036,
+        &quot;top10&quot;: [
+          19954,
+          19935,
+          20618,
+          527537,
+          16496,
+          336695,
+          18805,
+          22434,
+          20610,
+          21396
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 86.27073699999983,
+        &quot;top10&quot;: [
+          19954,
+          19935,
+          20618,
+          527537,
+          16496,
+          336695,
+          18805,
+          22434,
+          20610,
+          21396
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2826,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;sleeve/toploader&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;moderate&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2835,
+      &quot;cardId&quot;: 19268,
+      &quot;accepted&quot;: true,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 79.22040099999958,
+        &quot;top10&quot;: [
+          19268,
+          242400,
+          208128,
+          21098,
+          22486,
+          185150,
+          17465,
+          17199,
+          88660,
+          250807
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 80.0513549999996,
+        &quot;top10&quot;: [
+          19268,
+          22486,
+          208128,
+          22497,
+          250807,
+          22362,
+          242400,
+          19271,
+          88660,
+          22467
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2835,
+        &quot;accepted&quot;: true,
+        &quot;fullCard&quot;: true,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;approximate&quot;,
+        &quot;strata&quot;: [
+          &quot;clean/simple&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;easy&quot;,
+        &quot;notes&quot;: &quot;Complete physical card retained; corners slightly outside top/left boundary retain a narrow surround. No visible artwork/text cutoff; approximate, not tight pixel-accurate corners.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2836,
+      &quot;cardId&quot;: 19265,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 77.90004799999952,
+        &quot;top10&quot;: [
+          19265,
+          22497,
+          88660,
+          190056,
+          189876,
+          85547,
+          189796,
+          16943,
+          526919,
+          86455
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 88.27007200000025,
+        &quot;top10&quot;: [
+          19265,
+          22497,
+          88660,
+          190056,
+          189876,
+          85547,
+          189796,
+          16943,
+          526919,
+          86455
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2836,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;sleeve/toploader&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;moderate&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2838,
+      &quot;cardId&quot;: 19271,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 80.19602500000019,
+        &quot;top10&quot;: [
+          19271,
+          16634,
+          17223,
+          22491,
+          521240,
+          27668,
+          22469,
+          19599,
+          22397,
+          193707
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 89.24495699999989,
+        &quot;top10&quot;: [
+          19271,
+          16634,
+          17223,
+          22491,
+          521240,
+          27668,
+          22469,
+          19599,
+          22397,
+          193707
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2838,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;sleeve/toploader&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;moderate&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2866,
+      &quot;cardId&quot;: 17759,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 4,
+        &quot;ms&quot;: 91.48576299999968,
+        &quot;top10&quot;: [
+          336748,
+          66037,
+          65565,
+          17759,
+          66079,
+          60827,
+          336622,
+          343593,
+          17515,
+          337251
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 4,
+        &quot;ms&quot;: 92.84892599999966,
+        &quot;top10&quot;: [
+          336748,
+          66037,
+          65565,
+          17759,
+          66079,
+          60827,
+          336622,
+          343593,
+          17515,
+          337251
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2866,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;background/hand&quot;,
+          &quot;rotation/perspective&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;difficult&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2869,
+      &quot;cardId&quot;: 17768,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 84.91662199999973,
+        &quot;top10&quot;: [
+          17768,
+          60827,
+          19919,
+          183697,
+          196852,
+          18370,
+          334339,
+          65403,
+          17759,
+          17754
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 101.71165199999996,
+        &quot;top10&quot;: [
+          17768,
+          60827,
+          19919,
+          183697,
+          196852,
+          18370,
+          334339,
+          65403,
+          17759,
+          17754
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2869,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;background/hand&quot;,
+          &quot;rotation/perspective&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;difficult&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2871,
+      &quot;cardId&quot;: 17763,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 88.47609899999952,
+        &quot;top10&quot;: [
+          17763,
+          337649,
+          183899,
+          337644,
+          337645,
+          337646,
+          18537,
+          18582,
+          334339,
+          84790
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 93.14996799999972,
+        &quot;top10&quot;: [
+          17763,
+          337649,
+          183899,
+          337644,
+          337645,
+          337646,
+          18537,
+          18582,
+          334339,
+          84790
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2871,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;background/hand&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;difficult&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2899,
+      &quot;cardId&quot;: 19943,
+      &quot;accepted&quot;: true,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 5,
+        &quot;ms&quot;: 84.59889500000008,
+        &quot;top10&quot;: [
+          19958,
+          65403,
+          17750,
+          19935,
+          19943,
+          18323,
+          522039,
+          17839,
+          198972,
+          336621
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 78.83696299999974,
+        &quot;top10&quot;: [
+          19943,
+          17839,
+          17750,
+          19958,
+          19935,
+          26436,
+          522039,
+          108939,
+          337662,
+          22799
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2899,
+        &quot;accepted&quot;: true,
+        &quot;fullCard&quot;: true,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;approximate&quot;,
+        &quot;strata&quot;: [
+          &quot;glare&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;moderate&quot;,
+        &quot;notes&quot;: &quot;Physical card isolated with complete figure and both bottom labels; tight approximate edge fit. Glare remains in the crop; no significant visible content loss.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2900,
+      &quot;cardId&quot;: 19944,
+      &quot;accepted&quot;: true,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 88.7725389999996,
+        &quot;top10&quot;: [
+          19944,
+          19913,
+          19896,
+          18008,
+          185405,
+          184967,
+          185057,
+          19950,
+          22647,
+          184963
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 114.5707339999999,
+        &quot;top10&quot;: [
+          19944,
+          19913,
+          178603,
+          337631,
+          20414,
+          20604,
+          527566,
+          19950,
+          18618,
+          184963
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2900,
+        &quot;accepted&quot;: true,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: true,
+        &quot;cornerQuality&quot;: &quot;poor&quot;,
+        &quot;strata&quot;: [
+          &quot;glare&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;moderate&quot;,
+        &quot;notes&quot;: &quot;Correct physical card, but top-right boundary crosses slightly inside the actual edge and trims a thin artwork band. Conservatively counted as a cutoff and excluded from strict full-card success; not a wrong-object detection.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2901,
+      &quot;cardId&quot;: 19945,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 84.69968699999936,
+        &quot;top10&quot;: [
+          19945,
+          20613,
+          19795,
+          242400,
+          20604,
+          22492,
+          526567,
+          108939,
+          183908,
+          26436
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 86.94139400000131,
+        &quot;top10&quot;: [
+          19945,
+          20613,
+          19795,
+          242400,
+          20604,
+          22492,
+          526567,
+          108939,
+          183908,
+          26436
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2901,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;clean/simple&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;easy&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2902,
+      &quot;cardId&quot;: 19946,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 79.44181200000094,
+        &quot;top10&quot;: [
+          19946,
+          19912,
+          108939,
+          16507,
+          20554,
+          18009,
+          525831,
+          184644,
+          20604,
+          22262
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 78.55346099999952,
+        &quot;top10&quot;: [
+          19946,
+          19912,
+          108939,
+          16507,
+          20554,
+          18009,
+          525831,
+          184644,
+          20604,
+          22262
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2902,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;glare&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;moderate&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2903,
+      &quot;cardId&quot;: 19947,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 96.26072999999997,
+        &quot;top10&quot;: [
+          19947,
+          19908,
+          84108,
+          22262,
+          528706,
+          19599,
+          180328,
+          18991,
+          11416,
+          186407
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 88.02527499999997,
+        &quot;top10&quot;: [
+          19947,
+          19908,
+          84108,
+          22262,
+          528706,
+          19599,
+          180328,
+          18991,
+          11416,
+          186407
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2903,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;glare&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;moderate&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2906,
+      &quot;cardId&quot;: 19950,
+      &quot;accepted&quot;: true,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 93.0437550000006,
+        &quot;top10&quot;: [
+          19950,
+          17515,
+          336735,
+          17455,
+          19958,
+          336670,
+          17750,
+          337662,
+          188792,
+          39058
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 112.26303800000096,
+        &quot;top10&quot;: [
+          19950,
+          17759,
+          24318,
+          65403,
+          185412,
+          19149,
+          198274,
+          250807,
+          84790,
+          19958
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2906,
+        &quot;accepted&quot;: true,
+        &quot;fullCard&quot;: true,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;good&quot;,
+        &quot;strata&quot;: [
+          &quot;glare&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;moderate&quot;,
+        &quot;notes&quot;: &quot;Corners track outer card boundary and preserve top logo, artwork and bottom labels. No visible content cutoff.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2909,
+      &quot;cardId&quot;: 19957,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 78.2098960000003,
+        &quot;top10&quot;: [
+          19957,
+          336670,
+          19919,
+          184978,
+          185068,
+          58975,
+          16507,
+          253712,
+          16947,
+          19807
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 89.04299899999933,
+        &quot;top10&quot;: [
+          19957,
+          336670,
+          19919,
+          184978,
+          185068,
+          58975,
+          16507,
+          253712,
+          16947,
+          19807
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2909,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;glare&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;moderate&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2910,
+      &quot;cardId&quot;: 19959,
+      &quot;accepted&quot;: true,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 83.8055570000015,
+        &quot;top10&quot;: [
+          19959,
+          336670,
+          521927,
+          527566,
+          16947,
+          22799,
+          336723,
+          20521,
+          19055,
+          16507
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 88.37692600000082,
+        &quot;top10&quot;: [
+          19959,
+          527566,
+          20521,
+          249534,
+          19055,
+          336670,
+          16605,
+          22714,
+          184978,
+          185068
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2910,
+        &quot;accepted&quot;: true,
+        &quot;fullCard&quot;: true,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;good&quot;,
+        &quot;strata&quot;: [
+          &quot;glare&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;moderate&quot;,
+        &quot;notes&quot;: &quot;Corners track physical card; title and artist label retained. Glare remains; no meaningful visible artwork/text cutoff.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2939,
+      &quot;cardId&quot;: 533958,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: null,
+        &quot;ms&quot;: 90.92356199999995,
+        &quot;top10&quot;: [
+          17750,
+          17419,
+          18323,
+          19909,
+          16624,
+          66431,
+          198972,
+          22362,
+          45590,
+          317752
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: null,
+        &quot;ms&quot;: 88.31704100000024,
+        &quot;top10&quot;: [
+          17750,
+          17419,
+          18323,
+          19909,
+          16624,
+          66431,
+          198972,
+          22362,
+          45590,
+          317752
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2939,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;sleeve/toploader&quot;
+        ],
+        &quot;positiveReverified&quot;: false,
+        &quot;difficulty&quot;: &quot;moderate&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2950,
+      &quot;cardId&quot;: 15844,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 79.8002319999996,
+        &quot;top10&quot;: [
+          15844,
+          78791,
+          78657,
+          337635,
+          24156,
+          19341,
+          531522,
+          17510,
+          65565,
+          342793
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 91.11630499999956,
+        &quot;top10&quot;: [
+          15844,
+          78791,
+          78657,
+          337635,
+          24156,
+          19341,
+          531522,
+          17510,
+          65565,
+          342793
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2950,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;sleeve/toploader&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;difficult&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2965,
+      &quot;cardId&quot;: 17215,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 76.38249200000064,
+        &quot;top10&quot;: [
+          17215,
+          16636,
+          15868,
+          185181,
+          21399,
+          18257,
+          22402,
+          17998,
+          184440,
+          184461
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 76.54890200000045,
+        &quot;top10&quot;: [
+          17215,
+          16636,
+          15868,
+          185181,
+          21399,
+          18257,
+          22402,
+          17998,
+          184440,
+          184461
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2965,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;glare&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;moderate&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2969,
+      &quot;cardId&quot;: 19820,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 85.9182839999994,
+        &quot;top10&quot;: [
+          19820,
+          336668,
+          19962,
+          22426,
+          22498,
+          16634,
+          190537,
+          337605,
+          317468,
+          20620
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 86.53641400000015,
+        &quot;top10&quot;: [
+          19820,
+          336668,
+          19962,
+          22426,
+          22498,
+          16634,
+          190537,
+          337605,
+          317468,
+          20620
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2969,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;glare&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;moderate&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2981,
+      &quot;cardId&quot;: 20281,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 39,
+        &quot;ms&quot;: 77.66440200000034,
+        &quot;top10&quot;: [
+          336622,
+          530528,
+          22497,
+          337587,
+          20620,
+          336621,
+          17512,
+          521998,
+          88660,
+          521995
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 39,
+        &quot;ms&quot;: 95.17541599999822,
+        &quot;top10&quot;: [
+          336622,
+          530528,
+          22497,
+          337587,
+          20620,
+          336621,
+          17512,
+          521998,
+          88660,
+          521995
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2981,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;background/hand&quot;,
+          &quot;rotation/perspective&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;difficult&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2983,
+      &quot;cardId&quot;: 20279,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 2,
+        &quot;ms&quot;: 76.88691900000049,
+        &quot;top10&quot;: [
+          530526,
+          20279,
+          189876,
+          337312,
+          337313,
+          337314,
+          337315,
+          337316,
+          337317,
+          337318
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 2,
+        &quot;ms&quot;: 73.32978100000037,
+        &quot;top10&quot;: [
+          530526,
+          20279,
+          189876,
+          337312,
+          337313,
+          337314,
+          337315,
+          337316,
+          337317,
+          337318
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2983,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;background/hand&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;difficult&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 2984,
+      &quot;cardId&quot;: 20280,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 3,
+        &quot;ms&quot;: 83.46496699999989,
+        &quot;top10&quot;: [
+          530527,
+          530528,
+          20280,
+          88660,
+          20281,
+          67072,
+          336618,
+          185219,
+          22497,
+          11346
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 3,
+        &quot;ms&quot;: 74.63295100000141,
+        &quot;top10&quot;: [
+          530527,
+          530528,
+          20280,
+          88660,
+          20281,
+          67072,
+          336618,
+          185219,
+          22497,
+          11346
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 2984,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;background/hand&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;difficult&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 3012,
+      &quot;cardId&quot;: 19270,
+      &quot;accepted&quot;: true,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 85.7961209999994,
+        &quot;top10&quot;: [
+          19270,
+          26436,
+          15845,
+          16642,
+          185009,
+          185099,
+          88549,
+          526902,
+          525551,
+          184989
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 4,
+        &quot;ms&quot;: 116.92797999999857,
+        &quot;top10&quot;: [
+          185009,
+          185099,
+          88549,
+          19270,
+          26436,
+          185150,
+          18575,
+          16642,
+          526902,
+          22873
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 3012,
+        &quot;accepted&quot;: true,
+        &quot;fullCard&quot;: true,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;good&quot;,
+        &quot;strata&quot;: [
+          &quot;clean/simple&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;easy&quot;,
+        &quot;notes&quot;: &quot;Outer card rectangle retained including logo and bottom labels; right artwork/name reaches original card edge and is not newly clipped. No visible content cutoff.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 3014,
+      &quot;cardId&quot;: 15590,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 90.11085699999967,
+        &quot;top10&quot;: [
+          15590,
+          533562,
+          12759,
+          77971,
+          12399,
+          30078,
+          531509,
+          528691,
+          337250,
+          528130
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 84.7505540000002,
+        &quot;top10&quot;: [
+          15590,
+          533562,
+          12759,
+          77971,
+          12399,
+          30078,
+          531509,
+          528691,
+          337250,
+          528130
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 3014,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;binder/neighbors&quot;,
+          &quot;sleeve/toploader&quot;,
+          &quot;rotation/perspective&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;difficult&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 3056,
+      &quot;cardId&quot;: 16844,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 401,
+        &quot;ms&quot;: 87.48079099999995,
+        &quot;top10&quot;: [
+          17140,
+          337252,
+          337251,
+          337254,
+          19341,
+          15423,
+          69671,
+          17510,
+          17515,
+          15457
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 401,
+        &quot;ms&quot;: 85.7994120000003,
+        &quot;top10&quot;: [
+          17140,
+          337252,
+          337251,
+          337254,
+          19341,
+          15423,
+          69671,
+          17510,
+          17515,
+          15457
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 3056,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;glare&quot;,
+          &quot;binder/neighbors&quot;,
+          &quot;sleeve/toploader&quot;,
+          &quot;rotation/perspective&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;difficult&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 3078,
+      &quot;cardId&quot;: 15845,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 98.42395000000033,
+        &quot;top10&quot;: [
+          15845,
+          521240,
+          60827,
+          337251,
+          337254,
+          60849,
+          19341,
+          195145,
+          69671,
+          17510
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 101.45021600000109,
+        &quot;top10&quot;: [
+          15845,
+          521240,
+          60827,
+          337251,
+          337254,
+          60849,
+          19341,
+          195145,
+          69671,
+          17510
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 3078,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;binder/neighbors&quot;,
+          &quot;sleeve/toploader&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;difficult&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 3086,
+      &quot;cardId&quot;: 20327,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 498,
+        &quot;ms&quot;: 81.42424900000151,
+        &quot;top10&quot;: [
+          37729,
+          337635,
+          528691,
+          12759,
+          60849,
+          337231,
+          343042,
+          19341,
+          337675,
+          337678
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 498,
+        &quot;ms&quot;: 84.96723400000155,
+        &quot;top10&quot;: [
+          37729,
+          337635,
+          528691,
+          12759,
+          60849,
+          337231,
+          343042,
+          19341,
+          337675,
+          337678
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 3086,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;glare&quot;,
+          &quot;binder/neighbors&quot;,
+          &quot;sleeve/toploader&quot;,
+          &quot;rotation/perspective&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;difficult&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 3087,
+      &quot;cardId&quot;: 20329,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 3,
+        &quot;ms&quot;: 93.7265669999997,
+        &quot;top10&quot;: [
+          331472,
+          530581,
+          20329,
+          39058,
+          343593,
+          193627,
+          66037,
+          35319,
+          188248,
+          65292
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 3,
+        &quot;ms&quot;: 79.88596599999983,
+        &quot;top10&quot;: [
+          331472,
+          530581,
+          20329,
+          39058,
+          343593,
+          193627,
+          66037,
+          35319,
+          188248,
+          65292
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 3087,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;binder/neighbors&quot;,
+          &quot;sleeve/toploader&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;difficult&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 3090,
+      &quot;cardId&quot;: 20330,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 147,
+        &quot;ms&quot;: 77.04837300000145,
+        &quot;top10&quot;: [
+          59900,
+          12759,
+          58663,
+          12399,
+          18684,
+          58890,
+          331472,
+          333742,
+          528691,
+          58975
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 147,
+        &quot;ms&quot;: 90.85285899999872,
+        &quot;top10&quot;: [
+          59900,
+          12759,
+          58663,
+          12399,
+          18684,
+          58890,
+          331472,
+          333742,
+          528691,
+          58975
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 3090,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;glare&quot;,
+          &quot;binder/neighbors&quot;,
+          &quot;sleeve/toploader&quot;,
+          &quot;rotation/perspective&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;difficult&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 3097,
+      &quot;cardId&quot;: 15626,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 86.28723999999966,
+        &quot;top10&quot;: [
+          15626,
+          65076,
+          548363,
+          528691,
+          548384,
+          17510,
+          15367,
+          531714,
+          332772,
+          67357
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 111.62459600000147,
+        &quot;top10&quot;: [
+          15626,
+          65076,
+          548363,
+          528691,
+          548384,
+          17510,
+          15367,
+          531714,
+          332772,
+          67357
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 3097,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;binder/neighbors&quot;,
+          &quot;sleeve/toploader&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;moderate&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 3098,
+      &quot;cardId&quot;: 15647,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 8,
+        &quot;ms&quot;: 89.85756399999991,
+        &quot;top10&quot;: [
+          337252,
+          61894,
+          60827,
+          527881,
+          15836,
+          528691,
+          15418,
+          15647,
+          531714,
+          15457
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 8,
+        &quot;ms&quot;: 80.03301400000055,
+        &quot;top10&quot;: [
+          337252,
+          61894,
+          60827,
+          527881,
+          15836,
+          528691,
+          15418,
+          15647,
+          531714,
+          15457
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 3098,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;binder/neighbors&quot;,
+          &quot;sleeve/toploader&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;difficult&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 3100,
+      &quot;cardId&quot;: 15634,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 80.8310390000006,
+        &quot;top10&quot;: [
+          15634,
+          15400,
+          18006,
+          17402,
+          18004,
+          15847,
+          530884,
+          17823,
+          250432,
+          183698
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 89.16879900000094,
+        &quot;top10&quot;: [
+          15634,
+          15400,
+          18006,
+          17402,
+          18004,
+          15847,
+          530884,
+          17823,
+          250432,
+          183698
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 3100,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;binder/neighbors&quot;,
+          &quot;sleeve/toploader&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;moderate&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 3104,
+      &quot;cardId&quot;: 15623,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 113.29367999999886,
+        &quot;top10&quot;: [
+          15623,
+          17515,
+          15517,
+          17750,
+          61894,
+          348694,
+          348741,
+          348770,
+          19910,
+          87852
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 88.66120500000034,
+        &quot;top10&quot;: [
+          15623,
+          17515,
+          15517,
+          17750,
+          61894,
+          348694,
+          348741,
+          348770,
+          19910,
+          87852
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 3104,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;binder/neighbors&quot;,
+          &quot;sleeve/toploader&quot;,
+          &quot;rotation/perspective&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;moderate&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 3108,
+      &quot;cardId&quot;: 15640,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 87.51585100000011,
+        &quot;top10&quot;: [
+          15640,
+          337252,
+          196854,
+          69671,
+          15517,
+          185412,
+          15424,
+          15422,
+          15457,
+          61894
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 1,
+        &quot;ms&quot;: 79.83073800000057,
+        &quot;top10&quot;: [
+          15640,
+          337252,
+          196854,
+          69671,
+          15517,
+          185412,
+          15424,
+          15422,
+          15457,
+          61894
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 3108,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;binder/neighbors&quot;,
+          &quot;sleeve/toploader&quot;,
+          &quot;rotation/perspective&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;difficult&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 3169,
+      &quot;cardId&quot;: 16868,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 144,
+        &quot;ms&quot;: 79.63455599999907,
+        &quot;top10&quot;: [
+          521998,
+          521240,
+          15847,
+          533624,
+          17465,
+          18636,
+          337644,
+          337645,
+          337646,
+          60827
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 144,
+        &quot;ms&quot;: 83.09348899999895,
+        &quot;top10&quot;: [
+          521998,
+          521240,
+          15847,
+          533624,
+          17465,
+          18636,
+          337644,
+          337645,
+          337646,
+          60827
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 3169,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;background/hand&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;difficult&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    },
+    {
+      &quot;scanId&quot;: 3173,
+      &quot;cardId&quot;: 18232,
+      &quot;accepted&quot;: false,
+      &quot;raw&quot;: {
+        &quot;rank&quot;: 26,
+        &quot;ms&quot;: 78.79136800000015,
+        &quot;top10&quot;: [
+          17510,
+          336619,
+          20430,
+          548384,
+          58663,
+          19912,
+          17419,
+          16659,
+          17189,
+          18056
+        ]
+      },
+      &quot;isolated&quot;: {
+        &quot;rank&quot;: 26,
+        &quot;ms&quot;: 77.7126989999997,
+        &quot;top10&quot;: [
+          17510,
+          336619,
+          20430,
+          548384,
+          58663,
+          19912,
+          17419,
+          16659,
+          17189,
+          18056
+        ]
+      },
+      &quot;qa&quot;: {
+        &quot;scanId&quot;: 3173,
+        &quot;accepted&quot;: false,
+        &quot;fullCard&quot;: false,
+        &quot;falseDetection&quot;: false,
+        &quot;cutoff&quot;: false,
+        &quot;cornerQuality&quot;: &quot;not-emitted&quot;,
+        &quot;strata&quot;: [
+          &quot;glare&quot;,
+          &quot;binder/neighbors&quot;,
+          &quot;sleeve/toploader&quot;
+        ],
+        &quot;positiveReverified&quot;: true,
+        &quot;difficulty&quot;: &quot;difficult&quot;,
+        &quot;notes&quot;: &quot;Explicit abstention: no crop or physical-card corners emitted. Original front reviewed; no emitted detection to score for clipping.&quot;
+      }
+    }
+  ],
+  &quot;integrity&quot;: {
+    &quot;baselineUnchanged&quot;: 735,
+    &quot;dinoUnchanged&quot;: true,
+    &quot;model&quot;: &quot;dinov2-small:c2bb04a51fab207c420665f1946016107bffc701:q8:cls:rgb-fit224-v1&quot;,
+    &quot;modelHash&quot;: &quot;6bf550efefa26d4b85cb25c5a4fda7a9488a5ca2bfc6afe59b7b83fa052bce2a&quot;,
+    &quot;reranker&quot;: false,
+    &quot;tuning&quot;: false,
+    &quot;published&quot;: false,
+    &quot;catalogWrites&quot;: false
+  },
+  &quot;conclusion&quot;: &quot;No demonstrated material recognition improvement: one crop fixes an exact top1 miss, one previously correct result regresses, and most photographs abstain. Learned segmentation yields some usable physical-card crops but this frozen acceptance policy still fails on all reviewed hand/clutter and binder cases. Do not infer readiness from the small emitted-crop subgroup.&quot;,
+  &quot;limitations&quot;: [
+    &quot;Convenience sample with repeated card families, not population accuracy.&quot;,
+    &quot;Reviewer detection judgments are approximate and unblinded to appearance, but recorded before recognition.&quot;,
+    &quot;Catalog duplicate evidence suggests redundant entries, not authority to merge records.&quot;,
+    &quot;All accepted bad crops retained in primary emitted-crop comparison.&quot;
+  ],
+  &quot;cleanup&quot;: {
+    &quot;status&quot;: &quot;verified-deleted&quot;,
+    &quot;removedFiles&quot;: 203,
+    &quot;removedBytes&quot;: 119131498,
+    &quot;privateWorkspaceExists&quot;: false
+  }
+}</pre></details></html>

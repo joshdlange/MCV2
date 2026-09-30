@@ -8,3 +8,5 @@ vite.config.ts.*
 .pythonlibs/
 __pycache__/
 *.py[cod]
+.local/strong-card-model/
+.local/strong-card-detector-tests/
