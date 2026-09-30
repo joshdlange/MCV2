@@ -1,12 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {NEXT_EVALUATION_POLICY, assertNextEvaluationPolicy} from './dev-dino-next-evaluation.mjs';
+import {NEXT_EVALUATION_POLICY, assertNextEvaluationPolicy, assertAuthorizedFailureAudit} from './dev-dino-next-evaluation.mjs';
 
 test('next evaluation defaults are immutable, raw DINO and local only', () => {
   assert(Object.isFrozen(NEXT_EVALUATION_POLICY));
   assert.equal(assertNextEvaluationPolicy().baseline, 'canonical-single-image-dino');
   assert.equal(assertNextEvaluationPolicy().reranker, false);
   assert.equal(assertNextEvaluationPolicy().optionalGuidedCrop, false);
+});
+
+test('explicit twelve-scan exception is exact and never enables reranking or guided crops', () => {
+  const ids=[3173,3169,3090,3086,3056,2981,3098,3087,2984,2983,2899,2866];
+  const policy=assertAuthorizedFailureAudit(ids);
+  assert.equal(policy.reranker,false);
+  assert.equal(policy.optionalGuidedCrop,false);
+  assert.equal(policy.independentPhotoOnlyDetector,true);
+  assert.throws(()=>assertAuthorizedFailureAudit([...ids,1]));
+  assert.throws(()=>assertAuthorizedFailureAudit(ids.slice(1)));
 });
 
 test('reject all prohibited experiment overrides and unknown options', () => {

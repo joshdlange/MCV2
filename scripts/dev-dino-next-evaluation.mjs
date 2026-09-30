@@ -25,6 +25,20 @@ export function assertNextEvaluationPolicy(request = {}) {
   return NEXT_EVALUATION_POLICY;
 }
 
+// One explicit execution authorization, not a standing permission to query scans.
+export function assertAuthorizedFailureAudit(scanIds) {
+  const authorized = [3173,3169,3090,3086,3056,2981,3098,3087,2984,2983,2899,2866].sort((a,b)=>a-b);
+  assert.deepEqual([...scanIds].sort((a,b)=>a-b), authorized,
+    'This authorization is restricted to exactly the twelve specified scan IDs');
+  return Object.freeze({...NEXT_EVALUATION_POLICY,
+    input: 'explicit-twelve-scan-read-only-authorization',
+    productionAccess: 'SELECT scan ID, original image URL, confirmed card ID only',
+    network: 'these twelve originals and bounded catalog references only',
+    independentPhotoOnlyDetector: true,
+    deleteOwnedTemporaryEvidence: true,
+  });
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   assert(process.argv.slice(2).every(arg => arg === '--check'),
     'This policy-only entry point accepts --check; historical reranker/crop harness execution is not authorized.');

@@ -240,3 +240,17 @@ mtime_ms = 1790792532924
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/26453dff-2095-46b0-85bb-43ffc00a00ce/672d6fee-48b5-4c3a-ad3d-8655dc7105ef"
 storage_version_token = "1790792587649170"
 content_type = "text/html"
+
+[[outputs]]
+id = "tv9PEKikIe3QqzWLTWvAM"
+uri = "file://attached_assets/dev-failure12-executed-report.html"
+type = "html"
+title = "Executed 12-photo audit and independent detector test"
+description = "Actual visual failure attributions, per-scan observations, DINO-only comparison, detector abstentions, latency, and verified cleanup. No photographs or image URLs retained."
+logical_id = "fad8dfbe-ef20-4924-83e6-beb95729606a"
+content_hash = "sha256:cbff2d2d8b430b22f0a88f75467e2df48ce857b7ce1ae1e83dc5671bbd6565b5"
+size = 34631
+mtime_ms = 1790801797406
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/fad8dfbe-ef20-4924-83e6-beb95729606a/1b2d4eb8-b697-4a1e-8add-3e70dd4c8800"
+storage_version_token = "1790801967558909"
+content_type = "text/html"

@@ -1,0 +1,155 @@
+Yes. Proceed now.
+
+You have correctly identified that the current evidence is insufficient to classify the 12 DINO misses, and that the prior crop implementation was not a true independent card detector.
+
+Now do the actual work.
+
+MUST DO
+
+1. READ-ONLY FAILURE AUDIT
+
+You are authorized to access production READ-ONLY for these 12 scan IDs only:
+
+3173
+3169
+3090
+3086
+3056
+2981
+3098
+3087
+2984
+2983
+2899
+2866
+
+Retrieve only:
+- original scan image
+- scan ID
+- confirmed card ID
+
+Do not retrieve account or personal information.
+
+For each case, compare:
+- query photo
+- correct catalog reference
+- DINO Top-1 result
+- relevant nearby candidates
+
+Assign the primary visual failure cause based on actual evidence:
+- similar artwork
+- parallel / variant ambiguity
+- glare / lighting
+- perspective / rotation
+- card too small in frame
+- hand / background / obstruction
+- wrong or poor catalog reference
+- genuinely poor visual retrieval
+- other
+- cannot determine
+
+Do not infer from rank alone.
+
+2. BUILD THE REAL INDEPENDENT CARD DETECTOR
+
+Implement a DEVELOPMENT-ONLY detector with this contract:
+
+INPUT:
+one user photograph
+
+OUTPUT:
+either
+- four physical trading-card corners
+or
+- explicit abstention
+
+It must NOT depend on:
+- DINO results
+- catalog references
+- known card identity
+- approved reference boundaries
+- OCR
+- metadata
+
+The detector must operate on the user photo alone.
+
+Desired flow:
+
+photo
+→ detect physical card rectangle
+→ perspective correct
+→ rotate safely
+→ preserve natural card proportions
+→ create clean card-only image
+→ pad/normalize for DINO without stretching
+
+Important:
+Standard trading cards are approximately 2.5 x 3.5 inches, roughly 5:7. Do not geometrically force the artwork into 2:3. Preserve the detected card aspect and use padding/resizing for model input.
+
+3. TEST IT ON REAL PHOTOS
+
+Use the 12 authorized failure photos plus additional already-authorized development examples if available.
+
+Measure:
+- successful full-card detections
+- abstentions
+- false detections
+- crops that cut off card content
+- latency
+
+Then compare DINO-only recognition:
+
+A. raw photo
+B. independently detected/rectified card image
+
+DINO must remain unchanged.
+
+Do not use the reranker.
+
+4. CLEAN UP
+
+After testing:
+- delete temporary production image copies
+- verify deletion
+- retain only non-personal aggregate results
+
+MUST NOT DO
+
+- Do not publish.
+- Do not modify production.
+- Do not change DINO.
+- Do not use the reranker.
+- Do not resume full indexing.
+- Do not ask me to manually label more scans.
+- Do not return another planning document instead of results.
+
+PRESERVE
+
+- current DINO baseline
+- historical experiment files
+- existing labels
+- existing catalog
+- permanent index
+- production behavior
+
+FINAL RESPONSE
+
+Keep it concise and give me:
+
+1. Failure-cause count across the 12 misses.
+2. Per-scan cause summary.
+3. Independent detector success rate.
+4. Abstention rate.
+5. False-detection rate.
+6. Any crops that cut off content.
+7. Raw DINO Top-1 / Top-3 / Top-10 on the tested sample.
+8. Card-isolated DINO Top-1 / Top-3 / Top-10.
+9. Average detector latency.
+10. Whether card isolation materially improves DINO.
+11. Whether the remaining failures look like input-quality problems or model-retrieval problems.
+12. Confirm DINO was unchanged.
+13. Confirm production access was read-only.
+14. Confirm temporary production images were deleted.
+15. Confirm nothing was published.
+
+Do the work before responding.
