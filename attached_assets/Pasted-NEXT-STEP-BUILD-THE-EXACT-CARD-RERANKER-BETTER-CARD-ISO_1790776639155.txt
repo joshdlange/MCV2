@@ -1,0 +1,316 @@
+NEXT STEP: BUILD THE EXACT-CARD RERANKER + BETTER CARD ISOLATION
+
+The coverage-controlled DINO test was successful enough to continue.
+
+Measured result:
+- 9 verified reference cases
+- hard-negative test:
+  - Top-1: 5/9
+  - Top-3: 7/9
+  - Top-10: 8/9
+- biggest failure pattern: same-art / parallel variants
+- warm DINO embedding approximately 76 ms
+- search approximately 1 ms
+
+Conclusion:
+DINO should be treated as STAGE 1 candidate retrieval, NOT the final exact-card decision maker.
+
+Do not try to force DINO alone to solve parallels.
+
+Goal:
+Build a two-stage recognition pipeline:
+
+STAGE 1:
+DINO retrieves the best 10–20 visual candidates.
+
+STAGE 2:
+A more detail-sensitive reranker chooses among those candidates using exact-card evidence.
+
+Also improve the input by isolating the actual trading-card rectangle and producing a clean approximately 2:3 card image.
+
+==================================================
+MUST DO
+==================================================
+
+1. PRESERVE DINO AS STAGE 1
+
+Do not change the DINO model yet.
+
+Use DINO to retrieve the Top 10–20 candidate cards.
+
+DINO should answer:
+
+“What cards visually resemble this scan?”
+
+It should NOT be solely responsible for:
+
+“Which exact parallel is this?”
+
+2. BUILD A DEVELOPMENT-ONLY STAGE 2 RERANKER
+
+For the DINO Top 10 candidates, compare the scanned card against each catalog reference using signals that are MORE sensitive to exact visual differences than DINO.
+
+Prioritize:
+
+- border color
+- foil/refractor/color treatment
+- background pattern
+- frame/layout
+- card-number location/content
+- set/logo markings
+- text placement
+- distinctive symbols/icons
+- local artwork/layout differences
+
+The reranker should specifically help distinguish cases like:
+
+- base vs holographic
+- Gold vs Rainbow vs Silver
+- same artwork / different parallel
+
+Do not use character identity alone.
+
+3. TEST SIMPLE VISUAL METHODS BEFORE ANOTHER EXPENSIVE AI CALL
+
+Evaluate lightweight exact-image comparison techniques where practical, such as:
+
+- local feature matching
+- edge/layout comparison
+- perceptual similarity
+- color histogram / color-region comparison
+- structural similarity after alignment
+- border-region comparison
+
+You may combine several signals into a reranking score.
+
+If a small computer-vision dependency is needed, use the smallest appropriate option.
+
+Do not add a large new ML model without evidence the lightweight approach is insufficient.
+
+4. METADATA MAY BE USED AS SOFT EVIDENCE IN STAGE 2
+
+After DINO has already retrieved candidates, OCR/vision metadata may help rerank them.
+
+Useful evidence includes:
+
+- card number
+- year
+- set
+- subset
+- printed parallel name
+- copyright/product markings
+
+Important:
+
+Metadata must NOT prevent the correct card from entering Stage 1.
+
+Bad OCR must not eliminate a visually correct candidate.
+
+Use metadata for:
+- corroboration
+- contradiction penalties
+- tie-breaking
+
+not initial retrieval.
+
+5. FIX THE CARD-ONLY IMAGE INPUT
+
+The previous geometry-only detector succeeded on only 1/16 real scans.
+
+That is not good enough.
+
+Build a better DEVELOPMENT-ONLY card-isolation step.
+
+Goal:
+
+photo
+→ identify actual card rectangle
+→ remove hand/table/background
+→ correct perspective
+→ rotate upright
+→ normalize to approximately 2:3
+→ preserve artwork proportions
+
+Do not stretch the card.
+
+6. IMPROVE RECTANGLE DETECTION
+
+The detector must be able to handle:
+
+- card held in hand
+- card on table
+- busy background
+- slight perspective
+- rotation
+- sleeve
+- top loader
+- partially hidden edges
+- glare
+
+Do not require all four edges to be perfectly obvious before considering a detection.
+
+Evaluate stronger but still reasonable document/card detection approaches.
+
+If the current Sharp/pure-JS geometry method is insufficient, you are authorized to evaluate a better computer-vision implementation.
+
+Do not silently accept a bad crop.
+
+7. MANUAL FALLBACK REMAINS
+
+If automatic detection is uncertain:
+
+- show/use the existing manual crop
+- never cut off card content silently
+- preserve the original image
+
+Automatic detection should make normal scans easier, not make failed scans worse.
+
+8. RUN A CONTROLLED TEST USING THE SAME VERIFIED CASES
+
+Use the same 9 verified cards from the successful coverage-controlled experiment.
+
+Do not change the labels.
+
+For each scan:
+
+A. DINO-only ranking
+B. DINO + exact-card reranker
+C. Clean card crop + DINO + exact-card reranker, where crop succeeds
+
+Measure:
+
+- Top-1
+- Top-3
+- Top-10
+- exact-parallel correctness
+- correct-card rank before reranking
+- correct-card rank after reranking
+
+The most important metric is:
+
+EXACT TOP-1 AFTER RERANKING.
+
+9. PAY SPECIAL ATTENTION TO THE KNOWN FAILURES
+
+Specifically evaluate:
+
+Black Widow:
+- correct base card vs holographic variant
+
+Random:
+- correct Gold vs Rainbow vs Silver
+
+Iceman:
+- why Onslaught narrowly beat the correct card
+
+Vulture 2099:
+- why correct card ranked 15th
+
+I want to know whether Stage 2 fixes these or whether the Stage 1 candidate pool itself needs improvement.
+
+10. KEEP SPEED PRACTICAL
+
+Target:
+
+Stage 1 DINO:
+approximately current warm performance
+
+Stage 2:
+preferably well under 1 second for Top 10 candidates
+
+Full visual recognition goal:
+useful result within approximately 1–3 seconds.
+
+Measure:
+- crop/isolation time
+- DINO time
+- reranker time
+- total time
+
+==================================================
+MUST NOT DO
+==================================================
+
+- Do not publish.
+- Do not touch production.
+- Do not run full 77k indexing yet.
+- Do not replace DINO.
+- Do not expand the admin review tool.
+- Do not ask me to manually label more scans.
+- Do not alter existing confirmed labels.
+- Do not overwrite Cloudinary images.
+- Do not automatically add cards to collections.
+- Do not remove explicit collector confirmation.
+- Do not make OCR the primary retrieval method.
+- Do not treat similarity score as probability.
+
+==================================================
+PRESERVE
+==================================================
+
+- existing DINO implementation
+- existing verified 9-case cohort
+- existing hard-negative dataset
+- existing catalog
+- existing Cloudinary originals
+- existing manual crop fallback
+- existing explicit confirmation
+- indexing paused
+- production untouched
+
+==================================================
+QA
+==================================================
+
+For the same verified cohort report:
+
+DINO ONLY:
+- Top-1
+- Top-3
+- Top-10
+
+DINO + RERANKER:
+- Top-1
+- Top-3
+- Top-10
+
+NORMALIZED + DINO + RERANKER:
+- Top-1
+- Top-3
+- Top-10
+
+Also report:
+
+- automatic card-isolation success rate
+- exact-parallel success rate
+- Black Widow outcome
+- Random Gold/Rainbow/Silver outcome
+- Iceman outcome
+- Vulture 2099 outcome
+- average total latency
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Keep the response concise.
+
+Tell me:
+
+1. Automatic card detection success rate.
+2. DINO-only Top-1.
+3. DINO + reranker Top-1.
+4. Normalized + DINO + reranker Top-1.
+5. Whether Black Widow’s correct parallel is now chosen.
+6. Whether Random’s Gold parallel is now chosen.
+7. Whether Iceman improved.
+8. Whether Vulture 2099 improved.
+9. Average end-to-end visual processing time.
+10. What signals were most useful for exact-parallel discrimination.
+11. Whether this two-stage approach is promising enough to continue.
+12. Confirm full indexing remains paused.
+13. Confirm production was untouched.
+
+Do the experiment before responding.
+
+Do not return another planning document instead of results.
