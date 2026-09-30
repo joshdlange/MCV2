@@ -1,0 +1,215 @@
+MARVEL CARD VAULT — FOCUSED LOCAL-MATCHING TEST
+
+We are pausing all cropping, segmentation, SAM, edge detection, and the previous reranker.
+
+The current frozen baseline is raw-photo DINOv2-small against the bounded ~3,045-card index:
+
+Physical-card Top-1: ~70%
+Physical-card Top-3: ~77.5%
+Physical-card Top-10: ~85%
+
+The question for this experiment is ONLY:
+
+Can local geometric image matching improve DINO’s candidate ranking when the correct card is already in DINO’s Top 10?
+
+Do not broaden this experiment beyond that question.
+
+==================================================
+MUST DO
+==================================================
+
+1. KEEP DINOv2-SMALL FROZEN
+
+Do not change:
+- model
+- embeddings
+- preprocessing
+- index
+- similarity calculation
+- candidate retrieval logic
+
+DINO remains Stage 1.
+
+Use the same frozen real-world evaluation cohort and the same bounded ~3,045-card index composition.
+
+2. ADD A DEVELOPMENT-ONLY LOCAL MATCHER
+
+Use:
+
+ALIKED + LightGlue
+
+Use official/reputable pretrained weights.
+
+Do not use SuperPoint.
+
+The purpose of Stage 2 is to compare the raw phone photo against each DINO Top-10 catalog reference using local visual correspondences.
+
+Conceptually:
+
+raw phone photo
+→ frozen DINO
+→ Top 10 candidates
+→ ALIKED local features
+→ LightGlue pair matching
+→ geometric verification
+→ rerank Top 10
+
+No cropping is required before matching.
+
+3. PRECOMPUTE REFERENCE FEATURES
+
+For every catalog reference in the bounded index, precompute ALIKED features where practical.
+
+For each query photo:
+- extract query ALIKED features once
+- reuse them against the 10 candidate references
+
+Do not repeatedly recompute query features per candidate.
+
+4. USE GEOMETRIC CONSISTENCY
+
+For each candidate, capture at least:
+
+- number of matched features
+- number of geometric inliers
+- inlier ratio
+- match confidence
+- reprojection error
+- spatial coverage of matches
+- homography validity / geometric consistency
+
+Use a robust estimator such as RANSAC or MAGSAC if supported by the implementation.
+
+Do not rank candidates based only on raw match count.
+
+5. BUILD A SIMPLE DEVELOPMENT-ONLY SCORE
+
+Create one fixed local-verification score from the geometric evidence.
+
+Do not tune the score individually for particular scans.
+
+Freeze the score before running the full frozen cohort.
+
+6. TEST ONLY DINO TOP 10
+
+Do not test Top 20 yet.
+
+For every frozen evaluation case:
+
+A. record DINO Top-10 candidates
+B. run ALIKED + LightGlue against those 10
+C. rerank only those 10
+D. compare final result to frozen DINO-only baseline
+
+7. SCORE DUPLICATE PHYSICAL CARDS CORRECTLY
+
+Known duplicate physical-card examples include:
+
+- Rogue #146 IDs 20279 / 530526
+- Scott/Jean #147 IDs 20280 / 530527
+
+Do not change the catalog.
+
+Report BOTH:
+
+A. exact database ID accuracy
+B. physical-card accuracy
+
+If two IDs clearly represent the same physical card, either may count as correct in the physical-card metric.
+
+8. REPORT FAILURE TYPES
+
+For every DINO Top-1 miss, classify the Stage-2 outcome:
+
+- LightGlue corrected it to #1
+- correct card was in Top 10 but LightGlue failed to promote it
+- LightGlue made an originally correct #1 worse
+- correct card was never in DINO Top 10
+- duplicate/equivalent ID
+- same-art / exact-variant ambiguity
+- insufficient usable local features
+- other
+
+This distinction is critical.
+
+9. MEASURE SPEED
+
+Report:
+
+- ALIKED query feature extraction time
+- average LightGlue pair-match time
+- total Top-10 local matching time
+- full warm pipeline time
+- cold start separately
+
+This must eventually be suitable for a fast user experience.
+
+Do not reject the architecture solely because Replit CPU is slower than production hardware, but report actual timing honestly.
+
+==================================================
+MUST NOT DO
+==================================================
+
+- Do not change DINO.
+- Do not test new global embedding models yet.
+- Do not use SAM.
+- Do not build another crop detector.
+- Do not use the previous reranker.
+- Do not use OCR.
+- Do not use year, set, card number, or metadata to filter candidates.
+- Do not expand to 10,000 or 77,000 cards.
+- Do not publish.
+- Do not modify production.
+- Do not alter labels.
+- Do not alter catalog records.
+- Do not manually hand-select candidate cards.
+- Do not return another planning document instead of running the experiment.
+
+==================================================
+SUCCESS CRITERIA
+==================================================
+
+This experiment is worth continuing only if ALIKED + LightGlue does BOTH:
+
+1. materially improves physical-card Top-1 accuracy
+AND
+2. does not significantly damage already-correct DINO results
+
+A useful signal would be:
+- correcting several of DINO’s existing Top-1 misses
+- while breaking very few or none of DINO’s correct Top-1 results
+
+If it does not do that, stop this architecture and report that clearly.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+After actually running the test, report:
+
+1. Number of frozen evaluation cases.
+2. DINO-only exact Top-1 / Top-3 / Top-10.
+3. DINO-only physical-card Top-1 / Top-3 / Top-10.
+4. DINO + ALIKED/LightGlue exact Top-1 / Top-3 / Top-10.
+5. DINO + ALIKED/LightGlue physical-card Top-1 / Top-3 / Top-10.
+6. Number of DINO Top-1 misses corrected by LightGlue.
+7. Number of previously correct DINO Top-1 results broken by LightGlue.
+8. Number of failures where correct card was not in DINO Top 10.
+9. Number of failures caused by same-art / duplicate / variant ambiguity.
+10. Number of cases with insufficient local features.
+11. ALIKED feature extraction time.
+12. Average LightGlue pair-match time.
+13. Total Top-10 Stage-2 time.
+14. Full warm pipeline latency.
+15. Whether this architecture materially improves the frozen DINO baseline.
+16. Evidence-based recommendation:
+   A. continue with DINO + LightGlue
+   B. local matching helps but needs refinement
+   C. stop this architecture
+
+Confirm:
+- DINO unchanged
+- production untouched
+- nothing published
+- no cropping/SAM used
+- no OCR/metadata used

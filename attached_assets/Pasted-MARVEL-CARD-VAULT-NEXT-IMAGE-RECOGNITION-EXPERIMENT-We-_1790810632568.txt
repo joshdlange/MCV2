@@ -1,0 +1,495 @@
+MARVEL CARD VAULT — NEXT IMAGE RECOGNITION EXPERIMENT
+
+We are stopping the current card-cropping/segmentation direction.
+
+Do NOT continue:
+- SAM
+- edge/quadrilateral cropping
+- reference-guided cropping
+- the existing reranker
+- hand-tuning the original nine cases
+
+The goal now is to test a more appropriate coarse-to-fine visual recognition architecture for identifying a physical trading card from a real phone photo.
+
+==================================================
+BACKGROUND / FROZEN BASELINE
+==================================================
+
+Current verified broader baseline:
+
+DINOv2-small, raw photo, approximately 3,045-card bounded index:
+
+Top-1:
+28/40 = 70.0%
+
+Top-3:
+31/40 = 77.5%
+
+Top-10:
+34/40 = 85.0%
+
+A prior 41-case run produced essentially the same ~70% Top-1 result.
+
+The existing reranker reduced accuracy.
+
+SAM ViT-B:
+- safe full-card isolation only about 12%
+- approximately 35 seconds/image on tested CPU
+- no overall recognition improvement
+- therefore it is not part of the next architecture
+
+Some apparent exact-ID failures have also been identified as duplicate physical-card records:
+- Rogue #146 IDs 20279 / 530526
+- Scott/Jean #147 IDs 20280 / 530527
+
+Do not change those catalog records during this experiment.
+
+==================================================
+CORE ARCHITECTURE TO TEST
+==================================================
+
+We are testing this architecture:
+
+RAW PHONE PHOTO
+        ↓
+GLOBAL VISUAL RETRIEVAL
+        ↓
+TOP 10–20 CANDIDATES
+        ↓
+LOCAL FEATURE / GEOMETRIC MATCHING
+        ↓
+FINAL VISUAL RANKING
+        ↓
+USER CONFIRMATION
+
+The important change:
+
+DO NOT require the card to be isolated before recognition.
+
+The local matcher should attempt to identify corresponding card artwork/details between the raw photograph and candidate catalog reference even when the query includes:
+
+- hands
+- table/background
+- binder pages
+- neighboring cards
+- sleeves
+- top loaders
+- rotation
+- perspective
+- moderate glare
+
+==================================================
+PHASE 0 — FREEZE THE TEST
+==================================================
+
+Before running new models:
+
+1. Freeze the existing 40 reference-covered real-world cases.
+
+2. Preserve:
+- raw photos
+- correct confirmed physical card
+- independent reference image
+- existing DINO-small results
+- current 3,045-card index composition
+
+3. Do not tune anything based on individual answers.
+
+4. Create an evaluation-only equivalence map for confirmed duplicate physical-card records.
+
+For scoring, report BOTH:
+
+A. EXACT DATABASE ID accuracy
+B. PHYSICAL CARD accuracy
+
+If two database rows represent the same physical card, matching either should count as correct for physical-card accuracy.
+
+Do NOT modify production catalog data.
+
+==================================================
+PHASE 1 — GLOBAL RETRIEVAL MODEL BAKE-OFF
+==================================================
+
+Test RAW PHOTOS ONLY.
+
+No cropping.
+No SAM.
+No reranker.
+No OCR.
+No metadata filtering.
+
+Benchmark these global visual representations:
+
+A. Existing frozen DINOv2-small
+This remains the control.
+
+B. DINOv2-base
+Use the comparable official pretrained representation.
+
+C. SigLIP 2 Base-sized image encoder
+Use a released pretrained image representation appropriate for image retrieval.
+
+Do NOT add additional large models unless one of these cannot practically run.
+
+Do not start with DINO-large or giant models.
+
+We want to know whether a moderate model change materially improves retrieval without destroying latency.
+
+For each model:
+
+- embed every catalog reference in the same bounded index
+- embed each query independently
+- cosine similarity / appropriate native similarity
+- no OCR
+- no text
+- no metadata filtering
+
+Report:
+
+EXACT ID:
+- Top-1
+- Top-3
+- Top-5
+- Top-10
+- Top-20
+
+PHYSICAL CARD:
+- Top-1
+- Top-3
+- Top-5
+- Top-10
+- Top-20
+
+Also report:
+- warm query embedding time
+- p95 embedding time
+- search time
+- embedding dimensionality
+- memory required for 3,045 references
+- projected embedding storage for approximately 77,000 references
+
+Do not choose a winner based only on Top-1.
+
+Candidate recall matters because Stage 2 can only recover cards that Stage 1 retrieves.
+
+==================================================
+PHASE 2 — LOCAL GEOMETRIC VERIFICATION
+==================================================
+
+After Phase 1, select the best practical global retrieval model based primarily on:
+
+1. physical-card Top-10/Top-20 recall
+2. exact Top-1
+3. latency
+4. practicality
+
+Then test LOCAL IMAGE MATCHING on its candidates.
+
+Use:
+
+ALIKED + LightGlue
+OR
+DISK + LightGlue
+
+Prefer the option that is easiest to deploy and commercially appropriate.
+
+Do NOT use SuperPoint unless you first verify its pretrained-weight license is appropriate for this commercial product.
+
+The goal of local matching is NOT semantic similarity.
+
+The goal is:
+
+“Does this photograph contain the same visual card/image structure as this catalog reference?”
+
+==================================================
+PRECOMPUTATION
+==================================================
+
+For catalog references:
+
+Precompute local features where technically possible.
+
+Do not repeatedly extract the reference features for every query.
+
+For each user photo:
+
+1. extract query local features ONCE
+2. retrieve global Top 10
+3. match query features against each of those candidate references
+4. perform geometric verification
+
+Use an appropriate robust geometric estimator such as RANSAC/MAGSAC where supported.
+
+==================================================
+LOCAL MATCH EVIDENCE
+==================================================
+
+For every candidate collect evidence such as:
+
+- number of feature matches
+- number of geometric inliers
+- inlier ratio
+- spatial coverage of matches
+- estimated homography validity
+- reprojection error
+- match confidence
+
+Do NOT rank based purely on number of raw feature matches.
+
+A candidate with many inconsistent matches should not beat a candidate with fewer but geometrically coherent matches.
+
+Create a DEVELOPMENT-ONLY local verification score based on these measurements.
+
+Do not tune weights individually for particular cards.
+
+==================================================
+TOP-K EXPERIMENT
+==================================================
+
+Run local verification using:
+
+A. Top 5 global candidates
+B. Top 10 global candidates
+C. Top 20 global candidates ONLY if needed for recall analysis
+
+We need to determine the smallest candidate pool that maintains useful accuracy.
+
+Speed matters.
+
+==================================================
+PHASE 3 — RESULTS
+==================================================
+
+For the chosen global model alone report:
+
+EXACT:
+- Top-1
+- Top-3
+- Top-10
+
+PHYSICAL CARD:
+- Top-1
+- Top-3
+- Top-10
+
+Then report:
+
+GLOBAL + LOCAL MATCHING TOP 5
+
+EXACT:
+- Top-1
+- Top-3
+- Top-10
+
+PHYSICAL CARD:
+- Top-1
+- Top-3
+- Top-10
+
+GLOBAL + LOCAL MATCHING TOP 10
+
+Same metrics.
+
+If Top 20 is evaluated, report separately.
+
+==================================================
+CRITICAL FAILURE ANALYSIS
+==================================================
+
+For every global Top-1 miss classify what Stage 2 did.
+
+Specifically report:
+
+1. correct physical card was in candidate set and local matching promoted it to #1
+2. correct card was in candidate set but local matching failed to promote it
+3. local matching made a previously correct result worse
+4. correct card never entered candidate set
+5. duplicate/equivalent catalog record
+6. same-art/different-printing ambiguity
+7. insufficient local features because of glare/foil
+8. other
+
+This is critical.
+
+We need to distinguish:
+
+GLOBAL RETRIEVAL FAILURE
+
+from
+
+EXACT MATCHING FAILURE.
+
+==================================================
+PARALLELS / SAME ARTWORK
+==================================================
+
+Do NOT claim LightGlue can automatically distinguish parallels that use effectively identical artwork.
+
+Local geometry may correctly establish:
+
+“This is this artwork/card family.”
+
+It may not establish:
+
+“This is Gold rather than Rainbow.”
+
+Report those separately.
+
+If two candidate cards have essentially identical geometry/artwork, mark the case:
+
+VISUAL FAMILY MATCH — EXACT VARIANT UNRESOLVED
+
+Do not force confidence.
+
+Do NOT add OCR or metadata yet.
+
+First establish how far pure visual retrieval + geometric verification gets us.
+
+==================================================
+SPEED REQUIREMENTS
+==================================================
+
+This system must eventually feel fast to a collector.
+
+Measure real warm latency for:
+
+1. query global embedding
+2. ANN / similarity search
+3. query local-feature extraction
+4. local matching Top 5
+5. local matching Top 10
+6. total pipeline
+
+Do not include model-download/startup time in warm latency.
+
+Report cold-start separately.
+
+Target architecture should ultimately be capable of an approximately 1–2 second user-facing recognition experience.
+
+Do not reject an approach merely because the current Replit CPU is slower than production infrastructure.
+
+But report actual measured CPU performance honestly.
+
+If GPU is already available in the development environment, report GPU separately.
+
+Do not purchase or provision expensive infrastructure for this experiment.
+
+==================================================
+PHASE 4 — CONTROLLED SCALE TEST
+==================================================
+
+DO NOT immediately index all ~77,000 cards.
+
+Only proceed to this phase if the new pipeline materially beats current DINO-small.
+
+“Materially” means BOTH:
+
+- improved physical-card Top-1
+AND
+- improved or maintained Top-10 candidate recall
+
+If that happens:
+
+Create a DEVELOPMENT-ONLY representative index of approximately:
+
+10,000 catalog cards.
+
+Include:
+- multiple decades
+- multiple sets
+- inserts
+- same characters
+- similar artwork
+- known duplicates
+- parallels where available
+- visually confusing cards
+
+Ensure every scored query's correct reference exists in the index.
+
+Then rerun the winning pipeline WITHOUT retuning it.
+
+Report whether accuracy survives the larger candidate pool.
+
+Do not proceed to 77k yet.
+
+==================================================
+MUST NOT DO
+==================================================
+
+- Do not modify production.
+- Do not publish.
+- Do not resume the permanent/full index build.
+- Do not change user collections.
+- Do not change confirmed labels.
+- Do not change catalog records.
+- Do not use SAM.
+- Do not build another crop detector.
+- Do not use the old reranker.
+- Do not use OCR in this experiment.
+- Do not use year/set/card number to filter retrieval.
+- Do not hand-select candidates.
+- Do not tune on the original nine-card sample.
+- Do not treat duplicate database IDs as distinct physical cards in the physical-card metric.
+- Do not return another planning document instead of running the benchmark.
+
+==================================================
+PRESERVE
+==================================================
+
+Preserve:
+
+- production application
+- current DINO-small implementation
+- historical experiment outputs
+- frozen test cohort
+- raw photos
+- catalog
+- labels
+- permanent index
+- Cloudinary originals
+- existing Scan to Add behavior
+
+This is a development experiment only.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Do the experiment first.
+
+Then give me a concise report containing:
+
+1. Number of frozen test cases.
+2. Number of confirmed duplicate/equivalent-ID cases.
+3. DINO-small physical Top-1 / Top-3 / Top-10.
+4. DINO-base physical Top-1 / Top-3 / Top-10.
+5. SigLIP 2 physical Top-1 / Top-3 / Top-10.
+6. Which global model had the best candidate recall.
+7. Which global model had the best practical speed/accuracy balance.
+8. Global-only exact Top-1.
+9. Global + LightGlue exact Top-1.
+10. Global-only physical-card Top-1.
+11. Global + LightGlue physical-card Top-1.
+12. How many incorrect global Top-1 results LightGlue corrected.
+13. How many correct global Top-1 results LightGlue broke.
+14. How many remaining failures were because the correct card never entered the candidate set.
+15. How many were same-art / exact-variant ambiguity.
+16. Warm global embedding latency.
+17. Warm local-feature extraction latency.
+18. Top-5 LightGlue latency.
+19. Top-10 LightGlue latency.
+20. Total warm pipeline latency.
+21. Whether this materially beats the frozen DINO-small baseline.
+22. Whether you proceeded to the 10,000-card test.
+23. If so, 10k Top-1 / Top-3 / Top-10 and latency.
+24. Your evidence-based recommendation:
+    A. continue with this coarse-to-fine architecture
+    B. global retrieval improved but exact verification needs another approach
+    C. this architecture does not improve enough and should be stopped
+
+Confirm:
+- production untouched
+- nothing published
+- full indexing remains paused
+- no OCR/metadata filtering used
+- no SAM/cropping used
