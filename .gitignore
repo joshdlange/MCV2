@@ -4,9 +4,7 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
-.local/scan-review/
+.local/
 .pythonlibs/
 __pycache__/
 *.py[cod]
-.local/strong-card-model/
-.local/strong-card-detector-tests/

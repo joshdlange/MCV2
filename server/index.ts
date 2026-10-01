@@ -905,36 +905,23 @@ server.listen({
       console.error('Failed to start nightly pricing backfill cron:', error);
     });
 
-    // Additive visual-index schema follows this project's startup migration
-    // convention. Never rewrite catalog images or block HTTP readiness on ML.
-    void (async () => {
-      const { db } = await import('./db');
-      const { sql } = await import('drizzle-orm');
-      await db.transaction(async (tx) => {
-        await tx.execute(sql`SELECT pg_advisory_xact_lock(917205, 1)`);
-        await tx.execute(sql`
-          CREATE TABLE IF NOT EXISTS catalog_visual_references (
-            key text PRIMARY KEY,
-            model_version text NOT NULL,
-            reference_url text NOT NULL,
-            content_digest text,
-            embedding jsonb,
-            status text NOT NULL DEFAULT 'pending',
-            attempts integer NOT NULL DEFAULT 0,
-            last_error text,
-            retry_at timestamp,
-            updated_at timestamp NOT NULL DEFAULT now()
-          )`);
-        await tx.execute(sql`CREATE INDEX IF NOT EXISTS catalog_visual_model_status_idx
-          ON catalog_visual_references (model_version, status)`);
-        await tx.execute(sql`CREATE INDEX IF NOT EXISTS catalog_visual_digest_idx
-          ON catalog_visual_references (model_version, content_digest)`);
+    // Development-only experiment data must never ship. Report it on every
+    // production boot so the first publish confirms the deploy payload.
+    if (process.env.NODE_ENV === 'production') {
+      const devOnly = ['.local', '.pythonlibs', 'pyproject.toml', 'uv.lock'].filter(entry => fs.existsSync(entry));
+      if (devOnly.length) console.warn(`[deploy-check] Development-only paths present in deployment: ${devOnly.join(', ')}`);
+      else console.log('[deploy-check] No development-only paths in deployment.');
+    }
+
+    // Visual-index schema lives in shared/schema.ts (applied by the publish
+    // migration), not startup DDL. The worker loads only when explicitly enabled.
+    if (process.env.CATALOG_VISUAL_INDEX_ENABLED === 'true') {
+      import('./services/catalogVisual').then(({ startCatalogVisualIndexWorker }) => {
+        startCatalogVisualIndexWorker();
+      }).catch((error) => {
+        console.error('[CatalogVisual] Image index worker failed to start:', error);
       });
-      const { startCatalogVisualIndexWorker } = await import('./services/catalogVisual');
-      startCatalogVisualIndexWorker();
-    })().catch((error) => {
-      console.error('[CatalogVisual] Image index startup failed; scans will report unavailable:', error);
-    });
+    }
 
     // External → Cloudinary image migration worker: continuously (paced)
     // copies all externally-hosted card images (PriceCharting, COMC, eBay, …)

@@ -13,13 +13,16 @@ export type CatalogVisualResult = {
   error?: string;
 };
 
+// Shared "no image yet" asset (thousands of unrelated cards); never a visual reference.
+export const PLACEHOLDER_IMAGE_FILE = 'card-placeholder_ysozlo\\.png';
 // Eligibility is independent of OCR, card number, name and user-upload history.
 export const CATALOG = `FROM cards c JOIN card_sets s ON s.id=c.set_id
   LEFT JOIN main_sets m ON m.id=s.main_set_id`;
 export const ELIGIBLE = `c.archived_at IS NULL AND s.is_active AND s.archived_at IS NULL
   AND (m.id IS NULL OR (m.is_active AND m.archived_at IS NULL))
   AND c.front_image_url ~ '^https?://'
-  AND c.front_image_url !~* '^https?://([^/]*\\.)?(drive\\.google\\.com|docs\\.google\\.com|googleusercontent\\.com)(/|:)'`;
+  AND c.front_image_url !~* '^https?://([^/]*\\.)?(drive\\.google\\.com|docs\\.google\\.com|googleusercontent\\.com)(/|:)'
+  AND c.front_image_url !~* '/${PLACEHOLDER_IMAGE_FILE}$'`;
 const MAX_REFERENCES = 100_000; // ~154 MB of Float32 vectors; capacity is reported explicitly.
 const CACHE_TTL_MS = 60_000;
 const MAX_BATCH = 32;

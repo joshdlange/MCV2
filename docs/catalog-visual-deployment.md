@@ -1,22 +1,26 @@
 # Catalog visual retrieval deployment prerequisites
 
-1. Confirm the deployed database connection before applying schema changes.
-   Runtime currently reads `DATABASE_URL`; this does not prove it is the same
-   database as `NEON_DATABASE_URL` or that Replit Publish manages its schema.
-   This project's legacy duplicates block `db:push`; its external-database
-   convention uses parent-owned, advisory-locked additive startup transactions.
-   The application initializer must finish the isolated new table/index
-   transaction before starting the worker. Optional manual migration
-   `scripts/sql/catalog-visual-references.sql` mirrors that transaction.
-   It is additive and does not change catalog images. No DDL runs during build.
-   If the target is instead verified Replit-managed, use its supported Publish
-   schema diff, not the external-database startup convention.
-2. Run `npm run build`. Its final step downloads the pinned DINOv2-small q8 model
-   and configs into `dist/models`, then verifies CPU inference with remote model
-   downloads and filesystem model cache disabled. A download or inference error
-   fails the build. Deploy the entire `dist` artifact, including `dist/models`.
-   Launch from the project root (`npm start`). Production cannot fetch a missing
-   model remotely: a missing/broken artifact makes visual retrieval unavailable.
+Visual retrieval is **off by default**. `SCAN_VISUAL_RETRIEVAL=on` (exactly
+`on`) adds DINO picture retrieval to `POST /api/cards/scan`. Unset or any other
+value keeps the pre-retrieval flow: OCR, metadata match, artwork verification.
+With it off, scans never load the model and never read the visual index table.
+
+1. Schema. There is no startup DDL. The table is declared in `shared/schema.ts`
+   and the migration is `scripts/sql/catalog-visual-references.sql` (additive,
+   one table plus two indexes, no catalog changes, no pgvector). Confirm the
+   deployed application's actual database target before applying it: runtime
+   reads `DATABASE_URL`, which is not proven to equal `NEON_DATABASE_URL`, and
+   legacy duplicates block `db:push`. For an externally managed Neon target, an
+   authorized operator applies the SQL file. For a verified Replit-managed
+   target, use the Publish schema diff. Apply it before turning on either flag.
+2. Model. `npm run build` ends with `scripts/prepare-catalog-visual-model.ts`.
+   It is skipped unless `SCAN_VISUAL_RETRIEVAL=on` or
+   `CATALOG_VISUAL_INDEX_ENABLED=true` is set at build time. When it runs, it
+   downloads the pinned DINOv2-small q8 model and configs into `dist/models`
+   and verifies offline CPU inference. A download or inference failure logs a
+   warning and does **not** fail the build. Production never fetches a model
+   remotely, so a missing or broken artifact makes visual search report
+   "unavailable". Changing either flag requires a new build and Publish.
 3. Enable the runtime index worker only after the schema is available. It builds
    from active catalog front references, not scans, 16 references per batch with
    a 30-second pause after each batch. Missing schema backs off; the worker does
@@ -81,3 +85,26 @@ All eight tests passed, including strict parity on 16 real references and eight
 synthetic inputs (observed maximum component error zero). Repair/pilot/test logs
 are under `/tmp/catalog-visual-bulk/` (`repair-ready.jsonl`,
 `corrected-pilot-128.jsonl`, `repaired-parity-tests.log`).
+## Keeping development data out of the deployment
+
+`.local/` (experiment data, SAM weights, collector photos) and `.pythonlibs/`
+(torch, OpenCV, segment-anything) are gitignored and untracked. Whether
+Replit's deployment snapshot honours `.gitignore` is not verified, and
+`pyproject.toml`/`uv.lock` on `main` declare torch, torchvision, OpenCV and
+segment-anything, which a Python-aware deployment build may install.
+
+Every production boot logs one line:
+
+- `[deploy-check] No development-only paths in deployment.` means none of
+  `.local`, `.pythonlibs`, `pyproject.toml`, `uv.lock` are present.
+- `[deploy-check] Development-only paths present in deployment: ...` lists the
+  ones that shipped.
+
+If any are present, or the deployment build log shows Python packages being
+installed, choose one before the next Publish:
+
+1. Move the experiment data out of the project directory, e.g.
+   `mkdir -p ~/scan-experiments && mv .local/<dir> ~/scan-experiments/`
+   (the deployment snapshot covers the project directory only).
+2. Remove the Python manifest from `main`: `git rm pyproject.toml uv.lock`,
+   and drop `python-3.11` from `.replit` `modules` only if nothing else needs it.

@@ -17,6 +17,10 @@ import type { queryCatalogByImage } from './catalogVisual';
 
 export const FREE_SCAN_LIMIT_PER_MONTH = 25;
 
+// Catalog image retrieval (DINO) stays out of user scans unless explicitly
+// enabled. Off = the pre-retrieval flow: OCR -> metadata match -> artwork check.
+export const scanVisualRetrievalEnabled = () => process.env.SCAN_VISUAL_RETRIEVAL === 'on';
+
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
@@ -56,7 +60,8 @@ export interface ScanResult {
   /** Diagnostic only; an unavailable comparison never removes text-only matches. */
   visualVerification: 'verified' | 'uncertain' | 'abstained' | 'unavailable';
   warnings: string[];
-  imageIndex: {
+  /** Omitted when SCAN_VISUAL_RETRIEVAL is off. */
+  imageIndex?: {
     status: 'ready' | 'partial' | 'unavailable';
     indexedCount: number;
     totalEligible: number;
@@ -421,8 +426,10 @@ export async function scanCard(
     retrieveImageRows?: typeof retrieveImageCandidateRows;
     matchMetadata?: typeof matchCandidates;
     verify?: typeof verifyCandidateArt;
+    visualRetrieval?: boolean;
   } = {},
 ): Promise<ScanResult> {
+  const visualRetrieval = dependencies.visualRetrieval ?? scanVisualRetrievalEnabled();
   const started = Date.now();
   const timings = { visualRetrievalMs: 0, ocrMs: 0, dbMs: 0, rerankMs: 0, totalMs: 0 };
   const warnings: string[] = [];
@@ -433,15 +440,16 @@ export async function scanCard(
     buffer: backProcessed.buffer, mimeType: backProcessed.preprocessed ? 'image/jpeg' : backImage.mimeType,
   } : undefined;
 
+  const identify = async () => {
+    const start = Date.now();
+    try {
+      return await (dependencies.identify ?? identifyCardWithVision)(processedBuffer, outputMime, preparedBack);
+    } finally { timings.ocrMs = Date.now() - start; }
+  };
   // Run independent picture retrieval even when OCR yields no readable text.
   const [vision, imageResult] = await Promise.all([
-    (async () => {
-      const start = Date.now();
-      try {
-        return await (dependencies.identify ?? identifyCardWithVision)(processedBuffer, outputMime, preparedBack);
-      } finally { timings.ocrMs = Date.now() - start; }
-    })(),
-    (async () => {
+    identify(),
+    visualRetrieval ? (async () => {
       const start = Date.now();
       try {
         return await (dependencies.queryImage ?? (async (buffer: Buffer) =>
@@ -450,32 +458,35 @@ export async function scanCard(
         console.warn('[Scan] Catalog image retrieval unavailable:', error);
         return { status: 'unavailable' as const, matches: [], indexedCount: 0, totalEligible: 0 };
       } finally { timings.visualRetrievalMs = Date.now() - start; }
-    })(),
+    })() : null,
   ]);
 
   const parsed = buildParsedScan(vision);
   const dbStart = Date.now();
   const [textMatches, imageRows] = await Promise.all([
     (dependencies.matchMetadata ?? matchCandidates)(parsed),
-    (dependencies.retrieveImageRows ?? retrieveImageCandidateRows)(imageResult.matches.map(hit => hit.cardId)),
+    imageResult ? (dependencies.retrieveImageRows ?? retrieveImageCandidateRows)(imageResult.matches.map(hit => hit.cardId)) : [],
   ]);
   timings.dbMs = Date.now() - dbStart;
   const rerankStart = Date.now();
-  const candidates = rankImageCandidates(imageRows, imageResult.matches, parsed, textMatches);
+  // Flag off: metadata matches go to artwork verification unchanged, as before retrieval existed.
+  const candidates = imageResult ? rankImageCandidates(imageRows, imageResult.matches, parsed, textMatches) : textMatches;
   const comparison = await (dependencies.verify ?? verifyCandidateArt)(processedBuffer, outputMime, candidates, parsed);
   timings.rerankMs = Date.now() - rerankStart;
   const matches = comparison.matches;
   const confidenceLevel = matches.length > 0 ? matches[0].confidenceLevel : 'none';
   const hasImageMatches = candidates.some(match => match.retrievalSource !== 'metadata');
   const fallback = hasImageMatches ? 'none' : matches.length ? 'text-only' : 'no-candidates';
-  if (imageResult.status === 'partial') warnings.push('Catalog image index is incomplete; cards not yet indexed may be missed.');
-  if (imageResult.status === 'unavailable') warnings.push('Catalog image search is unavailable. Any suggestions are text-only fallbacks, not picture matches.');
-  if (!hasImageMatches && imageResult.status !== 'unavailable') warnings.push('No catalog image candidates were found. Any suggestions below use text only.');
-  if (!normalizeOcrText(vision.ocrText) && !parsed.characterName && !parsed.cardNumber && !parsed.setName) {
-    warnings.push('No readable identifying text was extracted. Picture candidates can still be reviewed; a back photo may help distinguish variants.');
+  if (imageResult) {
+    if (imageResult.status === 'partial') warnings.push('Catalog image index is incomplete; cards not yet indexed may be missed.');
+    if (imageResult.status === 'unavailable') warnings.push('Catalog image search is unavailable. Any suggestions are text-only fallbacks, not picture matches.');
+    if (!hasImageMatches && imageResult.status !== 'unavailable') warnings.push('No catalog image candidates were found. Any suggestions below use text only.');
+    if (!normalizeOcrText(vision.ocrText) && !parsed.characterName && !parsed.cardNumber && !parsed.setName) {
+      warnings.push('No readable identifying text was extracted. Picture candidates can still be reviewed; a back photo may help distinguish variants.');
+    }
+    if (comparison.status !== 'verified') warnings.push('Artwork verification was inconclusive or unavailable; review candidate images before confirming.');
+    if (matches.some(match => !usableImageUrl(match.imageUrl))) warnings.push('Some candidates have no usable reference image and could not be visually verified.');
   }
-  if (comparison.status !== 'verified') warnings.push('Artwork verification was inconclusive or unavailable; review candidate images before confirming.');
-  if (matches.some(match => !usableImageUrl(match.imageUrl))) warnings.push('Some candidates have no usable reference image and could not be visually verified.');
 
   const ocrText = normalizeOcrText(vision.ocrText) || [
     parsed.characterName,
@@ -506,10 +517,10 @@ export async function scanCard(
     preprocessed,
     visualVerification: comparison.status,
     warnings,
-    imageIndex: {
+    imageIndex: imageResult ? {
       status: imageResult.status, indexedCount: imageResult.indexedCount,
       totalEligible: imageResult.totalEligible, fallback,
-    },
+    } : undefined,
     timings,
   };
 }

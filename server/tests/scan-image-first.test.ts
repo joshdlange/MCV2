@@ -6,7 +6,7 @@ import type { ScanCandidateRow } from '../services/scanMatching';
 
 process.env.DATABASE_URL ||= 'postgres://unused:unused@localhost:5432/unused';
 delete process.env.OPENAI_API_KEY;
-const { scanCard, buildParsedScan, rerankVisualMatches } = await import('../services/scanService');
+const { scanCard, buildParsedScan, rerankVisualMatches, scanVisualRetrievalEnabled } = await import('../services/scanService');
 const { rankImageCandidates, sanitizeParsedScan, rankScanCandidates } = await import('../services/scanMatching');
 
 const vision = (fields = {}) => ({
@@ -25,6 +25,7 @@ test('image-only candidate outside OCR shortlist reaches scan results, with timi
     background: '#777777' } }).png().toBuffer();
   let queried = false;
   const result = await scanCard(front, 'image/png', undefined, {
+    visualRetrieval: true,
     queryImage: async buffer => {
       assert.ok(buffer.length);
       queried = true;
@@ -47,8 +48,8 @@ test('image-only candidate outside OCR shortlist reaches scan results, with timi
   assert.deepEqual(result.matches.map(match => match.cardId), [987, 988]);
   assert.equal(result.matches[0].retrievalSource, 'image');
   assert.equal(result.matches[1].retrievalSource, 'image-family');
-  assert.equal(result.imageIndex.fallback, 'none');
-  assert.equal(result.imageIndex.status, 'partial');
+  assert.equal(result.imageIndex?.fallback, 'none');
+  assert.equal(result.imageIndex?.status, 'partial');
   assert.match(result.warnings.join(' '), /incomplete/);
   assert.ok(result.matches.every(match => match.confidenceLevel !== 'high'));
   for (const value of Object.values(result.timings)) assert.ok(Number.isFinite(value) && value >= 0);
@@ -176,6 +177,7 @@ test('unavailable index and unreadable text produce explicit no-candidates fallb
   const front = await sharp({ create: { width: 600, height: 840, channels: 3,
     background: '#777777' } }).png().toBuffer();
   const result = await scanCard(front, 'image/png', undefined, {
+    visualRetrieval: true,
     queryImage: async () => ({ status: 'unavailable', matches: [], indexedCount: 0, totalEligible: 100 }),
     identify: async () => vision(),
     matchMetadata: async () => [],
@@ -183,7 +185,52 @@ test('unavailable index and unreadable text produce explicit no-candidates fallb
     verify: async (_front, _mime, matches) => ({ matches, status: 'unavailable' }),
   });
   assert.equal(result.confidenceLevel, 'none');
-  assert.equal(result.imageIndex.fallback, 'no-candidates');
+  assert.equal(result.imageIndex?.fallback, 'no-candidates');
   assert.match(result.warnings.join(' '), /image search is unavailable/);
   assert.match(result.warnings.join(' '), /No readable identifying text/);
+});
+test('SCAN_VISUAL_RETRIEVAL is off unless exactly "on"', () => {
+  const saved = process.env.SCAN_VISUAL_RETRIEVAL;
+  try {
+    for (const value of [undefined, '', 'off', 'true', 'ON', '1']) {
+      if (value === undefined) delete process.env.SCAN_VISUAL_RETRIEVAL;
+      else process.env.SCAN_VISUAL_RETRIEVAL = value;
+      assert.equal(scanVisualRetrievalEnabled(), false, String(value));
+    }
+    process.env.SCAN_VISUAL_RETRIEVAL = 'on';
+    assert.equal(scanVisualRetrievalEnabled(), true);
+  } finally {
+    if (saved === undefined) delete process.env.SCAN_VISUAL_RETRIEVAL;
+    else process.env.SCAN_VISUAL_RETRIEVAL = saved;
+  }
+});
+
+test('flag off: pre-retrieval flow, metadata matches reach verification untouched, no index output', async () => {
+  delete process.env.SCAN_VISUAL_RETRIEVAL;
+  const front = await sharp({ create: { width: 600, height: 840, channels: 3,
+    background: '#777777' } }).png().toBuffer();
+  const textMatches = [{
+    cardId: 42, name: 'Spider-Man', cardNumber: '7', setName: 'Marvel Masterpieces', subsetName: null,
+    year: 2024, imageUrl: 'https://images.example.com/42.jpg', confidence: 91,
+    confidenceLevel: 'high' as const, matchReasons: ['Card number match'],
+  }];
+  const calls: string[] = [];
+  const result = await scanCard(front, 'image/png', undefined, {
+    queryImage: async () => { throw new Error('visual retrieval must not run when the flag is off'); },
+    retrieveImageRows: async () => { throw new Error('image rows must not load when the flag is off'); },
+    identify: async () => { calls.push('identify'); return vision({ characterName: 'Spider-Man', cardNumber: '7' }); },
+    matchMetadata: async () => { calls.push('match'); return textMatches; },
+    verify: async (_front, _mime, matches) => {
+      calls.push('verify');
+      assert.equal(matches, textMatches); // same array: no image ranking, no text-only cap
+      return { matches, status: 'verified' };
+    },
+  });
+  assert.deepEqual(calls, ['identify', 'match', 'verify']);
+  assert.equal(result.imageIndex, undefined);
+  assert.deepEqual(result.matches, textMatches);
+  assert.equal(result.confidenceLevel, 'high');
+  assert.equal(result.timings.visualRetrievalMs, 0);
+  // Only the pre-retrieval photo-quality warnings; none of the image-index/verification notices.
+  assert.deepEqual(result.warnings, []);
 });
