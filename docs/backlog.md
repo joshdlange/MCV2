@@ -22,6 +22,30 @@ Items agreed with the owner; none are scheduled yet.
 - **Embed on save:** every image add or change (admin upload, approved collector photo, crop-queue
   result) embeds that one image when it is saved (single-image path). No catalog-wide batch jobs.
 
+## PRIORITY before Phase C dev testing: refresh the dev catalog from a production snapshot
+
+**Goal:** card IDs (and images) in dev match production, so dev testing of collection adds, scan
+confirm and image approvals is meaningful. Dev-only; **no production writes**; production is read in
+one read-only transaction.
+
+**Proposed safe procedure** (plan; needs approval before running):
+1. **Back up dev first:** a `pg_dump` of the dev database (`helium/heliumdb`) into the persistent
+   project volume, plus a tested restore command.
+2. **Read-only production export** of catalog tables only: `main_sets`, `card_sets`, `cards`, and any
+   catalog-only lookup tables they reference, in one `READ ONLY REPEATABLE READ` transaction against
+   the approved host. No users, collections, scans, orders or other personal data.
+3. **Load into dev in one transaction:**
+   - Truncate and reload those catalog tables, keeping IDs exactly as production has them.
+   - Reset their ID sequences to production's maximums.
+   - The loader hard-refuses any host but `helium`, and the production connection is read-only.
+4. **Dev rows that point at catalog IDs** (dev users' collections, wishlists, scan uploads, pending images,
+   visual references) would point at the wrong cards afterwards. They are test data, so the proposal is
+   to clear those dev tables or remap them by card identity. This decision belongs to the owner and is
+   listed explicitly before running.
+5. **Verify:** row counts and an ID-by-identity check equal production's. The app boots in dev, and
+   tests pass.
+6. **Keep it repeatable:** one script, run on demand whenever dev drifts again.
+
 ## Dev database has diverged from production (before Phase C dev testing)
 
 - **What:** 24,135 card IDs refer to different cards in dev and production. That is every ID above
