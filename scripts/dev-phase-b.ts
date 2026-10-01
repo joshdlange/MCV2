@@ -16,10 +16,11 @@ import {
 } from '../server/services/catalogVisualModel';
 import { downloadCatalogReference } from '../server/services/catalogVisualFetch';
 import { orderCardCorners } from '../shared/cardCorners';
+import { devDataPath } from '../server/devData';
 
 process.umask(0o077);
 process.env.CATALOG_VISUAL_OFFLINE = 'true';
-const ROOT = '.local/phase-b';
+const ROOT = devDataPath('phase-b');
 const mode = process.argv[2];
 const hash = (b: Buffer | string) => createHash('sha256').update(b).digest('hex');
 const read = async (p: string) => JSON.parse(await fs.readFile(p, 'utf8'));
@@ -164,9 +165,9 @@ if (mode === 'probe') {
 
 if (mode === 'index') {
   await fs.mkdir(path.join(ROOT, 'references'), { recursive: true });
-  const dev = await read('.local/broad-validation/dev-catalog-snapshot.json');
-  const manifest = await read('.local/broad-validation/reference-manifest.json');
-  const selected = new Map<number, any>(manifest.rows.filter((r: any) => !r.error).map((r: any) => [r.id, r]));
+  const dev = await read(devDataPath('broad-validation/dev-catalog-snapshot.json'));
+  const manifest = await read(devDataPath('broad-validation/reference-manifest.json'));
+  const selected = new Map<number, any>(manifest.rows.filter((r: any) => !r.error).map((r: any) => [r.id, { ...r, file: devDataPath(path.relative('.local', r.file)) }]));
   // Same recipe and order as scripts/dev-strong41-run.ts 'prepare' (3,045-card index).
   const usable = (r: any) => r.url?.startsWith('https://res.cloudinary.com/') && !r.url.includes('/scan_uploads/') && !r.archived_at && r.set_active && !r.set_archived;
   const byHash = (a: any, b: any) => hash(String(a.id)).localeCompare(hash(String(b.id)));
@@ -194,7 +195,7 @@ if (mode === 'index') {
     const bytes = await fs.readFile(file);
     assert.equal(hash(bytes), digest);
     try {
-      const v = await read(`.local/broad-validation/vectors/${digest}.json`);
+      const v = await read(devDataPath(`broad-validation/vectors/${digest}.json`));
       assert.equal(v.model, MODEL_VERSION);
       baseline[digest] = v.vector; cached++;
     } catch { baseline[digest] = await embedCatalogVisualImage(bytes, 'background'); }
@@ -243,7 +244,7 @@ if (mode === 'run') {
   // reordered set used in the run exactly (shared/cardCorners.test.ts).
   const clicked: Record<string, { corners: Point[] }> = await read(path.join(ROOT, 'corners.json'));
   const corners = Object.fromEntries(Object.entries(clicked).map(([id, v]) => [id, { corners: orderCardCorners(v.corners) }]));
-  const dev = await read('.local/broad-validation/dev-catalog-snapshot.json');
+  const dev = await read(devDataPath('broad-validation/dev-catalog-snapshot.json'));
   // Physical-card groups (pre-registered): the two known duplicate pairs, plus any active
   // catalog record with the same main set, card number, name and variation as the confirmed card.
   const known = [[20279, 530526], [20280, 530527]];

@@ -5,12 +5,13 @@ import http from 'node:http';
 import path from 'node:path';
 import { test } from 'node:test';
 import express from 'express';
+import { devDataPath } from '../devData';
 
 process.env.NODE_ENV = 'development';
 const { pool } = await import('../db');
 const { registerScanReviewRoutes, reviewEligibility } = await import('../scan-review-routes');
 const { loadScanReviewDataset, loadScanMetadata, originalScanBytes } = await import('../services/scanReview');
-const root = path.resolve('.local/scan-review');
+const root = devDataPath('scan-review');
 const dataset = await loadScanReviewDataset();
 const metadata = await loadScanMetadata();
 const provenance = JSON.parse(await fs.readFile(path.join(root, 'provenance.json'), 'utf8'));

@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import { historicalEvidence, loadHistoricalEvidence, resolveHistoricalLabel } from '../services/scanReviewHistorical';
 import { loadScanReviewDataset } from '../services/scanReview';
 import { loadPhotoOriginAudit } from '../services/scanReviewPhotoAudit';
+import { devDataPath } from '../devData';
 
 test('historical scan-linked confirmations are chosen IDs, not model suggestions or feedback-type labels', () => {
   const input = { scanId: 2683, createdAt: '2026-09-17T21:39:39',
@@ -51,18 +52,18 @@ test('null feedback, cross-owner records, later retractions and conflicting sele
 });
 test('all 60 private historical records match original scan source and persist separately from decisions', async () => {
   const dataset = await loadScanReviewDataset();
-  const before = await fs.readFile('.local/scan-review/decisions.json');
+  const before = await fs.readFile(devDataPath('scan-review', 'decisions.json'));
   const records = await loadHistoricalEvidence(dataset);
   assert.equal(records.size, 60);
   assert.equal([...records.values()].filter(item => item.sourceStatus === 'explicit-confirmation').length, 16);
   assert.equal([...records.values()].filter(item => item.sourceStatus === 'no-confirmation').length, 44);
   assert.equal([...records.values()].filter(item => item.sourceStatus === 'ambiguous').length, 0);
   assert.ok([...records.values()].every(item => item.originalImageUrl.includes('/scan_uploads/')));
-  const report = JSON.parse(await fs.readFile('.local/scan-review/historical-labels-report.json', 'utf8'));
+  const report = JSON.parse(await fs.readFile(devDataPath('scan-review', 'historical-labels-report.json'), 'utf8'));
   assert.equal(report.records.length, 60);
   assert.equal(report.datasetHash, dataset.datasetHash);
   assert.equal(report.candidateOrigin.includes('not a DINO'), true);
-  assert.deepEqual(await fs.readFile('.local/scan-review/decisions.json'), before);
+  assert.deepEqual(await fs.readFile(devDataPath('scan-review', 'decisions.json')), before);
 });
 test('photo audit distinguishes visible context from verified origin and excludes self-linked 3029', async () => {
   const dataset = await loadScanReviewDataset();

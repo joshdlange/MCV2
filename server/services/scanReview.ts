@@ -2,9 +2,10 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { RequestHandler } from 'express';
+import { devDataPath } from '../devData';
 
 export const REVIEW_DIR = process.env.NODE_ENV === 'test' && process.env.SCAN_REVIEW_TEST_DIR
-  ? path.resolve(process.env.SCAN_REVIEW_TEST_DIR) : path.resolve(process.cwd(), '.local/scan-review');
+  ? path.resolve(process.env.SCAN_REVIEW_TEST_DIR) : devDataPath('scan-review');
 const REVIEW_FILE = path.join(REVIEW_DIR, 'decisions.json');
 const HTML_FILE = path.join(REVIEW_DIR, 'review.html');
 type Suggestion = { cardId: number; name: string; year: number | null; mainSetName: string | null; subsetName: string | null; cardNumber: string | null };

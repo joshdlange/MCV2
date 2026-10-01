@@ -4,11 +4,12 @@ import sharp from 'sharp';
 import type { Express, RequestHandler } from 'express';
 import { requireDevelopmentAdmin } from './services/scanReview';
 import { isClockwiseConvex, orderCardCorners } from '../shared/cardCorners';
+import { devDataPath } from './devData';
 
 // DEV-ONLY Phase B corner marking for the frozen 41 scan photos. Registered only
 // when NODE_ENV=development; every endpoint is also admin + development gated.
-// Reads/writes .local/phase-b only (gitignored). No database access.
-const root = path.resolve(process.cwd(), '.local/phase-b');
+// Reads/writes MCV_DEV_DATA/phase-b only (default .local, gitignored). No database access.
+const root = devDataPath('phase-b');
 const base = '/api/admin/phase-b-corners';
 type Point = [number, number];
 type Case = { scanId: number; cardId: number; file: string };

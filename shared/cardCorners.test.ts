@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { orderCardCorners, isClockwiseConvex, type CornerPoint } from './cardCorners';
+import { devDataPath } from '../server/devData';
 
 const TL: CornerPoint = [0.1, 0.1], TR: CornerPoint = [0.8, 0.12], BR: CornerPoint = [0.82, 0.9], BL: CornerPoint = [0.08, 0.88];
 
@@ -25,8 +26,8 @@ test('reading-order clicks are not convex until ordered', () => {
   assert.ok(isClockwiseConvex(orderCardCorners([TL, TR, BL, BR])));
 });
 
-test('Phase B: ordering the as-clicked corners reproduces corners-ordered.json', { skip: !existsSync('.local/phase-b/corners-ordered.json') }, () => {
-  const clicked = JSON.parse(readFileSync('.local/phase-b/corners.json', 'utf8'));
-  const ordered = JSON.parse(readFileSync('.local/phase-b/corners-ordered.json', 'utf8'));
+test('Phase B: ordering the as-clicked corners reproduces corners-ordered.json', { skip: !existsSync(devDataPath('phase-b', 'corners-ordered.json')) }, () => {
+  const clicked = JSON.parse(readFileSync(devDataPath('phase-b', 'corners.json'), 'utf8'));
+  const ordered = JSON.parse(readFileSync(devDataPath('phase-b', 'corners-ordered.json'), 'utf8'));
   for (const id of Object.keys(clicked)) assert.deepEqual(orderCardCorners(clicked[id].corners), ordered[id].corners, id);
 });

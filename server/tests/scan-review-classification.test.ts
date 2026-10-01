@@ -3,12 +3,13 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import { devDataPath } from '../devData';
 
 const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'scan-review-classification-'));
 process.env.NODE_ENV = 'test';
 process.env.SCAN_REVIEW_TEST_DIR = dir;
 const classification = await import('../services/scanReviewClassification');
-const historical = JSON.parse(await fs.readFile('.local/scan-review/scan-metadata.json', 'utf8'));
+const historical = JSON.parse(await fs.readFile(devDataPath('scan-review', 'scan-metadata.json'), 'utf8'));
 const row = (id: number) => historical.rows.find((item: any) => item.scanId === id);
 const datasetHash = 'a'.repeat(64);
 
@@ -47,7 +48,7 @@ test('3084 reviewer-note back and 3094 OCR-empty image-only retain uncertain/fro
   assert.equal(classification.REVIEW_DEVELOPMENT_CASES[3120], 'vision literal-null fields and keyword');
 });
 test('separate durable classifications validate reasons without modifying original decisions', async () => {
-  const original = await fs.readFile('.local/scan-review/decisions.json');
+  const original = await fs.readFile(devDataPath('scan-review', 'decisions.json'));
   await classification.saveReviewClassification(datasetHash, 3084, {
     datasetHash, side: 'back', ocrTag: 'useful',
     unresolvedReason: 'only back image available',
@@ -63,6 +64,6 @@ test('separate durable classifications validate reasons without modifying origin
   }, 88, 'confirmed');
   file = await classification.readReviewClassifications(datasetHash);
   assert.equal(file.classifications[3094].ocrTag, 'empty');
-  assert.deepEqual(await fs.readFile('.local/scan-review/decisions.json'), original);
+  assert.deepEqual(await fs.readFile(devDataPath('scan-review', 'decisions.json')), original);
 });
 test.after(async () => { await fs.rm(dir, { recursive: true, force: true }); });
