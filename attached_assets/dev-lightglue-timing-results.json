@@ -1,0 +1,390 @@
+{
+  "scope": "CPU timing only; no accuracy evaluation, scoring, reranking, or publication",
+  "completedAt": "2026-09-30T23:34:09.599Z",
+  "trialStartedAt": "2026-09-30T23:28:39Z",
+  "hardDeadline": "2026-09-30T23:43:39Z",
+  "elapsedSinceAuthorizedStartSeconds": 330.601,
+  "measuredProcessWallMs": 80743.573458,
+  "sampleCount": 1,
+  "queryType": "Existing authorized local real raw phone photograph",
+  "index": {
+    "cardIds": 2938,
+    "uniqueReferenceEmbeddings": 2678,
+    "limitation": "Available retained frozen broad-validation index is 2938 IDs, not the later 3045-ID temporary index; no expansion performed.",
+    "actualFrozenDinoTop10Verified": true,
+    "indexLoadMs": 3656.684405
+  },
+  "configuration": {
+    "extractor": "ALIKED aliked-n16",
+    "maxNumKeypoints": 1024,
+    "longestEdge": 1024,
+    "lightglue": "aliked pretrained; all defaults, 9 layers, depth_confidence 0.95, width_confidence 0.99, filter_threshold 0.1; no compilation",
+    "geometry": "USAC_MAGSAC homography; 3px, maxIters=2000, confidence=0.995",
+    "queryExtractionOncePerPass": true,
+    "referenceFeaturesPrecomputedOnce": true
+  },
+  "iterations": {
+    "warmupPassesExcluded": 1,
+    "warmMeasuredPasses": 3,
+    "pairsPerPass": 10,
+    "totalMeasuredPairs": 30
+  },
+  "cold": {
+    "canonicalDinoFirstInferenceMs": 1665.1816560000007,
+    "workerSetupWallMs": 49838.701428,
+    "pythonImportMs": 20143.560372999673,
+    "localMatcherModelInitializationMs": 430.2177070003381,
+    "weightDownloads": {
+      "items": [
+        {
+          "model": "aliked-n16.pth",
+          "officialUrl": "https://github.com/Shiaoming/ALIKED/raw/main/models/aliked-n16.pth",
+          "downloadMs": 745.877382,
+          "bytes": 2738091,
+          "sha256": "5be8704840ed662d9d8c561bf7279c222092674e7eb05fd0feab94899e9d82f2"
+        },
+        {
+          "model": "aliked_lightglue_v0-1_arxiv.pth",
+          "officialUrl": "https://github.com/cvg/LightGlue/releases/download/v0.1_arxiv/aliked_lightglue.pth",
+          "downloadMs": 426.02310699999987,
+          "bytes": 47632827,
+          "sha256": "d975e965b105311a6143194852297dff4f02aea5cc2e10cecfed966ca0e22503"
+        }
+      ],
+      "sources": {
+        "lightglue": {
+          "url": "https://github.com/cvg/LightGlue",
+          "commit": "eb42fee2d71449efb0aa5c10549752b5d75384d8",
+          "license": "Apache-2.0 including pretrained matcher weights",
+          "licenseCitation": "https://github.com/cvg/LightGlue/blob/main/README.md#license"
+        },
+        "aliked": {
+          "url": "https://github.com/Shiaoming/ALIKED",
+          "license": "BSD-3-Clause",
+          "licenseCitation": "https://github.com/Shiaoming/ALIKED/blob/main/LICENSE"
+        },
+        "kornia": {
+          "url": "https://github.com/kornia/kornia/tree/v0.7.0",
+          "version": "0.7.0",
+          "license": "Apache-2.0"
+        },
+        "packaging": {
+          "url": "https://github.com/pypa/packaging/tree/25.0",
+          "version": "25.0",
+          "license": "Apache-2.0 OR BSD-2-Clause"
+        },
+        "officialApi": "https://github.com/cvg/LightGlue/blob/main/lightglue/aliked.py",
+        "officialResizeApi": "https://github.com/cvg/LightGlue/blob/main/lightglue/utils.py"
+      },
+      "sourceSetupWallTime": "Not individually timed; included in total authorized trial elapsed clock."
+    },
+    "referencePreparation": [
+      {
+        "decodeMs": 16.55330999983562,
+        "featureMs": 3200.6536349999806,
+        "keypoints": 1024
+      },
+      {
+        "decodeMs": 1.6116219999275927,
+        "featureMs": 1196.509963999688,
+        "keypoints": 1024
+      },
+      {
+        "decodeMs": 1.3932980000390671,
+        "featureMs": 2684.5613360001153,
+        "keypoints": 671
+      },
+      {
+        "decodeMs": 1.8637369998941722,
+        "featureMs": 2390.9180010000455,
+        "keypoints": 587
+      },
+      {
+        "decodeMs": 2.2420800000872987,
+        "featureMs": 1680.6318079998164,
+        "keypoints": 1024
+      },
+      {
+        "decodeMs": 61.01566899997124,
+        "featureMs": 3538.791306999883,
+        "keypoints": 1024
+      },
+      {
+        "decodeMs": 12.867923000158044,
+        "featureMs": 3149.2591500000344,
+        "keypoints": 1024
+      },
+      {
+        "decodeMs": 2.398116000222217,
+        "featureMs": 2083.808448000127,
+        "keypoints": 1024
+      },
+      {
+        "decodeMs": 13.916058000177145,
+        "featureMs": 5373.4104639997895,
+        "keypoints": 1024
+      },
+      {
+        "decodeMs": 2.9501070002879715,
+        "featureMs": 3048.2133539999268,
+        "keypoints": 1024
+      }
+    ],
+    "uniqueReferenceCount": 10,
+    "referenceFeatureTotalMs": 28346.757466999406,
+    "referenceDecodeTotalMs": 116.81192000060037
+  },
+  "warmMeanMs": {
+    "dino": 102.02498633333259,
+    "search": 6.480377666664329,
+    "queryDecode": 9.535159333154297,
+    "queryFeature": 2889.532741333369,
+    "lightgluePair": 327.0698048999596,
+    "tenPairs": 3270.6980489995963,
+    "geometryTop10": 8.367467999808772,
+    "stage2Top10": 6178.477874333264,
+    "fullPipeline": 6289.940900333332
+  },
+  "passes": [
+    {
+      "pass": 0,
+      "phase": "excluded warmup",
+      "dinoMs": 132.1981820000001,
+      "searchMs": 13.858554999998887,
+      "queryDecodeMs": 16.00904899987654,
+      "queryFeatureMs": 2340.461964000042,
+      "queryKeypoints": 1024,
+      "pairMatchMs": [
+        309.6572420004122,
+        326.71908000020267,
+        201.2346310002613,
+        225.1577349998115,
+        437.478198000008,
+        464.3805370001246,
+        267.83156500005134,
+        409.5991149997644,
+        409.33791799989194,
+        412.1052699997563
+      ],
+      "geometryMs": [
+        52.34111799973107,
+        1.0367840000071737,
+        0.6048659997759387,
+        0.624591000359942,
+        2.083608999782882,
+        1.3521660002879798,
+        0.4112439996788453,
+        0.4878090003330726,
+        0.5905360003453097,
+        1.0001050000028044
+      ],
+      "pairCount": 10,
+      "stage2Ms": 5880.745781999849,
+      "fullWarmPipelineMs": 6028.769154000001
+    },
+    {
+      "pass": 1,
+      "phase": "warm measurement",
+      "dinoMs": 98.2861699999994,
+      "searchMs": 10.13006299999688,
+      "queryDecodeMs": 10.458304999701795,
+      "queryFeatureMs": 2763.1559230003404,
+      "queryKeypoints": 1024,
+      "pairMatchMs": [
+        254.8917200001597,
+        282.8906290001214,
+        153.69219200010775,
+        228.2624679996843,
+        355.0705329998891,
+        539.7594199998821,
+        188.57143200011706,
+        409.07307499992385,
+        455.9978809998029,
+        435.4909730000145
+      ],
+      "geometryMs": [
+        0.5221219998929882,
+        0.7510030000048573,
+        0.5428859999483393,
+        0.5831960002069536,
+        0.3986189999523049,
+        1.205738999942696,
+        0.3475429998616164,
+        0.5129500000293774,
+        0.6455279999499908,
+        0.9362109999528911
+      ],
+      "pairCount": 10,
+      "stage2Ms": 6084.062532999724,
+      "fullWarmPipelineMs": 6195.983720999997
+    },
+    {
+      "pass": 2,
+      "phase": "warm measurement",
+      "dinoMs": 104.70401899999706,
+      "searchMs": 4.742159000001266,
+      "queryDecodeMs": 8.505135000177688,
+      "queryFeatureMs": 2901.737423999748,
+      "queryKeypoints": 1024,
+      "pairMatchMs": [
+        308.2737569998244,
+        304.7943460001079,
+        155.55867000011858,
+        213.81328999996185,
+        307.0552429999225,
+        537.1103070001482,
+        192.117387000053,
+        399.04625700000906,
+        414.7944369997276,
+        394.9204240002473
+      ],
+      "geometryMs": [
+        1.610880000043835,
+        0.9274560002268117,
+        0.46386599979086895,
+        0.6403590000445547,
+        0.41978099989137263,
+        3.2007169997996243,
+        0.38485000004584435,
+        0.49527500004842295,
+        0.6644949999099481,
+        0.9487259999332309
+      ],
+      "pairCount": 10,
+      "stage2Ms": 6147.911744000339,
+      "fullWarmPipelineMs": 6260.049862
+    },
+    {
+      "pass": 3,
+      "phase": "warm measurement",
+      "dinoMs": 103.0847700000013,
+      "searchMs": 4.568910999994841,
+      "queryDecodeMs": 9.642037999583408,
+      "queryFeatureMs": 3003.7048770000183,
+      "queryKeypoints": 1024,
+      "pairMatchMs": [
+        262.34290799993687,
+        294.4913919995997,
+        151.0208459999376,
+        210.67916899983175,
+        290.8370699997249,
+        539.5518420000371,
+        261.8791939999028,
+        424.9217219999082,
+        443.2087780000984,
+        401.976784999988
+      ],
+      "geometryMs": [
+        1.1369020003257901,
+        0.8017459999791754,
+        0.46126999995976803,
+        0.5270440001368115,
+        0.49370300030204817,
+        2.866197999992437,
+        0.416258999848651,
+        0.523226000041177,
+        0.6449079996855289,
+        1.028945999678399
+      ],
+      "pairCount": 10,
+      "stage2Ms": 6303.459345999727,
+      "fullWarmPipelineMs": 6413.789118000001
+    }
+  ],
+  "hardware": {
+    "cpuModel": "INTEL(R) XEON(R) PLATINUM 8581C CPU @ 2.30GHz",
+    "logicalCPUs": 4,
+    "affinityCPUs": 4,
+    "platform": "Linux",
+    "torch": "2.14.1+cpu",
+    "opencv": "5.0.0",
+    "torchThreads": 2,
+    "torchInteropThreads": 1,
+    "opencvThreads": 1,
+    "device": "cpu",
+    "cudaAvailable": false,
+    "gpuProvisioned": false,
+    "cpuQuotaCores": 4
+  },
+  "integrity": {
+    "unchanged": true,
+    "sha256": {
+      "canonicalDinoSource": "6bf550efefa26d4b85cb25c5a4fda7a9488a5ca2bfc6afe59b7b83fa052bce2a",
+      "frozenPlan": "b6aa1fc99d7d7a453c447e0703b01085f226578391053ab798b3ea91511aa93a",
+      "frozenReferenceManifest": "deccdd4de270259a6528234e283b78c1f9012d4aa24b5077d7c805a048dd9607",
+      "frozenIndexSummary": "af14f9281cce898adaaecaea287b8b12787aef09611560574b7c829f9a291311",
+      "priorQueryRuns": "03926ec6cffd98bdc83912ed442049a715389cf6c77335c2b49e71b8c10d8fc4",
+      "dinoConfig": "471007e1c59df520030a2690998f4e0ba5d810bc4f959d1984f630d198faa07e",
+      "dinoPreprocessorConfig": "14e780d86fa1861f8751f868d7f45425b5feb55c38ca26f152ca5097ab30f828",
+      "dinoQuantizedWeights": "3afdc8bc63b50558d6e5770f5b799bb82455c2311183a2de43803f343a29d917"
+    }
+  },
+  "sources": {
+    "lightglue": {
+      "url": "https://github.com/cvg/LightGlue",
+      "commit": "eb42fee2d71449efb0aa5c10549752b5d75384d8",
+      "license": "Apache-2.0 including pretrained matcher weights",
+      "licenseCitation": "https://github.com/cvg/LightGlue/blob/main/README.md#license",
+      "sourceFileSha256": {
+        "aliked": "60b24397c52e8a08d838828967cd03f5d6066c1f7c3c433805bf11dcb0d5228e",
+        "matcher": "dcb75b9cad1985c5e7a537c512d4318d47fbcc99df75b39a513de60e027c039f",
+        "imagePreprocessor": "c6d9260656a24d826128b68c95d0b7798106d04f4244a77f3b1856573f58e690"
+      }
+    },
+    "aliked": {
+      "url": "https://github.com/Shiaoming/ALIKED",
+      "license": "BSD-3-Clause",
+      "licenseCitation": "https://github.com/Shiaoming/ALIKED/blob/main/LICENSE"
+    },
+    "kornia": {
+      "url": "https://github.com/kornia/kornia/tree/v0.7.0",
+      "version": "0.7.0",
+      "license": "Apache-2.0"
+    },
+    "packaging": {
+      "url": "https://github.com/pypa/packaging/tree/25.0",
+      "version": "25.0",
+      "license": "Apache-2.0 OR BSD-2-Clause"
+    },
+    "officialApi": "https://github.com/cvg/LightGlue/blob/main/lightglue/aliked.py",
+    "officialResizeApi": "https://github.com/cvg/LightGlue/blob/main/lightglue/utils.py"
+  },
+  "limitations": [
+    "One previously used real query is timing evidence only, not an accuracy sample.",
+    "No accuracy improvement claim. CPU timings do not establish GPU performance or architecture failure.",
+    "Full warm wall clock includes sequential canonical DINO, exact bounded search, subprocess IPC, raw query decode, one ALIKED extraction, ten LightGlue matches and geometry. Input bytes and frozen vectors already in memory; reference prep excluded. Geometry timing includes correspondence conversion and MAGSAC when at least four correspondences exist.",
+    "Dependencies loaded from isolated official source; project dependency files and app workflows unchanged."
+  ],
+  "constraints": {
+    "productionUntouched": true,
+    "dinoUnchanged": true,
+    "noCropping": true,
+    "noSAM": true,
+    "noOCR": true,
+    "noMetadataFiltering": true,
+    "noNewQueryDownloads": true,
+    "noCatalogWrites": true,
+    "noIndexExpansion": true,
+    "noPreviousReranker": true,
+    "nothingPublished": true
+  },
+  "warmRangesMs": {
+    "queryFeature": {
+      "min": 2763.1559230003404,
+      "max": 3003.7048770000183
+    },
+    "fullPipeline": {
+      "min": 6195.983720999997,
+      "max": 6413.789118000001
+    }
+  },
+  "cleanup": {
+    "completedAt": "2026-09-30T23:34:51.649Z",
+    "privateWorkingDirectoryRemoved": true,
+    "ownFeatureCacheReleased": true,
+    "ownDownloadedSourcesAndWeightsRemoved": true,
+    "priorDatasetsNotDeleted": true,
+    "trialProcessesStopped": true
+  },
+  "totalAuthorizedTrialElapsedSeconds": 372.65
+}
