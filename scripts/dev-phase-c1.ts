@@ -317,8 +317,8 @@ if (mode === 'score') {
     const comb = by(null);
     const verdict = (a: 'F' | 'FR') => {
       const f = comb[`family.${a}`];
-      const ok = { top3: f.top3 / comb.n >= 0.85, top1: f.top1 / comb.n >= 0.70, p95: latency[a].p95 <= 2500 };
-      return { top1: `${f.top1}/${comb.n} (${pct(f.top1, comb.n)}%)`, top3: `${f.top3}/${comb.n} (${pct(f.top3, comb.n)}%)`, p95ms: Math.round(latency[a].p95), ...ok, pass: ok.top1 && ok.top3 && ok.p95 };
+      const ok = { top3Ok: f.top3 / comb.n >= 0.85, top1Ok: f.top1 / comb.n >= 0.70, p95Ok: latency[a].p95 <= 2500 };
+      return { top1: `${f.top1}/${comb.n} (${pct(f.top1, comb.n)}%)`, top3: `${f.top3}/${comb.n} (${pct(f.top3, comb.n)}%)`, p95ms: Math.round(latency[a].p95), ...ok, pass: ok.top1Ok && ok.top3Ok && ok.p95Ok };
     };
     const vF = verdict('F'), vFR = verdict('FR');
     combos[`${labelSet}/${leak}`] = { excluded: singleRows(labelSet).filter((r: any) => leak !== 'none' && r.leakCandidate).map((r: any) => r.photo),
