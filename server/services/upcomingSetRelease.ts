@@ -2,9 +2,11 @@ import { db } from '../db';
 import { upcomingSets, mainSets, cardSets, cards } from '../../shared/schema';
 import { eq, sql } from 'drizzle-orm';
 import { catalogSlug, isDueForPublication, validateChecklist } from '../../shared/upcomingRelease';
+import { suppressAutomaticCatalogMutations } from '../devCatalogSnapshot';
 
 /** Staged cards exist only in private JSON, never in searchable catalog tables. */
 export async function publishDueUpcomingSets(now = new Date()) {
+  if (suppressAutomaticCatalogMutations()) return 0;
   const candidates = await db.select().from(upcomingSets).where(sql`
     ${upcomingSets.isActive} = true AND ${upcomingSets.status} = 'upcoming'
     AND ${upcomingSets.dateConfidence} = 'confirmed'

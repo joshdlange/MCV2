@@ -24,6 +24,10 @@ Items agreed with the owner; none are scheduled yet.
 
 ## PRIORITY before Phase C dev testing: refresh the dev catalog from a production snapshot
 
+**Completed in DEV on 2026-10-01.** Owner chose clearing dev test references.
+See [step 1 handoff](scan-v1-step1.md) for backup, verification and repeat procedure.
+The historical proposal below is retained for context.
+
 **Goal:** card IDs (and images) in dev match production, so dev testing of collection adds, scan
 confirm and image approvals is meaningful. Dev-only; **no production writes**; production is read in
 one read-only transaction.

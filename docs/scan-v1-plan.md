@@ -1,5 +1,9 @@
 # Scan to Add v1: plan
 
+> Superseded in scope by the owner's cut-down DEV request: see
+> [step 1 handoff](scan-v1-step1.md). Skip OCR, auto-rotate, instant indexing and
+> hosting studies. Never publish. Stop after each requested review boundary.
+
 - **Status:** PLAN ONLY (2026-10-01). Waiting for the owner's OK. Nothing is built or published.
 - **Where:** dev only, behind `SCAN_VISUAL_RETRIEVAL` (off in production).
 - **No OCR in the critical path.** C1 showed it is slow (about 2.4 s) and usually wrong on these cards.

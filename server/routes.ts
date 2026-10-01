@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import { suppressAutomaticCatalogMutations } from "./devCatalogSnapshot";
 import { upcomingPublicCatchup } from './services/upcomingSetRelease';
 import { ensureDiscoveryFresh } from './services/upcomingSetsSync';
 import { centralReleaseDate } from '../shared/upcomingRelease';
@@ -13115,22 +13116,22 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   console.log('Email automation jobs initialized');
 
   // One-time seed: 2026 CardFun Marvel Rivals - Eternal Glory (idempotent)
-  import('./seeds/seedCardfunEternalGlory').then(m => m.seedCardfunEternalGlory()).catch(err => {
+  if (!suppressAutomaticCatalogMutations()) import('./seeds/seedCardfunEternalGlory').then(m => m.seedCardfunEternalGlory()).catch(err => {
     console.error('[CardFun Seed] Error:', err);
   });
 
   // One-time data fix: misplaced Kakawow Cosmos cards CM-I-100..108 (idempotent)
-  import('./seeds/fixKakawowCosmosCards').then(m => m.fixKakawowCosmosCards()).catch(err => {
+  if (!suppressAutomaticCatalogMutations()) import('./seeds/fixKakawowCosmosCards').then(m => m.fixKakawowCosmosCards()).catch(err => {
     console.error('[Kakawow Fix] Error:', err);
   });
 
   // One-time seed: 2026 Topps Chrome Marvel Comics — 77 subsets, 9,444 cards (idempotent)
-  import('./seeds/seedToppsChromeMarvel2026').then(m => m.seedToppsChromeMarvel2026()).catch(err => {
+  if (!suppressAutomaticCatalogMutations()) import('./seeds/seedToppsChromeMarvel2026').then(m => m.seedToppsChromeMarvel2026()).catch(err => {
     console.error('[Topps Chrome Seed] Error:', err);
   });
 
   // One-time seed: 2026 Topps Mint Marvel — 20 subsets, 1,730 cards (idempotent)
-  import('./seeds/seedToppsMintMarvel2026').then(m => m.seedToppsMintMarvel2026()).catch(err => {
+  if (!suppressAutomaticCatalogMutations()) import('./seeds/seedToppsMintMarvel2026').then(m => m.seedToppsMintMarvel2026()).catch(err => {
     console.error('[Topps Mint Seed] Error:', err);
   });
 
@@ -13140,13 +13141,13 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   });
 
   // One-time seed: 2026 Topps Chrome Sapphire Edition — 29 subsets, 1,738 cards (idempotent)
-  import('./seeds/seedToppsChromeSapphire2026').then(m => m.seedToppsChromeSapphire2026()).catch(err => {
+  if (!suppressAutomaticCatalogMutations()) import('./seeds/seedToppsChromeSapphire2026').then(m => m.seedToppsChromeSapphire2026()).catch(err => {
     console.error('[Chrome Sapphire Seed] Error:', err);
   });
 
   // One-time seed: 2026 Topps Finest Fantastic Four: 65th Anniversary — 137 subsets, 4,851 cards (idempotent)
   // Then one-time fix: copy 100 base-card images added in dev into prod (empty-only, no overwrites)
-  import('./seeds/seedToppsFinestFF2026').then(m => m.seedToppsFinestFF2026())
+  if (!suppressAutomaticCatalogMutations()) import('./seeds/seedToppsFinestFF2026').then(m => m.seedToppsFinestFF2026())
     .then(() => import('./seeds/fixToppsFinestFF2026Images').then(m => m.fixToppsFinestFF2026Images()))
     .catch(err => {
       console.error('[Topps Finest FF Seed/Images] Error:', err);
@@ -13311,7 +13312,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   // set/number). Idempotent + advisory-locked; no-ops once duplicates are gone.
   // Safe to remove this block after it has run in production (check the
   // admin_audit_logs entry with action_type 'au_duplicate_cleanup').
-  import('./services/auDuplicateCleanup').then(async (m) => {
+  if (!suppressAutomaticCatalogMutations()) import('./services/auDuplicateCleanup').then(async (m) => {
     const result = await m.runAuDuplicateCleanup();
     if (result.deletedCards > 0) {
       console.log('[AU Cleanup] Removed duplicate AU cards:', JSON.stringify(result));
@@ -13333,7 +13334,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   // Remaps user refs to base twins, deletes the 90 AU cards and the emptied set.
   // Idempotent + advisory-locked; safe to remove after the prod run is confirmed
   // (admin_audit_logs action_type 'xmen_1991_au_set_cleanup').
-  import('./services/xmenAuSetCleanup').then(async (m) => {
+  if (!suppressAutomaticCatalogMutations()) import('./services/xmenAuSetCleanup').then(async (m) => {
     const result = await m.runXmenAuSetCleanup();
     if (result.ran) {
       console.log('[X-Men AU Set Cleanup] Removed duplicate AU set:', JSON.stringify(result));
@@ -13356,7 +13357,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   // collections (user-confirmed deletion incl. their user collection entries).
   // Safe to remove both after the prod run is confirmed (admin_audit_logs
   // action_type 'ultra_xmen_1996_dupe_removal').
-  import('./seeds/seedUltraWolverine1996Base').then(async (m) => {
+  if (!suppressAutomaticCatalogMutations()) import('./seeds/seedUltraWolverine1996Base').then(async (m) => {
     const seedResult = await m.seedUltraWolverine1996Base();
     if (seedResult.inserted > 0) {
       console.log(`[Ultra Wolverine Seed] Inserted ${seedResult.inserted} base cards into set ${seedResult.setId}`);
@@ -13385,7 +13386,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   // subset, then delete the duplicate family (incl. its identical zero-ref twin
   // subset). Idempotent + advisory-locked; safe to remove after the prod run is
   // confirmed (admin_audit_logs action_type 'skybox_1993_s2_merge').
-  import('./services/skybox1993S2Merge').then(async (m) => {
+  if (!suppressAutomaticCatalogMutations()) import('./services/skybox1993S2Merge').then(async (m) => {
     const result = await m.runSkybox1993S2Merge();
     if (result.ran) {
       console.log('[SkyBox 93 S2 Merge] Done:', JSON.stringify(result));
@@ -13434,7 +13435,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   // the real 30th Anniversary base checklist. Idempotent + advisory-locked; safe
   // to remove after the prod run is confirmed (admin_audit_logs action_type
   // 'spiderman_1992_reorg').
-  import('./services/spiderman1992Reorg').then(async (m) => {
+  if (!suppressAutomaticCatalogMutations()) import('./services/spiderman1992Reorg').then(async (m) => {
     const result = await m.runSpiderman1992Reorg();
     if (result.ran) {
       console.log('[Spider-Man 92 Reorg] Done:', JSON.stringify(result));

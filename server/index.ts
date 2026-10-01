@@ -4,6 +4,7 @@ import { createServer } from "http";
 import { installStartupGate } from "./startupGate";
 import { createDependencyHealthProbe, installDependencyHealth } from "./dependencyHealth";
 import { installDataFixWriteGate } from "./dataFixWriteGate";
+import { suppressAutomaticCatalogMutations } from "./devCatalogSnapshot";
 import path from "path";
 import fs from "fs";
 
@@ -645,74 +646,76 @@ server.listen({
   const dataFixWriteGate = installDataFixWriteGate(app);
 
   const runDataFixSeeds = async () => {
-    const { importSkyboxWizardChromium1996 } = await import('./seeds/importSkyboxWizardChromium1996');
-    await importSkyboxWizardChromium1996();
+    if (!suppressAutomaticCatalogMutations()) {
+      const { importSkyboxWizardChromium1996 } = await import('./seeds/importSkyboxWizardChromium1996');
+      await importSkyboxWizardChromium1996();
 
-    // Add-only catalog import; includes all checklist rows and the supplied thumbnail.
-    const { importToppsVaultMarvel2026 } = await import('./seeds/importToppsVaultMarvel2026');
-    await importToppsVaultMarvel2026();
+      // Add-only catalog import; includes all checklist rows and the supplied thumbnail.
+      const { importToppsVaultMarvel2026 } = await import('./seeds/importToppsVaultMarvel2026');
+      await importToppsVaultMarvel2026();
 
-    // Idempotent duplicate/relocation repair: consolidate legacy set twins and
-    // repoint every live card reference before archived source cards disappear
-    // from normal browsing. This must be awaited under the write gate above.
-    try {
-      const { mergeDuplicateLegacySets } = await import('./seeds/mergeDuplicateLegacySets');
-      await mergeDuplicateLegacySets();
-    } catch (error) {
-      console.error('Startup repair (legacy set merge) failed:', error);
-      throw error;
-    }
+      // Idempotent duplicate/relocation repair: consolidate legacy set twins and
+      // repoint every live card reference before archived source cards disappear
+      // from normal browsing. This must be awaited under the write gate above.
+      try {
+        const { mergeDuplicateLegacySets } = await import('./seeds/mergeDuplicateLegacySets');
+        await mergeDuplicateLegacySets();
+      } catch (error) {
+        console.error('Startup repair (legacy set merge) failed:', error);
+        throw error;
+      }
 
-    // Idempotent startup repair: restore curated card images that the Aug 4
-    // legacy duplicate-set merge left on the archived twin (ledger-guarded,
-    // never re-touches a card an admin fixed by hand).
-    try {
-      const { restoreTwinMergeImages } = await import('./seeds/restoreTwinMergeImages');
-      await restoreTwinMergeImages();
-    } catch (error) {
-      console.error('Startup repair (merge image restore) failed:', error);
-    }
+      // Idempotent startup repair: restore curated card images that the Aug 4
+      // legacy duplicate-set merge left on the archived twin (ledger-guarded,
+      // never re-touches a card an admin fixed by hand).
+      try {
+        const { restoreTwinMergeImages } = await import('./seeds/restoreTwinMergeImages');
+        await restoreTwinMergeImages();
+      } catch (error) {
+        console.error('Startup repair (merge image restore) failed:', error);
+      }
 
-    // Idempotent startup fix: 2025 Topps Chrome Marvel Studios checklist —
-    // completes the 200-card base + parallels, relocates mislabeled parallel
-    // strays, dedupes The Snap Variations (slug-matched, safe in dev and prod).
-    try {
-      const { fixTcms2025Checklist } = await import('./seeds/fixTcms2025Checklist');
-      await fixTcms2025Checklist();
-    } catch (error) {
-      console.error('Startup fix (TCMS 2025 checklist) failed:', error);
-    }
+      // Idempotent startup fix: 2025 Topps Chrome Marvel Studios checklist —
+      // completes the 200-card base + parallels, relocates mislabeled parallel
+      // strays, dedupes The Snap Variations (slug-matched, safe in dev and prod).
+      try {
+        const { fixTcms2025Checklist } = await import('./seeds/fixTcms2025Checklist');
+        await fixTcms2025Checklist();
+      } catch (error) {
+        console.error('Startup fix (TCMS 2025 checklist) failed:', error);
+      }
 
-    // Idempotent startup fix: 2025 Topps Chrome Marvel Studios INSERT sets —
-    // strips "[Color]"/"#XX-N" decorations from card names, moving each row to
-    // its correct insert/parallel set or merging it into the existing clean row
-    // (slug-matched, marker-gated, safe in dev and prod).
-    try {
-      const { fixTcms2025Inserts } = await import('./seeds/fixTcms2025Inserts');
-      await fixTcms2025Inserts();
-    } catch (error) {
-      console.error('Startup fix (TCMS 2025 inserts) failed:', error);
-    }
+      // Idempotent startup fix: 2025 Topps Chrome Marvel Studios INSERT sets —
+      // strips "[Color]"/"#XX-N" decorations from card names, moving each row to
+      // its correct insert/parallel set or merging it into the existing clean row
+      // (slug-matched, marker-gated, safe in dev and prod).
+      try {
+        const { fixTcms2025Inserts } = await import('./seeds/fixTcms2025Inserts');
+        await fixTcms2025Inserts();
+      } catch (error) {
+        console.error('Startup fix (TCMS 2025 inserts) failed:', error);
+      }
 
-    // Idempotent startup fix: parallel cards that leaked into base/insert set
-    // checklists across all products — moves them to their correct parallel sets
-    // (creating sets where missing), strips self-labelling decorations, and
-    // archives ambiguous Printing Plate entries (marker-gated, dev + prod safe).
-    try {
-      const { fixParallelLeaks } = await import('./seeds/fixParallelLeaks');
-      await fixParallelLeaks();
-    } catch (error) {
-      console.error('Startup fix (parallel leaks) failed:', error);
-    }
+      // Idempotent startup fix: parallel cards that leaked into base/insert set
+      // checklists across all products — moves them to their correct parallel sets
+      // (creating sets where missing), strips self-labelling decorations, and
+      // archives ambiguous Printing Plate entries (marker-gated, dev + prod safe).
+      try {
+        const { fixParallelLeaks } = await import('./seeds/fixParallelLeaks');
+        await fixParallelLeaks();
+      } catch (error) {
+        console.error('Startup fix (parallel leaks) failed:', error);
+      }
 
-    // Idempotent startup fix: 2026 Topps Chrome Superfractor — merges the 200
-    // junk one-card "Superfractor 1/N" subsets into the single canonical
-    // Superfractor subset, repointing owned copies (marker-gated, dev + prod).
-    try {
-      const { fixSuperfractor2026JunkSets } = await import('./seeds/fixSuperfractor2026JunkSets');
-      await fixSuperfractor2026JunkSets();
-    } catch (error) {
-      console.error('Startup fix (2026 Superfractor junk sets) failed:', error);
+      // Idempotent startup fix: 2026 Topps Chrome Superfractor — merges the 200
+      // junk one-card "Superfractor 1/N" subsets into the single canonical
+      // Superfractor subset, repointing owned copies (marker-gated, dev + prod).
+      try {
+        const { fixSuperfractor2026JunkSets } = await import('./seeds/fixSuperfractor2026JunkSets');
+        await fixSuperfractor2026JunkSets();
+      } catch (error) {
+        console.error('Startup fix (2026 Superfractor junk sets) failed:', error);
+      }
     }
 
     // Idempotent badge/feed seeds (deferred post-listen — bulk aggregations
@@ -802,7 +805,8 @@ server.listen({
       console.error('Startup seed (badge/feed fixes) failed:', error);
     } finally {
       // Noncritical seeds above log and continue. Reaching this point means the
-      // required card merge completed, so card-reference writes are safe.
+      // required card merge completed (or was intentionally suppressed for the
+      // local catalog snapshot), so card-reference writes are safe.
       dataFixWriteGate.markReady();
     }
   };
@@ -926,7 +930,7 @@ server.listen({
     // External → Cloudinary image migration worker: continuously (paced)
     // copies all externally-hosted card images (PriceCharting, COMC, eBay, …)
     // into our Cloudinary account until none remain (see services/imageMigration.ts).
-    import('./services/imageMigration').then(({ startImageMigrationWorker }) => {
+    if (!suppressAutomaticCatalogMutations()) import('./services/imageMigration').then(({ startImageMigrationWorker }) => {
       startImageMigrationWorker();
     }).catch((error) => {
       console.error('Failed to start image migration cron:', error);

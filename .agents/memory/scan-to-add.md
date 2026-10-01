@@ -3,6 +3,16 @@ name: Scan-to-Add product constraints
 description: Collector confirmation, photo review independence, and binder-page direction.
 ---
 
+## Current authorization: cut-down dev v1
+
+Build only in DEV; never publish; production is read-only. Preserve all existing `.local/` data and indexes. Checkpoint before each step and stop after the dev catalog refresh for review. The user authorized backing up dev, copying the production catalog with exact IDs, and clearing dev test references instead of remapping them.
+
+**Why:** The user wants a phone-testable flow in 2–3 sessions, not weeks.
+
+**How to apply:** Reuse C0 arm C and the existing search, confirm/add and photo-submission flows behind the default-off visual-retrieval flag. Skip auto-rotation, OCR in the scan path, instant re-indexing and hosting studies. Report end-to-end dev timing after the screen is wired. This authorization supersedes the older experiment-only restrictions below, especially their deletion instructions; do not delete retained `.local/` evidence.
+
+## Historical experiment constraints (not the current v1 scope)
+
 Use canonical single-image DINO alone for the next development recognition evaluation; do not run the historical reranker or reference-guided optional crop.
 
 **Why:** The frozen reranker did not improve retrieval. Approved-reference-boundary dependence does not demonstrate independent card isolation. Historical production photos were deliberately deleted, so retained ranks cannot establish visual failure causes.
