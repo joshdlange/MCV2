@@ -144,6 +144,76 @@ function PageCornerMarker({ item, onDone }: { item: Item; onDone: () => void }) 
   );
 }
 
+// Photo previews need the auth header, so they load through apiRequest into object URLs.
+function AuthImage({ src, alt }: { src: string; alt: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let active = true, objectUrl: string | undefined;
+    apiRequest("GET", src).then(r => r.blob()).then(b => {
+      if (active) { objectUrl = URL.createObjectURL(b); setUrl(objectUrl); }
+    }).catch(() => active && setFailed(true));
+    return () => { active = false; if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [src]);
+  if (failed) return <span className="text-xs text-red-600">Image unavailable</span>;
+  return url ? <img src={url} alt={alt} className="h-80 w-auto rounded border" /> : <Loader2 className="h-5 w-5 animate-spin" />;
+}
+
+type ReviewCard = CardInfo & { mainSetName: string | null; uploader: string | null };
+type Review = {
+  labelReview: { photoId: string; frozenCardId: number; suggestedCardId: number; why: string; frozen: ReviewCard | null; suggested: ReviewCard | null }[];
+  userUploads: { photoId: string; cell: number | null; card: ReviewCard }[];
+};
+
+function ReviewTile({ title, card }: { title: string; card: ReviewCard | null }) {
+  return (
+    <figure className="space-y-1 text-xs max-w-[16rem]">
+      <figcaption className="font-medium text-sm">{title}</figcaption>
+      {card?.imageUrl ? <img src={card.imageUrl} alt={card.name} className="h-80 w-auto rounded border" /> : <span className="text-red-600">No catalog image</span>}
+      {card && <div className="text-gray-700">
+        <div><strong>{card.name} #{card.cardNumber ?? "?"}</strong>{card.variation ? ` · ${card.variation}` : ""}</div>
+        <div>{card.year ?? ""} {card.mainSetName ?? ""} · {card.setName}</div>
+        <div>Production ID {card.id}{card.uploader ? ` · image uploaded by user ${card.uploader}` : ""}</div>
+      </div>}
+    </figure>
+  );
+}
+
+function photoSrc(photoId: string, cell: number | null) {
+  return cell === null ? `/api/admin/phase-c0/image/${photoId}` : `/api/admin/phase-c0/cell/${photoId}/${cell}`;
+}
+
+// DEV-ONLY Phase C1 label review: read-only, nothing here changes labels.json or the freezes.
+function LabelReview() {
+  const review = useQuery<Review>({ queryKey: ["/api/admin/phase-c0/review"], staleTime: 0 });
+  if (review.isLoading) return <Loader2 className="h-5 w-5 animate-spin" />;
+  if (!review.data) return <p className="text-sm text-red-600">Review data unavailable.</p>;
+  return (
+    <div className="space-y-6">
+      <h2 className="text-base font-semibold">Phase C1 label review (read-only)</h2>
+      {review.data.labelReview.map(r => (
+        <Card key={r.photoId}><CardContent className="pt-4 space-y-2">
+          <p className="text-sm">Photo <code>{r.photoId.slice(0, 8)}</code>: {r.why}</p>
+          <div className="flex flex-wrap gap-4">
+            <figure className="space-y-1"><figcaption className="font-medium text-sm">Your photo</figcaption><AuthImage src={photoSrc(r.photoId, null)} alt="Your photo" /></figure>
+            <ReviewTile title={`Frozen label (${r.frozenCardId})`} card={r.frozen} />
+            <ReviewTile title={`Suggested (${r.suggestedCardId})`} card={r.suggested} />
+          </div>
+        </CardContent></Card>
+      ))}
+      <h3 className="text-sm font-semibold">Possible leakage: labelled cards whose production image is a user upload ({review.data.userUploads.length})</h3>
+      <p className="text-xs text-gray-600">If the catalog image was made from this same photo, or you uploaded it yourself, the photo is excluded from C1 scoring and listed separately.
+        Binder pockets show the cell as the harness cuts it.</p>
+      {review.data.userUploads.map(p => (
+        <div key={`${p.photoId}-${p.cell}`} className="flex flex-wrap gap-4 border rounded p-2">
+          <figure className="space-y-1"><figcaption className="font-medium text-sm">Photo {p.photoId.slice(0, 8)}{p.cell === null ? "" : ` · ${CELL_NAMES[p.cell]} pocket`}</figcaption><AuthImage src={photoSrc(p.photoId, p.cell)} alt="Your photo" /></figure>
+          <ReviewTile title="Labelled card" card={p.card} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function PhaseC0Photos() {
   const { currentUser } = useAppStore();
   const queryClient = useQueryClient();
@@ -161,6 +231,7 @@ export default function PhaseC0Photos() {
   const [inputKey, setInputKey] = useState(0);
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
   const [activeCell, setActiveCell] = useState(0);
+  const showReview = new URLSearchParams(window.location.search).has("review");
 
   if (!enabled) return <div className="p-6"><Card><CardContent className="py-12 text-center text-gray-700"><ShieldAlert className="h-10 w-10 mx-auto text-red-500 mb-3" />{!import.meta.env.DEV ? "Only available in development" : "Admin access required"}</CardContent></Card></div>;
   const items = list.data?.items ?? [];
@@ -197,9 +268,11 @@ export default function PhaseC0Photos() {
     } catch { setStatus("Could not remove photo."); }
   };
 
+  if (showReview) return <div className="p-4 max-w-5xl"><LabelReview /></div>;
+
   return (
     <div className="p-4 space-y-4 max-w-4xl">
-      <h1 className="text-lg font-semibold">Phase C0 test photos: {singles} single cards, {pages.length} binder pages</h1>
+      <h1className="text-lg font-semibold">Phase C0 test photos: {singles} single cards, {pages.length} binder pages</h1>
       <p className="text-sm text-gray-700">
         Photos are saved untouched to the dev data folder (development only, never committed). Use JPEG photos. Card IDs are <strong>production</strong> IDs (frozen production catalog snapshot).
       </p>

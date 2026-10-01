@@ -100,3 +100,39 @@ test('search and lookup read the frozen production snapshot file (no database)',
     assert.equal((await fetch(`${s.url}/card/999`)).status, 404);
   } finally { s.close(); process.env.NODE_ENV = savedEnv; }
 });
+
+test('C1 label review is read-only and flags user-upload references', async () => {
+  process.env.NODE_ENV = 'development';
+  const parent = await fs.mkdtemp(path.join(os.tmpdir(), 'phase-c1-'));
+  const root = path.join(parent, 'phase-c0');
+  const app = express();
+  registerPhaseC0PhotoRoutes(app, (req: any, _res, next) => { req.user = { isAdmin: true }; next(); }, { root });
+  const server = app.listen(0);
+  const url = `http://127.0.0.1:${(server.address() as any).port}/api/admin/phase-c0`;
+  try {
+    const card = (id: number, name: string, imageUrl: string) => ({ id, name, cardNumber: '1', variation: null, setId: 1, setName: 'Base',
+      year: 2026, mainSetId: 1, mainSetName: 'Set', setActive: true, archived: false, imageUrl });
+    await fs.mkdir(path.join(root, 'prod-catalog'), { recursive: true });
+    await fs.writeFile(path.join(root, 'prod-catalog', 'cards.json'), JSON.stringify({ cards: [
+      card(1, 'Frozen', 'https://res.cloudinary.com/x/image/upload/v1/marvel-cards/1.jpg'),
+      card(2, 'Suggested', 'https://res.cloudinary.com/x/image/upload/v1/user_uploads/337/2/front.webp'),
+    ] }));
+    const labels = JSON.stringify([
+      { id: 'a', kind: 'single', file: 'photos/a.jpg', cardId: 2 },
+      { id: 'b', kind: 'binder', file: 'photos/b.jpg', cells: [1, 2, null, null, null, null, null, null, null] },
+    ]);
+    await fs.writeFile(path.join(root, 'labels.json'), labels);
+    await fs.mkdir(path.join(parent, 'phase-c1', 'cells'), { recursive: true });
+    await fs.writeFile(path.join(parent, 'phase-c1', 'label-review.json'), JSON.stringify([{ photoId: 'a', frozenCardId: 1, suggestedCardId: 2, why: 'x' }]));
+    const cellId = '3b12ef57-91a0-40c0-91a8-fcb1ee500573';
+    await fs.writeFile(path.join(parent, 'phase-c1', 'cells', `${cellId}-1.jpg`), await photo());
+    const review = await (await fetch(`${url}/review`)).json();
+    assert.equal(review.labelReview[0].frozen.name, 'Frozen');
+    assert.equal(review.labelReview[0].suggested.uploader, '337');
+    assert.deepEqual(review.userUploads.map((p: any) => [p.photoId, p.cell]), [['a', null], ['b', 1]]);
+    assert.equal((await fetch(`${url}/cell/${cellId}/1`)).status, 200);
+    assert.equal((await fetch(`${url}/cell/${cellId}/9`)).status, 404);
+    assert.equal((await fetch(`${url}/cell/..%2F..%2Fx/1`)).status, 404);
+    assert.equal(await fs.readFile(path.join(root, 'labels.json'), 'utf8'), labels); // unchanged
+  } finally { server.close(); process.env.NODE_ENV = savedEnv; }
+});

@@ -15,6 +15,7 @@ import { isClockwiseConvex, orderCardCorners, type CornerPoint } from '../shared
 // from a local file; this module never queries any database.
 let root = devDataPath('phase-c0');
 const catalogFile = () => path.join(root, 'prod-catalog', 'cards.json');
+const c1Root = () => path.join(path.dirname(root), 'phase-c1');
 const base = '/api/admin/phase-c0';
 const TAGS = ['hand', 'table', 'sleeve', 'toploader', 'glare', 'binder-neighbors', 'angle', 'low-light', 'clean'] as const;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024, files: 1 } });
@@ -167,6 +168,38 @@ export function registerPhaseC0PhotoRoutes(app: Express, authenticateUser: Reque
       await fs.rm(path.join(root, removed.file), { force: true });
       res.json({ removed: removed.id });
     } catch { res.status(500).json({ message: 'Could not remove photo' }); }
+  });
+
+  // Phase C1 label review (read-only): each photo beside its frozen label's catalog image and the
+  // suggested correction from phase-c1/label-review.json, plus every labelled card whose production
+  // reference is a user upload (possible query-photo leakage). Never changes labels.json.
+  app.get(`${base}/review`, ...guard, async (_req, res) => {
+    try {
+      const [{ byId }, items] = await Promise.all([loadCatalog(), readItems()]);
+      const suggestions: { photoId: string; frozenCardId: number; suggestedCardId: number; why: string }[] =
+        await fs.readFile(path.join(c1Root(), 'label-review.json'), 'utf8').then(JSON.parse).catch(() => []);
+      const card = (id: number | null | undefined) => {
+        const c = id ? byId.get(id) : undefined;
+        return c ? { ...publicCard(c), mainSetName: c.mainSetName, uploader: c.imageUrl?.match(/\/user_uploads\/(\d+)\//)?.[1] ?? null } : null;
+      };
+      const pairs = items.flatMap(item => item.kind === 'single'
+        ? [{ photoId: item.id, cell: null, card: card(item.cardId) }]
+        : (item.cells ?? []).map((id, cell) => ({ photoId: item.id, cell, card: card(id) })));
+      res.json({
+        labelReview: suggestions.map(s => ({ ...s, frozen: card(s.frozenCardId), suggested: card(s.suggestedCardId) })),
+        userUploads: pairs.filter(p => p.card?.uploader),
+      });
+    } catch { res.status(500).json({ message: 'Review data unavailable' }); }
+  });
+
+  // One binder cell as cut by the C0/C1 harness (phase-c1/cells), for the review view.
+  app.get(`${base}/cell/:id/:cell`, ...guard, async (req, res) => {
+    const cell = Number(req.params.cell);
+    if (!/^[0-9a-f-]{36}$/.test(req.params.id) || !Number.isInteger(cell) || cell < 0 || cell > 8) return res.status(404).json({ message: 'Unknown cell' });
+    try {
+      res.set('Cache-Control', 'private, no-store');
+      res.type('image/jpeg').send(await fs.readFile(path.join(c1Root(), 'cells', `${req.params.id}-${cell}.jpg`)));
+    } catch { res.status(404).json({ message: 'Cell image unavailable' }); }
   });
 
   app.get(`${base}/image/:id`, ...guard, async (req, res) => {
