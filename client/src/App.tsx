@@ -58,6 +58,8 @@ const AdminPushNotifications = lazy(() => import("@/pages/admin/push-notificatio
 const AdminLegacyTools = lazy(() => import("@/pages/admin/legacy-tools"));
 const AdminDataQuality = lazy(() => import("@/pages/admin/data-quality"));
 const AdminScanAccuracyReview = lazy(() => import("@/pages/admin/scan-accuracy-review"));
+// DEV-ONLY Phase B tool: compiled out of production builds.
+const AdminPhaseBCorners = import.meta.env.DEV ? lazy(() => import("@/pages/admin/phase-b-corners")) : null;
 const AdminFeed = lazy(() => import("@/pages/admin/feed"));
 const CardSearch = lazy(() => import("@/pages/card-search"));
 const MarketTrends = lazy(() => import("@/pages/market-trends"));
@@ -242,6 +244,7 @@ function Router() {
           <Route path="/admin/legacy-tools" component={AdminLegacyTools} />
           <Route path="/admin/data-quality" component={AdminDataQuality} />
           <Route path="/admin/scan-accuracy-review" component={AdminScanAccuracyReview} />
+          {AdminPhaseBCorners && <Route path="/admin/phase-b-corners" component={AdminPhaseBCorners} />}
           <Route path="/admin/feed" component={AdminFeed} />
           <Route path="/scan" component={ScanToAdd} />
           <Route path="/collectors/:username" component={CollectorProfile} />

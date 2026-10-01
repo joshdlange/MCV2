@@ -2268,6 +2268,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   });
 
   registerScanReviewRoutes(app, authenticateUser);
+  if (process.env.NODE_ENV === 'development') {
+    const { registerPhaseBCornerRoutes } = await import('./dev-phase-b-corners');
+    registerPhaseBCornerRoutes(app, authenticateUser);
+  }
 
   // Retired connector: keep legacy endpoints explicit, without loading Drive code
   // or touching the preserved Cloudinary images and import history.
