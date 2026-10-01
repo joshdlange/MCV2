@@ -60,6 +60,7 @@ const AdminDataQuality = lazy(() => import("@/pages/admin/data-quality"));
 const AdminScanAccuracyReview = lazy(() => import("@/pages/admin/scan-accuracy-review"));
 // DEV-ONLY Phase B tool: compiled out of production builds.
 const AdminPhaseBCorners = import.meta.env.DEV ? lazy(() => import("@/pages/admin/phase-b-corners")) : null;
+const AdminPhaseC0Photos = import.meta.env.DEV ? lazy(() => import("@/pages/admin/phase-c0-photos")) : null;
 const AdminFeed = lazy(() => import("@/pages/admin/feed"));
 const CardSearch = lazy(() => import("@/pages/card-search"));
 const MarketTrends = lazy(() => import("@/pages/market-trends"));
@@ -245,6 +246,7 @@ function Router() {
           <Route path="/admin/data-quality" component={AdminDataQuality} />
           <Route path="/admin/scan-accuracy-review" component={AdminScanAccuracyReview} />
           {AdminPhaseBCorners && <Route path="/admin/phase-b-corners" component={AdminPhaseBCorners} />}
+          {AdminPhaseC0Photos && <Route path="/admin/phase-c0-photos" component={AdminPhaseC0Photos} />}
           <Route path="/admin/feed" component={AdminFeed} />
           <Route path="/scan" component={ScanToAdd} />
           <Route path="/collectors/:username" component={CollectorProfile} />

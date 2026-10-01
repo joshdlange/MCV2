@@ -2271,6 +2271,8 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   if (process.env.NODE_ENV === 'development') {
     const { registerPhaseBCornerRoutes } = await import('./dev-phase-b-corners');
     registerPhaseBCornerRoutes(app, authenticateUser);
+    const { registerPhaseC0PhotoRoutes } = await import('./dev-phase-c0-photos');
+    registerPhaseC0PhotoRoutes(app, authenticateUser);
   }
 
   // Retired connector: keep legacy endpoints explicit, without loading Drive code
