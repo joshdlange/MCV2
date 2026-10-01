@@ -11,6 +11,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Check, Heart, Star, RotateCcw, Edit, Trash2, Save, X, RefreshCw, ExternalLink, Image, Upload, Camera, ChevronDown, ChevronUp, Settings, MoreVertical, ShoppingCart, TrendingUp } from "lucide-react";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { buildInputFromCard, openEbaySearch } from "@/lib/ebayAffiliate";
+import { EpnDisclosure } from "@/components/EpnDisclosure";
 import { useAppStore } from "@/lib/store";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -902,15 +903,18 @@ export function CardDetailModal({
 
             {/* Buy on eBay Button */}
             {!isEditing && (
-              <button
-                onClick={() => openEbaySearch(buildInputFromCard(card))}
-                className="w-full py-2 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold text-sm shadow-lg rounded-md flex items-center justify-center gap-2"
-                data-testid="button-buy-on-ebay"
-              >
-                <ShoppingCart className="w-4 h-4" />
-                Buy on eBay
-                <ExternalLink className="w-3 h-3 opacity-70" />
-              </button>
+              <div>
+                <button
+                  onClick={() => openEbaySearch(buildInputFromCard(card))}
+                  className="w-full py-2 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold text-sm shadow-lg rounded-md flex items-center justify-center gap-2"
+                  data-testid="button-buy-on-ebay"
+                >
+                  <ShoppingCart className="w-4 h-4" />
+                  Buy on eBay
+                  <ExternalLink className="w-3 h-3 opacity-70" />
+                </button>
+                <EpnDisclosure tone="dark" className="mt-1.5 text-center" />
+              </div>
             )}
 
             {/* Image Upload Section - Available for all users */}

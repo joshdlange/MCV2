@@ -24,6 +24,7 @@ import {
   formatChartLabels,
   hasEnoughData,
 } from "@/lib/marketSentiment";
+import { EpnDisclosure } from "@/components/EpnDisclosure";
 
 
 interface RawMarketData {
@@ -94,7 +95,7 @@ function MoverRow({ mover, isGainer }: { mover: Mover; isGainer: boolean }) {
 
   const handleClick = () => {
     if (mover.itemUrl) {
-      window.open(mover.itemUrl, '_blank');
+      window.open(mover.itemUrl, '_blank', 'noopener');
     }
   };
 
@@ -142,7 +143,7 @@ function MoverRow({ mover, isGainer }: { mover: Mover; isGainer: boolean }) {
 function RecentSaleCard({ sale }: { sale: RecentSale }) {
   const handleClick = () => {
     if (sale.itemWebUrl) {
-      window.open(sale.itemWebUrl, '_blank');
+      window.open(sale.itemWebUrl, '_blank', 'noopener');
     }
   };
 
@@ -227,9 +228,12 @@ function TopMoversModule({ marketData }: { marketData: MarketTrendsData }) {
 
         <div>
           {hasMovers ? (
-            displayMovers.map((mover, idx) => (
-              <MoverRow key={idx} mover={mover} isGainer={moverType === 'gainers'} />
-            ))
+            <>
+              {displayMovers.map((mover, idx) => (
+                <MoverRow key={idx} mover={mover} isGainer={moverType === 'gainers'} />
+              ))}
+              <EpnDisclosure className="mt-3" />
+            </>
           ) : (
             <div className="text-center py-8">
               <AlertCircle className="w-8 h-8 text-gray-300 mx-auto mb-2" />
@@ -256,11 +260,14 @@ function RecentSalesModule({ marketData }: { marketData: MarketTrendsData }) {
         </h3>
 
         {hasSales ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {sales.map((sale, idx) => (
-              <RecentSaleCard key={idx} sale={sale} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {sales.map((sale, idx) => (
+                <RecentSaleCard key={idx} sale={sale} />
+              ))}
+            </div>
+            <EpnDisclosure className="mt-3" />
+          </>
         ) : (
           <div className="text-center py-8">
             <AlertCircle className="w-8 h-8 text-gray-300 mx-auto mb-2" />

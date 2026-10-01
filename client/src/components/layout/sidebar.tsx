@@ -32,6 +32,7 @@ import {
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { avatarUrl } from "@/lib/collectorAvatars";
 import { normalizeTrustedAvatarUrl } from "@shared/trustedAvatarUrl";
+import { EpnDisclosure } from "@/components/EpnDisclosure";
 
 // Nav items in intentional groups: home / collect / build / community.
 // Rendered with subtle spacing + thin dividers between groups (no headers).
@@ -278,6 +279,7 @@ export function Sidebar() {
           </div>
         )}
 
+        <EpnDisclosure className="pt-2.5 border-t border-gray-200 mt-2.5 text-center" />
       </nav>
 
       {/* Upgrade Modal */}
