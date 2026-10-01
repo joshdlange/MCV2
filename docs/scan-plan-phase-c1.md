@@ -179,3 +179,27 @@ Each method gives the rank of the first card in the fused list that it accepts:
 - **Same transaction:** `card_sets(id, is_insert_subset)` for the T matcher (§3).
 - **Files:** `phase-c1/image-gaps-top500.csv` and `phase-c1/set-flags.json` (gitignored).
   The report summarizes the CSV.
+
+## Addendum A: proceed without owner confirmation (2026-10-01, before any C1 run or scoring)
+
+The owner could not view the comparison page in this session and said to continue: "Continue and
+we'll clean it up after." So corrections and leakage are **not owner-confirmed**. Arms, fusion,
+rotation, scoring and pass criteria are unchanged. Only §2's label and exclusion inputs change:
+
+1. **Two label sets, both reported in full:**
+   - **Frozen:** labels as frozen.
+   - **Suggested:** 19627bee → 548416 and 3b12ef57 → 533722. These are my reading of the photos,
+     marked **unconfirmed** everywhere they appear.
+2. **Two leakage settings, both reported:**
+   - **None excluded.**
+   - **All candidates excluded:** every photo or cell whose labelled card's production image is a
+     user upload, under that label set (uploaders 337, 1314 and 2078). This is a conservative
+     upper bound on the owner's rule.
+3. **The verdict (§5) is given for all four combinations.** The headline is
+   **suggested + all-candidates-excluded**, as the closest available proxy for owner-confirmed.
+   The report states that it is a proxy, and says so plainly if the combinations disagree.
+4. **The `card_sets.is_insert_subset` production read (§7)** goes ahead as flagged; the owner did
+   not object.
+
+When the owner confirms, the confirmed combination is read off the same raw outputs. Nothing is
+rerun.
