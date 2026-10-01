@@ -11,7 +11,7 @@ import sharp from 'sharp';
 import { devDataPath } from '../server/devData';
 
 process.umask(0o077);
-const C0 = devDataPath('phase-c0'), OUT = devDataPath('phase-c1', 'cells');
+export const C0 = devDataPath('phase-c0'), OUT = devDataPath('phase-c1', 'cells');
 const GRAY = { r: 0x77, g: 0x77, b: 0x77 };
 const sha = (b: Buffer | string) => createHash('sha256').update(b).digest('hex');
 
@@ -43,15 +43,11 @@ function homography(src: number[][], dst: number[][]) {
   return [...b.map((v, i) => v / A[i][i]), 1];
 }
 
-const labels: any[] = JSON.parse(await fs.readFile(path.join(C0, 'labels.json'), 'utf8'));
-const frozen = JSON.parse(await fs.readFile(path.join(C0, 'freeze.json'), 'utf8'));
-await fs.mkdir(OUT, { recursive: true });
-const cells: any[] = [];
-for (const page of labels.filter(i => i.kind === 'binder')) {
-  const bytes = await fs.readFile(path.join(C0, page.file));
-  assert.equal(sha(bytes), frozen.photos.find((p: any) => p.id === page.id)?.sha256, `page ${page.id} is not the frozen photo`);
+// Warp + 3x3 cut exactly as C0. Returns the 9 padded cell JPEGs and the time taken.
+export async function cutPageCells(bytes: Buffer, pageCorners: [number, number][]) {
+  const t0 = performance.now();
   const { data, info } = await sharp(bytes).rotate().removeAlpha().raw().toBuffer({ resolveWithObject: true });
-  const px = (page.pageCorners as [number, number][]).map(([x, y]) => [x * info.width, y * info.height]);
+  const px = pageCorners.map(([x, y]) => [x * info.width, y * info.height]);
   const d = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
   const pageW = (d(px[0], px[1]) + d(px[3], px[2])) / 2, pageH = (d(px[0], px[3]) + d(px[1], px[2])) / 2;
   const W = pageW >= pageH ? 2100 : Math.round(2100 * pageW / pageH), H = pageH > pageW ? 2100 : Math.round(2100 * pageH / pageW);
@@ -66,15 +62,31 @@ for (const page of labels.filter(i => i.kind === 'binder')) {
     }
   }
   const warped = sharp(out, { raw: { width: W, height: H, channels: 3 } });
+  const cells: Buffer[] = [];
   for (let i = 0; i < 9; i++) {
     const cw = W / 3, ch = H / 3, inset = 0.03;
     const left = Math.round((i % 3) * cw + cw * inset), top = Math.round(Math.floor(i / 3) * ch + ch * inset);
-    const crop = await padToCardAspect(await warped.clone().extract({ left, top, width: Math.round(cw * (1 - 2 * inset)), height: Math.round(ch * (1 - 2 * inset)) }).png().toBuffer());
+    cells.push(await padToCardAspect(await warped.clone().extract({ left, top, width: Math.round(cw * (1 - 2 * inset)), height: Math.round(ch * (1 - 2 * inset)) }).png().toBuffer()));
+  }
+  return { cells, warpMs: performance.now() - t0 };
+}
+
+if (process.argv[1]?.endsWith('dev-phase-c1-cells.ts')) {
+const labels: any[] = JSON.parse(await fs.readFile(path.join(C0, 'labels.json'), 'utf8'));
+const frozen = JSON.parse(await fs.readFile(path.join(C0, 'freeze.json'), 'utf8'));
+await fs.mkdir(OUT, { recursive: true });
+const cells: any[] = [];
+for (const page of labels.filter(i => i.kind === 'binder')) {
+  const bytes = await fs.readFile(path.join(C0, page.file));
+  assert.equal(sha(bytes), frozen.photos.find((p: any) => p.id === page.id)?.sha256, `page ${page.id} is not the frozen photo`);
+  const cut = await cutPageCells(bytes, page.pageCorners);
+  for (let i = 0; i < 9; i++) {
     const file = `${page.id}-${i}.jpg`;
-    await fs.writeFile(path.join(OUT, file), crop);
-    cells.push({ page: page.id, cell: i, label: page.cells[i], file, sha256: sha(crop) });
+    await fs.writeFile(path.join(OUT, file), cut.cells[i]);
+    cells.push({ page: page.id, cell: i, label: page.cells[i], file, sha256: sha(cut.cells[i]) });
   }
   console.log(`page ${page.id.slice(0, 8)}: 9 cells`);
 }
 await fs.writeFile(path.join(OUT, 'cells.json'), JSON.stringify(cells, null, 2));
 console.log(JSON.stringify({ cells: cells.length, hash: sha(JSON.stringify(cells)) }));
+}
