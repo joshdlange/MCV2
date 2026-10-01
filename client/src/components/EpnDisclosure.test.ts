@@ -5,8 +5,10 @@ import path from 'node:path';
 
 const source = readFileSync('client/src/components/EpnDisclosure.tsx', 'utf8');
 
-test('EPN disclosure wording is exactly the approved sentence', () => {
-  assert.match(source, /export const EPN_DISCLOSURE = "Sponsored · As an eBay Partner Network affiliate, MCV earns from qualifying purchases\.";/);
+test('EPN disclosure wording is exactly the approved sentences', async () => {
+  const { EPN_DISCLOSURE, EPN_SPONSORED_DISCLOSURE } = await import('./EpnDisclosure');
+  assert.equal(EPN_DISCLOSURE, 'As an eBay Partner Network affiliate, MCV earns from qualifying purchases.');
+  assert.equal(EPN_SPONSORED_DISCLOSURE, 'Sponsored · As an eBay Partner Network affiliate, MCV earns from qualifying purchases.');
 });
 
 test('every client file that renders eBay links or listings shows the disclosure', () => {
@@ -25,6 +27,10 @@ test('every client file that renders eBay links or listings shows the disclosure
   assert.deepEqual(offenders, []);
 });
 
-test('the site-wide sidebar carries the disclosure', () => {
-  assert.match(readFileSync('client/src/components/layout/sidebar.tsx', 'utf8'), /<EpnDisclosure /);
+test('the site-wide sidebar carries the unprefixed disclosure; eBay sections keep "Sponsored · "', () => {
+  assert.match(readFileSync('client/src/components/layout/sidebar.tsx', 'utf8'), /<EpnDisclosure sponsored=\{false\}/);
+  for (const f of ['client/src/components/cards/card-detail-modal.tsx', 'client/src/pages/market-trends.tsx']) {
+    const text = readFileSync(f, 'utf8');
+    assert.ok(text.includes('<EpnDisclosure') && !text.includes('sponsored={false}'), f);
+  }
 });

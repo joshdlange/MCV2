@@ -279,7 +279,7 @@ export function Sidebar() {
           </div>
         )}
 
-        <EpnDisclosure className="pt-2.5 border-t border-gray-200 mt-2.5 text-center" />
+        <EpnDisclosure sponsored={false} className="pt-2.5 border-t border-gray-200 mt-2.5 text-center" />
       </nav>
 
       {/* Upgrade Modal */}
