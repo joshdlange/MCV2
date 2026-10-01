@@ -1,6 +1,7 @@
 // DEV-ONLY Phase C0 run harness (docs/scan-plan-phase-c0.md, incl. Addendum A).
 // Modes:
-//   freeze   hash labels.json + every photo into freeze.json (once, before any run)
+//   freeze             hash labels.json + every photo into freeze.json (batch 1; once, before any run)
+//   freeze --batch=2   freeze the items added after batch 1 into freeze-batch2.json (held-out batch 2)
 //   run      arms A/B/C x {I-3045, I-full} on single photos; binder pages; writes results/runs.json
 // Reads MCV_DEV_DATA (default .local). No database access, no network.
 import fs from 'node:fs/promises';
@@ -98,26 +99,50 @@ const identity = (name: unknown, num: unknown, variation: unknown, setName: unkn
 const isBaseSet = (setName: unknown, mainSetName: unknown) =>
   norm(setName).replace(norm(mainSetName), '').replace(/(19|20)\d\d/g, '').replace('base', '') === '';
 
+// Batch 1 is the original freeze. Later batches freeze only the items added after it; the intake
+// server appends items and writes JSON.stringify(list, null, 2), so each batch's label hash is
+// verifiable by re-serializing just that batch's items in order.
+const BATCH = Number(process.argv.find(a => a.startsWith('--batch='))?.slice(8) ?? 1);
+const freezeFile = (batch: number) => path.join(C0, batch === 1 ? 'freeze.json' : `freeze-batch${batch}.json`);
+
 if (mode === 'freeze') {
-  const target = path.join(C0, 'freeze.json');
-  assert(!existsSync(target), 'photo freeze already exists');
-  const labelsRaw = await fs.readFile(path.join(C0, 'labels.json'));
-  const items = JSON.parse(labelsRaw.toString());
+  const target = freezeFile(BATCH);
+  assert(!existsSync(target), `batch ${BATCH} freeze already exists`);
+  const all = JSON.parse((await fs.readFile(path.join(C0, 'labels.json'))).toString());
+  let items = all;
+  if (BATCH > 1) {
+    const earlier = new Set<string>();
+    for (let b = 1; b < BATCH; b++) for (const p of (await read(freezeFile(b))).photos) earlier.add(p.id);
+    items = all.filter((i: any) => !earlier.has(i.id));
+    assert(items.length > 0, 'no new items to freeze');
+  }
+  const labelsSha256 = BATCH === 1 ? sha(await fs.readFile(path.join(C0, 'labels.json'))) : sha(JSON.stringify(items, null, 2));
   const photos = [];
   for (const item of items) photos.push({ id: item.id, file: item.file, sha256: sha(await fs.readFile(path.join(C0, item.file))) });
-  const freeze = { createdAt: new Date().toISOString(), labelsSha256: sha(labelsRaw), singles: items.filter((i: any) => i.kind === 'single').length,
+  const freeze = { batch: BATCH, createdAt: new Date().toISOString(), labelsSha256, singles: items.filter((i: any) => i.kind === 'single').length,
     binderPages: items.filter((i: any) => i.kind === 'binder').length, photos };
   await fs.writeFile(target, JSON.stringify(freeze, null, 2));
   console.log(JSON.stringify({ ...freeze, photos: photos.length, freezeSha256: sha(JSON.stringify(freeze)) }));
 }
 
 if (mode === 'run') {
-  // Freeze check: results are valid only against the frozen labels and photos.
-  const freeze = await read(path.join(C0, 'freeze.json'));
-  const labelsRaw = await fs.readFile(path.join(C0, 'labels.json'));
-  assert.equal(sha(labelsRaw), freeze.labelsSha256, 'labels.json changed after the freeze');
-  const items: any[] = JSON.parse(labelsRaw.toString());
-  for (const p of freeze.photos) assert.equal(sha(await fs.readFile(path.join(C0, p.file))), p.sha256, `photo ${p.id} changed after the freeze`);
+  // Freeze check: results are valid only against the frozen labels and photos of each batch.
+  const all: any[] = JSON.parse((await fs.readFile(path.join(C0, 'labels.json'))).toString());
+  const items: any[] = [];
+  const freezes: any[] = [];
+  for (let b = 1; existsSync(freezeFile(b)); b++) {
+    const f = await read(freezeFile(b));
+    const ids = f.photos.map((p: any) => p.id);
+    const batchItems = ids.map((id: string) => all.find(i => i.id === id));
+    assert(batchItems.every(Boolean), `batch ${b}: a frozen item is missing from labels.json`);
+    assert.equal(sha(JSON.stringify(batchItems, null, 2)), f.labelsSha256, `batch ${b}: labels changed after the freeze`);
+    for (const p of f.photos) assert.equal(sha(await fs.readFile(path.join(C0, p.file))), p.sha256, `batch ${b}: photo ${p.id} changed after the freeze`);
+    items.push(...batchItems.map((i: any) => ({ ...i, batch: b })));
+    freezes.push({ batch: b, labelsSha256: f.labelsSha256, photos: f.photos.length });
+  }
+  const unfrozen = all.filter(i => !items.some(x => x.id === i.id));
+  assert.equal(unfrozen.length, 0, `${unfrozen.length} uploaded item(s) are not in any freeze`);
+  const freeze = { labelsSha256: freezes.map(f => f.labelsSha256).join(',') };
 
   // Production catalog of record (Addendum A).
   const prodCards: any[] = (await read(path.join(C0, 'prod-catalog/cards.json'))).cards;
@@ -206,7 +231,7 @@ if (mode === 'run') {
       const embedMs = performance.now() - t;
       for (const index of ['small', 'full'] as const) {
         const r = search(index, arm.variant, vectors, item.cardId);
-        results.push({ arm: arm.name, index, photo: item.id, cardId: item.cardId, tags: item.tags, embedMs, ms: embedMs + r.searchMs, ...r });
+        results.push({ arm: arm.name, index, batch: item.batch, photo: item.id, cardId: item.cardId, tags: item.tags, embedMs, ms: embedMs + r.searchMs, ...r });
       }
     }
     console.log(`done arm ${arm.name}`);
@@ -277,7 +302,7 @@ if (mode === 'run') {
   try { commit = execSync('git rev-parse --short HEAD').toString().trim(); } catch {}
   await fs.mkdir(path.join(C0, 'results'), { recursive: true });
   await fs.writeFile(path.join(C0, 'results', 'runs.json'), JSON.stringify({ createdAt: new Date().toISOString(), commit, model: MODEL_VERSION,
-    freezeLabelsSha256: freeze.labelsSha256, fullIndexRows: full.rows.length, fullIndexManifestHash: fullIndex.manifestHash,
+    freezes, freezeLabelsSha256: freeze.labelsSha256, fullIndexRows: full.rows.length, fullIndexManifestHash: fullIndex.manifestHash,
     smallIndexRows: small.rows.length, summary: Object.fromEntries(['A', 'B', 'C'].flatMap(a => ['small', 'full'].map(ix => [`${a}/${ix}`, summarize(a, ix)]))),
     bestOfBC: best, results, binder }, null, 1));
   console.log(JSON.stringify({ bestOfBC: best, summaryFull: { A: summarize('A', 'full'), B: sB, C: sC } }));
