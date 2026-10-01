@@ -1,9 +1,10 @@
 # Catalog visual retrieval deployment prerequisites
 
-Visual retrieval is **off by default**. `SCAN_VISUAL_RETRIEVAL=on` (exactly
-`on`) adds DINO picture retrieval to `POST /api/cards/scan`. Unset or any other
-value keeps the pre-retrieval flow: OCR, metadata match, artwork verification.
-With it off, scans never load the model and never read the visual index table.
+Visual retrieval and artwork verification are **off by default**.
+`SCAN_VISUAL_RETRIEVAL=on` (exactly `on`) adds DINO picture retrieval to
+`POST /api/cards/scan`; `SCAN_ART_VERIFICATION=on` adds the sequential GPT
+artwork comparison (up to 8 s). With both off, a scan is OCR then metadata
+match only: no model load, no visual-index reads, no comparison call.
 
 1. Schema. There is no startup DDL. The table is declared in `shared/schema.ts`
    and the migration is `scripts/sql/catalog-visual-references.sql` (additive,
@@ -89,9 +90,10 @@ are under `/tmp/catalog-visual-bulk/` (`repair-ready.jsonl`,
 
 `.local/` (experiment data, SAM weights, collector photos) and `.pythonlibs/`
 (torch, OpenCV, segment-anything) are gitignored and untracked. Whether
-Replit's deployment snapshot honours `.gitignore` is not verified, and
-`pyproject.toml`/`uv.lock` on `main` declare torch, torchvision, OpenCV and
-segment-anything, which a Python-aware deployment build may install.
+Replit's deployment snapshot honours `.gitignore` is not verified. The
+experiment-only `pyproject.toml`/`uv.lock` (torch, torchvision, OpenCV,
+segment-anything) were removed from `main`; restore them from git history
+(`git show 8aee322:pyproject.toml`) only for further development experiments.
 
 Every production boot logs one line:
 
@@ -106,5 +108,6 @@ installed, choose one before the next Publish:
 1. Move the experiment data out of the project directory, e.g.
    `mkdir -p ~/scan-experiments && mv .local/<dir> ~/scan-experiments/`
    (the deployment snapshot covers the project directory only).
-2. Remove the Python manifest from `main`: `git rm pyproject.toml uv.lock`,
-   and drop `python-3.11` from `.replit` `modules` only if nothing else needs it.
+2. If Python packages are still installed during the deployment build, drop
+   `python-3.11` from `.replit` `modules` (present since July, before the scan
+   experiments; no production code uses Python).

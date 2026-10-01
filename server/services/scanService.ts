@@ -20,6 +20,9 @@ export const FREE_SCAN_LIMIT_PER_MONTH = 25;
 // Catalog image retrieval (DINO) stays out of user scans unless explicitly
 // enabled. Off = the pre-retrieval flow: OCR -> metadata match -> artwork check.
 export const scanVisualRetrievalEnabled = () => process.env.SCAN_VISUAL_RETRIEVAL === 'on';
+// GPT artwork verification adds a sequential call (up to 8 s) after OCR; the live
+// build never ran it. Off = matcher ranking is returned as-is.
+export const scanArtVerificationEnabled = () => process.env.SCAN_ART_VERIFICATION === 'on';
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -57,8 +60,9 @@ export interface ScanResult {
   matches: ScanMatch[];
   confidenceLevel: 'high' | 'medium' | 'low' | 'none';
   preprocessed: boolean;
-  /** Diagnostic only; an unavailable comparison never removes text-only matches. */
-  visualVerification: 'verified' | 'uncertain' | 'abstained' | 'unavailable';
+  /** Diagnostic only; an unavailable comparison never removes text-only matches.
+   * Omitted when SCAN_ART_VERIFICATION is off. */
+  visualVerification?: 'verified' | 'uncertain' | 'abstained' | 'unavailable';
   warnings: string[];
   /** Omitted when SCAN_VISUAL_RETRIEVAL is off. */
   imageIndex?: {
@@ -349,7 +353,7 @@ export async function verifyCandidateArt(
   matches: ScanMatch[],
   parsed: ParsedScan,
   client: Pick<OpenAI, 'chat'> | null = openai
-): Promise<{ matches: ScanMatch[]; status: ScanResult['visualVerification'] }> {
+): Promise<{ matches: ScanMatch[]; status: NonNullable<ScanResult['visualVerification']> }> {
   const candidates = matches
     .map(m => ({ ...m, reference: usableImageUrl(m.imageUrl) }))
     .filter((m): m is typeof m & { reference: string } => !!m.reference)
@@ -427,9 +431,11 @@ export async function scanCard(
     matchMetadata?: typeof matchCandidates;
     verify?: typeof verifyCandidateArt;
     visualRetrieval?: boolean;
+    artVerification?: boolean;
   } = {},
 ): Promise<ScanResult> {
   const visualRetrieval = dependencies.visualRetrieval ?? scanVisualRetrievalEnabled();
+  const artVerification = dependencies.artVerification ?? scanArtVerificationEnabled();
   const started = Date.now();
   const timings = { visualRetrievalMs: 0, ocrMs: 0, dbMs: 0, rerankMs: 0, totalMs: 0 };
   const warnings: string[] = [];
@@ -471,9 +477,11 @@ export async function scanCard(
   const rerankStart = Date.now();
   // Flag off: metadata matches go to artwork verification unchanged, as before retrieval existed.
   const candidates = imageResult ? rankImageCandidates(imageRows, imageResult.matches, parsed, textMatches) : textMatches;
-  const comparison = await (dependencies.verify ?? verifyCandidateArt)(processedBuffer, outputMime, candidates, parsed);
+  const comparison = artVerification
+    ? await (dependencies.verify ?? verifyCandidateArt)(processedBuffer, outputMime, candidates, parsed)
+    : null;
   timings.rerankMs = Date.now() - rerankStart;
-  const matches = comparison.matches;
+  const matches = comparison?.matches ?? candidates;
   const confidenceLevel = matches.length > 0 ? matches[0].confidenceLevel : 'none';
   const hasImageMatches = candidates.some(match => match.retrievalSource !== 'metadata');
   const fallback = hasImageMatches ? 'none' : matches.length ? 'text-only' : 'no-candidates';
@@ -484,7 +492,7 @@ export async function scanCard(
     if (!normalizeOcrText(vision.ocrText) && !parsed.characterName && !parsed.cardNumber && !parsed.setName) {
       warnings.push('No readable identifying text was extracted. Picture candidates can still be reviewed; a back photo may help distinguish variants.');
     }
-    if (comparison.status !== 'verified') warnings.push('Artwork verification was inconclusive or unavailable; review candidate images before confirming.');
+    if (comparison && comparison.status !== 'verified') warnings.push('Artwork verification was inconclusive or unavailable; review candidate images before confirming.');
     if (matches.some(match => !usableImageUrl(match.imageUrl))) warnings.push('Some candidates have no usable reference image and could not be visually verified.');
   }
 
@@ -515,7 +523,7 @@ export async function scanCard(
     matches,
     confidenceLevel,
     preprocessed,
-    visualVerification: comparison.status,
+    visualVerification: comparison?.status,
     warnings,
     imageIndex: imageResult ? {
       status: imageResult.status, indexedCount: imageResult.indexedCount,

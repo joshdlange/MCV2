@@ -4,7 +4,7 @@
 - **Auditor:** Claude Code (read-only audit; no implementation)
 - **Repository:** `/home/runner/workspace` @ `c84eb64`
 
-**Status:** DRAFT. Not committed. Waiting for your review.
+**Status:** DRAFT, waiting for your review. Note: Replit Agent auto-committed this file and the LightGlue timing files in `55832f5` (2026-10-01 14:36 UTC); Claude Code did not commit.
 
 Notation used throughout:
 - `file:line` points into this repo.
@@ -45,7 +45,7 @@ Notation used throughout:
    - 76% of image-bearing cards belong to a multi-subset "parallel family".
    - 570 parallel families (1,923 cards) reuse the exact same image URL across parallels, so image recognition cannot tell those apart.
 
-7. **LightGlue timing run just before this session.** It was run minutes before this audit (untracked files, 23:31–23:34 UTC). Result: ALIKED+LightGlue on CPU = **6.29 s per query** for the top 10.
+7. **LightGlue timing run just before this session.** It was run minutes before this audit (files mtime 23:31–23:34 UTC; since auto-committed by Replit Agent in `55832f5`). Result: ALIKED+LightGlue on CPU = **6.29 s per query** for the top 10.
    - The results JSON contains keys that the committed script never writes, so the file was edited after the run or produced by a different script version (§3).
 
 ---
@@ -136,7 +136,7 @@ Common facts:
 | Eval harness / policy guard | `dev-dino-next-evaluation.mjs` (+ test), `dev-dino-failure-audit.mjs` (`b2d7890`) | — | 12-ID list `:30`, 41-ID list `:43` |
 | Quad/edge detector, failure12 | `dev-independent-card-detector.py` (+ test), `dev-failure12-{run,report}` (`086b7b9`) | — | `dev-failure12-executed-results.json` → detector accepted **0/12**, abstained **12/12** ✔. `primaryVisualCauseCounts`: hand/background/obstruction **7**, glare **3**, similar artwork **2** ✔. Raw Top-1/3/10 on the 12 = 0/3/6. |
 | **SAM ViT-B** | `dev-segment-card-detector{.py,.test.py,-download.py,.config.json}`, `dev-strong41-{run.ts,report.mjs}` (`c489e3d`) | `.local/strong-card-model/sam_vit_b_01ec64.pth` (358 MB) | `dev-strong41-results.json` → `detector.overall.fullCard` **5**/41 ✔. `meanDetectorMs` **34,961** ✔. Raw and isolated both 28/31/34 (40-case reconstruction) ✔. |
-| **LightGlue timing** (untracked) | `scripts/dev-lightglue-timing.ts`, `scripts/dev-lightglue-timing-worker.py`, `attached_assets/dev-lightglue-timing-results.json` | `.local/lightglue-timing-*.json` | ALIKED-n16 1024 kp @1024 px + LightGlue + MAGSAC on DINO top-10, CPU with 2 threads, **1 query**: `warmMeanMs.fullPipeline` **6,290 ms** (query features 2,890; 327 ms per pair). Cold start 49.8 s. No accuracy measured. |
+| **LightGlue timing** (committed by Replit Agent in `55832f5`) | `scripts/dev-lightglue-timing.ts`, `scripts/dev-lightglue-timing-worker.py`, `attached_assets/dev-lightglue-timing-results.json` | `.local/lightglue-timing-*.json` | ALIKED-n16 1024 kp @1024 px + LightGlue + MAGSAC on DINO top-10, CPU with 2 threads, **1 query**: `warmMeanMs.fullPipeline` **6,290 ms** (query features 2,890; 327 ms per pair). Cold start 49.8 s. No accuracy measured. |
 | Catalog visual bulk/index CLIs | `scripts/catalog-visual-{bulk,index}.ts` (npm scripts `catalog:visual:*`) | — | Has a `--write` path, but it is hard-guarded to `NODE_ENV=development` + no `REPLIT_DEPLOYMENT` + DB host in {helium, localhost} (`catalog-visual-bulk.ts:36-38`; `catalog-visual-index.ts:8`) |
 | Older crop test | `scripts/test-scan-crop-browser.mjs` (`1598906`) | — | not examined in depth |
 
@@ -177,7 +177,7 @@ Cmds run: `git status --short`, `git diff --stat HEAD` (empty; no tracked modifi
 | `scripts/dev-segment-card-detector*`, `dev-strong41-*` | tracked | **REMOVE** from main (keep in git history) |
 | `scripts/dev-independent-card-detector*`, `dev-failure12-*` | tracked | REMOVE from main |
 | `scripts/dev-{image,bounded,detail,orb,focus,broad,broad-private,dino-failure-audit}*`, `dev-card-normalization*` | tracked | **NEEDS REVIEW** — keep `dev-dino-next-evaluation.mjs` and `dev-broad-private-plan.ts` (the case list) as the eval harness; remove the rest |
-| `scripts/dev-lightglue-timing{.ts,-worker.py}`, `attached_assets/dev-lightglue-timing-results.json` (untracked) | mtime 23:31–23:34. The JSON has keys (`warmRangesMs`, `cleanup`, `totalAuthorizedTrialElapsedSeconds`) the script does not write, and the .ts was modified after `completedAt`. | **NEEDS REVIEW** (provenance) |
+| `scripts/dev-lightglue-timing{.ts,-worker.py}`, `attached_assets/dev-lightglue-timing-results.json` (committed by Replit Agent in `55832f5`) | mtime 23:31–23:34. The JSON has keys (`warmRangesMs`, `cleanup`, `totalAuthorizedTrialElapsedSeconds`) the script does not write, and the .ts was modified after `completedAt`. | **NEEDS REVIEW** (provenance) |
 | `attached_assets/dev-*.{html,json}` reports, `*_PASTED*.txt` prompts | tracked | HARMLESS DEV ARTIFACT (keep as the evidence trail, or move to `docs/experiments/`) |
 | `.local/{broad-validation 794 MB, parallel-focus 181 MB, detail-orb 72 MB, bounded-dino 61 MB, detail-experiment 39 MB, image-experiment 29 MB}` | gitignored via `/etc/.gitignore:9 .local/` | **REMOVE** after you decide on retention (contain user-photo derivatives, §5) |
 | `.local/scan-review/` 21 MB (60 original user photos + review state) | gitignored | **NEEDS REVIEW** (privacy retention decision) |
@@ -572,7 +572,7 @@ Take a snapshot first: `git tag audit-2026-09-30 c84eb64` (local tag only). Repl
           scripts/dev-failure12-* scripts/dev-orb-* scripts/dev-detail-* scripts/dev-focus-* \
           scripts/dev-image-experiment* scripts/dev-card-normalization* scripts/dev-bounded-* scripts/dev-broad-orb.py \
           scripts/dev-broad-private-orb.py
-   rm scripts/dev-lightglue-timing.ts scripts/dev-lightglue-timing-worker.py   # untracked
+   git rm scripts/dev-lightglue-timing.ts scripts/dev-lightglue-timing-worker.py   # tracked since 55832f5
    ```
    Keep `dev-dino-next-evaluation.mjs` and `dev-broad-private-plan.ts` as the eval harness. Optionally move `attached_assets/dev-*` reports to `docs/experiments/`.
 5. **`.local/scan-review/` (60 user photos):** your privacy decision. Delete, or keep only while the dev review tool is in use.
@@ -589,7 +589,7 @@ Take a snapshot first: `git tag audit-2026-09-30 c84eb64` (local tag only). Repl
 ## 14. Confirmations
 
 - **Nothing published or deployed.** I only sent read-only GETs to the public site: `/`, two asset JS files, and three API paths without credentials.
-- **No production data or code changed.** No tracked file was modified (`git diff --stat HEAD` is empty). The only new file is this report, `docs/scan-audit.md`, which is not committed.
+- **No production data or code changed.** No tracked file was modified (`git diff --stat HEAD` is empty). The only new file is this report, `docs/scan-audit.md`, which Claude Code did not commit (Replit Agent auto-committed it in `55832f5`).
 - **No DB writes.** Every query ran against the **dev** DB (`helium/heliumdb`) with `default_transaction_read_only=on`. The Neon/production DB was **not** queried.
 - **No files deleted or moved.** Scratch scripts and the live JS downloads are in the session scratchpad only.
 - **No packages installed and no models downloaded.** Tests used the already-bundled `dist/models` ONNX offline.
