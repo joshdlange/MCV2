@@ -236,3 +236,50 @@ if (mode === 'assemble') {
     indexed: order.length, missing: count - order.length, rows: order.map(o => ({ k: o.k, cardIds: entries[o.k].cardIds })) }));
   console.log(JSON.stringify({ indexed: order.length, missing: count - order.length }));
 }
+
+if (mode === 'verify') {
+  // Run after `assemble`, before deleting the image cache.
+  const index = await read(path.join(OUT, 'index.json'));
+  const f32 = async (v: string) => { const b = await fs.readFile(path.join(OUT, `${v}.f32`)); return new Float32Array(b.buffer, b.byteOffset, b.byteLength / 4); };
+  const cur = await f32('current'), fix = await f32('cropfix');
+  assert.equal(cur.length, index.rows.length * DIM); assert.equal(fix.length, index.rows.length * DIM);
+  let badNorm = 0;
+  for (const m of [cur, fix]) for (let r = 0; r < index.rows.length; r++) {
+    let n = 0; for (let d = 0; d < DIM; d++) { const x = m[r * DIM + d]; if (!Number.isFinite(x)) { n = NaN; break; } n += x * x; }
+    if (!(Math.abs(Math.sqrt(n) - 1) < 1e-4)) badNorm++;
+  }
+  // Digest per row, from the progress logs (order = assembled order by k).
+  const digestByK = new Map<number, { digest: string; source: string }>();
+  for (const f of await fs.readdir(OUT)) if (/^progress-\d+\.jsonl$/.test(f))
+    for (const l of (await fs.readFile(path.join(OUT, f), 'utf8')).split('\n').filter(Boolean).map(x => JSON.parse(x))) if (l.ok) digestByK.set(l.k, l);
+  // Phase B parity on shared images.
+  const pb = await read(devDataPath('phase-b/index.json'));
+  let pbChecked = 0, pbMax = 0;
+  index.rows.forEach((r: any, i: number) => {
+    const d = digestByK.get(r.k)?.digest; const b = d && pb.baseline[d], f = d && pb.fixed[d];
+    if (!b || !f) return;
+    pbChecked++;
+    for (let j = 0; j < DIM; j++) pbMax = Math.max(pbMax, Math.abs(cur[i * DIM + j] - b[j]), Math.abs(fix[i * DIM + j] - f[j]));
+  });
+  // Re-embed a seeded random sample of downloaded images from the cache.
+  const { entries } = await read(MANIFEST);
+  const downloaded = index.rows.map((r: any, i: number) => ({ r, i })).filter(({ r }: any) => digestByK.get(r.k)?.source === 'download');
+  let seed = 20261001; const rand = () => (seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
+  let reChecked = 0, reMax = 0;
+  for (let n = 0; n < 20 && downloaded.length; n++) {
+    const { r, i } = downloaded[Math.floor(rand() * downloaded.length)];
+    const file = path.join(CACHE, `${sha(entries[r.k].url)}.img`);
+    if (!existsSync(file)) continue;
+    const bytes = await fs.readFile(file);
+    const a = await embedCatalogVisualImage(bytes, 'background'), b = await embedFixed(bytes);
+    reChecked++;
+    for (let j = 0; j < DIM; j++) reMax = Math.max(reMax, Math.abs(cur[i * DIM + j] - a[j]), Math.abs(fix[i * DIM + j] - b[j]));
+  }
+  const result = { rows: index.rows.length, manifestCount: index.manifestCount, missing: index.missing, badNorm,
+    phaseBParity: { checked: pbChecked, maxAbsDiff: pbMax }, reembed: { checked: reChecked, maxAbsDiff: reMax },
+    currentSha256: sha(await fs.readFile(path.join(OUT, 'current.f32'))), cropfixSha256: sha(await fs.readFile(path.join(OUT, 'cropfix.f32'))),
+    indexJsonSha256: sha(await fs.readFile(path.join(OUT, 'index.json'))) };
+  await fs.writeFile(path.join(OUT, 'verify.json'), JSON.stringify(result, null, 2));
+  console.log(JSON.stringify(result));
+  assert.equal(badNorm, 0); assert(pbChecked > 0 && pbMax < 1e-6, 'Phase B parity'); assert(reChecked >= 15 && reMax < 1e-6, 're-embed parity');
+}
