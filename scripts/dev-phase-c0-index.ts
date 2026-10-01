@@ -16,16 +16,21 @@ import sharp from 'sharp';
 import { embedCatalogVisualImage, normalizeVisualVector, bundledVisualModelPath, MODEL_REVISION, MODEL_VERSION } from '../server/services/catalogVisualModel';
 import { downloadCatalogReference } from '../server/services/catalogVisualFetch';
 import { CATALOG, ELIGIBLE } from '../server/services/catalogVisual';
+import { devDataPath } from '../server/devData';
 
 process.umask(0o077);
 process.env.CATALOG_VISUAL_OFFLINE = 'true';
-const OUT = '.local/phase-c0/index-full';
-const CACHE = '.local/phase-c0/catalog-cache';
+const [mode, ...args] = process.argv.slice(2);
+// --run=prod (addendum): production catalog of record; reuses vectors from the dev-manifest run by URL.
+const PROD = args.includes('--run=prod');
+const DEV_RUN = devDataPath('phase-c0/index-full');
+const OUT = PROD ? devDataPath('phase-c0/index-prod') : DEV_RUN;
+const MANIFEST = PROD ? devDataPath('phase-c0/prod-catalog/manifest.json') : path.join(DEV_RUN, 'manifest.json');
+const CACHE = devDataPath('phase-c0/catalog-cache');
 const DIM = 384, BYTES = DIM * 4;
 const MAX_CONCURRENT_TOTAL = 4, MAX_RPS_TOTAL = 10, ATTEMPTS = 5;
 const sha = (b: Buffer | string) => createHash('sha256').update(b).digest('hex');
 const read = async (p: string) => JSON.parse(await fs.readFile(p, 'utf8'));
-const [mode, ...args] = process.argv.slice(2);
 
 // Same crop-fix embedding as scripts/dev-phase-b.ts (processor resize/center-crop off).
 let fixPipe: any;
@@ -52,7 +57,8 @@ type Entry = { url: string; cardIds: number[] };
 
 if (mode === 'manifest') {
   await fs.mkdir(OUT, { recursive: true });
-  const target = path.join(OUT, 'manifest.json');
+  assert(!PROD, 'the production manifest comes from scripts/dev-phase-c0-prod-snapshot.ts');
+  const target = MANIFEST;
   assert(!existsSync(target), 'manifest already frozen');
   const c = new pg.Client({ connectionString: process.env.DATABASE_URL, options: '-c default_transaction_read_only=on' });
   assert.equal(new URL(process.env.DATABASE_URL!).hostname, 'helium', 'dev catalog only');
@@ -73,16 +79,37 @@ if (mode === 'worker') {
   // Download budget across all shards (this shard's share), counting bytes already downloaded.
   const budgetBytes = Number(args.find(a => a.startsWith('--budget-gb='))?.slice(12) ?? Infinity) * 1e9 / shards;
   assert(Number.isInteger(shard) && shards >= 1 && shard < shards);
-  const { entries }: { entries: Entry[] } = await read(path.join(OUT, 'manifest.json'));
+  const { entries }: { entries: Entry[] } = await read(MANIFEST);
   await fs.mkdir(CACHE, { recursive: true });
+  await fs.mkdir(OUT, { recursive: true });
+  // Production run: vectors already built by the dev-manifest run, keyed by URL (same image, same model).
+  const prior = new Map<string, { digest: string; current: Buffer; cropfix: Buffer }>();
+  if (PROD) {
+    const wanted = new Set(entries.filter((_, k) => k % shards === shard).map(e => e.url));
+    const devEntries: Entry[] = (await read(path.join(DEV_RUN, 'manifest.json'))).entries;
+    for (const f of await fs.readdir(DEV_RUN)) {
+      const m = f.match(/^progress-(\d+)\.jsonl$/);
+      if (!m) continue;
+      const cur = await fs.readFile(path.join(DEV_RUN, `current-${m[1]}.f32`)), fix = await fs.readFile(path.join(DEV_RUN, `cropfix-${m[1]}.f32`));
+      let row = 0;
+      for (const line of (await fs.readFile(path.join(DEV_RUN, f), 'utf8')).split('\n').filter(Boolean)) {
+        const l = JSON.parse(line);
+        if (!l.ok) continue;
+        const u = devEntries[l.k].url;
+        if (wanted.has(u)) prior.set(u, { digest: l.digest, current: cur.subarray(row * BYTES, (row + 1) * BYTES), cropfix: fix.subarray(row * BYTES, (row + 1) * BYTES) });
+        row++;
+      }
+    }
+    console.log(JSON.stringify({ shard, reusableFromDevRun: prior.size }));
+  }
   // Reuse originals already on disk from Phase B (keyed by URL).
   const local = new Map<string, string>();
-  const manifestRows = (await read('.local/broad-validation/reference-manifest.json')).rows;
-  for (const r of manifestRows) if (r.url && r.file) local.set(r.url, r.file);
-  const snapshot = await read('.local/broad-validation/dev-catalog-snapshot.json');
-  for (const f of await fs.readdir('.local/phase-b/references')) {
+  const manifestRows = (await read(devDataPath('broad-validation/reference-manifest.json'))).rows;
+  for (const r of manifestRows) if (r.url && r.file) local.set(r.url, devDataPath(path.relative('.local', r.file)));
+  const snapshot = await read(devDataPath('broad-validation/dev-catalog-snapshot.json'));
+  for (const f of await fs.readdir(devDataPath('phase-b/references'))) {
     const row = snapshot.find((r: any) => r.id === Number(f.split('.')[0]));
-    if (row?.url) local.set(row.url, `.local/phase-b/references/${f}`);
+    if (row?.url) local.set(row.url, devDataPath('phase-b/references', f));
   }
   const files = { current: path.join(OUT, `current-${shard}.f32`), cropfix: path.join(OUT, `cropfix-${shard}.f32`), progress: path.join(OUT, `progress-${shard}.jsonl`) };
   // Resume: progress lines are the source of truth; truncate vectors to match.
@@ -115,23 +142,35 @@ if (mode === 'worker') {
         await fs.writeFile(`${cached}.tmp`, bytes);
         await fs.rename(`${cached}.tmp`, cached); // atomic: a crash never leaves a partial cache file
         return { bytes, source: 'download' };
-      } catch (e) { error = (e as Error).message.replace(/https?:\/\/\S+/g, '[url]').slice(0, 160); }
+      } catch (e) {
+        error = (e as Error).message.replace(/https?:\/\/\S+/g, '[url]').slice(0, 160);
+        if (/HTTP 404\b/.test(error)) break; // gone: retrying cannot help
+      }
     }
     return { error, source: 'download' };
   }
   const queue = [...todo];
   const ready: Promise<any>[] = [];
-  const startFetch = () => { const item = queue.shift(); if (item) ready.push(fetchBytes(item.url).then(r => ({ item, ...r }))); };
+  const startFetch = () => {
+    const item = queue.shift();
+    if (!item) return;
+    const reused = prior.get(item.url);
+    ready.push(reused ? Promise.resolve({ item, reused, source: 'reused' }) : fetchBytes(item.url).then(r => ({ item, ...r })));
+  };
   for (let i = 0; i < concurrency * 2; i++) startFetch();
 
   const byDigest = new Map<string, { current: Buffer; cropfix: Buffer }>();
   const started = Date.now();
   let n = 0;
   while (ready.length) {
-    const { item, bytes, error, source } = await ready.shift()!;
+    const { item, bytes, error, source, reused } = await ready.shift()! as any;
     startFetch();
     let line: any = { k: item.k, source };
-    if (!bytes) line = { ...line, ok: false, error };
+    if (reused) {
+      await fs.appendFile(files.current, reused.current);
+      await fs.appendFile(files.cropfix, reused.cropfix);
+      line = { ...line, ok: true, digest: reused.digest, bytes: 0 };
+    } else if (!bytes) line = { ...line, ok: false, error };
     else {
       try {
         const digest = sha(bytes);
@@ -159,7 +198,7 @@ if (mode === 'worker') {
 }
 
 if (mode === 'status') {
-  const { count } = await read(path.join(OUT, 'manifest.json'));
+  const { count } = await read(MANIFEST);
   const lines: any[] = [];
   const firstAt: number[] = [];
   for (const f of await fs.readdir(OUT)) if (/^progress-\d+\.jsonl$/.test(f)) {
@@ -177,7 +216,7 @@ if (mode === 'status') {
 }
 
 if (mode === 'assemble') {
-  const { entries, count, hash } = await read(path.join(OUT, 'manifest.json'));
+  const { entries, count, hash } = await read(MANIFEST);
   const shards = (await fs.readdir(OUT)).filter(f => /^progress-\d+\.jsonl$/.test(f)).map(f => Number(f.match(/\d+/)![0]));
   const order: { k: number; shard: number; row: number }[] = [];
   for (const s of shards) {

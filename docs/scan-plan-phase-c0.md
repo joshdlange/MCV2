@@ -154,3 +154,34 @@ Float32, 384 per image), `manifest.json` (URL digest → card IDs) and `progress
    of re-parsing JSON every 60 s (audit §7.4). This is required before any full-catalog production index.
 7. **Upload size:** resize on the client before upload (`main` already caps at 2400 px) and log rejected
    sizes, so the 10 MB cap becomes measurable.
+
+## Addendum A: production is the catalog of record (approved 2026-10-01, before any photo freeze)
+
+**Why:** the dev and production databases have diverged.
+- **IDs:** 24,135 card IDs refer to different cards in the two (every ID above 540,000, about 1,690 below 530,000).
+- **Images:** production has 93,231 cards with a usable image versus 78,647 in dev.
+- **Labels:** the owner's labels are production cards.
+
+Arms (§3), scoring metrics (§4) and verdicts (§5) are **unchanged**. Only the catalog and index
+inputs change:
+
+1. **Catalog snapshot.** `scripts/dev-phase-c0-prod-snapshot.ts` takes one read-only transaction on
+   production (`ep-lingering-waterfall-a6jtu4k4…/neondb`), catalog metadata only, at 2026-10-01 17:49:53 UTC.
+   - Eligible images use the same `ELIGIBLE` SQL: **90,991 images, 92,209 card rows**, manifest hash `ed50c452…`.
+   - All **217,459** cards (ID, name, number, variation, set, main set, active/archived, image URL) are
+     kept for labels, search and the duplicate rule.
+2. **Labels** are production card IDs. The intake page searches and looks up the frozen snapshot file;
+   the dev server never connects to production.
+3. **I-full = production's eligible images** (`--run=prod`).
+   - **Reused vectors:** vectors from the earlier dev-manifest run are reused where the URL matches
+     (38,133 images; verified byte-identical on a 300-image trial).
+   - **Skipped:** dev-only URLs.
+   - **Downloaded:** only images not yet embedded, by the same single-image procedure.
+   - **Failures:** HTTP 404 is treated as permanent; such images are reported as missing, not retried.
+   - **Download cap:** 35 GB total across both runs (about 22 GB expected).
+4. **I-3045 is unchanged** (Phase B images and vectors, dev card IDs). On this index a hit counts
+   when the index card's dev identity (normalized name, number, variation and set name) equals the
+   labelled card's production identity.
+   - The §4 duplicate rule is applied on the production snapshot.
+   - 2,988 of 3,045 index IDs are the same card in both databases.
+5. **Not findable** (§1) is evaluated against the production snapshot.
