@@ -32,7 +32,7 @@ function CardLabel({ id }: { id: string }) {
   const card = useCard(id);
   if (!/^\d+$/.test(id)) return null;
   if (card.isLoading) return <Loader2 className="h-4 w-4 animate-spin inline" />;
-  if (card.error || !card.data) return <span className="text-xs text-red-600">Not in dev catalog</span>;
+  if (card.error || !card.data) return <span className="text-xs text-red-600">Not in the production catalog snapshot</span>;
   const c = card.data;
   return (
     <span className="inline-flex items-center gap-2 text-xs text-gray-700">
@@ -52,7 +52,7 @@ function CardSearch({ onPick, target }: { onPick: (id: number) => void; target: 
   });
   return (
     <div className="space-y-2">
-      <label className="block text-sm">Search the dev catalog by name, number or set (e.g. "wolverine 1995 ultra 146")
+      <label className="block text-sm">Search the production catalog (frozen snapshot) by name, number or set (e.g. "wolverine 1995 ultra 146")
         <Input value={text} onChange={e => setText(e.target.value)} placeholder="Name, number, set" className="mt-1" />
       </label>
       <p className="text-xs text-gray-500">Tap a card to fill {target}.</p>
@@ -201,7 +201,7 @@ export default function PhaseC0Photos() {
     <div className="p-4 space-y-4 max-w-4xl">
       <h1 className="text-lg font-semibold">Phase C0 test photos: {singles} single cards, {pages.length} binder pages</h1>
       <p className="text-sm text-gray-700">
-        Photos are saved untouched to <code>.local/phase-c0</code> (development only, never committed). Use JPEG photos.
+        Photos are saved untouched to the dev data folder (development only, never committed). Use JPEG photos. Card IDs are <strong>production</strong> IDs (frozen production catalog snapshot).
       </p>
 
       <Card><CardContent className="space-y-3 pt-4">

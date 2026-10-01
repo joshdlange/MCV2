@@ -4,15 +4,17 @@ import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import multer from 'multer';
 import type { Express, RequestHandler } from 'express';
-import { pool } from './db';
+import { devDataPath } from './devData';
 import { requireDevelopmentAdmin } from './services/scanReview';
 import { isClockwiseConvex, orderCardCorners, type CornerPoint } from '../shared/cardCorners';
 
 // DEV-ONLY Phase C0 test-photo intake: the owner's own labelled phone photos.
 // Registered only when NODE_ENV=development; every endpoint is development + admin gated.
-// Photos and labels live in .local/phase-c0 (gitignored). The only database access is a
-// read-only catalog lookup so labels can be checked against card names.
-let root = path.resolve(process.cwd(), '.local/phase-c0');
+// Photos and labels live under MCV_DEV_DATA/phase-c0 (default .local, gitignored).
+// Card search and lookup read the frozen PRODUCTION catalog snapshot (Phase C0 addendum A)
+// from a local file; this module never queries any database.
+let root = devDataPath('phase-c0');
+const catalogFile = () => path.join(root, 'prod-catalog', 'cards.json');
 const base = '/api/admin/phase-c0';
 const TAGS = ['hand', 'table', 'sleeve', 'toploader', 'glare', 'binder-neighbors', 'angle', 'low-light', 'clean'] as const;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024, files: 1 } });
@@ -40,6 +42,18 @@ function mutate(change: (items: Item[]) => Item[] | Promise<Item[]>) {
   writes = write.catch(() => undefined);
   return write;
 }
+
+type CatalogCard = { id: number; name: string; cardNumber: string | null; variation: string | null; setName: string;
+  year: number | null; mainSetName: string | null; setActive: boolean; archived: boolean; imageUrl: string | null };
+let catalog: Promise<{ byId: Map<number, CatalogCard>; rows: (CatalogCard & { text: string; number: string })[] }> | undefined;
+const loadCatalog = () => catalog ??= fs.readFile(catalogFile(), 'utf8').then(raw => {
+  const cards: CatalogCard[] = JSON.parse(raw).cards;
+  const rows = cards.map(c => ({ ...c, text: `${c.name} ${c.setName} ${c.mainSetName ?? ''}`.toLowerCase(),
+    number: String(c.cardNumber ?? '').toLowerCase().replace(/^[#0]+/, '') }));
+  return { byId: new Map(cards.map(c => [c.id, c])), rows };
+}).catch(error => { catalog = undefined; throw error; });
+const publicCard = (c: CatalogCard) => ({ id: c.id, name: c.name, cardNumber: c.cardNumber, variation: c.variation,
+  imageUrl: c.imageUrl, archivedAt: c.archived || !c.setActive ? 'archived' : null, setName: c.setName, year: c.year });
 
 const cardId = (value: unknown) => {
   const n = Number(value);
@@ -73,7 +87,7 @@ function labels(kind: Item['kind'], body: any): Partial<Item> {
 
 export function registerPhaseC0PhotoRoutes(app: Express, authenticateUser: RequestHandler, options: { root?: string } = {}) {
   if (process.env.NODE_ENV !== 'development') return;
-  if (options.root) root = path.resolve(options.root); // tests only
+  if (options.root) { root = path.resolve(options.root); catalog = undefined; } // tests only
   const guard = [authenticateUser, requireDevelopmentAdmin];
 
   app.get(base, ...guard, async (_req, res) => {
@@ -81,39 +95,30 @@ export function registerPhaseC0PhotoRoutes(app: Express, authenticateUser: Reque
     catch { res.status(500).json({ message: 'Phase C0 labels unavailable' }); }
   });
 
-  // Read-only catalog lookup (dev database) so the owner can confirm a label.
+  // Label check against the frozen production catalog snapshot (local file).
   app.get(`${base}/card/:id`, ...guard, async (req, res) => {
     const id = cardId(req.params.id);
     if (!id) return res.status(400).json({ message: 'Invalid card ID' });
     try {
-      const { rows } = await pool.query(`SELECT c.id, c.name, c.card_number AS "cardNumber", c.variation,
-          c.front_image_url AS "imageUrl", c.archived_at AS "archivedAt", s.name AS "setName", s.year
-        FROM cards c JOIN card_sets s ON s.id = c.set_id WHERE c.id = $1`, [id]);
-      if (!rows[0]) return res.status(404).json({ message: `Card ${id} is not in the dev catalog` });
-      res.json(rows[0]);
-    } catch { res.status(500).json({ message: 'Catalog lookup failed' }); }
+      const card = (await loadCatalog()).byId.get(id);
+      if (!card) return res.status(404).json({ message: `Card ${id} is not in the production catalog snapshot` });
+      res.json(publicCard(card));
+    } catch { res.status(500).json({ message: 'Production catalog snapshot unavailable' }); }
   });
 
-  // Read-only catalog search (dev database): every word must match the name, set or main-set
+  // Search the frozen production snapshot: every word must appear in the name, set or main-set
   // name, or equal the card number (ignoring a leading "#" and zeros). Active cards first.
   app.get(`${base}/search`, ...guard, async (req, res) => {
     const words = String(req.query.q ?? '').toLowerCase().split(/\s+/).map(w => w.replace(/^#/, '')).filter(Boolean).slice(0, 6);
     if (!words.length || words.join('').length < 2) return res.json([]);
     try {
-      const params: string[] = [];
-      const conditions = words.map(word => {
-        params.push(`%${word.replace(/[\\%_]/g, '\\$&')}%`, word.replace(/^0+(?=\d)/, ''));
-        const like = `$${params.length - 1}`, number = `$${params.length}`;
-        return `(c.name ILIKE ${like} OR s.name ILIKE ${like} OR m.name ILIKE ${like}
-          OR ltrim(lower(c.card_number), '#0') = ltrim(${number}, '0'))`;
-      });
-      const { rows } = await pool.query(`SELECT c.id, c.name, c.card_number AS "cardNumber", c.variation,
-          c.front_image_url AS "imageUrl", c.archived_at AS "archivedAt", s.name AS "setName", s.year
-        FROM cards c JOIN card_sets s ON s.id = c.set_id LEFT JOIN main_sets m ON m.id = s.main_set_id
-        WHERE ${conditions.join(' AND ')}
-        ORDER BY (c.archived_at IS NOT NULL), s.year NULLS LAST, s.name, c.card_number, c.id LIMIT 30`, params);
-      res.json(rows);
-    } catch { res.status(500).json({ message: 'Catalog search failed' }); }
+      const { rows } = await loadCatalog();
+      const hits = rows.filter(c => words.every(w => c.text.includes(w) || c.number === w.replace(/^0+(?=\d)/, '')));
+      const inactive = (c: CatalogCard) => Number(c.archived || !c.setActive);
+      hits.sort((a, b) => inactive(a) - inactive(b) || (a.year ?? 9999) - (b.year ?? 9999)
+        || a.setName.localeCompare(b.setName) || String(a.cardNumber ?? '').localeCompare(String(b.cardNumber ?? ''), undefined, { numeric: true }) || a.id - b.id);
+      res.json(hits.slice(0, 30).map(publicCard));
+    } catch { res.status(500).json({ message: 'Production catalog snapshot unavailable' }); }
   });
 
   app.post(base, ...guard, upload.single('photo'), async (req: any, res) => {
