@@ -276,3 +276,4 @@ At this rate, one live scan is about half a cent.
 | Raw output | `phase-c1/results/raw.json` sha256 `b4adb2cfabdde8cd8630330e8db9a6b8e34f80b0e344b008b517f4203a14714d` |
 | Scores | `phase-c1/results/scores.json` sha256 `a1c9b3dd09ee50dad75c50cfd0f9ede161db722ac18b3a4b0ec67e80623a50c6` |
 | OCR model | gpt-4o-mini-2024-07-18 |
+| Harness version | Run at 21:38 UTC from the working tree on top of `1bf02c37`, so the harness was **not** committed before the run (the plan was). Replit's auto-commit `141536e7` (21:44) captured the same file. The only later change, in `c7804627`, is a score-output field rename. |
