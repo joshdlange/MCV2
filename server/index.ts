@@ -121,6 +121,13 @@ server.listen({
   const { warmPool } = await import("./db");
   await warmPool();
 
+  // DEV-only frozen C0 scan index/model. Failure is explicit and blocks readiness;
+  // deployment, production and off paths do not import or initialize the service.
+  if (suppressAutomaticCatalogMutations()) {
+    const { initializeDevScanVisual } = await import("./services/devScanVisual");
+    await initializeDevScanVisual();
+  }
+
   // Idempotent startup migration: trusted uploader flag (bypasses image approval queue).
   // Safe to run on every boot in dev and prod; drizzle db:push is blocked by legacy data.
   try {

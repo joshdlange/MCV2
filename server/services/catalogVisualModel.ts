@@ -1,5 +1,6 @@
 import sharp from 'sharp';
 import path from 'node:path';
+import { access } from 'node:fs/promises';
 
 export const MODEL_ID = 'Xenova/dinov2-small';
 export const MODEL_REVISION = 'c2bb04a51fab207c420665f1946016107bffc701';
@@ -7,6 +8,35 @@ export const MODEL_VERSION = `dinov2-small:${MODEL_REVISION}:q8:cls:rgb-fit224-v
 export const VECTOR_DIMENSIONS = 384;
 export const bundledVisualModelPath = () => path.resolve('dist/models', MODEL_ID, MODEL_REVISION);
 let modelPromise: Promise<any> | undefined;
+let offlineModelPromise: Promise<any> | undefined;
+
+/** Explicit opt-in: never downloads and does not reuse a possibly remote model. */
+export async function preloadBundledCatalogVisualModel(): Promise<any> {
+  offlineModelPromise ??= (async () => {
+    const root = bundledVisualModelPath();
+    for (const file of ['config.json', 'preprocessor_config.json', 'onnx/model_quantized.onnx']) {
+      await access(path.join(root, file)).catch(() => {
+        throw new Error(`Bundled visual model unavailable: ${file}`);
+      });
+    }
+    const { pipeline, env } = await import('@huggingface/transformers');
+    const previous = { remote: env.allowRemoteModels, local: env.allowLocalModels, cache: env.useFSCache };
+    try {
+      env.allowRemoteModels = false;
+      env.allowLocalModels = true;
+      env.useFSCache = false;
+      return await pipeline('image-feature-extraction', root, {
+        revision: MODEL_REVISION, device: 'cpu', dtype: 'q8', local_files_only: true,
+        session_options: { intraOpNumThreads: 2, interOpNumThreads: 1 },
+      });
+    } finally {
+      env.allowRemoteModels = previous.remote;
+      env.allowLocalModels = previous.local;
+      env.useFSCache = previous.cache;
+    }
+  })().catch(error => { offlineModelPromise = undefined; throw error; });
+  return offlineModelPromise;
+}
 type Work = { run: () => Promise<unknown>; resolve: (value: any) => void; reject: (error: unknown) => void };
 
 // One active ONNX call is not preemptible. Waiting scans always run before
@@ -91,22 +121,27 @@ export function visualTopK(
 
 // A bounded serialized queue prevents concurrent ONNX executions exhausting RAM.
 // DINO's CLS token is an instance-artwork descriptor, not a text/name embedding.
-export async function embedCatalogVisualImage(buffer: Buffer, priority: 'scan' | 'background' = 'scan'): Promise<number[]> {
+export async function embedCatalogVisualImage(buffer: Buffer, priority: 'scan' | 'background' = 'scan', options: { offline?: boolean } = {}): Promise<number[]> {
   if (!buffer.length || buffer.length > 12 * 1024 * 1024) throw new Error('Visual image must be 1 byte–12 MB');
   return scheduler.run(async () => {
     const { pipeline, RawImage, env } = await import('@huggingface/transformers');
-    const offline = process.env.NODE_ENV === 'production' || process.env.CATALOG_VISUAL_OFFLINE === 'true';
-    if (offline) {
-      env.allowRemoteModels = false;
-      env.allowLocalModels = true;
-      env.useFSCache = false;
+    let model: any;
+    if (options.offline) {
+      model = await preloadBundledCatalogVisualModel();
+    } else {
+      const offline = process.env.NODE_ENV === 'production' || process.env.CATALOG_VISUAL_OFFLINE === 'true';
+      if (offline) {
+        env.allowRemoteModels = false;
+        env.allowLocalModels = true;
+        env.useFSCache = false;
+      }
+      modelPromise ??= pipeline('image-feature-extraction', offline ? bundledVisualModelPath() : MODEL_ID, {
+        revision: MODEL_REVISION, device: 'cpu', dtype: 'q8',
+        local_files_only: offline,
+        session_options: { intraOpNumThreads: 2, interOpNumThreads: 1 },
+      }).catch(error => { modelPromise = undefined; throw error; });
+      model = await modelPromise;
     }
-    modelPromise ??= pipeline('image-feature-extraction', offline ? bundledVisualModelPath() : MODEL_ID, {
-      revision: MODEL_REVISION, device: 'cpu', dtype: 'q8',
-      local_files_only: offline,
-      session_options: { intraOpNumThreads: 2, interOpNumThreads: 1 },
-    }).catch(error => { modelPromise = undefined; throw error; });
-    const model = await modelPromise;
     // Decode with explicit pixel cap, apply orientation and retain the entire card.
     const { data, info } = await sharp(buffer, { limitInputPixels: 24_000_000 })
       .rotate().resize(224, 224, { fit: 'contain', background: '#777777' })
