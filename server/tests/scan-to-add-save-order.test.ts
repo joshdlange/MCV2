@@ -43,6 +43,7 @@ function scanMutation(context: Record<string, unknown>) {
 function scanHarness(options: {
   cardId?: number; submitImage?: boolean; imageUrl?: string | null;
   failCollection?: boolean; failImage?: boolean; visualV1?: boolean;
+  telemetry?: boolean;
   frontFile?: File | null; token?: string | null; autoApproved?: boolean;
   owned?: boolean; afterCollection?: (context: Record<string, any>) => void;
   afterToken?: (context: Record<string, any>) => void;
@@ -52,11 +53,15 @@ function scanHarness(options: {
   const states: string[] = [];
   const toasts: any[] = [];
   const pending: Promise<unknown>[] = [];
+  const telemetryEvents: Array<{ update: unknown; pathsAtAttempt: string[] }> = [];
   const selectedCard = { cardId: options.cardId ?? 902, name: 'Manually selected card' };
   const context: Record<string, any> = {
     Error,
     selectedCard,
     scanEpoch: { current: 7 },
+    scanTelemetry: { current: options.telemetry ? {
+      record: (update: unknown) => telemetryEvents.push({ update: JSON.parse(JSON.stringify(update)), pathsAtAttempt: calls.map(call => call.path) }),
+    } : null },
     visualV1: options.visualV1 ?? false,
     frontFile: options.frontFile === undefined ? new File(['cropped photo'], 'front.jpg', { type: 'image/jpeg' }) : options.frontFile,
     alreadyOwned: options.owned ?? false,
@@ -114,7 +119,7 @@ function scanHarness(options: {
     && node.name?.text === 'confirmCard') as ts.FunctionDeclaration | undefined;
   assert.ok(declaration, 'Scan to Add must have confirmation handler');
   const confirm = evaluate<() => void>(`(${declaration.getText(tree)})`, context);
-  return { mutation, confirm, calls, states, pending, context, toasts };
+  return { mutation, confirm, calls, states, pending, context, toasts, telemetryEvents };
 }
 
 async function performMutation(harness: ReturnType<typeof scanHarness>) {
@@ -291,6 +296,46 @@ test('visual recognition sends image for scanning only, never submits a review p
   const recognition = declaration.initializer!.getText(tree);
   assert.match(recognition, /fetch\("\/api\/cards\/scan"/);
   assert.doesNotMatch(recognition, /uploadScanFrontPhoto|submitScanPhoto|submit-scan-image|\/upload/);
+});
+
+test('photo telemetry records an actual multipart attempt only after collection success', async () => {
+  for (const failImage of [false, true]) {
+    const harness = scanHarness({ visualV1: true, telemetry: true, failImage });
+    await performMutation(harness);
+    assert.deepEqual(harness.telemetryEvents, [{
+      update: { photoSubmitUsed: true },
+      pathsAtAttempt: ['/api/collection'],
+    }]);
+    assert.equal(harness.calls[1].path, '/api/cards/902/upload');
+    assert.ok(harness.states.includes('stage:success'));
+  }
+});
+
+test('photo telemetry does not record checkbox opt-in without an actual submission attempt', async () => {
+  const cases = [
+    { submitImage: false },
+    { failCollection: true },
+    { frontFile: null },
+    { token: null },
+    { frontFile: new File([new Uint8Array(5 * 1024 * 1024 + 1)], 'large.jpg') },
+    { afterToken: (context: Record<string, any>) => { context.scanEpoch.current += 1; } },
+  ];
+  for (const options of cases) {
+    const harness = scanHarness({ visualV1: true, telemetry: true, ...options });
+    await performMutation(harness);
+    assert.deepEqual(harness.telemetryEvents, []);
+  }
+});
+
+test('photo telemetry uses the recorder snapshotted before the collection await', async () => {
+  const harness = scanHarness({
+    visualV1: true, telemetry: true,
+    afterCollection: context => {
+      context.scanTelemetry.current = { record: () => assert.fail('must not use a different scan recorder') };
+    },
+  });
+  await performMutation(harness);
+  assert.equal(harness.telemetryEvents.length, 1);
 });
 
 test('visual review checkbox uses missing/failed image and retained front File, not scan URL', () => {

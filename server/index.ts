@@ -124,6 +124,8 @@ server.listen({
   // DEV-only frozen C0 scan index/model. Failure is explicit and blocks readiness;
   // deployment, production and off paths do not import or initialize the service.
   if (suppressAutomaticCatalogMutations()) {
+    const { initializeDevScanTelemetry } = await import("./services/devScanTelemetry");
+    await initializeDevScanTelemetry();
     const { initializeDevScanVisual } = await import("./services/devScanVisual");
     await initializeDevScanVisual();
   }

@@ -5,7 +5,7 @@ description: Collector confirmation, photo review independence, and binder-page 
 
 ## Current authorization: cut-down dev v1
 
-Build only in DEV; never publish; production is read-only. Preserve all existing `.local/` data and indexes. Checkpoint before each step and stop after the dev catalog refresh for review. The user authorized backing up dev, copying the production catalog with exact IDs, and clearing dev test references instead of remapping them.
+Build only in DEV; never publish; production is read-only. Preserve all existing `.local/` data and indexes. Checkpoint before each step. After reviewing the dev catalog refresh, the user authorized continuing steps 2–5 without stopping unless something breaks or needs their decision. The user authorized backing up dev, copying the production catalog with exact IDs, and clearing dev test references instead of remapping them.
 
 **Why:** The user wants a phone-testable flow in 2–3 sessions, not weeks.
 

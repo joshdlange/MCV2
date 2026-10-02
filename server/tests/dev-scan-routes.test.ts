@@ -10,8 +10,16 @@ import {
   type DevScanRouteDependencies,
 } from '../devScanRoutes';
 import type { DevScanVisualResult } from '../services/devScanVisual';
+import {
+  DevScanTelemetryError, type DevScanTelemetry, type DevScanEventPatch, type DevScanEventOutcome,
+} from '../services/devScanTelemetry';
 
 const env = { NODE_ENV: 'development', SCAN_VISUAL_RETRIEVAL: 'on' };
+const eventId = '11111111-1111-4111-8111-111111111111';
+// Explicitly injected test-only writer; production defaults to the real writer.
+const noopTelemetry: DevScanTelemetry = {
+  begin: async () => eventId, finish: async () => {}, patch: async () => {},
+};
 const result: DevScanVisualResult = {
   matches: [],
   families: [], topScore: null, margin: null,
@@ -34,8 +42,9 @@ async function fixture(
   authentication: RequestHandler = auth,
 ) {
   const app = express();
+  app.use(express.json());
   let legacyCalls = 0;
-  registerDevScanRoutes(app, authentication, { env, ...dependencies });
+  registerDevScanRoutes(app, authentication, { env, telemetry: noopTelemetry, ...dependencies });
   app.post('/api/cards/scan', express.raw({ type: '*/*', limit: '12mb' }), (req, res) => {
     legacyCalls++;
     res.json({ legacy: true, bytes: req.body.length });
@@ -160,6 +169,7 @@ test('success uses the injected service and preserves families without storing t
     assert.equal(response.status, 200);
     const data = await response.json();
     assert.equal(data.mode, 'visual-v1');
+    assert.equal(data.scanEventId, eventId);
     assert.equal(data.imageUrl, null);
     assert.equal(data.scanUploadId, null);
     assert.equal(data.ocrText, '');
@@ -205,7 +215,10 @@ test('empty results abstain, quota exhaustion prevents inference, and failures a
       if (mode === 'empty') assert.equal(data.confidenceLevel, 'none');
       if (mode === 'quota') assert.deepEqual({ limit: data.limit, limitReached: data.limitReached }, { limit: 25, limitReached: true });
       if (mode.endsWith('error')) {
-        assert.deepEqual(data, { message: 'Scan failed. Please try again.' });
+        assert.deepEqual(data, {
+          message: 'Scan failed. Please try again.',
+          ...(mode === 'inference-error' ? { scanEventId: eventId } : {}),
+        });
         assert.deepEqual(logs, [[]]); // No error/request payload given to logger.
       }
       assert.equal(f.legacyCalls(), 0);
@@ -250,14 +263,15 @@ test('quota helper locks per user in the same transaction as count and reservati
     },
   } as unknown as NonNullable<Parameters<typeof reserveDevScanQuota>[1]>;
   const user = { id: 42, plan: 'SIDE_KICK' };
+  const quotaEnv = { ...env, DATABASE_URL: 'postgresql://dev:password@helium/heliumdb' };
   assert.deepEqual(await Promise.all([
-    reserveDevScanQuota(user, database),
-    reserveDevScanQuota(user, database),
+    reserveDevScanQuota(user, database, new Date(), quotaEnv),
+    reserveDevScanQuota(user, database, new Date(), quotaEnv),
   ]), [true, false]);
   assert.equal(used, 25);
   assert.deepEqual(events, ['begin', 'lock', 'count', 'reserve', 'commit', 'begin', 'lock', 'count', 'commit']);
   events.length = 0;
-  assert.equal(await reserveDevScanQuota({ ...user, plan: 'SUPER_HERO' }, database), true);
+  assert.equal(await reserveDevScanQuota({ ...user, plan: 'SUPER_HERO' }, database, new Date(), quotaEnv), true);
   assert.deepEqual(events, ['begin', 'lock', 'reserve', 'commit']);
 });
 
@@ -267,4 +281,118 @@ test('normal route wires DEV branch before legacy multipart; branch has no persi
   const source = readFileSync('server/devScanRoutes.ts', 'utf8');
   assert.doesNotMatch(source, /uploadImage|createScanUpload|scanCard\(|cloudinary|scanUploads|writeFile/);
   assert.match(source, /next\('route'\)/);
+});
+
+function trackedTelemetry(owner = 42) {
+  const outcomes: DevScanEventOutcome[] = [];
+  const patches: DevScanEventPatch[] = [];
+  let begins = 0;
+  const telemetry: DevScanTelemetry = {
+    begin: async userId => { assert.equal(userId, 42); begins++; return eventId; },
+    finish: async (id, userId, outcome) => {
+      assert.equal(id, eventId); assert.equal(userId, 42); outcomes.push(outcome);
+    },
+    patch: async (id, userId, patch) => {
+      if (id !== eventId || userId !== owner) throw new DevScanTelemetryError(404, 'Scan event not found');
+      if (patch.pickedCardId === 999) throw new DevScanTelemetryError(400, 'pickedCardId must identify an active DEV card');
+      patches.push(patch);
+    },
+  };
+  return { telemetry, outcomes, patches, begins: () => begins };
+}
+async function patchEvent(base: string, body: unknown, id = eventId, authorized = true) {
+  return fetch(`${base}/api/cards/scan/events/${id}`, {
+    method: 'PATCH', body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json', ...(authorized ? { Authorization: 'Bearer valid' } : {}) },
+  });
+}
+test('every admitted scan begins metadata before inference, and inference failure finishes error', async () => {
+  for (const fails of [false, true]) {
+    const tracked = trackedTelemetry();
+    const f = await fixture({
+      telemetry: tracked.telemetry, reserveQuota: async () => true,
+      scan: async () => {
+        assert.equal(tracked.begins(), 1);
+        if (fails) throw new Error('private image detail');
+        return { ...result, topScore: 0.8, margin: 0.2 };
+      }, logError: () => {},
+    });
+    try {
+      const response = await post(f.base, multipart(await photo()));
+      assert.equal(response.status, fails ? 500 : 200);
+      assert.equal((await response.json()).scanEventId, eventId);
+      assert.equal(tracked.outcomes.length, 1);
+      assert.equal(tracked.outcomes[0].status, fails ? 'error' : 'success');
+      assert.equal(tracked.outcomes[0].topScore, fails ? null : 0.8);
+      assert.equal(tracked.outcomes[0].margin, fails ? null : 0.2);
+      assert.ok(tracked.outcomes[0].serverMs >= 0);
+    } finally { await f.close(); }
+  }
+});
+test('telemetry begin and finish failures are explicit and never return a successful scan', async () => {
+  for (const failAt of ['begin', 'finish']) {
+    let scans = 0;
+    const f = await fixture({
+      reserveQuota: async () => true, logError: () => {},
+      scan: async () => { scans++; return result; },
+      telemetry: {
+        ...noopTelemetry,
+        begin: async () => { if (failAt === 'begin') throw new Error('private DB detail'); return eventId; },
+        finish: async () => { throw new Error('private DB detail'); },
+      },
+    });
+    try {
+      const response = await post(f.base, multipart(await photo()));
+      assert.equal(response.status, 500);
+      assert.equal((await response.json()).message, 'Scan telemetry logging failed. Please try again.');
+      assert.equal(scans, failAt === 'begin' ? 0 : 1);
+    } finally { await f.close(); }
+  }
+});
+test('PATCH requires auth and ownership, validates IDs and allowlisted scalar fields, and permits timing updates', async () => {
+  const tracked = trackedTelemetry();
+  const f = await fixture({ telemetry: tracked.telemetry });
+  try {
+    assert.equal((await patchEvent(f.base, { totalMs: 123 }, eventId, false)).status, 401);
+    assert.equal((await patchEvent(f.base, { totalMs: 123 }, 'bad-id')).status, 400);
+    assert.equal((await patchEvent(f.base, { totalMs: 123 }, '22222222-2222-4222-8222-222222222222')).status, 404);
+    for (const body of [
+      {}, [], null, { imageUrl: 'private' }, { ocrText: 'private' }, { userId: 1 },
+      { status: 'success' }, { topScore: 1 }, { totalMs: -1 }, { totalMs: 1800001 },
+      { totalMs: '123' }, { usedSearch: 1 }, { photoSubmitUsed: 'true' },
+      { pickedCardId: 0 }, { pickedCardId: 1.5 }, { pickedCardId: 999 },
+      { totalMs: 123, filename: 'private' },
+    ]) assert.equal((await patchEvent(f.base, body)).status, 400);
+    const body = { totalMs: 123.4, usedSearch: true, photoSubmitUsed: false, pickedCardId: 12 };
+    const response = await patchEvent(f.base, body);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { scanEventId: eventId, updated: true });
+    assert.equal((await patchEvent(f.base, { pickedCardId: null, totalMs: 0 })).status, 200);
+    assert.deepEqual(tracked.patches, [body, { pickedCardId: null, totalMs: 0 }]);
+  } finally { await f.close(); }
+  const otherOwner = await fixture({ telemetry: trackedTelemetry(1).telemetry });
+  try { assert.equal((await patchEvent(otherOwner.base, { totalMs: 123 })).status, 404); }
+  finally { await otherOwner.close(); }
+});
+test('PATCH is a 404 when flag off or not strictly DEV, without auth or telemetry work', async () => {
+  for (const disabled of [
+    { ...env, SCAN_VISUAL_RETRIEVAL: 'off' }, { ...env, NODE_ENV: 'production' },
+    { ...env, REPLIT_DEPLOYMENT: '1' },
+  ]) {
+    const f = await fixture({
+      env: disabled, telemetry: { ...noopTelemetry, patch: async () => { throw new Error('must not write'); } },
+    }, () => { throw new Error('must not authenticate'); });
+    try { assert.equal((await patchEvent(f.base, { totalMs: 0 })).status, 404); }
+    finally { await f.close(); }
+  }
+});
+test('PATCH persistence errors surface explicitly without raw error details', async () => {
+  const f = await fixture({
+    logError: () => {}, telemetry: { ...noopTelemetry, patch: async () => { throw new Error('secret DB error'); } },
+  });
+  try {
+    const response = await patchEvent(f.base, { usedSearch: true });
+    assert.equal(response.status, 500);
+    assert.deepEqual(await response.json(), { message: 'Scan telemetry update failed. Please try again.' });
+  } finally { await f.close(); }
 });

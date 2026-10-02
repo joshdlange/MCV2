@@ -13,6 +13,7 @@ import { CardCrop } from "@/components/CardCrop";
 import { QuickSearch, type QuickSearchSelection } from "@/components/dashboard/quick-search";
 import { hasUsableScanCardImage, scanCorrection, submitScanPhoto, uploadScanFrontPhoto, type PhotoSubmissionStatus } from "@/lib/scanConfirmation";
 import { useAppStore } from "@/lib/store";
+import { createScanEventRecorder } from "@/lib/scanTelemetry";
 import {
   Camera,
   Upload,
@@ -65,6 +66,7 @@ interface ScanParsed {
 
 interface ScanResult {
   mode?: "visual-v1";
+  scanEventId?: string | null;
   families?: ScanFamily[];
   topScore?: number | null;
   margin?: number | null;
@@ -346,6 +348,7 @@ export default function ScanToAdd() {
   const scanEpoch = useRef(0);
   const scanAbort = useRef<AbortController | null>(null);
   const scanFetchStartedAt = useRef<number | null>(null);
+  const scanTelemetry = useRef<ReturnType<typeof createScanEventRecorder> | null>(null);
 
   // Resolve once before allowing capture. Missing/failed config stays on legacy.
   const { data: scanConfig } = useQuery<{ visualV1: boolean }>({
@@ -394,8 +397,11 @@ export default function ScanToAdd() {
   }, []);
 
   // Two frames measure the results DOM after React commits and the browser paints.
+  // Keep the measurement alive if the user immediately opens versions/search.
+  const resultsReady = visualV1 && scanResult?.mode === "visual-v1"
+    && ["results", "search", "versions", "confirmed", "success"].includes(stage);
   useEffect(() => {
-    if (!visualV1 || stage !== "results" || scanResult?.mode !== "visual-v1" || browserTiming || scanFetchStartedAt.current === null) return;
+    if (!resultsReady || browserTiming || scanFetchStartedAt.current === null) return;
     const startedAt = scanFetchStartedAt.current;
     const epoch = scanEpoch.current;
     let secondFrame = 0;
@@ -410,7 +416,11 @@ export default function ScanToAdd() {
       cancelAnimationFrame(firstFrame);
       cancelAnimationFrame(secondFrame);
     };
-  }, [stage, scanResult, browserTiming, visualV1]);
+  }, [resultsReady, scanResult, browserTiming]);
+
+  useEffect(() => {
+    if (browserTiming) scanTelemetry.current?.record({ totalMs: browserTiming.elapsedMs });
+  }, [browserTiming]);
 
   // Picker state
   const [pickerYear, setPickerYear] = useState<number | null>(null);
@@ -451,9 +461,26 @@ export default function ScanToAdd() {
       refetchUsage();
       setScanResult(data);
       if (visualV1 && data.mode === "visual-v1") {
+        scanTelemetry.current = typeof data.scanEventId === "string" && data.scanEventId.length > 0
+          ? createScanEventRecorder(
+              data.scanEventId,
+              (path, update) => apiRequest("PATCH", path, update),
+              () => epoch === scanEpoch.current,
+              () => toast({
+                title: "Scan activity could not be saved",
+                description: "You can still choose and add your card. Collection saves and photo review are unaffected.",
+                variant: "destructive",
+              }),
+            )
+          : null;
         setSelectedCard(null);
         setSelectedFamily(null);
-        setStage("results");
+        if ((data.families?.length ?? 0) === 0) {
+          scanTelemetry.current?.record({ usedSearch: true });
+          setStage("search");
+        } else {
+          setStage("results");
+        }
       } else if (data.confidenceLevel === "none") {
         setStage("picker-year");
       } else {
@@ -513,14 +540,15 @@ export default function ScanToAdd() {
       const imageUrl = scanResult?.imageUrl;
       const photoFile = frontFile;
       const useVisualPhoto = visualV1;
+      const telemetry = scanTelemetry.current;
       const res = await apiRequest("POST", "/api/collection", {
         cardId,
         condition: "Near Mint",
         acquiredVia: "scan",
       });
-      return { saved: await res.json(), cardId, wantsPhoto, imageUrl, photoFile, useVisualPhoto, epoch };
+      return { saved: await res.json(), cardId, wantsPhoto, imageUrl, photoFile, useVisualPhoto, telemetry, epoch };
     },
-    onSuccess: async ({ cardId, wantsPhoto, imageUrl, photoFile, useVisualPhoto, epoch }) => {
+    onSuccess: async ({ cardId, wantsPhoto, imageUrl, photoFile, useVisualPhoto, telemetry, epoch }) => {
       qc.invalidateQueries({ queryKey: ["/api/collection"] });
       qc.invalidateQueries({ queryKey: ["/api/user/stats"] });
       if (epoch !== scanEpoch.current) return;
@@ -537,7 +565,11 @@ export default function ScanToAdd() {
       const status = await submitScanPhoto(async () => {
         try {
           if (useVisualPhoto) {
-            return await uploadScanFrontPhoto(cardId, photoFile, async () => user?.getIdToken(), () => epoch === scanEpoch.current);
+            return await uploadScanFrontPhoto(
+              cardId, photoFile, async () => user?.getIdToken(),
+              () => epoch === scanEpoch.current,
+              () => telemetry?.record({ photoSubmitUsed: true }),
+            );
           }
           const res = await apiRequest("POST", `/api/cards/${cardId}/submit-scan-image`, { imageUrl });
           return await res.json() as { autoApproved?: boolean };
@@ -757,6 +789,7 @@ export default function ScanToAdd() {
     scanAbort.current?.abort();
     scanAbort.current = null;
     scanFetchStartedAt.current = null;
+    scanTelemetry.current = null;
     scanMutation.reset();
     feedbackMutation.reset();
     addToCollectionMutation.reset();
@@ -788,6 +821,7 @@ export default function ScanToAdd() {
   }
 
   function openSearch() {
+    scanTelemetry.current?.record({ usedSearch: true });
     setSelectedCard(null);
     setSelectedFamily(null);
     setSelectedFromSearch(false);
@@ -808,6 +842,7 @@ export default function ScanToAdd() {
   }
 
   function handleSearchSelect(card: QuickSearchSelection) {
+    scanTelemetry.current?.record({ pickedCardId: card.id });
     setSelectedCard({
       cardId: card.id,
       name: card.name,
@@ -1238,6 +1273,7 @@ export default function ScanToAdd() {
                   key={card.cardId}
                   card={card}
                   onSelect={(match) => {
+                    scanTelemetry.current?.record({ pickedCardId: match.cardId });
                     setSelectedCard(match);
                     setSelectedFromSearch(false);
                     setStage("confirmed");
@@ -1257,6 +1293,14 @@ export default function ScanToAdd() {
         )}
         {stage === "search" && (
           <div className="space-y-4">
+            {visualV1 && scanResult?.mode === "visual-v1" && (scanResult.families?.length ?? 0) === 0 && (
+              <p className="text-sm text-gray-500">No picture matches found. Search the catalog to choose your card.</p>
+            )}
+            {visualV1 && browserTiming && (
+              <p className="text-xs text-gray-500" data-testid="scan-dev-elapsed">
+                Dev scan elapsed: {(browserTiming.elapsedMs / 1000).toFixed(2)}s (request to painted results)
+              </p>
+            )}
             <p className="font-semibold text-gray-800 dark:text-white">Find your card</p>
             <QuickSearch onSelect={handleSearchSelect} />
             <Button variant="outline" className="w-full" onClick={() => scanResult ? setStage("results") : handleReset()}>

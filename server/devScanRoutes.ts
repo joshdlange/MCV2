@@ -8,6 +8,10 @@ import {
 } from './services/devScanVisual';
 import type { ScanResult } from './services/scanService';
 import type { db } from './db';
+import {
+  assertDevScanTelemetryDatabase, devScanTelemetry, DevScanTelemetryError,
+  isDevScanEventId, validateDevScanEventPatch, type DevScanTelemetry,
+} from './services/devScanTelemetry';
 
 export const DEV_SCAN_MAX_BYTES = 10 * 1024 * 1024;
 export const DEV_SCAN_FREE_MONTHLY_LIMIT = 25;
@@ -21,8 +25,15 @@ export async function reserveDevScanQuota(
   user: DevScanUser,
   database?: Pick<typeof db, 'transaction'>,
   now = new Date(),
+  env: NodeJS.ProcessEnv = process.env,
 ): Promise<boolean> {
-  const connection = database ?? (await import('./db')).db;
+  assertDevScanTelemetryDatabase(env);
+  let connection = database;
+  if (!connection) {
+    const { db: realDb, pool } = await import('./db');
+    assertDevScanTelemetryDatabase({ ...env, DATABASE_URL: pool.options.connectionString });
+    connection = realDb;
+  }
   const startOfMonth = new Date(now);
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
@@ -39,7 +50,7 @@ export async function reserveDevScanQuota(
   });
 }
 
-/** Kept separate from inference and quota for a later telemetry callback. */
+/** The response contains only an opaque telemetry event ID, never the photo. */
 export function devScanResponse(result: DevScanVisualResult) {
   const parsed: ScanResult['parsed'] = {
     characterName: null, setName: null, subsetName: null, cardNumber: null,
@@ -71,6 +82,7 @@ export interface DevScanRouteDependencies {
   env?: NodeJS.ProcessEnv;
   scan?: (buffer: Buffer) => Promise<DevScanVisualResult>;
   reserveQuota?: (user: DevScanUser) => Promise<boolean>;
+  telemetry?: DevScanTelemetry;
   logError?: () => void;
 }
 
@@ -84,7 +96,9 @@ export function registerDevScanRoutes(
 ): void {
   const enabled = () => isDevScanVisualEnabled(dependencies.env ?? process.env);
   const scan = dependencies.scan ?? (buffer => getDevScanVisualService().scan(buffer));
-  const reserveQuota = dependencies.reserveQuota ?? reserveDevScanQuota;
+  const reserveQuota = dependencies.reserveQuota
+    ?? (user => reserveDevScanQuota(user, undefined, new Date(), dependencies.env ?? process.env));
+  const telemetry = dependencies.telemetry ?? devScanTelemetry;
   const logError = dependencies.logError ?? (() => console.error('[DevScan] Visual scan failed'));
   const upload = multer({
     storage: multer.memoryStorage(),
@@ -99,6 +113,33 @@ export function registerDevScanRoutes(
     res.setHeader('Cache-Control', 'no-store');
     res.json({ visualV1: enabled() });
   });
+  app.patch('/api/cards/scan/events/:id',
+    (_req, res, next) => {
+      if (!enabled()) { res.status(404).json({ message: 'Not found' }); return; }
+      next();
+    },
+    authenticateUser,
+    async (req, res) => {
+      const user = (req as typeof req & { user?: DevScanUser }).user;
+      if (!user || !Number.isSafeInteger(user.id) || user.id <= 0) {
+        res.status(401).json({ message: 'Authentication required' }); return;
+      }
+      if (!isDevScanEventId(req.params.id)) {
+        res.status(400).json({ message: 'Invalid scan event ID' }); return;
+      }
+      try {
+        const patch = validateDevScanEventPatch(req.body);
+        await telemetry.patch(req.params.id, user.id, patch);
+        res.json({ scanEventId: req.params.id, updated: true });
+      } catch (error) {
+        if (error instanceof DevScanTelemetryError) {
+          res.status(error.statusCode).json({ message: error.message }); return;
+        }
+        logError();
+        res.status(500).json({ message: 'Scan telemetry update failed. Please try again.' });
+      }
+    },
+  );
   app.post('/api/cards/scan',
     (_req, _res, next) => enabled() ? next() : next('route'),
     authenticateUser,
@@ -134,6 +175,9 @@ export function registerDevScanRoutes(
         res.status(400).json({ message: 'Invalid image. Use a single JPEG, PNG, or WebP photo (max 10MB).' });
         return;
       }
+      const serverStarted = performance.now();
+      let scanEventId: string | undefined;
+      let phase: 'quota' | 'telemetry' | 'inference' = 'quota';
       try {
         if (!await reserveQuota(user)) {
           res.status(429).json({
@@ -142,12 +186,32 @@ export function registerDevScanRoutes(
           });
           return;
         }
+        phase = 'telemetry';
+        scanEventId = await telemetry.begin(user.id);
+        phase = 'inference';
         const result = await scan(file.buffer);
-        res.json(devScanResponse(result));
+        phase = 'telemetry';
+        await telemetry.finish(scanEventId, user.id, {
+          status: 'success', topScore: result.topScore, margin: result.margin,
+          serverMs: performance.now() - serverStarted,
+        });
+        res.json({ ...devScanResponse(result), scanEventId });
       } catch {
+        let telemetryFailed = phase === 'telemetry';
+        if (scanEventId) {
+          try {
+            await telemetry.finish(scanEventId, user.id, {
+              status: 'error', topScore: null, margin: null,
+              serverMs: performance.now() - serverStarted,
+            });
+          } catch { telemetryFailed = true; }
+        }
         // Do not log images, filenames, request bodies, identities, or raw errors.
         logError();
-        res.status(500).json({ message: 'Scan failed. Please try again.' });
+        res.status(500).json({
+          message: telemetryFailed ? 'Scan telemetry logging failed. Please try again.' : 'Scan failed. Please try again.',
+          ...(scanEventId ? { scanEventId } : {}),
+        });
       } finally {
         // Release our reference immediately; buffers never leave this process.
         file.buffer = Buffer.alloc(0);

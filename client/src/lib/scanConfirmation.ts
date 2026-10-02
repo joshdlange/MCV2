@@ -19,6 +19,7 @@ export async function uploadScanFrontPhoto(
   file: File | null,
   getToken: () => Promise<string | undefined>,
   isCurrent: () => boolean,
+  onAttempt?: () => void,
 ): Promise<{ autoApproved?: boolean }> {
   if (!file) throw new Error("The scan photo is no longer available. Please scan it again.");
   if (file.size > 5 * 1024 * 1024) {
@@ -29,6 +30,7 @@ export async function uploadScanFrontPhoto(
   if (!token) throw new Error("Please sign in again to submit your photo for review.");
   const body = new FormData();
   body.append("frontImage", file);
+  onAttempt?.();
   const response = await fetch(`/api/cards/${cardId}/upload`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },

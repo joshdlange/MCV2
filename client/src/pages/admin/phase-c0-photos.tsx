@@ -272,7 +272,7 @@ export default function PhaseC0Photos() {
 
   return (
     <div className="p-4 space-y-4 max-w-4xl">
-      <h1className="text-lg font-semibold">Phase C0 test photos: {singles} single cards, {pages.length} binder pages</h1>
+      <h1 className="text-lg font-semibold">Phase C0 test photos: {singles} single cards, {pages.length} binder pages</h1>
       <p className="text-sm text-gray-700">
         Photos are saved untouched to the dev data folder (development only, never committed). Use JPEG photos. Card IDs are <strong>production</strong> IDs (frozen production catalog snapshot).
       </p>
