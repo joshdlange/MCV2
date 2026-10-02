@@ -2,13 +2,26 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Star, Search } from "lucide-react";
+import { Star, Search, ImageOff, Loader2 } from "lucide-react";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { useLocation } from "wouter";
 import type { CardWithSet, CardSet } from "@shared/schema";
 import { formatSetName } from "@/lib/formatTitle";
+import { apiRequest } from "@/lib/queryClient";
 
-export function QuickSearch() {
+// /api/v2/search intentionally returns lightweight rows, not CardWithSet.
+export interface QuickSearchSelection {
+  id: number;
+  name: string;
+  cardNumber: string;
+  frontImageUrl: string | null;
+  setName: string;
+  setYear: number | null;
+  isInsert: boolean;
+  rarity: string | null;
+}
+
+export function QuickSearch({ onSelect }: { onSelect?: (card: QuickSearchSelection) => void } = {}) {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSet, setSelectedSet] = useState<string>("all");
@@ -31,7 +44,17 @@ export function QuickSearch() {
   // Fetch search results
   const { data: searchResults, isLoading } = useQuery<CardWithSet[]>({
     queryKey: ["/api/cards/search", { query: debouncedQuery, setId: selectedSet }],
-    enabled: debouncedQuery.length >= 2,
+    enabled: !onSelect && debouncedQuery.length >= 2,
+  });
+
+  const { data: selectableResults, isFetching: selectingLoading, error: selectionError } = useQuery<QuickSearchSelection[]>({
+    queryKey: ["/api/v2/search", { q: debouncedQuery.trim(), setId: selectedSet, limit: 50 }],
+    queryFn: async () => {
+      const params = new URLSearchParams({ q: debouncedQuery.trim(), limit: "50" });
+      if (selectedSet !== "all") params.set("setId", selectedSet);
+      return (await apiRequest("GET", `/api/v2/search?${params}`)).json();
+    },
+    enabled: !!onSelect && debouncedQuery.trim().length >= 2,
   });
 
   const cardAspectRatio = "aspect-[2.5/3.5]";
@@ -47,7 +70,7 @@ export function QuickSearch() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && searchQuery.trim().length >= 2) {
+              if (!onSelect && e.key === 'Enter' && searchQuery.trim().length >= 2) {
                 setLocation(`/card-search?search=${encodeURIComponent(searchQuery.trim())}`);
               }
             }}
@@ -78,7 +101,7 @@ export function QuickSearch() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && searchQuery.trim().length >= 2) {
+              if (!onSelect && e.key === 'Enter' && searchQuery.trim().length >= 2) {
                 setLocation(`/card-search?search=${encodeURIComponent(searchQuery.trim())}`);
               }
             }}
@@ -102,14 +125,47 @@ export function QuickSearch() {
 
 
 
+      {onSelect && (
+        <div className="space-y-2 mt-4">
+          {searchQuery.trim().length < 2 ? (
+            <p className="text-sm text-gray-500">Enter at least two characters to search by name, set or card number.</p>
+          ) : selectingLoading || searchQuery.trim() !== debouncedQuery.trim() ? (
+            <p className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="w-4 h-4 animate-spin" /> Searching…</p>
+          ) : selectionError ? (
+            <p role="alert" className="text-sm text-red-600">Search failed: {selectionError.message}</p>
+          ) : selectableResults?.length === 0 ? (
+            <p className="text-sm text-gray-500">No cards found. Try another name or card number, or change the set.</p>
+          ) : selectableResults?.map((card) => (
+            <button
+              key={card.id}
+              type="button"
+              onClick={() => onSelect(card)}
+              className="w-full text-left flex items-center gap-3 p-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-red-300 bg-white dark:bg-gray-900"
+            >
+              <div className="w-12 h-16 flex-shrink-0 rounded overflow-hidden bg-gray-100 dark:bg-gray-800">
+                {card.frontImageUrl
+                  ? <img src={card.frontImageUrl} alt={card.name} className="w-full h-full object-contain" />
+                  : <div className="w-full h-full flex items-center justify-center"><ImageOff className="w-4 h-4 text-gray-400" /></div>}
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-sm text-gray-900 dark:text-white">{card.name}</p>
+                <p className="text-xs text-gray-500">{card.setName}</p>
+                <p className="text-xs text-gray-500">#{card.cardNumber}{card.setYear ? ` · ${card.setYear}` : ""}</p>
+              </div>
+            </button>
+          ))}
+          {selectableResults?.length === 50 && <p className="text-xs text-gray-500">Showing first 50 results. Narrow your search to find the exact version.</p>}
+        </div>
+      )}
+
       {/* Card Detail Modal */}
-      <CardDetailModal
+      {!onSelect && <CardDetailModal
         card={selectedCard}
         isOpen={!!selectedCard}
         onClose={() => setSelectedCard(null)}
         isInCollection={false}
         isInWishlist={false}
-      />
+      />}
     </div>
   );
 }

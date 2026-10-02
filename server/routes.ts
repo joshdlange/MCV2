@@ -85,6 +85,7 @@ import {
 import { uploadUserCardImage, uploadMainSetThumbnail, downloadAndUploadToCloudinary, isCloudinaryUrl } from "./cloudinary";
 import { registerMarketplaceRoutes } from "./marketplace-routes";
 import { registerScanReviewRoutes } from "./scan-review-routes";
+import { registerDevScanRoutes } from "./devScanRoutes";
 import { optimizedStorage, tokenizeSearch } from "./optimized-storage";
 import {
   AccountDeletionPendingError,
@@ -8955,6 +8956,8 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   });
 
   // ===== SCAN TO ADD ROUTES =====
+
+  registerDevScanRoutes(app, authenticateUser);
 
   // GET /api/cards/scan/usage — remaining scans this month
   app.get("/api/cards/scan/usage", authenticateUser, async (req: any, res) => {

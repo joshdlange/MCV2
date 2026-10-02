@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, RotateCw } from "lucide-react";
-import { cropForCard, moveCrop, resizeCrop, type CardOrientation, type CropRect } from "@/lib/cardCrop";
+import { cardCropRatio, cropForCard, moveCrop, resizeCrop, type CardOrientation, type CardCropFormat, type CropRect } from "@/lib/cardCrop";
 
 type OrientedImage = { canvas: HTMLCanvasElement; url: string };
 
@@ -10,11 +10,13 @@ export function CardCrop({
   onConfirm,
   onCancel,
   side = "front",
+  format = "legacy",
 }: {
   file: File;
   onConfirm: (cropped: File, preview: string) => void;
   onCancel: () => void;
   side?: "front" | "back";
+  format?: CardCropFormat;
 }) {
   const [image, setImage] = useState<OrientedImage | null>(null);
   const [crop, setCrop] = useState<CropRect | null>(null);
@@ -24,6 +26,12 @@ export function CardCrop({
   const [processing, setProcessing] = useState(false);
   const displayRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ x: number; y: number; crop: CropRect } | null>(null);
+  const activeRef = useRef(true);
+
+  useEffect(() => {
+    activeRef.current = true;
+    return () => { activeRef.current = false; };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -56,7 +64,7 @@ export function CardCrop({
       ctx.rotate(rotation * Math.PI / 180);
       ctx.drawImage(source, -w / 2, -h / 2, w, h);
       setImage({ canvas, url: canvas.toDataURL("image/jpeg", 0.88) });
-      setCrop(cropForCard(canvas.width, canvas.height, 0.9, orientation));
+      setCrop(cropForCard(canvas.width, canvas.height, 0.9, orientation, format));
       setError("");
     };
     source.onerror = () => {
@@ -67,11 +75,11 @@ export function CardCrop({
       active = false;
       URL.revokeObjectURL(sourceUrl);
     };
-  }, [file, rotation]);
+  }, [file, rotation, format]);
 
   function changeOrientation(next: CardOrientation) {
     setOrientation(next);
-    if (image) setCrop(cropForCard(image.canvas.width, image.canvas.height, 0.9, next));
+    if (image) setCrop(cropForCard(image.canvas.width, image.canvas.height, 0.9, next, format));
   }
 
   function onPointerMove(event: React.PointerEvent<HTMLDivElement>) {
@@ -87,9 +95,9 @@ export function CardCrop({
     if (!image || !crop || processing) return;
     setProcessing(true);
     const output = document.createElement("canvas");
-    // Avoid upscaling a small image; the crop ratio remains exactly 2:3.
+    // Avoid upscaling a small image; output uses the same ratio as the frame.
     output.width = Math.max(2, Math.round(crop.width));
-    output.height = Math.max(2, Math.round(output.width * (orientation === "portrait" ? 1.5 : 2 / 3)));
+    output.height = Math.max(2, Math.round(output.width / cardCropRatio(orientation, format)));
     const ctx = output.getContext("2d");
     if (!ctx) {
       setError("Could not crop this image. Please try again.");
@@ -99,6 +107,7 @@ export function CardCrop({
     ctx.drawImage(image.canvas, crop.x, crop.y, crop.width, crop.height,
       0, 0, output.width, output.height);
     output.toBlob((blob) => {
+      if (!activeRef.current) return;
       setProcessing(false);
       if (!blob) {
         setError("Could not save the cropped image. Please try again.");
@@ -165,8 +174,8 @@ export function CardCrop({
             Frame size
             <input
               type="range" min="30" max="100" step="1"
-              value={Math.round(crop.width / Math.min(image.canvas.width, image.canvas.height * (orientation === "portrait" ? 2 / 3 : 3 / 2)) * 100)}
-              onChange={(e) => setCrop(resizeCrop(crop, image.canvas.width, image.canvas.height, Number(e.target.value) / 100, orientation))}
+              value={Math.round(crop.width / Math.min(image.canvas.width, image.canvas.height * cardCropRatio(orientation, format)) * 100)}
+              onChange={(e) => setCrop(resizeCrop(crop, image.canvas.width, image.canvas.height, Number(e.target.value) / 100, orientation, format))}
               className="w-full accent-red-600"
             />
           </label>
@@ -177,7 +186,9 @@ export function CardCrop({
           <RotateCw className="w-4 h-4 mr-1" /> Rotate
         </Button>
         <Button variant="outline" type="button" onClick={() => changeOrientation(orientation === "portrait" ? "landscape" : "portrait")}>
-          {orientation === "portrait" ? "Landscape 3:2" : "Portrait 2:3"}
+          {orientation === "portrait"
+            ? `Landscape ${format === "visual-v1" ? "7:5" : "3:2"}`
+            : `Portrait ${format === "visual-v1" ? "5:7" : "2:3"}`}
         </Button>
         <Button variant="outline" type="button" onClick={onCancel}>Cancel</Button>
         <Button type="button" className="flex-1 min-w-32 bg-red-600 hover:bg-red-700" onClick={confirm} disabled={!image || processing}>

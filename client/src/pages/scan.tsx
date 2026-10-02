@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
 import { useHardwareBackHandler } from "@/hooks/useBackButton";
 import { CardCrop } from "@/components/CardCrop";
+import { QuickSearch, type QuickSearchSelection } from "@/components/dashboard/quick-search";
 import { scanCorrection, submitScanPhoto, type PhotoSubmissionStatus } from "@/lib/scanConfirmation";
 import { useAppStore } from "@/lib/store";
 import {
@@ -63,6 +64,11 @@ interface ScanParsed {
 }
 
 interface ScanResult {
+  mode?: "visual-v1";
+  families?: ScanFamily[];
+  topScore?: number | null;
+  margin?: number | null;
+  timings?: { queueMs: number; cropMs: number; embeddingMs: number; searchMs: number; totalMs: number };
   imageUrl: string | null;
   scanUploadId: number | null;
   ocrText: string;
@@ -78,6 +84,19 @@ interface ScanResult {
     totalEligible: number;
     fallback: "none" | "text-only" | "no-candidates";
   };
+}
+
+interface ScanFamily {
+  familyKey: string;
+  score: number;
+  representativeCardId: number;
+  options: ScanMatch[];
+}
+
+interface ScanBrowserTiming {
+  startedAt: number;
+  resultsPaintedAt: number;
+  elapsedMs: number;
 }
 
 interface PickerSet {
@@ -112,6 +131,8 @@ type Stage =
   | "crop-back"
   | "scanning"
   | "results"
+  | "versions"
+  | "search"
   | "picker-year"
   | "picker-set"
   | "picker-subset"
@@ -322,19 +343,42 @@ export default function ScanToAdd() {
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const backInputRef = useRef<HTMLInputElement>(null);
+  const scanEpoch = useRef(0);
+  const scanAbort = useRef<AbortController | null>(null);
+  const scanFetchStartedAt = useRef<number | null>(null);
+
+  // Resolve once before allowing capture. Missing/failed config stays on legacy.
+  const { data: scanConfig } = useQuery<{ visualV1: boolean }>({
+    queryKey: ["/api/cards/scan/config"],
+    queryFn: async () => {
+      try {
+        const data = await (await apiRequest("GET", "/api/cards/scan/config")).json();
+        return { visualV1: data?.visualV1 === true };
+      } catch {
+        return { visualV1: false };
+      }
+    },
+    staleTime: Infinity,
+    retry: false,
+  });
+  const configResolved = scanConfig !== undefined;
+  const visualV1 = scanConfig?.visualV1 === true;
 
   // Core scan state
   const [stage, setStage] = useState<Stage>("idle");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [backSourceFile, setBackSourceFile] = useState<File | null>(null);
-  const [frontCropped, setFrontCropped] = useState<File | null>(null);
+  const [frontFile, setFrontFile] = useState<File | null>(null);
   const previewObjectUrl = useRef<string | null>(null);
   const [photoSubmission, setPhotoSubmission] = useState<PhotoSubmissionStatus>("idle");
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [selectedCard, setSelectedCard] = useState<ScanMatch | null>(null);
   const [submitImage, setSubmitImage] = useState(false);
   const [dbImageBroken, setDbImageBroken] = useState(false);
+  const [selectedFamily, setSelectedFamily] = useState<ScanFamily | null>(null);
+  const [selectedFromSearch, setSelectedFromSearch] = useState(false);
+  const [browserTiming, setBrowserTiming] = useState<ScanBrowserTiming | null>(null);
 
   // Reset the broken-image flag whenever a different card is selected
   useEffect(() => {
@@ -345,7 +389,28 @@ export default function ScanToAdd() {
 
   useEffect(() => () => {
     if (previewObjectUrl.current) URL.revokeObjectURL(previewObjectUrl.current);
+    scanEpoch.current += 1;
+    scanAbort.current?.abort();
   }, []);
+
+  // Two frames measure the results DOM after React commits and the browser paints.
+  useEffect(() => {
+    if (!visualV1 || stage !== "results" || scanResult?.mode !== "visual-v1" || browserTiming || scanFetchStartedAt.current === null) return;
+    const startedAt = scanFetchStartedAt.current;
+    const epoch = scanEpoch.current;
+    let secondFrame = 0;
+    const firstFrame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(() => {
+        if (epoch !== scanEpoch.current) return;
+        const resultsPaintedAt = performance.now();
+        setBrowserTiming({ startedAt, resultsPaintedAt, elapsedMs: resultsPaintedAt - startedAt });
+      });
+    });
+    return () => {
+      cancelAnimationFrame(firstFrame);
+      cancelAnimationFrame(secondFrame);
+    };
+  }, [stage, scanResult, browserTiming, visualV1]);
 
   // Picker state
   const [pickerYear, setPickerYear] = useState<number | null>(null);
@@ -359,26 +424,37 @@ export default function ScanToAdd() {
   // ── Mutations ──
 
   const scanMutation = useMutation({
-    mutationFn: async ({ front, back }: { front: File; back?: File }) => {
+    mutationFn: async ({ front, back, epoch }: { front: File; back?: File; epoch: number }) => {
+      if (!configResolved) throw new Error("Scan configuration is still loading. Please try again.");
       const formData = new FormData();
       formData.append("image", front);
       if (back) formData.append("backImage", back);
       const token = await user?.getIdToken();
+      if (epoch !== scanEpoch.current) throw new Error("Scan cancelled");
+      const controller = new AbortController();
+      scanAbort.current = controller;
+      scanFetchStartedAt.current = visualV1 ? performance.now() : null;
       const res = await fetch("/api/cards/scan", {
         method: "POST",
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: formData,
+        signal: controller.signal,
       });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.message || "Scan failed");
       }
-      return res.json() as Promise<ScanResult>;
+      return { result: await res.json() as ScanResult, epoch };
     },
-    onSuccess: (data) => {
+    onSuccess: ({ result: data, epoch }) => {
+      if (epoch !== scanEpoch.current) return;
       refetchUsage();
       setScanResult(data);
-      if (data.confidenceLevel === "none") {
+      if (visualV1 && data.mode === "visual-v1") {
+        setSelectedCard(null);
+        setSelectedFamily(null);
+        setStage("results");
+      } else if (data.confidenceLevel === "none") {
         setStage("picker-year");
       } else {
         setStage("results");
@@ -387,7 +463,8 @@ export default function ScanToAdd() {
         }
       }
     },
-    onError: (err: Error) => {
+    onError: (err: Error, { epoch }) => {
+      if (epoch !== scanEpoch.current) return;
       refetchUsage();
       if (err.message?.includes("free scans this month")) {
         toast({ title: "Monthly scan limit reached", description: "Upgrade to Super Hero for unlimited scans.", variant: "destructive" });
@@ -422,14 +499,15 @@ export default function ScanToAdd() {
 
   function sendFeedback(feedbackType: "correct" | "wrong" | "not_found", selectedCardId?: number | null) {
     if (!scanResult?.scanUploadId || feedbackGiven) return;
+    const epoch = scanEpoch.current;
     feedbackMutation.mutate({ feedbackType, selectedCardId }, {
-      onSuccess: () => setFeedbackGiven(true),
-      onError: () => toast({ title: "Feedback could not be saved", variant: "destructive" }),
+      onSuccess: () => { if (epoch === scanEpoch.current) setFeedbackGiven(true); },
+      onError: () => { if (epoch === scanEpoch.current) toast({ title: "Feedback could not be saved", variant: "destructive" }); },
     });
   }
 
   const addToCollectionMutation = useMutation({
-    mutationFn: async (cardId: number) => {
+    mutationFn: async ({ cardId, epoch }: { cardId: number; epoch: number }) => {
       // Snapshot the confirmed card and review choice before awaiting the save.
       const wantsPhoto = submitImage;
       const imageUrl = scanResult?.imageUrl;
@@ -438,11 +516,12 @@ export default function ScanToAdd() {
         condition: "Near Mint",
         acquiredVia: "scan",
       });
-      return { saved: await res.json(), cardId, wantsPhoto, imageUrl };
+      return { saved: await res.json(), cardId, wantsPhoto, imageUrl, epoch };
     },
-    onSuccess: async ({ cardId, wantsPhoto, imageUrl }) => {
+    onSuccess: async ({ cardId, wantsPhoto, imageUrl, epoch }) => {
       qc.invalidateQueries({ queryKey: ["/api/collection"] });
       qc.invalidateQueries({ queryKey: ["/api/user/stats"] });
+      if (epoch !== scanEpoch.current) return;
 
       setStage("success");
       if (!wantsPhoto) return;
@@ -456,10 +535,12 @@ export default function ScanToAdd() {
         const res = await apiRequest("POST", `/api/cards/${cardId}/submit-scan-image`, { imageUrl });
         return res.json() as Promise<{ autoApproved?: boolean }>;
       });
+      if (epoch !== scanEpoch.current) return;
       setPhotoSubmission(status);
       if (status === "failed") toast({ title: "Photo was not submitted", description: "Your card was added, but its photo could not be sent for review.", variant: "destructive" });
     },
-    onError: (err: Error) => {
+    onError: (err: Error, { epoch }) => {
+      if (epoch !== scanEpoch.current) return;
       if (err.message?.toLowerCase().includes("limit")) {
         toast({
           title: "Collection limit reached",
@@ -548,8 +629,10 @@ export default function ScanToAdd() {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
+    if (!configResolved) return;
+    handleReset();
     setSourceFile(file);
-    setFrontCropped(null);
+    setFrontFile(null);
     setBackSourceFile(null);
     if (previewObjectUrl.current) URL.revokeObjectURL(previewObjectUrl.current);
     previewObjectUrl.current = null;
@@ -563,8 +646,9 @@ export default function ScanToAdd() {
   }
 
   function startScan(front: File, back?: File) {
+    if (!configResolved) return;
     setStage("scanning");
-    scanMutation.mutate({ front, back });
+    scanMutation.mutate({ front, back, epoch: scanEpoch.current });
   }
 
   function confirmCard() {
@@ -572,7 +656,7 @@ export default function ScanToAdd() {
     if (scanResult?.scanUploadId) {
       sendFeedback(scanCorrection(scanResult.matches[0]?.cardId, selectedCard.cardId), selectedCard.cardId);
     }
-    addToCollectionMutation.mutate(selectedCard.cardId);
+    addToCollectionMutation.mutate({ cardId: selectedCard.cardId, epoch: scanEpoch.current });
   }
 
   function handleBackFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -658,10 +742,21 @@ export default function ScanToAdd() {
   }
 
   function handleReset() {
+    scanEpoch.current += 1;
+    scanAbort.current?.abort();
+    scanAbort.current = null;
+    scanFetchStartedAt.current = null;
+    scanMutation.reset();
+    feedbackMutation.reset();
+    addToCollectionMutation.reset();
+    setSelectedFamily(null);
+    setSelectedFromSearch(false);
+    setBrowserTiming(null);
+    setDbImageBroken(false);
     setStage("idle");
     setSourceFile(null);
     setBackSourceFile(null);
-    setFrontCropped(null);
+    setFrontFile(null);
     if (previewObjectUrl.current) URL.revokeObjectURL(previewObjectUrl.current);
     previewObjectUrl.current = null;
     setPreviewUrl(null);
@@ -678,6 +773,43 @@ export default function ScanToAdd() {
     setPickerCardSetId(null);
     setCardSearch("");
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (backInputRef.current) backInputRef.current.value = "";
+  }
+
+  function openSearch() {
+    setSelectedCard(null);
+    setSelectedFamily(null);
+    setSelectedFromSearch(false);
+    setSubmitImage(false);
+    setDbImageBroken(false);
+    setPhotoSubmission("idle");
+    setFeedbackGiven(false);
+    feedbackMutation.reset();
+    addToCollectionMutation.reset();
+    setPickerYear(null);
+    setPickerSet(null);
+    setPickerSetName("");
+    setPickerSubset(null);
+    setPickerSubsetName("");
+    setPickerCardSetId(null);
+    setCardSearch("");
+    setStage("search");
+  }
+
+  function handleSearchSelect(card: QuickSearchSelection) {
+    setSelectedCard({
+      cardId: card.id,
+      name: card.name,
+      setName: card.setName,
+      subsetName: null,
+      cardNumber: card.cardNumber,
+      year: card.setYear,
+      imageUrl: card.frontImageUrl,
+      confidence: 0,
+      matchReasons: [],
+    });
+    setSelectedFromSearch(true);
+    setStage("confirmed");
   }
 
   // Android hardware back: step backwards through the scan stages instead of
@@ -702,6 +834,14 @@ export default function ScanToAdd() {
       case "results":
         handleReset();
         return true;
+      case "versions":
+        setSelectedFamily(null);
+        setStage("results");
+        return true;
+      case "search":
+        if (scanResult) setStage("results");
+        else handleReset();
+        return true;
       case "picker-year":
         if (scanResult) {
           setStage("results");
@@ -724,7 +864,11 @@ export default function ScanToAdd() {
         return true;
       case "confirmed":
         setSelectedCard(null);
-        if (pickerCardSetId) {
+        if (selectedFromSearch) {
+          setStage("search");
+        } else if (selectedFamily) {
+          setStage("versions");
+        } else if (pickerCardSetId) {
           setStage("picker-card");
         } else if (scanResult) {
           setStage("results");
@@ -815,8 +959,8 @@ export default function ScanToAdd() {
 
             {/* Upload area — card-themed */}
             <div
-              className={`group relative ${isAtScanLimit ? "cursor-not-allowed" : "cursor-pointer"}`}
-              onClick={() => !isAtScanLimit && fileInputRef.current?.click()}
+               className={`group relative ${isAtScanLimit || !configResolved ? "cursor-not-allowed" : "cursor-pointer"}`}
+               onClick={() => configResolved && !isAtScanLimit && fileInputRef.current?.click()}
             >
               {/* Fanned card stack behind */}
               <div className="absolute inset-x-6 bottom-0 top-4 rounded-2xl bg-red-100 dark:bg-red-950/30 border border-red-200/60 dark:border-red-900/40 rotate-3 shadow-sm transition-transform group-hover:rotate-[5deg]" />
@@ -865,7 +1009,7 @@ export default function ScanToAdd() {
                       </Button>
                     </div>
                   ) : (
-                    <Button className="bg-red-600 hover:bg-red-700 text-white gap-2 px-6 py-2 rounded-full shadow-sm shadow-red-200 dark:shadow-red-900/30 transition-transform group-hover:scale-[1.02]">
+                    <Button disabled={!configResolved} className="bg-red-600 hover:bg-red-700 text-white gap-2 px-6 py-2 rounded-full shadow-sm shadow-red-200 dark:shadow-red-900/30 transition-transform group-hover:scale-[1.02]">
                       <Camera className="w-4 h-4" />
                       Open Camera / Upload
                     </Button>
@@ -971,18 +1115,20 @@ export default function ScanToAdd() {
         {stage === "crop" && sourceFile && (
           <CardCrop
             file={sourceFile}
+            format={visualV1 ? "visual-v1" : "legacy"}
             onCancel={handleReset}
             onConfirm={(file, preview) => {
               if (previewObjectUrl.current) URL.revokeObjectURL(previewObjectUrl.current);
               previewObjectUrl.current = preview;
               setPreviewUrl(preview);
               setSourceFile(null);
-              setFrontCropped(file);
-              setStage("crop-back-choice");
+              setFrontFile(file);
+              if (visualV1) startScan(file);
+              else setStage("crop-back-choice");
             }}
           />
         )}
-        {stage === "crop-back-choice" && frontCropped && (
+        {stage === "crop-back-choice" && frontFile && (
           <div className="space-y-4">
             <h2 className="font-semibold text-gray-900 dark:text-white">Front crop ready</h2>
             {previewUrl && <img src={previewUrl} alt="Cropped card front" className="max-h-64 mx-auto rounded-lg border object-contain" />}
@@ -990,13 +1136,13 @@ export default function ScanToAdd() {
             <Button variant="outline" className="w-full" onClick={() => backInputRef.current?.click()}>
               <Camera className="w-4 h-4 mr-2" /> Add card back
             </Button>
-            <Button className="w-full bg-red-600 hover:bg-red-700" onClick={() => startScan(frontCropped)}>
+            <Button className="w-full bg-red-600 hover:bg-red-700" onClick={() => startScan(frontFile)}>
               Scan front only
             </Button>
             <Button variant="ghost" className="w-full" onClick={handleReset}>Cancel</Button>
           </div>
         )}
-        {stage === "crop-back" && backSourceFile && frontCropped && (
+        {stage === "crop-back" && backSourceFile && frontFile && (
           <CardCrop
             file={backSourceFile}
             side="back"
@@ -1004,7 +1150,7 @@ export default function ScanToAdd() {
             onConfirm={(back, backPreview) => {
               URL.revokeObjectURL(backPreview);
               setBackSourceFile(null);
-              startScan(frontCropped, back);
+              startScan(frontFile, back);
             }}
           />
         )}
@@ -1026,7 +1172,88 @@ export default function ScanToAdd() {
         )}
 
         {/* ── RESULTS ── */}
-        {stage === "results" && scanResult && (
+        {stage === "results" && visualV1 && scanResult?.mode === "visual-v1" && (
+          <div className="space-y-4">
+            {previewUrl && (
+              <div className="rounded-xl overflow-hidden border bg-white dark:bg-gray-900 max-h-48 flex items-center justify-center">
+                <img src={previewUrl} alt="Scanned card" className="max-h-48 object-contain" />
+              </div>
+            )}
+            <p className="font-semibold text-gray-800 dark:text-white">
+              {(scanResult.families?.length ?? 0) === 0
+                ? "No picture matches found"
+                : "Choose the matching card artwork"}
+            </p>
+            <p className="text-sm text-amber-700 dark:text-amber-400">
+              Similar artwork is not a verified identification. Choose a card, then check its exact version and finish.
+            </p>
+            {browserTiming && (
+              <p className="text-xs text-gray-500" data-testid="scan-dev-elapsed">
+                Dev scan elapsed: {(browserTiming.elapsedMs / 1000).toFixed(2)}s (request to painted results)
+              </p>
+            )}
+            <div className="space-y-2">
+              {(scanResult.families ?? []).slice(0, 5).map((family) => {
+                const representative = family.options.find((card) => card.cardId === family.representativeCardId) ?? family.options[0];
+                if (!representative) return null;
+                return (
+                  <CardTile
+                    key={family.familyKey}
+                    card={representative}
+                    onSelect={() => {
+                      setSelectedCard(null);
+                      setSelectedFamily(family);
+                      setSelectedFromSearch(false);
+                      setStage("versions");
+                    }}
+                    selected={false}
+                    showConfidence={false}
+                  />
+                );
+              })}
+            </div>
+            <Button variant="outline" className="w-full text-sm" onClick={openSearch}>
+              <Search className="w-4 h-4 mr-2" /> Not here? Search cards
+            </Button>
+          </div>
+        )}
+        {stage === "versions" && selectedFamily && (
+          <div className="space-y-4">
+            <p className="font-semibold text-gray-800 dark:text-white">Which version?</p>
+            <p className="text-sm text-gray-500">Compare the printed details and finish. Versions without catalog images are included.</p>
+            <div className="space-y-2">
+              {selectedFamily.options.map((card) => (
+                <CardTile
+                  key={card.cardId}
+                  card={card}
+                  onSelect={(match) => {
+                    setSelectedCard(match);
+                    setSelectedFromSearch(false);
+                    setStage("confirmed");
+                  }}
+                  selected={false}
+                  showConfidence={false}
+                />
+              ))}
+            </div>
+            <Button variant="outline" className="w-full" onClick={() => { setSelectedFamily(null); setStage("results"); }}>
+              <ArrowLeft className="w-4 h-4 mr-2" /> Back to scan results
+            </Button>
+            <Button variant="outline" className="w-full" onClick={openSearch}>
+              <Search className="w-4 h-4 mr-2" /> Not here? Search cards
+            </Button>
+          </div>
+        )}
+        {stage === "search" && (
+          <div className="space-y-4">
+            <p className="font-semibold text-gray-800 dark:text-white">Find your card</p>
+            <QuickSearch onSelect={handleSearchSelect} />
+            <Button variant="outline" className="w-full" onClick={() => scanResult ? setStage("results") : handleReset()}>
+              <ArrowLeft className="w-4 h-4 mr-2" /> {scanResult ? "Back to scan results" : "Cancel"}
+            </Button>
+          </div>
+        )}
+        {stage === "results" && scanResult && !(visualV1 && scanResult.mode === "visual-v1") && (
           <div className="space-y-4">
             {previewUrl && (
               <div className="rounded-xl overflow-hidden border bg-white dark:bg-gray-900 max-h-48 flex items-center justify-center">
@@ -1478,7 +1705,11 @@ export default function ScanToAdd() {
                 className="w-full"
                 onClick={() => {
                   setSelectedCard(null);
-                  if (isPickerStage || pickerCardSetId) {
+                  if (selectedFromSearch) {
+                    setStage("search");
+                  } else if (selectedFamily) {
+                    setStage("versions");
+                  } else if (isPickerStage || pickerCardSetId) {
                     setStage("picker-card");
                   } else if (scanResult) {
                     setStage("results");
