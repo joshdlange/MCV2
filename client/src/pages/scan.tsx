@@ -11,7 +11,7 @@ import { useLocation } from "wouter";
 import { useHardwareBackHandler } from "@/hooks/useBackButton";
 import { CardCrop } from "@/components/CardCrop";
 import { QuickSearch, type QuickSearchSelection } from "@/components/dashboard/quick-search";
-import { scanCorrection, submitScanPhoto, type PhotoSubmissionStatus } from "@/lib/scanConfirmation";
+import { hasUsableScanCardImage, scanCorrection, submitScanPhoto, uploadScanFrontPhoto, type PhotoSubmissionStatus } from "@/lib/scanConfirmation";
 import { useAppStore } from "@/lib/store";
 import {
   Camera,
@@ -511,33 +511,44 @@ export default function ScanToAdd() {
       // Snapshot the confirmed card and review choice before awaiting the save.
       const wantsPhoto = submitImage;
       const imageUrl = scanResult?.imageUrl;
+      const photoFile = frontFile;
+      const useVisualPhoto = visualV1;
       const res = await apiRequest("POST", "/api/collection", {
         cardId,
         condition: "Near Mint",
         acquiredVia: "scan",
       });
-      return { saved: await res.json(), cardId, wantsPhoto, imageUrl, epoch };
+      return { saved: await res.json(), cardId, wantsPhoto, imageUrl, photoFile, useVisualPhoto, epoch };
     },
-    onSuccess: async ({ cardId, wantsPhoto, imageUrl, epoch }) => {
+    onSuccess: async ({ cardId, wantsPhoto, imageUrl, photoFile, useVisualPhoto, epoch }) => {
       qc.invalidateQueries({ queryKey: ["/api/collection"] });
       qc.invalidateQueries({ queryKey: ["/api/user/stats"] });
       if (epoch !== scanEpoch.current) return;
 
       setStage("success");
       if (!wantsPhoto) return;
-      if (!imageUrl) {
+      if (!useVisualPhoto && !imageUrl) {
         setPhotoSubmission("failed");
         toast({ title: "Photo was not submitted", description: "The scan photo was not saved, but your card was added.", variant: "destructive" });
         return;
       }
       setPhotoSubmission("pending");
+      let photoError = "Your card was added, but its photo could not be sent for review.";
       const status = await submitScanPhoto(async () => {
-        const res = await apiRequest("POST", `/api/cards/${cardId}/submit-scan-image`, { imageUrl });
-        return res.json() as Promise<{ autoApproved?: boolean }>;
+        try {
+          if (useVisualPhoto) {
+            return await uploadScanFrontPhoto(cardId, photoFile, async () => user?.getIdToken(), () => epoch === scanEpoch.current);
+          }
+          const res = await apiRequest("POST", `/api/cards/${cardId}/submit-scan-image`, { imageUrl });
+          return await res.json() as { autoApproved?: boolean };
+        } catch (error) {
+          if (error instanceof Error) photoError = `${error.message} Your card was still added.`;
+          throw error;
+        }
       });
       if (epoch !== scanEpoch.current) return;
       setPhotoSubmission(status);
-      if (status === "failed") toast({ title: "Photo was not submitted", description: "Your card was added, but its photo could not be sent for review.", variant: "destructive" });
+      if (status === "failed") toast({ title: "Photo was not submitted", description: photoError, variant: "destructive" });
     },
     onError: (err: Error, { epoch }) => {
       if (epoch !== scanEpoch.current) return;
@@ -884,7 +895,7 @@ export default function ScanToAdd() {
     }
   });
 
-  const cardMissingImage = selectedCard && (!selectedCard.imageUrl || dbImageBroken);
+  const cardMissingImage = selectedCard && (dbImageBroken || (visualV1 ? !hasUsableScanCardImage(selectedCard.imageUrl) : !selectedCard.imageUrl));
 
   const isPickerStage =
     stage === "picker-year" ||
@@ -1592,7 +1603,7 @@ export default function ScanToAdd() {
                   <div className="space-y-1">
                     <p className="text-xs text-center text-gray-500">In our database</p>
                     <div className="aspect-[2.5/3.5] rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 border-2 border-blue-200">
-                      {selectedCard.imageUrl && !dbImageBroken ? (
+                      {!cardMissingImage && selectedCard.imageUrl ? (
                         <img
                           src={selectedCard.imageUrl}
                           alt={selectedCard.name}
@@ -1616,7 +1627,7 @@ export default function ScanToAdd() {
               <div className="flex gap-4 items-start">
                 {!previewUrl && (
                   <div className="w-20 h-28 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 border">
-                    {selectedCard.imageUrl && !dbImageBroken ? (
+                    {!cardMissingImage && selectedCard.imageUrl ? (
                       <img
                         src={selectedCard.imageUrl}
                         alt={selectedCard.name}
@@ -1660,7 +1671,7 @@ export default function ScanToAdd() {
               </div>
             )}
 
-            {cardMissingImage && scanResult?.imageUrl && (
+            {cardMissingImage && (visualV1 ? frontFile : scanResult?.imageUrl) && (
               <label className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 cursor-pointer">
                 <input
                   type="checkbox"

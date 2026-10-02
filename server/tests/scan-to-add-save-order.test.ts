@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
-import { scanCorrection, submitScanPhoto } from '../../client/src/lib/scanConfirmation';
+import { hasUsableScanCardImage, scanCorrection, submitScanPhoto } from '../../client/src/lib/scanConfirmation';
 
 // Exercise the actual scan mutation callbacks and image-review route with in-memory
 // collaborators. Extracting just these functions avoids importing routes.ts (which
@@ -34,19 +34,36 @@ function scanMutation(context: Record<string, unknown>) {
     && node.name.getText(tree) === 'addToCollectionMutation') as ts.VariableDeclaration | undefined;
   assert.ok(declaration?.initializer, 'Scan to Add must keep its collection mutation');
   return evaluate<{
-    mutationFn: (cardId: number) => Promise<unknown>;
+    mutationFn: (variables: { cardId: number; epoch: number }) => Promise<unknown>;
     onSuccess: (result: any) => Promise<void>;
-    onError: (error: Error) => void;
+    onError: (error: Error, variables: { cardId: number; epoch: number }) => void;
   }>(declaration.initializer.getText(tree), context);
 }
 
-function scanHarness(options: { cardId?: number; submitImage?: boolean; imageUrl?: string | null; failCollection?: boolean; failImage?: boolean } = {}) {
-  const calls: Array<{ path: string; body: any }> = [];
+function scanHarness(options: {
+  cardId?: number; submitImage?: boolean; imageUrl?: string | null;
+  failCollection?: boolean; failImage?: boolean; visualV1?: boolean;
+  frontFile?: File | null; token?: string | null; autoApproved?: boolean;
+  owned?: boolean; afterCollection?: (context: Record<string, any>) => void;
+  afterToken?: (context: Record<string, any>) => void;
+  afterUpload?: (context: Record<string, any>) => void;
+} = {}) {
+  const calls: Array<{ path: string; body: any; headers?: any }> = [];
   const states: string[] = [];
+  const toasts: any[] = [];
   const pending: Promise<unknown>[] = [];
   const selectedCard = { cardId: options.cardId ?? 902, name: 'Manually selected card' };
   const context: Record<string, any> = {
+    Error,
     selectedCard,
+    scanEpoch: { current: 7 },
+    visualV1: options.visualV1 ?? false,
+    frontFile: options.frontFile === undefined ? new File(['cropped photo'], 'front.jpg', { type: 'image/jpeg' }) : options.frontFile,
+    alreadyOwned: options.owned ?? false,
+    user: { getIdToken: async () => {
+      options.afterToken?.(context);
+      return options.token === undefined ? 'firebase-test-token' : options.token;
+    } },
     scanResult: { imageUrl: options.imageUrl === undefined ? 'https://example.com/scan.jpg' : options.imageUrl, scanUploadId: null, matches: [] },
     submitImage: options.submitImage ?? true,
     photoSubmission: 'idle',
@@ -56,20 +73,39 @@ function scanHarness(options: { cardId?: number; submitImage?: boolean; imageUrl
       calls.push({ path, body });
       if (path === '/api/collection' && options.failCollection) throw Error('Collection unavailable');
       if (path.endsWith('/submit-scan-image') && options.failImage) throw Error('Image unavailable');
+      if (path === '/api/collection') options.afterCollection?.(context);
       return { json: async () => path === '/api/collection' ? { id: 1 } : { autoApproved: false } };
     },
     qc: { invalidateQueries: () => {} },
     setStage: (state: string) => states.push(`stage:${state}`),
     setPhotoSubmission: (state: string) => { states.push(`photo:${state}`); context.photoSubmission = state; },
-    toast: () => {},
+    toast: (value: unknown) => toasts.push(value),
     sendFeedback: () => {},
     scanCorrection, submitScanPhoto,
   };
+  // Evaluate the actual upload helper with a local mocked fetch, never a network
+  // call or process-wide fetch override.
+  const helperSource = readFileSync(new URL('../../client/src/lib/scanConfirmation.ts', import.meta.url), 'utf8');
+  const helperTree = sourceFile(helperSource, ts.ScriptKind.TS);
+  const helper = walk(helperTree, node => ts.isFunctionDeclaration(node)
+    && node.name?.text === 'uploadScanFrontPhoto') as ts.FunctionDeclaration;
+  context.uploadScanFrontPhoto = evaluate(`(${helper.getText(helperTree).replace(/^export /, '')})`, {
+    Error,
+    FormData,
+    fetch: async (path: string, request: any) => {
+      calls.push({ path, body: request.body, headers: request.headers });
+      options.afterUpload?.(context);
+      return {
+        ok: !options.failImage,
+        json: async () => options.failImage ? { message: 'Image unavailable' } : { autoApproved: options.autoApproved ?? false },
+      };
+    },
+  });
   const mutation = scanMutation(context);
   context.addToCollectionMutation = {
     isPending: false,
-    mutate: (cardId: number) => {
-      const operation = mutation.mutationFn(cardId).then(result => mutation.onSuccess(result), mutation.onError);
+    mutate: (variables: { cardId: number; epoch: number }) => {
+      const operation = mutation.mutationFn(variables).then(result => mutation.onSuccess(result), error => mutation.onError(error, variables));
       pending.push(operation);
     },
   };
@@ -78,7 +114,7 @@ function scanHarness(options: { cardId?: number; submitImage?: boolean; imageUrl
     && node.name?.text === 'confirmCard') as ts.FunctionDeclaration | undefined;
   assert.ok(declaration, 'Scan to Add must have confirmation handler');
   const confirm = evaluate<() => void>(`(${declaration.getText(tree)})`, context);
-  return { mutation, confirm, calls, states, pending };
+  return { mutation, confirm, calls, states, pending, context, toasts };
 }
 
 async function performMutation(harness: ReturnType<typeof scanHarness>) {
@@ -130,6 +166,147 @@ test('failed collection save does not start image submission', async () => {
   await performMutation(harness);
   assert.deepEqual(harness.calls.map(call => call.path), ['/api/collection']);
   assert.equal(harness.states.includes('stage:success'), false);
+});
+
+test('visual opted-in photo uses retained front File, Firebase Bearer, and multipart only after collection save', async () => {
+  const front = new File(['real cropped front'], 'cropped.webp', { type: 'image/webp' });
+  const harness = scanHarness({ visualV1: true, frontFile: front, imageUrl: null });
+  await performMutation(harness);
+  assert.deepEqual(harness.calls.map(call => call.path), ['/api/collection', '/api/cards/902/upload']);
+  assert.equal(harness.calls[0].body.cardId, 902);
+  const upload = harness.calls[1];
+  assert.equal(upload.headers.Authorization, 'Bearer firebase-test-token');
+  assert.equal(upload.headers['Content-Type'], undefined, 'browser supplies multipart boundary');
+  assert.ok(upload.body instanceof FormData);
+  assert.deepEqual([...upload.body.keys()], ['frontImage']);
+  const submitted = upload.body.get('frontImage') as File;
+  assert.equal(submitted.name, front.name);
+  assert.equal(await submitted.text(), await front.text());
+  assert.ok(harness.states.includes('photo:submitted'));
+});
+
+test('visual photo opt-out never uploads, including an already-owned card', async () => {
+  for (const owned of [false, true]) {
+    const harness = scanHarness({ visualV1: true, submitImage: false, owned });
+    await performMutation(harness);
+    assert.deepEqual(harness.calls.map(call => call.path), ['/api/collection']);
+    assert.ok(harness.states.includes('stage:success'));
+  }
+});
+
+test('already-owned visual card still follows collection add then optional upload', async () => {
+  const harness = scanHarness({ visualV1: true, owned: true });
+  await performMutation(harness);
+  assert.deepEqual(harness.calls.map(call => call.path), ['/api/collection', '/api/cards/902/upload']);
+});
+
+test('visual upload failure cannot undo ownership or turn collection success into failure', async () => {
+  const harness = scanHarness({ visualV1: true, failImage: true });
+  await performMutation(harness);
+  assert.deepEqual(harness.calls.map(call => call.path), ['/api/collection', '/api/cards/902/upload']);
+  assert.ok(harness.states.includes('stage:success'));
+  assert.ok(harness.states.includes('photo:failed'));
+  assert.equal(harness.toasts[0].title, 'Photo was not submitted');
+});
+
+test('visual failed collection never uploads even when explicitly opted in', async () => {
+  const harness = scanHarness({ visualV1: true, failCollection: true });
+  await performMutation(harness);
+  assert.deepEqual(harness.calls.map(call => call.path), ['/api/collection']);
+  assert.equal(harness.states.includes('stage:success'), false);
+});
+
+test('visual mode, File, and opt-in are snapshotted before the collection await', async () => {
+  const front = new File(['original front'], 'original.jpg', { type: 'image/jpeg' });
+  const harness = scanHarness({
+    visualV1: true, frontFile: front,
+    afterCollection: context => {
+      context.frontFile = new File(['new scan'], 'new.jpg');
+      context.submitImage = false;
+      context.visualV1 = false;
+      context.scanResult.imageUrl = 'https://example.com/unrelated.jpg';
+    },
+  });
+  await performMutation(harness);
+  assert.equal(harness.calls[1].path, '/api/cards/902/upload');
+  assert.equal(await (harness.calls[1].body.get('frontImage') as File).text(), 'original front');
+});
+
+test('visual upload respects server admin/trusted auto-approval response', async () => {
+  const harness = scanHarness({ visualV1: true, autoApproved: true });
+  await performMutation(harness);
+  assert.ok(harness.states.includes('photo:approved'));
+  assert.equal(harness.states.includes('photo:submitted'), false);
+});
+
+test('visual missing token or File never sends unauthenticated upload or falls back to scan URL', async () => {
+  for (const options of [{ token: null }, { frontFile: null }]) {
+    const harness = scanHarness({ visualV1: true, ...options });
+    await performMutation(harness);
+    assert.deepEqual(harness.calls.map(call => call.path), ['/api/collection']);
+    assert.ok(harness.states.includes('stage:success'));
+    assert.ok(harness.states.includes('photo:failed'));
+  }
+});
+
+test('visual photo size allows 5MB and reports larger photos without undoing collection save', async () => {
+  for (const size of [5 * 1024 * 1024, 5 * 1024 * 1024 + 1]) {
+    const harness = scanHarness({ visualV1: true, frontFile: new File([new Uint8Array(size)], 'front.jpg', { type: 'image/jpeg' }) });
+    await performMutation(harness);
+    assert.ok(harness.states.includes('stage:success'));
+    if (size > 5 * 1024 * 1024) {
+      assert.equal(harness.calls.length, 1);
+      assert.ok(harness.states.includes('photo:failed'));
+      assert.match(harness.toasts[0].description, /5MB.*crop/i);
+    } else {
+      assert.equal(harness.calls[1].path, '/api/cards/902/upload');
+    }
+  }
+});
+
+test('stale collection or token completion cannot upload a reset scan photo', async () => {
+  for (const change of ['afterCollection', 'afterToken'] as const) {
+    const harness = scanHarness({ visualV1: true, [change]: (context: Record<string, any>) => { context.scanEpoch.current += 1; } });
+    await performMutation(harness);
+    assert.deepEqual(harness.calls.map(call => call.path), ['/api/collection']);
+    assert.equal(harness.states.includes('photo:failed'), false, 'stale callbacks must not update reset UI');
+  }
+});
+
+test('stale upload completion cannot overwrite a reset scan UI', async () => {
+  const harness = scanHarness({
+    visualV1: true,
+    afterUpload: context => { context.scanEpoch.current += 1; },
+  });
+  await performMutation(harness);
+  assert.deepEqual(harness.calls.map(call => call.path), ['/api/collection', '/api/cards/902/upload']);
+  assert.equal(harness.states.includes('photo:submitted'), false);
+  assert.equal(harness.states.includes('photo:failed'), false);
+});
+
+test('visual recognition sends image for scanning only, never submits a review photo', () => {
+  const tree = sourceFile(scanSource, ts.ScriptKind.TSX);
+  const declaration = walk(tree, node => ts.isVariableDeclaration(node)
+    && node.name.getText(tree) === 'scanMutation') as ts.VariableDeclaration;
+  const recognition = declaration.initializer!.getText(tree);
+  assert.match(recognition, /fetch\("\/api\/cards\/scan"/);
+  assert.doesNotMatch(recognition, /uploadScanFrontPhoto|submitScanPhoto|submit-scan-image|\/upload/);
+});
+
+test('visual review checkbox uses missing/failed image and retained front File, not scan URL', () => {
+  const tree = sourceFile(scanSource, ts.ScriptKind.TSX);
+  const condition = walk(tree, node => ts.isVariableDeclaration(node)
+    && node.name.getText(tree) === 'cardMissingImage') as ts.VariableDeclaration;
+  for (const imageUrl of [null, '', 'data:image/png;base64,abc', 'https://via.placeholder.com/200?text=Card',
+    'https://res.cloudinary.com/dlwfuryyz/image/upload/v1748442577/card-placeholder_ysozlo.png?cache=1']) {
+    assert.ok(evaluate(condition.initializer!.getText(tree), { selectedCard: { imageUrl }, dbImageBroken: false, visualV1: true, hasUsableScanCardImage }));
+  }
+  assert.ok(evaluate(condition.initializer!.getText(tree), { selectedCard: { imageUrl: 'https://example.com/card.jpg' }, dbImageBroken: true, visualV1: true, hasUsableScanCardImage }));
+  assert.equal(evaluate(condition.initializer!.getText(tree), { selectedCard: { imageUrl: 'https://example.com/card.jpg' }, dbImageBroken: false, visualV1: true, hasUsableScanCardImage }), false);
+  assert.equal(evaluate(condition.initializer!.getText(tree), { selectedCard: { imageUrl: '/legacy-relative.jpg' }, dbImageBroken: false, visualV1: false, hasUsableScanCardImage }), false, 'legacy image behavior is unchanged');
+  assert.match(scanSource, /cardMissingImage && \(visualV1 \? frontFile : scanResult\?\.imageUrl\)/);
+  assert.match(scanSource, /onError=\{\(\) => setDbImageBroken\(true\)\}/);
+  assert.match(scanSource, /const \[submitImage, setSubmitImage\] = useState\(false\)/);
 });
 
 type RouteHandler = (req: any, res: any) => Promise<void>;
