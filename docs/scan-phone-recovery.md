@@ -22,8 +22,9 @@ This does not reconstruct rankings for older scans.
 
 ### Missed-card identification follow-up
 
-The user identified the two missed characters as Colossus and Ghost Rider from
-2007 or 2008 Masterpieces; exact year/card numbers remain unconfirmed.
+The user confirmed both missed cards are from 2008 Masterpieces Set 2:
+Colossus #11 (catalog ID 22723) and Ghost Rider #28 (catalog ID 22759).
+The 2007 candidates below were ruled out by that confirmation.
 Read-only development catalog/index inspection and HTTP image decoding found:
 
 | Candidate | Catalog ID | Current image | Frozen index |
@@ -36,6 +37,8 @@ Read-only development catalog/index inspection and HTTP image decoding found:
 The frozen index source manifest references these same URLs. The Colossus montage
 is a verified current catalog-reference defect, but original scan photos/rankings
 are unavailable, so its causal contribution to the historical miss is unproven.
+Ghost Rider #28 has an indexed single-card front; its historical miss remains
+unexplained, rather than being attributed to low resolution without a paired test.
 The 2007 Gold/Holofoil variants are also indexed. Ghost Rider Preview PT6 and
 Subcasts SC3 have no front image and are not indexed; no evidence yet identifies
 either as the user's card. No catalog or image modifications were made.
