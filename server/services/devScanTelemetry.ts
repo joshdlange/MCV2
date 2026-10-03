@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { suppressAutomaticCatalogMutations } from '../devCatalogSnapshot';
+import { isVisualScanEnabled } from '../scanRuntime';
 
 export const DEV_SCAN_MAX_TOTAL_MS = 30 * 60 * 1000;
 export interface DevScanEventPatch {
@@ -25,14 +25,7 @@ export class DevScanTelemetryError extends Error {
   constructor(public readonly statusCode: number, message: string) { super(message); }
 }
 export function assertDevScanTelemetryDatabase(env: NodeJS.ProcessEnv = process.env): void {
-  if (!suppressAutomaticCatalogMutations(env)) throw new Error('Development scan telemetry is disabled');
-  let url: URL;
-  try { url = new URL(env.DATABASE_URL ?? ''); }
-  catch { throw new Error('Development scan telemetry requires the Helium development database'); }
-  if (!['postgres:', 'postgresql:'].includes(url.protocol)
-      || url.hostname !== 'helium' || url.pathname !== '/heliumdb') {
-    throw new Error('Development scan telemetry requires the Helium development database');
-  }
+  if (!isVisualScanEnabled(env)) throw new Error('Visual scan telemetry is disabled');
 }
 export function validateDevScanEventPatch(value: unknown): DevScanEventPatch {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -95,9 +88,9 @@ export class DevScanTelemetryWriter implements DevScanTelemetry {
       photo_submit_used boolean NOT NULL DEFAULT false,
       total_ms double precision CHECK (total_ms >= 0 AND total_ms <= 1800000),
       server_ms double precision CHECK (server_ms >= 0),
+      ranked_card_ids jsonb,
       created_at timestamptz NOT NULL DEFAULT now()
     )`);
-    await db.query('ALTER TABLE dev_scan_events ADD COLUMN IF NOT EXISTS ranked_card_ids jsonb');
   }
   async begin(userId: number): Promise<string> {
     const db = await this.connection();
@@ -146,6 +139,6 @@ export class DevScanTelemetryWriter implements DevScanTelemetry {
 }
 export const devScanTelemetry: DevScanTelemetry = new DevScanTelemetryWriter();
 export async function initializeDevScanTelemetry(env: NodeJS.ProcessEnv = process.env): Promise<void> {
-  if (!suppressAutomaticCatalogMutations(env)) return;
+  if (!isVisualScanEnabled(env)) return;
   await new DevScanTelemetryWriter(env).initialize();
 }

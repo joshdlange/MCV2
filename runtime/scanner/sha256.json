@@ -1,0 +1,8 @@
+{
+  "index/index.json": "a80794e724e318f6bb21acac6a9e44eb484a6ac95fd8049a20f48fc8c0caf4d9",
+  "index/current.f32": "9e75c1d16ce7cbf79727de4b8825dee506b69a618b83116f6b67ad64fcaf4f49",
+  "index/verify.json": "e87f15179e6bfe3ec8a9ea387f4000d36a8b0271cd81c63bb4d865ee09a533e7",
+  "model/config.json": "471007e1c59df520030a2690998f4e0ba5d810bc4f959d1984f630d198faa07e",
+  "model/preprocessor_config.json": "14e780d86fa1861f8751f868d7f45425b5feb55c38ca26f152ca5097ab30f828",
+  "model/onnx/model_quantized.onnx": "3afdc8bc63b50558d6e5770f5b799bb82455c2311183a2de43803f343a29d917"
+}

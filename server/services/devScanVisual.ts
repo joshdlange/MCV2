@@ -2,15 +2,14 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import sharp from 'sharp';
-import { devDataPath } from '../devData';
-import { suppressAutomaticCatalogMutations } from '../devCatalogSnapshot';
+import { isVisualScanEnabled, visualScanIndexPath } from '../scanRuntime';
 import {
   MODEL_VERSION, VECTOR_DIMENSIONS, embedCatalogVisualImage, preloadBundledCatalogVisualModel,
 } from './catalogVisualModel';
 import { scanFamilyKey, type ScanCandidateRow, type ScoredMatch } from './scanMatching';
 import { readDevScanBadImages } from "./devScanBadImages";
 
-export const isDevScanVisualEnabled = suppressAutomaticCatalogMutations;
+export const isDevScanVisualEnabled = isVisualScanEnabled;
 export interface DevScanCatalogCard extends ScanCandidateRow { active: boolean; setId?: number; mainSetId?: number | null }
 export interface DevScanFrozenIndex {
   model: string;
@@ -73,7 +72,7 @@ export function validateDevScanIndex(index: DevScanFrozenIndex, matrix: Float32A
 }
 
 /** Reads only the frozen current arm. Never rebuilds or writes anything. */
-export async function loadDevScanFrozenIndex(directory = devDataPath('phase-c0', 'index-prod')) {
+export async function loadDevScanFrozenIndex(directory = visualScanIndexPath()) {
   const [json, bytes] = await Promise.all([
     fs.readFile(path.join(directory, 'index.json')), fs.readFile(path.join(directory, 'current.f32')),
   ]);

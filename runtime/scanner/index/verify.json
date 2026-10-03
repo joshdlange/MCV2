@@ -1,0 +1,17 @@
+{
+  "rows": 90415,
+  "manifestCount": 90991,
+  "missing": 576,
+  "badNorm": 0,
+  "phaseBParity": {
+    "checked": 5534,
+    "maxAbsDiff": 1.4828053562787602e-8
+  },
+  "reembed": {
+    "checked": 20,
+    "maxAbsDiff": 7.404918872522259e-9
+  },
+  "currentSha256": "9e75c1d16ce7cbf79727de4b8825dee506b69a618b83116f6b67ad64fcaf4f49",
+  "cropfixSha256": "cff4c3141fa49482fef2e2b0d5eafaed8eb1dea7dfb62459fa60a58715437cee",
+  "indexJsonSha256": "a80794e724e318f6bb21acac6a9e44eb484a6ac95fd8049a20f48fc8c0caf4d9"
+}

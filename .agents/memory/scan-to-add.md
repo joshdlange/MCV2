@@ -3,13 +3,13 @@ name: Scan-to-Add product constraints
 description: Collector confirmation, photo review independence, and binder-page direction.
 ---
 
-## Current authorization: cut-down dev v1
+## Authorization: minimal production scanner launch
 
-Build only in DEV; never publish; production is read-only. Preserve all existing `.local/` data and indexes. Checkpoint before each step. After reviewing the dev catalog refresh, the user authorized continuing steps 2–5 without stopping unless something breaks or needs their decision. The user authorized backing up dev, copying the production catalog with exact IDs, and clearing dev test references instead of remapping them.
+The user authorized production preparation of Scan to Add and Rapid Scan, superseding the earlier dev-only restriction. They require destructive repair to be opt-in, reusable packaged vectors/model, an on/off scanner flag retaining the old scanner, creation-only database setup with no existing-table changes, and no dev database dependence. The user presses Publish.
 
-**Why:** The user wants a phone-testable flow in 2–3 sessions, not weeks.
+**Why:** The user explicitly narrowed the launch to these essentials, not a broader scanner redesign.
 
-**How to apply:** Reuse C0 arm C and the existing search, confirm/add and photo-submission flows behind the default-off visual-retrieval flag. Skip auto-rotation and OCR in the scan path. Embed-on-save is now authorized in dev; production hosting remains checklist work, not production changes. Report end-to-end dev timing after the screen is wired. This authorization supersedes the older experiment-only restrictions below, especially their deletion instructions; do not delete retained `.local/` evidence.
+**How to apply:** Preserve existing `.local/` evidence and reuse the frozen vectors. Keep scanner enablement separate from catalog-maintenance suppression. Do not expand this authorization to unrelated features or fixes. Preserve the consent and image-review constraints below in production.
 
 ## Mobile-browser acceptance
 

@@ -124,8 +124,8 @@ export async function uploadUserCardImage(
     const uploadOptions: any = {
       folder: folder,
       resource_type: 'image',
-      public_id: devReview ? `${side}-${(await import("node:crypto")).randomUUID()}` : side,
-      overwrite: !devReview,
+      public_id: process.env.SCAN_VISUAL_RETRIEVAL === "on" ? `${side}-${(await import("node:crypto")).randomUUID()}` : side,
+      overwrite: process.env.SCAN_VISUAL_RETRIEVAL !== "on",
       transformation: [
         { width: 1200, height: 1200, crop: 'limit', quality: 'auto' },
         { format: 'auto' }

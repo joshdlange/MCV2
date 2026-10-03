@@ -11,13 +11,11 @@ const env = {
   DATABASE_URL: 'postgresql://dev:password@helium/heliumdb',
 };
 const id = '11111111-1111-4111-8111-111111111111';
-test('DDL and every writer operation guard strict DEV flag and exact Helium target before connecting', async () => {
+test('DDL and every writer operation guard the feature flag before connecting', async () => {
   for (const bad of [
-    { ...env, NODE_ENV: 'production' }, { ...env, REPLIT_DEPLOYMENT: '1' },
-    { ...env, SCAN_VISUAL_RETRIEVAL: 'off' }, { ...env, DATABASE_URL: '' },
-    { ...env, DATABASE_URL: 'postgresql://dev:password@helium/production' },
-    { ...env, DATABASE_URL: 'postgresql://dev:password@production/heliumdb' },
-    { ...env, DATABASE_URL: 'postgresql://dev:password@helium.example.com/heliumdb' },
+    { ...env, NODE_ENV: 'production', SCAN_VISUAL_RETRIEVAL: 'off' },
+    { ...env, REPLIT_DEPLOYMENT: '1', SCAN_VISUAL_RETRIEVAL: 'off' },
+    { ...env, SCAN_VISUAL_RETRIEVAL: 'off' },
   ]) {
     let connections = 0;
     const writer = new DevScanTelemetryWriter(bad, async () => {
@@ -34,6 +32,10 @@ test('DDL and every writer operation guard strict DEV flag and exact Helium targ
   await initializeDevScanTelemetry({ NODE_ENV: 'production' });
   await initializeDevScanTelemetry({ ...env, SCAN_VISUAL_RETRIEVAL: 'off' });
   assert.doesNotThrow(() => assertDevScanTelemetryDatabase(env));
+  assert.doesNotThrow(() => assertDevScanTelemetryDatabase({
+    NODE_ENV: 'production', REPLIT_DEPLOYMENT: '1', SCAN_VISUAL_RETRIEVAL: 'on',
+    DATABASE_URL: 'postgresql://db.example/catalog',
+  }));
 });
 test('photo-free DDL is separate from shared schema, and request writes never lazily create schema', async () => {
   const queries: { text: string; values?: unknown[] }[] = [];
@@ -43,7 +45,7 @@ test('photo-free DDL is separate from shared schema, and request writes never la
   const writer = new DevScanTelemetryWriter(env, async () => database);
   await writer.initialize();
   assert.match(queries[0].text, /CREATE TABLE IF NOT EXISTS dev_scan_events/);
-  assert.doesNotMatch(queries[0].text, /image|url|filename|ocr|base64|json|request/i);
+  assert.doesNotMatch(queries[0].text, /image|url|filename|ocr|base64|request/i);
   assert.doesNotMatch(readFileSync('shared/schema.ts', 'utf8'), /dev_scan_events/);
   queries.length = 0;
   const created = await writer.begin(42);

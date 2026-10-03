@@ -78,7 +78,7 @@ test('strict development gate and disabled startup do no initialization', async 
     for (const REPLIT_DEPLOYMENT of [undefined, '', '1', 'false']) {
       for (const SCAN_VISUAL_RETRIEVAL of [undefined, '', 'on', 'off', 'ON', 'true']) {
         assert.equal(isDevScanVisualEnabled({ NODE_ENV, REPLIT_DEPLOYMENT, SCAN_VISUAL_RETRIEVAL }),
-          NODE_ENV === 'development' && !REPLIT_DEPLOYMENT && SCAN_VISUAL_RETRIEVAL === 'on');
+          SCAN_VISUAL_RETRIEVAL === 'on');
       }
     }
   }
@@ -210,7 +210,7 @@ test('startup import remains behind strict guard; changed TypeScript parses', ()
     assert.deepEqual(parsed.diagnostics?.filter(d => d.category === ts.DiagnosticCategory.Error), []);
   }
   assert.match(readFileSync('server/index.ts', 'utf8'),
-    /if \(suppressAutomaticCatalogMutations\(\)\) \{\s*const \{ initializeDevScanTelemetry \} = await import\("\.\/services\/devScanTelemetry"\);\s*await initializeDevScanTelemetry\(\);\s*const \{ initializeDevScanVisual \} = await import\("\.\/services\/devScanVisual"\);\s*await initializeDevScanVisual\(\);/);
+    /if \(isVisualScanEnabled\(\)\) \{\s*const \{ initializeScanSchema \} = await import\("\.\/scanSchema"\);\s*await initializeScanSchema\(\);\s*const \{ initializeDevScanTelemetry \} = await import\("\.\/services\/devScanTelemetry"\);\s*await initializeDevScanTelemetry\(\);\s*const \{ initializeDevScanVisual \} = await import\("\.\/services\/devScanVisual"\);\s*await initializeDevScanVisual\(\);/);
 });
 
 const localParityAvailable = existsSync(devDataPath('phase-c0', 'results', 'runs.json'))

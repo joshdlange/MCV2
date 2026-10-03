@@ -89,11 +89,20 @@ async function post(base: string, body: FormData, authorized = true) {
   });
 }
 
+test('production enables the same scanner routes for all plans', async () => {
+  const f = await fixture({ env: { NODE_ENV: 'production', REPLIT_DEPLOYMENT: '1', SCAN_VISUAL_RETRIEVAL: 'on' } });
+  try {
+    const response = await fetch(`${f.base}/api/cards/scan/config`);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { visualV1: true });
+  } finally { await f.close(); }
+});
+
 test('config is public, strictly gated, and flag-off delegates the untouched request to legacy', async () => {
   for (const disabled of [
     { ...env, SCAN_VISUAL_RETRIEVAL: 'off' },
-    { ...env, NODE_ENV: 'production' },
-    { ...env, REPLIT_DEPLOYMENT: '1' },
+    { ...env, NODE_ENV: 'production', SCAN_VISUAL_RETRIEVAL: 'off' },
+    { ...env, REPLIT_DEPLOYMENT: '1', SCAN_VISUAL_RETRIEVAL: 'off' },
   ]) {
     const f = await fixture({
       env: disabled, scan: async () => { throw new Error('must not infer'); },
@@ -394,8 +403,8 @@ test('PATCH requires auth and ownership, validates IDs and allowlisted scalar fi
 });
 test('PATCH is a 404 when flag off or not strictly DEV, without auth or telemetry work', async () => {
   for (const disabled of [
-    { ...env, SCAN_VISUAL_RETRIEVAL: 'off' }, { ...env, NODE_ENV: 'production' },
-    { ...env, REPLIT_DEPLOYMENT: '1' },
+    { ...env, SCAN_VISUAL_RETRIEVAL: 'off' }, { ...env, NODE_ENV: 'production', SCAN_VISUAL_RETRIEVAL: 'off' },
+    { ...env, REPLIT_DEPLOYMENT: '1', SCAN_VISUAL_RETRIEVAL: 'off' },
   ]) {
     const f = await fixture({
       env: disabled, telemetry: { ...noopTelemetry, patch: async () => { throw new Error('must not write'); } },

@@ -1,5 +1,5 @@
 import type { Express, RequestHandler } from "express";
-import { randomUUID } from "node:crypto";
+import { createScanUndoToken, readScanUndoToken } from "./scanUndoToken";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { cards, cardSets, mainSets, userCollections, SIDE_KICK_CARD_LIMIT } from "../shared/schema";
 import { assertDevScanTelemetryDatabase } from "./services/devScanTelemetry";
@@ -15,7 +15,6 @@ export function devScanUndoMatches(entry: DevScanUndoCapability, row: unknown, u
  * an existing row. Undo is capability-scoped to a new row and its exact snapshot. */
 export function registerDevScanUxRoutes(app: Express, auth: RequestHandler, enabled: () => boolean) {
   const gate: RequestHandler = (_req, res, next) => { if (!enabled()) { res.sendStatus(404); return; } next(); };
-  const undos = new Map<string, DevScanUndoCapability>();
   app.get("/api/cards/scan/browse/:step", gate, auth, async (req, res) => {
     const step = req.params.step;
     if (!["years", "sets", "subsets", "cards"].includes(step)) { res.sendStatus(404); return; }
@@ -51,10 +50,8 @@ export function registerDevScanUxRoutes(app: Express, auth: RequestHandler, enab
         return { created: false, ownedRow: concurrent };
       });
       let undoToken: string | null = null;
-      for (const [token, entry] of undos) if (entry.expires < Date.now()) undos.delete(token);
       if (saved.created) {
-        undoToken = randomUUID();
-        undos.set(undoToken, { userId: req.user.id, rowId: saved.ownedRow.id, snapshot: JSON.stringify(saved.ownedRow), expires: Date.now() + 120_000 });
+        undoToken = createScanUndoToken({ userId: req.user.id, rowId: saved.ownedRow.id, snapshot: JSON.stringify(saved.ownedRow), expires: Date.now() + 120_000 });
       }
       const { optimizedStorage } = await import("./optimized-storage");
       // Preserve the normal add path's farm-proof ledger and feed semantics.
@@ -76,7 +73,7 @@ export function registerDevScanUxRoutes(app: Express, auth: RequestHandler, enab
     try {
       assertDevScanTelemetryDatabase();
       const token = req.body.undoToken;
-      const entry = undos.get(token);
+      const entry = readScanUndoToken(token);
       if (!entry || entry.userId !== req.user.id || entry.rowId !== Number(req.params.id) || entry.expires < Date.now()) { res.status(409).json({ message: "Undo expired. Your collection was not changed." }); return; }
       const { db } = await import("./db");
       const removed = await db.transaction(async tx => {
@@ -85,7 +82,6 @@ export function registerDevScanUxRoutes(app: Express, auth: RequestHandler, enab
         await tx.delete(userCollections).where(and(eq(userCollections.id, entry.rowId), eq(userCollections.userId, req.user.id)));
         return true;
       });
-      undos.delete(token);
       if (!removed) { res.status(409).json({ message: "This row has changed since scanning. Undo left it untouched." }); return; }
       const { optimizedStorage } = await import("./optimized-storage");
       optimizedStorage.invalidateUserStatsCache(req.user.id);

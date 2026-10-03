@@ -6,6 +6,7 @@ import { createDependencyHealthProbe, installDependencyHealth } from "./dependen
 import { installDataFixWriteGate } from "./dataFixWriteGate";
 import { suppressAutomaticCatalogMutations } from "./devCatalogSnapshot";
 import { allowSuperfractorDuplicateRepair } from "./startupRepairPolicy";
+import { isVisualScanEnabled } from "./scanRuntime";
 import path from "path";
 import fs from "fs";
 
@@ -122,9 +123,10 @@ server.listen({
   const { warmPool } = await import("./db");
   await warmPool();
 
-  // DEV-only frozen C0 scan index/model. Failure is explicit and blocks readiness;
-  // deployment, production and off paths do not import or initialize the service.
-  if (suppressAutomaticCatalogMutations()) {
+  // Scanner startup is independent of development-only catalog maintenance.
+  if (isVisualScanEnabled()) {
+    const { initializeScanSchema } = await import("./scanSchema");
+    await initializeScanSchema();
     const { initializeDevScanTelemetry } = await import("./services/devScanTelemetry");
     await initializeDevScanTelemetry();
     const { initializeDevScanVisual } = await import("./services/devScanVisual");
