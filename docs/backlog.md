@@ -21,6 +21,13 @@ Items agreed with the owner; none are scheduled yet.
   match. Download and embed only new or changed images.
 - **Embed on save:** every image add or change (admin upload, approved collector photo, crop-queue
   result) embeds that one image when it is saved (single-image path). No catalog-wide batch jobs.
+  DEV implementation now covers Edit Images, individual pending-photo approval, and the
+  shared storage image-update methods. Embedding is prepared before save; the image and
+  persistent per-card override commit together. Scans reload overrides and exclude that
+  card's frozen vector, preserving shared-reference siblings. Production remains unchanged.
+  Colossus's actual authenticated replacement and paired original-photo rank proof are
+  still pending the photo and authenticated admin action. Bulk/direct-SQL writers are
+  not covered by these hooks; do not treat this as universal or production-complete.
 
 ## PRIORITY before Phase C dev testing: refresh the dev catalog from a production snapshot
 

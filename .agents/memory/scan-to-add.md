@@ -9,9 +9,34 @@ Build only in DEV; never publish; production is read-only. Preserve all existing
 
 **Why:** The user wants a phone-testable flow in 2–3 sessions, not weeks.
 
-**How to apply:** Reuse C0 arm C and the existing search, confirm/add and photo-submission flows behind the default-off visual-retrieval flag. Skip auto-rotation, OCR in the scan path, instant re-indexing and hosting studies. Report end-to-end dev timing after the screen is wired. This authorization supersedes the older experiment-only restrictions below, especially their deletion instructions; do not delete retained `.local/` evidence.
+**How to apply:** Reuse C0 arm C and the existing search, confirm/add and photo-submission flows behind the default-off visual-retrieval flag. Skip auto-rotation and OCR in the scan path. Embed-on-save is now authorized in dev; production hosting remains checklist work, not production changes. Report end-to-end dev timing after the screen is wired. This authorization supersedes the older experiment-only restrictions below, especially their deletion instructions; do not delete retained `.local/` evidence.
 
 ## Mobile-browser acceptance
+
+### Photo consent and approval rules
+
+Scanner-matched Add never uploads a photo or creates a review item; discard the
+photo on completion. A search-picked card with a usable image gets no photo offer.
+For a search-picked card without a usable image, ask “Use your photo as this card's
+image?”; only explicit Yes uploads, and No uploads nothing. “Report wrong image”
+creates a reasoned review item with an optional, explicitly attached photo.
+Only full admins bypass photo approval; trusted uploaders must queue until the
+user decides otherwise.
+
+**Why:** The user explicitly required these rules and a regression test preventing
+matched Add from ever uploading or creating an admin item.
+
+**How to apply:** Preserve consent across all single-card and future binder flows.
+Do not retain scan bytes inside added-card notifications. Report real authenticated
+end-to-end evidence separately from fixture, policy, or substituted-auth tests.
+
+### Image replacement and paired proof
+
+The user requires scan-reference corrections through the real admin image-replace or approved-photo flow, never a direct catalog DB edit. Saving the reference must automatically embed it and retire that card's old retrieval vector.
+
+**Why:** A displayed-image fix alone leaves recognition using the bad reference. The user explicitly requested same-photo before/after ranks for Colossus #11 and diagnosis of Ghost Rider #28, both 2008 Masterpieces Set 2.
+
+**How to apply:** Preserve the frozen baseline for valid paired comparisons; keep new references as durable per-card overrides. A reference-self-match or injected-vector test is not proof that the user's camera photo now works. Do not claim authenticated admin-path acceptance without actually exercising it.
 
 ### One-tap acceptance supersedes repeated confirmation
 

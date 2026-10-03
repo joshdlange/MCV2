@@ -3,12 +3,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Camera, Search, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ToastAction } from "@/components/ui/toast";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHardwareBackHandler } from "@/hooks/useBackButton";
 import { apiRequest } from "@/lib/queryClient";
-import { uploadScanFrontPhoto } from "@/lib/scanConfirmation";
+import { runDevScanAction, uploadScanFrontPhoto } from "@/lib/scanConfirmation";
+import { ScanAddedActions } from "./report-image-dialog";
 import { CardCrop } from "@/components/CardCrop";
 import { SetThumbnail } from "@/components/cards/set-thumbnail";
 import type { CardSet } from "@shared/schema";
@@ -38,7 +38,7 @@ function groupSearch(rows: SearchCard[]): ScanArtworkFamily[] {
     if (found) found.options.push(card);
     else grouped.set(key, { familyKey: key, score: 0, representativeCardId: card.cardId, options: [card] });
   }
-  return [...grouped.values()].map(family => {
+  return Array.from(grouped.values()).map(family => {
     const base = family.options.find(c => (c as SearchCard).isBase === true)
       ?? family.options.find(c => (c as SearchCard).isBase === undefined && (!c.subsetName || /^base$/i.test(c.subsetName)));
     if (base) {
@@ -91,40 +91,58 @@ export function DevScanWorkspace({ families, margin, browseHint, previewUrl, pho
   const refresh = () => {
     for (const key of ["/api/collection", "/api/stats", "/api/user/stats", "/api/collection/check"]) void qc.invalidateQueries({ queryKey: [key] });
   };
+  const discardAndNext = () => {
+    setReviewFile(null); setOfferCard(null);
+    // Parent reset releases source files and revokes its preview object URL.
+    onNext();
+  };
+  const discardAndReset = () => { setReviewFile(null); setOfferCard(null); onReset(); };
+  const photoEffects = {
+    add: async () => { throw new Error("Ownership cannot be added from the photo offer."); },
+    upload: () => uploadScanFrontPhoto(offerCard!.cardId, reviewFile, async () => user?.getIdToken(), () => mounted.current, () => record({ photoSubmitUsed: true })),
+  };
+  const offerPolicy = { source: "search" as const, missingImage: true, hasPhoto: !!reviewFile };
   const add = useMutation({
-    mutationFn: async ({ card }: { card: ScanTileCard; missingImage: boolean; fromFind: boolean }) =>
-      (await apiRequest("POST", "/api/cards/scan/collection", { cardId: card.cardId })).json() as Promise<{ created: boolean; ownedRow: { id: number; cardId: number }; undoToken: string | null }>,
-    onSuccess: (saved, { card, missingImage, fromFind }) => {
+    mutationFn: ({ card, missingImage, fromFind, hasPhoto }: { card: ScanTileCard; missingImage: boolean; fromFind: boolean; hasPhoto: boolean }) =>
+      runDevScanAction(
+        { source: fromFind ? "search" : "match", missingImage, hasPhoto },
+        "add",
+        {
+          add: async () => (await apiRequest("POST", "/api/cards/scan/collection", { cardId: card.cardId })).json() as Promise<{ created: boolean; ownedRow: { id: number; cardId: number }; undoToken: string | null }>,
+          upload: async () => { throw new Error("Add cannot submit a photo. Use the explicit photo offer."); },
+        },
+      ),
+    onSuccess: (result, { card }) => {
+      const saved = result.saved!;
       saving.current = false;
       refresh();
       const newlyCreated = saved.created === true && Number.isInteger(saved.ownedRow?.id) && saved.ownedRow.cardId === card.cardId && typeof saved.undoToken === "string";
-      const notice = toast({
+      toast({
         title: saved.created ? "Added to your collection" : "Already in your collection",
         description: saved.created ? card.name : "Existing ownership and quantity left unchanged.",
         duration: 12_000,
-        action: newlyCreated ? <ToastAction altText="Undo this newly added card" data-testid="scan-undo" onClick={async () => {
-          try {
-            await apiRequest("DELETE", `/api/cards/scan/collection/${saved.ownedRow.id}`, { undoToken: saved.undoToken });
-            refresh(); notice.dismiss(); toast({ title: "Addition undone", description: "Only the new owned row was removed." });
-          } catch (error) { toast({ title: "Undo left your collection unchanged", description: error instanceof Error ? error.message : "Try again.", variant: "destructive" }); }
-        }}>Undo</ToastAction> : undefined,
+        action: <ScanAddedActions card={{ cardId: card.cardId, name: card.name }} ownedRowId={newlyCreated ? saved.ownedRow.id : undefined} undoToken={newlyCreated ? saved.undoToken : undefined} />,
       });
       if (!mounted.current) return;
-      if (fromFind && missingImage && photo) { setOfferCard(card); setView("offer"); }
-      else onNext();
+      if (result.next === "offer") { setOfferCard(card); setView("offer"); }
+      else discardAndNext();
     },
     onError: (error: Error) => { saving.current = false; toast({ title: "Couldn't add card", description: `${error.message} Your photo is still here; try Add again.`, variant: "destructive" }); },
   });
   const submitPhoto = useMutation({
-    mutationFn: () => uploadScanFrontPhoto(offerCard!.cardId, reviewFile, async () => user?.getIdToken(), () => mounted.current, () => record({ photoSubmitUsed: true })),
-    onSuccess: result => { toast({ title: result.autoApproved ? "Photo approved" : "Photo sent for review" }); onNext(); },
+    mutationFn: () => runDevScanAction(offerPolicy, "yes", photoEffects),
+    onSuccess: result => { toast({ title: result.photoResult?.autoApproved ? "Photo approved" : "Photo sent for review" }); discardAndNext(); },
     onError: (error: Error) => toast({ title: "Photo was not submitted", description: `${error.message} Your card is still added. Retry or skip.`, variant: "destructive" }),
   });
+  async function skipPhoto() {
+    await runDevScanAction(offerPolicy, "skip", photoEffects);
+    discardAndNext();
+  }
   function addCard(card: ScanTileCard, missingImage: boolean) {
     if (saving.current) return;
     saving.current = true;
     record({ pickedCardId: card.cardId, ...(view === "find" ? { usedSearch: true as const } : {}) });
-    add.mutate({ card, missingImage, fromFind: view === "find" });
+    add.mutate({ card, missingImage, fromFind: view === "find", hasPhoto: !!reviewFile });
   }
   function findCard() {
     record({ usedSearch: true });
@@ -138,7 +156,7 @@ export function DevScanWorkspace({ families, margin, browseHint, previewUrl, pho
   function back() {
     if (saving.current || submitPhoto.isPending) return;
     if (view === "crop") { setView("offer"); return; }
-    if (view === "offer") { onNext(); return; }
+    if (view === "offer") { void skipPhoto(); return; }
     if (view === "find") {
       setQuery("");
       if (mode === "browse") {
@@ -146,8 +164,8 @@ export function DevScanWorkspace({ families, margin, browseHint, previewUrl, pho
         if (step === "subset") { setStep("set"); setSubset(null); return; }
         if (step === "set") { setStep("year"); setSet(null); return; }
       }
-      if (families.length) setView("results"); else onReset();
-    } else onReset();
+      if (families.length) setView("results"); else discardAndReset();
+    } else discardAndReset();
   }
   useHardwareBackHandler(() => { back(); return true; });
   const list = mode === "search" ? search : step === "year" ? years : step === "set" ? sets : step === "subset" ? subsets : cards;
@@ -162,7 +180,7 @@ export function DevScanWorkspace({ families, margin, browseHint, previewUrl, pho
   }
   return <section data-testid="scan-workspace" data-stage={view === "find" ? `picker-${mode === "search" ? "search" : step}` : view} className="scan-fast h-[calc(100dvh-4rem-var(--safe-area-top,0px))] overflow-hidden" style={{ paddingBottom: "var(--safe-area-bottom,0px)" }}>
     <div className="mx-auto flex h-full min-h-0 max-w-lg flex-col px-3">
-      <header className="flex shrink-0 items-center justify-between py-3"><h1 className="scan-heading flex items-center gap-2 text-2xl"><ScanLine className="h-5 w-5 text-red-600" />Scan to add</h1><Button data-testid="scan-reset" variant="ghost" size="sm" disabled={pending || submitPhoto.isPending} onClick={onReset}>New scan</Button></header>
+      <header className="flex shrink-0 items-center justify-between py-3"><h1 className="scan-heading flex items-center gap-2 text-2xl"><ScanLine className="h-5 w-5 text-red-600" />Scan to add</h1><Button data-testid="scan-reset" variant="ghost" size="sm" disabled={pending || submitPhoto.isPending} onClick={discardAndReset}>New scan</Button></header>
       {view === "results" && <>
         <div className="mb-2 flex shrink-0 items-center gap-3">{previewUrl && <img src={previewUrl} alt="Your full scan" className="h-12 w-10 rounded object-contain" />}<div><h2 className="text-sm font-semibold">{ambiguous ? "A close match. Which artwork is yours?" : "Ready to add"}</h2><p className="text-xs text-gray-600">{ambiguous ? "Compare the artwork, then tap Add." : "Top artwork and visual version selected. Change a version below."}</p></div></div>
         {elapsedMs !== undefined && <p data-testid="scan-dev-elapsed" className="mb-2 text-[10px] text-gray-500">Dev scan elapsed: {(elapsedMs / 1000).toFixed(2)}s · {ambiguous ? "Close artwork scores" : "Top match selected"}</p>}
@@ -190,11 +208,11 @@ export function DevScanWorkspace({ families, margin, browseHint, previewUrl, pho
         <Button variant="outline" className="my-3 h-11 shrink-0" disabled={pending} onClick={back}><ArrowLeft className="mr-2 h-4 w-4" />Back {mode === "browse" && step !== "year" ? "to change context" : "to scan"}</Button>
       </>}
       {view === "offer" && offerCard && <div data-testid="scan-photo-offer" className="flex min-h-0 flex-1 flex-col justify-center gap-3 overflow-y-auto">
-        <h2 className="scan-heading text-3xl">Card added. Photo missing.</h2><p className="text-sm text-gray-600">Want to help fill the catalog? Your scan photo is still here. Offering it for review is optional.</p>
+        <h2 className="scan-heading text-3xl">Use your photo as this card’s image?</h2><p className="text-sm text-gray-600">Card added. The catalog has no usable image. Yes sends your photo for review; skipping sends nothing.</p>
         {previewUrl && <img src={previewUrl} alt="Retained photo for optional review" className="mx-auto max-h-[25dvh] object-contain" />}
-        <Button data-testid="scan-submit-photo" className="scan-primary" disabled={submitPhoto.isPending} onClick={() => submitPhoto.mutate()}>{submitPhoto.isPending ? "Sending for review…" : "Offer photo for review"}</Button>
+        <Button data-testid="scan-submit-photo" className="scan-primary" disabled={submitPhoto.isPending} onClick={() => submitPhoto.mutate()}>{submitPhoto.isPending ? "Sending for review…" : "Yes, use my photo"}</Button>
         <Button data-testid="scan-review-crop" variant="outline" disabled={submitPhoto.isPending} onClick={() => setView("crop")}>Crop review photo (optional)</Button>
-        <Button data-testid="scan-offer-skip" variant="ghost" disabled={submitPhoto.isPending} onClick={onNext}><Camera className="mr-2 h-4 w-4" />Skip & scan next</Button>
+        <Button data-testid="scan-offer-skip" variant="ghost" disabled={submitPhoto.isPending} onClick={() => void skipPhoto()}><Camera className="mr-2 h-4 w-4" />Skip & scan next</Button>
       </div>}
       {view === "crop" && photo && <div className="min-h-0 flex-1 overflow-y-auto"><CardCrop file={photo} format="visual-v1" onCancel={() => setView("offer")} onConfirm={(file, url) => { URL.revokeObjectURL(url); setReviewFile(file); setView("offer"); }} /></div>}
     </div>

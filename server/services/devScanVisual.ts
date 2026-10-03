@@ -131,6 +131,16 @@ export class DevScanVisualService {
   private readonly activeIdsByRow: number[][];
   private tail: Promise<unknown> = Promise.resolve();
   private pending = 0;
+  private overrides = new Map<number, { url: string; vector: number[] | null }>();
+
+  /** A replacement masks only its card's old vector, not shared-image siblings. */
+  setReferenceOverride(cardId: number, url: string, vector: number[] | null) {
+    if (vector && (vector.length !== VECTOR_DIMENSIONS || vector.some(v => !Number.isFinite(v))
+      || Math.abs(Math.sqrt(vector.reduce((n, v) => n + v * v, 0)) - 1) > 0.001)) {
+      throw new Error("Invalid replacement visual vector");
+    }
+    this.overrides.set(cardId, { url, vector });
+  }
 
   constructor(
     private readonly index: DevScanFrozenIndex,
@@ -174,6 +184,12 @@ export class DevScanVisualService {
     const started = performance.now();
     this.pending++;
     const work = this.tail.then(async () => {
+      if (this === service) {
+        const { readDevScanReferences } = await import("./devScanReferenceSave");
+        for (const row of await readDevScanReferences()) {
+          this.setReferenceOverride(row.card_id, row.image_url, row.embedding);
+        }
+      }
       const ready = performance.now();
       const crops = [buffer, await devScanCenterCrop(buffer, 0.85), await devScanCenterCrop(buffer, 0.7)];
       const cropped = performance.now();
@@ -204,12 +220,21 @@ export class DevScanVisualService {
     const bestByFamily = new Map<string, { score: number; id: number }>();
     this.activeIdsByRow.forEach((ids, r) => {
       for (const id of ids) {
+        if (this.overrides.has(id)) continue;
         const score = scores[r], key = this.familyById.get(id)!;
         direct.set(id, score);
         const best = bestByFamily.get(key);
         if (!best || score > best.score || (score === best.score && id < best.id)) bestByFamily.set(key, { score, id });
       }
     });
+    for (const [id, override] of this.overrides) {
+      const key = this.familyById.get(id);
+      if (!key || !override.vector) continue;
+      const score = Math.fround(Math.max(...vectors.map(q => q.reduce((sum, value, i) => sum + value * override.vector![i], 0))));
+      direct.set(id, score);
+      const best = bestByFamily.get(key);
+      if (!best || score > best.score || (score === best.score && id < best.id)) bestByFamily.set(key, { score, id });
+    }
     const rankedCardIds = [...direct.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0]).map(([id]) => id);
     const votes = new Map<number, { count: number; card: DevScanCatalogCard }>();
     for (const id of rankedCardIds.slice(0, 10)) {
@@ -228,7 +253,7 @@ export class DevScanVisualService {
           return {
             cardId: row.id, name: row.name, cardNumber: row.cardNumber, setName: row.setName,
             subsetName: row.variation || (row.isInsertSubset ? row.setName : null),
-            year: row.setYear, imageUrl: row.frontImageUrl,
+            year: row.setYear, imageUrl: this.overrides.get(row.id)?.url ?? row.frontImageUrl,
             confidence: (similarity ?? best.score) * 100,
             confidenceLevel: (similarity ?? best.score) >= 0.65 ? 'medium' : 'low',
             imageSimilarity: similarity ?? best.score, familyKey,
@@ -264,6 +289,8 @@ export function getDevScanVisualService(): DevScanVisualService {
 export async function initializeDevScanVisual(): Promise<DevScanVisualService | undefined> {
   if (!isDevScanVisualEnabled()) return undefined;
   startup ??= (async () => {
+    const { initializeDevScanReferences } = await import("./devScanReferenceSave");
+    await initializeDevScanReferences();
     const { db } = await import('../db');
     const { cards, cardSets, mainSets } = await import('../../shared/schema');
     const { eq, and, or, isNull } = await import('drizzle-orm');

@@ -1,5 +1,30 @@
 export type PhotoSubmissionStatus = "idle" | "pending" | "submitted" | "approved" | "failed";
 
+export interface DevScanPhotoPolicy {
+  source: "match" | "search";
+  missingImage: boolean;
+  hasPhoto: boolean;
+}
+
+/** DEV v1 only. Ownership and explicit photo consent are separate actions.
+ * Injecting the effects lets tests exercise the same action chain as the UI. */
+export async function runDevScanAction<T>(
+  policy: DevScanPhotoPolicy,
+  action: "add" | "yes" | "skip",
+  effects: { add: () => Promise<T>; upload: () => Promise<{ autoApproved?: boolean }> },
+): Promise<{ next: "offer" | "next"; saved?: T; photoResult?: { autoApproved?: boolean } }> {
+  const mayOffer = policy.source === "search" && policy.missingImage && policy.hasPhoto;
+  if (action === "add") {
+    const saved = await effects.add();
+    return { saved, next: mayOffer ? "offer" : "next" };
+  }
+  if (action === "yes") {
+    if (!mayOffer) throw new Error("This card is not eligible for a scan photo offer.");
+    return { next: "next", photoResult: await effects.upload() };
+  }
+  return { next: "next" };
+}
+
 // Inspect the URL without query/fragment so cache-busting does not disguise a
 // catalog placeholder. A load error is tracked separately by the scan screen.
 export function hasUsableScanCardImage(imageUrl: string | null | undefined): boolean {
@@ -30,6 +55,7 @@ export async function uploadScanFrontPhoto(
   if (!token) throw new Error("Please sign in again to submit your photo for review.");
   const body = new FormData();
   body.append("frontImage", file);
+  body.append("source", "scan_to_add");
   onAttempt?.();
   const response = await fetch(`/api/cards/${cardId}/upload`, {
     method: "POST",

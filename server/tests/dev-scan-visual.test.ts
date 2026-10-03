@@ -31,6 +31,26 @@ function fixture(n = 7) {
   const catalog = Array.from({ length: n }, (_, i) => card(i + 1));
   return { index, matrix, catalog };
 }
+
+test('replacement removes old card vector, updates displayed reference and supports first images', () => {
+  const f = fixture(3);
+  f.index.rows[0].cardIds.push(4);
+  f.catalog.push(card(4), card(5));
+  const service = new DevScanVisualService(f.index, f.matrix, f.catalog, undefined, 4, enabled);
+  assert.equal(service.rankVectors([vector(0)]).rankedCardIds![0], 1);
+  service.setReferenceOverride(1, 'https://example.com/new.jpg', vector(2));
+  const oldQuery = service.rankVectors([vector(0)]);
+  assert.equal(oldQuery.rankedCardIds![0], 4, 'Shared-reference sibling retains its vector');
+  assert.equal(oldQuery.matches.find(m => m.cardId === 1)?.imageSimilarity, 0);
+  const newQuery = service.rankVectors([vector(2)]);
+  assert.equal(newQuery.rankedCardIds![0], 1);
+  assert.equal(newQuery.matches.find(m => m.cardId === 1)?.imageUrl, 'https://example.com/new.jpg');
+  service.setReferenceOverride(5, 'https://example.com/first.jpg', vector(4));
+  assert.equal(service.rankVectors([vector(4)]).rankedCardIds![0], 5);
+  service.setReferenceOverride(1, 'https://example.com/changed-again.jpg', null);
+  assert.ok(!service.rankVectors([vector(2)]).rankedCardIds!.includes(1), 'Stale override never reactivates frozen vector');
+  assert.throws(() => service.setReferenceOverride(1, 'x', [1]), /Invalid/);
+});
 function make(embed?: (buffer: Buffer) => Promise<number[]>, maxWaiting = 4) {
   const { index, matrix, catalog } = fixture();
   return new DevScanVisualService(index, matrix, catalog, embed, maxWaiting, enabled);

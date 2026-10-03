@@ -116,12 +116,16 @@ export async function uploadUserCardImage(
   side: 'front' | 'back'
 ): Promise<string> {
   try {
-    const folder = `user_uploads/${userId}/${cardId}`;
+    // Dev catalog/user IDs can overlap production. Never overwrite production
+    // uploads, or an earlier pending/approved photo, during DEV review testing.
+    const devReview = process.env.NODE_ENV === "development"
+      && !process.env.REPLIT_DEPLOYMENT && process.env.SCAN_VISUAL_RETRIEVAL === "on";
+    const folder = `${devReview ? "dev_scan_review" : "user_uploads"}/${userId}/${cardId}`;
     const uploadOptions: any = {
       folder: folder,
       resource_type: 'image',
-      public_id: side,
-      overwrite: true,
+      public_id: devReview ? `${side}-${(await import("node:crypto")).randomUUID()}` : side,
+      overwrite: !devReview,
       transformation: [
         { width: 1200, height: 1200, crop: 'limit', quality: 'auto' },
         { format: 'auto' }

@@ -7,6 +7,7 @@ import { Switch, Route } from "wouter";
 import { queryClient, apiRequest } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { ReportImageHost } from "@/components/scan/report-image-dialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileHeader } from "@/components/layout/mobile-header";
@@ -429,6 +430,7 @@ function App() {
       <TooltipProvider>
         <AuthProvider>
           <Toaster />
+          <ReportImageHost />
           <AuthenticatedApp />
         </AuthProvider>
       </TooltipProvider>

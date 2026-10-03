@@ -864,6 +864,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateCard(id: number, insertCard: InsertCard): Promise<Card | undefined> {
+    // DEV image writes fail explicitly before changing the card if embedding fails.
+    // Metadata-only writes and every production write keep their existing behavior.
+    if (Object.prototype.hasOwnProperty.call(insertCard, "frontImageUrl")) {
+      const { prepareDevScanReference, saveDevScanReference } = await import("./services/devScanReferenceSave");
+      const reference = await prepareDevScanReference(insertCard.frontImageUrl);
+      if (reference) {
+        return db.transaction(async tx => {
+          const [updated] = await tx.update(cards).set(insertCard).where(eq(cards.id, id)).returning();
+          if (updated) await saveDevScanReference(tx, id, reference);
+          return updated;
+        });
+      }
+    }
     try {
       const [card] = await db
         .update(cards)
@@ -878,6 +891,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateCardImage(id: number, imageUrl: string): Promise<Card | undefined> {
+    const { isDevScanVisualEnabled } = await import("./services/devScanVisual");
+    if (isDevScanVisualEnabled()) return this.updateCard(id, { frontImageUrl: imageUrl } as InsertCard);
     try {
       const [card] = await db
         .update(cards)

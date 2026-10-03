@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ImageOff, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { hasUsableScanCardImage } from "@/lib/scanConfirmation";
+import { openImageReport } from "./report-image-dialog";
 
 export interface ScanTileCard {
   cardId: number; name: string; setName: string; subsetName: string | null;
@@ -41,5 +42,6 @@ export function ScanResultTile({ family, pending, onAdd, compact = false, primar
       {inlineOptions.map(option => <button key={option.cardId} className="scan-chip" data-card-id={option.cardId} title={`${option.setName} · ${option.year} · #${option.cardNumber} · ${option.subsetName || "Base"}`} aria-pressed={card.cardId === option.cardId} disabled={pending} onClick={() => setSelectedId(option.cardId)}>{card.cardId === option.cardId && <Check className="mr-1 inline h-3 w-3" />}{versionLabel(option)}</button>)}
     </div>}
     <Button data-testid={primary ? "scan-add" : "scan-option-add"} className="scan-primary mt-auto w-full" disabled={pending} onClick={() => onAdd(card, missing)}>{pending ? "Adding…" : "Add to collection"}</Button>
+    <Button data-testid="scan-report-image" variant="ghost" size="sm" disabled={pending} onClick={() => openImageReport({ cardId: card.cardId, name: card.name })}>Report wrong image</Button>
   </article>;
 }

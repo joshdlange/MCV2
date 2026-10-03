@@ -86,6 +86,10 @@ import { uploadUserCardImage, uploadMainSetThumbnail, downloadAndUploadToCloudin
 import { registerMarketplaceRoutes } from "./marketplace-routes";
 import { registerScanReviewRoutes } from "./scan-review-routes";
 import { registerDevScanRoutes } from "./devScanRoutes";
+import { registerDevImageReviewRoutes } from "./devImageReviewRoutes";
+import { isDevScanVisualEnabled } from "./services/devScanVisual";
+import { canAutoApproveCardPhoto, imageReviewDetails } from "./services/cardPhotoReviewPolicy";
+import { approveDevCardImage } from "./services/devApproveCardImage";
 import { optimizedStorage, tokenizeSearch } from "./optimized-storage";
 import {
   AccountDeletionPendingError,
@@ -3124,6 +3128,8 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       const imageUpdates = Object.fromEntries(successfulUploads.map((upload) => [upload.key, upload.url]));
 
       try {
+        const { prepareDevScanReference, saveDevScanReference } = await import("./services/devScanReferenceSave");
+        const scanReference = await prepareDevScanReference(imageUpdates.frontImageUrl);
         const updatedCard = await db.transaction(async (tx) => {
           const expectedConditions = [eq(cards.id, id)];
           if (changedSides.includes('front')) {
@@ -3153,6 +3159,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
             entityName: `${existingCard.name} #${existingCard.cardNumber}`,
             notes: JSON.stringify({ sides: changedSides }),
           });
+          await saveDevScanReference(tx, id, scanReference);
           return updated;
         });
         res.json(updatedCard);
@@ -8735,6 +8742,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   });
 
   // ===== USER IMAGE UPLOAD ROUTES =====
+  registerDevImageReviewRoutes(app, authenticateUser, upload);
   
   // User uploads card image (front and/or back)
   app.post("/api/cards/:cardId/upload", authenticateUser, upload.fields([
@@ -8744,6 +8752,9 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
     try {
       const cardId = parseInt(req.params.cardId);
       const files = req.files as { frontImage?: Express.Multer.File[], backImage?: Express.Multer.File[] };
+      if (!Number.isSafeInteger(cardId) || !await storage.getCard(cardId)) {
+        return res.status(404).json({ message: "Card not found" });
+      }
       
       if (!files.frontImage && !files.backImage) {
         return res.status(400).json({ message: "At least one image (front or back) is required" });
@@ -8801,11 +8812,15 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         cardId,
         frontImageUrl,
         backImageUrl,
+        source: req.body?.source === "scan_to_add" ? "scan_to_add" : "manual_upload",
       });
       
-      // Auto-approve for admin and trusted uploader users (skip the approval queue)
-      const skipsQueue = req.user.isAdmin || req.user.trustedUploader;
+      // Only full admins bypass review, including in the gap-fill path.
+      const skipsQueue = canAutoApproveCardPhoto(req.user);
       if (skipsQueue) {
+        if (isDevScanVisualEnabled()) {
+          await approveDevCardImage(pendingImage.id, req.user.id);
+        } else {
         const card = await storage.getCard(cardId);
         if (card) {
           const cardUpdates: any = {};
@@ -8825,6 +8840,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
               await storage.updateCardSet(card.setId, { imageUrl: frontImageUrl });
             }
           }
+        }
         }
       }
 
@@ -9111,15 +9127,18 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         source: 'scan_to_add',
       } as any);
 
-      // Auto-approve for admin and trusted uploader users (skip the approval queue)
-      const skipsQueue = req.user.isAdmin || req.user.trustedUploader;
+      const skipsQueue = canAutoApproveCardPhoto(req.user);
       if (skipsQueue) {
+        if (isDevScanVisualEnabled()) {
+          await approveDevCardImage(pendingImage.id, req.user.id);
+        } else {
         await storage.updateCard(cardId, { frontImageUrl: imageUrl });
         await storage.updatePendingCardImage(pendingImage.id, {
           status: 'approved',
           reviewedBy: req.user.id,
           reviewedAt: new Date(),
         });
+        }
       }
 
       res.json({ success: true, pendingImage, autoApproved: skipsQueue });
@@ -9139,6 +9158,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       const pendingImages = await storage.getPendingCardImages();
       res.json(pendingImages.map((submission: any) => ({
         ...submission,
+        ...imageReviewDetails(submission.source),
         user: submission.user ? {
           ...submission.user,
           photoURL: normalizeTrustedAvatarUrl(submission.user.photoURL),
@@ -9177,6 +9197,9 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       // Update card image
       const cardUpdates: any = {};
       const overrideImageUrl = (req.body?.overrideImageUrl || "").trim() || null;
+      if (isDevScanVisualEnabled()) {
+        await approveDevCardImage(imageId, req.user.id, overrideImageUrl);
+      } else {
       
       // Admin can supply an override URL; otherwise use the submitted image
       if (overrideImageUrl) {
@@ -9200,9 +9223,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         reviewedBy: req.user.id,
         reviewedAt: new Date(),
       });
+      }
       
       // Check if user has earned Contributor badge (3+ approved images)
-      await badgeService.checkContributor(pendingImage.userId);
+      await badgeService.checkContributor(pendingImage.userId).catch(error => console.warn("Post-approval badge check failed", error));
 
       // Feed v1: image-approved event (idempotent, fire-and-forget)
       import('./services/feedService').then(m => m.emitFeedEvent({
@@ -9226,7 +9250,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       res.json({ message: "Image approved successfully" });
     } catch (error) {
       console.error('Approve image error:', error);
-      res.status(500).json({ message: "Failed to approve image" });
+      res.status((error as any)?.statusCode || 500).json({ message: (error as any)?.statusCode ? (error as Error).message : "Failed to approve image" });
     }
   });
   
@@ -9263,6 +9287,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
             failed.push({ id: imageId, reason: "Already reviewed" });
             continue;
           }
+          if (imageReviewDetails(pendingImage.source).reviewKind === "wrong_image") {
+            failed.push({ id: imageId, reason: "Review image reports individually" });
+            continue;
+          }
           const card = await storage.getCard(pendingImage.cardId);
           if (!card) {
             failed.push({ id: imageId, reason: "Card not found" });
@@ -9270,6 +9298,9 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
           }
 
           const cardUpdates: any = {};
+          if (isDevScanVisualEnabled()) {
+            await approveDevCardImage(imageId, req.user.id);
+          } else {
           if (pendingImage.frontImageUrl) cardUpdates.frontImageUrl = pendingImage.frontImageUrl;
           if (pendingImage.backImageUrl) cardUpdates.backImageUrl = pendingImage.backImageUrl;
           if (Object.keys(cardUpdates).length > 0) {
@@ -9281,9 +9312,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
             reviewedBy: req.user.id,
             reviewedAt: new Date(),
           });
+          }
 
           // Contributor badge check (3+ approved images)
-          await badgeService.checkContributor(pendingImage.userId);
+          await badgeService.checkContributor(pendingImage.userId).catch(error => console.warn("Post-approval badge check failed", error));
 
           // Feed v1: image-approved event (idempotent, fire-and-forget)
           import('./services/feedService').then(m => m.emitFeedEvent({

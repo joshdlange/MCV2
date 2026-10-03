@@ -12,15 +12,18 @@ import { CheckCircle, XCircle, Image, User, Calendar, Loader2, AlertCircle, Scan
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
+import { bulkApprovableImageIds, canApproveImageReview, imageReportReasonLabel, isWrongImageReport } from "@/lib/imageReview";
 
 interface PendingSubmission {
   id: number;
   userId: number;
   cardId: number;
-  frontImageUrl: string | null;
+  frontImageUrl?: string | null;
   backImageUrl: string | null;
   status: 'pending' | 'approved' | 'rejected';
-  source: 'manual_upload' | 'scan_to_add';
+  source: string;
+  reviewKind?: "wrong_image" | "photo";
+  reviewReason?: string | null;
   rejectionReason: string | null;
   reviewedBy: number | null;
   reviewedAt: string | null;
@@ -172,7 +175,7 @@ export default function AdminImageApprovals() {
   const { toast } = useToast();
 
   // Fetch pending submissions
-  const { data: submissions = [], isLoading } = useQuery({
+  const { data: submissions = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['/api/admin/pending-images'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/admin/pending-images');
@@ -254,6 +257,10 @@ export default function AdminImageApprovals() {
 
   const handleApprove = (submission: PendingSubmission) => {
     const override = overrideUrls[submission.id]?.trim();
+    if (!canApproveImageReview(submission, override)) {
+      toast({ title: "Replacement image required", description: "Use a valid HTTP or HTTPS replacement URL, or reject to resolve without changing the catalog.", variant: "destructive" });
+      return;
+    }
     approveMutation.mutate({ submissionId: submission.id, overrideImageUrl: override || undefined });
   };
 
@@ -263,6 +270,8 @@ export default function AdminImageApprovals() {
 
   const pendingSubmissions = submissions.filter(s => s.status === 'pending');
   const reviewedSubmissions = submissions.filter(s => s.status !== 'pending');
+  const bulkEligible = pendingSubmissions.filter(s => !isWrongImageReport(s));
+  const selectedEligibleIds = bulkApprovableImageIds(pendingSubmissions, selectedIds);
 
   const toggleSelected = (id: number) => {
     setSelectedIds(prev => {
@@ -272,18 +281,18 @@ export default function AdminImageApprovals() {
     });
   };
 
-  const allSelected = pendingSubmissions.length > 0 && pendingSubmissions.every(s => selectedIds.has(s.id));
+  const allSelected = bulkEligible.length > 0 && bulkEligible.every(s => selectedIds.has(s.id));
 
   const toggleSelectAll = () => {
     if (allSelected) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(pendingSubmissions.map(s => s.id)));
+      setSelectedIds(new Set(bulkEligible.map(s => s.id)));
     }
   };
 
   const handleBulkApprove = () => {
-    const ids = Array.from(selectedIds);
+    const ids = selectedEligibleIds;
     if (ids.length === 0) return;
     if (window.confirm(`Approve ${ids.length} selected image${ids.length === 1 ? '' : 's'}? They will go live on their cards immediately.`)) {
       bulkApproveMutation.mutate(ids);
@@ -299,6 +308,7 @@ export default function AdminImageApprovals() {
       </div>
     );
   }
+  if (isError) return <div role="alert" className="p-6 space-y-3"><p>The image queue could not load. Your review changes have not been submitted.</p><Button variant="outline" onClick={() => void refetch()}>Retry</Button></div>;
 
   return (
     <div className="p-6 space-y-6">
@@ -328,16 +338,17 @@ export default function AdminImageApprovals() {
             <Checkbox
               checked={allSelected}
               onCheckedChange={toggleSelectAll}
+              disabled={bulkEligible.length === 0 || bulkApproveMutation.isPending}
               data-testid="checkbox-select-all"
             />
-            Select all ({pendingSubmissions.length})
+            Select all ({bulkEligible.length})
           </label>
-          {selectedIds.size > 0 && (
-            <span className="text-sm text-gray-500 dark:text-gray-400">{selectedIds.size} selected</span>
+          {selectedEligibleIds.length > 0 && (
+            <span className="text-sm text-gray-500 dark:text-gray-400">{selectedEligibleIds.length} selected</span>
           )}
           <Button
             onClick={handleBulkApprove}
-            disabled={selectedIds.size === 0 || bulkApproveMutation.isPending}
+            disabled={selectedEligibleIds.length === 0 || bulkApproveMutation.isPending}
             className="bg-green-600 hover:bg-green-700 ml-auto"
             data-testid="button-bulk-approve"
           >
@@ -346,10 +357,11 @@ export default function AdminImageApprovals() {
             ) : (
               <CheckCircle className="w-4 h-4 mr-2" />
             )}
-            Approve Selected{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
+            Approve Selected{selectedEligibleIds.length > 0 ? ` (${selectedEligibleIds.length})` : ''}
           </Button>
         </div>
       )}
+      {pendingSubmissions.some(isWrongImageReport) && <p className="text-sm text-gray-600 dark:text-gray-300">Wrong-image reports require individual review and are excluded from bulk approval. Reject resolves a report without changing the catalog.</p>}
 
       {/* Pending Submissions */}
       {pendingSubmissions.length === 0 ? (
@@ -368,7 +380,8 @@ export default function AdminImageApprovals() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
                     <Checkbox
-                      checked={selectedIds.has(submission.id)}
+                      checked={!isWrongImageReport(submission) && selectedIds.has(submission.id)}
+                      disabled={isWrongImageReport(submission) || bulkApproveMutation.isPending}
                       onCheckedChange={() => toggleSelected(submission.id)}
                       className="mt-1"
                       data-testid={`checkbox-select-${submission.id}`}
@@ -384,6 +397,7 @@ export default function AdminImageApprovals() {
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <Badge className="bg-orange-500">Pending</Badge>
+                    {isWrongImageReport(submission) && <Badge variant="outline">Wrong image · {imageReportReasonLabel(submission.reviewReason ?? submission.source.replace(/^wrong_image:/, ""))}</Badge>}
                     {submission.source === 'scan_to_add' && (
                       <Badge variant="outline" className="text-xs border-blue-300 text-blue-600 flex items-center gap-1">
                         <ScanLine className="w-3 h-3" /> Scan to Add
@@ -393,6 +407,7 @@ export default function AdminImageApprovals() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                {isWrongImageReport(submission) && <p className="text-sm" data-testid="report-review-reason">Report: {imageReportReasonLabel(submission.reviewReason ?? submission.source.replace(/^wrong_image:/, ""))}{!submission.frontImageUrl && " · No photo supplied. Provide a replacement URL to approve, or reject to resolve without a catalog change."}</p>}
                 {/* Submitter Info */}
                 <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-900 rounded-lg border">
                   <div className="w-10 h-10 rounded-full bg-marvel-red flex items-center justify-center text-white font-bold">
@@ -443,8 +458,8 @@ export default function AdminImageApprovals() {
                           data-testid="img-submitted-front"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400">
-                          <AlertCircle className="w-8 h-8" />
+                        <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-400">
+                          <AlertCircle className="w-8 h-8" /><span className="text-xs">No photo supplied</span>
                         </div>
                       )}
                     </div>
@@ -524,7 +539,7 @@ export default function AdminImageApprovals() {
                 <div className="flex gap-2 pt-2">
                   <Button
                     onClick={() => handleApprove(submission)}
-                    disabled={approveMutation.isPending}
+                    disabled={approveMutation.isPending || rejectMutation.isPending || !canApproveImageReview(submission, overrideUrls[submission.id])}
                     className="flex-1 bg-green-600 hover:bg-green-700"
                     data-testid="button-approve"
                   >
@@ -537,7 +552,7 @@ export default function AdminImageApprovals() {
                   </Button>
                   <Button
                     onClick={() => handleReject(submission)}
-                    disabled={rejectMutation.isPending}
+                    disabled={rejectMutation.isPending || approveMutation.isPending}
                     variant="destructive"
                     className="flex-1"
                     data-testid="button-reject"
@@ -572,6 +587,7 @@ export default function AdminImageApprovals() {
                       <p className="text-sm text-gray-600 dark:text-gray-300">
                         Submitted by {submission.user.username}
                       </p>
+                      {isWrongImageReport(submission) && <p className="text-xs text-gray-600 dark:text-gray-300">Wrong image · {imageReportReasonLabel(submission.reviewReason ?? submission.source.replace(/^wrong_image:/, ""))}{!submission.frontImageUrl && " · No photo supplied"}</p>}
                     </div>
                     <Badge className={submission.status === 'approved' ? 'bg-green-600' : 'bg-red-600'}>
                       {submission.status === 'approved' ? 'Approved' : 'Rejected'}
