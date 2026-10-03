@@ -114,7 +114,7 @@ async function check(label: string) {
      .filter(el => Array.from(el.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim()))
      .filter(el => parseFloat(getComputedStyle(el).fontSize) < 12).map(el => el.textContent));
    assert.deepEqual(undersized, [], `${label} all idle text at least 12px`);
-   assert.equal(await page.getByTestId("scan-rapid-start").count(), 0);
+   assert.equal(await page.getByTestId("scan-rapid-start").count(), 1);
    const footer = await page.locator(".scan-idle-footer").boundingBox();
    assert.ok(footer && footer.y > (await page.locator(".scan-idle-help").boundingBox())!.y, "Footer follows content");
    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
@@ -133,7 +133,7 @@ try {
    assert.deepEqual(await page.locator(".scan-idle-guide-list li").allTextContents(), ["Good lighting", "Whole card in view", "Front of card", "Sleeves & toploaders OK", "Browse by year & set", "Type a search", "Pick the exact version", "Report a wrong image"]);
    assert.equal(await page.locator(".scan-idle-help p").textContent(), "Card missing a picture? Add yours after you scan, and every photo you submit helps the next collector find it faster.");
    assert.equal(await page.locator(".scan-idle-guides button, .scan-idle-help button").count(), 0, "Informational guides, no dead buttons");
-   assert.ok(!/rapid|binder|ocr|file size/i.test(await page.getByTestId("scan-idle").innerText()));
+   assert.ok(!/ocr|file size/i.test(await page.getByTestId("scan-idle").innerText()));
   assert.ok((await page.locator(".scan-idle-banner").boundingBox())!.y < 145, "Banner at top of start content, not vertically centered");
    assert.deepEqual(await page.locator(".scan-idle-recent img").evaluateAll(imgs => imgs.map(img => img.getAttribute("src"))), [7, 6, 5, 4, 3, 2].map(i => `/qa-owned/${i}.jpg`));
   assert.equal(await page.getByText("Your next card. In your vault.", { exact: true }).count(), 0);
@@ -142,7 +142,8 @@ try {
    const actionPositions = await page.locator(".scan-idle-primary, .scan-idle-search").evaluateAll(els => els.map(el => ({ top: el.getBoundingClientRect().top, height: el.getBoundingClientRect().height })));
    // Original 18px section spacing, 56px capture and 44px search. Tips only grow 1px.
    assert.ok(Math.abs(actionPositions[0].top - 355) < 2, `Original mobile capture geometry (1px minimum-font adjustment): ${JSON.stringify(actionPositions)}`);
-   assert.ok(Math.abs(actionPositions[1].top - actionPositions[0].top - 66) < 1);
+   const rapidBox = await page.getByTestId("scan-rapid-start").boundingBox();
+   assert.ok(rapidBox && rapidBox.y > actionPositions[0].top && rapidBox.y < actionPositions[1].top, "Rapid entry between scan and search");
    for (let i = 0; i < 6; i++) {
      await page.locator(".scan-idle-recent button").nth(i).click();
      await page.getByTestId("button-close-modal").waitFor();

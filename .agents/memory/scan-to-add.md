@@ -66,7 +66,7 @@ The user explicitly loved the start screen with useful information below the sca
 
 **Why:** The user confirmed the page with “I love this page now” and identified binder-page scanning as the intended direction.
 
-**How to apply:** Keep experimental camera testing separate from the approved start page. Do not describe sequential single-card capture as whole-page recognition before that capability exists.
+**How to apply:** The user subsequently requested a Rapid Scan binder-page test button between Scan a card and Search instead. Keep that entry on the start page, with an explicit one-card-at-a-time test note until whole-page recognition exists.
 
 Rapid Scan is authorized in DEV as sequential live-camera captures feeding a reusable batch review grid, not whole-page binder recognition.
 

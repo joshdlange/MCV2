@@ -18,7 +18,7 @@ function OwnedThumbnail({ row }: { row: CollectionItem }) {
   </span>;
 }
 
-export function ScanIdle({ authenticated, count, atLimit, ready, onScan, onSearch, onPlans }: {
+export function ScanIdle({ authenticated, count, atLimit, ready, onScan, onRapid, onSearch, onPlans }: {
   authenticated: boolean;
   count?: number;
   atLimit: boolean;
@@ -88,6 +88,12 @@ export function ScanIdle({ authenticated, count, atLimit, ready, onScan, onSearc
       <Button data-testid="scan-start" className="scan-idle-primary" disabled={atLimit || !ready} onClick={onScan}>
         <Camera className="mr-2 h-6 w-6" aria-hidden="true" />Scan a card
       </Button>
+      {onRapid && <div>
+        <Button data-testid="scan-rapid-start" variant="outline" className="scan-idle-rapid" disabled={atLimit || !ready} onClick={onRapid} aria-describedby="rapid-test-note">
+          <Layers className="mr-2 h-4 w-4 shrink-0" aria-hidden="true" />Rapid scan · 9-sleeve binder page
+        </Button>
+        <p id="rapid-test-note" className="mt-1 text-center text-xs text-gray-600">Test version: capture one card at a time.</p>
+      </div>}
       {atLimit && <p role="alert" className="text-center text-xs text-amber-700">Monthly scan limit reached. <button className="underline" onClick={onPlans}>View plans</button></p>}
       <Button variant="outline" className="scan-idle-search" onClick={onSearch}><Search className="mr-2 h-4 w-4" aria-hidden="true" />Search instead</Button>
     </div>
