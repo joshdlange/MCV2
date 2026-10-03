@@ -87,6 +87,7 @@ const apiCalls: { method: string; path: string; data?: unknown; bytes: number }[
 let realResult: any;
 let blank = false;
 let photoFailure = false;
+let scanFailure = false;
 const testTelemetry = true;
 // External catalog artwork is substituted solely for isolated layout QA; the
 // repeated thumbnails in screenshots are NOT evidence of catalog artwork.
@@ -172,6 +173,9 @@ try {
     const call = { method: request.method(), path: url.pathname, data: undefined as unknown, bytes };
     if (request.headers()['content-type']?.includes('application/json')) call.data = request.postDataJSON();
     apiCalls.push(call);
+    if (url.pathname === '/api/cards/scan' && scanFailure) {
+      return route.fulfill({ status: 502, contentType: 'text/html', body: '<h1>Bad gateway</h1>' });
+    }
     if (url.pathname === '/api/cards/scan/config' || (url.pathname === '/api/cards/scan' && !blank)
       || (testTelemetry && url.pathname.startsWith('/api/cards/scan/events/'))) {
       const response = await route.fetch({ url: `${backend}${url.pathname}${url.search}`, timeout: 120000 });
@@ -179,6 +183,7 @@ try {
       return route.fulfill({ response });
     }
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    if (url.pathname === '/api/cards/scan/client-event') return json({ ok: true });
     if (url.pathname === '/api/cards/scan' && blank) {
       const id = await telemetry.begin(1);
       await telemetry.finish(id, 1, { status: 'success', topScore: null, margin: null, serverMs: 0 });
@@ -276,6 +281,17 @@ try {
   await page.getByRole('alert').filter({ hasText: 'Your photo was not submitted' }).waitFor();
   await screenshot('photo-failure-card-still-added');
   await reset();
+  scanFailure = true;
+  await startScan(page);
+  await page.getByTestId('scan-recovery').waitFor();
+  await page.getByRole('button', { name: 'Try again', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Search instead', exact: true }).waitFor();
+  assert.equal(await page.getByTestId('scan-recovery').locator('img').count(), 1, 'Failed request keeps photo preview');
+  await screenshot('scan-error-photo-retained');
+  scanFailure = false;
+  await page.getByRole('button', { name: 'Try again', exact: true }).click();
+  await page.getByText('Find your card', { exact: true }).waitFor();
+  assert.ok(apiCalls.filter(c => c.path === '/api/cards/scan').length >= 5, 'Retry sent retained crop without selecting another file');
   assert.deepEqual(pageErrors, [], 'No browser JS errors');
   assert.deepEqual(unexpectedApis, [], 'Every API is isolated and explicitly mocked/proxied');
   await writeFile(path.join(directory, 'qa-report.json'), JSON.stringify({

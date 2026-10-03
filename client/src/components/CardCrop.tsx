@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, RotateCw } from "lucide-react";
 import { cardCropRatio, cropForCard, moveCrop, resizeCrop, type CardOrientation, type CardCropFormat, type CropRect } from "@/lib/cardCrop";
+import { boundedScanDimensions, scanFailureMessage } from "@/lib/scanRecovery";
+import { prepareScanImage, scanCanvasBlob } from "@/lib/scanImage";
 
 type OrientedImage = { canvas: HTMLCanvasElement; url: string };
 
@@ -11,12 +13,16 @@ export function CardCrop({
   onCancel,
   side = "front",
   format = "legacy",
+  onSearchInstead,
+  onDecodeError,
 }: {
   file: File;
   onConfirm: (cropped: File, preview: string) => void;
   onCancel: () => void;
   side?: "front" | "back";
   format?: CardCropFormat;
+  onSearchInstead?: () => void;
+  onDecodeError?: () => void;
 }) {
   const [image, setImage] = useState<OrientedImage | null>(null);
   const [crop, setCrop] = useState<CropRect | null>(null);
@@ -24,9 +30,12 @@ export function CardCrop({
   const [orientation, setOrientation] = useState<CardOrientation>("portrait");
   const [error, setError] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [retry, setRetry] = useState(0);
   const displayRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ x: number; y: number; crop: CropRect } | null>(null);
   const activeRef = useRef(true);
+  const onDecodeErrorRef = useRef(onDecodeError);
+  onDecodeErrorRef.current = onDecodeError;
 
   useEffect(() => {
     activeRef.current = true;
@@ -37,6 +46,32 @@ export function CardCrop({
     let active = true;
     setImage(null);
     setCrop(null);
+    if (format === "visual-v1") {
+      setError("");
+      let prepared: HTMLCanvasElement | null = null;
+      let preview: string | null = null;
+      void (async () => {
+        try {
+          prepared = await prepareScanImage(file, rotation);
+          if (!active) { prepared.width = prepared.height = 0; return; }
+          const blob = await scanCanvasBlob(prepared);
+          if (!active) { prepared.width = prepared.height = 0; return; }
+          preview = URL.createObjectURL(blob);
+          setImage({ canvas: prepared, url: preview });
+          setCrop(cropForCard(prepared.width, prepared.height, 0.9, orientation, format));
+        } catch (error) {
+          if (active) {
+            setError(scanFailureMessage(error));
+            onDecodeErrorRef.current?.();
+          }
+        }
+      })();
+      return () => {
+        active = false;
+        if (preview) URL.revokeObjectURL(preview);
+        if (prepared) prepared.width = prepared.height = 0;
+      };
+    }
     const sourceUrl = URL.createObjectURL(file);
     const source = new Image();
     source.onload = () => {
@@ -75,7 +110,7 @@ export function CardCrop({
       active = false;
       URL.revokeObjectURL(sourceUrl);
     };
-  }, [file, rotation, format]);
+  }, [file, rotation, format, retry]);
 
   function changeOrientation(next: CardOrientation) {
     setOrientation(next);
@@ -93,6 +128,30 @@ export function CardCrop({
 
   function confirm() {
     if (!image || !crop || processing) return;
+    if (format === "visual-v1") {
+      setProcessing(true);
+      setError("");
+      void (async () => {
+        try {
+          const output = document.createElement("canvas");
+          const dimensions = boundedScanDimensions(crop.width, crop.height);
+          output.width = Math.max(2, dimensions.width);
+          output.height = Math.max(2, dimensions.height);
+          const ctx = output.getContext("2d");
+          if (!ctx) throw new Error("Could not crop this image. Please try again.");
+          ctx.drawImage(image.canvas, crop.x, crop.y, crop.width, crop.height, 0, 0, output.width, output.height);
+          const blob = await scanCanvasBlob(output);
+          output.width = output.height = 0;
+          if (!activeRef.current) return;
+          onConfirm(new File([blob], "card-scan.jpg", { type: "image/jpeg" }), URL.createObjectURL(blob));
+        } catch (error) {
+          if (activeRef.current) setError(scanFailureMessage(error));
+        } finally {
+          if (activeRef.current) setProcessing(false);
+        }
+      })();
+      return;
+    }
     setProcessing(true);
     const output = document.createElement("canvas");
     // Avoid upscaling a small image; output uses the same ratio as the frame.
@@ -123,7 +182,24 @@ export function CardCrop({
         <h2 className="font-semibold text-gray-900 dark:text-white">Crop your card {side}</h2>
         <p className="text-sm text-gray-500">Drag the frame over the {side} of one card. Keep visible background outside the frame. Rotate if needed.</p>
       </div>
-      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+      {error && (
+        <div role="alert" className="space-y-2">
+          <p className="text-sm text-red-600">{error}</p>
+          {format === "visual-v1" && (
+            <>
+              <p className="text-sm text-gray-500">Your selected photo is still here.</p>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" type="button" disabled={processing} onClick={() => {
+                  setError("");
+                  if (image && crop) confirm();
+                  else setRetry((value) => value + 1);
+                }}>Try again</Button>
+                {onSearchInstead && <Button variant="outline" type="button" onClick={onSearchInstead}>Search instead</Button>}
+              </div>
+            </>
+          )}
+        </div>
+      )}
       {!image && !error && <Loader2 className="animate-spin text-red-500 mx-auto" />}
       {image && crop && (
         <>

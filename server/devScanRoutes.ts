@@ -113,6 +113,27 @@ export function registerDevScanRoutes(
     res.setHeader('Cache-Control', 'no-store');
     res.json({ visualV1: enabled() });
   });
+  // Pre-upload failures previously left no evidence at all. Accept only small,
+  // categorical diagnostics, never photos, names, free text, or URLs.
+  app.post('/api/cards/scan/client-event',
+    (_req, res, next) => {
+      if (!enabled()) { res.sendStatus(404); return; }
+      next();
+    }, authenticateUser, (req, res) => {
+      const body = req.body;
+      const codes = ['camera_open', 'photo_selected', 'decode_failed', 'crop_ready',
+        'request_failed', 'camera_interrupted'];
+      if (!body || Object.keys(body).some(k => !['code', 'bytes', 'kind'].includes(k))
+          || !codes.includes(body.code)
+          || (body.bytes !== undefined && (!Number.isSafeInteger(body.bytes) || body.bytes < 0 || body.bytes > 1e9))
+          || (body.kind !== undefined && !['jpeg', 'png', 'webp', 'heic', 'other'].includes(body.kind))) {
+        res.status(400).json({ message: 'Invalid scan diagnostic' }); return;
+      }
+      console.info('[DevScanClient]', JSON.stringify({
+        code: body.code, bytes: body.bytes, kind: body.kind,
+      }));
+      res.sendStatus(204);
+    });
   app.patch('/api/cards/scan/events/:id',
     (_req, res, next) => {
       if (!enabled()) { res.status(404).json({ message: 'Not found' }); return; }

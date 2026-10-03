@@ -11,6 +11,14 @@ Build only in DEV; never publish; production is read-only. Preserve all existing
 
 **How to apply:** Reuse C0 arm C and the existing search, confirm/add and photo-submission flows behind the default-off visual-retrieval flag. Skip auto-rotation, OCR in the scan path, instant re-indexing and hosting studies. Report end-to-end dev timing after the screen is wired. This authorization supersedes the older experiment-only restrictions below, especially their deletion instructions; do not delete retained `.local/` evidence.
 
+## Mobile-browser acceptance
+
+Do not describe isolated, mocked-auth browser checks as signed-in phone acceptance. The user tests the dev URL in an Android browser, not just the native app, and requires camera-file coverage including large iPhone photos and HEIC. Errors must keep an available photo and offer explicit retry/search.
+
+**Why:** The user reported roughly nine resets out of ten phone attempts despite the earlier isolated tests passing. Only one attempt reached server telemetry; pre-upload failures could not be individually classified retrospectively.
+
+**How to apply:** Distinguish real signed-in mobile evidence from desktop viewport/decoder tests. Inspect pre-upload lifecycle and authentication resets as well as inference; no scan event does not prove a specific file-format, network, or memory failure.
+
 ## Historical experiment constraints (not the current v1 scope)
 
 Use canonical single-image DINO alone for the next development recognition evaluation; do not run the historical reranker or reference-guided optional crop.

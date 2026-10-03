@@ -14,6 +14,7 @@ import { QuickSearch, type QuickSearchSelection } from "@/components/dashboard/q
 import { hasUsableScanCardImage, scanCorrection, submitScanPhoto, uploadScanFrontPhoto, type PhotoSubmissionStatus } from "@/lib/scanConfirmation";
 import { useAppStore } from "@/lib/store";
 import { createScanEventRecorder } from "@/lib/scanTelemetry";
+import { requestVisualScan, scanFileError, scanFailureMessage, setScanCameraPending, clearScanCameraPending, scanCameraInterrupted, scanSessionStorage, scanClientEvent, type ScanClientEventCode } from "@/lib/scanRecovery";
 import {
   Camera,
   Upload,
@@ -132,6 +133,7 @@ type Stage =
   | "crop-back-choice"
   | "crop-back"
   | "scanning"
+  | "error"
   | "results"
   | "versions"
   | "search"
@@ -371,6 +373,7 @@ export default function ScanToAdd() {
   const [stage, setStage] = useState<Stage>("idle");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [sourceFile, setSourceFile] = useState<File | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
   const [backSourceFile, setBackSourceFile] = useState<File | null>(null);
   const [frontFile, setFrontFile] = useState<File | null>(null);
   const previewObjectUrl = useRef<string | null>(null);
@@ -382,6 +385,31 @@ export default function ScanToAdd() {
   const [selectedFamily, setSelectedFamily] = useState<ScanFamily | null>(null);
   const [selectedFromSearch, setSelectedFromSearch] = useState(false);
   const [browserTiming, setBrowserTiming] = useState<ScanBrowserTiming | null>(null);
+  const cameraRecoveryChecked = useRef(false);
+
+  function recordClientPhase(code: ScanClientEventCode, file?: File) {
+    if (!visualV1) return;
+    void apiRequest("POST", "/api/cards/scan/client-event", scanClientEvent(code, file))
+      .catch(() => console.warn("DEV scan phase diagnostic could not be saved"));
+  }
+
+  useEffect(() => {
+    if (!configResolved || cameraRecoveryChecked.current) return;
+    cameraRecoveryChecked.current = true;
+    if (scanCameraInterrupted(visualV1, scanSessionStorage())) {
+      recordClientPhase("camera_interrupted");
+      setScanError("The camera or photo picker was interrupted when this page reloaded. This page no longer has that photo. Select it again, or search instead.");
+      setStage("error");
+    }
+  }, [configResolved, visualV1]);
+
+  useEffect(() => {
+    if (!visualV1) return;
+    const input = fileInputRef.current;
+    const clearMarker = () => clearScanCameraPending(scanSessionStorage());
+    input?.addEventListener("cancel", clearMarker);
+    return () => input?.removeEventListener("cancel", clearMarker);
+  }, [visualV1]);
 
   // Reset the broken-image flag whenever a different card is selected
   useEffect(() => {
@@ -436,6 +464,16 @@ export default function ScanToAdd() {
   const scanMutation = useMutation({
     mutationFn: async ({ front, back, epoch }: { front: File; back?: File; epoch: number }) => {
       if (!configResolved) throw new Error("Scan configuration is still loading. Please try again.");
+      if (visualV1) {
+        const controller = new AbortController();
+        scanAbort.current = controller;
+        const result = await requestVisualScan({
+          front, back, controller, getToken: async () => user?.getIdToken(),
+          isCurrent: () => epoch === scanEpoch.current,
+          onFetchStarted: () => { scanFetchStartedAt.current = performance.now(); },
+        });
+        return { result: result as ScanResult, epoch };
+      }
       const formData = new FormData();
       formData.append("image", front);
       if (back) formData.append("backImage", back);
@@ -490,7 +528,7 @@ export default function ScanToAdd() {
         }
       }
     },
-    onError: (err: Error, { epoch }) => {
+    onError: (err: Error, { epoch, front }) => {
       if (epoch !== scanEpoch.current) return;
       refetchUsage();
       if (err.message?.includes("free scans this month")) {
@@ -498,7 +536,11 @@ export default function ScanToAdd() {
       } else {
         toast({ title: "Scan failed", description: err.message, variant: "destructive" });
       }
-      setStage("idle");
+      if (visualV1) {
+        recordClientPhase("request_failed", front);
+        setScanError(scanFailureMessage(err));
+        setStage("error");
+      } else setStage("idle");
     },
   });
 
@@ -669,10 +711,19 @@ export default function ScanToAdd() {
   // ── Handlers ──
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (visualV1) clearScanCameraPending(scanSessionStorage());
     const file = e.target.files?.[0];
     if (!file) return;
+    recordClientPhase("photo_selected", file);
     e.target.value = "";
     if (!configResolved) return;
+    if (visualV1) {
+      const error = scanFileError(file);
+      if (error) {
+        toast({ title: "Photo could not be used", description: error, variant: "destructive" });
+        return;
+      }
+    }
     handleReset();
     setSourceFile(file);
     setFrontFile(null);
@@ -690,6 +741,7 @@ export default function ScanToAdd() {
 
   function startScan(front: File, back?: File) {
     if (!configResolved) return;
+    setScanError(null);
     setStage("scanning");
     scanMutation.mutate({ front, back, epoch: scanEpoch.current });
   }
@@ -785,6 +837,7 @@ export default function ScanToAdd() {
   }
 
   function handleReset() {
+    if (visualV1) clearScanCameraPending(scanSessionStorage());
     scanEpoch.current += 1;
     scanAbort.current?.abort();
     scanAbort.current = null;
@@ -798,6 +851,7 @@ export default function ScanToAdd() {
     setBrowserTiming(null);
     setDbImageBroken(false);
     setStage("idle");
+    setScanError(null);
     setSourceFile(null);
     setBackSourceFile(null);
     setFrontFile(null);
@@ -841,6 +895,15 @@ export default function ScanToAdd() {
     setStage("search");
   }
 
+  function launchPhotoPicker() {
+    if (!configResolved || isAtScanLimit) return;
+    if (visualV1) {
+      setScanCameraPending(scanSessionStorage());
+      recordClientPhase("camera_open");
+    }
+    fileInputRef.current?.click();
+  }
+
   function handleSearchSelect(card: QuickSearchSelection) {
     scanTelemetry.current?.record({ pickedCardId: card.id });
     setSelectedCard({
@@ -877,6 +940,8 @@ export default function ScanToAdd() {
         return true;
       case "scanning":
         return true; // swallow back while a scan is in flight
+      case "error":
+        return true; // Keep the photo until an explicit retry/search/reset action.
       case "results":
         handleReset();
         return true;
@@ -886,6 +951,8 @@ export default function ScanToAdd() {
         return true;
       case "search":
         if (scanResult) setStage("results");
+        else if (visualV1 && scanError) setStage("error");
+        else if (visualV1 && sourceFile) setStage("crop");
         else handleReset();
         return true;
       case "picker-year":
@@ -1006,7 +1073,7 @@ export default function ScanToAdd() {
             {/* Upload area — card-themed */}
             <div
                className={`group relative ${isAtScanLimit || !configResolved ? "cursor-not-allowed" : "cursor-pointer"}`}
-               onClick={() => configResolved && !isAtScanLimit && fileInputRef.current?.click()}
+               onClick={launchPhotoPicker}
             >
               {/* Fanned card stack behind */}
               <div className="absolute inset-x-6 bottom-0 top-4 rounded-2xl bg-red-100 dark:bg-red-950/30 border border-red-200/60 dark:border-red-900/40 rotate-3 shadow-sm transition-transform group-hover:rotate-[5deg]" />
@@ -1163,16 +1230,32 @@ export default function ScanToAdd() {
             file={sourceFile}
             format={visualV1 ? "visual-v1" : "legacy"}
             onCancel={handleReset}
+            onSearchInstead={visualV1 ? openSearch : undefined}
+            onDecodeError={visualV1 ? () => recordClientPhase("decode_failed", sourceFile) : undefined}
             onConfirm={(file, preview) => {
+              recordClientPhase("crop_ready", file);
               if (previewObjectUrl.current) URL.revokeObjectURL(previewObjectUrl.current);
               previewObjectUrl.current = preview;
               setPreviewUrl(preview);
-              setSourceFile(null);
+              if (!visualV1) setSourceFile(null);
               setFrontFile(file);
               if (visualV1) startScan(file);
               else setStage("crop-back-choice");
             }}
           />
+        )}
+        {stage === "error" && visualV1 && (
+          <div className="space-y-4" data-testid="scan-recovery">
+            {previewUrl && <img src={previewUrl} alt="Retained card photo" className="max-h-64 mx-auto rounded-lg border object-contain" />}
+            <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 p-4 space-y-2">
+              <h2 className="font-semibold text-gray-900 dark:text-white">Scan could not finish</h2>
+              <p className="text-sm text-red-700 dark:text-red-300">{scanError}</p>
+              {(frontFile || sourceFile) && <p className="text-sm text-gray-600 dark:text-gray-400">Your photo is kept on this screen. You don't need to take it again.</p>}
+            </div>
+            <Button className="w-full bg-red-600 hover:bg-red-700" disabled={scanMutation.isPending || (!frontFile && isAtScanLimit)} onClick={() => { if (frontFile) startScan(frontFile); else launchPhotoPicker(); }}>Try again</Button>
+            <Button variant="outline" className="w-full" onClick={openSearch}>Search instead</Button>
+            <Button variant="ghost" className="w-full" onClick={handleReset}>Clear photo and start over</Button>
+          </div>
         )}
         {stage === "crop-back-choice" && frontFile && (
           <div className="space-y-4">
@@ -1303,7 +1386,7 @@ export default function ScanToAdd() {
             )}
             <p className="font-semibold text-gray-800 dark:text-white">Find your card</p>
             <QuickSearch onSelect={handleSearchSelect} />
-            <Button variant="outline" className="w-full" onClick={() => scanResult ? setStage("results") : handleReset()}>
+            <Button variant="outline" className="w-full" onClick={() => scanResult ? setStage("results") : visualV1 && scanError ? setStage("error") : visualV1 && sourceFile ? setStage("crop") : handleReset()}>
               <ArrowLeft className="w-4 h-4 mr-2" /> {scanResult ? "Back to scan results" : "Cancel"}
             </Button>
           </div>

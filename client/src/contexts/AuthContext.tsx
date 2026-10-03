@@ -6,6 +6,8 @@ import { useAppStore } from '@/lib/store';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { getNativeLaunchSession } from '@/lib/nativeLaunchSession';
+import { queryClient } from '@/lib/queryClient';
+import { canRefreshScanSessionInPlace } from '@/lib/scanSession';
 import {
   isRetryableSyncError,
   syncFirebaseUserWithBackend,
@@ -45,6 +47,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [syncError, setSyncError] = useState<AuthSyncError>(null);
   const syncAbortRef = useRef<AbortController | null>(null);
+  const verifiedUid = useRef<string | null>(null);
   const { setCurrentUser } = useAppStore();
 
   const applyBackendUser = useCallback((backendUser: BackendUser) => {
@@ -96,6 +99,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     syncAbortRef.current?.abort();
     const controller = new AbortController();
     syncAbortRef.current = controller;
+    verifiedUid.current = null;
     setLoading(true);
     setSyncError(null);
     setUser(null);
@@ -117,6 +121,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       );
       if (!isCurrent() || controller.signal.aborted) return false;
       applyBackendUser(backendUser);
+      verifiedUid.current = firebaseUser.uid;
       setUser(firebaseUser);
       setSyncError(null);
       return true;
@@ -152,6 +157,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
       console.error('Backend account refresh failed; blocking app access:', error);
+      verifiedUid.current = null;
       setUser(null);
       setCurrentUser(null);
       setSyncError('permanent');
@@ -179,6 +185,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signOutAfterSyncError = async () => {
+    verifiedUid.current = null;
     syncAbortRef.current?.abort();
     syncAbortRef.current = null;
     await signOutUser();
@@ -208,6 +215,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       handleRedirect();
 
       const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        // A same-identity notification while returning from the phone camera
+        // must not replace the scan with the global loading screen. Initial
+        // login/account changes still require full backend verification.
+        if (canRefreshScanSessionInPlace(
+          import.meta.env.DEV,
+          queryClient.getQueryData<{ visualV1: boolean }>(['/api/cards/scan/config'])?.visualV1 === true,
+          verifiedUid.current,
+          firebaseUser?.uid,
+        )) {
+          await refreshExistingSession(firebaseUser!);
+          return;
+        }
         const generation = ++authStateGeneration;
         syncAbortRef.current?.abort();
         syncAbortRef.current = null;
@@ -238,6 +257,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             }
           }
         } else {
+          verifiedUid.current = null;
           setUser(null);
           setCurrentUser(null);
           setSyncError(null);

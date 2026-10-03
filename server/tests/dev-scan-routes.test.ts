@@ -37,6 +37,24 @@ const photo = () => sharp({
   create: { width: 20, height: 30, channels: 3, background: '#777' },
 }).png().toBuffer();
 
+test('pre-upload diagnostic is dev-only, authenticated, and rejects free text/photos', async () => {
+  const server = await fixture({});
+  try {
+    const send = (body: unknown, authorized = true) => fetch(`${server.base}/api/cards/scan/client-event`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...(authorized ? { Authorization: 'Bearer valid' } : {}) },
+      body: JSON.stringify(body),
+    });
+    assert.equal((await send({ code: 'decode_failed', bytes: 123, kind: 'heic' })).status, 204);
+    assert.equal((await send({ code: 'decode_failed', photo: 'private' })).status, 400);
+    assert.equal((await send({ code: 'anything' })).status, 400);
+    assert.equal((await send({ code: 'camera_open' }, false)).status, 401);
+  } finally { await server.close(); }
+  const disabled = await fixture({ env: { ...env, SCAN_VISUAL_RETRIEVAL: 'off' } });
+  try {
+    assert.equal((await fetch(`${disabled.base}/api/cards/scan/client-event`, { method: 'POST' })).status, 404);
+  } finally { await disabled.close(); }
+});
+
 async function fixture(
   dependencies: DevScanRouteDependencies,
   authentication: RequestHandler = auth,
