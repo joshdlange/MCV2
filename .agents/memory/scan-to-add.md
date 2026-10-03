@@ -13,6 +13,12 @@ Build only in DEV; never publish; production is read-only. Preserve all existing
 
 ## Mobile-browser acceptance
 
+Phone testing must use a production-built frontend without Vite HMR, while the backend remains development-only on the dev database. Send the entire resized photo to recognition; crop only within optional card-image review. Keep phone actions visible without page scrolling.
+
+**Why:** After the initial recovery fixes, the user reported one success out of three Android browser attempts and repeated page resets. An isolated established HMR socket termination reproduced Vite automatically reloading. This verifies the mechanism, not the historical phone trigger. The user explicitly removed recognition cropping because arm C was evaluated on uncropped photos.
+
+**How to apply:** Do not switch the backend to production to obtain a production frontend, or restore recognition cropping as an optimization. Validate sequential scans against a no-HMR build and distinguish isolated mocked-auth testing from physical-device acceptance.
+
 Do not describe isolated, mocked-auth browser checks as signed-in phone acceptance. The user tests the dev URL in an Android browser, not just the native app, and requires camera-file coverage including large iPhone photos and HEIC. Errors must keep an available photo and offer explicit retry/search.
 
 **Why:** The user reported roughly nine resets out of ten phone attempts despite the earlier isolated tests passing. Only one attempt reached server telemetry; pre-upload failures could not be individually classified retrospectively.

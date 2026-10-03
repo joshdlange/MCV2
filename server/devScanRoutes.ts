@@ -122,15 +122,23 @@ export function registerDevScanRoutes(
     }, authenticateUser, (req, res) => {
       const body = req.body;
       const codes = ['camera_open', 'photo_selected', 'decode_failed', 'crop_ready',
-        'request_failed', 'camera_interrupted'];
-      if (!body || Object.keys(body).some(k => !['code', 'bytes', 'kind'].includes(k))
+        'request_failed', 'camera_interrupted', 'page_load', 'page_hidden', 'page_visible',
+        'page_hide', 'page_show', 'client_error', 'decode_start', 'decode_ready',
+        'request_started', 'results_ready', 'stage_change'];
+      if (!body || Object.keys(body).some(k => !['code', 'bytes', 'kind', 'pageId', 'sequence', 'attempt', 'elapsedMs', 'navigation', 'previousCode', 'stage', 'failure'].includes(k))
           || !codes.includes(body.code)
+          || (body.stage !== undefined && !['idle', 'preparing', 'photo-crop', 'crop', 'crop-back-choice', 'crop-back', 'scanning', 'error', 'results', 'versions', 'search', 'picker-year', 'picker-set', 'picker-subset', 'picker-card', 'confirmed', 'success'].includes(body.stage))
+          || (body.failure !== undefined && !['auth', 'timeout', 'network', 'decode', 'file', 'response', 'other'].includes(body.failure))
+          || (body.pageId !== undefined && !/^[a-f0-9-]{36}$/.test(body.pageId))
+          || ['sequence', 'attempt', 'elapsedMs'].some(k => body[k] !== undefined && (!Number.isSafeInteger(body[k]) || body[k] < 0))
+          || (body.navigation !== undefined && !['navigate', 'reload', 'back_forward', 'prerender'].includes(body.navigation))
+          || (body.previousCode !== undefined && !codes.includes(body.previousCode))
           || (body.bytes !== undefined && (!Number.isSafeInteger(body.bytes) || body.bytes < 0 || body.bytes > 1e9))
           || (body.kind !== undefined && !['jpeg', 'png', 'webp', 'heic', 'other'].includes(body.kind))) {
         res.status(400).json({ message: 'Invalid scan diagnostic' }); return;
       }
       console.info('[DevScanClient]', JSON.stringify({
-        code: body.code, bytes: body.bytes, kind: body.kind,
+        ...body, receivedAt: new Date().toISOString(),
       }));
       res.sendStatus(204);
     });

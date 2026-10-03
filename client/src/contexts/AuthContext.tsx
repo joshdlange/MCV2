@@ -219,7 +219,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // must not replace the scan with the global loading screen. Initial
         // login/account changes still require full backend verification.
         if (canRefreshScanSessionInPlace(
-          import.meta.env.DEV,
+          import.meta.env.DEV || import.meta.env.PHONE_PREVIEW === true,
           queryClient.getQueryData<{ visualV1: boolean }>(['/api/cards/scan/config'])?.visualV1 === true,
           verifiedUid.current,
           firebaseUser?.uid,

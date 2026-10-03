@@ -3,16 +3,35 @@ export const MAX_SCAN_INPUT_BYTES = 40 * 1024 * 1024;
 export const MAX_SCAN_IMAGE_SIDE = 1600;
 export const SCAN_TIMEOUT_MS = 60_000;
 export const SCAN_CAMERA_MARKER = "mcv-dev-scan-camera-pending";
-export type ScanClientEventCode = "camera_open" | "photo_selected" | "decode_failed" | "crop_ready" | "request_failed" | "camera_interrupted";
+export type ScanClientEventCode = "camera_open" | "photo_selected" | "decode_failed" | "crop_ready" | "request_failed" | "camera_interrupted" | "page_load" | "page_hidden" | "page_visible" | "page_hide" | "page_show" | "client_error" | "decode_start" | "decode_ready" | "request_started" | "results_ready" | "stage_change";
+
+const diagnosticPageId = typeof crypto !== "undefined" ? crypto.randomUUID() : "unknown";
+let diagnosticSequence = 0;
+let diagnosticAttempt = 0;
+const phaseBeforePageLoad = (() => {
+  try { return scanSessionStorage()?.getItem("mcv-scan-last-phase") || undefined; } catch { return undefined; }
+})();
 
 export function scanClientEvent(code: ScanClientEventCode, file?: Pick<File, "size" | "name" | "type">) {
-  if (!file) return { code };
+  if (code === "camera_open") diagnosticAttempt++;
+  const storage = scanSessionStorage();
+  let previousCode: string | undefined;
+  try {
+    previousCode = code === "page_load" ? phaseBeforePageLoad : storage?.getItem("mcv-scan-last-phase") || undefined;
+    storage?.setItem("mcv-scan-last-phase", code);
+  } catch { /* Optional breadcrumbs must not block capture. */ }
+  const navigation = typeof performance !== "undefined"
+    ? (performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming)?.type : undefined;
+  const details = { code, pageId: diagnosticPageId, sequence: ++diagnosticSequence,
+    attempt: diagnosticAttempt, elapsedMs: Math.round(performance.now()),
+    navigation, previousCode };
+  if (!file) return details;
   const kind: "jpeg" | "png" | "webp" | "heic" | "other" =
     /image\/jpeg/i.test(file.type) || /\.jpe?g$/i.test(file.name) ? "jpeg" :
     /image\/png/i.test(file.type) || /\.png$/i.test(file.name) ? "png" :
     /image\/webp/i.test(file.type) || /\.webp$/i.test(file.name) ? "webp" :
     /image\/hei[cf]/i.test(file.type) || /\.(heic|heif)$/i.test(file.name) ? "heic" : "other";
-  return { code, bytes: Math.max(0, Math.min(1e9, Math.floor(file.size))), kind };
+  return { ...details, bytes: Math.max(0, Math.min(1e9, Math.floor(file.size))), kind };
 }
 
 // Scalar, tab-scoped interruption hint only. No photo, URL, token or user data.

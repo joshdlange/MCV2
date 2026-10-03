@@ -883,10 +883,10 @@ server.listen({
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   const { setupVite, serveStatic } = await import("./vite");
-  if (app.get("env") === "development") {
+  if (app.get("env") === "development" && !process.argv.includes("--phone-preview")) {
     await setupVite(app, server);
   } else {
-    serveStatic(app);
+    serveStatic(app, app.get("env") === "development" ? "dist/public" : undefined);
   }
 
   startupGate.markReady();

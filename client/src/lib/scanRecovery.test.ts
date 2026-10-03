@@ -146,7 +146,14 @@ test("camera interruption marker is scalar, DEV gated, and clears on selection/r
 });
 
 test("client diagnostics contain only allowlisted scalar metadata, never filenames/photos/URLs", () => {
-  assert.deepEqual(scanClientEvent("camera_open"), { code: "camera_open" });
-  assert.deepEqual(scanClientEvent("photo_selected", { name: "private-name.HEIC", type: "", size: 9182374 }), { code: "photo_selected", bytes: 9182374, kind: "heic" });
-  assert.deepEqual(scanClientEvent("request_failed", { name: "private-name.jpg", type: "image/jpeg", size: 2e9 }), { code: "request_failed", bytes: 1e9, kind: "jpeg" });
+  const opened = scanClientEvent("camera_open");
+  assert.equal(opened.code, "camera_open");
+  assert.ok(opened.pageId && opened.sequence > 0 && opened.elapsedMs >= 0);
+  const selected = scanClientEvent("photo_selected", { name: "private-name.HEIC", type: "", size: 9182374 });
+  assert.equal(selected.kind, "heic");
+  assert.equal(selected.bytes, 9182374);
+  assert.ok(!JSON.stringify(selected).includes("private-name"));
+  assert.equal(selected.pageId, opened.pageId);
+  assert.ok(selected.sequence > opened.sequence);
+  assert.equal(scanClientEvent("request_failed", { name: "private-name.jpg", type: "image/jpeg", size: 2e9 }).bytes, 1e9);
 });

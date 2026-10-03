@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
 import { useHardwareBackHandler } from "@/hooks/useBackButton";
 import { CardCrop } from "@/components/CardCrop";
+import { prepareScanImage, scanCanvasBlob } from "@/lib/scanImage";
 import { QuickSearch, type QuickSearchSelection } from "@/components/dashboard/quick-search";
 import { hasUsableScanCardImage, scanCorrection, submitScanPhoto, uploadScanFrontPhoto, type PhotoSubmissionStatus } from "@/lib/scanConfirmation";
 import { useAppStore } from "@/lib/store";
@@ -129,6 +130,8 @@ interface PickerCard {
 
 type Stage =
   | "idle"
+  | "preparing"
+  | "photo-crop"
   | "crop"
   | "crop-back-choice"
   | "crop-back"
@@ -371,11 +374,17 @@ export default function ScanToAdd() {
 
   // Core scan state
   const [stage, setStage] = useState<Stage>("idle");
+  const diagnosticStage = useRef<Stage>(stage);
+  diagnosticStage.current = stage;
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
   const [backSourceFile, setBackSourceFile] = useState<File | null>(null);
   const [frontFile, setFrontFile] = useState<File | null>(null);
+  // Recognition always uses the full frame; review crops never replace it.
+  const [reviewPhotoFile, setReviewPhotoFile] = useState<File | null>(null);
+  const [reviewPhotoCropped, setReviewPhotoCropped] = useState(false);
+  const [exactVersionConfirmed, setExactVersionConfirmed] = useState(false);
   const previewObjectUrl = useRef<string | null>(null);
   const [photoSubmission, setPhotoSubmission] = useState<PhotoSubmissionStatus>("idle");
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
@@ -387,11 +396,45 @@ export default function ScanToAdd() {
   const [browserTiming, setBrowserTiming] = useState<ScanBrowserTiming | null>(null);
   const cameraRecoveryChecked = useRef(false);
 
-  function recordClientPhase(code: ScanClientEventCode, file?: File) {
+  function recordClientPhase(code: ScanClientEventCode, file?: File, error?: unknown) {
     if (!visualV1) return;
-    void apiRequest("POST", "/api/cards/scan/client-event", scanClientEvent(code, file))
+    const message = error instanceof Error ? error.message : "";
+    const failure = error === undefined ? undefined
+      : /sign.in|token|auth/i.test(message) ? "auth"
+      : /timeout|timed out|longer than/i.test(message) ? "timeout"
+      : /connect|fetch|network/i.test(message) ? "network"
+      : /HEIC|decode|open this|pixels|prepare/i.test(message) ? "decode"
+      : /size|larger|empty/i.test(message) ? "file"
+      : /response|returned an error/i.test(message) ? "response" : "other";
+    void apiRequest("POST", "/api/cards/scan/client-event", { ...scanClientEvent(code, file), stage: diagnosticStage.current, failure })
       .catch(() => console.warn("DEV scan phase diagnostic could not be saved"));
   }
+
+  useEffect(() => {
+    recordClientPhase("stage_change");
+  }, [stage, visualV1]);
+
+  useEffect(() => {
+    if (!visualV1) return;
+    recordClientPhase("page_load");
+    const visibility = () => recordClientPhase(document.hidden ? "page_hidden" : "page_visible");
+    const hide = () => recordClientPhase("page_hide");
+    const show = () => recordClientPhase("page_show");
+    // Diagnostics intentionally contain codes only, never raw error messages.
+    const error = () => recordClientPhase("client_error");
+    document.addEventListener("visibilitychange", visibility);
+    window.addEventListener("pagehide", hide);
+    window.addEventListener("pageshow", show);
+    window.addEventListener("error", error);
+    window.addEventListener("unhandledrejection", error);
+    return () => {
+      document.removeEventListener("visibilitychange", visibility);
+      window.removeEventListener("pagehide", hide);
+      window.removeEventListener("pageshow", show);
+      window.removeEventListener("error", error);
+      window.removeEventListener("unhandledrejection", error);
+    };
+  }, [visualV1]);
 
   useEffect(() => {
     if (!configResolved || cameraRecoveryChecked.current) return;
@@ -416,6 +459,7 @@ export default function ScanToAdd() {
     setDbImageBroken(false);
     setSubmitImage(false);
     setPhotoSubmission("idle");
+    setExactVersionConfirmed(false);
   }, [selectedCard?.cardId]);
 
   useEffect(() => () => {
@@ -462,6 +506,7 @@ export default function ScanToAdd() {
   // ── Mutations ──
 
   const scanMutation = useMutation({
+    gcTime: visualV1 ? 0 : 5 * 60 * 1000,
     mutationFn: async ({ front, back, epoch }: { front: File; back?: File; epoch: number }) => {
       if (!configResolved) throw new Error("Scan configuration is still loading. Please try again.");
       if (visualV1) {
@@ -470,7 +515,10 @@ export default function ScanToAdd() {
         const result = await requestVisualScan({
           front, back, controller, getToken: async () => user?.getIdToken(),
           isCurrent: () => epoch === scanEpoch.current,
-          onFetchStarted: () => { scanFetchStartedAt.current = performance.now(); },
+          onFetchStarted: () => {
+            scanFetchStartedAt.current = performance.now();
+            recordClientPhase("request_started", front);
+          },
         });
         return { result: result as ScanResult, epoch };
       }
@@ -498,6 +546,7 @@ export default function ScanToAdd() {
       if (epoch !== scanEpoch.current) return;
       refetchUsage();
       setScanResult(data);
+      recordClientPhase("results_ready");
       if (visualV1 && data.mode === "visual-v1") {
         scanTelemetry.current = typeof data.scanEventId === "string" && data.scanEventId.length > 0
           ? createScanEventRecorder(
@@ -537,10 +586,14 @@ export default function ScanToAdd() {
         toast({ title: "Scan failed", description: err.message, variant: "destructive" });
       }
       if (visualV1) {
-        recordClientPhase("request_failed", front);
+        recordClientPhase("request_failed", front, err);
         setScanError(scanFailureMessage(err));
         setStage("error");
       } else setStage("idle");
+    },
+    onSettled: () => {
+      // The observer otherwise retains mutation variables (and photo bytes).
+      if (visualV1) scanMutation.reset();
     },
   });
 
@@ -576,11 +629,12 @@ export default function ScanToAdd() {
   }
 
   const addToCollectionMutation = useMutation({
+    gcTime: visualV1 ? 0 : 5 * 60 * 1000,
     mutationFn: async ({ cardId, epoch }: { cardId: number; epoch: number }) => {
       // Snapshot the confirmed card and review choice before awaiting the save.
       const wantsPhoto = submitImage;
       const imageUrl = scanResult?.imageUrl;
-      const photoFile = frontFile;
+      const photoFile = visualV1 ? reviewPhotoFile : frontFile;
       const useVisualPhoto = visualV1;
       const telemetry = scanTelemetry.current;
       const res = await apiRequest("POST", "/api/collection", {
@@ -710,6 +764,37 @@ export default function ScanToAdd() {
 
   // ── Handlers ──
 
+  async function prepareFullFrame(file: File, epoch: number) {
+    let canvas: HTMLCanvasElement | null = null;
+    setStage("preparing");
+    setScanError(null);
+    recordClientPhase("decode_start", file);
+    try {
+      canvas = await prepareScanImage(file, 0);
+      if (epoch !== scanEpoch.current) return;
+      const blob = await scanCanvasBlob(canvas);
+      if (epoch !== scanEpoch.current) return;
+      const reduced = new File([blob], "card-full-frame.jpg", { type: "image/jpeg" });
+      // Commit only after encoding succeeds. Release the camera original.
+      setSourceFile(null);
+      setFrontFile(reduced);
+      setReviewPhotoFile(reduced);
+      setReviewPhotoCropped(false);
+      if (previewObjectUrl.current) URL.revokeObjectURL(previewObjectUrl.current);
+      previewObjectUrl.current = URL.createObjectURL(reduced);
+      setPreviewUrl(previewObjectUrl.current);
+      recordClientPhase("decode_ready", reduced);
+      startScan(reduced);
+    } catch (error) {
+      if (epoch !== scanEpoch.current) return;
+      recordClientPhase("decode_failed", file, error);
+      setScanError(scanFailureMessage(error));
+      setStage("error");
+    } finally {
+      if (canvas) canvas.width = canvas.height = 0;
+    }
+  }
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (visualV1) clearScanCameraPending(scanSessionStorage());
     const file = e.target.files?.[0];
@@ -726,6 +811,10 @@ export default function ScanToAdd() {
     }
     handleReset();
     setSourceFile(file);
+    if (visualV1) {
+      void prepareFullFrame(file, scanEpoch.current);
+      return;
+    }
     setFrontFile(null);
     setBackSourceFile(null);
     if (previewObjectUrl.current) URL.revokeObjectURL(previewObjectUrl.current);
@@ -748,6 +837,7 @@ export default function ScanToAdd() {
 
   function confirmCard() {
     if (!selectedCard || addToCollectionMutation.isPending) return;
+    if (visualV1 && (stage !== "confirmed" || !exactVersionConfirmed)) return;
     if (scanResult?.scanUploadId) {
       sendFeedback(scanCorrection(scanResult.matches[0]?.cardId, selectedCard.cardId), selectedCard.cardId);
     }
@@ -855,6 +945,9 @@ export default function ScanToAdd() {
     setSourceFile(null);
     setBackSourceFile(null);
     setFrontFile(null);
+    setReviewPhotoFile(null);
+    setReviewPhotoCropped(false);
+    setExactVersionConfirmed(false);
     if (previewObjectUrl.current) URL.revokeObjectURL(previewObjectUrl.current);
     previewObjectUrl.current = null;
     setPreviewUrl(null);
@@ -931,6 +1024,11 @@ export default function ScanToAdd() {
       case "crop":
         handleReset();
         return true;
+      case "photo-crop":
+        setStage("confirmed");
+        return true;
+      case "preparing":
+        return true;
       case "crop-back":
         setBackSourceFile(null);
         setStage("crop-back-choice");
@@ -1006,6 +1104,216 @@ export default function ScanToAdd() {
     stage === "picker-card";
 
   // ── Render ────────────────────────────────────────────────────────────────
+
+  // DEV visual-v1 is a bounded phone workspace, not the legacy scrolling page.
+  // The app shell reserves 4rem for its mobile header; only lists scroll here.
+  if (visualV1) {
+    const families = scanResult?.families ?? [];
+    const working = stage === "preparing" || stage === "scanning";
+    const resultStage = stage === "results" || stage === "versions" || stage === "confirmed";
+    const retryPhoto = () => {
+      if (frontFile) startScan(frontFile);
+      else if (sourceFile) void prepareFullFrame(sourceFile, scanEpoch.current);
+      else launchPhotoPicker();
+    };
+    const returnToResults = () => {
+      setExactVersionConfirmed(false);
+      if (selectedFromSearch) setStage("search");
+      else if (selectedFamily) setStage("versions");
+      else if (scanResult) setStage("results");
+      else handleReset();
+    };
+    const advanceSelection = () => {
+      if (stage === "results" && selectedFamily) {
+        setSelectedCard(null);
+        setStage("versions");
+      } else if (stage === "versions" && selectedCard) {
+        setExactVersionConfirmed(false);
+        setStage("confirmed");
+      } else if (stage === "confirmed") confirmCard();
+    };
+    return (
+      <section
+        data-testid="scan-workspace"
+        data-stage={stage}
+        className="h-[calc(100dvh-4rem-var(--safe-area-top,0px))] min-h-0 overflow-hidden bg-gray-50 dark:bg-gray-950"
+        style={{ paddingBottom: "var(--safe-area-bottom, 0px)" }}
+      >
+        <div className="mx-auto flex h-full min-h-0 max-w-lg flex-col px-4">
+          <input data-testid="scan-file-input" ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
+          <header className="flex shrink-0 items-center justify-between gap-3 py-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-600 text-white"><ScanLine className="h-4 w-4" /></div>
+              <h1 className="font-bebas text-2xl tracking-wide text-gray-900 dark:text-white">Scan to Add</h1>
+            </div>
+            {stage !== "idle" && !working && stage !== "photo-crop" && (
+              <Button data-testid="scan-reset" variant="ghost" size="sm" disabled={addToCollectionMutation.isPending || photoSubmission === "pending"} onClick={handleReset}>New scan</Button>
+            )}
+            {stage === "idle" && scanUsage && <span className="text-xs text-gray-500">{scanUsage.unlimited ? "Unlimited scans" : `${scanUsage.remaining ?? 0} scans left`}</span>}
+          </header>
+
+          {stage === "idle" && (
+            <div className="flex min-h-0 flex-1 flex-col justify-center gap-5 pb-4">
+              <div className="text-center">
+                <h2 className="font-bebas text-4xl tracking-wide text-gray-900 dark:text-white">Your next card. In your vault.</h2>
+                <p className="mx-auto mt-2 max-w-xs text-sm text-gray-500">Photograph one card. Find its artwork, then check the exact version.</p>
+              </div>
+              <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-5 text-center dark:border-red-900 dark:bg-red-950/20">
+                <Camera className="mx-auto mb-3 h-10 w-10 text-red-600" />
+                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Use the whole photo. No crop needed.</p>
+                <p className="mt-1 text-xs text-gray-500">One card, good light, printed details in focus.</p>
+              </div>
+              <Button data-testid="scan-start" className="h-16 w-full rounded-xl bg-red-600 text-lg font-semibold text-white hover:bg-red-700" disabled={isAtScanLimit || !configResolved} onClick={launchPhotoPicker}>
+                <Camera className="mr-2 h-6 w-6" /> Scan a card
+              </Button>
+              {isAtScanLimit && <p role="alert" className="text-center text-xs text-amber-700">Monthly scan limit reached. <button className="underline" onClick={() => setLocation("/subscribe")}>View plans</button></p>}
+              <Button variant="outline" className="h-11 w-full" onClick={openSearch}><Search className="mr-2 h-4 w-4" /> Search instead</Button>
+              {userStats && <p className="text-center text-xs text-gray-400">{userStats.totalCards.toLocaleString()} cards in your collection</p>}
+            </div>
+          )}
+
+          {working && (
+            <div className="flex min-h-0 flex-1 flex-col justify-center gap-5 text-center" aria-live="polite" data-testid="scan-progress">
+              {previewUrl && <img src={previewUrl} alt="Full scan photo" className="mx-auto max-h-[25dvh] max-w-full rounded-lg object-contain" />}
+              <div className="mx-auto h-2 w-40 animate-pulse rounded bg-red-200" />
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{stage === "preparing" ? "Preparing your photo…" : "Finding matching artwork…"}</h2>
+              <p className="text-sm text-gray-500">{stage === "preparing" ? "Resizing the full frame on this device." : "You'll check the exact version before saving."}</p>
+            </div>
+          )}
+
+          {stage === "error" && (
+            <div data-testid="scan-recovery" className="flex min-h-0 flex-1 flex-col justify-center gap-3">
+              {previewUrl && <img src={previewUrl} alt="Retained full-frame photo" className="mx-auto max-h-[20dvh] max-w-full rounded-lg object-contain" />}
+              <div role="alert" className="max-h-[28dvh] overflow-y-auto rounded-xl border border-red-200 bg-red-50 p-3 dark:bg-red-950/20">
+                <h2 className="font-semibold text-gray-900 dark:text-white">Scan could not finish</h2>
+                <p className="mt-1 text-sm text-red-700 dark:text-red-300">{scanError}</p>
+                {(frontFile || sourceFile) && <p className="mt-2 text-xs text-gray-500">Your photo is still here. Retry without taking it again.</p>}
+              </div>
+              <Button data-testid="scan-retry" className="h-12 w-full bg-red-600 hover:bg-red-700" onClick={retryPhoto}>Try again</Button>
+              <Button variant="outline" className="w-full" onClick={openSearch}>Search instead</Button>
+              <Button variant="ghost" className="w-full" onClick={handleReset}>Clear photo and start over</Button>
+            </div>
+          )}
+
+          {stage === "results" && (
+            <div className="flex min-h-0 flex-1 flex-col gap-2">
+              <div className="flex shrink-0 items-center gap-3 rounded-xl border bg-white p-2 dark:bg-gray-900">
+                {previewUrl && <img src={previewUrl} alt="Full scan photo" className="h-16 w-14 rounded object-contain" />}
+                <div className="min-w-0">
+                  <h2 className="text-sm font-semibold text-gray-800 dark:text-white">{families.length ? "Choose the matching card artwork" : "No picture matches found"}</h2>
+                  <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">Similar artwork isn't an exact identification.</p>
+                </div>
+              </div>
+              {browserTiming && <p data-testid="scan-dev-elapsed" className="shrink-0 text-[11px] text-gray-500">Dev scan elapsed: {(browserTiming.elapsedMs / 1000).toFixed(2)}s (request to painted results)</p>}
+              <div data-testid="scan-result-list" className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pb-2">
+                {families.slice(0, 5).map(family => {
+                  const card = family.options.find(option => option.cardId === family.representativeCardId) ?? family.options[0];
+                  return card ? <CardTile key={family.familyKey} card={card} selected={selectedFamily?.familyKey === family.familyKey} showConfidence={false} onSelect={() => {
+                    setSelectedFamily(family);
+                    setSelectedCard(null);
+                    setSelectedFromSearch(false);
+                  }} /> : null;
+                })}
+                {!families.length && <p className="rounded-xl border border-dashed p-5 text-sm text-gray-500">Search by character, set or card number to find the exact card.</p>}
+              </div>
+            </div>
+          )}
+
+          {stage === "versions" && selectedFamily && (
+            <div className="flex min-h-0 flex-1 flex-col gap-2">
+              <h2 className="shrink-0 font-semibold text-gray-800 dark:text-white">Which version?</h2>
+              <p className="shrink-0 text-xs text-gray-500">Compare the number, printed details and parallel / finish.</p>
+              <div data-testid="scan-version-list" className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pb-2">
+                {selectedFamily.options.map(card => <CardTile key={card.cardId} card={card} selected={selectedCard?.cardId === card.cardId} showConfidence={false} onSelect={match => {
+                  scanTelemetry.current?.record({ pickedCardId: match.cardId });
+                  setSelectedCard(match);
+                  setExactVersionConfirmed(false);
+                  setSelectedFromSearch(false);
+                }} />)}
+              </div>
+            </div>
+          )}
+
+          {stage === "search" && (
+            <div className="flex min-h-0 flex-1 flex-col gap-2">
+              <h2 className="shrink-0 font-semibold text-gray-800 dark:text-white">Find your card</h2>
+              {scanResult && !families.length && <p className="text-xs text-gray-500">No picture matches found. Choose your card from the catalog.</p>}
+              <div data-testid="scan-search-list" className="min-h-0 flex-1 overflow-y-auto overscroll-contain"><QuickSearch onSelect={handleSearchSelect} /></div>
+              <Button variant="outline" className="mb-3 w-full shrink-0" onClick={() => scanResult ? setStage("results") : scanError ? setStage("error") : handleReset()}><ArrowLeft className="mr-2 h-4 w-4" /> {scanResult ? "Back to scan results" : "Back"}</Button>
+            </div>
+          )}
+
+          {stage === "confirmed" && selectedCard && (
+            <div className="flex min-h-0 flex-1 flex-col gap-2">
+              <h2 className="shrink-0 font-semibold text-gray-800 dark:text-white">Confirm the exact version</h2>
+              <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain" data-testid="scan-confirmation-details">
+                <div className="flex shrink-0 items-center justify-center gap-4 rounded-xl border bg-white p-2 dark:bg-gray-900">
+                  {previewUrl && <div className="text-center"><p className="mb-1 text-[10px] text-gray-500">Your full photo</p><img src={previewUrl} alt="Your scan" className="h-[clamp(56px,12dvh,110px)] w-24 object-contain" /></div>}
+                  <div className="text-center"><p className="mb-1 text-[10px] text-gray-500">Catalog image</p>
+                    {!cardMissingImage && selectedCard.imageUrl ? <img src={selectedCard.imageUrl} alt={selectedCard.name} onError={() => setDbImageBroken(true)} className="h-[clamp(56px,12dvh,110px)] w-24 object-contain" /> : <div className="flex h-16 w-24 flex-col items-center justify-center gap-1 text-gray-400"><ImageOff className="h-5 w-5" /><span className="text-[10px]">No image yet</span></div>}
+                  </div>
+                </div>
+                <div className="shrink-0 rounded-xl border bg-white p-3 dark:bg-gray-900" data-testid="scan-exact-card">
+                  <p className="font-semibold text-gray-900 dark:text-white">{selectedCard.name}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">{selectedCard.setName}</p>
+                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">#{selectedCard.cardNumber || "—"} · {selectedCard.year ?? "Year unknown"} · {selectedCard.subsetName || "Check base / parallel finish"}</p>
+                </div>
+                {alreadyOwned && <p className="text-xs text-amber-700 dark:text-amber-400">Already owned: {ownedQuantity}. Adding increases your quantity.</p>}
+                {cardMissingImage && reviewPhotoFile && (
+                  <div className="shrink-0 rounded-lg border border-blue-200 bg-blue-50 p-2 dark:bg-blue-950/20">
+                    <label className="flex items-center gap-2 text-xs text-blue-800 dark:text-blue-300"><input data-testid="scan-submit-photo" type="checkbox" className="accent-red-600" checked={submitImage} onChange={event => setSubmitImage(event.target.checked)} /> Submit photo for admin review (optional)</label>
+                    {submitImage && <Button data-testid="scan-review-crop" variant="ghost" size="sm" className="mt-1 h-8 text-xs" onClick={() => setStage("photo-crop")}>{reviewPhotoCropped ? "Adjust review crop" : "Crop review photo"}<ChevronRight className="ml-1 h-3 w-3" /></Button>}
+                  </div>
+                )}
+                <label className="flex shrink-0 items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-900 dark:bg-amber-950/20 dark:text-amber-300">
+                  <input data-testid="scan-exact-confirm" type="checkbox" checked={exactVersionConfirmed} onChange={event => setExactVersionConfirmed(event.target.checked)} className="mt-0.5 accent-red-600" />
+                  I checked the exact card, set, number and parallel / finish. This is my card.
+                </label>
+              </div>
+            </div>
+          )}
+
+          {stage === "photo-crop" && frontFile && (
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-3" data-testid="scan-review-crop-panel">
+              <p className="mb-2 rounded-lg bg-blue-50 p-2 text-xs text-blue-800">For card-image review only. Recognition keeps the original full frame.</p>
+              <CardCrop file={frontFile} format="visual-v1" onCancel={() => setStage("confirmed")} onConfirm={(cropped, url) => {
+                URL.revokeObjectURL(url);
+                setReviewPhotoFile(cropped);
+                setReviewPhotoCropped(true);
+                setStage("confirmed");
+              }} />
+            </div>
+          )}
+
+          {stage === "success" && selectedCard && (
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 text-center">
+              <CheckCircle2 className="h-14 w-14 text-green-600" />
+              <div><h2 className="text-xl font-bold text-gray-900 dark:text-white">Added to your collection!</h2><p className="mt-1 text-sm text-gray-500">{selectedCard.name} is now in your vault.</p></div>
+              {photoSubmission === "pending" && <p className="text-xs text-blue-600">Submitting your photo…</p>}
+              {photoSubmission === "submitted" && <p className="text-xs text-blue-600">Photo submitted for admin review.</p>}
+              {photoSubmission === "approved" && <p className="text-xs text-green-600">Photo submitted and approved.</p>}
+              {photoSubmission === "failed" && <p role="alert" className="text-xs text-red-600">Photo review failed. Your card was added.</p>}
+              <Button className="h-12 w-full bg-red-600 hover:bg-red-700" onClick={() => setLocation("/my-collection")}><FolderOpen className="mr-2 h-4 w-4" /> View in Collection</Button>
+              <Button data-testid="scan-another" variant="outline" className="h-12 w-full" disabled={photoSubmission === "pending"} onClick={handleReset}><RefreshCw className="mr-2 h-4 w-4" /> Scan Another Card</Button>
+            </div>
+          )}
+
+          {resultStage && (
+            <footer data-testid="scan-sticky-actions" className="sticky bottom-0 z-10 mt-2 shrink-0 border-t bg-gray-50 py-3 dark:bg-gray-950">
+              <div className="flex gap-2">
+                <Button data-testid="scan-add" className="h-12 flex-1 bg-red-600 font-semibold text-white hover:bg-red-700" onClick={advanceSelection} disabled={addToCollectionMutation.isPending || (stage === "results" ? !selectedFamily : stage === "versions" ? !selectedCard : !exactVersionConfirmed)}>
+                  <Star className="mr-2 h-4 w-4" />{addToCollectionMutation.isPending ? "Adding…" : stage === "confirmed" && alreadyOwned ? "Add another copy" : "Add"}
+                </Button>
+                <Button data-testid="scan-not-here" variant="outline" className="h-12 flex-1" disabled={addToCollectionMutation.isPending} onClick={openSearch}><Search className="mr-2 h-4 w-4" /> Not here?</Button>
+              </div>
+              {stage === "versions" && <button className="mt-2 w-full text-xs text-gray-500" onClick={() => { setSelectedFamily(null); setSelectedCard(null); setStage("results"); }}>Back to artwork</button>}
+              {stage === "confirmed" && <button className="mt-2 w-full text-xs text-gray-500" disabled={addToCollectionMutation.isPending} onClick={returnToResults}>Back to versions</button>}
+            </footer>
+          )}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-12">

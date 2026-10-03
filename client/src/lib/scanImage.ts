@@ -5,7 +5,7 @@ export type HeicScanConverter = (options: { blob: Blob; toType: string; quality:
 export async function convertHeicScanFile(file: File, converter?: HeicScanConverter): Promise<Blob> {
   if (!/\.(heic|heif)$/i.test(file.name) && !/image\/hei[cf]/i.test(file.type)) return file;
   try {
-    // Loaded only by CardCrop's visual-v1 path; conversion stays on this device.
+    // Loaded only by the visual-v1 path; conversion stays on this device.
     const convert = converter ?? (await import("heic2any")).default;
     const result = await convert({ blob: file, toType: "image/jpeg", quality: 0.88 });
     const blob = Array.isArray(result) ? result[0] : result;
@@ -73,7 +73,7 @@ export async function scanImageDimensions(file: Blob): Promise<{ width: number; 
 
 export function scanCanvasBlob(canvas: HTMLCanvasElement): Promise<Blob> {
   return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Could not save the cropped image. Please try again.")), "image/jpeg", 0.88);
+    canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Could not prepare this photo. Please try again.")), "image/jpeg", 0.88);
   });
 }
 
@@ -83,6 +83,7 @@ export async function prepareScanImage(file: File, rotation: number): Promise<HT
   const decodedFile = await convertHeicScanFile(file);
   let source: ImageBitmap | HTMLImageElement | null = null;
   let sourceUrl: string | null = null;
+  let canvas: HTMLCanvasElement | null = null;
   try {
     if (typeof createImageBitmap === "function") {
       const dimensions = await scanImageDimensions(decodedFile);
@@ -99,6 +100,7 @@ export async function prepareScanImage(file: File, rotation: number): Promise<HT
     if (!source) {
       sourceUrl = URL.createObjectURL(decodedFile);
       const image = new Image();
+      source = image;
       await new Promise<void>((resolve, reject) => {
         image.onload = () => resolve();
         image.onerror = () => reject(new Error(
@@ -113,7 +115,7 @@ export async function prepareScanImage(file: File, rotation: number): Promise<HT
     const originalWidth = source instanceof HTMLImageElement ? source.naturalWidth : source.width;
     const originalHeight = source instanceof HTMLImageElement ? source.naturalHeight : source.height;
     const { width, height } = boundedScanDimensions(originalWidth, originalHeight);
-    const canvas = document.createElement("canvas");
+    canvas = document.createElement("canvas");
     const sideways = rotation % 180 !== 0;
     canvas.width = sideways ? height : width;
     canvas.height = sideways ? width : height;
@@ -123,6 +125,9 @@ export async function prepareScanImage(file: File, rotation: number): Promise<HT
     ctx.rotate(rotation * Math.PI / 180);
     ctx.drawImage(source, -width / 2, -height / 2, width, height);
     return canvas;
+  } catch (error) {
+    if (canvas) canvas.width = canvas.height = 0;
+    throw error;
   } finally {
     if (source && "close" in source) source.close();
     if (source instanceof HTMLImageElement) source.src = "";
