@@ -90,9 +90,9 @@ export function ScanIdle({ authenticated, count, atLimit, ready, onScan, onRapid
       </Button>
       {onRapid && <div>
         <Button data-testid="scan-rapid-start" variant="outline" className="scan-idle-rapid" disabled={atLimit || !ready} onClick={onRapid} aria-describedby="rapid-test-note">
-          <Layers className="mr-2 h-4 w-4 shrink-0" aria-hidden="true" />Rapid scan · 9-sleeve binder page
+          <Layers className="mr-2 h-4 w-4 shrink-0" aria-hidden="true" />Rapid scan
         </Button>
-        <p id="rapid-test-note" className="mt-1 text-center text-xs text-gray-600">Test version: capture one card at a time.</p>
+        <p id="rapid-test-note" className="mt-1 text-center text-xs text-gray-600">Capture cards one at a time, then review and add together.</p>
       </div>}
       {atLimit && <p role="alert" className="text-center text-xs text-amber-700">Monthly scan limit reached. <button className="underline" onClick={onPlans}>View plans</button></p>}
       <Button variant="outline" className="scan-idle-search" onClick={onSearch}><Search className="mr-2 h-4 w-4" aria-hidden="true" />Search instead</Button>

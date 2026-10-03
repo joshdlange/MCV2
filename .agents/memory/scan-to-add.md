@@ -62,11 +62,11 @@ Do not describe isolated, mocked-auth browser checks as signed-in phone acceptan
 
 ### Approved start screen and binder direction
 
-The user explicitly loved the start screen with useful information below the scan/search buttons. Preserve that direction rather than redesigning it during camera work. They want future wording to lean toward scanning a nine-sleeve binder page.
+The user explicitly loved the start screen with useful information below the scan/search buttons. Preserve that direction rather than redesigning it during camera work.
 
 **Why:** The user confirmed the page with “I love this page now” and identified binder-page scanning as the intended direction.
 
-**How to apply:** The user subsequently requested a Rapid Scan binder-page test button between Scan a card and Search instead. Keep that entry on the start page, with an explicit one-card-at-a-time test note until whole-page recognition exists.
+**How to apply:** Keep the entry between Scan a card and Search instead, named only “Rapid scan.” The user clarified that sequential rapid capture is “AWESOME and works pretty well” on their phone and explicitly removed the nine-sleeve binder wording. Whole-page recognition is a separate future feature, not this mode.
 
 Rapid Scan is authorized in DEV as sequential live-camera captures feeding a reusable batch review grid, not whole-page binder recognition.
 
