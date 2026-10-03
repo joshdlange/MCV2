@@ -60,6 +60,14 @@ Do not describe isolated, mocked-auth browser checks as signed-in phone acceptan
 
 ## Historical experiment constraints (not the current v1 scope)
 
+### Approved start screen and binder direction
+
+The user explicitly loved the start screen with useful information below the scan/search buttons. Preserve that direction rather than redesigning it during camera work. They want future wording to lean toward scanning a nine-sleeve binder page.
+
+**Why:** The user confirmed the page with “I love this page now” and identified binder-page scanning as the intended direction.
+
+**How to apply:** Keep experimental camera testing separate from the approved start page. Do not describe sequential single-card capture as whole-page recognition before that capability exists.
+
 Rapid Scan is authorized in DEV as sequential live-camera captures feeding a reusable batch review grid, not whole-page binder recognition.
 
 **Why:** The user explicitly requested this intermediate step toward nine-pocket pages while keeping production and model changes out of scope.
