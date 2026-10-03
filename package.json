@@ -9,7 +9,7 @@
     "test:catalog-visual": "tsx --test server/tests/catalog-visual.test.ts server/tests/catalog-visual-batch.test.ts",
     "dev": "NODE_ENV=development tsx server/index.ts",
     "dev:phone": "vite build --mode phone && NODE_ENV=development tsx server/index.ts --phone-preview",
-    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && tsx scripts/prepare-catalog-visual-model.ts",
+    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --metafile=dist/server-build-meta.json && tsx scripts/prepare-catalog-visual-model.ts",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
     "db:push": "drizzle-kit push",

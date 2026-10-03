@@ -2,6 +2,7 @@
 - [Marketplace scrapped](marketplace-scrapped.md) — MCV is a companion to eBay/Whatnot, not a competitor; don't extend marketplace code or propose selling features.
 - [Two separate profile pages](profile-hub.md) — /collectors/:username is PUBLIC; /profile is PRIVATE Account Settings. Don't re-merge.
 - [Scan-to-Add constraints](scan-to-add.md) — minimal production preparation authorized; user publishes; preserve .local, separate ownership from photo approval.
+- [Publishing package boundaries](publishing-package.md) — isolate runtime packaging from preserved dev data; Git ignore is not a publishing filter; verify bundled production dependencies.
 - [Postgres LIMIT without ORDER BY](scan-matching-nondeterminism.md) — paginated candidate queries need explicit ORDER BY or results vary between runs.
 - [XP / Collector Power system](xp-system.md) — single source of truth computeUserXp; hybrid model (badge/image derived, card_added from decoupled no-FK xp_events ledger); farm-proof unique index
 - [Repo tooling quirks](env-quirks.md) — db:push prompt needs a TTY & aborts ALL changes at first prompt (users.email dupes block it permanently); no root tsconfig so tsc never checks the server
