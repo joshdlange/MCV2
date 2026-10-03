@@ -1,3 +1,6 @@
 build/
+screenshots/
+typecheck-idle.log
+idle-server.log
 images/
 catalog-fixture.json

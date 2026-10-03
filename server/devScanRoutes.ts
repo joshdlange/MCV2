@@ -131,7 +131,7 @@ export function registerDevScanRoutes(
       if (!body || Object.keys(body).some(k => !['code', 'bytes', 'kind', 'pageId', 'sequence', 'attempt', 'elapsedMs', 'navigation', 'previousCode', 'stage', 'failure', 'marginThreshold', 'shownOptions'].includes(k))
           || !codes.includes(body.code)
           || (body.marginThreshold !== undefined && body.marginThreshold !== 0.035)
-          || (body.shownOptions !== undefined && (![1, 2, 3].includes(body.shownOptions)))
+          || (body.shownOptions !== undefined && (![1, 2, 3, 4, 5].includes(body.shownOptions)))
           || (body.stage !== undefined && !['idle', 'preparing', 'photo-crop', 'crop', 'crop-back-choice', 'crop-back', 'scanning', 'error', 'results', 'versions', 'search', 'picker-year', 'picker-set', 'picker-subset', 'picker-card', 'confirmed', 'success'].includes(body.stage))
           || (body.failure !== undefined && !['auth', 'timeout', 'network', 'decode', 'file', 'response', 'other'].includes(body.failure))
           || (body.pageId !== undefined && !/^[a-f0-9-]{36}$/.test(body.pageId))

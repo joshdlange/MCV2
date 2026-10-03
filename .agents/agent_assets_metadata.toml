@@ -282,3 +282,73 @@ mtime_ms = 1791052389289
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/67c5bc07-fa67-4f16-84ab-245a164fa88c/3ab2b9d2-9071-4d39-86ed-b60b8db50ceb"
 storage_version_token = "1791052413996926"
 content_type = "text/html"
+
+[[outputs]]
+id = "pwsrbH_yuq25pJtJddV4x"
+uri = "file://client/scan-qa/screenshots/idle/mobile-390x844-mock-auth.png"
+type = "image"
+title = "Scan to Add — 390px mobile"
+description = "Full-page browser QA capture with simulated account and collection data."
+logical_id = "ae4aab5d-29fb-4127-9c21-3c8414aa8d0f"
+content_hash = "sha256:6137e5ed07ab68c12f0ff1e91405c542fc40c69957b32fb477b82b41f399380d"
+size = 238435
+mtime_ms = 1791057679241
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/ae4aab5d-29fb-4127-9c21-3c8414aa8d0f/3b144ecf-6149-4589-bb51-b6fa4a270293"
+storage_version_token = "1791057766311228"
+content_type = "image/png"
+
+[[outputs]]
+id = "kJEJJ1yRu314ntsndXlpn"
+uri = "file://client/scan-qa/screenshots/idle/desktop-1280x844-mock-auth.png"
+type = "image"
+title = "Scan to Add — desktop"
+description = "Full-page browser QA capture with simulated account and collection data."
+logical_id = "de5ef222-da09-4706-be14-d173f0c34047"
+content_hash = "sha256:2457bdcc6148902fff1f372137fb52f07e730a40dbbe9e6574d61784943b5639"
+size = 542222
+mtime_ms = 1791057684377
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/de5ef222-da09-4706-be14-d173f0c34047/a0f34464-b02c-4e7a-92f2-7709b85d5c2c"
+storage_version_token = "1791057767356615"
+content_type = "image/png"
+
+[[outputs]]
+id = "sZbw_EdfNzfJ0Y9zFDg4k"
+uri = "file://client/scan-qa/screenshots/rapid/live-tray-390-mock-auth-fake-camera.png"
+type = "image"
+title = "Rapid Scan — live camera and tray, 390px"
+description = "Actual components with simulated camera, recognition and account data; not a real-device capture."
+logical_id = "e4cc5b86-3f1f-4ae8-bba2-520e361dfe31"
+content_hash = "sha256:d9f3cf9292edfc5e51fbf19e326c3128b5391df0dc99915b1782a7314feb40e5"
+size = 58123
+mtime_ms = 1791057135302
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/e4cc5b86-3f1f-4ae8-bba2-520e361dfe31/fbb0db57-df4d-4681-aee6-03863147a15f"
+storage_version_token = "1791057251718232"
+content_type = "image/png"
+
+[[outputs]]
+id = "EOUny1znoBOepoFhQ9AO3"
+uri = "file://client/scan-qa/screenshots/rapid/review-390-mock-auth-fake-camera.png"
+type = "image"
+title = "Rapid Scan — review and Add all, 390px"
+description = "Isolated browser QA: suggested matches stay separate from explicit set/version choices."
+logical_id = "bceb1dfc-e05c-44f2-a3bc-33bbb7cf22bb"
+content_hash = "sha256:1f096be25854e0c36b8bd701ed0f4abdfd719ac95c5be291297043a2a3745a19"
+size = 75172
+mtime_ms = 1791057135561
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/bceb1dfc-e05c-44f2-a3bc-33bbb7cf22bb/af1057f8-856c-4ded-a0c5-b9d791b0fa19"
+storage_version_token = "1791057252543851"
+content_type = "image/png"
+
+[[outputs]]
+id = "8vPhN475TiQQ10QcnQ-Oa"
+uri = "file://client/scan-qa/screenshots/rapid/choice-collapsed-390-mock-auth-fake-camera.png"
+type = "image"
+title = "Rapid Scan — set and version choices, 390px"
+description = "All same-art sets remain visible; longer parallel lists expand on tap. Simulated QA catalog."
+logical_id = "c677e7f1-9f8b-4ace-88ab-f67399e17ccb"
+content_hash = "sha256:74caa15c3b05bae728b98e5e0278f98e83f402999c037bcd2828cde3f4217351"
+size = 60936
+mtime_ms = 1791057135825
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/c677e7f1-9f8b-4ace-88ab-f67399e17ccb/37637004-80d6-407b-a271-ff708766b4b7"
+storage_version_token = "1791057253304191"
+content_type = "image/png"

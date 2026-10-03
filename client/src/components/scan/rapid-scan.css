@@ -1,0 +1,41 @@
+/* MCV collector workbench: existing Bebas / sans typography, paper and precise red. */
+.rapid-scan { min-height: calc(100dvh - 4rem - var(--safe-area-top, 0px)); padding: 0 12px calc(20px + var(--safe-area-bottom, 0px)); }
+.rapid-shell { max-width: 640px; margin: auto; }
+.rapid-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 0 10px; gap: 12px; }
+.rapid-header h1 { font-size: 28px; line-height: 1; }
+.rapid-kicker { color: #a3121b; font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.rapid-copy { font-size: 12px; line-height: 1.5; color: #655a5d; margin: 8px 0 12px; }
+.rapid-camera { position: relative; background: #292328; border-radius: 14px; overflow: hidden; height: min(36dvh, 300px); display: flex; align-items: center; justify-content: center; }
+.rapid-camera video { width: 100%; height: 100%; object-fit: contain; }
+.rapid-outline { position: absolute; height: 78%; aspect-ratio: 5/7; border: 2px solid #f3e9e2; border-radius: 8px; pointer-events: none; }
+.rapid-camera-note { position: absolute; bottom: 10px; color: #faf2ec; background: #292328; border-radius: 4px; padding: 4px 8px; font-size: 10px; }
+.rapid-camera-message { color: #faf2ec; padding: 22px; text-align: center; font-size: 13px; line-height: 1.6; }
+.rapid-capture-controls { display: flex; gap: 8px; margin: 12px 0; }
+.rapid-capture-controls > button:first-child { flex: 1; }
+.rapid-tray { display: flex; overflow-x: auto; gap: 8px; padding: 5px 0 12px; }
+.rapid-thumb { flex: 0 0 112px; border: 1px solid #d8d0ca; background: #fcfbf9; border-radius: 8px; text-align: left; overflow: hidden; }
+.rapid-thumb img { height: 75px; width: 100%; object-fit: contain; background: #e8e2dc; }
+.rapid-thumb span { display: block; font-size: 10px; padding: 5px 6px; font-weight: 700; }
+.rapid-thumb .rapid-thumb-name { font-size: 11px; padding-bottom: 2px; line-height: 1.35; }
+.rapid-thumb-set { display: block; padding: 2px 6px 6px; font-size: 9px; line-height: 1.3; color: #655a5d; }
+.rapid-status { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 4px 7px; border-radius: 4px; background: #eee7df; color: #655a5d; }
+.rapid-status[data-tone="green"] { background: #e3efe5; color: #296038; }
+.rapid-status[data-tone="amber"] { background: #f8eacb; color: #77520f; }
+.rapid-status[data-tone="red"] { background: #f6dfdb; color: #a32229; }
+.rapid-review-grid { display: grid; grid-template-columns: minmax(0,1fr); gap: 10px; margin: 12px 0; }
+.rapid-review-item { border: 1px solid #d8d0ca; background: #fcfbf9; border-radius: 12px; padding: 12px; min-width: 0; }
+.rapid-item-top { display: flex; gap: 10px; align-items: flex-start; }
+.rapid-item-top img { height: 84px; width: 61px; object-fit: contain; border-radius: 5px; background: #e8e2dc; flex-shrink: 0; }
+.rapid-item-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 12px; line-height: 1.5; }
+.rapid-item-copy h3 { font-weight: 750; font-size: 14px; margin: 4px 0 2px; }
+.rapid-item-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.rapid-item-actions button { min-height: 40px; }
+.rapid-alert { border: 1px solid #e2b4ad; border-radius: 8px; padding: 12px; font-size: 12px; background: #f8e8e3; color: #a32229; margin: 8px 0; }
+.rapid-empty { border: 1px dashed #c9bdb4; border-radius: 12px; padding: 24px 18px; font-size: 13px; color: #655a5d; line-height: 1.7; }
+.rapid-footer { position: sticky; bottom: 0; padding: 12px 0 calc(10px + var(--safe-area-bottom, 0px)); background: #f5f3f0; z-index: 2; border-top: 1px solid #d8d0ca; display: flex; flex-direction: column; gap: 8px; }
+.rapid-footer p { font-size: 11px; color: #655a5d; }
+.rapid-choice { border-bottom: 1px solid #d8d0ca; margin-bottom: 12px; padding-bottom: 12px; }
+.rapid-choice h2 { font-size: 18px; font-weight: 700; }
+.rapid-skeleton { height: 100px; border-radius: 8px; background: #e8e2dc; margin-top: 10px; }
+.scan-fast .scan-versions-toggle { color: #a3121a; font-size: 12px; padding: 8px; min-height: 38px; text-decoration: underline; }
+@media (min-width:768px) { .rapid-review-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }

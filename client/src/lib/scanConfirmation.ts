@@ -45,6 +45,7 @@ export async function uploadScanFrontPhoto(
   getToken: () => Promise<string | undefined>,
   isCurrent: () => boolean,
   onAttempt?: () => void,
+  signal?: AbortSignal,
 ): Promise<{ autoApproved?: boolean }> {
   if (!file) throw new Error("The scan photo is no longer available. Please scan it again.");
   if (file.size > 5 * 1024 * 1024) {
@@ -61,6 +62,8 @@ export async function uploadScanFrontPhoto(
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body,
+    credentials: "include",
+    signal,
   });
   if (!response.ok) {
     const error = await response.json().catch(() => null);

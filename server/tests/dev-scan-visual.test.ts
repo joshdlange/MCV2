@@ -57,6 +57,22 @@ function make(embed?: (buffer: Buffer) => Promise<number[]>, maxWaiting = 4) {
 }
 const image = () => sharp({ create: { width: 40, height: 60, channels: 3, background: '#777777' } }).png().toBuffer();
 
+test("flagged references stay out of ranking and family alternatives until freshly replaced", () => {
+  const f = fixture(3);
+  const svc = new DevScanVisualService(f.index,f.matrix,f.catalog,undefined,4,enabled);
+  svc.setBadImages(new Map([[1,"bad.jpg"]]));
+  const check = () => {
+    const result = svc.rankVectors([vector(0)]);
+    assert.ok(!result.rankedCardIds!.includes(1));
+    assert.ok(!result.matches.some(c=>c.cardId===1));
+  };
+  check();
+  svc.setReferenceOverride(1,"different.jpg",null); check();
+  svc.setReferenceOverride(1,"bad.jpg",vector(0)); check();
+  svc.setReferenceOverride(1,"fixed.jpg",vector(0));
+  assert.equal(svc.rankVectors([vector(0)]).rankedCardIds![0],1);
+});
+
 test('strict development gate and disabled startup do no initialization', async () => {
   for (const NODE_ENV of [undefined, '', 'development', 'production', 'test']) {
     for (const REPLIT_DEPLOYMENT of [undefined, '', '1', 'false']) {

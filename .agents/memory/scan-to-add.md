@@ -60,6 +60,12 @@ Do not describe isolated, mocked-auth browser checks as signed-in phone acceptan
 
 ## Historical experiment constraints (not the current v1 scope)
 
+Rapid Scan is authorized in DEV as sequential live-camera captures feeding a reusable batch review grid, not whole-page binder recognition.
+
+**Why:** The user explicitly requested this intermediate step toward nine-pocket pages while keeping production and model changes out of scope.
+
+**How to apply:** Keep no OCR, no retained/uploaded photos without explicit submission, explicit ambiguous-set choice, and Undo limited to newly created owned rows. Future pocket captures should feed the same review flow.
+
 Phone scan identity selection must never preselect a set when artwork occurs in several sets. One tap on the correct set row adds it; parallel chips wrap below that row. Show five ranked artwork groups when available, full set names, and compact text-based browse steps starting at the guessed year's set list.
 
 **Why:** The user scanned 1992 Darkhawk #11 and the UI favored a 2024 reprint; artwork similarity alone would silently add the wrong printing.

@@ -4,6 +4,7 @@ import { writeFile, mkdir } from "node:fs/promises";
 import { searchDevScanCatalog, browseDevScanCatalog } from "../server/services/devScanBrowse";
 import { loadDevScanFrozenIndex, DevScanVisualService } from "../server/services/devScanVisual";
 import { assertDevScanTelemetryDatabase } from "../server/services/devScanTelemetry";
+import { readDevScanBadImages } from "../server/services/devScanBadImages";
 assertDevScanTelemetryDatabase();
 const { pool } = await import("../server/db");
 try {
@@ -30,6 +31,17 @@ try {
   const same = result.families.find(f=>f.options.some(c=>c.cardId===55352))!;
   assert.ok(same.options.some(c=>c.cardId===16483),"1992 original in reprint artwork group");
   assert.ok(same.options.some(c=>c.cardId===16583),"unindexed parallel retained");
+  const flags = readDevScanBadImages();
+  assert.ok(flags.has(22723) && flags.has(198004));
+  service.setBadImages(flags);
+  const darkhawkRow = index.rows.findIndex(r=>r.cardIds.includes(16483));
+  const filtered = service.rankVectors([Array.from(matrix.subarray(darkhawkRow*384,(darkhawkRow+1)*384))]);
+  for (const id of flags.keys()) {
+    assert.ok(!filtered.rankedCardIds!.includes(id),`flag ${id} excluded from ranking`);
+    assert.ok(!filtered.matches.some(c=>c.cardId===id),`flag ${id} excluded from expanded options`);
+  }
+  assert.equal(filtered.rankedCardIds![0],16483);
+  console.log("PASS actual frozen Darkhawk vector excludes every Markdown bad-image flag");
   await mkdir(".local/scan-v1/qa/phone-rows",{recursive:true});
   await writeFile(".local/scan-v1/qa/phone-rows/catalog-fixtures.json",JSON.stringify({
     result,search:await searchDevScanCatalog("darkhawk 11 1992"),

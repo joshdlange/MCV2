@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { DevScanWorkspace, type ScanBrowseHint } from "@/components/scan/dev-scan-workspace";
+import { ScanIdle } from "@/components/scan/scan-idle";
+import { RapidScanWorkspace } from "@/components/scan/rapid-scan-workspace";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -377,6 +379,7 @@ export default function ScanToAdd() {
 
   // Core scan state
   const [stage, setStage] = useState<Stage>("idle");
+  const [rapid, setRapid] = useState(false);
   const diagnosticStage = useRef<Stage>(stage);
   diagnosticStage.current = stage;
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -1108,8 +1111,9 @@ export default function ScanToAdd() {
 
   // ── Render ────────────────────────────────────────────────────────────────
 
-  // DEV visual-v1 is a bounded phone workspace, not the legacy scrolling page.
-  // The app shell reserves 4rem for its mobile header; only lists scroll here.
+  // DEV visual-v1 scan stages remain bounded phone workspaces; idle scrolls normally.
+  // The app shell reserves 4rem for its mobile header.
+  if (visualV1 && rapid) return <RapidScanWorkspace onExit={() => { setRapid(false); handleReset(); }} />;
   if (visualV1 && (stage === "results" || stage === "search")) {
     return <>
       <input data-testid="scan-file-input" ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
@@ -1152,10 +1156,10 @@ export default function ScanToAdd() {
       <section
         data-testid="scan-workspace"
         data-stage={stage}
-        className="h-[calc(100dvh-4rem-var(--safe-area-top,0px))] min-h-0 overflow-hidden bg-gray-50 dark:bg-gray-950"
+        className={`${stage === "idle" ? "min-h-[calc(100dvh-4rem-var(--safe-area-top,0px))]" : "h-[calc(100dvh-4rem-var(--safe-area-top,0px))] min-h-0 overflow-hidden"} bg-gray-50 dark:bg-gray-950`}
         style={{ paddingBottom: "var(--safe-area-bottom, 0px)" }}
       >
-        <div className="mx-auto flex h-full min-h-0 max-w-lg flex-col px-4">
+        <div className={`mx-auto flex flex-col px-4 ${stage === "idle" ? "scan-idle-layout" : "h-full min-h-0 max-w-lg"}`}>
           <input data-testid="scan-file-input" ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
           <header className="flex shrink-0 items-center justify-between gap-3 py-3">
             <div className="flex items-center gap-2">
@@ -1169,23 +1173,8 @@ export default function ScanToAdd() {
           </header>
 
           {stage === "idle" && (
-            <div className="flex min-h-0 flex-1 flex-col justify-center gap-5 pb-4">
-              <div className="text-center">
-                <h2 className="font-bebas text-4xl tracking-wide text-gray-900 dark:text-white">Your next card. In your vault.</h2>
-                <p className="mx-auto mt-2 max-w-xs text-sm text-gray-500">Photograph one card. Top artwork and version selected, ready for one-tap Add.</p>
-              </div>
-              <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-5 text-center dark:border-red-900 dark:bg-red-950/20">
-                <Camera className="mx-auto mb-3 h-10 w-10 text-red-600" />
-                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Use the whole photo. No crop needed.</p>
-                <p className="mt-1 text-xs text-gray-500">One card, good light, printed details in focus.</p>
-              </div>
-              <Button data-testid="scan-start" className="h-16 w-full rounded-xl bg-red-600 text-lg font-semibold text-white hover:bg-red-700" disabled={isAtScanLimit || !configResolved} onClick={launchPhotoPicker}>
-                <Camera className="mr-2 h-6 w-6" /> Scan next card
-              </Button>
-              {isAtScanLimit && <p role="alert" className="text-center text-xs text-amber-700">Monthly scan limit reached. <button className="underline" onClick={() => setLocation("/subscribe")}>View plans</button></p>}
-              <Button variant="outline" className="h-11 w-full" onClick={openSearch}><Search className="mr-2 h-4 w-4" /> Search instead</Button>
-              {userStats && <p className="text-center text-xs text-gray-400">{userStats.totalCards.toLocaleString()} cards in your collection</p>}
-            </div>
+            <ScanIdle authenticated={!!user} count={userStats?.totalCards} atLimit={isAtScanLimit} ready={configResolved}
+              onScan={launchPhotoPicker} onRapid={() => setRapid(true)} onSearch={openSearch} onPlans={() => setLocation("/subscribe")} />
           )}
 
           {working && (

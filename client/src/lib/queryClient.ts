@@ -60,6 +60,7 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  signal?: AbortSignal,
 ): Promise<Response> {
   const headers = await getAuthHeaders();
   
@@ -68,6 +69,7 @@ export async function apiRequest(
     headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
+    signal,
   });
 
   await throwIfResNotOk(res);

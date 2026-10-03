@@ -8,6 +8,7 @@ import {
   MODEL_VERSION, VECTOR_DIMENSIONS, embedCatalogVisualImage, preloadBundledCatalogVisualModel,
 } from './catalogVisualModel';
 import { scanFamilyKey, type ScanCandidateRow, type ScoredMatch } from './scanMatching';
+import { readDevScanBadImages } from "./devScanBadImages";
 
 export const isDevScanVisualEnabled = suppressAutomaticCatalogMutations;
 export interface DevScanCatalogCard extends ScanCandidateRow { active: boolean; setId?: number; mainSetId?: number | null }
@@ -134,6 +135,15 @@ export class DevScanVisualService {
   private tail: Promise<unknown> = Promise.resolve();
   private pending = 0;
   private overrides = new Map<number, { url: string; vector: number[] | null }>();
+  private badImages = new Map<number, string>();
+
+  setBadImages(flags: Map<number, string>) { this.badImages = new Map(flags); }
+  private suppressed(id: number) {
+    const flagged = this.badImages.get(id);
+    if (!flagged) return false;
+    const replacement = this.overrides.get(id);
+    return !replacement?.vector || replacement.url === flagged;
+  }
 
   /** A replacement masks only its card's old vector, not shared-image siblings. */
   setReferenceOverride(cardId: number, url: string, vector: number[] | null) {
@@ -186,7 +196,7 @@ export class DevScanVisualService {
    * No card number restriction: reprints can renumber the same artwork.
    * Only direct seed matches join (no similarity-chain drift). */
   private artworkSiblings(key: string): string[] {
-    const seed = this.optionsByFamily.get(key)!;
+    const seed = this.optionsByFamily.get(key)!.filter(c => !this.suppressed(c.id));
     const names = new Set(seed.map(c => c.name.toLowerCase().replace(/[^a-z0-9]/g, "")));
     const candidates = new Set([...names].flatMap(name => [...(this.familiesByName.get(name) ?? [])]));
     // A shared frozen reference is exact image identity even when catalog names
@@ -197,12 +207,13 @@ export class DevScanVisualService {
       const row = this.rowById.get(card.id);
       if (row === undefined) continue;
       for (const id of this.activeIdsByRow[row]) {
-        if (this.overrides.has(id)) continue;
+        if (this.overrides.has(id) || this.suppressed(id)) continue;
         const sibling = this.familyById.get(id)!;
         candidates.add(sibling); exact.add(sibling);
       }
     }
     const vectorFor = (card: DevScanCatalogCard) => {
+      if (this.suppressed(card.id)) return null;
       if (this.overrides.has(card.id)) return this.overrides.get(card.id)!.vector;
       const row = this.rowById.get(card.id);
       return row === undefined ? null : this.matrix.subarray(row * VECTOR_DIMENSIONS, (row + 1) * VECTOR_DIMENSIONS);
@@ -265,7 +276,7 @@ export class DevScanVisualService {
     const bestByFamily = new Map<string, { score: number; id: number }>();
     this.activeIdsByRow.forEach((ids, r) => {
       for (const id of ids) {
-        if (this.overrides.has(id)) continue;
+        if (this.overrides.has(id) || this.suppressed(id)) continue;
         const score = scores[r], key = this.familyById.get(id)!;
         direct.set(id, score);
         const best = bestByFamily.get(key);
@@ -274,7 +285,7 @@ export class DevScanVisualService {
     });
     for (const [id, override] of this.overrides) {
       const key = this.familyById.get(id);
-      if (!key || !override.vector) continue;
+      if (!key || !override.vector || this.suppressed(id)) continue;
       const score = Math.fround(Math.max(...vectors.map(q => q.reduce((sum, value, i) => sum + value * override.vector![i], 0))));
       direct.set(id, score);
       const best = bestByFamily.get(key);
@@ -290,7 +301,7 @@ export class DevScanVisualService {
         if (consumed.has(familyKey)) continue;
         const siblings = this.artworkSiblings(familyKey).filter(key => !consumed.has(key));
         siblings.forEach(key => consumed.add(key));
-        const options = siblings.flatMap(key => this.optionsByFamily.get(key)!).map((row): ScoredMatch => {
+        const options = siblings.flatMap(key => this.optionsByFamily.get(key)!).filter(row => !this.suppressed(row.id)).map((row): ScoredMatch => {
           const similarity = direct.get(row.id);
           return {
             cardId: row.id, name: row.name, cardNumber: row.cardNumber, setName: row.setName,
@@ -350,6 +361,7 @@ export async function initializeDevScanVisual(): Promise<DevScanVisualService | 
     }).from(cards).innerJoin(cardSets, eq(cards.setId, cardSets.id))
       .leftJoin(mainSets, eq(cardSets.mainSetId, mainSets.id));
     const next = new DevScanVisualService(index, matrix, catalog as DevScanCatalogCard[]);
+    next.setBadImages(readDevScanBadImages());
     await preloadBundledCatalogVisualModel();
     service = next;
     return next;

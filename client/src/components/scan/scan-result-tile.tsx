@@ -12,19 +12,30 @@ export interface ScanTileCard {
 export interface ScanArtworkFamily {
   familyKey: string; score: number; representativeCardId: number; options: ScanTileCard[];
 }
+/** Remove a repeated parent only at name boundaries; never erase variant identity. */
+export function scanSubsetLabel(card: ScanTileCard, value = card.subsetName ?? "") {
+  const parent = card.mainSetName || card.setName;
+  if (!parent) return value.trim();
+  const escaped = parent.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return value.replace(new RegExp(`^${escaped}(?:\\s*[-–—:·/]\\s*|\\s+|$)`, "i"), "")
+    .replace(new RegExp(`(?:\\s*[-–—:·/]\\s*|\\s+)${escaped}$`, "i"), "").trim();
+}
 function isBaseOption(card: ScanTileCard) {
-  return !card.subsetName || /^base(?: set)?$/i.test(card.subsetName)
-    || !!card.mainSetName && (card.subsetName.toLowerCase() === card.mainSetName.toLowerCase()
-      || card.setName.toLowerCase() === card.mainSetName.toLowerCase());
+  const label = scanSubsetLabel(card);
+  return !label || /^base(?: set)?$/i.test(label);
 }
 
 /** Highlighting is a ranking hint, never a selection of a set or ownership. */
-export function ScanResultTile({ family, pending, onAdd, compact = false, primary = false }: {
+export function ScanResultTile({ family, pending, onAdd, onSelect, compact = false, primary = false }: {
   family: ScanArtworkFamily; pending: boolean; compact?: boolean; primary?: boolean;
-  onAdd: (card: ScanTileCard, missingImage: boolean) => void;
+  onAdd?: (card: ScanTileCard, missingImage: boolean) => void;
+  onSelect?: (card: ScanTileCard, missingImage: boolean) => void;
 }) {
   const [variants, setVariants] = useState<Record<string, number>>({});
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [broken, setBroken] = useState<Record<number, boolean>>({});
+  const action = onSelect ?? onAdd;
+  const actionLabel = onSelect ? "Choose" : "Add";
   const groups = new Map<string, ScanTileCard[]>();
   for (const option of family.options) {
     // Parallels share a main-set identity. A year is always part of that
@@ -43,16 +54,16 @@ export function ScanResultTile({ family, pending, onAdd, compact = false, primar
       const missing = !hasUsableScanCardImage(card.imageUrl) || !!broken[card.cardId];
       const label = `${card.name}, #${card.cardNumber}, ${card.mainSetName || card.setName}, ${card.year ?? "year unknown"}`;
       const variantLabel = (option: ScanTileCard) => {
-        const basic = isBaseOption(option) ? "Base" : option.subsetName!;
-        const duplicates = options.filter(c => (isBaseOption(c) ? "Base" : c.subsetName) === basic);
+        const basic = isBaseOption(option) ? "Base" : scanSubsetLabel(option);
+        const duplicates = options.filter(c => (isBaseOption(c) ? "Base" : scanSubsetLabel(c)) === basic);
         if (duplicates.length < 2) return basic;
-        if (duplicates.some(c => c.setName !== option.setName)) return `${basic} · ${option.setName}`;
+        if (duplicates.some(c => c.setName !== option.setName)) return `${basic} · ${scanSubsetLabel(option, option.setName) || "Base"}`;
         if (duplicates.some(c => c.cardNumber !== option.cardNumber)) return `${basic} · #${option.cardNumber}`;
         return `${basic} · catalog ${option.cardId}`;
       };
       return <section className="scan-set-choice" data-testid="scan-set-choice" data-main-set-id={card.mainSetId ?? card.setId} key={key}>
         <div className="scan-identity-row">
-          <button className="scan-identity" data-testid="scan-set-row" data-card-id={card.cardId} aria-label={`Add ${label}`} disabled={pending} onClick={() => onAdd(card, missing)}>
+          <button className="scan-identity" data-testid="scan-set-row" data-card-id={card.cardId} aria-label={`${actionLabel} ${label}`} disabled={pending || !action} onClick={() => action?.(card, missing)}>
             <div className="scan-art">{!missing
               ? <img src={card.imageUrl!} alt={card.name} onError={() => setBroken(old => ({ ...old, [card.cardId]: true }))} />
               : <div className="flex flex-col items-center gap-1 p-1 text-center text-[10px] text-gray-600"><ImageOff className="h-5 w-5" />No photo</div>}</div>
@@ -60,17 +71,19 @@ export function ScanResultTile({ family, pending, onAdd, compact = false, primar
               <h3>{card.name}</h3>
               <p className="scan-card-number">#{card.cardNumber}</p>
               <p className="scan-set-name">{card.mainSetName || card.setName}</p>
-              {card.mainSetName && card.setName !== card.mainSetName && <p className="scan-set-name">{card.setName}</p>}
-              {options.length === 1 && card.subsetName && !/^base(?: set)?$/i.test(card.subsetName) && !card.setName.toLowerCase().includes(card.subsetName.toLowerCase()) && <p className="scan-set-name">{card.subsetName}</p>}
+              {card.mainSetName && card.setName !== card.mainSetName && scanSubsetLabel(card, card.setName) && <p className="scan-set-name">{scanSubsetLabel(card, card.setName)}</p>}
+              {options.length === 1 && !isBaseOption(card) && scanSubsetLabel(card, card.setName) !== scanSubsetLabel(card) && <p className="scan-set-name">{scanSubsetLabel(card)}</p>}
               <p className="scan-year">{card.year ?? "Year unknown"}</p>
             </div>
           </button>
-          <Button data-testid={primary ? "scan-add" : "scan-option-add"} className="scan-primary scan-row-add" aria-label={`Add to collection: ${label}`} disabled={pending} onClick={() => onAdd(card, missing)}>{pending ? "Adding…" : "Add"}</Button>
+          <Button data-testid={onSelect ? "scan-option-select" : primary ? "scan-add" : "scan-option-add"} className="scan-primary scan-row-add" aria-label={`${onSelect ? "Choose card" : "Add to collection"}: ${label}`} disabled={pending || !action} onClick={() => action?.(card, missing)}>{pending ? (onSelect ? "Please wait…" : "Adding…") : actionLabel}</Button>
         </div>
         {options.length > 1 && <div data-testid="scan-version-chips" aria-label="Parallels in this set">
-          {options.map(option => <button key={option.cardId} className="scan-chip" data-card-id={option.cardId} aria-pressed={variants[key] === option.cardId} disabled={pending} onClick={() => setVariants(old => ({ ...old, [key]: option.cardId }))}>
-            {variants[key] === option.cardId && <Check className="mr-1 inline h-3 w-3" />}{variantLabel(option)}
+          {(expanded[key] ? options : options.slice(0, 3)).map(option => <button key={option.cardId} className="scan-chip" data-card-id={option.cardId} aria-pressed={card.cardId === option.cardId} disabled={pending} onClick={() => setVariants(old => ({ ...old, [key]: option.cardId }))}>
+            {card.cardId === option.cardId && <Check className="mr-1 inline h-3 w-3" />}{variantLabel(option)}
           </button>)}
+          {options.length > 3 && <button className="scan-versions-toggle" aria-expanded={!!expanded[key]} disabled={pending} onClick={() => setExpanded(old => ({ ...old, [key]: !old[key] }))}>{expanded[key] ? "Fewer versions" : `+${options.length - 3} more versions`}</button>}
+          {!expanded[key] && options.slice(3).some(option => option.cardId === card.cardId) && <span className="scan-chip" aria-label="Selected version">{variantLabel(card)}</span>}
         </div>}
         <button data-testid="scan-report-image" className="scan-report-link" disabled={pending} onClick={() => openImageReport({ cardId: card.cardId, name: card.name })}>Report wrong image</button>
       </section>;
