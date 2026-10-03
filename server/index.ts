@@ -5,6 +5,7 @@ import { installStartupGate } from "./startupGate";
 import { createDependencyHealthProbe, installDependencyHealth } from "./dependencyHealth";
 import { installDataFixWriteGate } from "./dataFixWriteGate";
 import { suppressAutomaticCatalogMutations } from "./devCatalogSnapshot";
+import { allowSuperfractorDuplicateRepair } from "./startupRepairPolicy";
 import path from "path";
 import fs from "fs";
 
@@ -720,8 +721,12 @@ server.listen({
       // junk one-card "Superfractor 1/N" subsets into the single canonical
       // Superfractor subset, repointing owned copies (marker-gated, dev + prod).
       try {
-        const { fixSuperfractor2026JunkSets } = await import('./seeds/fixSuperfractor2026JunkSets');
-        await fixSuperfractor2026JunkSets();
+        if (allowSuperfractorDuplicateRepair()) {
+          const { fixSuperfractor2026JunkSets } = await import('./seeds/fixSuperfractor2026JunkSets');
+          await fixSuperfractor2026JunkSets();
+        } else {
+          console.log('[Superfractor 2026 Fix] Disabled; explicit maintenance opt-in required.');
+        }
       } catch (error) {
         console.error('Startup fix (2026 Superfractor junk sets) failed:', error);
       }

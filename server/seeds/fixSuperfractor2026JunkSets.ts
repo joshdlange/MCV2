@@ -1,5 +1,6 @@
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
+import { allowSuperfractorDuplicateRepair } from '../startupRepairPolicy';
 
 /**
  * One-time idempotent fix: 2026 Topps Chrome Marvel Comics "Superfractor 1/N"
@@ -30,6 +31,7 @@ const MARKER = 'superfractor_2026_junk_sets_fix_v1';
 const CANONICAL_SLUG = '2026-topps-chrome-marvel-comics-superfractor';
 
 export async function fixSuperfractor2026JunkSets(): Promise<void> {
+  if (!allowSuperfractorDuplicateRepair()) return;
   const done = await db.execute(sql`SELECT 1 FROM startup_migrations WHERE name = ${MARKER}`);
   if (((done as any).rows ?? []).length > 0) return;
 

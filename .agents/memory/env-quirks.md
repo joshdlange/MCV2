@@ -5,6 +5,13 @@ description: Non-obvious environment gotchas that waste time — schema push pro
 
 # Repo tooling quirks
 
+## Off-workspace release staging and restoration
+Off-workspace storage can hit a quota despite `df` reporting free capacity. Keep originals until a copied or compressed backup has passed content checksums.
+
+**Why:** Release staging hit cross-device moves and quota failures; a verified compressed archive avoided losing dev scan data.
+
+**How to apply:** Treat external staging as temporary, restore promptly, and verify counts/checksums. When restoring ignored files after a branch switch, merge with tracked files rather than replacing their entire parent directory; checkout may have restored tracked files in that same directory.
+
 ## `npm run db:push` (drizzle-kit) is interactive and needs a TTY
 When the schema has ambiguous changes (e.g. a new table whose name resembles a legacy one),
 drizzle-kit prompts "create vs rename" and BLOCKS. Piping a newline into it does NOT satisfy the
