@@ -55,6 +55,8 @@
 .dark .scan-idle { color: #f5efeb; }
 .dark .scan-idle-copy, .dark .scan-idle-footer p, .dark .scan-idle-tips li { color: #bab4b3; }
 .dark .scan-idle .scan-idle-search, .dark .scan-idle .scan-idle-rapid { color: #e4dcdc; border-color: #605151; }
+.scan-idle .scan-idle-rapid, .dark .scan-idle .scan-idle-rapid { border-color: var(--idle-red); }
+.scan-idle .scan-idle-rapid svg { color: var(--idle-red); }
 .dark .scan-idle-footer { border-color: #493d3d; }
 .dark .scan-idle-tips li { background: #352b2c; }
 @media (max-height: 700px) {
