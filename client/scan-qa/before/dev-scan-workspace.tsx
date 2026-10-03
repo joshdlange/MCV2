@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Camera, Search, ScanLine, ChevronRight } from "lucide-react";
+import { ArrowLeft, Camera, Search, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -10,6 +10,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { runDevScanAction, uploadScanFrontPhoto } from "@/lib/scanConfirmation";
 import { ScanAddedActions } from "./report-image-dialog";
 import { CardCrop } from "@/components/CardCrop";
+import { SetThumbnail } from "@/components/cards/set-thumbnail";
+import type { CardSet } from "@shared/schema";
 import type { ScanEventUpdate } from "@/lib/scanTelemetry";
 import { ScanResultTile, type ScanArtworkFamily, type ScanTileCard } from "./scan-result-tile";
 import "./scan-workspace.css";
@@ -18,10 +20,10 @@ import "./scan-workspace.css";
 // show up to three alternatives; this is a UI ambiguity rule, not probability.
 export const SCAN_ARTWORK_AMBIGUITY_MARGIN = 0.035;
 export interface ScanBrowseHint { year: number; mainSetId: number | null; setId: number; setName: string }
-interface PickerSet { id: number; name: string; type: "main_set" | "card_set"; subset_count: number; totalCards?: number }
+interface PickerSet { id: number; name: string; type: "main_set" | "card_set"; subset_count: number }
 interface PickerSubset { id: number; name: string; isInsertSubset: boolean; totalCards: number }
 interface PickerCard { id: number; name: string; cardNumber: string; frontImageUrl: string | null; variation: string | null }
-interface SearchCard extends ScanTileCard { setId: number; mainSetId: number | null; isBase?: boolean; exactNumber: boolean }
+interface SearchCard extends ScanTileCard { setId: number; mainSetId: number | null; mainSetName?: string; isBase?: boolean; exactNumber: boolean }
 type View = "results" | "find" | "offer" | "crop";
 type BrowseStep = "year" | "set" | "subset" | "card";
 
@@ -54,8 +56,8 @@ export function DevScanWorkspace({ families, margin, browseHint, previewUrl, pho
 }) {
   const [view, setView] = useState<View>(initialSearch ? "find" : "results");
   const [mode, setMode] = useState<"browse" | "search">("browse");
-  const [step, setStep] = useState<BrowseStep>(browseHint ? "set" : "year");
-  const [year, setYear] = useState<number | null>(browseHint?.year ?? null);
+  const [step, setStep] = useState<BrowseStep>("year");
+  const [year, setYear] = useState<number | null>(null);
   const [set, setSet] = useState<PickerSet | null>(null);
   const [subset, setSubset] = useState<PickerSubset | null>(null);
   const [setId, setSetId] = useState<number | null>(null);
@@ -63,6 +65,7 @@ export function DevScanWorkspace({ families, margin, browseHint, previewUrl, pho
   const [debounced, setDebounced] = useState("");
   const [offerCard, setOfferCard] = useState<ScanTileCard | null>(null);
   const [reviewFile, setReviewFile] = useState(photo);
+  const [favorites, setFavorites] = useState<number[]>([]);
   const saving = useRef(false);
   const mounted = useRef(true);
   const decisionLogged = useRef(false);
@@ -70,20 +73,20 @@ export function DevScanWorkspace({ families, margin, browseHint, previewUrl, pho
   const { user } = useAuth();
   const qc = useQueryClient();
   const ambiguous = families.length > 1 && (margin == null || margin < SCAN_ARTWORK_AMBIGUITY_MARGIN);
-  const shown = families.slice(0, 5);
+  // Two readable artworks side by side are preferable to three tiny phone cards.
+  const shown = families.slice(0, ambiguous ? 2 : 1);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => {
     if (decisionLogged.current || !families.length) return;
     decisionLogged.current = true;
     // Code-only diagnostic: no card titles, photos or user-entered search text.
-    // Use the existing allowlisted diagnostic; there is no set preselection.
-    void apiRequest("POST", "/api/cards/scan/client-event", { code: ambiguous ? "artwork_ambiguous" : "results_ready", stage: "results", marginThreshold: SCAN_ARTWORK_AMBIGUITY_MARGIN, shownOptions: shown.length }).catch(() => {});
+    void apiRequest("POST", "/api/cards/scan/client-event", { code: ambiguous ? "artwork_ambiguous" : "artwork_preselected", stage: "results", marginThreshold: SCAN_ARTWORK_AMBIGUITY_MARGIN, shownOptions: shown.length }).catch(() => {});
   }, [families.length, ambiguous, shown.length]);
   useEffect(() => { const timer = setTimeout(() => setDebounced(query.trim()), 250); return () => clearTimeout(timer); }, [query]);
-  const years = useScanList<number>("/api/cards/scan/browse/years", view === "find" && mode === "browse");
-  const sets = useScanList<PickerSet>(`/api/cards/scan/browse/sets?year=${year}`, view === "find" && mode === "browse" && step === "set" && year !== null);
-  const subsets = useScanList<PickerSubset>(`/api/cards/scan/browse/subsets?mainSetId=${set?.id}&year=${year}`, view === "find" && mode === "browse" && step === "subset" && !!set);
-  const cards = useScanList<PickerCard>(`/api/cards/scan/browse/cards?setId=${setId}&search=${encodeURIComponent(debounced)}`, view === "find" && mode === "browse" && step === "card" && !!setId);
+  const years = useScanList<number>("/api/cards/picker/years", view === "find" && mode === "browse" && step === "year");
+  const sets = useScanList<PickerSet>(`/api/cards/picker/sets?year=${year}`, view === "find" && mode === "browse" && step === "set" && year !== null);
+  const subsets = useScanList<PickerSubset>(`/api/cards/picker/subsets?mainSetId=${set?.id}&year=${year}`, view === "find" && mode === "browse" && step === "subset" && !!set);
+  const cards = useScanList<PickerCard>(`/api/cards/picker/cards?setId=${setId}&search=${encodeURIComponent(debounced)}`, view === "find" && mode === "browse" && step === "card" && !!setId);
   const search = useScanList<SearchCard>(`/api/cards/scan/search?q=${encodeURIComponent(debounced)}`, view === "find" && mode === "search" && !!debounced);
   const refresh = () => {
     for (const key of ["/api/collection", "/api/stats", "/api/user/stats", "/api/collection/check"]) void qc.invalidateQueries({ queryKey: [key] });
@@ -146,9 +149,9 @@ export function DevScanWorkspace({ families, margin, browseHint, previewUrl, pho
     setView("find"); setMode("browse"); setQuery("");
     if (browseHint) {
       setYear(browseHint.year);
-      setStep("set");
-    } else { setYear(null); setStep("year"); }
-    setSet(null); setSubset(null); setSetId(null);
+      setSet({ id: browseHint.mainSetId ?? browseHint.setId, name: browseHint.setName, type: browseHint.mainSetId ? "main_set" : "card_set", subset_count: 0 });
+      setSetId(browseHint.setId); setSubset(null); setStep("card");
+    } else setStep("year");
   }
   function back() {
     if (saving.current || submitPhoto.isPending) return;
@@ -167,59 +170,40 @@ export function DevScanWorkspace({ families, margin, browseHint, previewUrl, pho
   useHardwareBackHandler(() => { back(); return true; });
   const list = mode === "search" ? search : step === "year" ? years : step === "set" ? sets : step === "subset" ? subsets : cards;
   const pending = add.isPending;
-  function contextRow(item: PickerSubset | PickerSet) {
-    return <button key={item.id} className="scan-context-row" onClick={() => {
+  function subsetTile(item: PickerSubset | PickerSet) {
+    const cardSet = { id: item.id, name: item.name, year: year!, slug: "", description: null, imageUrl: null, totalCards: "totalCards" in item ? item.totalCards : 0, mainSetId: set?.id ?? null, isActive: true, isCanonical: false, isInsertSubset: "isInsertSubset" in item ? item.isInsertSubset : false, canonicalSource: null, archivedAt: null, createdAt: new Date() } as CardSet;
+    return <SetThumbnail key={item.id} set={cardSet} isFavorite={favorites.includes(item.id)} onFavorite={() => setFavorites(old => old.includes(item.id) ? old.filter(id => id !== item.id) : [...old, item.id])} showAdminControls={false} onClick={() => {
       setQuery("");
       if ("type" in item) { setSet(item); setSubset(null); setStep(item.type === "main_set" ? "subset" : "card"); setSetId(item.type === "card_set" ? item.id : null); }
       else { setSubset(item); setSetId(item.id); setStep("card"); }
-    }}><span>{item.name}</span><small>{item.totalCards == null ? "Count unavailable" : `${item.totalCards} cards`}</small><ChevronRight className="h-4 w-4 shrink-0 text-red-700" /></button>;
+    }} />;
   }
   return <section data-testid="scan-workspace" data-stage={view === "find" ? `picker-${mode === "search" ? "search" : step}` : view} className="scan-fast h-[calc(100dvh-4rem-var(--safe-area-top,0px))] overflow-hidden" style={{ paddingBottom: "var(--safe-area-bottom,0px)" }}>
     <div className="mx-auto flex h-full min-h-0 max-w-lg flex-col px-3">
       <header className="flex shrink-0 items-center justify-between py-3"><h1 className="scan-heading flex items-center gap-2 text-2xl"><ScanLine className="h-5 w-5 text-red-600" />Scan to add</h1><Button data-testid="scan-reset" variant="ghost" size="sm" disabled={pending || submitPhoto.isPending} onClick={discardAndReset}>New scan</Button></header>
       {view === "results" && <>
-        <div className="mb-2 flex shrink-0 items-center gap-3">{previewUrl && <img src={previewUrl} alt="Your full scan" className="h-12 w-10 rounded object-contain" />}<div><h2 className="text-sm font-semibold">Check artwork, set and year</h2><p className="text-xs text-gray-600">Tap the correct set row or Add. Nothing is added until you choose.</p></div></div>
-        {elapsedMs !== undefined && <p data-testid="scan-dev-elapsed" className="mb-2 text-[10px] text-gray-500">Dev scan elapsed: {(elapsedMs / 1000).toFixed(2)}s · {ambiguous ? "Close artwork scores" : "Best artwork highlighted"}</p>}
-        <div data-testid="scan-result-list" className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{shown.map((family, i) => <ScanResultTile key={family.familyKey} family={family} primary={i === 0} pending={pending} onAdd={addCard} />)}</div>
+        <div className="mb-2 flex shrink-0 items-center gap-3">{previewUrl && <img src={previewUrl} alt="Your full scan" className="h-12 w-10 rounded object-contain" />}<div><h2 className="text-sm font-semibold">{ambiguous ? "A close match. Which artwork is yours?" : "Ready to add"}</h2><p className="text-xs text-gray-600">{ambiguous ? "Compare the artwork, then tap Add." : "Top artwork and visual version selected. Change a version below."}</p></div></div>
+        {elapsedMs !== undefined && <p data-testid="scan-dev-elapsed" className="mb-2 text-[10px] text-gray-500">Dev scan elapsed: {(elapsedMs / 1000).toFixed(2)}s · {ambiguous ? "Close artwork scores" : "Top match selected"}</p>}
+        <div data-testid="scan-result-list" className="min-h-0 flex-1 overflow-y-auto overscroll-contain"><div className={ambiguous ? "scan-grid" : ""}>{shown.map((family, i) => <ScanResultTile key={family.familyKey} family={family} primary={i === 0} pending={pending} onAdd={addCard} />)}</div></div>
         <footer data-testid="scan-sticky-actions" className="shrink-0 py-3"><Button data-testid="scan-not-here" className="h-11 w-full" variant="outline" disabled={pending} onClick={findCard}><Search className="mr-2 h-4 w-4" />Not here? Browse or search</Button></footer>
       </>}
       {view === "find" && <>
         <div className="mb-2 flex shrink-0 gap-2"><Button size="sm" variant={mode === "browse" ? "default" : "outline"} onClick={() => { setMode("browse"); setQuery(""); }}>Browse cards</Button><Button size="sm" variant={mode === "search" ? "default" : "outline"} onClick={() => { setMode("search"); setQuery(""); }}>Type search</Button></div>
-        {mode === "browse" && <>
-          <div className="mb-2 flex shrink-0 items-center gap-2">
-            <label htmlFor="scan-browse-year" className="text-xs font-semibold">Year</label>
-            <select id="scan-browse-year" data-testid="scan-year-select" className="scan-year-select" value={year ?? ""} disabled={years.isLoading} onChange={e => {
-              const nextYear = e.target.value ? Number(e.target.value) : null;
-              setYear(nextYear); setSet(null); setSubset(null); setSetId(null); setQuery(""); setStep(nextYear ? "set" : "year");
-            }}>
-              <option value="">Choose year</option>
-              {year !== null && !years.data?.includes(year) && <option value={year}>{year}</option>}
-              {years.data?.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-            {browseHint?.year === year && <span className="text-[11px] text-gray-600">Scan’s year guess</span>}
-          </div>
-          {years.isError && step !== "year" && <button className="mb-2 text-left text-xs text-red-700 underline" onClick={() => void years.refetch()}>Years could not load. Retry</button>}
-          <nav aria-label="Browse context" className="scan-breadcrumb shrink-0">
-            <button onClick={() => { setStep("year"); setSet(null); setSubset(null); setSetId(null); setQuery(""); }}>Year{year ? ` ${year}` : ""}</button>
-            <ChevronRight className="h-3 w-3" />
-            <button disabled={!year} aria-current={step === "set" ? "step" : undefined} onClick={() => { setStep("set"); setSubset(null); setSetId(null); setQuery(""); }}>Set{set ? `: ${set.name}` : ""}</button>
-            <ChevronRight className="h-3 w-3" />
-            <button disabled={!set || set.type !== "main_set"} aria-current={step === "subset" ? "step" : undefined} onClick={() => { setStep("subset"); setSetId(null); setQuery(""); }}>Subset{subset ? `: ${subset.name}` : ""}</button>
-          </nav>
-          <h2 className="mb-2 shrink-0 text-sm font-semibold">{step === "year" ? "Choose a year above" : step === "set" ? `Choose a set from ${year}` : step === "subset" ? "Choose a subset" : "Choose your card"}</h2>
-        </>}
-        {(mode === "search" || step !== "year") && <Input data-testid="scan-search-input" className="mb-2 h-11 shrink-0 bg-stone-50" placeholder={mode === "search" ? "Name, number, set, year…" : step === "card" ? "Filter cards by name or number…" : `Filter ${step === "set" ? "sets" : "subsets"} by name…`} value={query} onChange={e => setQuery(e.target.value)} />}
+        {mode === "browse" && <nav aria-label="Browse context" className="mb-2 flex shrink-0 flex-wrap gap-1 text-xs">
+          {(["year", "set", "subset", "card"] as BrowseStep[]).map((s, i) => <button key={s} disabled={i > ["year","set","subset","card"].indexOf(step)} className={`rounded px-2 py-2 ${step === s ? "bg-red-100 font-semibold text-red-800" : "bg-stone-200"}`} onClick={() => { setStep(s); setQuery(""); if (s === "year") { setSet(null); setSubset(null); setSetId(null); } if (s === "set") { setSubset(null); setSetId(null); } }}>{i + 1} · {s === "year" && year ? year : s === "set" && set ? set.name : s === "subset" && subset ? subset.name : s[0].toUpperCase()+s.slice(1)}</button>)}
+        </nav>}
+        {mode === "browse" && step === "card" && browseHint && <p className="mb-2 text-[11px] text-gray-600">Suggested set from the scan. Change Year, Set or Subset above.</p>}
+        {(mode === "search" || step === "card") && <Input data-testid="scan-search-input" className="mb-2 h-11 shrink-0 bg-stone-50" placeholder={mode === "search" ? "Name, set or exact card number…" : "Filter this checklist…"} value={query} onChange={e => setQuery(e.target.value)} />}
         <div data-testid={mode === "search" ? "scan-search-list" : "scan-browse-list"} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {list.isLoading && <div className="scan-grid">{[0,1,2,3].map(n => <div key={n} className="scan-skeleton" />)}</div>}
           {list.isError && <div role="alert" className="rounded-lg border border-red-200 p-4 text-sm">This checklist couldn't load.<Button variant="outline" className="mt-3 w-full" onClick={() => void list.refetch()}>Retry</Button></div>}
           {mode === "search" && !debounced && <div className="rounded-xl border border-dashed border-stone-300 p-5 text-sm text-gray-600">Try a character or printed number. Exact numbers come first; versions stay together.</div>}
           {!list.isLoading && !list.isError && list.data?.length === 0 && (mode === "browse" || debounced) && <div className="rounded-xl border border-dashed p-5 text-sm">No cards in this context. Change the year or set, or try a different search.</div>}
-          {mode === "browse" && (step === "set" || step === "subset") && (() => {
-            const rows = (step === "set" ? sets.data : subsets.data)?.filter(item => query.toLowerCase().trim().split(/\s+/).every(token => item.name.toLowerCase().includes(token)));
-            return <div>{rows?.map(contextRow)}{rows?.length === 0 && !!list.data?.length && <p className="p-4 text-sm">No names match this filter. Try fewer words.</p>}</div>;
-          })()}
-          {mode === "browse" && step === "card" && <div className="scan-grid">{cards.data?.map(c => <ScanResultTile key={c.id} pending={pending} compact family={{ familyKey: String(c.id), score: 0, representativeCardId: c.id, options: [{ cardId: c.id, name: c.name, cardNumber: c.cardNumber, imageUrl: c.frontImageUrl, subsetName: c.variation, setName: subset?.name ?? set?.name ?? "", mainSetName: set?.name, mainSetId: set?.type === "main_set" ? set.id : null, setId: setId!, year }] }} onAdd={addCard} />)}</div>}
-          {mode === "search" && groupSearch(search.data ?? []).map(family => <ScanResultTile key={family.familyKey} family={family} pending={pending} onAdd={addCard} />)}
+          {mode === "browse" && step === "year" && <div className="scan-grid">{years.data?.map(y => <Button key={y} variant="outline" className="h-14" onClick={() => { setYear(y); setSet(null); setStep("set"); }}>{y}</Button>)}</div>}
+          {mode === "browse" && step === "set" && <div className="scan-grid">{sets.data?.map(subsetTile)}</div>}
+          {mode === "browse" && step === "subset" && <div className="scan-grid">{subsets.data?.map(subsetTile)}</div>}
+          {mode === "browse" && step === "card" && <div className="scan-grid">{cards.data?.map(c => <ScanResultTile key={c.id} pending={pending} compact family={{ familyKey: String(c.id), score: 0, representativeCardId: c.id, options: [{ cardId: c.id, name: c.name, cardNumber: c.cardNumber, imageUrl: c.frontImageUrl, subsetName: c.variation, setName: subset?.name ?? set?.name ?? "", year }] }} onAdd={addCard} />)}</div>}
+          {mode === "search" && groupSearch(search.data ?? []).map((family, index, groups) => <div key={family.familyKey} className="mb-3">{(index === 0 || (groups[index-1].options[0] as SearchCard).mainSetId !== (family.options[0] as SearchCard).mainSetId || groups[index-1].options[0].year !== family.options[0].year) && <h3 className="mb-2 border-b border-stone-300 pb-1 text-xs font-semibold">{family.options[0].year} · {(family.options[0] as SearchCard).mainSetName ?? family.options[0].setName}</h3>}<ScanResultTile family={family} compact pending={pending} onAdd={addCard} /></div>)}
         </div>
         <Button variant="outline" className="my-3 h-11 shrink-0" disabled={pending} onClick={back}><ArrowLeft className="mr-2 h-4 w-4" />Back {mode === "browse" && step !== "year" ? "to change context" : "to scan"}</Button>
       </>}

@@ -1,12 +1,36 @@
 .scan-fast { --scan-paper: #f5f3f0; --scan-ink: #25272c; --scan-red: #ed1d24; background: var(--scan-paper); color: var(--scan-ink); }
-.scan-fast .scan-tile { background: #fcfbf9; border: 1px solid #dedbd6; border-radius: 12px; padding: 10px; min-width: 0; gap: 7px; }
-.scan-fast .scan-tile[data-selected=true] { border-color: var(--scan-red); box-shadow: inset 0 0 0 1px var(--scan-red); }
-.scan-fast .scan-art { background: #eae7e2; border-radius: 8px; height: clamp(80px, 18dvh, 180px); display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.scan-fast .scan-grid .scan-art { height: clamp(70px, 14dvh, 130px); }
-.scan-fast [data-testid="scan-version-chips"] { max-height: 66px; overflow-y: auto; overscroll-behavior: contain; }
-.scan-fast .scan-grid [data-testid="scan-version-chips"] { max-height: 54px; }
+.scan-fast .scan-tile { background: #fcfbf9; border: 1px solid #dedbd6; border-radius: 12px; min-width: 0; margin-bottom: 10px; overflow: hidden; }
+.scan-fast .scan-tile[data-highlighted=true] { border-color: var(--scan-red); }
+.scan-fast .scan-best { padding: 6px 12px; background: #fae7e4; color: #9d1821; font-size: 11px; font-weight: 700; }
+.scan-fast .scan-family-heading { padding: 10px 12px; font-size: 12px; font-weight: 600; border-bottom: 1px solid #dedbd6; }
+.scan-fast .scan-set-choice + .scan-set-choice { border-top: 1px solid #dedbd6; }
+.scan-fast .scan-set-choice { padding: 12px; }
+.scan-fast .scan-identity-row { display: flex; gap: 10px; align-items: flex-start; }
+.scan-fast .scan-identity { display: flex; flex: 1; min-width: 0; gap: 10px; text-align: left; align-items: flex-start; border-radius: 6px; }
+.scan-fast .scan-identity-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.scan-fast .scan-identity-copy h3 { font-size: 14px; font-weight: 700; line-height: 1.35; }
+.scan-fast .scan-card-number { font-family: ui-monospace, monospace; font-size: 12px; margin-top: 3px; }
+.scan-fast .scan-set-name { margin-top: 4px; font-size: 12px; line-height: 1.45; color: #52505a; }
+.scan-fast .scan-year { margin-top: 3px; font-size: 12px; font-weight: 600; }
+.scan-fast .scan-art { flex: 0 0 58px; width: 58px; background: #eae7e2; border-radius: 5px; height: 82px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.scan-fast .scan-row-add { padding: 0 12px; min-width: 48px; height: 44px; }
+.scan-fast [data-testid="scan-version-chips"] { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+.scan-fast .scan-report-link { display: block; font-size: 11px; color: #70646a; text-decoration: underline; text-underline-offset: 3px; margin-top: 9px; }
+.scan-fast .scan-checklist-tile { margin-bottom: 0; }
+.scan-fast .scan-checklist-tile .scan-set-choice { padding: 9px; }
+.scan-fast .scan-checklist-tile .scan-identity-row, .scan-fast .scan-checklist-tile .scan-identity { flex-direction: column; width: 100%; }
+.scan-fast .scan-checklist-tile .scan-art { flex: auto; width: 100%; height: 145px; }
+.scan-fast .scan-checklist-tile .scan-row-add { width: 100%; }
+.scan-fast .scan-context-row { display: flex; width: 100%; align-items: center; gap: 12px; text-align: left; padding: 14px 12px; background: #fcfbf9; border-bottom: 1px solid #dedbd6; }
+.scan-fast .scan-context-row span:first-child { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 14px; font-weight: 600; }
+.scan-fast .scan-context-row small { color: #66606a; font-size: 12px; white-space: nowrap; }
+.scan-fast .scan-context-row:hover { background: #fae7e4; }
+.scan-fast .scan-year-select { padding: 6px 28px 6px 10px; border: 1px solid #d4d0c9; border-radius: 6px; background: #fcfbf9; color: #25272c; font-size: 14px; min-height: 40px; }
+.scan-fast .scan-breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 3px; font-size: 12px; margin-bottom: 10px; }
+.scan-fast .scan-breadcrumb button { text-align: left; overflow-wrap: anywhere; padding: 6px; color: #a3121a; text-decoration: underline; text-underline-offset: 3px; }
+.scan-fast .scan-breadcrumb button:disabled { color: #746b70; text-decoration: none; }
 .scan-fast .scan-art img { width: 100%; height: 100%; object-fit: contain; }
-.scan-fast .scan-chip { border: 1px solid #d4d0c9; border-radius: 6px; padding: 7px 9px; font-size: 11px; line-height: 1.25; background: #f5f3f0; }
+.scan-fast .scan-chip { border: 1px solid #d4d0c9; border-radius: 6px; padding: 8px 9px; font-size: 12px; line-height: 1.35; background: #f5f3f0; white-space: normal; overflow-wrap: anywhere; text-align: left; max-width: 100%; }
 .scan-fast .scan-chip[aria-pressed=true] { background: #fff0ed; border-color: var(--scan-red); color: #a3121a; }
 .scan-fast .scan-primary { background: var(--scan-red); color: #fff9f7; min-height: 44px; font-weight: 600; }
 .scan-fast .scan-primary:hover { background: #cc1820; }

@@ -1,0 +1,81 @@
+{
+  "label": "Isolated workspace fixture UI QA; mock auth and API responses; not authenticated real-phone acceptance",
+  "source": "Helium DEV read-only catalog export 2026-10-03T18:32:46.545Z; actual frozen reference vector card 16483; real service.rankVectors; no query/photo recognition performed",
+  "fixturePath": "/home/runner/workspace/client/scan-qa/catalog-fixture.json",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "evidence": [
+    {
+      "mode": "before",
+      "status": "passed",
+      "errors": [],
+      "unexpected": [],
+      "writes": [
+        {
+          "method": "POST",
+          "url": "/api/cards/scan/client-event",
+          "body": {
+            "code": "artwork_preselected",
+            "stage": "results",
+            "marginThreshold": 0.035,
+            "shownOptions": 1
+          }
+        }
+      ]
+    },
+    {
+      "mode": "after",
+      "status": "passed",
+      "errors": [],
+      "unexpected": [],
+      "writes": [
+        {
+          "method": "POST",
+          "url": "/api/cards/scan/client-event",
+          "body": {
+            "code": "results_ready",
+            "stage": "results",
+            "marginThreshold": 0.035,
+            "shownOptions": 5
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/api/cards/scan/client-event",
+          "body": {
+            "code": "results_ready",
+            "stage": "results",
+            "marginThreshold": 0.035,
+            "shownOptions": 5
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/api/cards/scan/collection",
+          "body": {
+            "cardId": 55352
+          }
+        },
+        {
+          "method": "DELETE",
+          "url": "/api/cards/scan/collection/97213",
+          "body": {
+            "undoToken": "isolated-undo-token"
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/api/cards/scan/client-event",
+          "body": {
+            "code": "results_ready",
+            "stage": "results",
+            "marginThreshold": 0.035,
+            "shownOptions": 5
+          }
+        }
+      ]
+    }
+  ]
+}

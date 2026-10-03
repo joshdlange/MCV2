@@ -268,3 +268,17 @@ mtime_ms = 1790806273930
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/9b7135d4-0313-46af-9ffb-f6f7f4521e86/7643caca-2bff-43e6-8c73-b00e5a643ac0"
 storage_version_token = "1790806389683946"
 content_type = "text/html"
+
+[[outputs]]
+id = "bXNoor0JufMHRdCPcmsW4"
+uri = "file://screenshots/scan-phone/before-after.html"
+type = "html"
+title = "Scan UI — all before/after screenshots at 390px"
+description = "Results including same-art sets, Year, Set, Subset, Card grid, and darkhawk 11 1992 search. Real catalog fixtures; isolated browser checks, not signed-in phone acceptance."
+logical_id = "67c5bc07-fa67-4f16-84ab-245a164fa88c"
+content_hash = "sha256:7de353d666bc3edfe5aba1226bd9dc76c819f4dd51613cdcdf421672c00cac23"
+size = 1365042
+mtime_ms = 1791052389289
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/67c5bc07-fa67-4f16-84ab-245a164fa88c/3ab2b9d2-9071-4d39-86ed-b60b8db50ceb"
+storage_version_token = "1791052413996926"
+content_type = "text/html"

@@ -7,41 +7,73 @@ import { openImageReport } from "./report-image-dialog";
 export interface ScanTileCard {
   cardId: number; name: string; setName: string; subsetName: string | null;
   cardNumber: string; year: number | null; imageUrl: string | null;
+  mainSetId?: number | null; setId?: number; mainSetName?: string | null;
 }
 export interface ScanArtworkFamily {
   familyKey: string; score: number; representativeCardId: number; options: ScanTileCard[];
 }
+function isBaseOption(card: ScanTileCard) {
+  return !card.subsetName || /^base(?: set)?$/i.test(card.subsetName)
+    || !!card.mainSetName && (card.subsetName.toLowerCase() === card.mainSetName.toLowerCase()
+      || card.setName.toLowerCase() === card.mainSetName.toLowerCase());
+}
 
-/** One artwork, inline exact versions and one collection action. Reusable in grids. */
+/** Highlighting is a ranking hint, never a selection of a set or ownership. */
 export function ScanResultTile({ family, pending, onAdd, compact = false, primary = false }: {
   family: ScanArtworkFamily; pending: boolean; compact?: boolean; primary?: boolean;
   onAdd: (card: ScanTileCard, missingImage: boolean) => void;
 }) {
-  const [selectedId, setSelectedId] = useState(family.representativeCardId);
-  const [brokenId, setBrokenId] = useState<number | null>(null);
-  const [expanded, setExpanded] = useState(!compact);
-  const card = family.options.find(c => c.cardId === selectedId) ?? family.options[0];
-  if (!card) return null;
-  const missing = !hasUsableScanCardImage(card.imageUrl) || brokenId === card.cardId;
-  const representative = family.options.find(option => option.cardId === family.representativeCardId) ?? family.options[0];
-  const inlineOptions = [representative, ...family.options.filter(option => option.cardId !== representative.cardId)];
-  const versionLabel = (option: ScanTileCard) => {
-    const basic = option.subsetName || "Base";
-    const same = family.options.filter(c => (c.subsetName || "Base") === basic);
-    if (same.length < 2) return basic;
-    if (same.some(c => c.year !== option.year)) return `${basic} · ${option.year}`;
-    if (same.some(c => c.setName !== option.setName)) return `${basic} · ${option.setName}`;
-    if (same.some(c => c.cardNumber !== option.cardNumber)) return `${basic} · #${option.cardNumber}`;
-    return `${basic} · catalog ${option.cardId}`;
-  };
-  return <article className="scan-tile flex flex-col gap-2" data-testid="scan-artwork-option" data-selected={primary}>
-    <div className="scan-art">{!missing ? <img src={card.imageUrl!} alt={card.name} onError={() => setBrokenId(card.cardId)} /> : <div className="flex flex-col items-center gap-2 text-xs text-gray-500"><ImageOff className="h-6 w-6" />No catalog photo</div>}</div>
-    <div><h3 className="line-clamp-2 text-sm font-semibold leading-tight">{card.name}</h3><p className="mt-1 line-clamp-2 text-[11px] leading-snug text-gray-600" title={card.setName}>{card.setName}</p><p className="mt-1 text-xs font-mono">#{card.cardNumber} · {card.year ?? "—"}</p></div>
-    {compact && family.options.length > 1 && <button className="text-left text-xs font-medium text-red-700" onClick={() => setExpanded(!expanded)}>{expanded ? "Hide versions" : `+${family.options.length - 1} versions`}</button>}
-    {expanded && <div data-testid="scan-version-chips" className="flex flex-wrap gap-1">
-      {inlineOptions.map(option => <button key={option.cardId} className="scan-chip" data-card-id={option.cardId} title={`${option.setName} · ${option.year} · #${option.cardNumber} · ${option.subsetName || "Base"}`} aria-pressed={card.cardId === option.cardId} disabled={pending} onClick={() => setSelectedId(option.cardId)}>{card.cardId === option.cardId && <Check className="mr-1 inline h-3 w-3" />}{versionLabel(option)}</button>)}
-    </div>}
-    <Button data-testid={primary ? "scan-add" : "scan-option-add"} className="scan-primary mt-auto w-full" disabled={pending} onClick={() => onAdd(card, missing)}>{pending ? "Adding…" : "Add to collection"}</Button>
-    <Button data-testid="scan-report-image" variant="ghost" size="sm" disabled={pending} onClick={() => openImageReport({ cardId: card.cardId, name: card.name })}>Report wrong image</Button>
+  const [variants, setVariants] = useState<Record<string, number>>({});
+  const [broken, setBroken] = useState<Record<number, boolean>>({});
+  const groups = new Map<string, ScanTileCard[]>();
+  for (const option of family.options) {
+    // Parallels share a main-set identity. A year is always part of that
+    // identity, even when the same art or catalog set is reused.
+    const key = `${option.year}:${option.mainSetId ?? option.setId ?? option.mainSetName ?? option.setName}`;
+    groups.set(key, [...(groups.get(key) ?? []), option]);
+  }
+  if (!groups.size) return null;
+  return <article className={`scan-tile${compact ? " scan-checklist-tile" : ""}`} data-testid="scan-artwork-option" data-highlighted={primary}>
+    {primary && <div className="scan-best">Best artwork match · check the set</div>}
+    {groups.size > 1 && <h3 className="scan-family-heading">This artwork appears in {groups.size} sets</h3>}
+    {Array.from(groups, ([key, options]) => {
+      const card = options.find(option => option.cardId === variants[key])
+        ?? options.find(isBaseOption)
+        ?? options[0];
+      const missing = !hasUsableScanCardImage(card.imageUrl) || !!broken[card.cardId];
+      const label = `${card.name}, #${card.cardNumber}, ${card.mainSetName || card.setName}, ${card.year ?? "year unknown"}`;
+      const variantLabel = (option: ScanTileCard) => {
+        const basic = isBaseOption(option) ? "Base" : option.subsetName!;
+        const duplicates = options.filter(c => (isBaseOption(c) ? "Base" : c.subsetName) === basic);
+        if (duplicates.length < 2) return basic;
+        if (duplicates.some(c => c.setName !== option.setName)) return `${basic} · ${option.setName}`;
+        if (duplicates.some(c => c.cardNumber !== option.cardNumber)) return `${basic} · #${option.cardNumber}`;
+        return `${basic} · catalog ${option.cardId}`;
+      };
+      return <section className="scan-set-choice" data-testid="scan-set-choice" data-main-set-id={card.mainSetId ?? card.setId} key={key}>
+        <div className="scan-identity-row">
+          <button className="scan-identity" data-testid="scan-set-row" data-card-id={card.cardId} aria-label={`Add ${label}`} disabled={pending} onClick={() => onAdd(card, missing)}>
+            <div className="scan-art">{!missing
+              ? <img src={card.imageUrl!} alt={card.name} onError={() => setBroken(old => ({ ...old, [card.cardId]: true }))} />
+              : <div className="flex flex-col items-center gap-1 p-1 text-center text-[10px] text-gray-600"><ImageOff className="h-5 w-5" />No photo</div>}</div>
+            <div className="scan-identity-copy">
+              <h3>{card.name}</h3>
+              <p className="scan-card-number">#{card.cardNumber}</p>
+              <p className="scan-set-name">{card.mainSetName || card.setName}</p>
+              {card.mainSetName && card.setName !== card.mainSetName && <p className="scan-set-name">{card.setName}</p>}
+              {options.length === 1 && card.subsetName && !/^base(?: set)?$/i.test(card.subsetName) && !card.setName.toLowerCase().includes(card.subsetName.toLowerCase()) && <p className="scan-set-name">{card.subsetName}</p>}
+              <p className="scan-year">{card.year ?? "Year unknown"}</p>
+            </div>
+          </button>
+          <Button data-testid={primary ? "scan-add" : "scan-option-add"} className="scan-primary scan-row-add" aria-label={`Add to collection: ${label}`} disabled={pending} onClick={() => onAdd(card, missing)}>{pending ? "Adding…" : "Add"}</Button>
+        </div>
+        {options.length > 1 && <div data-testid="scan-version-chips" aria-label="Parallels in this set">
+          {options.map(option => <button key={option.cardId} className="scan-chip" data-card-id={option.cardId} aria-pressed={variants[key] === option.cardId} disabled={pending} onClick={() => setVariants(old => ({ ...old, [key]: option.cardId }))}>
+            {variants[key] === option.cardId && <Check className="mr-1 inline h-3 w-3" />}{variantLabel(option)}
+          </button>)}
+        </div>}
+        <button data-testid="scan-report-image" className="scan-report-link" disabled={pending} onClick={() => openImageReport({ cardId: card.cardId, name: card.name })}>Report wrong image</button>
+      </section>;
+    })}
   </article>;
 }

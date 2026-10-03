@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { cards, cardSets, mainSets, userCollections, SIDE_KICK_CARD_LIMIT } from "../shared/schema";
 import { assertDevScanTelemetryDatabase } from "./services/devScanTelemetry";
+import { browseDevScanCatalog, searchDevScanCatalog } from "./services/devScanBrowse";
 
 export interface DevScanUndoCapability { userId: number; rowId: number; snapshot: string; expires: number }
 export function devScanUndoMatches(entry: DevScanUndoCapability, row: unknown, userId: number, rowId: number, now = Date.now()): boolean {
@@ -15,6 +16,15 @@ export function devScanUndoMatches(entry: DevScanUndoCapability, row: unknown, u
 export function registerDevScanUxRoutes(app: Express, auth: RequestHandler, enabled: () => boolean) {
   const gate: RequestHandler = (_req, res, next) => { if (!enabled()) { res.sendStatus(404); return; } next(); };
   const undos = new Map<string, DevScanUndoCapability>();
+  app.get("/api/cards/scan/browse/:step", gate, auth, async (req, res) => {
+    const step = req.params.step;
+    if (!["years", "sets", "subsets", "cards"].includes(step)) { res.sendStatus(404); return; }
+    const args = { year: Number(req.query.year), mainSetId: Number(req.query.mainSetId), setId: Number(req.query.setId), search: String(req.query.search ?? "").slice(0,100) };
+    const required = step === "cards" ? [args.setId] : step === "subsets" ? [args.year,args.mainSetId] : step === "sets" ? [args.year] : [];
+    if (required.some(n => !Number.isSafeInteger(n) || n < 1)) { res.status(400).json({message:"Invalid browse context"}); return; }
+    try { res.json(await browseDevScanCatalog(step,args)); }
+    catch { res.status(500).json({message:"Checklist could not load. Try again."}); }
+  });
   app.post("/api/cards/scan/collection", gate, auth, async (req: any, res) => {
     try {
       assertDevScanTelemetryDatabase();
@@ -87,50 +97,7 @@ export function registerDevScanUxRoutes(app: Express, auth: RequestHandler, enab
     try {
       const q = String(req.query.q ?? "").trim().slice(0, 100);
       if (!q) { res.json([]); return; }
-      const { db } = await import("./db");
-      // Card-number tokens are exact-first, including a single digit and # prefix.
-      const number = q.replace(/^#/, "").toLowerCase();
-      const pattern = `%${q.replace(/[%_\\]/g, "\\$&")}%`;
-      const result = await db.execute(sql`
-        WITH eligible AS (
-          SELECT c.*, cs.name AS set_name, cs.year AS set_year, cs.main_set_id,
-            coalesce(ms.name, cs.name) AS parent_name,
-            coalesce(cs.main_set_id, -cs.id) AS family_parent,
-            ((c.variation IS NULL OR lower(c.variation) IN ('','base'))
-              AND (cs.main_set_id IS NULL OR lower(cs.name)=lower(ms.name)
-                OR lower(cs.name)=lower(ms.name)||' - '||lower(ms.name)
-                OR lower(cs.name) IN (lower(ms.name)||' - base', lower(ms.name)||' - base set'))) AS is_base
-          FROM cards c JOIN card_sets cs ON cs.id=c.set_id
-          LEFT JOIN main_sets ms ON ms.id=cs.main_set_id
-          WHERE c.archived_at IS NULL AND cs.archived_at IS NULL AND cs.is_active=true
-            AND (cs.main_set_id IS NULL OR (ms.is_active=true AND ms.archived_at IS NULL))
-        ), matching_families AS (
-          SELECT family_parent, set_year, lower(name) AS family_name, card_number,
-            bool_or(lower(card_number)=${number}) AS exact_number, min(parent_name) AS parent_name
-          FROM eligible
-          WHERE lower(card_number)=${number} OR name ILIKE ${pattern} OR set_name ILIKE ${pattern}
-            OR parent_name ILIKE ${pattern} OR card_number ILIKE ${pattern}
-          GROUP BY family_parent, set_year, lower(name), card_number
-          ORDER BY bool_or(lower(card_number)=${number}) DESC, set_year DESC, min(parent_name), card_number
-          LIMIT 50
-        ), expanded AS (
-          SELECT e.*, f.exact_number,
-            dense_rank() OVER (ORDER BY f.exact_number DESC, f.set_year DESC, f.parent_name, f.family_parent, f.card_number, f.family_name) AS family_rank,
-            row_number() OVER (PARTITION BY f.family_parent,f.set_year,f.family_name,f.card_number
-              ORDER BY e.is_base DESC, e.is_insert ASC, e.set_name, e.id) AS version_rank
-          FROM matching_families f JOIN eligible e ON e.family_parent=f.family_parent
-            AND e.set_year=f.set_year AND lower(e.name)=f.family_name AND e.card_number=f.card_number
-        )
-        SELECT id AS "cardId", name, card_number AS "cardNumber", front_image_url AS "imageUrl",
-          set_name AS "setName", set_year AS year, set_id AS "setId", main_set_id AS "mainSetId",
-          parent_name AS "mainSetName", is_base AS "isBase",
-          CASE WHEN is_base THEN coalesce(variation,'Base') ELSE coalesce(variation,
-            CASE WHEN set_name LIKE parent_name||' - %' THEN substring(set_name FROM length(parent_name)+4) ELSE set_name END) END AS "subsetName",
-          is_insert AS "isInsert", exact_number AS "exactNumber"
-        FROM expanded WHERE version_rank <= 30
-        ORDER BY family_rank, version_rank LIMIT 150
-      `);
-      res.json(result.rows);
+      res.json(await searchDevScanCatalog(q));
     } catch { res.status(500).json({ message: "Search could not load. Try again." }); }
   });
 }

@@ -60,6 +60,12 @@ Do not describe isolated, mocked-auth browser checks as signed-in phone acceptan
 
 ## Historical experiment constraints (not the current v1 scope)
 
+Phone scan identity selection must never preselect a set when artwork occurs in several sets. One tap on the correct set row adds it; parallel chips wrap below that row. Show five ranked artwork groups when available, full set names, and compact text-based browse steps starting at the guessed year's set list.
+
+**Why:** The user scanned 1992 Darkhawk #11 and the UI favored a 2024 reprint; artwork similarity alone would silently add the wrong printing.
+
+**How to apply:** Preserve one-tap Add, Undo, quick next scan, no recognition crop UI, no HMR, and existing photo consent rules. Verify at 390px, distinguish isolated UI screenshots from signed-in phone evidence, and stop after delivering requested screenshots—no publishing or production writes.
+
 Use canonical single-image DINO alone for the next development recognition evaluation; do not run the historical reranker or reference-guided optional crop.
 
 **Why:** The frozen reranker did not improve retrieval. Approved-reference-boundary dependence does not demonstrate independent card isolation. Historical production photos were deliberately deleted, so retained ranks cannot establish visual failure causes.

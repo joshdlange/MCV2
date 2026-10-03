@@ -129,6 +129,8 @@ export class DevScanVisualService {
   private readonly familyById = new Map<number, string>();
   private readonly optionsByFamily = new Map<string, DevScanCatalogCard[]>();
   private readonly activeIdsByRow: number[][];
+  private readonly rowById = new Map<number, number>();
+  private readonly familiesByName = new Map<string, Set<string>>();
   private tail: Promise<unknown> = Promise.resolve();
   private pending = 0;
   private overrides = new Map<number, { url: string; vector: number[] | null }>();
@@ -165,6 +167,10 @@ export class DevScanVisualService {
       const options = this.optionsByFamily.get(key) ?? [];
       options.push(card);
       this.optionsByFamily.set(key, options);
+      const name = card.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const siblings = this.familiesByName.get(name) ?? new Set<string>();
+      siblings.add(key);
+      this.familiesByName.set(name, siblings);
     }
     for (const options of this.optionsByFamily.values()) options.sort((a, b) => a.id - b.id);
     this.activeIdsByRow = index.rows.map(row => row.cardIds.filter(id => {
@@ -172,6 +178,45 @@ export class DevScanVisualService {
       return this.cards.get(id)!.active;
     }));
     if (!this.activeIdsByRow.some(ids => ids.length)) throw new Error('Frozen index has no active DEV catalog cards');
+    index.rows.forEach((row, i) => row.cardIds.forEach(id => this.rowById.set(id, i)));
+  }
+
+  /** Reference-to-reference comparison, NOT the query's score. A guarded
+   * cross-print threshold tolerates foil/border differences; it never auto-adds.
+   * No card number restriction: reprints can renumber the same artwork.
+   * Only direct seed matches join (no similarity-chain drift). */
+  private artworkSiblings(key: string): string[] {
+    const seed = this.optionsByFamily.get(key)!;
+    const names = new Set(seed.map(c => c.name.toLowerCase().replace(/[^a-z0-9]/g, "")));
+    const candidates = new Set([...names].flatMap(name => [...(this.familiesByName.get(name) ?? [])]));
+    // A shared frozen reference is exact image identity even when catalog names
+    // disagree (a reason to offer a choice, never to silently repair metadata).
+    const exact = new Set<string>();
+    for (const card of seed) {
+      if (this.overrides.has(card.id)) continue;
+      const row = this.rowById.get(card.id);
+      if (row === undefined) continue;
+      for (const id of this.activeIdsByRow[row]) {
+        if (this.overrides.has(id)) continue;
+        const sibling = this.familyById.get(id)!;
+        candidates.add(sibling); exact.add(sibling);
+      }
+    }
+    const vectorFor = (card: DevScanCatalogCard) => {
+      if (this.overrides.has(card.id)) return this.overrides.get(card.id)!.vector;
+      const row = this.rowById.get(card.id);
+      return row === undefined ? null : this.matrix.subarray(row * VECTOR_DIMENSIONS, (row + 1) * VECTOR_DIMENSIONS);
+    };
+    const vectors = seed.map(vectorFor).filter(v => v !== null);
+    return [...candidates].filter(candidate => candidate === key || exact.has(candidate) || this.optionsByFamily.get(candidate)!.some(card => {
+      const vector = vectorFor(card);
+      if (!vector) return false;
+      return vectors.some(reference => {
+        let dot = 0;
+        for (let i = 0; i < VECTOR_DIMENSIONS; i++) dot += reference![i] * vector[i];
+        return dot >= 0.85;
+      });
+    }));
   }
 
   /** One active whole 3-crop request plus at most maxWaiting queued requests.
@@ -236,23 +281,22 @@ export class DevScanVisualService {
       if (!best || score > best.score || (score === best.score && id < best.id)) bestByFamily.set(key, { score, id });
     }
     const rankedCardIds = [...direct.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0]).map(([id]) => id);
-    const votes = new Map<number, { count: number; card: DevScanCatalogCard }>();
-    for (const id of rankedCardIds.slice(0, 10)) {
-      const card = this.cards.get(id)!;
-      const key = card.mainSetId ?? card.setId;
-      if (key === undefined) continue;
-      const prior = votes.get(key);
-      votes.set(key, { count: (prior?.count ?? 0) + 1, card: prior?.card ?? card });
-    }
-    const hinted = [...votes.values()].sort((a, b) => b.count - a.count)[0]?.card;
-    const families = [...bestByFamily.entries()]
-      .sort((a, b) => b[1].score - a[1].score || a[1].id - b[1].id)
-      .slice(0, 5).map(([familyKey, best]): DevScanVisualFamily => {
-        const options = this.optionsByFamily.get(familyKey)!.map((row): ScoredMatch => {
+    // Start browse at the highest-ranked reference's year, not whichever set
+    // has the most parallel rows in the top ten. This never selects a set.
+    const hinted = this.cards.get(rankedCardIds[0]);
+    const consumed = new Set<string>();
+    const families: DevScanVisualFamily[] = [];
+    for (const [familyKey, best] of [...bestByFamily.entries()].sort((a,b) => b[1].score-a[1].score || a[1].id-b[1].id)) {
+        if (consumed.has(familyKey)) continue;
+        const siblings = this.artworkSiblings(familyKey).filter(key => !consumed.has(key));
+        siblings.forEach(key => consumed.add(key));
+        const options = siblings.flatMap(key => this.optionsByFamily.get(key)!).map((row): ScoredMatch => {
           const similarity = direct.get(row.id);
           return {
             cardId: row.id, name: row.name, cardNumber: row.cardNumber, setName: row.setName,
-            subsetName: row.variation || (row.isInsertSubset ? row.setName : null),
+            setId: row.setId, mainSetId: row.mainSetId, mainSetName: row.mainSetName,
+            subsetName: row.variation || (row.mainSetName && row.setName.startsWith(row.mainSetName + " - ")
+              ? row.setName.slice(row.mainSetName.length + 3) : row.isInsertSubset ? row.setName : "Base"),
             year: row.setYear, imageUrl: this.overrides.get(row.id)?.url ?? row.frontImageUrl,
             confidence: (similarity ?? best.score) * 100,
             confidenceLevel: (similarity ?? best.score) >= 0.65 ? 'medium' : 'low',
@@ -263,8 +307,9 @@ export class DevScanVisualService {
               : 'Retrieved by catalog image similarity'],
           };
         }).sort((a, b) => b.imageSimilarity! - a.imageSimilarity! || a.cardId - b.cardId);
-        return { familyKey, score: best.score, representativeCardId: best.id, options };
-      });
+        families.push({ familyKey, score: best.score, representativeCardId: best.id, options });
+        if (families.length === 5) break;
+    }
     return {
       families, matches: families.flatMap(family => family.options),
       rankedCardIds: rankedCardIds.slice(0, 100),

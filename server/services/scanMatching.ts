@@ -53,6 +53,9 @@ export interface ScanCandidateRow {
 }
 
 export interface ScoredMatch {
+  setId?: number;
+  mainSetId?: number | null;
+  mainSetName?: string | null;
   cardId: number;
   name: string;
   setName: string;
