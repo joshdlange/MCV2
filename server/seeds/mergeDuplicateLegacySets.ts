@@ -585,22 +585,22 @@ async function applyPairBatch(
     ${col} LIKE '%/user_uploads/%' OR
     ${col} LIKE '%/mcv/sets/%')`);
   const frontCanReplace = imageTransferMode === 'missing-only'
-    ? sql`s.front_image_url IS NULL`
+    ? sql`NULLIF(s.front_image_url, '') IS NULL`
     : sql`(s.front_image_url IS NULL
         OR (${curated('d.front_image_url')} AND NOT ${curated('s.front_image_url')}))`;
   const backCanReplace = imageTransferMode === 'missing-only'
-    ? sql`s.back_image_url IS NULL`
+    ? sql`NULLIF(s.back_image_url, '') IS NULL`
     : sql`(s.back_image_url IS NULL
         OR (${curated('d.back_image_url')} AND NOT ${curated('s.back_image_url')}))`;
   await tx.execute(sql`
     UPDATE cards s SET front_image_url = d.front_image_url
     FROM merge_pairs p JOIN cards d ON d.id = p.dup_id
-    WHERE s.id = p.surv_id AND d.front_image_url IS NOT NULL
+    WHERE s.id = p.surv_id AND NULLIF(d.front_image_url, '') IS NOT NULL
       AND ${frontCanReplace}`);
   await tx.execute(sql`
     UPDATE cards s SET back_image_url = d.back_image_url
     FROM merge_pairs p JOIN cards d ON d.id = p.dup_id
-    WHERE s.id = p.surv_id AND d.back_image_url IS NOT NULL
+    WHERE s.id = p.surv_id AND NULLIF(d.back_image_url, '') IS NOT NULL
       AND ${backCanReplace}`);
 
   // Soft-archive the duplicates (never hard-delete)
@@ -1218,7 +1218,12 @@ async function relocateLostMarvelBonusCards(tx: Tx): Promise<void> {
   console.log(`${LOG} Lost Marvel Bonus Cards: relocated ${pairs.length} card(s)`);
 }
 
-async function relocate2023FlairSubsetCards(tx: Tx): Promise<void> {
+export async function relocate2023FlairSubsetCards(tx: Tx): Promise<void> {
+  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('merge_duplicate_legacy_sets'))`);
+  await tx.execute(sql`
+    LOCK TABLE cards, card_sets, user_collections, user_wishlists, pc_binder_cards,
+      listings, pending_card_images, xp_events, scan_uploads, scan_feedback, feed_events
+    IN SHARE ROW EXCLUSIVE MODE`);
   const [source] = await tx.select().from(cardSets).where(and(
     eq(cardSets.slug, FLAIR_2023_BASE_SLUG),
     eq(cardSets.isActive, true),
@@ -1234,10 +1239,7 @@ async function relocate2023FlairSubsetCards(tx: Tx): Promise<void> {
   ));
   const sourceCarved = sourceCards.filter((card) => normCardNumber(card.cardNumber).startsWith('CC'));
   const sourceFlairium = sourceCards.filter((card) => normCardNumber(card.cardNumber).startsWith('FT'));
-  if (sourceCarved.length === 0 && sourceFlairium.length === 0) {
-    console.log(`${LOG} 2023 Flair subsets: misplaced CC/FT cards already relocated — skipping`);
-    return;
-  }
+  const alreadyRelocated = sourceCarved.length === 0 && sourceFlairium.length === 0;
 
   const sourceBase = sourceCards.filter((card) => /^\d+$/.test(card.cardNumber.trim()));
   const unexpectedSource = sourceCards.filter((card) => {
@@ -1252,8 +1254,8 @@ async function relocate2023FlairSubsetCards(tx: Tx): Promise<void> {
   );
   if (
     sourceBase.length !== FLAIR_2023_EXPECTED_COUNTS.base
-    || sourceCarved.length !== FLAIR_2023_EXPECTED_COUNTS.carved
-    || sourceFlairium.length !== FLAIR_2023_EXPECTED_COUNTS.flarium
+    || (!alreadyRelocated && sourceCarved.length !== FLAIR_2023_EXPECTED_COUNTS.carved)
+    || (!alreadyRelocated && sourceFlairium.length !== FLAIR_2023_EXPECTED_COUNTS.flarium)
     || unexpectedSource.length > 0
     || normalizedBaseNumbers.size !== expectedBaseNumbers.size
     || [...expectedBaseNumbers].some((number) => !normalizedBaseNumbers.has(number))
@@ -1264,24 +1266,26 @@ async function relocate2023FlairSubsetCards(tx: Tx): Promise<void> {
       + `${sourceCarved.length} CC, ${sourceFlairium.length} FT, ${unexpectedSource.length} unexpected`,
     );
   }
-  assertExactPrefixedCardNumbers(
-    '2023 Flair source Carved cards',
-    sourceCarved.map((card) => card.cardNumber),
-    'CC',
-    FLAIR_2023_EXPECTED_COUNTS.carved,
-  );
-  assertExactPrefixedCardNumbers(
-    '2023 Flair source Flairium cards',
-    sourceFlairium.map((card) => card.cardNumber),
-    'FT',
-    FLAIR_2023_EXPECTED_COUNTS.flarium,
-  );
+  if (!alreadyRelocated) {
+    assertExactPrefixedCardNumbers(
+      '2023 Flair source Carved cards',
+      sourceCarved.map((card) => card.cardNumber),
+      'CC',
+      FLAIR_2023_EXPECTED_COUNTS.carved,
+    );
+    assertExactPrefixedCardNumbers(
+      '2023 Flair source Flairium cards',
+      sourceFlairium.map((card) => card.cardNumber),
+      'FT',
+      FLAIR_2023_EXPECTED_COUNTS.flarium,
+    );
+  }
 
   const targets = await tx.select().from(cardSets).where(and(
     inArray(cardSets.slug, [FLAIR_2023_CARVED_SLUG, FLAIR_2023_FLAIRIUM_SLUG]),
     eq(cardSets.isActive, true),
   ));
-  if (targets.length !== 2) {
+  if (targets.length !== 2 || source.archivedAt || targets.some((target) => target.archivedAt)) {
     throw new Error('2023 Flair subsets: active Carved and Flairium target subsets are required');
   }
   if (source.mainSetId == null || targets.some((target) => target.mainSetId !== source.mainSetId)) {
@@ -1321,6 +1325,33 @@ async function relocate2023FlairSubsetCards(tx: Tx): Promise<void> {
     'FT',
     FLAIR_2023_EXPECTED_COUNTS.flarium,
   );
+
+  const assertTerminalState = async () => {
+    for (const [subset, prefix, count] of [
+      [source, '', 90], [carvedTarget, 'CC', 24], [flairiumTarget, 'FT', 60],
+    ] as const) {
+      const active = await tx.select().from(cards).where(and(
+        eq(cards.setId, subset.id), isNull(cards.archivedAt),
+      ));
+      assertExactPrefixedCardNumbers(`2023 Flair final ${subset.slug}`,
+        active.map((card) => card.cardNumber), prefix, count);
+      const [stored] = await tx.select().from(cardSets).where(eq(cardSets.id, subset.id));
+      if (stored.totalCards !== count) {
+        throw new Error(`2023 Flair subsets: incorrect stored total for ${subset.slug}`);
+      }
+    }
+    const archivedSources = await tx.select().from(cards).where(eq(cards.setId, source.id));
+    for (const card of archivedSources.filter((card) =>
+      /^(CC|FT)/.test(normCardNumber(card.cardNumber)))) {
+      if (!card.archivedAt || await refCount(tx, card.id) > 0) {
+        throw new Error(`2023 Flair subsets: source ${card.cardNumber} still active or referenced`);
+      }
+    }
+  };
+  if (alreadyRelocated) {
+    await assertTerminalState();
+    return;
+  }
 
   const targetByNumber = new Map<string, CardRow>();
   for (const target of targetCards) {
@@ -1385,6 +1416,7 @@ async function relocate2023FlairSubsetCards(tx: Tx): Promise<void> {
         (SELECT count(*) FROM cards WHERE set_id = ${subset.id} AND archived_at IS NULL)
       WHERE id = ${subset.id}`);
   }
+  await assertTerminalState();
 
   console.log(
     `${LOG} 2023 Flair subsets: relocated ${sourceCarved.length} CC + ${sourceFlairium.length} FT cards; `

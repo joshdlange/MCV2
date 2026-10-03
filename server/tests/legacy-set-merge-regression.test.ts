@@ -10,6 +10,7 @@ import {
   buildHildebrandtPowerBlastPairs,
   mergeExactLenDuplicateRows,
   mergeDuplicateLegacySets,
+  relocate2023FlairSubsetCards,
 } from "../seeds/mergeDuplicateLegacySets";
 import {
   cardSets,
@@ -62,6 +63,261 @@ test("2023 Flair checklist guard rejects missing, duplicate, and out-of-range nu
   assert.throws(
     () => assertExactPrefixedCardNumbers("out of range Flairium", outOfRangeFlairium, "FT", 60),
     /missing \[FT60\].*unexpected \[FT61\]/,
+  );
+});
+
+test("2023 Flair relocates all 84 real-subset cards once, without losing references or unrelated cards", async () => {
+  const tag = `flair-2023-relocation-${Date.now()}`;
+  const normalize = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const byId = <T extends { id: number }>(rows: T[]) => rows.sort((a, b) => a.id - b.id);
+
+  await assert.rejects(
+    db.transaction(async (tx) => {
+      const subsets = await tx.select().from(cardSets).where(inArray(cardSets.slug, [
+        FLAIR_2023_BASE, FLAIR_2023_CARVED, FLAIR_2023_FLAIRIUM,
+      ]));
+      assert.equal(subsets.length, 3, "real Flair subsets must exist");
+      const base = subsets.find((set) => set.slug === FLAIR_2023_BASE)!;
+      const carved = subsets.find((set) => set.slug === FLAIR_2023_CARVED)!;
+      const flairium = subsets.find((set) => set.slug === FLAIR_2023_FLAIRIUM)!;
+      assert.ok(base.isActive && carved.isActive && flairium.isActive);
+      assert.ok(base.mainSetId != null);
+      assert.equal(carved.mainSetId, base.mainSetId);
+      assert.equal(flairium.mainSetId, base.mainSetId);
+
+      const allProductSubsets = await tx.select().from(cardSets)
+        .where(eq(cardSets.mainSetId, base.mainSetId));
+      const otherIds = allProductSubsets.map((set) => set.id)
+        .filter((id) => ![base.id, carved.id, flairium.id].includes(id));
+      const otherCardsBefore = otherIds.length
+        ? byId(await tx.select().from(cards).where(inArray(cards.setId, otherIds)))
+        : [];
+      const otherSetsBefore = byId(allProductSubsets.filter((set) => otherIds.includes(set.id)));
+
+      const targetCards = await tx.select().from(cards)
+        .where(inArray(cards.setId, [carved.id, flairium.id]));
+      const activeTargets = targetCards.filter((card) => card.archivedAt === null);
+      assert.equal(activeTargets.filter((card) => card.setId === carved.id).length, 24);
+      assert.equal(activeTargets.filter((card) => card.setId === flairium.id).length, 60);
+      const targets = new Map(activeTargets.map((card) => [normalize(card.cardNumber), card]));
+      assert.equal(targets.size, 84);
+      for (const [prefix, count, setId] of [["CC", 24, carved.id], ["FT", 60, flairium.id]] as const) {
+        for (let n = 1; n <= count; n++) {
+          assert.equal(targets.get(`${prefix}${n}`)?.setId, setId);
+        }
+      }
+      assert.equal(targets.get("FT53")!.name, "Bucky Barnes");
+
+      const baseCardsBefore = await tx.select().from(cards).where(eq(cards.setId, base.id));
+      const originalBase = baseCardsBefore.filter((card) => card.archivedAt === null
+        && /^\d+$/.test(card.cardNumber.trim()));
+      assert.equal(originalBase.length, 90);
+      const existingSources = baseCardsBefore.filter((card) => card.archivedAt === null
+        && /^(CC|FT)/.test(normalize(card.cardNumber)));
+      assert.ok(existingSources.length === 0 || existingSources.length === 84);
+
+      // Repaired dev databases have archived the originals. Clone their real
+      // checklist identities into the actual base subset, never unarchive or
+      // alter committed data; every fixture change is rolled back below.
+      if (existingSources.length === 0) {
+        const archived = new Map(baseCardsBefore.filter((card) => card.archivedAt !== null)
+          .map((card) => [normalize(card.cardNumber), card]));
+        await tx.insert(cards).values([...targets].map(([number, target]) => {
+          const original = archived.get(number);
+          return {
+            setId: base.id,
+            cardNumber: original?.cardNumber ?? target.cardNumber,
+            name: original?.name ?? (number === "FT53" ? "Bucky" : target.name),
+            rarity: original?.rarity ?? target.rarity,
+            isInsert: original?.isInsert ?? target.isInsert,
+            frontImageUrl: original?.frontImageUrl ?? null,
+            backImageUrl: original?.backImageUrl ?? null,
+          };
+        }));
+      }
+      const sources = (await tx.select().from(cards).where(eq(cards.setId, base.id)))
+        .filter((card) => card.archivedAt === null && /^(CC|FT)/.test(normalize(card.cardNumber)));
+      assert.equal(sources.length, 84);
+      const sourceByNumber = new Map(sources.map((card) => [normalize(card.cardNumber), card]));
+      assert.equal(sourceByNumber.size, 84);
+      assert.equal(sourceByNumber.get("FT53")!.name, "Bucky");
+      const cc1 = sourceByNumber.get("CC1")!;
+      const cc2 = sourceByNumber.get("CC2")!;
+      const cc3 = sourceByNumber.get("CC3")!;
+      const ft53 = sourceByNumber.get("FT53")!;
+      const cc1Target = targets.get("CC1")!;
+      const cc2Target = targets.get("CC2")!;
+      const cc3Target = targets.get("CC3")!;
+      const ft53Target = targets.get("FT53")!;
+
+      // Number punctuation/case is immaterial; identity is checked by both
+      // normalized number and normalized name (except verified FT53).
+      await tx.update(cards).set({ cardNumber: "cc-1" }).where(eq(cards.id, cc1.id));
+      await tx.update(cards).set({ cardNumber: "fT-53" }).where(eq(cards.id, ft53.id));
+      await tx.update(cards).set({ name: "Wrong Character" }).where(eq(cards.id, cc2.id));
+      await assert.rejects(relocate2023FlairSubsetCards(tx), /name mismatch.*CC.*2/i);
+      assert.equal((await tx.select().from(cards).where(eq(cards.id, cc1.id)))[0].archivedAt, null);
+      assert.equal((await tx.select().from(cards).where(eq(cards.id, cc2Target.id)))[0].name, cc2Target.name);
+      await tx.update(cards).set({ name: cc2.name }).where(eq(cards.id, cc2.id));
+
+      // Exercise each front/back direction independently, including blank
+      // target slots that must be filled and blank source slots that must not.
+      await tx.update(cards).set({
+        frontImageUrl: "/mcv/sets/flair-cc1-source-front.webp",
+        backImageUrl: "/mcv/sets/flair-cc1-source-back.webp",
+      }).where(eq(cards.id, cc1.id));
+      await tx.update(cards).set({
+        frontImageUrl: "https://example.invalid/cc1-existing-front.jpg",
+        backImageUrl: null,
+      }).where(eq(cards.id, cc1Target.id));
+      await tx.update(cards).set({
+        frontImageUrl: "/mcv/sets/flair-cc2-source-front.webp",
+        backImageUrl: "/mcv/sets/flair-cc2-source-back.webp",
+      }).where(eq(cards.id, cc2.id));
+      await tx.update(cards).set({
+        frontImageUrl: null,
+        backImageUrl: "https://example.invalid/cc2-existing-back.jpg",
+      }).where(eq(cards.id, cc2Target.id));
+      await tx.update(cards).set({
+        frontImageUrl: "/mcv/sets/flair-cc3-source-front.webp",
+        backImageUrl: "/mcv/sets/flair-cc3-source-back.webp",
+      }).where(eq(cards.id, cc3.id));
+      await tx.update(cards).set({ frontImageUrl: "", backImageUrl: "" })
+        .where(eq(cards.id, cc3Target.id));
+      await tx.update(cards).set({ frontImageUrl: "", backImageUrl: "" })
+        .where(eq(cards.id, ft53.id));
+      await tx.update(cards).set({ frontImageUrl: null, backImageUrl: "" })
+        .where(eq(cards.id, ft53Target.id));
+
+      const [user] = await tx.insert(users).values({
+        firebaseUid: tag, username: tag, email: `${tag}@example.invalid`,
+      }).returning();
+      const collectionRows = await tx.insert(userCollections).values([
+        { userId: user.id, cardId: cc1.id, quantity: 2 },
+        { userId: user.id, cardId: cc1Target.id, quantity: 3 },
+        { userId: user.id, cardId: ft53.id, quantity: 4 },
+      ]).returning();
+      const targetCollection = collectionRows.find((row) => row.cardId === cc1Target.id)!;
+      const sourceCollection = collectionRows.find((row) => row.cardId === cc1.id)!;
+      await tx.insert(userWishlists).values([
+        { userId: user.id, cardId: cc1.id }, { userId: user.id, cardId: cc1Target.id },
+        { userId: user.id, cardId: ft53.id },
+      ]);
+      const [binder] = await tx.insert(pcBinders)
+        .values({ userId: user.id, name: tag }).returning();
+      await tx.insert(pcBinderCards).values([
+        { binderId: binder.id, cardId: cc1.id },
+        { binderId: binder.id, cardId: cc1Target.id },
+        { binderId: binder.id, cardId: ft53.id },
+      ]);
+      await tx.insert(xpEvents).values([
+        { userId: user.id, eventType: "card_added", cardId: cc1.id, points: 1 },
+        { userId: user.id, eventType: "card_added", cardId: cc1Target.id, points: 1 },
+        { userId: user.id, eventType: "card_added", cardId: ft53.id, points: 1 },
+      ]);
+      await tx.insert(listings).values({
+        sellerId: user.id, userCollectionId: sourceCollection.id, cardId: cc1.id,
+        price: "5.00", conditionSnapshot: "Near Mint", description: tag,
+      });
+      await tx.insert(pendingCardImages).values({
+        userId: user.id, cardId: cc2.id, frontImageUrl: "/mcv/sets/cc2-pending.webp",
+      });
+      const [scan] = await tx.insert(scanUploads).values({
+        userId: user.id, confidenceLevel: "high", topMatchCardId: cc2.id,
+      }).returning();
+      await tx.insert(scanFeedback).values({
+        userId: user.id, scanUploadId: scan.id, feedbackType: "wrong", selectedCardId: ft53.id,
+      });
+      await tx.insert(feedEvents).values({
+        userId: user.id, eventType: "first_card", title: tag,
+        relatedType: "card", relatedId: cc3.id, dedupeKey: tag,
+      });
+
+      const snapshot = async () => ({
+        sets: byId(await tx.select().from(cardSets).where(inArray(cardSets.id, subsets.map((set) => set.id)))),
+        cards: byId(await tx.select().from(cards).where(inArray(cards.setId, subsets.map((set) => set.id)))),
+        collections: byId(await tx.select().from(userCollections).where(eq(userCollections.userId, user.id))),
+        wishlists: byId(await tx.select().from(userWishlists).where(eq(userWishlists.userId, user.id))),
+        binderCards: byId(await tx.select().from(pcBinderCards).where(eq(pcBinderCards.binderId, binder.id))),
+        xp: byId(await tx.select().from(xpEvents).where(eq(xpEvents.userId, user.id))),
+        listings: byId(await tx.select().from(listings).where(eq(listings.sellerId, user.id))),
+        pending: byId(await tx.select().from(pendingCardImages).where(eq(pendingCardImages.userId, user.id))),
+        scans: byId(await tx.select().from(scanUploads).where(eq(scanUploads.userId, user.id))),
+        feedback: byId(await tx.select().from(scanFeedback).where(eq(scanFeedback.userId, user.id))),
+        feeds: byId(await tx.select().from(feedEvents).where(eq(feedEvents.userId, user.id))),
+      });
+      await relocate2023FlairSubsetCards(tx);
+      const first = await snapshot();
+      for (const [slug, total] of [
+        [FLAIR_2023_BASE, 90], [FLAIR_2023_CARVED, 24], [FLAIR_2023_FLAIRIUM, 60],
+      ] as const) {
+        assert.equal(first.sets.find((set) => set.slug === slug)?.totalCards, total);
+      }
+      assert.equal(first.cards.filter((card) => card.setId === base.id && card.archivedAt === null).length, 90);
+      assert.equal(first.cards.filter((card) => card.setId === base.id && card.archivedAt !== null).length,
+        baseCardsBefore.filter((card) => card.archivedAt !== null).length + 84);
+      assert.equal(first.cards.filter((card) => card.setId === carved.id && card.archivedAt === null).length, 24);
+      assert.equal(first.cards.filter((card) => card.setId === flairium.id && card.archivedAt === null).length, 60);
+      assert.deepEqual(
+        byId(first.cards.filter((card) => originalBase.some((baseCard) => baseCard.id === card.id))),
+        byId(originalBase),
+      );
+      for (const source of sources) {
+        const number = normalize(source.cardNumber);
+        const survivor = targets.get(number)!;
+        assert.ok(first.cards.find((card) => card.id === source.id)?.archivedAt, number);
+        const retained = first.cards.find((card) => card.id === survivor.id)!;
+        assert.equal(retained.archivedAt, null, number);
+        assert.equal(retained.setId, number.startsWith("CC") ? carved.id : flairium.id, number);
+        assert.equal(normalize(retained.cardNumber), number);
+        assert.equal(retained.name, survivor.name, number);
+      }
+      const finalCard = (id: number) => first.cards.find((card) => card.id === id)!;
+      assert.equal(finalCard(cc1Target.id).frontImageUrl, "https://example.invalid/cc1-existing-front.jpg");
+      assert.equal(finalCard(cc1Target.id).backImageUrl, "/mcv/sets/flair-cc1-source-back.webp");
+      assert.equal(finalCard(cc2Target.id).frontImageUrl, "/mcv/sets/flair-cc2-source-front.webp");
+      assert.equal(finalCard(cc2Target.id).backImageUrl, "https://example.invalid/cc2-existing-back.jpg");
+      assert.equal(finalCard(cc3Target.id).frontImageUrl, "/mcv/sets/flair-cc3-source-front.webp");
+      assert.equal(finalCard(cc3Target.id).backImageUrl, "/mcv/sets/flair-cc3-source-back.webp");
+      assert.equal(finalCard(ft53Target.id).frontImageUrl, null);
+      assert.equal(finalCard(ft53Target.id).backImageUrl, "");
+      assert.equal(finalCard(ft53Target.id).name, "Bucky Barnes");
+
+      assert.deepEqual(first.collections.map((row) => [row.cardId, row.quantity]).sort((a, b) => a[0] - b[0]),
+        [[cc1Target.id, 5], [ft53Target.id, 4]].sort((a, b) => a[0] - b[0]));
+      assert.equal(first.collections.find((row) => row.cardId === cc1Target.id)!.id, targetCollection.id);
+      assert.deepEqual(first.wishlists.map((row) => row.cardId).sort((a, b) => a - b),
+        [cc1Target.id, ft53Target.id].sort((a, b) => a - b));
+      assert.deepEqual(first.binderCards.map((row) => row.cardId).sort((a, b) => a - b),
+        [cc1Target.id, ft53Target.id].sort((a, b) => a - b));
+      assert.deepEqual(first.xp.map((row) => row.cardId).sort((a, b) => a! - b!),
+        [cc1Target.id, ft53Target.id].sort((a, b) => a - b));
+      assert.equal(first.listings[0].userCollectionId, targetCollection.id);
+      assert.equal(first.listings[0].cardId, cc1Target.id);
+      assert.equal(first.pending[0].cardId, cc2Target.id);
+      assert.equal(first.scans[0].topMatchCardId, cc2Target.id);
+      assert.equal(first.feedback[0].selectedCardId, ft53Target.id);
+      assert.equal(first.feeds[0].relatedId, cc3Target.id);
+      const sourceIds = new Set(sources.map((card) => card.id));
+      for (const ids of [
+        first.collections.map((row) => row.cardId), first.wishlists.map((row) => row.cardId),
+        first.binderCards.map((row) => row.cardId), first.xp.map((row) => row.cardId),
+        first.listings.map((row) => row.cardId), first.pending.map((row) => row.cardId),
+        first.scans.map((row) => row.topMatchCardId),
+        first.feedback.map((row) => row.selectedCardId), first.feeds.map((row) => row.relatedId),
+      ]) assert.ok(ids.every((id) => id == null || !sourceIds.has(id)));
+
+      if (otherIds.length) {
+        assert.deepEqual(byId(await tx.select().from(cardSets).where(inArray(cardSets.id, otherIds))),
+          otherSetsBefore);
+        assert.deepEqual(byId(await tx.select().from(cards).where(inArray(cards.setId, otherIds))),
+          otherCardsBefore);
+      }
+      await relocate2023FlairSubsetCards(tx);
+      assert.deepEqual(await snapshot(), first, "repeat call must not alter any cards, totals or references");
+      throw new FixtureRollback();
+    }),
+    (error: unknown) => error instanceof FixtureRollback,
   );
 });
 
