@@ -43,7 +43,7 @@ test("telemetry failure warns once per scan and does not block later records", a
   assert.equal(updates.length, 3);
 });
 
-test("reset epochs suppress queued writes and stale failure toasts", async () => {
+test("repeat capture preserves already accepted records but rejects stale callbacks and toasts", async () => {
   let current = true;
   let calls = 0;
   let warnings = 0;
@@ -57,9 +57,10 @@ test("reset epochs suppress queued writes and stale failure toasts", async () =>
   recorder.record({ totalMs: 0 });
   await settle();
   current = false;
+  recorder.record({ pickedCardId: 999 });
   reject(new Error("old scan failed"));
   await settle();
-  assert.equal(calls, 1);
+  assert.equal(calls, 2);
   assert.equal(warnings, 0);
 });
 

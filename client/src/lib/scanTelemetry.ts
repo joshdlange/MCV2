@@ -17,9 +17,11 @@ export function createScanEventRecorder(
   let warned = false;
   return {
     record(update: ScanEventUpdate): void {
+      // Accepted updates belong to this immutable event ID even when fast repeat
+      // capture advances the epoch before the network queue drains.
+      if (!isCurrent()) return;
       const snapshot = { ...update };
       queue = queue.then(async () => {
-        if (!isCurrent()) return;
         try {
           await request(`/api/cards/scan/events/${encodeURIComponent(eventId)}`, snapshot);
         } catch {

@@ -174,7 +174,7 @@ test('startup import remains behind strict guard; changed TypeScript parses', ()
     assert.deepEqual(parsed.diagnostics?.filter(d => d.category === ts.DiagnosticCategory.Error), []);
   }
   assert.match(readFileSync('server/index.ts', 'utf8'),
-    /if \(suppressAutomaticCatalogMutations\(\)\) \{\s*const \{ initializeDevScanVisual \} = await import\("\.\/services\/devScanVisual"\);\s*await initializeDevScanVisual\(\);/);
+    /if \(suppressAutomaticCatalogMutations\(\)\) \{\s*const \{ initializeDevScanTelemetry \} = await import\("\.\/services\/devScanTelemetry"\);\s*await initializeDevScanTelemetry\(\);\s*const \{ initializeDevScanVisual \} = await import\("\.\/services\/devScanVisual"\);\s*await initializeDevScanVisual\(\);/);
 });
 
 const localParityAvailable = existsSync(devDataPath('phase-c0', 'results', 'runs.json'))

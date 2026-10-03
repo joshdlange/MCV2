@@ -13,6 +13,7 @@ export interface DevScanEventOutcome {
   topScore: number | null;
   margin: number | null;
   serverMs: number;
+  rankedCardIds?: number[];
 }
 /** Only scalar metadata crosses this boundary, never an image or request. */
 export interface DevScanTelemetry {
@@ -96,6 +97,7 @@ export class DevScanTelemetryWriter implements DevScanTelemetry {
       server_ms double precision CHECK (server_ms >= 0),
       created_at timestamptz NOT NULL DEFAULT now()
     )`);
+    await db.query('ALTER TABLE dev_scan_events ADD COLUMN IF NOT EXISTS ranked_card_ids jsonb');
   }
   async begin(userId: number): Promise<string> {
     const db = await this.connection();
@@ -110,9 +112,9 @@ export class DevScanTelemetryWriter implements DevScanTelemetry {
   async finish(id: string, userId: number, outcome: DevScanEventOutcome): Promise<void> {
     const db = await this.connection();
     const result = await db.query(
-      `UPDATE dev_scan_events SET status = $3, top_score = $4, margin = $5, server_ms = $6
+      `UPDATE dev_scan_events SET status = $3, top_score = $4, margin = $5, server_ms = $6, ranked_card_ids = $7::jsonb
        WHERE id = $1 AND user_id = $2 RETURNING id`,
-      [id, userId, outcome.status, outcome.topScore, outcome.margin, outcome.serverMs],
+      [id, userId, outcome.status, outcome.topScore, outcome.margin, outcome.serverMs, JSON.stringify(outcome.rankedCardIds ?? null)],
     );
     if (!result.rows.length) throw new Error('Development scan event is missing');
   }

@@ -1,4 +1,5 @@
 import type { Express, RequestHandler } from 'express';
+import { registerDevScanUxRoutes } from './devScanUxRoutes';
 import multer from 'multer';
 import sharp from 'sharp';
 import { and, count, eq, sql } from 'drizzle-orm';
@@ -60,7 +61,8 @@ export function devScanResponse(result: DevScanVisualResult) {
   return {
     mode: 'visual-v1' as const, imageUrl: null, scanUploadId: null, ocrText: '', parsed,
     matches: result.matches, families: result.families, topScore: result.topScore,
-    margin: result.margin, timings: result.timings,
+    margin: result.margin, timings: result.timings, browseHint: result.browseHint,
+    rankedCardIds: result.rankedCardIds,
     confidenceLevel: result.matches.length ? 'low' as const : 'none' as const,
   };
 }
@@ -95,6 +97,7 @@ export function registerDevScanRoutes(
   dependencies: DevScanRouteDependencies = {},
 ): void {
   const enabled = () => isDevScanVisualEnabled(dependencies.env ?? process.env);
+  registerDevScanUxRoutes(app, authenticateUser, enabled);
   const scan = dependencies.scan ?? (buffer => getDevScanVisualService().scan(buffer));
   const reserveQuota = dependencies.reserveQuota
     ?? (user => reserveDevScanQuota(user, undefined, new Date(), dependencies.env ?? process.env));
@@ -124,9 +127,11 @@ export function registerDevScanRoutes(
       const codes = ['camera_open', 'photo_selected', 'decode_failed', 'crop_ready',
         'request_failed', 'camera_interrupted', 'page_load', 'page_hidden', 'page_visible',
         'page_hide', 'page_show', 'client_error', 'decode_start', 'decode_ready',
-        'request_started', 'results_ready', 'stage_change'];
-      if (!body || Object.keys(body).some(k => !['code', 'bytes', 'kind', 'pageId', 'sequence', 'attempt', 'elapsedMs', 'navigation', 'previousCode', 'stage', 'failure'].includes(k))
+        'request_started', 'results_ready', 'stage_change', 'artwork_ambiguous', 'artwork_preselected'];
+      if (!body || Object.keys(body).some(k => !['code', 'bytes', 'kind', 'pageId', 'sequence', 'attempt', 'elapsedMs', 'navigation', 'previousCode', 'stage', 'failure', 'marginThreshold', 'shownOptions'].includes(k))
           || !codes.includes(body.code)
+          || (body.marginThreshold !== undefined && body.marginThreshold !== 0.035)
+          || (body.shownOptions !== undefined && (![1, 2, 3].includes(body.shownOptions)))
           || (body.stage !== undefined && !['idle', 'preparing', 'photo-crop', 'crop', 'crop-back-choice', 'crop-back', 'scanning', 'error', 'results', 'versions', 'search', 'picker-year', 'picker-set', 'picker-subset', 'picker-card', 'confirmed', 'success'].includes(body.stage))
           || (body.failure !== undefined && !['auth', 'timeout', 'network', 'decode', 'file', 'response', 'other'].includes(body.failure))
           || (body.pageId !== undefined && !/^[a-f0-9-]{36}$/.test(body.pageId))
@@ -222,6 +227,7 @@ export function registerDevScanRoutes(
         phase = 'telemetry';
         await telemetry.finish(scanEventId, user.id, {
           status: 'success', topScore: result.topScore, margin: result.margin,
+          rankedCardIds: result.rankedCardIds,
           serverMs: performance.now() - serverStarted,
         });
         res.json({ ...devScanResponse(result), scanEventId });

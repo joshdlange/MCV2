@@ -90,6 +90,10 @@ const reviewUploads: { width: number; height: number }[] = [];
 let lastResult: any;
 let controlledFailure = false;
 let replayRetry = false;
+let existingOwnership = false;
+let changedOwnership = false;
+const undoRequests: { id: number; token: string }[] = [];
+const owned = new Map<number, { id: number; cardId: number; token: string }>();
 const app = express();
 app.use(express.json());
 app.post("/api/cards/scan/client-event", (req, res) => { phases.push(req.body); res.json({ ok: true }); });
@@ -165,8 +169,41 @@ await page.route("**/*", async route => {
   }
   if (url.pathname === "/api/cards/scan/config" || url.pathname === "/api/cards/scan/client-event" || url.pathname.startsWith("/api/cards/scan/events/")) return route.continue();
   if (url.pathname === "/api/cards/scan/usage") return json({ used: inference.length, limit: null, remaining: 25, unlimited: true });
+  if (url.pathname === "/api/cards/scan/collection" && request.method() === "POST") {
+    const payload = request.postDataJSON();
+    writes.push(payload);
+    const row = { id: 71000 + writes.length, cardId: payload.cardId, token: `qa-new-row-${writes.length}` };
+    if (!existingOwnership) owned.set(row.id, row);
+    return json({ created: !existingOwnership, ownedRow: { id: row.id, cardId: row.cardId }, undoToken: existingOwnership ? null : row.token });
+  }
+  if (/^\/api\/cards\/scan\/collection\/\d+$/.test(url.pathname) && request.method() === "DELETE") {
+    const id = Number(url.pathname.split("/").pop());
+    const token = request.postDataJSON().undoToken;
+    undoRequests.push({ id, token });
+    assert.equal(owned.get(id)?.token, token, "Undo uses the created owned row capability, never a card id");
+    if (changedOwnership) return json({ message: "This row changed. Undo left it untouched." }, 409);
+    owned.delete(id);
+    return json({ undone: true, ownedRowId: id });
+  }
+  if (url.pathname === "/api/cards/scan/search") {
+    const card = lastResult.matches[0];
+    return json([
+      // Parallel deliberately arrives first and has no per-card variation. The
+      // explicit checklist base flag, never alphabetical order, wins selection.
+      { cardId: card.cardId + 1, name: card.name, cardNumber: card.cardNumber, imageUrl: null, setName: "QA Set - Amber", mainSetName: "QA Set", year: 2024, setId: 124, mainSetId: 456, subsetName: null, isBase: false, exactNumber: true },
+      { cardId: card.cardId, name: card.name, cardNumber: card.cardNumber, imageUrl: null, setName: "QA Set - Base", mainSetName: "QA Set", year: 2024, setId: 123, mainSetId: 456, subsetName: null, isBase: true, exactNumber: true },
+    ]);
+  }
+  if (url.pathname === "/api/cards/picker/years") return json([2024, 2023]);
+  if (url.pathname === "/api/cards/picker/sets") return json([{ id: 456, name: "QA Set", type: "main_set", subset_count: 2 }]);
+  if (url.pathname === "/api/cards/picker/subsets") return json([{ id: 123, name: "Base", isInsertSubset: false, totalCards: 17 }]);
+  if (url.pathname === "/api/cards/picker/cards") {
+    const card = lastResult.matches[0];
+    return json([{ id: card.cardId, name: card.name, cardNumber: card.cardNumber, frontImageUrl: null, variation: null, isInsert: false }]);
+  }
   if (url.pathname === "/api/stats" || url.pathname === "/api/user/stats") return json({ totalCards: writes.length });
   if (url.pathname === "/api/card-sets") return json([]);
+  if (/^\/api\/card-sets\/\d+\/first-card-image$/.test(url.pathname)) return json({ imageUrl: null });
   if (url.pathname.startsWith("/api/collection/check/")) return json({ owned: false, quantity: 0 });
   if (url.pathname === "/api/collection") { if (request.method() === "POST") writes.push(request.postDataJSON()); return json({ success: true }); }
   if (url.pathname === "/api/v2/search") {
@@ -242,50 +279,32 @@ try {
     assert.equal(retained.liveCanvasPixels, 0, "Preparation canvases released");
     assert.equal(writes.length, index, "No automatic write on recognition");
     await page.screenshot({ path: path.join(directory, `scan-${index + 1}-results.png`) });
-    await page.getByTestId("scan-result-list").locator("button").first().click();
+    assert.equal(await page.getByTestId("scan-add").isDisabled(), false, "Top artwork/version is preselected");
+    assert.equal(await page.getByTestId("scan-exact-confirm").count(), 0, "No forced confirmation");
+    assert.equal(await page.getByTestId("scan-version-list").count(), 0, "No forced version screen");
+    const expectedTop = lastResult.families[0].representativeCardId;
+    const chosenChip = page.getByTestId("scan-artwork-option").first().locator('[aria-pressed="true"]');
+    assert.equal(await chosenChip.count(), 1, "Exactly one inline version preselected");
+    existingOwnership = index === 4;
     await page.getByTestId("scan-add").click();
-    await page.getByTestId("scan-version-list").waitFor();
-    await checkLayout(`393 scan ${index + 1} versions`, true);
-    if (index === 4) {
-      await page.setViewportSize({ width: 360, height: 640 });
-      await checkLayout("360 versions", true);
-      await page.screenshot({ path: path.join(directory, "360-versions.png") });
-      await page.setViewportSize({ width: 393, height: 852 });
-    }
-    await page.getByTestId("scan-version-list").locator("button").first().click();
-    await page.getByTestId("scan-add").click();
-    await page.getByTestId("scan-exact-confirm").waitFor();
-    assert.equal(await page.getByTestId("scan-add").isDisabled(), true, "Explicit confirmation gates writes");
-    assert.equal(writes.length, index);
-    await checkLayout(`393 scan ${index + 1} confirmation`, true);
-    if (index === 4) {
-      await page.setViewportSize({ width: 360, height: 640 });
-      await checkLayout("360 confirmation", true);
-      await page.getByTestId("scan-submit-photo").check();
-      await checkLayout("360 review option", true);
-      await page.screenshot({ path: path.join(directory, "360-review-confirmation.png") });
-      await page.getByTestId("scan-review-crop").click();
-      await page.getByRole("button", { name: "Use front crop" }).waitFor();
-      await checkLayout("360 optional review crop");
-      await page.getByRole("button", { name: "Use front crop" }).click();
-      await page.getByTestId("scan-exact-confirm").waitFor();
-      await checkLayout("360 cropped confirmation", true);
-      assert.equal(inference.length, 5, "Review crop never triggers recognition");
-      await page.setViewportSize({ width: 393, height: 852 });
-    }
-    await page.getByTestId("scan-exact-confirm").check();
-    await page.getByTestId("scan-add").click();
-    await page.getByTestId("scan-another").waitFor();
-    await page.getByTestId("scan-another").click();
     await page.getByTestId("scan-start").waitFor();
+    assert.equal(writes.length, index + 1, "Exactly one tap writes the collection");
+    assert.equal(writes[index].cardId, expectedTop, "Representative visual version, not arbitrary first alternative");
+    if (index < 4) {
+      await page.getByTestId("scan-undo").click();
+      await page.getByText("Addition undone", { exact: true }).waitFor();
+      assert.equal(undoRequests.at(-1)?.id, 71001 + index);
+    } else {
+      await page.getByText("Already in your collection", { exact: true }).waitFor();
+      assert.equal(await page.getByTestId("scan-undo").count(), 0, "Existing ownership has no Undo");
+    }
     const resetResources = await resourceCounts();
     assert.equal(resetResources.liveUrls, 0, "Reset revokes all preview URLs");
     assert.equal(resetResources.liveCanvasPixels, 0, "Reset releases review canvases");
     scans.push({ ordinal: index + 1, inference: inference[index], wallMs: performance.now() - start, retained, resetResources });
   }
   assert.equal(writes.length, 5);
-  assert.equal(reviewUploads.length, 1);
-  assert.ok(Math.abs(reviewUploads[0].width / reviewUploads[0].height - 5 / 7) < 0.01, "Only review upload is cropped 5:7");
+   assert.equal(reviewUploads.length, 0, "Visual adds never gate on a missing-photo offer");
   // Separate controlled error/retry uses a replay, not a sixth inference claim.
   controlledFailure = true;
   await page.getByTestId("scan-file-input").setInputFiles({ name: "retry-test.jpg", mimeType: "image/jpeg", buffer: landscape });
@@ -300,9 +319,71 @@ try {
   await checkLayout("360 retry results", true);
   assert.deepEqual((await resourceCounts()).decodeNames, beforeRetry.decodeNames, "Retry uses retained reduced file without decode");
   await page.getByTestId("scan-not-here").click();
+   await page.getByTestId("scan-browse-list").waitFor();
+   await checkLayout("360 hinted browse");
+   if (lastResult.browseHint) {
+     assert.equal(await page.getByTestId("scan-workspace").getAttribute("data-stage"), "picker-card", "Top10 common set hint prefilters the checklist");
+     await page.getByRole("button", { name: "Back to change context" }).click();
+     assert.ok(["picker-subset", "picker-set"].includes(await page.getByTestId("scan-workspace").getAttribute("data-stage") ?? ""), "Back changes browse context");
+   }
+   await page.getByRole("button", { name: "Type search", exact: true }).click();
   await page.getByTestId("scan-search-list").waitFor();
+   await page.getByTestId("scan-search-input").fill("1");
+   await page.getByTestId("scan-option-add").waitFor();
+   assert.equal(await page.getByTestId("scan-artwork-option").count(), 1, "Base + parallel collapsed as one family");
+   await page.getByRole("button", { name: "+1 versions", exact: true }).click();
+   assert.equal(await page.getByTestId("scan-version-chips").locator("button").count(), 2, "Inline search parallels");
+   assert.equal(await page.getByTestId("scan-version-chips").locator('[aria-pressed=true]').getAttribute("data-card-id"), String(lastResult.matches[0].cardId), "True base wins even when a no-variation parallel arrives first");
   await checkLayout("360 search");
-  await page.getByTestId("scan-reset").click();
+   existingOwnership = false;
+   await page.getByTestId("scan-option-add").click();
+   await page.getByTestId("scan-photo-offer").waitFor();
+   assert.equal(writes.at(-1)?.cardId, lastResult.matches[0].cardId, "Collapsed search Add uses the real base representative");
+   await checkLayout("360 post-add optional offer");
+   assert.equal((await resourceCounts()).liveUrls, 1, "Photo retained until offer resolved");
+   changedOwnership = true;
+   await page.getByTestId("scan-undo").click();
+   await page.getByText("Undo left your collection unchanged", { exact: true }).waitFor();
+   assert.ok(owned.has(71006), "Changed ownership left untouched");
+   changedOwnership = false;
+   await page.getByTestId("scan-review-crop").click();
+   await page.getByRole("button", { name: "Use front crop" }).waitFor();
+   await checkLayout("360 optional review crop");
+   await page.getByRole("button", { name: "Use front crop" }).click();
+   await page.getByTestId("scan-photo-offer").waitFor();
+   await page.getByTestId("scan-submit-photo").click();
+   await page.getByTestId("scan-start").waitFor();
+   assert.equal(reviewUploads.length, 1);
+   assert.ok(Math.abs(reviewUploads[0].width / reviewUploads[0].height - 5 / 7) < 0.01, "Optional crop changes review upload only");
+   // Replay controlled candidates: UI coverage, not another real inference.
+   const top = lastResult.families[0];
+   const variant = { ...top.options[0], cardId: 99001, subsetName: "Gold" };
+   const alternative = { ...top.options[0], cardId: 99002, name: "QA alternative artwork" };
+   lastResult = { ...lastResult, margin: 0.01, families: [
+     { ...top, options: [variant, ...top.options] },
+     { familyKey: "qa-other", score: top.score - 0.01, representativeCardId: alternative.cardId, options: [alternative] },
+   ] };
+   await page.getByTestId("scan-file-input").setInputFiles({ name: "ambiguous-ui-only.jpg", mimeType: "image/jpeg", buffer: landscape });
+   await page.getByTestId("scan-result-list").waitFor();
+   assert.equal(await page.getByTestId("scan-artwork-option").count(), 2, "Ambiguous artwork side by side, each with Add");
+   await checkLayout("360 ambiguous artworks", true);
+   await page.screenshot({ path: path.join(directory, "360-ambiguous.png") });
+   await page.getByTestId("scan-version-chips").first().getByRole("button", { name: "Gold", exact: true }).click();
+   await page.getByTestId("scan-add").click();
+   await page.getByTestId("scan-start").waitFor();
+   assert.equal(writes.at(-1)?.cardId, 99001, "Inline chip changes one-tap Add version");
+   assert.equal((await resourceCounts()).liveUrls, 0, "Repeat reset releases photos");
+   await page.getByTestId("scan-file-input").setInputFiles({ name: "offer-skip-ui-only.jpg", mimeType: "image/jpeg", buffer: landscape });
+   await page.getByTestId("scan-result-list").waitFor();
+   await page.getByTestId("scan-not-here").click();
+   await page.getByRole("button", { name: "Type search", exact: true }).click();
+   await page.getByTestId("scan-search-input").fill("1");
+   await page.getByTestId("scan-option-add").click();
+   await page.getByTestId("scan-photo-offer").waitFor();
+   assert.equal((await resourceCounts()).liveUrls, 1);
+   await page.getByTestId("scan-offer-skip").click();
+   await page.getByTestId("scan-start").waitFor();
+   assert.equal((await resourceCounts()).liveUrls, 0, "Skip resolves the photo offer and releases retained bytes");
   assert.equal(inference.length, 5);
   assert.deepEqual(errors, []);
   assert.deepEqual(unexpected, []);

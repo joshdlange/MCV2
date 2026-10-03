@@ -10,7 +10,7 @@ import {
 import { scanFamilyKey, type ScanCandidateRow, type ScoredMatch } from './scanMatching';
 
 export const isDevScanVisualEnabled = suppressAutomaticCatalogMutations;
-export interface DevScanCatalogCard extends ScanCandidateRow { active: boolean }
+export interface DevScanCatalogCard extends ScanCandidateRow { active: boolean; setId?: number; mainSetId?: number | null }
 export interface DevScanFrozenIndex {
   model: string;
   indexed: number;
@@ -31,6 +31,8 @@ export interface DevScanVisualResult {
   topScore: number | null;
   /** Difference between the best two distinct families; null if fewer than two. */
   margin: number | null;
+  rankedCardIds?: number[];
+  browseHint?: { year: number | null; mainSetId: number | null; setId: number; setName: string };
   timings: { queueMs: number; cropMs: number; embeddingMs: number; searchMs: number; totalMs: number };
 }
 type Embed = (buffer: Buffer) => Promise<number[]>;
@@ -208,6 +210,16 @@ export class DevScanVisualService {
         if (!best || score > best.score || (score === best.score && id < best.id)) bestByFamily.set(key, { score, id });
       }
     });
+    const rankedCardIds = [...direct.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0]).map(([id]) => id);
+    const votes = new Map<number, { count: number; card: DevScanCatalogCard }>();
+    for (const id of rankedCardIds.slice(0, 10)) {
+      const card = this.cards.get(id)!;
+      const key = card.mainSetId ?? card.setId;
+      if (key === undefined) continue;
+      const prior = votes.get(key);
+      votes.set(key, { count: (prior?.count ?? 0) + 1, card: prior?.card ?? card });
+    }
+    const hinted = [...votes.values()].sort((a, b) => b.count - a.count)[0]?.card;
     const families = [...bestByFamily.entries()]
       .sort((a, b) => b[1].score - a[1].score || a[1].id - b[1].id)
       .slice(0, 5).map(([familyKey, best]): DevScanVisualFamily => {
@@ -230,6 +242,8 @@ export class DevScanVisualService {
       });
     return {
       families, matches: families.flatMap(family => family.options),
+      rankedCardIds: rankedCardIds.slice(0, 100),
+      browseHint: hinted?.setId ? { year: hinted.setYear, mainSetId: hinted.mainSetId ?? null, setId: hinted.setId, setName: hinted.mainSetName || hinted.setName } : undefined,
       topScore: families[0]?.score ?? null,
       margin: families.length > 1 ? families[0].score - families[1].score : null,
     };
@@ -255,7 +269,7 @@ export async function initializeDevScanVisual(): Promise<DevScanVisualService | 
     const { eq, and, or, isNull } = await import('drizzle-orm');
     const { index, matrix } = await loadDevScanFrozenIndex();
     const catalog = await db.select({
-      id: cards.id, name: cards.name, cardNumber: cards.cardNumber,
+      id: cards.id, name: cards.name, cardNumber: cards.cardNumber, setId: cards.setId, mainSetId: cardSets.mainSetId,
       frontImageUrl: cards.frontImageUrl, variation: cards.variation, isInsert: cards.isInsert,
       setName: cardSets.name, setYear: cardSets.year, mainSetName: mainSets.name,
       isInsertSubset: cardSets.isInsertSubset,

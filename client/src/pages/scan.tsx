@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { DevScanWorkspace, type ScanBrowseHint } from "@/components/scan/dev-scan-workspace";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,6 +68,8 @@ interface ScanParsed {
 }
 
 interface ScanResult {
+  browseHint?: ScanBrowseHint | null;
+  rankedCardIds?: number[];
   mode?: "visual-v1";
   scanEventId?: string | null;
   families?: ScanFamily[];
@@ -1107,6 +1110,19 @@ export default function ScanToAdd() {
 
   // DEV visual-v1 is a bounded phone workspace, not the legacy scrolling page.
   // The app shell reserves 4rem for its mobile header; only lists scroll here.
+  if (visualV1 && (stage === "results" || stage === "search")) {
+    return <>
+      <input data-testid="scan-file-input" ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
+      <DevScanWorkspace families={scanResult?.families ?? []} margin={scanResult?.margin} browseHint={scanResult?.browseHint}
+        previewUrl={previewUrl} photo={reviewPhotoFile} elapsedMs={browserTiming?.elapsedMs} initialSearch={stage === "search"}
+        record={update => scanTelemetry.current?.record(update)} onReset={handleReset} onNext={() => {
+          handleReset();
+          // Camera opening after an async save may be blocked on iOS. The idle
+          // capture button remains the explicit large Scan next fallback.
+          requestAnimationFrame(() => { try { launchPhotoPicker(); } catch { /* explicit capture button remains available */ } });
+        }} />
+    </>;
+  }
   if (visualV1) {
     const families = scanResult?.families ?? [];
     const working = stage === "preparing" || stage === "scanning";
@@ -1156,7 +1172,7 @@ export default function ScanToAdd() {
             <div className="flex min-h-0 flex-1 flex-col justify-center gap-5 pb-4">
               <div className="text-center">
                 <h2 className="font-bebas text-4xl tracking-wide text-gray-900 dark:text-white">Your next card. In your vault.</h2>
-                <p className="mx-auto mt-2 max-w-xs text-sm text-gray-500">Photograph one card. Find its artwork, then check the exact version.</p>
+                <p className="mx-auto mt-2 max-w-xs text-sm text-gray-500">Photograph one card. Top artwork and version selected, ready for one-tap Add.</p>
               </div>
               <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-5 text-center dark:border-red-900 dark:bg-red-950/20">
                 <Camera className="mx-auto mb-3 h-10 w-10 text-red-600" />
@@ -1164,7 +1180,7 @@ export default function ScanToAdd() {
                 <p className="mt-1 text-xs text-gray-500">One card, good light, printed details in focus.</p>
               </div>
               <Button data-testid="scan-start" className="h-16 w-full rounded-xl bg-red-600 text-lg font-semibold text-white hover:bg-red-700" disabled={isAtScanLimit || !configResolved} onClick={launchPhotoPicker}>
-                <Camera className="mr-2 h-6 w-6" /> Scan a card
+                <Camera className="mr-2 h-6 w-6" /> Scan next card
               </Button>
               {isAtScanLimit && <p role="alert" className="text-center text-xs text-amber-700">Monthly scan limit reached. <button className="underline" onClick={() => setLocation("/subscribe")}>View plans</button></p>}
               <Button variant="outline" className="h-11 w-full" onClick={openSearch}><Search className="mr-2 h-4 w-4" /> Search instead</Button>
@@ -1177,7 +1193,7 @@ export default function ScanToAdd() {
               {previewUrl && <img src={previewUrl} alt="Full scan photo" className="mx-auto max-h-[25dvh] max-w-full rounded-lg object-contain" />}
               <div className="mx-auto h-2 w-40 animate-pulse rounded bg-red-200" />
               <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{stage === "preparing" ? "Preparing your photo…" : "Finding matching artwork…"}</h2>
-              <p className="text-sm text-gray-500">{stage === "preparing" ? "Resizing the full frame on this device." : "You'll check the exact version before saving."}</p>
+              <p className="text-sm text-gray-500">{stage === "preparing" ? "Resizing the full frame on this device." : "Finding the artwork and its visual version."}</p>
             </div>
           )}
 

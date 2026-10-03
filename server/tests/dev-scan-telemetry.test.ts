@@ -48,10 +48,10 @@ test('photo-free DDL is separate from shared schema, and request writes never la
   queries.length = 0;
   const created = await writer.begin(42);
   assert.match(created, /^[0-9a-f-]{36}$/);
-  await writer.finish(created, 42, { status: 'success', topScore: 0.8, margin: 0.2, serverMs: 100 });
+  await writer.finish(created, 42, { status: 'success', topScore: 0.8, margin: 0.2, serverMs: 100, rankedCardIds: [31, 22] });
   assert.equal(queries.length, 2);
   assert.deepEqual(queries[0].values, [created, 42]);
-  assert.deepEqual(queries[1].values, [created, 42, 'success', 0.8, 0.2, 100]);
+  assert.deepEqual(queries[1].values, [created, 42, 'success', 0.8, 0.2, 100, '[31,22]']);
   assert.match(queries[1].text, /WHERE id = \$1 AND user_id = \$2/);
   assert.ok(queries.every(q => !q.text.includes('CREATE')));
 });

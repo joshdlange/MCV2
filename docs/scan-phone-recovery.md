@@ -1,5 +1,45 @@
 # Dev phone scan investigation — 2026-10-03
 
+## One-tap UX retest investigation
+
+The next phone test recorded seven scans between 17:13 and 17:21 UTC:
+five selections/adds, and two searches without a final selected card.
+The five owned additions in the same user's collection during that interval were:
+Daredevil #27 (1995 Masterpieces Base), Spider-Man #20 (1995 Masterpieces Canvas),
+Jean Grey #26 (1996 Masterpieces), Shadowcat #75 and Punisher #73
+(1992 Masterpieces Base).
+
+At 17:14:29 and 17:18:31 UTC (12:14:29 and 12:18:31 Central), used_search=true
+but picked_card_id=NULL. No corresponding additional owned card appears in the
+collection interval through 17:25 UTC. Therefore the missed card's identity,
+historical rank and image quality cannot be inferred. No scan photos were stored;
+old records have scores/margins but no candidate ranking. Do not claim that
+absence of a selection proves an absent or bad catalog image.
+
+New scan results persist the first 100 directly ranked card IDs in guarded DEV
+telemetry. The top ten vote on the parent set for the guided browse starting hint.
+This does not reconstruct rankings for older scans.
+
+### Missed-card identification follow-up
+
+The user identified the two missed characters as Colossus and Ghost Rider from
+2007 or 2008 Masterpieces; exact year/card numbers remain unconfirmed.
+Read-only development catalog/index inspection and HTTP image decoding found:
+
+| Candidate | Catalog ID | Current image | Frozen index |
+| --- | --- | --- | --- |
+| 2007 Colossus #19 | 22638 | HTTP 200, 180×240; single Colossus card front | Present |
+| 2007 Ghost Rider #32 | 22653 | HTTP 200, 180×240; single Ghost Rider card front | Present |
+| 2008 Set 2 Colossus #11 | 22723 | HTTP 200, 240×108; three-card montage, not an isolated card | Present |
+| 2008 Set 2 Ghost Rider #28 | 22759 | HTTP 200, 174×240; dark, low-resolution single-card front | Present |
+
+The frozen index source manifest references these same URLs. The Colossus montage
+is a verified current catalog-reference defect, but original scan photos/rankings
+are unavailable, so its causal contribution to the historical miss is unproven.
+The 2007 Gold/Holofoil variants are also indexed. Ghost Rider Preview PT6 and
+Subcasts SC3 have no front image and are not indexed; no evidence yet identifies
+either as the user's card. No catalog or image modifications were made.
+
 ## Second retest and no-HMR follow-up
 
 User reported one success in three Android-browser attempts after refreshing, with

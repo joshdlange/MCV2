@@ -13,6 +13,14 @@ Build only in DEV; never publish; production is read-only. Preserve all existing
 
 ## Mobile-browser acceptance
 
+### One-tap acceptance supersedes repeated confirmation
+
+The user confirmed phone scans now work and requested top artwork/version preselected with inline version chips and one Add action, not card → version → confirmation. Close artwork scores should show alternatives with their own Add actions. Return to capture after adding, with safe Undo.
+
+**Why:** The user called successful recognition good but found the multiple confirmations and failed-match fallback unusable.
+
+**How to apply:** Keep results reusable as tiles for a future binder grid, without building binder scanning yet. “Not here?” uses Year → Set → Subset → Card with scan-derived starting context. Preserve missing-image photo offers after search-picked adds; do not reinstate mandatory confirmation or recognition cropping.
+
 Phone testing must use a production-built frontend without Vite HMR, while the backend remains development-only on the dev database. Send the entire resized photo to recognition; crop only within optional card-image review. Keep phone actions visible without page scrolling.
 
 **Why:** After the initial recovery fixes, the user reported one success out of three Android browser attempts and repeated page resets. An isolated established HMR socket termination reproduced Vite automatically reloading. This verifies the mechanism, not the historical phone trigger. The user explicitly removed recognition cropping because arm C was evaluated on uncropped photos.
