@@ -10,8 +10,8 @@ export const keep = [
   'client/src/assets/avatars', 'uploads',
 ];
 export function assertPublishCopy(env) {
-  if (env.REPLIT_DEV_DOMAIN) {
-    throw new Error('Refusing to prune the development workspace. Run only in the isolated publishing build.');
+  if (env.PUBLISH_BUILD !== '1') {
+    throw new Error('Refusing to prune without PUBLISH_BUILD=1. This signal must be supplied only by the deployment build command.');
   }
 }
 const retained = name => keep.some(k => name === k || name.startsWith(`${k}/`));
@@ -48,6 +48,13 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const root = process.cwd();
   if (process.argv.includes('--publish')) {
     assertPublishCopy(process.env); // Before npm or any filesystem mutation.
+    // The failed publishing log proved DEV_DOMAIN is present in build containers.
+    // Log only non-secret boolean context; neither marker is an authorization gate.
+    console.log('[publish context]', JSON.stringify({
+      explicitPublishBuild: process.env.PUBLISH_BUILD === '1',
+      replitDevDomainPresent: Boolean(process.env.REPLIT_DEV_DOMAIN),
+      replitDeploymentIsOne: process.env.REPLIT_DEPLOYMENT === '1',
+    }));
     execFileSync('npm', ['run', 'build'], { stdio: 'inherit' });
     execFileSync('node_modules/.bin/esbuild', [
       'scripts/check-runtime-package.ts', '--platform=node', '--packages=external',

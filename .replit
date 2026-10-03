@@ -8,7 +8,7 @@ packages = ["unzip"]
 
 [deployment]
 deploymentTarget = "autoscale"
-build = ["node", "scripts/publish-package.mjs", "--publish"]
+build = ["env", "PUBLISH_BUILD=1", "node", "scripts/publish-package.mjs", "--publish"]
 run = ["npm", "run", "start"]
 
 [[ports]]

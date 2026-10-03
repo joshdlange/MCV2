@@ -7,6 +7,17 @@ import { assertPublishCopy, inspect, prune } from './publish-package.mjs';
 
 test('publishing cleanup refuses the development environment', () => {
   assert.throws(() => assertPublishCopy({ REPLIT_DEV_DOMAIN: 'workspace.replit.dev' }), /Refusing/);
+  for (const flag of [undefined, '', '0', 'true', 'on']) {
+    assert.throws(() => assertPublishCopy({ PUBLISH_BUILD: flag, REPLIT_DEPLOYMENT: '1' }), /Refusing/);
+  }
+  assert.throws(() => assertPublishCopy({}), /Refusing/);
+});
+test('explicit publishing signal works even when the build exposes the dev domain', () => {
+  for (const deployment of [undefined, '1']) {
+    assert.doesNotThrow(() => assertPublishCopy({
+      PUBLISH_BUILD: '1', REPLIT_DEV_DOMAIN: 'build.replit.dev', REPLIT_DEPLOYMENT: deployment,
+    }));
+  }
 });
 test('allowlist removes only an isolated fixture; runtime files survive', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'publish-policy-'));
@@ -28,7 +39,7 @@ test('allowlist removes only an isolated fixture; runtime files survive', async 
     assert.equal(report.removedBytes, excluded.length * 4);
     await assert.rejects(prune(root, { REPLIT_DEV_DOMAIN: 'dev' }), /Refusing/);
     await access(path.join(root, excluded[0]));
-    await prune(root, {});
+    await prune(root, { PUBLISH_BUILD: '1', REPLIT_DEV_DOMAIN: 'build.replit.dev' });
     for (const file of required) await access(path.join(root, file));
     for (const file of excluded) await assert.rejects(access(path.join(root, file)));
   } finally { await rm(root, { recursive: true, force: true }); }
