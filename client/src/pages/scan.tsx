@@ -1181,8 +1181,8 @@ export default function ScanToAdd() {
             <div className="flex min-h-0 flex-1 flex-col justify-center gap-5 text-center" aria-live="polite" data-testid="scan-progress">
               {previewUrl && <img src={previewUrl} alt="Full scan photo" className="mx-auto max-h-[25dvh] max-w-full rounded-lg object-contain" />}
               <div className="mx-auto h-2 w-40 animate-pulse rounded bg-red-200" />
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{stage === "preparing" ? "Preparing your photo…" : "Finding matching artwork…"}</h2>
-              <p className="text-sm text-gray-500">{stage === "preparing" ? "Resizing the full frame on this device." : "Finding the artwork and its visual version."}</p>
+              <h2 role="status" aria-live="polite" className="text-lg font-semibold text-gray-800 dark:text-gray-100">{stage === "preparing" ? "Preparing your photo…" : "Finding matching artwork…"}</h2>
+              <p className="text-sm text-gray-500">{stage === "preparing" ? "Getting your photo ready on this device. Large photos can take a few seconds." : "Comparing your photo with the card catalog."}</p>
             </div>
           )}
 

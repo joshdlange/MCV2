@@ -15,7 +15,7 @@ import { ScanResultTile, type ScanArtworkFamily, type ScanTileCard } from "./sca
 import "./scan-workspace.css";
 
 // Cosine scores are fractions. Below 0.035 separation between artwork families
-// show up to three alternatives; this is a UI ambiguity rule, not probability.
+// show close-match guidance; this is a UI ambiguity rule, not probability.
 export const SCAN_ARTWORK_AMBIGUITY_MARGIN = 0.035;
 export interface ScanBrowseHint { year: number; mainSetId: number | null; setId: number; setName: string }
 interface PickerSet { id: number; name: string; type: "main_set" | "card_set"; subset_count: number; totalCards?: number }
@@ -179,7 +179,8 @@ export function DevScanWorkspace({ families, margin, browseHint, previewUrl, pho
       <header className="flex shrink-0 items-center justify-between py-3"><h1 className="scan-heading flex items-center gap-2 text-2xl"><ScanLine className="h-5 w-5 text-red-600" />Scan to add</h1><Button data-testid="scan-reset" variant="ghost" size="sm" disabled={pending || submitPhoto.isPending} onClick={discardAndReset}>New scan</Button></header>
       {view === "results" && <>
         <div className="mb-2 flex shrink-0 items-center gap-3">{previewUrl && <img src={previewUrl} alt="Your full scan" className="h-12 w-10 rounded object-contain" />}<div><h2 className="text-sm font-semibold">Check artwork, set and year</h2><p className="text-xs text-gray-600">Tap the correct set row or Add. Nothing is added until you choose.</p></div></div>
-        {elapsedMs !== undefined && <p data-testid="scan-dev-elapsed" className="mb-2 text-[10px] text-gray-500">Dev scan elapsed: {(elapsedMs / 1000).toFixed(2)}s · {ambiguous ? "Close artwork scores" : "Best artwork highlighted"}</p>}
+        {ambiguous && <p data-testid="scan-close-match-guidance" role="status" className="mb-2 shrink-0 text-xs text-gray-600">Several cards have similar artwork. Check the set, year and card number before adding. Don’t see yours? Browse or search below.</p>}
+        {elapsedMs !== undefined && <p data-testid="scan-dev-elapsed" className="mb-2 shrink-0 text-[10px] text-gray-500">Matches found in {(elapsedMs / 1000).toFixed(2)}s</p>}
         <div data-testid="scan-result-list" className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{shown.map((family, i) => <ScanResultTile key={family.familyKey} family={family} primary={i === 0} pending={pending} onAdd={addCard} />)}</div>
         <footer data-testid="scan-sticky-actions" className="shrink-0 py-3"><Button data-testid="scan-not-here" className="h-11 w-full" variant="outline" disabled={pending} onClick={findCard}><Search className="mr-2 h-4 w-4" />Not here? Browse or search</Button></footer>
       </>}

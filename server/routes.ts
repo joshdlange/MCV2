@@ -468,6 +468,8 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
             nativeLogin.data.sessionId,
             nativeLogin.data.platform,
           );
+          // Return the just-recorded count, not the pre-launch user snapshot.
+          user = { ...user, nativeMobileLogins: nativeResult.loginNumber };
           await badgeService.checkVaultRegular(
             user.id,
             nativeResult.loginNumber,

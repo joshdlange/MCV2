@@ -62,6 +62,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       subscriptionStatus: backendUser.subscriptionStatus,
       onboardingComplete: backendUser.onboardingComplete || false,
       totalLogins: backendUser.totalLogins || 0,
+      nativeMobileLogins: backendUser.nativeMobileLogins || 0,
       username: backendUser.username
     });
     const selectedPlan = localStorage.getItem('selectedPlan');

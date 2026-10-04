@@ -20,6 +20,7 @@ export function toAuthUser(user: DatabaseUser) {
     subscriptionStatus: user.subscriptionStatus,
     onboardingComplete: user.onboardingComplete,
     totalLogins: user.totalLogins,
+    nativeMobileLogins: user.nativeMobileLogins,
   };
 }
 

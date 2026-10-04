@@ -64,6 +64,7 @@ const databaseUser = {
 
 test("auth responses expose only fields needed to establish the app session", () => {
   const result = toAuthUser(databaseUser);
+  assert.equal(result.nativeMobileLogins, 4);
   assert.equal(result.id, 42);
   assert.equal(result.totalLogins, 4);
   assert.equal("firebaseUid" in result, false);

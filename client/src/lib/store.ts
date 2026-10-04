@@ -15,6 +15,7 @@ interface AppState {
     subscriptionStatus: string;
     onboardingComplete: boolean;
     totalLogins: number;
+    nativeMobileLogins?: number;
     username?: string;
   } | null;
   toggleAdminMode: () => void;

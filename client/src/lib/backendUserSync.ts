@@ -12,6 +12,7 @@ export interface BackendUser {
   subscriptionStatus: string;
   onboardingComplete: boolean;
   totalLogins: number;
+  nativeMobileLogins?: number;
 }
 
 export class BackendUserSyncError extends Error {

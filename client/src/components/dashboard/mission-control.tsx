@@ -12,6 +12,8 @@ import {
 import { Apple, ChevronRight, Play, Target } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { pickMission } from "@/lib/dailyMission";
+import { useNativeReview } from "@/hooks/useNativeReview";
+import { Capacitor } from "@capacitor/core";
 import type { CollectionStats } from "@shared/schema";
 import type { XpProgress } from "@shared/xp";
 
@@ -44,6 +46,7 @@ export function MissionCard({
   const { data: xp } = useXpSummary();
   const totalLogins = useAppStore((state) => state.currentUser?.totalLogins ?? 0);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  useNativeReview(!isLoading && !!stats);
 
   if (isLoading) {
     return (
@@ -97,7 +100,13 @@ export function MissionCard({
             <Button
               onClick={() => {
                 if (mission.review) {
-                  setReviewDialogOpen(true);
+                  // Explicit review buttons open the store: native review APIs
+                  // can silently suppress UI and must not leave a dead button.
+                  if (Capacitor.isNativePlatform()) {
+                    window.open(Capacitor.getPlatform() === "ios" ? APP_STORE_REVIEW_URL : GOOGLE_PLAY_REVIEW_URL, "_blank", "noopener,noreferrer");
+                  } else {
+                    setReviewDialogOpen(true);
+                  }
                 } else {
                   setLocation(mission.href ?? "/browse");
                 }
