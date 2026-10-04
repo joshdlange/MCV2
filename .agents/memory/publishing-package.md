@@ -23,7 +23,7 @@ Production dependency pruning must be checked against the compiled server, not j
 
 Preserve Replit's toolchain metadata when excluding application caches.
 
-**Why:** A publish passed Build and Bundle, then failed before Node started with `exec: "npm": executable file not found in $PATH`. The application allowlist had removed `.cache/replit` along with ordinary caches. A successful build-time inference check did not test the hosting runtime's command resolution.
+**Why:** A publish passed Build and Bundle, then failed before Node started with `exec: "npm": executable file not found in $PATH`. The application allowlist had removed `.cache/replit` along with ordinary caches. Preserving that metadata was followed by a successful Promote and user-confirmed live scanning. A successful build-time inference check alone did not test the hosting runtime's command resolution.
 
 **How to apply:** Retain the platform metadata, not the entire model/cache tree. Rehearse the exact run command after production dependency pruning in an isolated payload. A local rehearsal still cannot prove the hosting container's PATH; verify the next Promote result.
 
