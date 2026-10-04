@@ -20,3 +20,15 @@ Production dependency pruning must be checked against the compiled server, not j
 **Why:** Bundling a dynamic local Vite-config import hoists its static plugin imports into the server entry point, so simply making the config import dynamic still leaves production dependent on devDependencies.
 
 **How to apply:** Keep development-only config imports opaque to the production bundler and validate the resulting entry-point dependencies after pruning.
+
+Preserve Replit's toolchain metadata when excluding application caches.
+
+**Why:** A publish passed Build and Bundle, then failed before Node started with `exec: "npm": executable file not found in $PATH`. The application allowlist had removed `.cache/replit` along with ordinary caches. A successful build-time inference check did not test the hosting runtime's command resolution.
+
+**How to apply:** Retain the platform metadata, not the entire model/cache tree. Rehearse the exact run command after production dependency pruning in an isolated payload. A local rehearsal still cannot prove the hosting container's PATH; verify the next Promote result.
+
+Production-mode rehearsals must not use the live database or identities.
+
+**Why:** The user describes MCV as a live app with approximately 2,000 users and requires preserving its established behavior. Production startup runs migrations, recovery, and background work, so simply starting a second server against existing credentials is not a harmless test.
+
+**How to apply:** Use a temporary catalog-only database and isolated external-service fixtures. Distinguish real inference from fixture authentication, and wait for both startup readiness and the data-update write gate before measuring scans.

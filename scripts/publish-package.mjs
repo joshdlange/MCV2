@@ -6,6 +6,9 @@ import { execFileSync } from 'node:child_process';
 // Relative paths deliberately preserve the application's existing runtime contract.
 export const keep = [
   'dist', 'node_modules', 'package.json', 'package-lock.json', '.replit',
+  // Replit uses this metadata to assemble the runtime PATH/Nix toolchain.
+  // It is infrastructure, not a disposable application/model cache.
+  '.cache/replit',
   'runtime/scanner/index', 'docs/scan-bad-images.md',
   'client/src/assets/avatars', 'uploads',
 ];
