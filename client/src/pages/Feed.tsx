@@ -3,7 +3,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
+  DropdownMenuRadioGroup, DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu";
+import {
+  Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+} from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -20,7 +28,7 @@ import noCardImagePlaceholder from "@assets/image_1784478496002.png";
 import {
   Activity as ActivityIcon, Trophy, ArrowLeftRight, Sparkles,
   Award, BookOpen, Image as ImageIcon, Share2, Star, Crown, Loader2,
-  ChevronDown, ChevronUp, ExternalLink, Layers, UserPlus, Users,
+  ChevronDown, ChevronUp, ExternalLink, Layers, UserPlus, Users, SlidersHorizontal, Check,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -981,6 +989,105 @@ function GroupedBadgeCard({ group, pending, onReact, followState, onOpenDetail }
 // Activity tab
 // ---------------------------------------------------------------------------
 
+const FEED_AUDIENCES: { value: FeedFilter; label: string }[] = [
+  { value: "everyone", label: "Everyone" },
+  { value: "following", label: "Friends & Following" },
+  { value: "me", label: "My activity" },
+];
+
+function AudiencePicker({ value, onChange }: {
+  value: FeedFilter;
+  onChange: (value: FeedFilter) => void;
+}) {
+  const isMobile = useIsMobile();
+  const [open, setOpen] = useState(false);
+  const selectedButton = useRef<HTMLButtonElement>(null);
+  const label = FEED_AUDIENCES.find(audience => audience.value === value)!.label;
+  const choose = (audience: FeedFilter) => {
+    onChange(audience);
+    setOpen(false);
+  };
+  const trigger = (
+    <Button
+      size="sm" variant="outline"
+      className="gap-2 bg-zinc-950 border-zinc-700 text-zinc-200 hover:bg-zinc-900 hover:text-zinc-100"
+      aria-label={`Feed audience: ${label}`}
+      data-testid="button-feed-audience"
+    >
+      <SlidersHorizontal className="w-3.5 h-3.5" aria-hidden="true" />
+      {label}
+      <ChevronDown className="w-3.5 h-3.5 text-zinc-500" aria-hidden="true" />
+    </Button>
+  );
+
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger asChild>{trigger}</SheetTrigger>
+        <SheetContent
+          side="bottom"
+          className="rounded-t-xl border-zinc-700 bg-zinc-950 text-zinc-100 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+          data-testid="feed-audience-sheet"
+          onOpenAutoFocus={event => {
+            event.preventDefault();
+            selectedButton.current?.focus();
+          }}
+        >
+          <SheetHeader className="text-left pr-8">
+            <SheetTitle className="text-zinc-100">Feed audience</SheetTitle>
+            <SheetDescription className="text-zinc-400">
+              Choose whose activity appears in your feed.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-4 space-y-1" role="group" aria-label="Feed audience">
+            {FEED_AUDIENCES.map(audience => (
+              <button
+                key={audience.value}
+                ref={value === audience.value ? selectedButton : undefined}
+                type="button"
+                aria-pressed={value === audience.value}
+                data-testid={`feed-audience-${audience.value}`}
+                onClick={() => choose(audience.value)}
+                className={`flex w-full items-center justify-between rounded-lg px-3 py-3 text-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${
+                  value === audience.value ? "bg-zinc-800 text-zinc-100" : "text-zinc-300 hover:bg-zinc-900"
+                }`}
+              >
+                {audience.label}
+                {value === audience.value && <Check className="w-4 h-4 text-red-400" aria-hidden="true" />}
+              </button>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        className="min-w-56 bg-zinc-950 border-zinc-700 text-zinc-200"
+        aria-label="Feed audience"
+        data-testid="feed-audience-menu"
+      >
+        <DropdownMenuRadioGroup value={value} onValueChange={audience => choose(audience as FeedFilter)}>
+          {FEED_AUDIENCES.map(audience => (
+            <DropdownMenuRadioItem
+              key={audience.value}
+              value={audience.value}
+              data-testid={`feed-audience-${audience.value}`}
+              className="justify-between gap-4 py-2 pl-3 pr-3 [&>span]:hidden focus:bg-zinc-800 focus:text-zinc-100"
+            >
+              {audience.label}
+              {value === audience.value && <Check className="w-4 h-4 text-red-400" aria-hidden="true" />}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function ActivityTab() {
   const [filter, setFilter] = useState<FeedFilter>("everyone");
   const [contentType, setContentType] = useState<FeedContentType>("all");
@@ -1235,20 +1342,7 @@ function ActivityTab() {
           />
         </div>
       )}
-      <div className="flex gap-2 flex-wrap" role="group" aria-label="Feed audience">
-        {(["everyone", "following", "me"] as FeedFilter[]).map((f) => (
-          <Button
-            key={f}
-            size="sm"
-            variant={filter === f ? "default" : "outline"}
-            onClick={() => changeFilter(f)}
-            aria-pressed={filter === f}
-            data-testid={`button-filter-${f}`}
-          >
-            {f === "everyone" ? "Everyone" : f === "following" ? "Friends & Following" : "Me"}
-          </Button>
-        ))}
-      </div>
+      <AudiencePicker value={filter} onChange={changeFilter} />
       <div className="flex gap-2 flex-wrap" role="group" aria-label="Feed content">
         {(["all", "badges", "cards", "activity"] as FeedContentType[]).map((type) => (
           <Button

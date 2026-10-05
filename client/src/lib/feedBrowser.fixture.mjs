@@ -113,7 +113,62 @@ try {
     await page.goto(`${base}/feed`, { waitUntil: "domcontentloaded" });
     await page.getByTestId("feed-event-101").waitFor();
     assert.equal(await page.getByTestId("button-filter-friends").count(), 0);
-    assert.equal(await page.getByTestId("button-filter-following").innerText(), "Friends & Following");
+    const picker = page.getByTestId("button-feed-audience");
+    const pickerContent = page.getByTestId(width === 393 ? "feed-audience-sheet" : "feed-audience-menu");
+    const labels = { everyone: "Everyone", following: "Friends & Following", me: "My activity" };
+    let selectedAudience = "everyone";
+    const chooseAudience = async audience => {
+      await picker.click();
+      await pickerContent.waitFor();
+      assert.equal(
+        await page.getByTestId(`feed-audience-${selectedAudience}`).getAttribute(width === 393 ? "aria-pressed" : "aria-checked"),
+        "true", "reopened picker exposes current selection",
+      );
+      await page.getByTestId(`feed-audience-${audience}`).click();
+      await pickerContent.waitFor({ state: "hidden" });
+      assert.equal(await picker.innerText(), labels[audience], "picker shows current audience");
+      selectedAudience = audience;
+    };
+    assert.equal(await picker.innerText(), "Everyone");
+    assert.equal(await page.getByTestId("button-filter-following").count(), 0, "old audience row is gone");
+    await picker.click();
+    await pickerContent.waitFor();
+    assert.equal(await page.getByTestId("feed-audience-following").innerText(), "Friends & Following");
+    assert.equal(await page.getByTestId("feed-audience-me").innerText(), "My activity");
+    assert.equal(await page.getByTestId("feed-audience-everyone").getAttribute(width === 393 ? "aria-pressed" : "aria-checked"), "true");
+    assert.equal(await page.getByTestId("feed-audience-everyone").locator("svg.lucide-check").count(), 1, "selected checkmark");
+    if (width === 393) {
+      await page.waitForTimeout(550);
+      const box = await pickerContent.boundingBox();
+      assert.ok(Math.abs(box.y + box.height - 852) <= 2, "phone picker anchored to bottom");
+      await page.screenshot({ path: `${output}/feed-audience-sheet-393.png` });
+      await page.getByRole("button", { name: "Close", exact: true }).click();
+      await pickerContent.waitFor({ state: "hidden" });
+      assert.equal(await picker.innerText(), "Everyone", "dismissal preserves selected audience");
+    } else {
+      await page.waitForTimeout(200);
+      await page.screenshot({ path: `${output}/feed-audience-menu-1280.png` });
+      await page.keyboard.press("Escape");
+      await pickerContent.waitFor({ state: "hidden" });
+      await picker.focus();
+      await page.keyboard.press("ArrowDown");
+      await pickerContent.waitFor();
+      await page.keyboard.press("Home");
+      await page.waitForFunction(() => document.activeElement?.getAttribute("data-testid") === "feed-audience-everyone");
+      await page.keyboard.press("ArrowDown");
+      await page.waitForFunction(() => document.activeElement?.getAttribute("data-testid") === "feed-audience-following");
+      await page.keyboard.press("Enter");
+      await pickerContent.waitFor({ state: "hidden" });
+      assert.equal(await picker.innerText(), "Friends & Following", "desktop arrow/enter keyboard selection");
+      selectedAudience = "following";
+      await chooseAudience("everyone");
+    }
+    await picker.click();
+    await pickerContent.waitFor();
+    await page.keyboard.press("Escape");
+    await pickerContent.waitFor({ state: "hidden" });
+    await page.waitForFunction(() => document.activeElement?.getAttribute("data-testid") === "button-feed-audience");
+    assert.equal(await picker.innerText(), "Everyone", "Escape dismisses without selection");
     for (const type of ["badges", "cards"]) {
       await page.getByTestId(`button-type-${type}`).click();
       const first = type === "badges" ? 101 : 201;
@@ -136,7 +191,7 @@ try {
     await page.waitForFunction(() => document.querySelector('[data-testid="reaction-fire_pull-101"]')?.getAttribute("aria-pressed") === "true");
     assert.match(await page.getByTestId("reaction-fire_pull-101").innerText(), /1/);
     for (const audience of ["following", "me", "everyone"]) {
-      await page.getByTestId(`button-filter-${audience}`).click();
+      await chooseAudience(audience);
       await page.getByTestId("feed-event-101").waitFor();
       assert.equal(await page.getByTestId("reaction-fire_pull-101").getAttribute("aria-pressed"), "true");
       assert.match(await page.getByTestId("reaction-fire_pull-101").innerText(), /1/);
@@ -147,10 +202,10 @@ try {
     await page.getByTestId("reaction-fire_pull-101").click();
     await page.waitForTimeout(100);
     assert.ok(releaseMutation);
-    await page.getByTestId("button-filter-following").click();
+    await chooseAudience("following");
     releaseMutation();
     await page.waitForFunction(() => document.querySelector('[data-testid="reaction-fire_pull-101"]')?.getAttribute("aria-pressed") === "false");
-    await page.getByTestId("button-filter-everyone").click();
+    await chooseAudience("everyone");
     await page.waitForFunction(() => document.querySelector('[data-testid="reaction-fire_pull-101"]')?.getAttribute("aria-pressed") === "false");
     assert.equal(await page.getByTestId("reaction-fire_pull-101").getAttribute("title"), "Add Fire Pull reaction");
     await page.getByTestId("button-type-activity").click();
@@ -162,7 +217,11 @@ try {
     await page.screenshot({ path: `${output}/feed-${width}.png` });
     assert.deepEqual(errors, []);
     assert.deepEqual(writes, ["POST /api/feed/211/react", "POST /api/feed/101/react", "DELETE /api/feed/101/react"]);
-    reports.push({ component: "Feed", width, status: "passed", requests, interceptedWrites: writes });
+    reports.push({
+      component: "Feed", width, status: "passed", requests, interceptedWrites: writes,
+      checks: ["audience picker labels and selected state", "Escape dismissal and restored focus", "content filters", "badges/cards pagination", "older-page reactions", "refresh replacement", "cross-audience reaction state",
+        width === 393 ? "phone bottom sheet and close dismissal" : "desktop dropdown keyboard selection"],
+    });
     await page.close();
   }
 
