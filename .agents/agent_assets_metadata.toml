@@ -352,3 +352,17 @@ mtime_ms = 1791057135825
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/c677e7f1-9f8b-4ace-88ab-f67399e17ccb/37637004-80d6-407b-a271-ff708766b4b7"
 storage_version_token = "1791057253304191"
 content_type = "image/png"
+
+[[outputs]]
+id = "-HGlkiJp11j-PJ132Ovah"
+uri = "file://attached_assets/review-evidence/approved-hawkeye-47.jpg"
+type = "image"
+title = "Anton’s submitted photo — Hawkeye #47"
+description = "Approved September 2. Currently attached to Gold RayWave Refractor; his collection contains Human Torch Refractor."
+logical_id = "f6309870-5873-42fc-8382-a9fd6e634e18"
+content_hash = "sha256:ba207069681eb4df6d60b84eb5d28b9a4f2ee3edf18e2f040cdfe26fa3deac2c"
+size = 92213
+mtime_ms = 1791209692168
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/f6309870-5873-42fc-8382-a9fd6e634e18/ed0d80af-8291-4d9b-a6fb-30cbffe2517b"
+storage_version_token = "1791209729794059"
+content_type = "image/jpeg"
