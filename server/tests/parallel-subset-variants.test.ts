@@ -7,6 +7,7 @@ import {
 import {
   TOPPS_CHROME_2026_SUBSETS,
   TOPPS_CHROME_DOOM_PARALLEL_NAMES,
+  TOPPS_CHROME_FANFARE_PARALLEL_NAMES,
 } from '../seeds/seedToppsChromeMarvel2026';
 import { appendParallelVariants } from '../seeds/parallelSubsetVariants';
 
@@ -47,10 +48,10 @@ test('2026 Topps Mint requested foils mirror all 125 Base cards', () => {
 });
 
 test('One World Under Doom variants mirror all 20 insert cards', () => {
-  assert.equal(TOPPS_CHROME_2026_SUBSETS.length, 77);
+  assert.equal(TOPPS_CHROME_2026_SUBSETS.length, 84);
   assert.equal(
     TOPPS_CHROME_2026_SUBSETS.reduce((total, subset) => total + subset.cards.length, 0),
-    9_444,
+    9_794,
   );
   assertVariantsMirrorSource(
     TOPPS_CHROME_2026_SUBSETS,
@@ -77,4 +78,21 @@ test('parallel variant builder rejects ambiguous or malformed source checklists'
     () => appendParallelVariants([], 'Base', ['Gold']),
     /must exist exactly once/,
   );
+});
+
+test('seven Fanfare parallels mirror the 50-card checklist without copied image fields', () => {
+  assert.deepEqual(TOPPS_CHROME_FANFARE_PARALLEL_NAMES, [
+    'Fanfare Green Speckle Refractor /99',
+    'Fanfare Purple Speckle Refractor /75',
+    'Fanfare Gold Speckle Refractor /50',
+    'Fanfare Orange Wave Refractor /25',
+    'Fanfare Black Wave Refractor /10',
+    'Fanfare Red Wave Refractor /5',
+    'Fanfare SuperFractor 1/1',
+  ]);
+  assert.equal(TOPPS_CHROME_2026_SUBSETS.find(s => s.name === 'Fanfare')?.cards.length, 50);
+  assertVariantsMirrorSource(TOPPS_CHROME_2026_SUBSETS, 'Fanfare', TOPPS_CHROME_FANFARE_PARALLEL_NAMES);
+  for (const subset of TOPPS_CHROME_2026_SUBSETS.filter(s => TOPPS_CHROME_FANFARE_PARALLEL_NAMES.includes(s.name as any))) {
+    for (const card of subset.cards) assert.deepEqual(Object.keys(card).sort(), ['name', 'num']);
+  }
 });

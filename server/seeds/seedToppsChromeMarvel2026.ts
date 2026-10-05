@@ -10,11 +10,11 @@ import { areExpectedChecklistsComplete } from './seedChecklistCompletion';
  *
  * Creates (only if missing — safe to run on every startup, dev and prod):
  *  - The master set (matched by slug), with the box image
- *  - 77 subsets (Base + inserts; the original 200 one-card "Superfractor 1/N"
+ *  - 84 subsets (Base + inserts; the original 200 one-card "Superfractor 1/N"
  *    junk subsets were removed from the data — see fixSuperfractor2026JunkSets —
  *    "The Beyond" TB-01..TB-20 and five One World Under Doom parallels were
  *    added Aug 2026)
- *  - 9,444 cards total
+ *  - 9,794 cards total, including seven 50-card Fanfare parallels
  *
  * Data source: server/seeds/data/toppsChrome2026.json, generated from the
  * user's spreadsheet with these cleanups: trimmed names, merged the
@@ -35,11 +35,20 @@ export const TOPPS_CHROME_DOOM_PARALLEL_NAMES = [
   'One World Under Doom Red',
   'One World Under Doom Superfractor',
 ] as const;
-export const TOPPS_CHROME_2026_SUBSETS: SubsetDef[] = appendParallelVariants(
+export const TOPPS_CHROME_FANFARE_PARALLEL_NAMES = [
+  'Fanfare Green Speckle Refractor /99',
+  'Fanfare Purple Speckle Refractor /75',
+  'Fanfare Gold Speckle Refractor /50',
+  'Fanfare Orange Wave Refractor /25',
+  'Fanfare Black Wave Refractor /10',
+  'Fanfare Red Wave Refractor /5',
+  'Fanfare SuperFractor 1/1',
+] as const;
+export const TOPPS_CHROME_2026_SUBSETS: SubsetDef[] = appendParallelVariants(appendParallelVariants(
   subsetData as SubsetDef[],
   'One World Under Doom',
   TOPPS_CHROME_DOOM_PARALLEL_NAMES,
-);
+), 'Fanfare', TOPPS_CHROME_FANFARE_PARALLEL_NAMES);
 const SUBSETS = TOPPS_CHROME_2026_SUBSETS;
 
 // Same normalization used by the canonical taxonomy importer in routes.ts
