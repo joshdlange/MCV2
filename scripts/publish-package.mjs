@@ -10,7 +10,7 @@ export const keep = [
   // It is infrastructure, not a disposable application/model cache.
   '.cache/replit',
   'runtime/scanner/index', 'docs/scan-bad-images.md',
-  'client/src/assets/avatars', 'uploads',
+  'client/src/assets/avatars', 'uploads', 'badge_images',
 ];
 export function assertPublishCopy(env) {
   if (env.PUBLISH_BUILD !== '1') {
@@ -42,6 +42,7 @@ export async function prune(root, env) {
   for (const required of [
     'dist/index.js', 'dist/public/index.html', 'dist/check-runtime-package.mjs',
     'runtime/scanner/index/current.f32', 'docs/scan-bad-images.md',
+    'badge_images/thumbs', 'badge_images/large',
   ]) await access(path.join(root, required));
   const report = await inspect(root);
   for (const item of report.removed) await rm(path.join(root, item), { recursive: true, force: true });

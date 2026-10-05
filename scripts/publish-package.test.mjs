@@ -26,6 +26,7 @@ test('allowlist removes only an isolated fixture; runtime files survive', async 
     'dist/models/dino/model.onnx', 'runtime/scanner/index/current.f32',
     'docs/scan-bad-images.md', 'client/src/assets/avatars/avatar.webp',
     'uploads/badges/badge.webp', 'node_modules/library/index.js', 'package.json',
+    'badge_images/round_50.png', 'badge_images/thumbs/round_50.webp', 'badge_images/large/round_50.webp',
     '.cache/replit/nix/env.json', '.cache/replit/toolchain.json',
   ];
   const excluded = ['.local/test-photo.jpg', '.pythonlibs/python', '.cache/model', '.git/objects/data',

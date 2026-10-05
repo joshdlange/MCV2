@@ -32,3 +32,9 @@ Production-mode rehearsals must not use the live database or identities.
 **Why:** The user describes MCV as a live app with approximately 2,000 users and requires preserving its established behavior. Production startup runs migrations, recovery, and background work, so simply starting a second server against existing credentials is not a harmless test.
 
 **How to apply:** Use a temporary catalog-only database and isolated external-service fixtures. Distinguish real inference from fixture authentication, and wait for both startup readiness and the data-update write gate before measuring scans.
+
+Validate every separately mounted static asset directory in the published payload, not only Vite output and uploads.
+
+**Why:** The badge artwork in a separate root directory was excluded while badge database rows remained intact. Missing image requests fell through to the SPA and returned HTTP 200 HTML, concealing the failure.
+
+**How to apply:** Package all runtime static mounts and verify image Content-Type as well as status. Treat missing artwork separately from missing badge awards.

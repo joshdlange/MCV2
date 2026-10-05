@@ -1,5 +1,5 @@
 import { avatarUrl } from "@/lib/collectorAvatars";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, type TouchEvent } from "react";
 import { useLocation, Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Users, MessageCircle, Award, User, Lock, Clock, Check, X, Search, UserPlus, Plus, Grid, List, Trophy, Star, Calendar, Info, ShieldOff, ShieldAlert, Flag } from "lucide-react";
+import { Users, MessageCircle, Award, User, Lock, Clock, Check, X, Search, UserPlus, Plus, Grid, List, Trophy, Star, Calendar, Info, ShieldOff, ShieldAlert, Flag, RefreshCw } from "lucide-react";
 import { DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -202,7 +202,7 @@ export default function Social() {
   }, []);
 
   // Helper function to get auth headers
-  const getAuthHeaders = async () => {
+  const getAuthHeaders = async (): Promise<Record<string, string>> => {
     if (!user) return {};
     const token = await user.getIdToken();
     return {
@@ -241,7 +241,7 @@ export default function Social() {
   const [peopleTab, setPeopleTab] = useState<"friends" | "followers" | "following">("friends");
 
   // Fetch message threads (only friends with message history)
-  const { data: messageThreads = [] } = useQuery({
+  const { data: messageThreads = [], refetch: refetchThreads } = useQuery({
     queryKey: ["social/message-threads"],
     queryFn: async () => {
       const headers = await getAuthHeaders();
@@ -249,7 +249,12 @@ export default function Social() {
       if (!response.ok) throw new Error("Failed to fetch message threads");
       return response.json();
     },
-    enabled: !!user,
+    enabled: !!user && activeTab === "messages",
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: activeTab === "messages" ? 10_000 : false,
   });
 
   // Fetch user badges
@@ -406,27 +411,153 @@ export default function Social() {
       const headers = await getAuthHeaders();
       const response = await fetch(`/api/social/messages/${selectedFriendId}`, { headers });
       if (!response.ok) throw new Error("Failed to fetch messages");
-      const data = await response.json();
-      queryClient.invalidateQueries({ queryKey: ["/api/social/unread-count"] });
-      queryClient.invalidateQueries({ queryKey: ["social/message-threads"] });
-      return data;
+      return response.json();
     },
-    enabled: !!selectedFriendId && !!user,
+    enabled: !!selectedFriendId && !!user && activeTab === "messages",
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: activeTab === "messages" ? 10_000 : false,
   });
 
-  // Auto-scroll message areas to the newest message when a conversation
-  // opens or new messages arrive (desktop + mobile containers).
+  const { refetch: refetchUnread } = useQuery({
+    queryKey: ["/api/social/unread-count"],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch("/api/social/unread-count", { headers });
+      if (!response.ok) throw new Error("Could not update unread count");
+      return response.json();
+    },
+    enabled: !!user && activeTab === "messages",
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: activeTab === "messages" ? 10_000 : false,
+  });
+  const refreshLock = useRef(false);
+  const [refreshingMessages, setRefreshingMessages] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const pullGesture = useRef<{ x: number; y: number; target: HTMLElement | null; distance: number } | null>(null);
+  const refreshInbox = async () => {
+    if (refreshLock.current || !user || activeTab !== "messages") return;
+    refreshLock.current = true;
+    setRefreshingMessages(true);
+    setPullDistance(0);
+    try {
+      const results = await Promise.allSettled([
+        refetchThreads({ throwOnError: true, cancelRefetch: false }),
+        ...(selectedFriendId ? [refetchMessages({ throwOnError: true, cancelRefetch: false })] : []),
+        refetchUnread({ throwOnError: true, cancelRefetch: false }),
+      ]);
+      const failure = results.find(result => result.status === "rejected");
+      if (failure?.status === "rejected") throw failure.reason;
+    } catch (error) {
+      toast({
+        title: "Could not refresh messages",
+        description: `${error instanceof Error ? error.message : "Please check your connection"}. Tap Refresh to retry.`,
+        variant: "destructive",
+      });
+    } finally {
+      refreshLock.current = false;
+      setRefreshingMessages(false);
+    }
+  };
+  const cancelPull = () => {
+    pullGesture.current = null;
+    setPullDistance(0);
+  };
+  const startPull = (event: TouchEvent<HTMLDivElement>) => {
+    cancelPull();
+    if (event.touches.length !== 1 || refreshLock.current) return;
+    let target = event.target instanceof HTMLElement ? event.target : null;
+    if (target?.closest("input, textarea, button, a")) return;
+    while (target && target !== event.currentTarget) {
+      if (/auto|scroll/.test(getComputedStyle(target).overflowY)) break;
+      target = target.parentElement;
+    }
+    const scrollTarget = target === event.currentTarget ? null : target;
+    if ((scrollTarget?.scrollTop ?? window.scrollY) > 1) return;
+    pullGesture.current = {
+      x: event.touches[0].clientX, y: event.touches[0].clientY,
+      target: scrollTarget, distance: 0,
+    };
+  };
+  const movePull = (event: TouchEvent<HTMLDivElement>) => {
+    const gesture = pullGesture.current;
+    if (!gesture) return;
+    if (event.touches.length !== 1 || (gesture.target?.scrollTop ?? window.scrollY) > 1) {
+      cancelPull();
+      return;
+    }
+    const dy = event.touches[0].clientY - gesture.y;
+    const dx = Math.abs(event.touches[0].clientX - gesture.x);
+    if (dy < -6 || dx > Math.max(20, dy)) {
+      cancelPull();
+      return;
+    }
+    gesture.distance = Math.max(0, dy);
+    setPullDistance(Math.min(gesture.distance * 0.4, 60));
+  };
+  const finishPull = () => {
+    const distance = pullGesture.current?.distance ?? 0;
+    cancelPull();
+    if (distance >= 80) void refreshInbox();
+  };
+  useEffect(() => { cancelPull(); }, [activeTab, selectedFriendId]);
+
+  // Preserve the reader's position on refresh/poll. Initial opening, own sends,
+  // and updates while already near the bottom follow the newest message.
   const desktopMessagesRef = useRef<HTMLDivElement>(null);
   const mobileMessagesRef = useRef<HTMLDivElement>(null);
   const desktopComposerRef = useRef<HTMLTextAreaElement>(null);
   const mobileComposerRef = useRef<HTMLTextAreaElement>(null);
-  useEffect(() => {
+  const scrollSession = useRef("");
+  const stickToBottom = useRef(true);
+  const sentConversation = useRef<number | null>(null);
+  const trackMessageScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const element = event.currentTarget;
+    stickToBottom.current = element.scrollHeight - element.clientHeight - element.scrollTop <= 80;
+  };
+  useLayoutEffect(() => {
+    if (activeTab !== "messages") {
+      scrollSession.current = "";
+      return;
+    }
+    const session = `${activeTab}:${selectedFriendId}`;
+    if (scrollSession.current !== session || sentConversation.current === selectedFriendId) {
+      stickToBottom.current = true;
+      scrollSession.current = session;
+      sentConversation.current = null;
+    }
+    let frame = 0;
+    const scroll = () => {
+      if (!stickToBottom.current) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (!stickToBottom.current) return;
+        for (const ref of [desktopMessagesRef, mobileMessagesRef]) {
+          if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
+        }
+      });
+    };
+    const observer = new ResizeObserver(scroll);
     for (const ref of [desktopMessagesRef, mobileMessagesRef]) {
       if (ref.current) {
-        ref.current.scrollTop = ref.current.scrollHeight;
+        observer.observe(ref.current);
+        for (const child of Array.from(ref.current.children)) observer.observe(child);
+        ref.current.addEventListener("load", scroll, true);
       }
     }
-  }, [messages, selectedFriendId]);
+    scroll();
+    const elements = [desktopMessagesRef.current, mobileMessagesRef.current];
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+      elements.forEach(el => el?.removeEventListener("load", scroll, true));
+    };
+  }, [messages, selectedFriendId, activeTab]);
 
   useEffect(() => {
     if (!newMessage) {
@@ -505,9 +636,11 @@ export default function Social() {
       if (!response.ok) throw new Error("Failed to send message");
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["social/messages", selectedFriendId] });
+    onSuccess: (_data, variables) => {
+      sentConversation.current = variables.recipientId;
+      queryClient.invalidateQueries({ queryKey: ["social/messages", variables.recipientId] });
       queryClient.invalidateQueries({ queryKey: ["social/message-threads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/social/unread-count"] });
       setNewMessage("");
       toast({
         title: "Success",
@@ -940,13 +1073,24 @@ export default function Social() {
 
 
 
-        <TabsContent value="messages" className="min-h-[70vh] bg-white dark:bg-gray-900">
+        <TabsContent
+          value="messages" className="min-h-[70vh] bg-white dark:bg-gray-900"
+          onTouchStart={startPull} onTouchMove={movePull} onTouchEnd={finishPull} onTouchCancel={cancelPull}
+        >
+          <div className="flex items-center justify-end gap-2 p-2 border-b border-gray-200 dark:border-gray-700">
+            <span role="status" className="text-xs text-gray-500 dark:text-gray-400">
+              {refreshingMessages ? "Refreshing messages…" : pullDistance > 0 ? "Pull down to refresh messages" : ""}
+            </span>
+            <Button size="sm" variant="outline" onClick={() => void refreshInbox()} disabled={refreshingMessages} data-testid="button-refresh-messages">
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Refresh
+            </Button>
+          </div>
           {/* Mobile: Show either conversation list OR chat (not both) */}
           {/* Desktop: Show side-by-side layout */}
           <div className="h-full rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
             
             {/* MOBILE VIEW - Two-step flow */}
-            <div className="md:hidden h-full">
+            <div className="md:hidden h-[70dvh]">
               {!selectedFriendId ? (
                 /* Step 1: Conversation List */
                 <div className="flex flex-col h-full">
@@ -1036,7 +1180,7 @@ export default function Social() {
                 </div>
               ) : (
                 /* Step 2: Chat View (Full Screen) */
-                <div className="flex flex-col h-full min-h-[70vh]">
+                <div className="flex flex-col h-full min-h-0">
                   {/* Chat Header with Back Button */}
                   {(() => {
                     const selectedThread = messageThreads.find((t: any) => t.user.id === selectedFriendId);
@@ -1072,7 +1216,7 @@ export default function Social() {
                   })()}
                   
                   {/* Messages Area */}
-                  <div ref={desktopMessagesRef} className="flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-900">
+                  <div ref={desktopMessagesRef} onScroll={trackMessageScroll} className="min-h-0 flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-900">
                     {messages.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full text-center">
                         <MessageCircle className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" />
@@ -1140,6 +1284,7 @@ export default function Social() {
                                   body: formData,
                                 });
                                 if (response.ok) {
+                                  sentConversation.current = selectedFriendId;
                                   refetchMessages();
                                   toast({ title: "Image sent!", description: "Your image has been shared." });
                                 } else {
@@ -1318,7 +1463,7 @@ export default function Social() {
                     })()}
                     
                     {/* Messages */}
-                    <div ref={mobileMessagesRef} className="flex-1 overflow-y-auto p-4">
+                    <div ref={mobileMessagesRef} onScroll={trackMessageScroll} className="min-h-0 flex-1 overflow-y-auto p-4">
                       {messages.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-center">
                           <MessageCircle className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" />
@@ -1385,6 +1530,7 @@ export default function Social() {
                                     body: formData,
                                   });
                                   if (response.ok) {
+                                    sentConversation.current = selectedFriendId;
                                     refetchMessages();
                                     toast({ title: "Image sent!" });
                                   } else {

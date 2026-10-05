@@ -6105,6 +6105,8 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
     try {
       const feed = await import('./services/feedService');
       const allowedFilters = ['everyone', 'following', 'friends', 'me'] as const;
+      const allowedTypes = ['all', 'badges', 'cards', 'activity'] as const;
+      const type = allowedTypes.find(value => value === req.query.type) ?? 'all';
       const filter = (allowedFilters as readonly string[]).includes(String(req.query.filter))
         ? (String(req.query.filter) as (typeof allowedFilters)[number])
         : 'everyone';
@@ -6123,7 +6125,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         }
       }
       const limit = Math.min(parseInt(String(req.query.limit || '25')) || 25, 50);
-      const events = await feed.getFeedPage({ viewerId: req.user.id, filter, before, beforeId, limit });
+      const events = await feed.getFeedPage({ viewerId: req.user.id, filter, type, before, beforeId, limit });
       const last = events[events.length - 1];
       res.json({
         events,

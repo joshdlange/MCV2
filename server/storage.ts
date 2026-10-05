@@ -2181,7 +2181,7 @@ export class DatabaseStorage implements IStorage {
           and(eq(messages.senderId, userId2), eq(messages.recipientId, userId1))
         )
       )
-      .orderBy(messages.createdAt);
+      .orderBy(messages.createdAt, messages.id);
 
     return messageList.map(m => ({
       ...m,
@@ -2225,46 +2225,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMessageThreads(userId: number): Promise<{ user: User; lastMessage: Message; unreadCount: number }[]> {
-    // This is a complex query - we'll implement a simpler version for now
-    const recentMessages = await db
-      .select()
-      .from(messages)
-      .where(
-        or(
-          eq(messages.senderId, userId),
-          eq(messages.recipientId, userId)
-        )
+    const result = await db.execute(sql`
+      WITH involved AS (
+        SELECT *, CASE WHEN sender_id = ${userId} THEN recipient_id ELSE sender_id END AS partner_id
+        FROM messages WHERE sender_id = ${userId} OR recipient_id = ${userId}
+      ), ranked AS (
+        SELECT partner_id, id, created_at,
+          row_number() OVER (PARTITION BY partner_id ORDER BY created_at DESC, id DESC) AS rn,
+          max(created_at) FILTER (WHERE recipient_id = ${userId}) OVER (PARTITION BY partner_id) AS last_received_at,
+          count(*) FILTER (WHERE recipient_id = ${userId} AND NOT is_read) OVER (PARTITION BY partner_id) AS unread_count
+        FROM involved
       )
-      .orderBy(desc(messages.createdAt))
-      .limit(100);
-
-    // Group by conversation partner and get most recent message
-    const threads: { [key: number]: { user: User; lastMessage: Message; unreadCount: number } } = {};
-    
-    for (const message of recentMessages) {
-      const partnerId = message.senderId === userId ? message.recipientId : message.senderId;
-      
-      if (!threads[partnerId]) {
-        const partner = await this.getUser(partnerId);
-        if (partner) {
-          threads[partnerId] = {
-            user: partner,
-            lastMessage: message,
-            unreadCount: 0
-          };
-        }
-      }
-      
-      // Count unread messages from this partner
-      if (message.recipientId === userId && !message.isRead) {
-        threads[partnerId].unreadCount++;
-      }
-    }
-
-    return Object.values(threads).sort((a, b) =>
-      new Date(b.lastMessage.createdAt as string).getTime() -
-      new Date(a.lastMessage.createdAt as string).getTime()
-    );
+      SELECT * FROM ranked WHERE rn = 1
+      ORDER BY last_received_at DESC NULLS LAST, created_at DESC, id DESC
+    `);
+    const rows = result.rows as any[];
+    if (!rows.length) return [];
+    const [partners, latestMessages] = await Promise.all([
+      db.select().from(users).where(inArray(users.id, rows.map(r => Number(r.partner_id)))),
+      db.select().from(messages).where(inArray(messages.id, rows.map(r => Number(r.id)))),
+    ]);
+    const partnerMap = new Map(partners.map(p => [p.id, p]));
+    const messageMap = new Map(latestMessages.map(m => [m.id, m]));
+    return rows.flatMap(row => {
+      const user = partnerMap.get(Number(row.partner_id));
+      const lastMessage = messageMap.get(Number(row.id));
+      return user && lastMessage ? [{ user, lastMessage, unreadCount: Number(row.unread_count), lastReceivedAt: row.last_received_at }] : [];
+    });
   }
 
   // Social Features - Badges

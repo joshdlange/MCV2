@@ -6,6 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import {
+  getReactionLedger, feedPageKey, feedQueryKey, mergeFeedEvents,
+  patchReaction, reconcileFeedPage, reconcileReactions, recordReaction,
+  type FeedAudience, type FeedContentType, type ReactionResult,
+} from "@/lib/feedCache";
 import { avatarUrl } from "@/lib/collectorAvatars";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useLocation, Link } from "wouter";
@@ -49,6 +54,8 @@ interface FeedEvent {
 interface FeedResponse {
   events: FeedEvent[];
   nextCursor: string | null;
+  pageVersion?: string;
+  reactionVersion?: number;
 }
 
 interface LeaderboardEntry {
@@ -63,7 +70,7 @@ interface LeaderboardsResponse {
   allTimeTopXp: LeaderboardEntry[];
 }
 
-type FeedFilter = "everyone" | "following" | "friends" | "me";
+type FeedFilter = FeedAudience;
 
 interface FollowingResponse {
   viewerId: number;
@@ -656,7 +663,9 @@ function ReactionRow({ event, pending, onReact }: {
         return (
           <button
             key={r.key}
-            title={r.label}
+            title={`${active ? "Remove" : "Add"} ${r.label} reaction`}
+            aria-label={`${active ? "Remove" : "Add"} ${r.label} reaction${count > 0 ? ` (${count})` : ""}`}
+            aria-pressed={active}
             data-testid={`reaction-${r.key}-${event.id}`}
             disabled={pending}
             onClick={() => onReact(event.id, r.key, active)}
@@ -974,21 +983,36 @@ function GroupedBadgeCard({ group, pending, onReact, followState, onOpenDetail }
 
 function ActivityTab() {
   const [filter, setFilter] = useState<FeedFilter>("everyone");
+  const [contentType, setContentType] = useState<FeedContentType>("all");
   const [pagination, setPagination] = useState<{ key: string; events: FeedEvent[]; cursor: string | null }>({
     key: "", events: [], cursor: null,
   });
   const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreFailed, setLoadMoreFailed] = useState(false);
   const [pendingFollowUsername, setPendingFollowUsername] = useState<string | null>(null);
   const [detail, setDetail] = useState<FeedDetail | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const reactionLedger = useRef(getReactionLedger(queryClient));
+  const reactionInFlight = useRef(false);
 
-  const { data, dataUpdatedAt, isLoading } = useQuery<FeedResponse>({
-    queryKey: ["/api/feed", filter],
-    queryFn: async () => {
-      const res = await apiRequest("GET", `/api/feed?filter=${filter}`);
-      return res.json();
+  const { data, isLoading, isError, refetch } = useQuery<FeedResponse>({
+    queryKey: feedQueryKey(filter, contentType),
+    queryFn: async ({ signal }) => {
+      const requestVersion = reactionLedger.current.version;
+      const res = await apiRequest("GET", `/api/feed?filter=${filter}&type=${contentType}`, undefined, signal);
+      const page: FeedResponse = await res.json();
+      return {
+        ...page,
+        events: reconcileReactions(page.events, reactionLedger.current, requestVersion),
+        pageVersion: crypto.randomUUID(),
+        reactionVersion: requestVersion,
+      };
     },
+    // Reconcile at cache commit too: a mutation may resolve between the
+    // queryFn's return and React Query storing its result.
+    structuralSharing: (_old, incoming) =>
+      reconcileFeedPage(incoming as FeedResponse, reactionLedger.current),
     staleTime: 0,
     refetchOnMount: "always",
   });
@@ -1007,9 +1031,7 @@ function ActivityTab() {
       toast({ title: `Following @${username}`, description: "Their activity will show in your Following feed." });
       queryClient.invalidateQueries({ queryKey: ["/api/feed/following"] });
       queryClient.invalidateQueries({ queryKey: ["/api/feed/discover"] });
-      if (filter === "following" || filter === "friends") {
-        queryClient.invalidateQueries({ queryKey: ["/api/feed", filter] });
-      }
+      queryClient.invalidateQueries({ queryKey: ["/api/feed", "following"] });
     },
     onError: (err: any) => {
       toast({ title: "Could not follow", description: String(err?.message || err), variant: "destructive" });
@@ -1028,12 +1050,12 @@ function ActivityTab() {
 
   // A fresh first page (including a privacy change or imported card image)
   // invalidates *all* older local pages immediately, not only the query cache.
-  const pageKey = `${filter}:${dataUpdatedAt}`;
+  const pageKey = feedPageKey(filter, contentType, data?.pageVersion);
   const extraEvents = pagination.key === pageKey ? pagination.events : [];
   const nextCursor = pagination.key === pageKey
     ? pagination.cursor ?? data?.nextCursor ?? null
     : data?.nextCursor ?? null;
-  const events = [...(data?.events ?? []), ...extraEvents];
+  const events = mergeFeedEvents(data?.events ?? [], extraEvents);
   const groups = useMemo(() => {
     const g = groupEvents(events);
     // "Me" keeps strict history order; Everyone (and other filters) prioritize variety.
@@ -1045,34 +1067,53 @@ function ActivityTab() {
   const pageSessionRef = useRef(0);
 
   const changeFilter = (f: FeedFilter) => {
+    if (f === filter) return;
     pageSessionRef.current++;
     setFilter(f);
     setPagination({ key: "", events: [], cursor: null });
     setLoadingMore(false);
+    setLoadMoreFailed(false);
   };
 
+  const changeContentType = (type: FeedContentType) => {
+    if (type === contentType) return;
+    pageSessionRef.current++;
+    setContentType(type);
+    setPagination({ key: "", events: [], cursor: null });
+    setLoadingMore(false);
+    setLoadMoreFailed(false);
+  };
+
+  const loadingMoreRef = useRef<number | null>(null);
   const loadMore = async () => {
-    if (!nextCursor || loadingMore) return;
     const session = pageSessionRef.current;
+    if (!nextCursor || loadingMore || loadMoreFailed || loadingMoreRef.current === session) return;
+    loadingMoreRef.current = session;
     const requestedPageKey = pageKey;
+    const requestVersion = reactionLedger.current.version;
     setLoadingMore(true);
     try {
-      const res = await apiRequest("GET", `/api/feed?filter=${filter}&before=${encodeURIComponent(nextCursor)}`);
+      const res = await apiRequest("GET", `/api/feed?filter=${filter}&type=${contentType}&before=${encodeURIComponent(nextCursor)}`);
       const page: FeedResponse = await res.json();
       // A refetch may replace the first page while this older cursor is in
       // flight. Never append that stale page to the fresh feed.
       if (session !== pageSessionRef.current
-          || `${filter}:${queryClient.getQueryState(["/api/feed", filter])?.dataUpdatedAt ?? 0}` !== requestedPageKey) return;
+          || feedPageKey(filter, contentType, queryClient.getQueryData<FeedResponse>(feedQueryKey(filter, contentType))?.pageVersion) !== requestedPageKey) return;
       setPagination(prev => ({
         key: requestedPageKey,
-        events: [...(prev.key === requestedPageKey ? prev.events : []), ...page.events],
+        events: mergeFeedEvents(
+          prev.key === requestedPageKey ? prev.events : [],
+          reconcileReactions(page.events, reactionLedger.current, requestVersion),
+        ),
         cursor: page.nextCursor ?? "",
       }));
     } catch {
       if (session === pageSessionRef.current) {
+        setLoadMoreFailed(true);
         toast({ title: "Could not load more", variant: "destructive" });
       }
     } finally {
+      if (loadingMoreRef.current === session) loadingMoreRef.current = null;
       if (session === pageSessionRef.current) setLoadingMore(false);
     }
   };
@@ -1093,7 +1134,7 @@ function ActivityTab() {
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [nextCursor, isLoading, events.length]);
+  }, [nextCursor, isLoading, events.length, pageKey, loadingMore, loadMoreFailed]);
 
   // Pull-to-refresh (touch devices): dragging down while already at the top
   // of the page re-fetches the feed and resets pagination.
@@ -1108,9 +1149,10 @@ function ActivityTab() {
     pageSessionRef.current++; // cancel any in-flight loadMore append
     setPagination({ key: "", events: [], cursor: null });
     setLoadingMore(false);
+    setLoadMoreFailed(false);
     try {
       await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["/api/feed", filter] }),
+        queryClient.refetchQueries({ queryKey: feedQueryKey(filter, contentType), exact: true }),
         queryClient.refetchQueries({ queryKey: ["/api/feed/following"] }),
       ]);
     } finally {
@@ -1146,29 +1188,33 @@ function ActivityTab() {
       const res = remove
         ? await apiRequest("DELETE", `/api/feed/${eventId}/react`)
         : await apiRequest("POST", `/api/feed/${eventId}/react`, { reaction });
-      return { eventId, ...(await res.json()) };
+      const result: ReactionResult & { xpAwarded?: number } = { eventId, ...(await res.json()) };
+      return result;
     },
     onSuccess: (result) => {
-      const patch = (e: FeedEvent) =>
-        e.id === result.eventId ? { ...e, reactions: result.reactions, myReaction: result.myReaction } : e;
-      queryClient.setQueryData<FeedResponse>(["/api/feed", filter], (old) =>
+      recordReaction(reactionLedger.current, result);
+      const patch = (e: FeedEvent) => patchReaction(e, result);
+      // Patch every cached audience/content combination, not whichever filter
+      // happens to be active when the mutation resolves.
+      queryClient.setQueriesData<FeedResponse>({ queryKey: ["/api/feed"] }, (old) =>
         old ? { ...old, events: old.events.map(patch) } : old,
       );
-      const updatedPageKey = `${filter}:${queryClient.getQueryState(["/api/feed", filter])?.dataUpdatedAt ?? 0}`;
-      setPagination(prev => prev.key === pageKey
-        ? { ...prev, key: updatedPageKey, events: prev.events.map(patch) }
-        : prev);
-      if (result.xpAwarded > 0) {
+      setPagination(prev => ({ ...prev, events: prev.events.map(patch) }));
+      if ((result.xpAwarded ?? 0) > 0) {
         toast({ title: `+${result.xpAwarded} XP`, description: "Thanks for cheering on a fellow collector!" });
       }
     },
     onError: (err: any) => {
       toast({ title: "Reaction failed", description: String(err?.message || err), variant: "destructive" });
     },
+    onSettled: () => { reactionInFlight.current = false; },
   });
 
-  const onReact = (eventId: number, reaction: string, remove: boolean) =>
+  const onReact = (eventId: number, reaction: string, remove: boolean) => {
+    if (reactionInFlight.current) return;
+    reactionInFlight.current = true;
     reactMutation.mutate({ eventId, reaction, remove });
+  };
 
   return (
     <div
@@ -1189,35 +1235,55 @@ function ActivityTab() {
           />
         </div>
       )}
-      <div className="flex gap-2 flex-wrap">
-        {(["everyone", "following", "friends", "me"] as FeedFilter[]).map((f) => (
+      <div className="flex gap-2 flex-wrap" role="group" aria-label="Feed audience">
+        {(["everyone", "following", "me"] as FeedFilter[]).map((f) => (
           <Button
             key={f}
             size="sm"
             variant={filter === f ? "default" : "outline"}
             onClick={() => changeFilter(f)}
+            aria-pressed={filter === f}
             data-testid={`button-filter-${f}`}
           >
-            {f === "everyone" ? "Everyone" : f === "following" ? "Following" : f === "friends" ? "Friends" : "Me"}
+            {f === "everyone" ? "Everyone" : f === "following" ? "Friends & Following" : "Me"}
+          </Button>
+        ))}
+      </div>
+      <div className="flex gap-2 flex-wrap" role="group" aria-label="Feed content">
+        {(["all", "badges", "cards", "activity"] as FeedContentType[]).map((type) => (
+          <Button
+            key={type}
+            size="sm"
+            variant={contentType === type ? "default" : "outline"}
+            onClick={() => changeContentType(type)}
+            aria-pressed={contentType === type}
+            data-testid={`button-type-${type}`}
+          >
+            {type === "all" ? "All" : type === "badges" ? "Badges" : type === "cards" ? "Cards" : "Activity"}
           </Button>
         ))}
       </div>
 
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+      ) : isError && events.length === 0 ? (
+        <div className="rounded-xl bg-zinc-900 border border-zinc-800 py-12 text-center text-zinc-400">
+          <p className="font-medium text-zinc-300">Could not load the feed</p>
+          <Button size="sm" variant="outline" className="mt-3" onClick={() => void refetch()}>Try again</Button>
+        </div>
       ) : events.length === 0 ? (
         <div className="rounded-xl bg-zinc-900 border border-zinc-800 py-12 text-center text-zinc-400">
           <ActivityIcon className="w-10 h-10 mx-auto mb-3 opacity-40" />
           <p className="font-medium text-zinc-300">
-            {filter === "following" ? "Nothing here yet" : filter === "friends" ? "No friends yet" : "No activity yet"}
+            {contentType !== "all" ? `No ${contentType} yet` : filter === "following" ? "Nothing here yet" : "No activity yet"}
           </p>
           <p className="text-sm mt-1 max-w-md mx-auto">
-            {filter === "me"
-              ? "Add cards, earn badges, and build binders to see your milestones here."
-              : filter === "following"
-                ? "Follow collectors to personalize your Feed."
-                : filter === "friends"
-                  ? "Friends are mutual follows. Follow collectors you know, and when they follow back, they'll show up here."
+            {contentType !== "all"
+              ? "Try All or another audience to see more from the Vault."
+              : filter === "me"
+                ? "Add cards, earn badges, and build binders to see your milestones here."
+                : filter === "following"
+                  ? "Activity from friends and collectors you follow will appear here."
                   : "Collector milestones will show up here as the community builds their vaults."}
           </p>
         </div>
@@ -1233,6 +1299,11 @@ function ActivityTab() {
           {nextCursor && nextCursor !== "" && (
             <div ref={sentinelRef} className="flex justify-center py-4" data-testid="feed-infinite-sentinel">
               {loadingMore && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />}
+              {loadMoreFailed && (
+                <Button size="sm" variant="outline" onClick={() => setLoadMoreFailed(false)}>
+                  Try loading more again
+                </Button>
+              )}
             </div>
           )}
         </div>

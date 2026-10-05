@@ -168,12 +168,19 @@ export async function emitBadgeEarned(userId: number, badgeId: number): Promise<
 export async function getFeedPage(opts: {
   viewerId: number;
   filter: 'everyone' | 'following' | 'friends' | 'me';
+  type?: 'all' | 'badges' | 'cards' | 'activity';
   before?: Date;
   beforeId?: number; // composite cursor tiebreaker — same-timestamp rows aren't skipped
   limit?: number;
 }) {
   const limit = Math.min(opts.limit ?? 25, 50);
   const conditions = [eq(feedEvents.hidden, false)] as any[];
+  // Apply before LIMIT/cursor pagination, never filter an already limited page.
+  const isBadge = sql`(${feedEvents.eventType} = 'badge_earned' OR coalesce(${feedEvents.relatedType}, '') = 'badge')`;
+  const isCard = sql`(${feedEvents.eventType} IN ('first_card', 'image_approved') OR coalesce(${feedEvents.relatedType}, '') = 'card')`;
+  if (opts.type === 'badges') conditions.push(isBadge);
+  if (opts.type === 'cards') conditions.push(sql`NOT ${isBadge} AND ${isCard}`);
+  if (opts.type === 'activity') conditions.push(sql`NOT ${isBadge} AND NOT ${isCard}`);
   if (opts.before) {
     conditions.push(
       opts.beforeId != null
