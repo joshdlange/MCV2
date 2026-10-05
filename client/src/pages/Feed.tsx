@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -1010,13 +1010,14 @@ function AudiencePicker({ value, onChange }: {
   const trigger = (
     <Button
       size="sm" variant="outline"
-      className="gap-2 bg-zinc-950 border-zinc-700 text-zinc-200 hover:bg-zinc-900 hover:text-zinc-100"
+      className="h-9 w-9 shrink-0 gap-0 px-0 sm:w-auto sm:gap-2 sm:px-3 bg-zinc-950 border-zinc-700 text-zinc-200 hover:bg-zinc-900 hover:text-zinc-100"
       aria-label={`Feed audience: ${label}`}
+      title={`Feed audience: ${label}`}
       data-testid="button-feed-audience"
     >
       <SlidersHorizontal className="w-3.5 h-3.5" aria-hidden="true" />
-      {label}
-      <ChevronDown className="w-3.5 h-3.5 text-zinc-500" aria-hidden="true" />
+      <span className="hidden sm:inline" data-testid="feed-audience-label">{label}</span>
+      <ChevronDown className="hidden sm:block w-3.5 h-3.5 text-zinc-500" aria-hidden="true" />
     </Button>
   );
 
@@ -1088,8 +1089,7 @@ function AudiencePicker({ value, onChange }: {
   );
 }
 
-function ActivityTab() {
-  const [filter, setFilter] = useState<FeedFilter>("everyone");
+function ActivityTab({ filter }: { filter: FeedFilter }) {
   const [contentType, setContentType] = useState<FeedContentType>("all");
   const [pagination, setPagination] = useState<{ key: string; events: FeedEvent[]; cursor: string | null }>({
     key: "", events: [], cursor: null,
@@ -1173,14 +1173,14 @@ function ActivityTab() {
   // request from a previous filter can never append into the new one.
   const pageSessionRef = useRef(0);
 
-  const changeFilter = (f: FeedFilter) => {
-    if (f === filter) return;
+  // Audience lives beside the page tabs. Reset local pagination before paint
+  // when it changes, retaining the content type and shared reaction cache.
+  useLayoutEffect(() => {
     pageSessionRef.current++;
-    setFilter(f);
     setPagination({ key: "", events: [], cursor: null });
     setLoadingMore(false);
     setLoadMoreFailed(false);
-  };
+  }, [filter]);
 
   const changeContentType = (type: FeedContentType) => {
     if (type === contentType) return;
@@ -1342,7 +1342,6 @@ function ActivityTab() {
           />
         </div>
       )}
-      <AudiencePicker value={filter} onChange={changeFilter} />
       <div className="flex gap-2 flex-wrap" role="group" aria-label="Feed content">
         {(["all", "badges", "cards", "activity"] as FeedContentType[]).map((type) => (
           <Button
@@ -1691,6 +1690,8 @@ function TradeFeedTab() {
 // ---------------------------------------------------------------------------
 
 export default function Feed() {
+  const [activeTab, setActiveTab] = useState("activity");
+  const [filter, setFilter] = useState<FeedFilter>("everyone");
   return (
     <div className="container mx-auto px-4 py-6 max-w-3xl">
       {/* MCV-native header: dark charcoal, subtle halftone, thin red accent — no gradient wash */}
@@ -1702,13 +1703,16 @@ export default function Feed() {
         </h1>
         <p className="text-sm text-zinc-400 mt-1 relative">Milestones, leaderboards, and community activity from the Vault.</p>
       </div>
-      <Tabs defaultValue="activity">
-        <TabsList className="mb-4">
-          <TabsTrigger value="activity" data-testid="tab-activity">Activity</TabsTrigger>
-          <TabsTrigger value="leaderboards" data-testid="tab-leaderboards">Leaderboards</TabsTrigger>
-          <TabsTrigger value="trade" data-testid="tab-trade">Trade Feed</TabsTrigger>
-        </TabsList>
-        <TabsContent value="activity"><ActivityTab /></TabsContent>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <div className="mb-4 flex items-center gap-1.5 sm:gap-2" data-testid="feed-tab-header">
+          <TabsList className="shrink-0">
+            <TabsTrigger className="px-2 text-xs sm:px-3 sm:text-sm" value="activity" data-testid="tab-activity">Activity</TabsTrigger>
+            <TabsTrigger className="px-2 text-xs sm:px-3 sm:text-sm" value="leaderboards" data-testid="tab-leaderboards">Leaderboards</TabsTrigger>
+            <TabsTrigger className="px-2 text-xs sm:px-3 sm:text-sm" value="trade" data-testid="tab-trade">Trade Feed</TabsTrigger>
+          </TabsList>
+          {activeTab === "activity" && <AudiencePicker value={filter} onChange={setFilter} />}
+        </div>
+        <TabsContent value="activity"><ActivityTab filter={filter} /></TabsContent>
         <TabsContent value="leaderboards"><LeaderboardsTab /></TabsContent>
         <TabsContent value="trade"><TradeFeedTab /></TabsContent>
       </Tabs>
