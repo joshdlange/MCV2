@@ -659,6 +659,9 @@ server.listen({
 
   const runDataFixSeeds = async () => {
     if (!suppressAutomaticCatalogMutations()) {
+      const { seedToppsChromeMarvel2026 } = await import('./seeds/seedToppsChromeMarvel2026');
+      await seedToppsChromeMarvel2026();
+
       const { completeSapphire2025 } = await import('./seeds/completeSapphire2025');
       await completeSapphire2025();
 

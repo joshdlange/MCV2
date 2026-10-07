@@ -4,6 +4,7 @@ import { eq, and, inArray, sql } from 'drizzle-orm';
 import subsetData from './data/toppsChrome2026.json';
 import { appendParallelVariants } from './parallelSubsetVariants';
 import { areExpectedChecklistsComplete } from './seedChecklistCompletion';
+import { retryCatalogTransaction } from './retryCatalogTransaction';
 
 /**
  * One-time idempotent seed: 2026 Topps Chrome Marvel Comics.
@@ -159,6 +160,18 @@ async function ensureSubset(tx: Tx, mainSetId: number, name: string, isInsertSub
 }
 
 export async function seedToppsChromeMarvel2026(): Promise<void> {
+  await retryCatalogTransaction(() => ensureToppsChromeSubsets(SUBSETS));
+}
+
+// Targeted, add-only repair: never rewrites unrelated subsets or collector data.
+export async function seedToppsChromeFanfare2026(): Promise<void> {
+  const fanfare = SUBSETS.filter(subset =>
+    subset.name === 'Fanfare' || TOPPS_CHROME_FANFARE_PARALLEL_NAMES.some(name => name === subset.name),
+  );
+  await retryCatalogTransaction(() => ensureToppsChromeSubsets(fanfare));
+}
+
+async function ensureToppsChromeSubsets(SUBSETS: SubsetDef[]): Promise<void> {
   // Match every expected active card number in every expected subset. Aggregate
   // totals can hide a missing card when another subset contains duplicates.
   if (await areExpectedChecklistsComplete(

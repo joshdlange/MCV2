@@ -15,3 +15,9 @@ Heavy first-run seeds ran before `server.listen`, took ~85s in prod, and the dep
 **How to apply:** any new startup seed that can do minutes of real prod work goes in `runDataFixSeeds` (post-listen), never before `registerRoutes`. A seed that archives or merges cards must be awaited inside that gated sequence, not launched from route registration. Keep the gate aligned with every namespace that can create card references, including collection, wishlist, binders, cards, scans, and `/api/marketplace`. If a required archival/merge seed fails validation or execution, rethrow it and leave the gate in its failed state—opening writes would create fresh references on rows the next boot still needs to merge.
 
 Fast no-op probes must enforce every identity and terminal-shape invariant that the locked repair enforces. Aggregate totals cannot prove per-subset completeness; compare exact expected rows. Slug resolution must verify the expected parent and name. For small targets, prefer always running the locked validator.
+
+Catalog import advisory locks only serialize copies of that same importer, not other repairs that touch its rows. Retry entire rolled-back transactions on PostgreSQL deadlock/serialization errors with bounded backoff; never retry identity validation failures.
+
+**Why:** A published Fanfare addition rolled back on a production deadlock while its fire-and-forget startup caller merely logged the error. Inclusion in the server bundle did not prove catalog delivery.
+
+**How to apply:** Await required imports in the post-listen sequence, avoid parallel launches against overlapping catalog rows, and verify the published read endpoint after changes.
