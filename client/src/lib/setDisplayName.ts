@@ -4,6 +4,13 @@ interface GetDisplayNameParams {
   isAdmin: boolean;
 }
 
+// Only FULL COMBO names carry parent information. A bare subset name is
+// not evidence that it is its own parent (e.g. "Astonishing").
+export function extractMainSetName(fullComboName: string): string | undefined {
+  const index = fullComboName.indexOf(" - ");
+  return index > 0 ? fullComboName.slice(0, index) : undefined;
+}
+
 export function isBaseSetName(cardSetName: string, mainSetName: string): boolean {
   // Base set if name equals main set name
   if (cardSetName === mainSetName) return true;
@@ -24,6 +31,7 @@ export function getCardSetDisplayName({ cardSetName, mainSetName, isAdmin }: Get
     return { displayName: cardSetName, isBaseSet: false };
   }
 
+  mainSetName = mainSetName || extractMainSetName(cardSetName);
   if (!mainSetName) {
     return { displayName: cardSetName, isBaseSet: false };
   }

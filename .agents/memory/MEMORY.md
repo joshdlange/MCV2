@@ -47,3 +47,4 @@
 - [Image Admin boundary](image-admin-boundary.md) — card image replacements use one byte-ingested, Cloudinary-first, audited endpoint; generic card writes must reject image fields.
 - [Catalog duplicate audits](catalog-duplicate-audits.md) — repeated card numbers are mostly legitimate inserts; only merge after identity/subset classification and preserve all collector references.
 - [Upcoming release policy](upcoming-release-policy.md) — Central-midnight dates; verified announcements and staged checklists; atomic catalog publication with request-time catch-up.
+- [Catalog label readability](catalog-label-readability.md) — show full subset names while keeping compact, aligned tiles; modest changes rather than a redesign.

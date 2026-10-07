@@ -12,6 +12,7 @@ import { Search, Star, ArrowLeft, Plus, Edit, Filter, Grid3X3, List, X, Save, Ho
 import { CardGrid } from "@/components/cards/card-grid";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { SetThumbnail } from "@/components/cards/set-thumbnail";
+import { SubsetLabel } from "@/components/cards/subset-label";
 import { MainSetTile } from "@/components/cards/main-set-tile";
 import { getNewReleaseSetIds } from "@/lib/newReleaseSets";
 import { UpgradeModal } from "@/components/subscription/upgrade-modal";
@@ -23,7 +24,7 @@ import { useLocation, useParams, Link } from "wouter";
 import { SIDE_KICK_CARD_LIMIT } from "@shared/schema";
 import type { CardSet, CardWithSet, CollectionItem, MainSet } from "@shared/schema";
 import { formatCardName, formatSetName } from "@/lib/formatTitle";
-import { isBaseSetName } from "@/lib/setDisplayName";
+import { getCardSetDisplayName, isBaseSetName } from "@/lib/setDisplayName";
 import { ShareBinderModal } from "@/components/collection/share-binder-modal";
 
 interface CardFilters {
@@ -939,10 +940,10 @@ export default function BrowseCards() {
                   {searchResults.cards.map((card) => (
                     <div
                       key={card.id}
-                      className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                      className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer flex flex-col h-full min-w-0"
                       onClick={() => setSelectedCard(card)}
                     >
-                      <div className="aspect-[2.5/3.5] bg-gray-100 rounded-t-lg overflow-hidden">
+                      <div className="aspect-[2.5/3.5] bg-gray-100 rounded-t-lg overflow-hidden shrink-0">
                         {card.frontImageUrl ? (
                           <img
                             src={optimizedImageUrl(card.frontImageUrl, 300)}
@@ -957,10 +958,17 @@ export default function BrowseCards() {
                           </div>
                         )}
                       </div>
-                      <div className="p-2">
-                        <p className="text-xs font-medium text-gray-900 truncate">{card.name}</p>
-                        <p className="text-xs text-gray-600">{card.set.name}</p>
-                        <p className="text-xs text-gray-500">#{card.cardNumber}</p>
+                      <div className="p-2 flex flex-col flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-900 truncate mb-1" title={card.name}>{card.name}</p>
+                        <SubsetLabel
+                          name={getCardSetDisplayName({
+                            cardSetName: card.set.name,
+                            mainSetName: mainSets?.find(ms => ms.id === card.set.mainSetId)?.name,
+                            isAdmin: isAdminMode,
+                          }).displayName}
+                          className="text-gray-600 mb-1"
+                        />
+                        <p className="text-xs text-gray-500 mt-auto">#{card.cardNumber}</p>
                       </div>
                     </div>
                   ))}

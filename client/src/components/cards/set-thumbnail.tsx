@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import type { CardSet } from "@shared/schema";
 import { formatSetName } from "@/lib/formatTitle";
 import { getCardSetDisplayName } from "@/lib/setDisplayName";
+import { SubsetLabel } from "@/components/cards/subset-label";
 import { useAppStore } from "@/lib/store";
 import { useLocation } from "wouter";
 
@@ -95,13 +96,13 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
   return (
     <>
     <div 
-      className={`group relative bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden ${
+      className={`group relative bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden flex flex-col h-full min-w-0 ${
         isEmpty ? 'border-amber-200' : 'border-gray-200'
       }`}
       onClick={handleClick}
     >
       {/* Set Image */}
-      <div className="aspect-[2.5/3.5] bg-gray-100 overflow-hidden relative">
+      <div className="aspect-[2.5/3.5] bg-gray-100 overflow-hidden relative shrink-0">
         {loading ? (
           <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
             <div className="animate-spin w-6 h-6 border-2 border-white border-t-transparent rounded-full"></div>
@@ -157,18 +158,19 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
       </div>
 
       {/* Set Info */}
-      <div className="p-3">
-        <div className="flex items-start gap-1 mb-1">
+      <div className="p-3 flex flex-col flex-1 min-w-0">
+        <div className="flex flex-wrap items-start gap-1 mb-2">
           {isBaseSet && (
             <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200 text-xs px-1.5 py-0 shrink-0">
               Base
             </Badge>
           )}
-          <h3 className="font-medium text-gray-900 text-xs leading-tight line-clamp-2 min-h-[2rem]">
-            {isAdminContext ? formatSetName(set.name) : displayName}
-          </h3>
+          <SubsetLabel
+            name={isAdminContext ? formatSetName(set.name) : displayName}
+            className="font-medium text-gray-900 flex-1 basis-full"
+          />
         </div>
-        <div className="flex items-center justify-between text-xs text-gray-600">
+        <div className="flex flex-wrap gap-x-2 gap-y-1 items-center justify-between text-xs text-gray-600 mt-auto">
           <span>{set.year}</span>
           {set.totalCards === 0 ? (
             <Badge variant="secondary" className="bg-amber-100 text-amber-700 border-amber-200 text-xs px-1.5 py-0.5">

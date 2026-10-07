@@ -13,20 +13,11 @@ import { useToast } from "@/hooks/use-toast";
 import type { CardWithSet, CollectionItem, WishlistItem } from "@/types/schema";
 import SimpleImage from "@/components/ui/simple-image";
 import { CardFilters } from "@/types";
-import { formatCardName, formatSetName } from "@/lib/formatTitle";
+import { formatCardName } from "@/lib/formatTitle";
 import { getCardSetDisplayName } from "@/lib/setDisplayName";
+import { SubsetLabel } from "@/components/cards/subset-label";
 import { useAppStore } from "@/lib/store";
 import { UpgradeModal } from "@/components/subscription/upgrade-modal";
-
-// Helper to extract main set name from FULL COMBO format "MainSet - Subset"
-function extractMainSetName(fullComboName: string): string {
-  const delimiter = " - ";
-  const idx = fullComboName.indexOf(delimiter);
-  if (idx > 0) {
-    return fullComboName.substring(0, idx);
-  }
-  return fullComboName;
-}
 
 interface CardGridProps {
   filters?: CardFilters;
@@ -329,9 +320,9 @@ export function CardGrid({
       {viewMode === "grid" ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
           {sortedCards.map((card) => (
-            <Card key={card.id} className="group comic-border card-hover cursor-pointer" onClick={() => handleCardClick(card)}>
-              <CardContent className="p-0">
-                <div className="relative">
+            <Card key={card.id} className="group comic-border card-hover cursor-pointer flex flex-col min-w-0 h-full" onClick={() => handleCardClick(card)}>
+              <CardContent className="p-0 flex flex-col flex-1 min-w-0">
+                <div className="relative shrink-0">
                   <div className="w-full aspect-[5/7] bg-gray-200 rounded-t-lg overflow-hidden">
                     <SimpleImage
                       src={card.frontImageUrl || ''}
@@ -365,18 +356,20 @@ export function CardGrid({
                   </div>
                 </div>
                 
-                <div className="p-2">
-                  <h3 className="font-medium text-gray-900 text-xs truncate">
-                    {formatCardName(card.name)} #{card.cardNumber}
-                  </h3>
+                <div className="p-2 flex flex-col flex-1 min-w-0">
+                  <div className="flex items-baseline gap-1 min-w-0 mb-1">
+                    <h3 className="font-medium text-gray-900 text-xs truncate flex-1 min-w-0" title={formatCardName(card.name)}>
+                      {formatCardName(card.name)}
+                    </h3>
+                    <span className="text-[11px] leading-4 text-gray-600 shrink-0">#{card.cardNumber}</span>
+                  </div>
                   {(() => {
                     const setName = card.set?.name || 'Unknown Set';
-                    const mainSetName = extractMainSetName(setName);
-                    const { displayName } = getCardSetDisplayName({ cardSetName: setName, mainSetName, isAdmin: false });
-                    return <p className="text-xs text-gray-500 mb-2">{displayName}</p>;
+                    const { displayName } = getCardSetDisplayName({ cardSetName: setName, isAdmin: false });
+                    return <SubsetLabel name={displayName} className="text-gray-500 mb-2" />;
                   })()}
                   
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mt-auto mb-2 min-h-6">
                     {card.isInsert && (
                       <span className="text-xs text-white px-2 py-1 rounded bg-purple-600 font-bold shadow-lg">
                         INSERT
@@ -449,14 +442,13 @@ export function CardGrid({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0 pr-2">
-                        <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-1">
+                        <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-1" title={formatCardName(card.name)}>
                           {formatCardName(card.name)}
                         </h3>
                         {(() => {
                           const setName = card.set?.name || '';
-                          const mainSetName = extractMainSetName(setName);
-                          const { displayName } = getCardSetDisplayName({ cardSetName: setName, mainSetName, isAdmin: false });
-                          return <p className="text-xs text-gray-500 mb-1">{card.set.year} {displayName}</p>;
+                           const { displayName } = getCardSetDisplayName({ cardSetName: setName, isAdmin: false });
+                           return <SubsetLabel name={`${card.set?.year || ''} ${displayName}`.trim()} className="text-gray-500 mb-1" />;
                         })()}
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-medium text-gray-600">
