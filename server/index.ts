@@ -659,6 +659,9 @@ server.listen({
 
   const runDataFixSeeds = async () => {
     if (!suppressAutomaticCatalogMutations()) {
+      const { completeSapphire2025 } = await import('./seeds/completeSapphire2025');
+      await completeSapphire2025();
+
       const { importSkyboxWizardChromium1996 } = await import('./seeds/importSkyboxWizardChromium1996');
       await importSkyboxWizardChromium1996();
 

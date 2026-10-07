@@ -1,0 +1,802 @@
+[
+  {
+    "num": "1",
+    "name": "Iron Man"
+  },
+  {
+    "num": "2",
+    "name": "Thena"
+  },
+  {
+    "num": "3",
+    "name": "Eros"
+  },
+  {
+    "num": "4",
+    "name": "Ronin"
+  },
+  {
+    "num": "5",
+    "name": "Vulture"
+  },
+  {
+    "num": "6",
+    "name": "Agatha Harkness"
+  },
+  {
+    "num": "7",
+    "name": "Mystique"
+  },
+  {
+    "num": "8",
+    "name": "Solarus"
+  },
+  {
+    "num": "9",
+    "name": "Bloodline"
+  },
+  {
+    "num": "10",
+    "name": "Layla El-Faouly"
+  },
+  {
+    "num": "11",
+    "name": "Super-Skrull"
+  },
+  {
+    "num": "12",
+    "name": "Namor"
+  },
+  {
+    "num": "13",
+    "name": "Prowler"
+  },
+  {
+    "num": "14",
+    "name": "Echo"
+  },
+  {
+    "num": "15",
+    "name": "Omega Red"
+  },
+  {
+    "num": "16",
+    "name": "Swarm"
+  },
+  {
+    "num": "17",
+    "name": "Taskmaster"
+  },
+  {
+    "num": "18",
+    "name": "Kraven The Hunter"
+  },
+  {
+    "num": "19",
+    "name": "Havok"
+  },
+  {
+    "num": "20",
+    "name": "Nighthawk"
+  },
+  {
+    "num": "21",
+    "name": "Molecule Man"
+  },
+  {
+    "num": "22",
+    "name": "Sunfire"
+  },
+  {
+    "num": "23",
+    "name": "Nova"
+  },
+  {
+    "num": "24",
+    "name": "Photon"
+  },
+  {
+    "num": "25",
+    "name": "Kronos"
+  },
+  {
+    "num": "26",
+    "name": "Mole Man"
+  },
+  {
+    "num": "27",
+    "name": "Professor Xavier"
+  },
+  {
+    "num": "28",
+    "name": "The Watcher"
+  },
+  {
+    "num": "29",
+    "name": "Ghost-Spider"
+  },
+  {
+    "num": "30",
+    "name": "Bullseye"
+  },
+  {
+    "num": "31",
+    "name": "Man-Thing"
+  },
+  {
+    "num": "32",
+    "name": "Web-Head"
+  },
+  {
+    "num": "33",
+    "name": "Sentinel"
+  },
+  {
+    "num": "34",
+    "name": "Killmonger"
+  },
+  {
+    "num": "35",
+    "name": "Groot"
+  },
+  {
+    "num": "36",
+    "name": "Dormammu"
+  },
+  {
+    "num": "37",
+    "name": "Mockingbird"
+  },
+  {
+    "num": "38",
+    "name": "Banshee"
+  },
+  {
+    "num": "39",
+    "name": "Rhino"
+  },
+  {
+    "num": "40",
+    "name": "Human Torch"
+  },
+  {
+    "num": "41",
+    "name": "Mandarin"
+  },
+  {
+    "num": "42",
+    "name": "Crossbones"
+  },
+  {
+    "num": "43",
+    "name": "Enchantress"
+  },
+  {
+    "num": "44",
+    "name": "Squirrel Girl"
+  },
+  {
+    "num": "45",
+    "name": "Gorr"
+  },
+  {
+    "num": "46",
+    "name": "Throg"
+  },
+  {
+    "num": "47",
+    "name": "Colleen Wing"
+  },
+  {
+    "num": "48",
+    "name": "Blink"
+  },
+  {
+    "num": "49",
+    "name": "Shatterstar"
+  },
+  {
+    "num": "50",
+    "name": "Forge"
+  },
+  {
+    "num": "51",
+    "name": "Cannonball"
+  },
+  {
+    "num": "52",
+    "name": "Dazzler"
+  },
+  {
+    "num": "53",
+    "name": "FIN Fang Foom"
+  },
+  {
+    "num": "54",
+    "name": "Rek-Rap"
+  },
+  {
+    "num": "55",
+    "name": "Ego"
+  },
+  {
+    "num": "56",
+    "name": "Franklin Richards"
+  },
+  {
+    "num": "57",
+    "name": "Spider-Boy"
+  },
+  {
+    "num": "58",
+    "name": "Okoye"
+  },
+  {
+    "num": "59",
+    "name": "Silver Samurai"
+  },
+  {
+    "num": "60",
+    "name": "Kid Juggernaut"
+  },
+  {
+    "num": "61",
+    "name": "Songbird"
+  },
+  {
+    "num": "62",
+    "name": "Cloak"
+  },
+  {
+    "num": "63",
+    "name": "Dagger"
+  },
+  {
+    "num": "64",
+    "name": "Lady Deathstrike"
+  },
+  {
+    "num": "65",
+    "name": "Beta RAY Bill"
+  },
+  {
+    "num": "66",
+    "name": "Pyro"
+  },
+  {
+    "num": "67",
+    "name": "Calico"
+  },
+  {
+    "num": "68",
+    "name": "Onslaught"
+  },
+  {
+    "num": "69",
+    "name": "Jessica Jones"
+  },
+  {
+    "num": "70",
+    "name": "The Hood"
+  },
+  {
+    "num": "71",
+    "name": "Ironheart"
+  },
+  {
+    "num": "72",
+    "name": "Kate Bishop"
+  },
+  {
+    "num": "73",
+    "name": "Hope Summers"
+  },
+  {
+    "num": "74",
+    "name": "The Maker"
+  },
+  {
+    "num": "75",
+    "name": "Arishem"
+  },
+  {
+    "num": "76",
+    "name": "Ikaris"
+  },
+  {
+    "num": "77",
+    "name": "Sersi"
+  },
+  {
+    "num": "78",
+    "name": "Phyla-Vell"
+  },
+  {
+    "num": "79",
+    "name": "Hela"
+  },
+  {
+    "num": "80",
+    "name": "Falcon"
+  },
+  {
+    "num": "81",
+    "name": "Jackpot"
+  },
+  {
+    "num": "82",
+    "name": "Fantasma"
+  },
+  {
+    "num": "83",
+    "name": "Yelena"
+  },
+  {
+    "num": "84",
+    "name": "Ka-Zar"
+  },
+  {
+    "num": "85",
+    "name": "Lizard"
+  },
+  {
+    "num": "86",
+    "name": "Wong"
+  },
+  {
+    "num": "87",
+    "name": "Valeria Richards"
+  },
+  {
+    "num": "88",
+    "name": "Cadet Marvel"
+  },
+  {
+    "num": "89",
+    "name": "Mister Fantastic"
+  },
+  {
+    "num": "90",
+    "name": "Jane Foster"
+  },
+  {
+    "num": "91",
+    "name": "Sandman"
+  },
+  {
+    "num": "92",
+    "name": "Sabretooth"
+  },
+  {
+    "num": "93",
+    "name": "Colossus"
+  },
+  {
+    "num": "94",
+    "name": "Jean Grey"
+  },
+  {
+    "num": "95",
+    "name": "Storm"
+  },
+  {
+    "num": "96",
+    "name": "Shuri"
+  },
+  {
+    "num": "97",
+    "name": "Daredevil"
+  },
+  {
+    "num": "98",
+    "name": "Moon Knight"
+  },
+  {
+    "num": "99",
+    "name": "Amaranth"
+  },
+  {
+    "num": "100",
+    "name": "Wonder Man"
+  },
+  {
+    "num": "101",
+    "name": "Spider-Man"
+  },
+  {
+    "num": "102",
+    "name": "Mephisto"
+  },
+  {
+    "num": "103",
+    "name": "Wolverine"
+  },
+  {
+    "num": "104",
+    "name": "Star-Lord"
+  },
+  {
+    "num": "105",
+    "name": "Gambit"
+  },
+  {
+    "num": "106",
+    "name": "Black Cat"
+  },
+  {
+    "num": "107",
+    "name": "Cyclops"
+  },
+  {
+    "num": "108",
+    "name": "Silk"
+  },
+  {
+    "num": "109",
+    "name": "The Thing"
+  },
+  {
+    "num": "110",
+    "name": "She-Hulk"
+  },
+  {
+    "num": "111",
+    "name": "Luke Cage"
+  },
+  {
+    "num": "112",
+    "name": "Spider-Man 2099"
+  },
+  {
+    "num": "113",
+    "name": "Wasp"
+  },
+  {
+    "num": "114",
+    "name": "Makkari"
+  },
+  {
+    "num": "115",
+    "name": "Mysterio"
+  },
+  {
+    "num": "116",
+    "name": "Black Bolt"
+  },
+  {
+    "num": "117",
+    "name": "M.O.D.O.K."
+  },
+  {
+    "num": "118",
+    "name": "Annihilus"
+  },
+  {
+    "num": "119",
+    "name": "Thor"
+  },
+  {
+    "num": "120",
+    "name": "Rocket Raccoon"
+  },
+  {
+    "num": "121",
+    "name": "Quicksilver"
+  },
+  {
+    "num": "122",
+    "name": "X-23"
+  },
+  {
+    "num": "123",
+    "name": "Typhoid Mary"
+  },
+  {
+    "num": "124",
+    "name": "Bucky Barnes"
+  },
+  {
+    "num": "125",
+    "name": "Baron Zemo"
+  },
+  {
+    "num": "126",
+    "name": "Blade"
+  },
+  {
+    "num": "127",
+    "name": "Samurai Venom"
+  },
+  {
+    "num": "128",
+    "name": "Hulk"
+  },
+  {
+    "num": "129",
+    "name": "Black Widow"
+  },
+  {
+    "num": "130",
+    "name": "Ms. Marvel"
+  },
+  {
+    "num": "131",
+    "name": "Jubilee"
+  },
+  {
+    "num": "132",
+    "name": "Abomination"
+  },
+  {
+    "num": "133",
+    "name": "Hawkeye"
+  },
+  {
+    "num": "134",
+    "name": "Silver Surfer"
+  },
+  {
+    "num": "135",
+    "name": "Psylocke"
+  },
+  {
+    "num": "136",
+    "name": "Black Panther"
+  },
+  {
+    "num": "137",
+    "name": "Iron Fist"
+  },
+  {
+    "num": "138",
+    "name": "Ultron"
+  },
+  {
+    "num": "139",
+    "name": "Vision"
+  },
+  {
+    "num": "140",
+    "name": "Gamora"
+  },
+  {
+    "num": "141",
+    "name": "Ant-Man"
+  },
+  {
+    "num": "142",
+    "name": "Spider-Ham"
+  },
+  {
+    "num": "143",
+    "name": "Spider-Girl"
+  },
+  {
+    "num": "144",
+    "name": "Adam Warlock"
+  },
+  {
+    "num": "145",
+    "name": "Cable"
+  },
+  {
+    "num": "146",
+    "name": "Juggernaut"
+  },
+  {
+    "num": "147",
+    "name": "Emma Frost"
+  },
+  {
+    "num": "148",
+    "name": "Doctor Doom"
+  },
+  {
+    "num": "149",
+    "name": "Venom"
+  },
+  {
+    "num": "150",
+    "name": "Galactus"
+  },
+  {
+    "num": "151",
+    "name": "Captain Britain"
+  },
+  {
+    "num": "152",
+    "name": "Lockjaw"
+  },
+  {
+    "num": "153",
+    "name": "America Chavez"
+  },
+  {
+    "num": "154",
+    "name": "Domino"
+  },
+  {
+    "num": "155",
+    "name": "Mister Sinister"
+  },
+  {
+    "num": "156",
+    "name": "Jeff THE LAND Shark"
+  },
+  {
+    "num": "157",
+    "name": "Ronan"
+  },
+  {
+    "num": "158",
+    "name": "Thanos"
+  },
+  {
+    "num": "159",
+    "name": "Shang-Chi"
+  },
+  {
+    "num": "160",
+    "name": "Doctor Octopus"
+  },
+  {
+    "num": "161",
+    "name": "Green Goblin"
+  },
+  {
+    "num": "162",
+    "name": "Apocalypse"
+  },
+  {
+    "num": "163",
+    "name": "Hercules"
+  },
+  {
+    "num": "164",
+    "name": "Kingpin"
+  },
+  {
+    "num": "165",
+    "name": "Black Knight"
+  },
+  {
+    "num": "166",
+    "name": "Morbius"
+  },
+  {
+    "num": "167",
+    "name": "Nebula"
+  },
+  {
+    "num": "168",
+    "name": "Sentry"
+  },
+  {
+    "num": "169",
+    "name": "Magneto"
+  },
+  {
+    "num": "170",
+    "name": "Scarlet Witch"
+  },
+  {
+    "num": "171",
+    "name": "Mantis"
+  },
+  {
+    "num": "172",
+    "name": "Carol Danvers"
+  },
+  {
+    "num": "173",
+    "name": "Carnage"
+  },
+  {
+    "num": "174",
+    "name": "Invisible Woman"
+  },
+  {
+    "num": "175",
+    "name": "Destiny"
+  },
+  {
+    "num": "176",
+    "name": "Miles Morales"
+  },
+  {
+    "num": "177",
+    "name": "Beast"
+  },
+  {
+    "num": "178",
+    "name": "Nightcrawler"
+  },
+  {
+    "num": "179",
+    "name": "Iceman"
+  },
+  {
+    "num": "180",
+    "name": "Krakoa"
+  },
+  {
+    "num": "181",
+    "name": "Kang the Conqueror"
+  },
+  {
+    "num": "182",
+    "name": "Strong Guy"
+  },
+  {
+    "num": "183",
+    "name": "Ghost Rider"
+  },
+  {
+    "num": "184",
+    "name": "Drax"
+  },
+  {
+    "num": "185",
+    "name": "Captain America"
+  },
+  {
+    "num": "186",
+    "name": "Angel"
+  },
+  {
+    "num": "187",
+    "name": "Valkyrie"
+  },
+  {
+    "num": "188",
+    "name": "Kitty Pryde"
+  },
+  {
+    "num": "189",
+    "name": "Rogue"
+  },
+  {
+    "num": "190",
+    "name": "Bronze"
+  },
+  {
+    "num": "191",
+    "name": "Legion"
+  },
+  {
+    "num": "192",
+    "name": "Eve Warlock"
+  },
+  {
+    "num": "193",
+    "name": "Nick Fury"
+  },
+  {
+    "num": "194",
+    "name": "War Machine"
+  },
+  {
+    "num": "195",
+    "name": "Gorgon"
+  },
+  {
+    "num": "196",
+    "name": "Omega"
+  },
+  {
+    "num": "197",
+    "name": "Bishop"
+  },
+  {
+    "num": "198",
+    "name": "Liberty"
+  },
+  {
+    "num": "199",
+    "name": "Hellrune"
+  },
+  {
+    "num": "200",
+    "name": "Wagnerine"
+  }
+]

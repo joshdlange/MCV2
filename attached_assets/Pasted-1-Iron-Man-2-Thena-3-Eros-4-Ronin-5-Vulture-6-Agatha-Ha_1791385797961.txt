@@ -1,0 +1,200 @@
+1 Iron Man
+2 Thena
+3 Eros
+4 Ronin
+5 Vulture
+6 Agatha Harkness
+7 Mystique
+8 Solarus
+9 Bloodline
+10 Layla El-Faouly
+11 Super-Skrull
+12 Namor
+13 Prowler
+14 Echo
+15 Omega Red
+16 Swarm
+17 Taskmaster
+18 Kraven The Hunter
+19 Havok
+20 Nighthawk
+21 Molecule Man
+22 Sunfire
+23 Nova
+24 Photon
+25 Kronos
+26 Mole Man
+27 Professor Xavier
+28 The Watcher
+29 Ghost-Spider
+30 Bullseye
+31 Man-Thing
+32 Web-Head
+33 Sentinel
+34 Killmonger
+35 Groot
+36 Dormammu
+37 Mockingbird
+38 Banshee
+39 Rhino
+40 Human Torch
+41 Mandarin
+42 Crossbones
+43 Enchantress
+44 Squirrel Girl
+45 Gorr
+46 Throg
+47 Colleen Wing
+48 Blink
+49 Shatterstar
+50 Forge
+51 Cannonball
+52 Dazzler
+53 FIN Fang Foom
+54 Rek-Rap
+55 Ego
+56 Franklin Richards
+57 Spider-Boy
+58 Okoye
+59 Silver Samurai
+60 Kid Juggernaut
+61 Songbird
+62 Cloak
+63 Dagger
+64 Lady Deathstrike
+65 Beta RAY Bill
+66 Pyro
+67 Calico
+68 Onslaught
+69 Jessica Jones
+70 The Hood
+71 Ironheart
+72 Kate Bishop
+73 Hope Summers
+74 The Maker
+75 Arishem
+76 Ikaris
+77 Sersi
+78 Phyla-Vell
+79 Hela
+80 Falcon
+81 Jackpot
+82 Fantasma
+83 Yelena
+84 Ka-Zar
+85 Lizard
+86 Wong
+87 Valeria Richards
+88 Cadet Marvel
+89 Mister Fantastic
+90 Jane Foster
+91 Sandman
+92 Sabretooth
+93 Colossus
+94 Jean Grey
+95 Storm
+96 Shuri
+97 Daredevil
+98 Moon Knight
+99 Amaranth
+100 Wonder Man
+101 Spider-Man
+102 Mephisto
+103 Wolverine
+104 Star-Lord
+105 Gambit
+106 Black Cat
+107 Cyclops
+108 Silk
+109 The Thing
+110 She-Hulk
+111 Luke Cage
+112 Spider-Man 2099
+113 Wasp
+114 Makkari
+115 Mysterio
+116 Black Bolt
+117 M.O.D.O.K.
+118 Annihilus
+119 Thor
+120 Rocket Raccoon
+121 Quicksilver
+122 X-23
+123 Typhoid Mary
+124 Bucky Barnes
+125 Baron Zemo
+126 Blade
+127 Samurai Venom
+128 Hulk
+129 Black Widow
+130 Ms. Marvel
+131 Jubilee
+132 Abomination
+133 Hawkeye
+134 Silver Surfer
+135 Psylocke
+136 Black Panther
+137 Iron Fist
+138 Ultron
+139 Vision
+140 Gamora
+141 Ant-Man
+142 Spider-Ham
+143 Spider-Girl
+144 Adam Warlock
+145 Cable
+146 Juggernaut
+147 Emma Frost
+148 Doctor Doom
+149 Venom
+150 Galactus
+151 Captain Britain
+152 Lockjaw
+153 America Chavez
+154 Domino
+155 Mister Sinister
+156 Jeff THE LAND Shark
+157 Ronan
+158 Thanos
+159 Shang-Chi
+160 Doctor Octopus
+161 Green Goblin
+162 Apocalypse
+163 Hercules
+164 Kingpin
+165 Black Knight
+166 Morbius
+167 Nebula
+168 Sentry
+169 Magneto
+170 Scarlet Witch
+171 Mantis
+172 Carol Danvers
+173 Carnage
+174 Invisible Woman
+175 Destiny
+176 Miles Morales
+177 Beast
+178 Nightcrawler
+179 Iceman
+180 Krakoa
+181 Kang the Conqueror
+182 Strong Guy
+183 Ghost Rider
+184 Drax
+185 Captain America
+186 Angel
+187 Valkyrie
+188 Kitty Pryde
+189 Rogue
+190 Bronze
+191 Legion
+192 Eve Warlock
+193 Nick Fury
+194 War Machine
+195 Gorgon
+196 Omega
+197 Bishop
+198 Liberty
+199 Hellrune
+200 Wagnerine

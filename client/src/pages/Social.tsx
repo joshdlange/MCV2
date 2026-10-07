@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { MessageComposer } from "@/components/message-composer";
+import { createMessageDraft } from "@/lib/messageDraft";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { Users, MessageCircle, Award, User, Lock, Clock, Check, X, Search, UserPlus, Plus, Grid, List, Trophy, Star, Calendar, Info, ShieldOff, ShieldAlert, Flag, RefreshCw } from "lucide-react";
@@ -103,7 +104,7 @@ interface SearchUser {
 
 export default function Social() {
   const [selectedFriendId, setSelectedFriendId] = useState<number | null>(null);
-  const [newMessage, setNewMessage] = useState("");
+  const [messageDraft] = useState(createMessageDraft);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -511,8 +512,6 @@ export default function Social() {
   // and updates while already near the bottom follow the newest message.
   const desktopMessagesRef = useRef<HTMLDivElement>(null);
   const mobileMessagesRef = useRef<HTMLDivElement>(null);
-  const desktopComposerRef = useRef<HTMLTextAreaElement>(null);
-  const mobileComposerRef = useRef<HTMLTextAreaElement>(null);
   const scrollSession = useRef("");
   const stickToBottom = useRef(true);
   const sentConversation = useRef<number | null>(null);
@@ -558,23 +557,6 @@ export default function Social() {
       elements.forEach(el => el?.removeEventListener("load", scroll, true));
     };
   }, [messages, selectedFriendId, activeTab]);
-
-  useEffect(() => {
-    if (!newMessage) {
-      for (const ref of [desktopComposerRef, mobileComposerRef]) {
-        if (ref.current) {
-          ref.current.style.height = "40px";
-          ref.current.style.overflowY = "hidden";
-        }
-      }
-    }
-  }, [newMessage]);
-
-  const resizeMessageComposer = (textarea: HTMLTextAreaElement) => {
-    textarea.style.height = "auto";
-    textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 40), 120)}px`;
-    textarea.style.overflowY = textarea.scrollHeight > 120 ? "auto" : "hidden";
-  };
 
   // Follow / unfollow (unified model — no requests, no approval)
   const followMutation = useMutation({
@@ -641,7 +623,7 @@ export default function Social() {
       queryClient.invalidateQueries({ queryKey: ["social/messages", variables.recipientId] });
       queryClient.invalidateQueries({ queryKey: ["social/message-threads"] });
       queryClient.invalidateQueries({ queryKey: ["/api/social/unread-count"] });
-      setNewMessage("");
+      messageDraft.clearIfSent(variables.content);
       toast({
         title: "Success",
         description: "Message sent successfully",
@@ -708,6 +690,7 @@ export default function Social() {
   };
 
   const handleSendMessage = () => {
+    const newMessage = messageDraft.getSnapshot();
     if (selectedFriendId && newMessage.trim() && !sendMessage.isPending) {
       sendMessage.mutate({ recipientId: selectedFriendId, content: newMessage.trim() });
     }
@@ -1305,39 +1288,7 @@ export default function Social() {
                         </svg>
                       </Button>
                       
-                      {/* Message Input */}
-                      <div className="flex-1">
-                        <Textarea
-                          ref={desktopComposerRef}
-                          rows={1}
-                          placeholder="Message..."
-                          value={newMessage}
-                          onChange={(e) => {
-                            setNewMessage(e.target.value);
-                            resizeMessageComposer(e.target);
-                          }}
-                          className="w-full min-h-10 max-h-[120px] resize-none overflow-y-hidden px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-2xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                              e.preventDefault();
-                              handleSendMessage();
-                            }
-                          }}
-                          data-testid="input-message"
-                        />
-                      </div>
-                      
-                      {/* Send Button */}
-                      <Button
-                        onClick={handleSendMessage}
-                        disabled={!newMessage.trim() || sendMessage.isPending}
-                        className="w-10 h-10 rounded-full bg-blue-500 hover:bg-blue-600 text-white p-0 flex-shrink-0"
-                        data-testid="button-send-message"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                        </svg>
-                      </Button>
+                      <MessageComposer draft={messageDraft} pending={sendMessage.isPending} onSend={handleSendMessage} />
                     </div>
                   </div>
                 </div>
@@ -1550,35 +1501,7 @@ export default function Social() {
                           </svg>
                         </Button>
                         
-                        <div className="flex-1">
-                          <Textarea
-                            ref={mobileComposerRef}
-                            rows={1}
-                            placeholder="Message..."
-                            value={newMessage}
-                            onChange={(e) => {
-                              setNewMessage(e.target.value);
-                              resizeMessageComposer(e.target);
-                            }}
-                            className="w-full min-h-10 max-h-[120px] resize-none overflow-y-hidden px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-2xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500"
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                                e.preventDefault();
-                                handleSendMessage();
-                              }
-                            }}
-                          />
-                        </div>
-                        
-                        <Button
-                          onClick={handleSendMessage}
-                          disabled={!newMessage.trim() || sendMessage.isPending}
-                          className="w-10 h-10 rounded-full bg-blue-500 hover:bg-blue-600 text-white p-0 flex-shrink-0"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                          </svg>
-                        </Button>
+                        <MessageComposer draft={messageDraft} pending={sendMessage.isPending} onSend={handleSendMessage} />
                       </div>
                     </div>
                   </>
