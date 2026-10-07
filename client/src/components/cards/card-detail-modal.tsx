@@ -23,6 +23,7 @@ import { useCardPricing, useRefreshCardPricing } from "@/hooks/useCardPricing";
 import { auth } from "@/lib/firebase";
 import noCardImagePlaceholder from "@assets/image_1784478496002.png";
 import { formatCardName, formatSetName } from "@/lib/formatTitle";
+import { CardDetailImage } from "./card-detail-image";
 
 interface CardDetailModalProps {
   card: CardWithSet | null;
@@ -669,16 +670,12 @@ export function CardDetailModal({
               return (
                 <div className="flex justify-center py-6">
                   {/* Card Container with Aura */}
-                  <div className={`card-aura-container aura-${auraTier}`}>
-                    <div className="aspect-[2.5/3.5] w-[280px] relative overflow-hidden rounded-xl shadow-xl">
-                      <img
-                        src={(showBack ? convertGoogleDriveUrl(card.backImageUrl || '') : convertGoogleDriveUrl(card.frontImageUrl || '')) || noCardImagePlaceholder}
-                        alt={showBack ? `${card.name} back` : card.name}
-                        className="w-full h-full object-contain bg-gray-900"
-                        onError={(e) => {
-                          e.currentTarget.src = noCardImagePlaceholder;
-                        }}
-                      />
+                  <CardDetailImage
+                    src={(showBack ? convertGoogleDriveUrl(card.backImageUrl || '') : convertGoogleDriveUrl(card.frontImageUrl || '')) || noCardImagePlaceholder}
+                    alt={showBack ? `${card.name} back` : card.name}
+                    fallback={noCardImagePlaceholder}
+                    auraTier={auraTier}
+                  >
                       
                       {/* Status Badges */}
                       <div className="absolute top-2 right-2 flex flex-col gap-1.5">
@@ -712,8 +709,7 @@ export function CardDetailModal({
                           FLIP
                         </Button>
                       )}
-                    </div>
-                  </div>
+                  </CardDetailImage>
                 </div>
               );
             })()}
