@@ -83,6 +83,28 @@ async function checkShowcase(page: Page, requests: string[], scenario: string, o
   await page.getByTestId("button-close-modal").click();
 }
 
+async function checkBanner(page: Page) {
+  const banner = page.getByTestId("value-page-banner");
+  await banner.waitFor();
+  await page.waitForFunction(() => {
+    const image = document.querySelector<HTMLImageElement>('[data-testid="value-page-banner"]');
+    return image?.complete && image.naturalWidth > 0;
+  });
+  const dimensions = await banner.evaluate(image => {
+    const img = image as HTMLImageElement;
+    const bounds = img.getBoundingClientRect();
+    return { width: img.naturalWidth, height: img.naturalHeight, renderedWidth: bounds.width, renderedHeight: bounds.height, objectFit: getComputedStyle(img).objectFit };
+  });
+  assert.equal(dimensions.width, 1024);
+  assert.equal(dimensions.height, 344);
+  assert.ok(Math.abs(dimensions.renderedWidth / dimensions.renderedHeight - 1024 / 344) < 0.01, "banner is uncropped");
+  assert.notEqual(dimensions.objectFit, "cover");
+  assert.ok((await page.getByRole("heading", { name: "Most Valuable Cards", exact: true }).getAttribute("class"))?.includes("sr-only"));
+  assert.equal(await page.getByText("Your collection, ranked by cached market price.", { exact: true }).count(), 0);
+  assert.equal(await page.getByRole("link", { name: "My Collection", exact: true }).getAttribute("href"), "/my-collection");
+  assert.equal(await page.getByRole("link", { name: "See market trends →" }).getAttribute("href"), "/trends");
+}
+
 // Run: npx tsx client/src/dev/value-browser-check.ts
 // Optional: VALUE_UI_BASE_URL, VALUE_UI_CHROMIUM (browser executable).
 // This script never signs in and never sends API requests to the backend.
@@ -212,11 +234,25 @@ try {
       throw error;
     });
     await page.screenshot({ path: `${output}/${scenario}-390.png`, fullPage: scenario === "trends" });
+    if (scenario === "value") {
+      await checkBanner(page);
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.screenshot({ path: `${output}/value-banner-top-390.png` });
+      await page.setViewportSize({ width: 1280, height: 1000 });
+      await checkBanner(page);
+      await page.screenshot({ path: `${output}/value-banner-top-1280.png` });
+      await page.setViewportSize({ width: 390, height: 844 });
+    }
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > 390), false, `${scenario} horizontal overflow`);
     if (["value", "page-error", "detail-error"].includes(scenario)) {
       assert.ok((await page.getByTestId("value-summary").innerText()).includes(summary.totalValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })));
       assert.equal(await page.locator('[data-testid^="value-card-"]').count(), 25);
       await checkShowcase(page, requests, scenario, output);
+      if (scenario === "value") {
+        await page.getByRole("link", { name: "My Collection", exact: true }).click();
+        await page.getByRole("combobox", { name: "Collection sort" }).waitFor();
+        assert.equal(await page.getByTestId("value-page-banner").count(), 0, "back navigation reaches My Collection");
+      }
     }
     if (scenario === "error") {
       await page.getByRole("button", { name: "Retry", exact: true }).click();

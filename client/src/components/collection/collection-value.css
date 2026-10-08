@@ -1,3 +1,16 @@
+.value-page-banner {
+  overflow: hidden;
+  width: 100%;
+  border: 1px solid #80663c;
+  border-radius: 12px;
+  background: #21181d;
+  box-shadow: 0 5px 16px #79613d24;
+}
+.value-page-banner img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
 .value-gallery {
   --vault-ivory: #faf8f3;
   --vault-gold: #9b732e;

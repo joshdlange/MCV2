@@ -394,3 +394,17 @@ mtime_ms = 1791475771516
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/15304f45-0d2a-4be3-9bfa-e91508028256/c9d8cd3e-c5d0-4341-9e55-c67dba477348"
 storage_version_token = "1791476148654596"
 content_type = "image/png"
+
+[[outputs]]
+id = "tjYAmtS2qoSUWkWedhUAA"
+uri = "file://client/src/dev/screenshots/value-banner-top-390.png"
+type = "image"
+title = "Most Valuable Cards — new header"
+description = "Your banner and button-style back navigation at 390px. Screenshot uses test collection data; the update is running in dev."
+logical_id = "3b8144bb-fb82-43a5-b3c3-3d82791731f9"
+content_hash = "sha256:8dc6dd0575b9ad90a091f9b2e420ed4fd469d4117c6521a467e55f40bec4010b"
+size = 192713
+mtime_ms = 1791477778247
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/3b8144bb-fb82-43a5-b3c3-3d82791731f9/dcb8dd46-2acf-45cb-801a-6ba4636f4578"
+storage_version_token = "1791477908093336"
+content_type = "image/png"
