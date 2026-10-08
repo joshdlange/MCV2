@@ -49,3 +49,4 @@
 - [Upcoming release policy](upcoming-release-policy.md) — Central-midnight dates; verified announcements and staged checklists; atomic catalog publication with request-time catch-up.
 - [Catalog label readability](catalog-label-readability.md) — show full subset names while keeping compact, aligned tiles; modest changes rather than a redesign.
 - [Collection value policy](collection-value-policy.md) — positive cached market prices only; quantity-inclusive totals; visitor values limited to public shared collections.
+- [Golden Anniversary checklist](golden-anniversary-checklist.md) — owner expects all 150 numbered cards in the set and its other base subsets; disregard era headings, not cards.
