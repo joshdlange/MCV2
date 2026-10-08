@@ -265,6 +265,7 @@ try {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > 390), false, `${scenario} horizontal overflow`);
     if (["value", "page-error", "detail-error"].includes(scenario)) {
       assert.ok((await page.getByTestId("value-summary").innerText()).includes(summary.totalValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })));
+      assert.ok((await page.getByTestId("value-summary").innerText()).includes(`${summary.pricedCards.toLocaleString()} cards with prices / ${(summary.pricedCards + summary.unpricedCards).toLocaleString()} cards in collection`));
       assert.equal(await page.locator('[data-testid^="value-card-"]').count(), 25);
       await checkShowcase(page, requests, scenario, output);
       if (scenario === "value") {
