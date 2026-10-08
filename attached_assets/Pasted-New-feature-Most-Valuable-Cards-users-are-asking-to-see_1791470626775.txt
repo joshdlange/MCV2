@@ -1,0 +1,59 @@
+New feature: "Most Valuable Cards" (users are asking to see their collection by value). Build in
+dev, then tell me when it's ready to publish.
+
+PAGE: /collection/value, titled "Most Valuable Cards"
+- Shows the signed-in user's collected cards sorted by current market value, 25 at a time, with
+  a "Show more" button (next 25). Do the sorting and limiting in the database query, not in the
+  browser; it must stay fast for collections of thousands of cards.
+- Sort toggle: "High → Low" (default) and "Low → High".
+- Filter chip "Hide under $5", ON by default; tap to show all.
+- Cards with no price yet: never mixed into the sorted list. Show "X cards don't have a price yet"
+  at the bottom.
+- Each card: image, name + #, set, year, value in bold, and "×2 · $X total" when they own more
+  than one copy. Tapping a card opens the SAME card detail view used elsewhere in the app.
+- Top of the page: a summary strip with total collection value, the number of priced cards, and
+  "Prices updated [date]".
+- Mobile-first (390px), using the existing card grid/list style. Empty state for users with no
+  priced cards.
+- If the page shows any eBay links or listings, include the EpnDisclosure component (the
+  existing test enforces this).
+- Build the list as a reusable component so the page, the profile tab and the Market Trends box
+  all use the same code.
+
+ENTRY POINTS
+1. Dashboard: tapping the "Value" tile opens /collection/value (not Market Trends). Add a small
+   "See market trends →" link on the new page.
+2. My Collection: add "Value: High → Low" and "Value: Low → High" to the sort options, plus a
+   "Most valuable" shortcut chip.
+3. Market Trends: add a small "Your top cards" box (top 5 by value) with "See all →" linking to
+   the new page.
+4. USER PROFILE:
+   - Add a "Top Cards" tab in the profile tab row, right after "Overview" (before Trade Block).
+     It shows that profile owner's top cards by value, using the same component (25 at a time,
+     sort toggle, hide-under-$5 chip).
+   - Make the "Collection Value" stat in Collector Stats tappable; it opens the Top Cards tab.
+   - Add a small "Top Cards" preview row on the Overview tab (top 5 thumbnails with values and
+     "See all →").
+   - PRIVACY: follow the existing collection privacy/visibility settings. The owner always sees
+     their own. Visitors see the Top Cards tab and values only if the owner's collection is
+     public; otherwise hide the tab for visitors.
+
+TEST DATA (dev only)
+- Dev shows $0 values because price data was cleared during the dev catalog refresh. Live is
+  correct; this is NOT a bug to fix.
+- To test this feature properly, copy the card price data from production into dev (read-only on
+  production, catalog price tables only, no user data). If that's not practical, seed realistic
+  test prices for the cards involved.
+- Then build a dev test collection of 1,000+ cards with a realistic price spread (mostly under
+  $5, some $5–$100, a few $100+) for the speed and sorting tests.
+- The new page, the dashboard Value and the profile Collection Value must all use the same price
+  source and match each other.
+
+RULES
+- Don't touch Scan to Add, Rapid Scan or the publish packaging.
+- No production writes.
+- Before saying ready: test the 1,000+ card collection for speed, check that the page total
+  matches the dashboard and profile values, check the privacy rule from another account's view,
+  and run the publish-package check so the next publish works the first time.
+- Screenshots at 390px: the page (both sort orders), the profile Top Cards tab (owner view and
+  visitor view), and each entry point.
