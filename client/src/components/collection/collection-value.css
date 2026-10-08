@@ -4,14 +4,20 @@
   --vault-line: #e6dfcf;
 }
 .value-gallery .value-grail {
+  --grail-gold: #f4d58b;
   display: flex;
   width: 100%;
   align-items: center;
   gap: 28px;
   padding: 28px;
-  border: 1px solid var(--vault-line);
+  border: 1px solid #79613d;
   border-radius: 16px;
-  background: var(--vault-ivory);
+  background:
+    radial-gradient(ellipse at 18% 45%, #ac7d354d 0%, transparent 54%),
+    radial-gradient(ellipse at 100% 0%, #933f342b 0%, transparent 48%),
+    linear-gradient(125deg, #242227 0%, #151923 52%, #1b1a22 100%);
+  color: #fbf5e8;
+  box-shadow: inset 0 1px 0 #f4d58b26, 0 10px 28px #1719231a;
   text-align: left;
 }
 .value-grail-art {
@@ -23,8 +29,9 @@
 .value-grail-trophy {
   width: 28px;
   height: 28px;
-  color: var(--vault-gold);
+  color: var(--grail-gold);
   stroke-width: 1.5;
+  filter: drop-shadow(0 0 5px #efbd6780) drop-shadow(0 0 16px #efbd674d);
 }
 .value-image {
   display: flex;
@@ -39,7 +46,34 @@
   height: 100%;
   object-fit: contain;
 }
-.value-image-grail { width: 240px; height: 336px; }
+.value-image-grail {
+  width: 240px;
+  height: 336px;
+  overflow: visible;
+  background: transparent;
+}
+.value-image-grail img {
+  border-radius: 6px;
+  /* The filter follows image pixels, not a wrapper: portrait artwork stays clear. */
+  filter: drop-shadow(0 0 2px #ffe0a4b3) drop-shadow(0 0 13px #e5ad5759) drop-shadow(0 0 30px #d9a04438);
+}
+.value-grail-eyebrow { color: var(--grail-gold); }
+.value-grail-number, .value-grail-meta { color: #c8c5c5; }
+.value-grail-price {
+  color: #ffe2a2;
+  text-shadow: 0 2px 18px #d6a55226;
+}
+.value-grail-note { color: #dbcead; }
+.value-gallery .value-grail:hover { border-color: #d7af65; }
+.value-gallery .value-grail:focus-visible { outline-color: #d7af65; }
+@media (max-width: 639px) {
+  .value-gallery .value-grail {
+    background:
+      radial-gradient(ellipse at 45% 23%, #ac7d354d 0%, transparent 54%),
+      radial-gradient(ellipse at 100% 0%, #933f342b 0%, transparent 48%),
+      linear-gradient(150deg, #242227 0%, #151923 62%, #1b1a22 100%);
+  }
+}
 .value-image-grid { width: 100%; aspect-ratio: 5 / 7; }
 .value-grid {
   display: grid;

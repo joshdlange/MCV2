@@ -97,12 +97,12 @@ export function CollectionValueList({
             <Trophy className="value-grail-trophy" aria-label="Highest valued card" />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9b732e]">The holy grail</p>
-            <p className="mt-2 font-bebas text-3xl leading-tight tracking-wide break-words">{formatCardName(featured.name)} <span className="text-gray-500">#{featured.cardNumber}</span></p>
-            <p className="mt-1 text-sm text-gray-500">{formatSetName(featured.set.name)} · {featured.set.year}</p>
-            <p className="mt-4 text-3xl font-bold tabular-nums text-green-700">{formatMarketValue(featured.marketValue)}</p>
-            {featured.quantity > 1 && <p className="mt-1 text-xs text-gray-600">×{featured.quantity} · {formatMarketValue(featured.lineTotal)} total</p>}
-            <p className="mt-4 text-xs text-gray-500">Highest valued card · View card details →</p>
+            <p className="value-grail-eyebrow text-[11px] font-semibold uppercase tracking-[0.2em]">The holy grail</p>
+            <p className="mt-2 font-bebas text-3xl leading-tight tracking-wide break-words">{formatCardName(featured.name)} <span className="value-grail-number">#{featured.cardNumber}</span></p>
+            <p className="value-grail-meta mt-1 text-sm">{formatSetName(featured.set.name)} · {featured.set.year}</p>
+            <p className="value-grail-price mt-4 text-3xl font-bold tabular-nums">{formatMarketValue(featured.marketValue)}</p>
+            {featured.quantity > 1 && <p className="value-grail-meta mt-1 text-xs">×{featured.quantity} · {formatMarketValue(featured.lineTotal)} total</p>}
+            <p className="value-grail-note mt-4 text-xs">Highest valued card · View card details →</p>
           </div>
         </button>}
         <div className="value-grid" data-testid="value-grid">
