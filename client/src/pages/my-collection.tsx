@@ -22,6 +22,7 @@ import { compareCardNumbers } from "@shared/cardNumberSort";
 import type { CollectionItem, CardWithSet, CardSet, MainSet } from "@shared/schema";
 import { formatCardName, formatSetName } from "@/lib/formatTitle";
 import { useAppStore } from "@/lib/store";
+import { CollectionValueList } from "@/components/collection/collection-value-list";
 
 export default function MyCollection() {
   const [, setLocation] = useLocation();
@@ -32,6 +33,7 @@ export default function MyCollection() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSet, setSelectedSet] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [collectionSort, setCollectionSort] = useState<"existing" | "desc" | "asc">("existing");
   const [collectionView, setCollectionView] = useState<"cards" | "sets">("sets");
   // When searching from the sets overview: show matching cards (default) or the sets containing them
   const [searchResultMode, setSearchResultMode] = useState<"cards" | "sets">("cards");
@@ -676,6 +678,20 @@ export default function MyCollection() {
               </Button>
             )}
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setLocation("/collection/value")} className="rounded-full border-red-200 bg-red-50 text-red-700">Most valuable</Button>
+            <Select value={collectionSort} onValueChange={(value: "existing" | "desc" | "asc") => {
+              setCollectionSort(value);
+              if (value !== "existing") setCardsViewMode("owned");
+            }}>
+              <SelectTrigger aria-label="Collection sort" className="w-full sm:w-[210px] bg-white text-gray-900"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="existing">Default collection order</SelectItem>
+                <SelectItem value="desc">Value: High → Low</SelectItem>
+                <SelectItem value="asc">Value: Low → High</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         
         <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
@@ -721,7 +737,13 @@ export default function MyCollection() {
       </div>
 
       <div className="p-4 sm:p-6">
-        {collectionView === "cards" ? (
+        {collectionSort !== "existing" && cardsViewMode !== "missing" ? (
+          <CollectionValueList
+            key={`${collectionSort}-${selectedSet}-${deferredSearchQuery}-${showFavoritesOnly}`}
+            controlledOrder={collectionSort}
+            filters={{ search: deferredSearchQuery, setId: selectedSet === "all" ? undefined : Number(selectedSet), favorite: showFavoritesOnly }}
+          />
+        ) : collectionView === "cards" ? (
           <>
             
             {selectedSet !== "all" && cardsViewMode === "owned" && binderViewMode === "binder" ? (

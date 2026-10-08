@@ -1,4 +1,5 @@
 import { invalidateUserById } from "./user-cache";
+import { getCollectionValueSummary } from "./services/collectionValue";
 import { cardNumberNaturalSortKey } from "./cardNumberSort";
 import { 
   users, 
@@ -1285,19 +1286,11 @@ export class DatabaseStorage implements IStorage {
       
       console.log(`Insert cards result for user ${userId}:`, insertCardsResult);
 
-      // Calculate total value using real eBay pricing data where available
+      // Shared cached-market valuation; no personal/catalog estimate fallback.
       console.log(`Fetching total value for user ${userId}`);
-      const totalValueResult = await db
-        .select({ 
-          totalEstimated: sum(cards.estimatedValue),
-          totalReal: sum(cardPriceCache.avgPrice)
-        })
-        .from(userCollections)
-        .innerJoin(cards, eq(userCollections.cardId, cards.id))
-        .leftJoin(cardPriceCache, eq(cards.id, cardPriceCache.cardId))
-        .where(eq(userCollections.userId, userId));
+      const valuation = await getCollectionValueSummary(userId);
       
-      console.log(`Total value result for user ${userId}:`, totalValueResult);
+      console.log(`Total value result for user ${userId}:`, valuation.totalValue);
 
       console.log(`Fetching wishlist for user ${userId}`);
       const wishlistResult = await db
@@ -1347,22 +1340,14 @@ export class DatabaseStorage implements IStorage {
       const previousWishlist = Number(wishlistLastMonth[0]?.count) || 0;
       const wishlistGrowth = this.calculateGrowthPercentage(currentWishlist, previousWishlist);
 
-      // Calculate total value using real pricing data where available, fallback to estimated
-      // Handle null/undefined values more robustly
-      const realTotalStr = totalValueResult[0]?.totalReal;
-      const estimatedTotalStr = totalValueResult[0]?.totalEstimated;
-      
-      const realTotal = realTotalStr ? parseFloat(String(realTotalStr)) : 0;
-      const estimatedTotal = estimatedTotalStr ? parseFloat(String(estimatedTotalStr)) : 0;
-      const totalValue = (!isNaN(realTotal) && realTotal > 0) ? realTotal : (!isNaN(estimatedTotal) ? estimatedTotal : 0);
+      // Match the value page and dashboard, including owned quantities.
+      const totalValue = valuation.totalValue;
 
       console.log(`Final stats calculation for user ${userId}:`, {
         currentTotal,
         currentInserts,
         currentWishlist,
-        totalValue,
-        realTotal,
-        estimatedTotal
+        totalValue
       });
 
       return {

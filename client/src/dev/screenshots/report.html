@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Most Valuable Cards — 390px UI verification</title>
+  <style>
+    body{font:15px system-ui,sans-serif;background:#f7f8fa;color:#252b35;margin:0;padding:28px}
+    h1{font-size:28px;margin-bottom:8px}p{max-width:850px;line-height:1.6}
+    .notice{padding:16px;border:1px solid #dca6ab;background:#fbedef;border-radius:10px}
+    main{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,390px));gap:28px;align-items:start}
+    figure{margin:0;background:#fefefe;border:1px solid #dfe3e9;border-radius:12px;padding:12px}
+    figcaption{font-weight:700;margin-bottom:10px}img{width:100%;height:auto;border-radius:5px}
+    a{color:#b42331}small{display:block;font-weight:400;color:#596373;margin-top:5px}
+  </style>
+</head>
+<body>
+  <h1>Most Valuable Cards · 390px</h1>
+  <p class="notice"><strong>Mocked UI context, actual components.</strong> Captured with Playwright using test-only auth-module substitution and intercepted API responses. Fixtures contain 1,043 priced cards, 37 unpriced cards, and quantity-inclusive totals. No real user session, database writes, or production auth bypass. These screenshots verify frontend behavior, not backend privacy enforcement or database performance.</p>
+  <p>The running phone-preview server was left untouched. The browser script bundles current components in memory; the isolated entry is not imported by App. Verified: 25 cards including one holy grail, manual Load more to 50, no filter controls or automatic pagination, full hero details, owner/visitor visibility and unchanged five-card previews. My Collection retains both value sort options. Click any image for its full-resolution PNG.</p>
+  <main>
+    <figure><figcaption>Holy grail and grid · 390px</figcaption><a href="value-hero-grid-390.png"><img src="value-hero-grid-390.png" alt="Highest-value hero with adjacent trophy and responsive card grid"></a></figure>
+    <figure><figcaption>Holy grail and grid · 1280px</figcaption><a href="value-hero-grid-1280.png"><img src="value-hero-grid-1280.png" alt="Desktop holy grail and four-column gallery"></a></figure>
+    <figure><figcaption>Collector Top Cards · owner</figcaption><a href="profile-owner-hero-grid-390.png"><img src="profile-owner-hero-grid-390.png" alt="Owner Top Cards hero and grid at 390px"></a></figure>
+    <figure><figcaption>Collector Top Cards · allowed visitor</figcaption><a href="profile-visitor-hero-grid-390.png"><img src="profile-visitor-hero-grid-390.png" alt="Visitor Top Cards hero and grid at 390px"></a></figure>
+    <figure><figcaption>Overview preview · owner</figcaption><a href="profile-owner-overview-390.png"><img src="profile-owner-overview-390.png" alt="Owner top-five thumbnail preview at 390px"></a></figure>
+    <figure><figcaption>Overview preview · allowed visitor</figcaption><a href="profile-visitor-overview-390.png"><img src="profile-visitor-overview-390.png" alt="Visitor top-five thumbnail preview at 390px"></a></figure>
+    <figure><figcaption>Dashboard · Value tile</figcaption><a href="dashboard-390.png"><img src="dashboard-390.png" alt="Dashboard Value entry point at 390px"></a></figure>
+    <figure><figcaption>My Collection · shortcut and sorting</figcaption><a href="collection-390.png"><img src="collection-390.png" alt="My Collection value entry points at 390px"></a></figure>
+    <figure><figcaption>My Collection · server value ordering</figcaption><a href="collection-value-sort-390.png"><img src="collection-value-sort-390.png" alt="My Collection ascending value mode at 390px"></a></figure>
+    <figure><figcaption>Market Trends · Your top cards<small>Full-page capture</small></figcaption><a href="trends-390.png"><img src="trends-390.png" alt="Market Trends compact top-five box at 390px"></a></figure>
+    <figure><figcaption>Denied visitor · private collection</figcaption><a href="profile-private-390.png"><img src="profile-private-390.png" alt="Private collection visitor with no Top Cards tab"></a></figure>
+    <figure><figcaption>Denied visitor · friends-only</figcaption><a href="profile-friends-390.png"><img src="profile-friends-390.png" alt="Friends-only visitor with no Top Cards tab"></a></figure>
+    <figure><figcaption>Denied visitor · showCollection off</figcaption><a href="profile-hidden-390.png"><img src="profile-hidden-390.png" alt="Hidden collection visitor with no Top Cards tab"></a></figure>
+    <figure><figcaption>No cached prices yet</figcaption><a href="empty-390.png"><img src="empty-390.png" alt="Unpriced collection empty state"></a></figure>
+    <figure><figcaption>Load error with Retry</figcaption><a href="error-390.png"><img src="error-390.png" alt="Card value request error state"></a></figure>
+    <figure><figcaption>Skeleton loading state</figcaption><a href="loading-390.png"><img src="loading-390.png" alt="Card value loading state"></a></figure>
+  </main>
+</body>
+</html>

@@ -5890,54 +5890,11 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
 
   // Shared access guard for public collector endpoints.
   // Returns { ok: false, status, message } to block, or { ok: true, targetUser, isOwnProfile } to allow.
-  const resolveCollectorAccess = async (username: string, callerId?: number) => {
-    const [targetUser] = await db
-      .select()
-      .from(users)
-      .where(eq(users.username, username))
-      .limit(1);
-    if (!targetUser) return { ok: false as const, status: 404, message: "Collector not found" };
+  const { resolveCollectorAccess } = await import('./services/collectorAccess');
 
-    const isOwnProfile = callerId === targetUser.id;
-    if (isOwnProfile) return { ok: true as const, targetUser, isOwnProfile };
-
-    // Bidirectional block check
-    if (callerId) {
-      const [blockExists] = await db
-        .select({ id: blocks.id })
-        .from(blocks)
-        .where(or(
-          and(eq(blocks.blockerId, callerId), eq(blocks.blockedUserId, targetUser.id)),
-          and(eq(blocks.blockerId, targetUser.id), eq(blocks.blockedUserId, callerId))
-        ))
-        .limit(1);
-      if (blockExists) return { ok: false as const, status: 403, message: "This profile is not available" };
-    }
-
-    // Visibility enforcement — owner already returned above
-    const visibility = (targetUser.profileVisibility || 'public').toLowerCase();
-    if (visibility === 'private') {
-      return { ok: false as const, status: 403, message: "This profile is not available" };
-    }
-    if (visibility === 'friends') {
-      let accepted = false;
-      if (callerId) {
-        // Unified model: friends = mutual follows ONLY (legacy accepted rows
-        // were migrated into follows at startup; they no longer grant access).
-        {
-          const mutual: any = await db.execute(sql`
-            SELECT 1 FROM follows a
-            JOIN follows b ON b.follower_user_id = a.following_user_id AND b.following_user_id = a.follower_user_id
-            WHERE a.follower_user_id = ${callerId} AND a.following_user_id = ${targetUser.id}
-            LIMIT 1`);
-          accepted = (mutual.rows ?? []).length > 0;
-        }
-      }
-      if (!accepted) return { ok: false as const, status: 403, message: "This profile is not available" };
-    }
-
-    return { ok: true as const, targetUser, isOwnProfile };
-  };
+  const { registerCollectionValueRoutes } = await import('./collection-value-routes');
+  registerCollectionValueRoutes(app, authenticateUser, resolveCollectorAccess);
+  const { canViewTopCards } = await import('./services/collectionValue');
 
   // GET /api/collectors/:username — public profile by username
   app.get("/api/collectors/:username", authenticateUser, async (req: any, res) => {
@@ -6019,6 +5976,8 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
 
       // Strip unreliable stats (completedSets is hardcoded 0; loginStreak flagged unreliable)
       const { completedSets: _cs, loginStreak: _ls, ...publicStats } = stats as any;
+      const canViewValues = canViewTopCards(targetUser, isOwnProfile);
+      if (!canViewValues) publicStats.totalValue = null;
 
       res.json({
         user: {
@@ -6042,6 +6001,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         xp,
         isOwnProfile,
         canViewCollection,
+        canViewTopCards: canViewValues,
         canViewWishlist,
         friendStatus,
         friendRequestId,

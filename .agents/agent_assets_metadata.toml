@@ -366,3 +366,31 @@ mtime_ms = 1791209692168
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/f6309870-5873-42fc-8382-a9fd6e634e18/ed0d80af-8291-4d9b-a6fb-30cbffe2517b"
 storage_version_token = "1791209729794059"
 content_type = "image/jpeg"
+
+[[outputs]]
+id = "BU_vlnd6Tk8ayjlEAzgvt"
+uri = "file://attached_assets/reports/most-valuable-cards-mobile-review.html"
+type = "html"
+title = "Most Valuable Cards — mobile review"
+description = "390px screenshots of both sort orders, owner and visitor Top Cards tabs, entry points, and empty/error states. Actual UI components with clearly labeled test data."
+logical_id = "565bc877-d239-4263-87b4-3f4ef533fe8a"
+content_hash = "sha256:2798575ba11761d0bc139eed235ec68a9cf1635a57c13bf7d32007e151f90c0f"
+size = 3108123
+mtime_ms = 1791472447451
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/565bc877-d239-4263-87b4-3f4ef533fe8a/31058a4d-3c6a-4b72-b85d-876433dc9308"
+storage_version_token = "1791472461500653"
+content_type = "text/html"
+
+[[outputs]]
+id = "q3kakpR6WzIXqhLAqO1Vu"
+uri = "file://client/src/dev/screenshots/value-hero-grid-390.png"
+type = "image"
+title = "Top Cards — holy grail and grid"
+description = "390px layout preview using test cards. The updated layout is now running in dev with your existing collection."
+logical_id = "15304f45-0d2a-4be3-9bfa-e91508028256"
+content_hash = "sha256:55b1630c890af37c79c55ee43286ce94f3aedf6f61cea5befb8eb20908873003"
+size = 52890
+mtime_ms = 1791473394020
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/15304f45-0d2a-4be3-9bfa-e91508028256/ceb8e8c5-0ec2-472a-80f8-7df29e0b39ac"
+storage_version_token = "1791473520835248"
+content_type = "image/png"

@@ -3,6 +3,7 @@ import { auth } from "./firebase";
 import type { Auth } from "firebase/auth";
 import { Capacitor } from "@capacitor/core";
 import { createApiHeaders } from "./authHeaders";
+import { invalidateCollectionValues } from "./collectionValue";
 
 // web | ios | android — computed once; sent on every request so the server
 // can track which platforms each user actually uses.
@@ -73,6 +74,9 @@ export async function apiRequest(
   });
 
   await throwIfResNotOk(res);
+  if (method !== "GET" && /^\/api\/collection(?:\/|$)/.test(url)) {
+    invalidateCollectionValues(queryClient);
+  }
   return res;
 }
 

@@ -37,7 +37,7 @@ const TILES = [
     color: "#10b981",
     colorMuted: "rgba(16,185,129,0.15)",
     gradient: "from-emerald-700 to-emerald-500",
-    tooltip: "Estimated value based on recent eBay sales.",
+    tooltip: "Cached market value of all priced copies in your collection.",
     fill: false,
   },
   {
@@ -267,7 +267,7 @@ export function StatsDashboard() {
 
   const tileData = [
     { tile: TILES[0], rawValue: totalCards, displayValue: totalCards.toLocaleString(), onClick: () => setLocation("/my-collection") },
-    { tile: TILES[1], rawValue: Math.round(totalValue), displayValue: valueDisplay, onClick: () => setLocation("/trends") },
+    { tile: TILES[1], rawValue: Math.round(totalValue), displayValue: valueDisplay, onClick: () => setLocation("/collection/value") },
     { tile: TILES[2], rawValue: wishlistItems, displayValue: wishlistItems.toLocaleString(), onClick: () => setLocation("/wishlist") },
     { tile: TILES[3], rawValue: superpowersCount, displayValue: superpowersCount.toLocaleString(), onClick: () => setLocation("/social?tab=superpowers") },
   ];

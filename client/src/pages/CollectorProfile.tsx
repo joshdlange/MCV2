@@ -23,6 +23,7 @@ import type { XpProgress } from "@shared/xp";
 import { XP_PER_APPROVED_IMAGE, XP_FIRST_APPROVED_IMAGE_BONUS } from "@shared/xp";
 import BadgeIcon from "@/components/profile/BadgeIcon";
 import { avatarUrl } from "@/lib/collectorAvatars";
+import { CollectionValueList } from "@/components/collection/collection-value-list";
 
 interface CollectorUser {
   id: number;
@@ -44,7 +45,7 @@ interface CollectorUser {
 
 interface CollectorStats {
   totalCards: number;
-  totalValue: number;
+  totalValue: number | null;
   wishlistItems: number;
   friendsCount: number;
   badgesCount: number;
@@ -56,6 +57,7 @@ interface CollectorProfile {
   xp: XpProgress;
   isOwnProfile: boolean;
   canViewCollection: boolean;
+  canViewTopCards: boolean;
   canViewWishlist: boolean;
   friendStatus: string;
   friendRequestId: number | null;
@@ -146,7 +148,7 @@ export default function CollectorProfile() {
   };
 
   const { data: profile, isLoading: profileLoading, error: profileError } = useQuery<CollectorProfile>({
-    queryKey: ["/api/collectors", username],
+    queryKey: ["/api/collectors", username, { viewerId: currentUser?.uid }],
     queryFn: async () => {
       const headers = await getAuthHeaders();
       const res = await fetch(`/api/collectors/${username}`, { headers });
@@ -359,6 +361,8 @@ export default function CollectorProfile() {
   }
 
   const { user, stats, xp, isOwnProfile, canViewWishlist, friendStatus, approvedContributions } = profile;
+  // Fail closed for visitors; collection visibility alone also allows friends.
+  const canViewTopCards = isOwnProfile || profile.canViewTopCards === true;
   const isSuperHero = user.plan === "SUPER_HERO";
   // Usernames only on public-facing pages — never real names.
   const displayName = user.username || user.displayName;
@@ -592,6 +596,7 @@ export default function CollectorProfile() {
           <TabsList className="flex w-full overflow-x-auto justify-start gap-1 bg-white border border-gray-200 rounded-xl p-1 mb-6 shadow-sm no-scrollbar">
             {[
               { value: "overview", label: "Overview" },
+              ...(canViewTopCards ? [{ value: "top-cards", label: "Top Cards" }] : []),
               { value: "trade-block", label: "Trade Block" },
               { value: "wishlist", label: "Wishlist" },
               { value: "collections", label: "Collections" },
@@ -610,7 +615,15 @@ export default function CollectorProfile() {
           </TabsList>
 
           {/* ── Overview ── */}
+          {canViewTopCards && <TabsContent value="top-cards">
+            <CollectionValueList key={username} username={username} title="Top Cards" showSummary />
+          </TabsContent>}
           <TabsContent value="overview" className="space-y-6">
+            {canViewTopCards && <Card className="border border-gray-200 shadow-sm">
+              <CardContent className="p-4">
+                <CollectionValueList username={username} title="Top Cards" preview onSeeAll={() => setActiveTab("top-cards")} />
+              </CardContent>
+            </Card>}
             {/* Collector Stats card */}
             <Card className="border border-gray-200 shadow-sm">
               <CardHeader className="pb-3 border-b border-gray-100">
@@ -622,15 +635,20 @@ export default function CollectorProfile() {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {[
                     { label: "Cards Collected", value: stats.totalCards.toLocaleString(), color: "text-red-600" },
-                    { label: "Collection Value", value: `$${Number(stats.totalValue || 0).toLocaleString()}`, color: "text-green-600" },
+                    ...(canViewTopCards && stats.totalValue !== null ? [{ label: "Collection Value", value: `$${Number(stats.totalValue).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: "text-green-600" }] : []),
                     { label: "Wishlist Items", value: stats.wishlistItems, color: "text-purple-600" },
                     { label: "Friends", value: stats.friendsCount, color: "text-pink-600" },
                     { label: "Badges Earned", value: earnedBadges.length, color: "text-yellow-600" },
                     { label: "Collector Level", value: `Lvl ${xp.level}`, color: "text-blue-600" },
                   ].map(({ label, value, color }) => (
                     <div key={label} className="bg-gray-50 rounded-xl p-4 text-center">
+                      {label === "Collection Value" ? <button onClick={() => setActiveTab("top-cards")} className="w-full hover:underline">
+                        <div className={`text-2xl font-bold ${color} mb-1`}>{value}</div>
+                        <div className="text-xs text-gray-500">{label} →</div>
+                      </button> : <>
                       <div className={`text-2xl font-bold ${color} mb-1`}>{value}</div>
                       <div className="text-xs text-gray-500">{label}</div>
+                      </>}
                     </div>
                   ))}
                 </div>

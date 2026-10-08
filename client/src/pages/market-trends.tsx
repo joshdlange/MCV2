@@ -25,6 +25,7 @@ import {
   hasEnoughData,
 } from "@/lib/marketSentiment";
 import { EpnDisclosure } from "@/components/EpnDisclosure";
+import { CollectionValueList } from "@/components/collection/collection-value-list";
 
 
 interface RawMarketData {
@@ -488,6 +489,12 @@ export default function MarketTrends() {
           <TopMoversModule marketData={marketData} />
           <RecentSalesModule marketData={marketData} />
         </div>
+
+        <Card className="bg-white shadow-sm border-0 rounded-xl">
+          <CardContent className="p-4">
+            <CollectionValueList title="Your top cards" preview />
+          </CardContent>
+        </Card>
 
         <Card className="bg-gray-50 border-0">
           <CardContent className="p-4 text-center">

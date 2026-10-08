@@ -24,6 +24,7 @@ import { auth } from "@/lib/firebase";
 import noCardImagePlaceholder from "@assets/image_1784478496002.png";
 import { formatCardName, formatSetName } from "@/lib/formatTitle";
 import { CardDetailImage } from "./card-detail-image";
+import { invalidateCollectionValues } from "@/lib/collectionValue";
 
 interface CardDetailModalProps {
   card: CardWithSet | null;
@@ -847,6 +848,7 @@ export function CardDetailModal({
                           toast({ title: "Fetching pricing...", description: "This may take a moment" });
                           try {
                             const result = await refreshPricing(card.id);
+                            invalidateCollectionValues(queryClient);
                             await queryClient.invalidateQueries({ queryKey: ["/api/card-pricing", card.id] });
                             await queryClient.refetchQueries({ queryKey: ["/api/card-pricing", card.id] });
                             

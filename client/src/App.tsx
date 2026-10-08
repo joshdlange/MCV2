@@ -34,6 +34,7 @@ const loadDashboard = () => import("@/pages/dashboard");
 const Dashboard = lazy(loadDashboard);
 const BrowseCards = lazy(() => import("@/pages/browse-cards"));
 const MyCollection = lazy(() => import("@/pages/my-collection"));
+const CollectionValue = lazy(() => import("@/pages/collection-value"));
 const PcBinders = lazy(() => import("@/pages/pc-binders"));
 const PcBinderDetail = lazy(() => import("@/pages/pc-binder-detail"));
 const Wishlist = lazy(() => import("@/pages/wishlist"));
@@ -217,6 +218,7 @@ function Router() {
           <Route path="/browse/:mainSetSlug/:setSlug" component={BrowseCards} />
           <Route path="/card-search" component={CardSearch} />
           <Route path="/my-collection" component={MyCollection} />
+          <Route path="/collection/value" component={CollectionValue} />
           <Route path="/pc-binders" component={PcBinders} />
           <Route path="/pc-binders/:id" component={PcBinderDetail} />
           <Route path="/wishlist" component={Wishlist} />

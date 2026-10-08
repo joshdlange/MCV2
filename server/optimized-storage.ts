@@ -1,4 +1,5 @@
 import { db } from './db';
+import { getCollectionValueSummary } from './services/collectionValue';
 import { cards, cardSets, userCollections, userWishlists, cardPriceCache } from '../shared/schema';
 import type { CardWithSet } from '../shared/schema';
 import { eq, and, or, isNull, isNotNull, desc, asc, sql, count, ilike, gte, lte, inArray } from 'drizzle-orm';
@@ -332,11 +333,14 @@ export class OptimizedStorage {
    */
   async getUserStatsOptimized(userId: number) {
     const startTime = Date.now();
+    // Counts can be cached; valuation must match the page/profile immediately
+    // after a shared card price is updated by any collector.
+    const valuation = await getCollectionValueSummary(userId);
     
     const cached = userStatsCache.get(userId);
     if (cached && Date.now() - cached.timestamp < USER_STATS_CACHE_TTL) {
       performanceTracker.logQuery(`getUserStatsOptimized(userId=${userId}) [CACHED]`, startTime);
-      return cached.data;
+      return { ...cached.data, totalValue: valuation.totalValue };
     }
     
     try {
@@ -344,21 +348,9 @@ export class OptimizedStorage {
         SELECT 
           COUNT(*) as total_cards,
           COUNT(*) FILTER (WHERE c.is_insert = true) as total_inserts,
-          COALESCE(SUM(
-            CASE 
-              WHEN uc.personal_value IS NOT NULL AND uc.personal_value != '0' 
-              THEN CAST(uc.personal_value AS DECIMAL)
-              WHEN cpc.avg_price IS NOT NULL AND cpc.avg_price > 0
-              THEN cpc.avg_price
-              WHEN c.estimated_value IS NOT NULL 
-              THEN c.estimated_value
-              ELSE 0 
-            END
-          ), 0) as total_value,
           (SELECT COUNT(*) FROM user_wishlists WHERE user_id = ${userId}) as wishlist_count
         FROM user_collections uc
         INNER JOIN cards c ON c.id = uc.card_id
-        LEFT JOIN card_price_cache cpc ON cpc.card_id = c.id
         WHERE uc.user_id = ${userId}
       `);
 
@@ -369,7 +361,7 @@ export class OptimizedStorage {
       const stats = {
         totalCards: Number(row.total_cards) || 0,
         insertCards: Number(row.total_inserts) || 0,
-        totalValue: parseFloat(String(row.total_value || '0')),
+        totalValue: valuation.totalValue,
         wishlistCount: Number(row.wishlist_count) || 0
       };
       
