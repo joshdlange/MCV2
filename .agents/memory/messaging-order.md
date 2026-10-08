@@ -8,3 +8,9 @@ Sort conversations by the last RECEIVED message, with received conversations abo
 **Why:** The user repeated this requirement after outbound messages still displaced incoming conversations and opened threads did not reliably show the latest message.
 
 **How to apply:** Sending must not change a conversation's received-message priority. Ensure the mobile scroll container has a bounded height and account for delayed images when positioning a newly opened conversation.
+
+Received-time ties and sent-only conversations use a stable partner ordering, not latest outgoing activity.
+
+**Why:** Using outgoing activity as even a secondary sort allows sends to move threads with identical incoming timestamps, contrary to the requested priority.
+
+**How to apply:** Keep all sent-only threads below received threads; preserve stable ties when changing inbox queries.

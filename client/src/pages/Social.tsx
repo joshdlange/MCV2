@@ -1,4 +1,6 @@
 import { avatarUrl } from "@/lib/collectorAvatars";
+import { ConversationControls, MessageQueryState } from "@/components/message-navigation";
+import { filterMessageThreads, resolveMessageUser, type ConversationFilter, type MessageThread, type MessageUser } from "@/lib/messageNavigation";
 import { useState, useEffect, useLayoutEffect, useRef, type TouchEvent } from "react";
 import { useLocation, Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -104,6 +106,27 @@ interface SearchUser {
 
 export default function Social() {
   const [selectedFriendId, setSelectedFriendId] = useState<number | null>(null);
+  const [selectedMessageUser, setSelectedMessageUser] = useState<MessageUser | null>(null);
+  const [conversationSearch, setConversationSearch] = useState("");
+  const [conversationFilter, setConversationFilter] = useState<ConversationFilter>("all");
+  const [newChatOpen, setNewChatOpen] = useState(false);
+  const [messageUserSearch, setMessageUserSearch] = useState("");
+  const [debouncedMessageUserSearch, setDebouncedMessageUserSearch] = useState("");
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedMessageUserSearch(messageUserSearch.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [messageUserSearch]);
+  const openNewChat = () => {
+    setMessageUserSearch("");
+    setDebouncedMessageUserSearch("");
+    setNewChatOpen(true);
+  };
+  const openConversation = (recipient: MessageUser) => {
+    setSelectedMessageUser(recipient);
+    setSelectedFriendId(recipient.id);
+    setNewChatOpen(false);
+    setActiveTab("messages");
+  };
   const [messageDraft] = useState(createMessageDraft);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
@@ -222,7 +245,7 @@ export default function Social() {
     followsYou: boolean;
     isFriend: boolean;
   }
-  const { data: relationships, isLoading: friendsLoading } = useQuery<{
+  const { data: relationships, isLoading: friendsLoading, isError: friendsError, refetch: refetchRelationships } = useQuery<{
     followers: RelationshipUser[];
     following: RelationshipUser[];
     friends: RelationshipUser[];
@@ -241,12 +264,27 @@ export default function Social() {
   const friendUsers = relationships?.friends ?? [];
   const [peopleTab, setPeopleTab] = useState<"friends" | "followers" | "following">("friends");
 
-  // Fetch message threads (only friends with message history)
-  const { data: messageThreads = [], refetch: refetchThreads } = useQuery({
+  const { data: messageUsers = [], isLoading: messageUsersLoading, isFetching: messageUsersFetching, isError: messageUsersError, refetch: refetchMessageUsers } = useQuery<MessageUser[]>({
+    queryKey: ["social/message-users", debouncedMessageUserSearch],
+    queryFn: async ({ signal }) => {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/social/message-users?q=${encodeURIComponent(debouncedMessageUserSearch)}`, {
+        headers, signal, credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to look up collectors");
+      return response.json();
+    },
+    enabled: !!user && activeTab === "messages" && newChatOpen,
+  });
+  const messageLookupPending = messageUserSearch.trim() !== debouncedMessageUserSearch ||
+    messageUsersLoading || messageUsersFetching;
+
+  // Fetch message threads, preserving server order.
+  const { data: messageThreads = [], refetch: refetchThreads, isLoading: threadsLoading, isError: threadsError } = useQuery<MessageThread[]>({
     queryKey: ["social/message-threads"],
     queryFn: async () => {
       const headers = await getAuthHeaders();
-      const response = await fetch("/api/social/message-threads", { headers });
+      const response = await fetch("/api/social/message-threads", { headers, credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch message threads");
       return response.json();
     },
@@ -257,6 +295,17 @@ export default function Social() {
     refetchOnReconnect: true,
     refetchInterval: activeTab === "messages" ? 10_000 : false,
   });
+  const filteredThreads = filterMessageThreads(messageThreads, conversationSearch, conversationFilter,
+    new Set(friendUsers.map(friend => friend.id)));
+  const conversationControls = <ConversationControls search={conversationSearch} onSearch={setConversationSearch}
+    filter={conversationFilter} onFilter={setConversationFilter} />;
+  const threadListLoading = threadsLoading || (conversationFilter === "friends" && friendsLoading);
+  const threadListError = threadsError || (conversationFilter === "friends" && friendsError);
+  const threadQueryState = <MessageQueryState loading={threadListLoading} error={threadListError}
+    label="conversations" onRetry={() => {
+      void refetchThreads();
+      if (conversationFilter === "friends") void refetchRelationships();
+    }} />;
 
   // Fetch user badges
   const { data: userBadges = [] } = useQuery({
@@ -405,12 +454,12 @@ export default function Social() {
   });
 
   // Fetch messages for selected friend
-  const { data: messages = [], refetch: refetchMessages } = useQuery({
+  const { data: messages = [], refetch: refetchMessages, isLoading: messagesLoading, isError: messagesError } = useQuery<Message[]>({
     queryKey: ["social/messages", selectedFriendId],
     queryFn: async () => {
       if (!selectedFriendId) return [];
       const headers = await getAuthHeaders();
-      const response = await fetch(`/api/social/messages/${selectedFriendId}`, { headers });
+      const response = await fetch(`/api/social/messages/${selectedFriendId}`, { headers, credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch messages");
       return response.json();
     },
@@ -421,6 +470,10 @@ export default function Social() {
     refetchOnReconnect: true,
     refetchInterval: activeTab === "messages" ? 10_000 : false,
   });
+  const selectedConversationUser = resolveMessageUser(selectedFriendId, messageThreads, selectedMessageUser,
+    friendUsers, messages.map(message => message.sender));
+  const messageQueryState = <MessageQueryState loading={messagesLoading} error={messagesError}
+    label="messages" onRetry={() => { void refetchMessages(); }} />;
 
   const { refetch: refetchUnread } = useQuery({
     queryKey: ["/api/social/unread-count"],
@@ -517,6 +570,7 @@ export default function Social() {
   const sentConversation = useRef<number | null>(null);
   const trackMessageScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const element = event.currentTarget;
+    if (!element.getClientRects().length) return;
     stickToBottom.current = element.scrollHeight - element.clientHeight - element.scrollTop <= 80;
   };
   useLayoutEffect(() => {
@@ -537,7 +591,7 @@ export default function Social() {
       frame = requestAnimationFrame(() => {
         if (!stickToBottom.current) return;
         for (const ref of [desktopMessagesRef, mobileMessagesRef]) {
-          if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
+          if (ref.current?.getClientRects().length) ref.current.scrollTop = ref.current.scrollHeight;
         }
       });
     };
@@ -556,7 +610,7 @@ export default function Social() {
       cancelAnimationFrame(frame);
       elements.forEach(el => el?.removeEventListener("load", scroll, true));
     };
-  }, [messages, selectedFriendId, activeTab]);
+  }, [messages, selectedFriendId, activeTab, messagesLoading, messagesError]);
 
   // Follow / unfollow (unified model — no requests, no approval)
   const followMutation = useMutation({
@@ -1082,7 +1136,7 @@ export default function Social() {
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Messages</h2>
                     <Button 
                       size="sm" 
-                      onClick={() => setActiveTab('friends')}
+                      onClick={openNewChat}
                       className="bg-blue-500 hover:bg-blue-600 text-white"
                       data-testid="button-new-chat"
                     >
@@ -1092,24 +1146,26 @@ export default function Social() {
                   </div>
                   
                   {/* Conversation List */}
+                  {conversationControls}
+                  {threadListError && messageThreads.length > 0 && threadQueryState}
                   <div className="flex-1 overflow-y-auto">
-                    {messageThreads.length === 0 ? (
+                    {threadListLoading || (threadListError && messageThreads.length === 0) ? threadQueryState : filteredThreads.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full text-center px-6 py-12">
                         <MessageCircle className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
-                        <p className="text-gray-600 dark:text-gray-400 font-medium mb-1">No conversations yet</p>
-                        <p className="text-gray-400 dark:text-gray-500 text-sm mb-4">Send a message to start chatting</p>
+                        <p className="text-gray-600 dark:text-gray-400 font-medium mb-1">{messageThreads.length ? "No matching conversations" : "No conversations yet"}</p>
+                        <p className="text-gray-400 dark:text-gray-500 text-sm mb-4">{messageThreads.length ? "Try another search or filter." : "Choose a collector to start chatting."}</p>
                         <Button 
-                          onClick={() => setActiveTab('friends')}
+                          onClick={openNewChat}
                           className="bg-blue-500 hover:bg-blue-600 text-white"
                           data-testid="button-view-friends"
                         >
                           <Users className="w-4 h-4 mr-2" />
-                          View Friends
+                          New chat
                         </Button>
                       </div>
                     ) : (
                       <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                        {messageThreads.map((thread: any) => {
+                        {filteredThreads.map((thread) => {
                           const friendUser = thread.user;
                           const lastMessage = thread.lastMessage;
                           const unreadCount = thread.unreadCount || 0;
@@ -1117,14 +1173,22 @@ export default function Social() {
                           return (
                             <div
                               key={friendUser.id}
-                              onClick={() => setSelectedFriendId(friendUser.id)}
+                              onClick={() => openConversation(friendUser)}
+                              role="button"
+                              tabIndex={0}
+                              onKeyDown={event => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                  event.preventDefault();
+                                  openConversation(friendUser);
+                                }
+                              }}
                               className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
                               data-testid={`conversation-${friendUser.id}`}
                             >
                               {/* Avatar with status */}
                               <div className="relative flex-shrink-0">
                                 <Avatar className="w-14 h-14">
-                                  <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(friendUser.collectorAvatarKey) ?? friendUser.photoURL} />
+                                  <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(friendUser.collectorAvatarKey) ?? friendUser.photoURL ?? undefined} />
                                   <AvatarFallback className="bg-blue-500 text-white font-semibold text-lg">
                                     {friendUser.displayName?.charAt(0) || friendUser.username.charAt(0)}
                                   </AvatarFallback>
@@ -1166,8 +1230,7 @@ export default function Social() {
                 <div className="flex flex-col h-full min-h-0">
                   {/* Chat Header with Back Button */}
                   {(() => {
-                    const selectedThread = messageThreads.find((t: any) => t.user.id === selectedFriendId);
-                    const selectedFriendUser = selectedThread?.user;
+                    const selectedFriendUser = selectedConversationUser;
                     
                     return (
                       <div className="p-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
@@ -1183,7 +1246,7 @@ export default function Social() {
                           </svg>
                         </Button>
                         <Avatar className="w-10 h-10">
-                          <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(selectedFriendUser?.collectorAvatarKey) ?? selectedFriendUser?.photoURL} />
+                          <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(selectedFriendUser?.collectorAvatarKey) ?? selectedFriendUser?.photoURL ?? undefined} />
                           <AvatarFallback className="bg-blue-500 text-white font-medium">
                             {selectedFriendUser?.displayName?.charAt(0) || selectedFriendUser?.username?.charAt(0) || 'U'}
                           </AvatarFallback>
@@ -1199,8 +1262,9 @@ export default function Social() {
                   })()}
                   
                   {/* Messages Area */}
-                  <div ref={desktopMessagesRef} onScroll={trackMessageScroll} className="min-h-0 flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-900">
-                    {messages.length === 0 ? (
+                  {messagesError && messages.length > 0 && messageQueryState}
+                  <div ref={mobileMessagesRef} onScroll={trackMessageScroll} className="min-h-0 flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-900">
+                    {messagesLoading || (messagesError && messages.length === 0) ? messageQueryState : messages.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full text-center">
                         <MessageCircle className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" />
                         <p className="text-gray-500 dark:text-gray-400">No messages yet</p>
@@ -1304,7 +1368,7 @@ export default function Social() {
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Messages</h2>
                   <Button 
                     size="sm" 
-                    onClick={() => setActiveTab('friends')}
+                    onClick={openNewChat}
                     className="bg-blue-500 hover:bg-blue-600 text-white"
                   >
                     <Plus className="w-4 h-4 mr-1" />
@@ -1313,22 +1377,25 @@ export default function Social() {
                 </div>
                 
                 {/* Conversation List */}
+                {conversationControls}
+                {threadListError && messageThreads.length > 0 && threadQueryState}
                 <div className="flex-1 overflow-y-auto">
-                  {messageThreads.length === 0 ? (
+                  {threadListLoading || (threadListError && messageThreads.length === 0) ? threadQueryState : filteredThreads.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center px-6">
                       <MessageCircle className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" />
-                      <p className="text-gray-500 dark:text-gray-400 text-sm">No conversations</p>
+                      <p className="text-gray-500 dark:text-gray-400 text-sm">{messageThreads.length ? "No matching conversations" : "No conversations yet"}</p>
+                      {messageThreads.length > 0 && <p className="text-xs text-muted-foreground mt-1">Try another search or filter.</p>}
                       <Button 
-                        onClick={() => setActiveTab('friends')}
+                        onClick={openNewChat}
                         className="mt-3 bg-blue-500 hover:bg-blue-600 text-white text-sm"
                         size="sm"
                       >
-                        View Friends
+                        New chat
                       </Button>
                     </div>
                   ) : (
                     <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                      {messageThreads.map((thread: any) => {
+                      {filteredThreads.map((thread) => {
                         const friendUser = thread.user;
                         const lastMessage = thread.lastMessage;
                         const unreadCount = thread.unreadCount || 0;
@@ -1336,7 +1403,15 @@ export default function Social() {
                         return (
                           <div
                             key={friendUser.id}
-                            onClick={() => setSelectedFriendId(friendUser.id)}
+                            onClick={() => openConversation(friendUser)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={event => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                openConversation(friendUser);
+                              }
+                            }}
                             className={`flex items-center gap-3 p-4 cursor-pointer transition-colors ${
                               selectedFriendId === friendUser.id 
                                 ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500' 
@@ -1345,7 +1420,7 @@ export default function Social() {
                           >
                             <div className="relative flex-shrink-0">
                               <Avatar className="w-12 h-12">
-                                <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(friendUser.collectorAvatarKey) ?? friendUser.photoURL} />
+                                <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(friendUser.collectorAvatarKey) ?? friendUser.photoURL ?? undefined} />
                                 <AvatarFallback className="bg-blue-500 text-white font-semibold">
                                   {friendUser.displayName?.charAt(0) || friendUser.username.charAt(0)}
                                 </AvatarFallback>
@@ -1377,7 +1452,7 @@ export default function Social() {
               </div>
 
               {/* Right Column: Chat */}
-              <div className="flex-1 flex flex-col bg-white dark:bg-gray-900">
+              <div className="min-h-0 min-w-0 flex-1 flex flex-col bg-white dark:bg-gray-900">
                 {!selectedFriendId ? (
                   <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-800/50">
                     <div className="text-center">
@@ -1390,14 +1465,13 @@ export default function Social() {
                   <>
                     {/* Chat Header */}
                     {(() => {
-                      const selectedThread = messageThreads.find((t: any) => t.user.id === selectedFriendId);
-                      const selectedFriendUser = selectedThread?.user;
+                      const selectedFriendUser = selectedConversationUser;
                       
                       return (
                         <div className="p-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                           <div className="flex items-center gap-3">
                             <Avatar className="w-10 h-10">
-                              <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(selectedFriendUser?.collectorAvatarKey) ?? selectedFriendUser?.photoURL} />
+                              <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(selectedFriendUser?.collectorAvatarKey) ?? selectedFriendUser?.photoURL ?? undefined} />
                               <AvatarFallback className="bg-blue-500 text-white font-medium">
                                 {selectedFriendUser?.displayName?.charAt(0) || selectedFriendUser?.username?.charAt(0) || 'U'}
                               </AvatarFallback>
@@ -1414,8 +1488,9 @@ export default function Social() {
                     })()}
                     
                     {/* Messages */}
-                    <div ref={mobileMessagesRef} onScroll={trackMessageScroll} className="min-h-0 flex-1 overflow-y-auto p-4">
-                      {messages.length === 0 ? (
+                    {messagesError && messages.length > 0 && messageQueryState}
+                    <div ref={desktopMessagesRef} onScroll={trackMessageScroll} className="min-h-0 flex-1 overflow-y-auto p-4">
+                      {messagesLoading || (messagesError && messages.length === 0) ? messageQueryState : messages.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-center">
                           <MessageCircle className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" />
                           <p className="text-gray-500 dark:text-gray-400">No messages yet</p>
@@ -2023,6 +2098,54 @@ export default function Social() {
       />
 
       {/* Badge Detail Modal */}
+      <Dialog open={newChatOpen} onOpenChange={setNewChatOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>New chat</DialogTitle>
+            <DialogDescription>Choose a friend or look up a collector who accepts messages.</DialogDescription>
+          </DialogHeader>
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            <Input aria-label="Find a collector to message" placeholder="Search username or display name"
+              value={messageUserSearch} onChange={event => setMessageUserSearch(event.target.value)}
+              className="pl-9" data-testid="input-message-user-search" />
+          </div>
+          <p className="text-xs font-medium text-muted-foreground">
+            {messageUserSearch.trim() ? "Collectors" : "Your friends"}
+          </p>
+          <div className="max-h-[50dvh] overflow-y-auto">
+            {messageLookupPending || messageUsersError ? (
+              <MessageQueryState loading={messageLookupPending} error={!messageLookupPending && messageUsersError}
+                label="collectors" onRetry={() => { void refetchMessageUsers(); }} />
+            ) : messageUsers.length === 0 ? (
+              <div role="status" className="px-4 py-8 text-center">
+                <Users className="h-8 w-8 mx-auto mb-3 text-muted-foreground" aria-hidden="true" />
+                <p className="text-sm font-medium">{debouncedMessageUserSearch ? "No collectors found" : "No friends available to message"}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {debouncedMessageUserSearch ? "Try another username or display name." : "Search for a collector to start a conversation."}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {messageUsers.map(recipient => <button key={recipient.id} type="button"
+                  onClick={() => openConversation(recipient)} data-testid={`message-user-${recipient.id}`}
+                  className="w-full flex items-center gap-3 rounded-lg p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+                  <Avatar className="h-10 w-10 shrink-0">
+                    <AvatarImage referrerPolicy="no-referrer" src={avatarUrl(recipient.collectorAvatarKey) ?? recipient.photoURL ?? undefined} />
+                    <AvatarFallback className="bg-blue-500 text-white">{(recipient.displayName || recipient.username).charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold">{recipient.displayName || recipient.username}</span>
+                    <span className="block truncate text-xs text-muted-foreground">@{recipient.username}</span>
+                  </span>
+                  {recipient.isFriend && <Badge variant="secondary">Friend</Badge>}
+                </button>)}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!selectedBadge} onOpenChange={(open) => !open && setSelectedBadge(null)}>
         <DialogContent className="max-w-md mx-auto" data-testid="badge-detail-modal">
           {selectedBadge && (

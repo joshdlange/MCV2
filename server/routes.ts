@@ -5552,6 +5552,21 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   });
 
   // Messages API
+  app.get("/api/social/message-users", authenticateUser, async (req: any, res) => {
+    const q = req.query.q ?? "";
+    if (typeof q !== "string" || q.length > 100) {
+      return res.status(400).json({ message: "Search must be at most 100 characters" });
+    }
+    try {
+      const { searchMessageUsers } = await import("./services/messageNavigation");
+      res.setHeader("Cache-Control", "no-store");
+      res.json(await searchMessageUsers(req.user.id, q));
+    } catch (error) {
+      console.error("Message user search failed:", error);
+      res.status(500).json({ message: "Unable to search message recipients" });
+    }
+  });
+
   app.get("/api/social/messages/:userId", authenticateUser, async (req: any, res) => {
     try {
       const otherUserId = parseInt(req.params.userId);
@@ -5659,7 +5674,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   app.post("/api/social/messages/:id/read", authenticateUser, async (req: any, res) => {
     try {
       const messageId = parseInt(req.params.id);
-      await storage.markMessageAsRead(messageId);
+      await storage.markMessageAsRead(messageId, req.user.id);
       res.json({ message: "Message marked as read" });
     } catch (error) {
       console.error('Mark message as read error:', error);
@@ -5670,7 +5685,16 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   app.get("/api/social/message-threads", authenticateUser, async (req: any, res) => {
     try {
       const threads = await storage.getMessageThreads(req.user.id);
-      res.json(threads);
+      res.json(threads.map(thread => ({
+        ...thread,
+        user: {
+          id: thread.user.id,
+          username: thread.user.username,
+          displayName: thread.user.displayName,
+          photoURL: normalizeTrustedAvatarUrl(thread.user.photoURL),
+          collectorAvatarKey: thread.user.collectorAvatarKey,
+        },
+      })));
     } catch (error) {
       console.error('Get message threads error:', error);
       res.status(500).json({ message: "Failed to fetch message threads" });

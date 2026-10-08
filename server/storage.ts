@@ -188,7 +188,7 @@ interface IStorage {
   // Social Features - Messages
   getMessages(userId1: number, userId2: number): Promise<MessageWithUsers[]>;
   sendMessage(senderId: number, recipientId: number, content: string): Promise<Message>;
-  markMessageAsRead(messageId: number): Promise<void>;
+  markMessageAsRead(messageId: number, recipientId?: number): Promise<void>;
   getUnreadMessageCount(userId: number): Promise<number>;
   getMessageThreads(userId: number): Promise<{ user: User; lastMessage: Message; unreadCount: number }[]>;
 
@@ -2189,11 +2189,11 @@ export class DatabaseStorage implements IStorage {
     return message;
   }
 
-  async markMessageAsRead(messageId: number): Promise<void> {
+  async markMessageAsRead(messageId: number, recipientId?: number): Promise<void> {
     await db
       .update(messages)
       .set({ isRead: true })
-      .where(eq(messages.id, messageId));
+      .where(and(eq(messages.id, messageId), recipientId === undefined ? undefined : eq(messages.recipientId, recipientId)));
   }
 
   async getUnreadMessageCount(userId: number): Promise<number> {
@@ -2222,7 +2222,7 @@ export class DatabaseStorage implements IStorage {
         FROM involved
       )
       SELECT * FROM ranked WHERE rn = 1
-      ORDER BY last_received_at DESC NULLS LAST, created_at DESC, id DESC
+      ORDER BY last_received_at DESC NULLS LAST, partner_id ASC
     `);
     const rows = result.rows as any[];
     if (!rows.length) return [];
