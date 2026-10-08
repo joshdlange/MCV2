@@ -104,6 +104,7 @@ export function CardDetailModal({
   // eBay pricing hooks - enable autoFetch to display cached pricing data
   const { data: pricing, isLoading: isPricingLoading } = useCardPricing(card?.id || 0, true);
   const refreshPricing = useRefreshCardPricing();
+  const [isCheckingValue, setIsCheckingValue] = useState(false);
 
   // Owner quantity update (min 1; removal stays a separate action)
   const updateQuantityMutation = useMutation({
@@ -841,7 +842,8 @@ export function CardDetailModal({
                         variant="outline"
                         size="sm"
                         onClick={async () => {
-                          if (!card) return;
+                          if (!card || isCheckingValue) return;
+                          setIsCheckingValue(true);
                           toast({ title: "Fetching pricing...", description: "This may take a moment" });
                           try {
                             const result = await refreshPricing(card.id);
@@ -857,14 +859,16 @@ export function CardDetailModal({
                             }
                           } catch (error: any) {
                             toast({ title: "Failed to update", description: error.message || "Unknown error", variant: "destructive" });
+                          } finally {
+                            setIsCheckingValue(false);
                           }
                         }}
-                        disabled={isPricingLoading}
+                        disabled={isPricingLoading || isCheckingValue}
                         className="text-xs bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white border-none"
                         data-testid="button-refresh-pricing"
                       >
-                        <RefreshCw className={`w-3 h-3 mr-1 ${isPricingLoading ? 'animate-spin' : ''}`} />
-                        Refresh
+                        <RefreshCw className={`w-3 h-3 mr-1 ${isPricingLoading || isCheckingValue ? 'animate-spin' : ''}`} />
+                        {isPricingLoading || isCheckingValue ? 'Checking…' : 'Check Value'}
                       </Button>
                     </div>
                     
@@ -890,7 +894,7 @@ export function CardDetailModal({
                         </div>
                       )
                     ) : (
-                      <p className="text-sm text-gray-400">No pricing data yet. Click refresh to fetch.</p>
+                      <p className="text-sm text-gray-400">No pricing data yet. Tap Check Value to look it up.</p>
                     )}
                   </div>
                 </CollapsibleContent>
