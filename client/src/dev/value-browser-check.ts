@@ -99,10 +99,27 @@ async function checkBanner(page: Page) {
   assert.equal(dimensions.height, 344);
   assert.ok(Math.abs(dimensions.renderedWidth / dimensions.renderedHeight - 1024 / 344) < 0.01, "banner is uncropped");
   assert.notEqual(dimensions.objectFit, "cover");
-  assert.ok((await page.getByRole("heading", { name: "Most Valuable Cards", exact: true }).getAttribute("class"))?.includes("sr-only"));
+  const heading = page.getByRole("heading", { name: "Most Valuable Cards", exact: true });
+  assert.ok(!(await heading.getAttribute("class"))?.includes("sr-only"), "heading is visible, not screen-reader-only");
+  assert.equal(await heading.isVisible(), true);
   assert.equal(await page.getByText("Your collection, ranked by cached market price.", { exact: true }).count(), 0);
-  assert.equal(await page.getByRole("link", { name: "My Collection", exact: true }).getAttribute("href"), "/my-collection");
-  assert.equal(await page.getByRole("link", { name: "See market trends →" }).getAttribute("href"), "/trends");
+  const collectionLink = page.getByRole("link", { name: "My Collection", exact: true });
+  const trendsLink = page.getByRole("link", { name: "Market Trends", exact: true });
+  assert.equal(await collectionLink.getAttribute("href"), "/my-collection");
+  assert.equal(await trendsLink.getAttribute("href"), "/trends");
+  const titleBounds = await heading.boundingBox();
+  const bannerBounds = await banner.boundingBox();
+  const collectionBounds = await collectionLink.boundingBox();
+  const trendsBounds = await trendsLink.boundingBox();
+  assert.ok(titleBounds && bannerBounds && collectionBounds && trendsBounds);
+  assert.ok(titleBounds.y + titleBounds.height <= bannerBounds.y, "visible heading precedes banner");
+  assert.ok(collectionBounds.y >= bannerBounds.y + bannerBounds.height, "My Collection is below banner");
+  assert.ok(trendsBounds.y >= bannerBounds.y + bannerBounds.height, "Market Trends is below banner");
+  assert.ok(Math.abs(collectionBounds.y - trendsBounds.y) < 1, "navigation links share a row");
+  assert.ok(Math.abs(collectionBounds.width - trendsBounds.width) < 1, "navigation links are balanced");
+  assert.ok(collectionBounds.height >= 44 && trendsBounds.height >= 44, "comfortable navigation touch targets");
+  assert.ok((await page.getByTestId("value-summary").innerText()).includes("Includes every priced copy in your collection."));
+  assert.equal(await page.getByText("Includes every priced copy, regardless of filters.", { exact: true }).count(), 0);
 }
 
 // Run: npx tsx client/src/dev/value-browser-check.ts
@@ -146,7 +163,9 @@ const css = (await postcss([tailwindcss({ config: "tailwind.config.ts" })]).proc
 let checks = 0;
 try {
   for (const scenario of ["value", "dashboard", "collection", "trends", "profile-owner", "profile-visitor", "profile-private", "profile-friends", "profile-hidden", "empty", "error", "loading", "page-error", "detail-error"]) {
+    console.log(`Checking ${scenario}`);
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    page.setDefaultTimeout(15_000);
     const errors: string[] = [], requests: string[] = [];
     page.on("pageerror", error => { errors.push(error.message); console.error(scenario, error.message); });
     await page.route("**/src/dev/value-harness.html*", route => route.fulfill({
@@ -249,6 +268,10 @@ try {
       assert.equal(await page.locator('[data-testid^="value-card-"]').count(), 25);
       await checkShowcase(page, requests, scenario, output);
       if (scenario === "value") {
+        await page.getByRole("link", { name: "Market Trends", exact: true }).click();
+        await page.getByRole("heading", { name: "Your top cards" }).waitFor();
+        await page.getByRole("link", { name: "See all →" }).click();
+        await page.getByTestId("value-page-banner").waitFor();
         await page.getByRole("link", { name: "My Collection", exact: true }).click();
         await page.getByRole("combobox", { name: "Collection sort" }).waitFor();
         assert.equal(await page.getByTestId("value-page-banner").count(), 0, "back navigation reaches My Collection");

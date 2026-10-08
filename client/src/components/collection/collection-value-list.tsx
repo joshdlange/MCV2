@@ -64,7 +64,7 @@ export function CollectionValueList({
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Total collection value</p>
         <p className="mt-1 text-3xl font-bold tabular-nums text-green-700">{formatMarketValue(summary.totalValue)}</p>
         <p className="mt-2 text-sm text-gray-600">{summary.pricedCards.toLocaleString()} priced cards · {summary.pricedCopies.toLocaleString()} copies</p>
-        <p className="mt-1 text-xs text-gray-500">Includes every priced copy, regardless of filters.</p>
+        <p className="mt-1 text-xs text-gray-500">Includes every priced copy in your collection.</p>
         <p className="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-500">Prices updated {summary.pricesUpdatedAt ? new Date(summary.pricesUpdatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}</p>
       </div>}
       {query.isLoading ? <div role="status" aria-label="Loading card values" className="space-y-4">
