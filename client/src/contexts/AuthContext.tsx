@@ -6,7 +6,7 @@ import { useAppStore } from '@/lib/store';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { getNativeLaunchSession } from '@/lib/nativeLaunchSession';
-import { queryClient } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import { canRefreshScanSessionInPlace } from '@/lib/scanSession';
 import {
   isRetryableSyncError,
@@ -20,7 +20,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   syncError: AuthSyncError;
-  refreshUser: () => Promise<void>;
+  refreshUser: () => Promise<boolean>;
   retrySync: () => Promise<void>;
   signOutAfterSyncError: () => Promise<void>;
 }
@@ -29,7 +29,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   syncError: null,
-  refreshUser: async () => {},
+  refreshUser: async () => false,
   retrySync: async () => {},
   signOutAfterSyncError: async () => {},
 });
@@ -51,6 +51,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const { setCurrentUser } = useAppStore();
 
   const applyBackendUser = useCallback((backendUser: BackendUser) => {
+    const previous = useAppStore.getState().currentUser;
     setCurrentUser({
       id: backendUser.id,
       name: backendUser.displayName || backendUser.username,
@@ -65,6 +66,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       nativeMobileLogins: backendUser.nativeMobileLogins || 0,
       username: backendUser.username
     });
+    if (previous?.id === backendUser.id && previous.plan !== backendUser.plan) {
+      void queryClient.invalidateQueries();
+    }
     const selectedPlan = localStorage.getItem('selectedPlan');
     if (selectedPlan === 'SUPER_HERO' && backendUser.plan === 'SIDE_KICK') {
       localStorage.removeItem('selectedPlan');
@@ -143,17 +147,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (syncAbortRef.current) return;
     const controller = new AbortController();
     syncAbortRef.current = controller;
+    const timeout = window.setTimeout(() => controller.abort(), 10_000);
     try {
-      const backendUser = await syncUserWithBackend(firebaseUser, undefined, {
-        signal: controller.signal,
-      });
+      // Lightweight read-only refresh: no login/badge sync on every focus.
+      const response = await apiRequest("GET", "/api/auth/me", undefined, controller.signal);
+      const { user: backendUser } = await response.json() as { user: BackendUser };
       if (auth.currentUser?.uid !== firebaseUser.uid || controller.signal.aborted) return;
+      if (!backendUser || backendUser.id !== useAppStore.getState().currentUser?.id) return;
       applyBackendUser(backendUser);
       setUser(firebaseUser);
       setSyncError(null);
+      return backendUser.plan === 'SUPER_HERO';
     } catch (error) {
       if (auth.currentUser?.uid !== firebaseUser.uid || controller.signal.aborted) return;
-      if (isRetryableSyncError(error)) {
+      if (!(error instanceof Error && /^(401|403):/.test(error.message))) {
         console.error('Temporary backend account refresh failure:', error);
         return;
       }
@@ -163,6 +170,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setCurrentUser(null);
       setSyncError('permanent');
     } finally {
+      window.clearTimeout(timeout);
       if (syncAbortRef.current === controller) syncAbortRef.current = null;
     }
   }, [applyBackendUser, setCurrentUser, syncUserWithBackend]);
@@ -170,9 +178,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Function to refresh user data from backend
   const refreshUser = async () => {
     if (user) {
-      await refreshExistingSession(user);
+      return (await refreshExistingSession(user)) === true;
     }
+    return false;
   };
+
+  // Checkout can finish in another tab/device. Refresh without blanking an
+  // already-verified session, and avoid overlapping focus/resume requests.
+  useEffect(() => {
+    if (!user) return;
+    let lastRefresh = 0;
+    const refresh = () => {
+      if (document.visibilityState !== 'visible' || Date.now() - lastRefresh < 5000) return;
+      lastRefresh = Date.now();
+      void refreshExistingSession(user);
+    };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    const timer = window.setInterval(refresh, 60_000);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+      window.clearInterval(timer);
+    };
+  }, [user, refreshExistingSession]);
 
   const retrySync = async () => {
     const firebaseUser = auth.currentUser;

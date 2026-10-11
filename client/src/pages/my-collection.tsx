@@ -17,7 +17,6 @@ import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
-import { SIDE_KICK_CARD_LIMIT } from "@shared/schema";
 import { compareCardNumbers } from "@shared/cardNumberSort";
 import type { CollectionItem, CardWithSet, CardSet, MainSet } from "@shared/schema";
 import { formatCardName, formatSetName } from "@/lib/formatTitle";
@@ -43,7 +42,6 @@ export default function MyCollection() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const COLLECTION_LIMIT = SIDE_KICK_CARD_LIMIT;
   const favStorageKey = currentUser ? `favoriteSetIds_user_${currentUser.id}` : 'favoriteSetIds';
   const [favoriteSetIds, setFavoriteSetIds] = useState<number[]>(() => {
     try {
@@ -301,7 +299,7 @@ export default function MyCollection() {
     },
     onError: (error: Error) => {
       const msg = error.message || '';
-      if (msg.includes('403') || msg.includes('COLLECTION_LIMIT_REACHED')) {
+      if (msg.includes('COLLECTION_LIMIT_REACHED')) {
         setShowUpgradeModal(true);
         return;
       }
@@ -1452,10 +1450,6 @@ export default function MyCollection() {
         collectionQuantity={selectedCard ? collection?.find(item => item.card.id === selectedCard.id)?.quantity : undefined}
         onAddToCollection={() => {
           if (selectedCard) {
-            if (currentUser?.plan !== 'SUPER_HERO' && (collection?.length || 0) >= COLLECTION_LIMIT) {
-              setShowUpgradeModal(true);
-              return;
-            }
             addToCollectionMutation.mutate(selectedCard.id);
           }
         }}

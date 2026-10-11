@@ -34,6 +34,7 @@
 - [Feed v1 architecture](feed-v1.md) — dedupe-key emits, privacy at READ time, advisory-locked reaction XP cap, composite cursor; new feed reads must reuse getReadableEvent predicate.
 - [Messaging order](messaging-order.md) — inbox prioritizes last received message; opening a thread shows the latest exchange on phone and desktop.
 - [Atomic collection adds](atomic-collection-adds.md) — distinct-card limits and inserts share one per-user transaction; owned-card retries must remain no-ops at the limit.
+- [Upgrade freshness](upgrade-freshness.md) — stale device plans must never block collection adds; confirm activation from a fresh backend account.
 - [Badge system pitfalls](badge-system-pitfalls.md) — awardBadge needs numeric DB ids (slugs fail silently); badge rows must be seeded; login checks need priorLastLogin; upgraded_at stamped by DB trigger.
 - [Parallel-leak fix count verification](parallel-leak-verification.md) — verify card-merge seeds via baseline snapshot → restart → per-user diff; prod has ~39 legacy rows on archived cards (pre-existing).
 - [Push notifications](push-notifications.md) — FCM secret is FIREBASE_SERVICE_ACCOUNT_KEY (not _JSON); admin manual sends + approved new-message trigger only (generic body, no message content); segments map to users.plan.

@@ -594,8 +594,16 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   });
 
   // Get current user
-  app.get("/api/auth/me", authenticateUser, (req: any, res) => {
-    res.json({ user: toAuthUser(req.user) });
+  app.get("/api/auth/me", authenticateUser, async (req: any, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    try {
+      // Authentication may cache identity; entitlements must be fresh.
+      const user = await storage.getUser(req.user.id);
+      if (!user) return res.status(401).json({ message: "Account no longer exists" });
+      res.json({ user: toAuthUser(user) });
+    } catch {
+      res.status(503).json({ message: "Account refresh temporarily unavailable" });
+    }
   });
 
   // Simple in-memory rate limiter for the public forgot-password endpoint.

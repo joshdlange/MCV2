@@ -1,6 +1,5 @@
 import { optimizedImageUrl } from "@/lib/utils";
 import { useState } from "react";
-import { SIDE_KICK_CARD_LIMIT } from "@shared/schema";
 import { compareCardNumbers } from "@shared/cardNumberSort";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -61,7 +60,6 @@ export function CardGrid({
   const { toast } = useToast();
   const { currentUser } = useAppStore();
   
-  const COLLECTION_LIMIT = SIDE_KICK_CARD_LIMIT;
   
   // Use dedicated set endpoint for complete card list when filtering by set
   const apiEndpoint = filters.setId ? `/api/sets/${filters.setId}/cards` : '/api/cards';
@@ -238,13 +236,6 @@ export function CardGrid({
   };
 
   const handleAddToCollection = (cardId: number) => {
-    if (currentUser?.plan !== 'SUPER_HERO') {
-      const currentCount = collection?.length || 0;
-      if (currentCount >= COLLECTION_LIMIT) {
-        setShowUpgradeModal(true);
-        return;
-      }
-    }
     addToCollectionMutation.mutate(cardId);
   };
 

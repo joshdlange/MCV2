@@ -7,6 +7,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/contexts/AuthContext";
 import { Capacitor } from '@capacitor/core';
+import { confirmUpgrade } from "@/lib/confirmUpgrade";
 
 export default function SubscriptionSuccess() {
   const [, setLocation] = useLocation();
@@ -14,9 +15,9 @@ export default function SubscriptionSuccess() {
   const { currentUser } = useAppStore();
   const { refreshUser } = useAuth();
   const [verifying, setVerifying] = useState(true);
-  const [verified, setVerified] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showReturnButton, setShowReturnButton] = useState(false);
+  const [retry, setRetry] = useState(0);
 
   // iOS deep link return: after web subscribe, fire the custom URL scheme to re-open the app
   useEffect(() => {
@@ -44,24 +45,27 @@ export default function SubscriptionSuccess() {
   }, [search]);
 
   useEffect(() => {
+    const controller = new AbortController();
     const verifyCheckout = async () => {
+      setVerifying(true);
+      setError(null);
       const params = new URLSearchParams(search);
       const sessionId = params.get('session_id');
-      
-      if (!sessionId) {
-        setVerifying(false);
-        setVerified(true);
-        return;
-      }
 
       try {
-        const response = await apiRequest('POST', '/api/verify-checkout-session', { sessionId });
-        const result = await response.json();
-        
-        console.log('Checkout verification result:', result);
-        setVerified(true);
-        
-        await refreshUser();
+        // A webhook may activate the account even if checkout verification
+        // temporarily fails. Fresh account state is the final authority.
+        let checkoutError: unknown;
+        if (sessionId) {
+          try {
+            await apiRequest('POST', '/api/verify-checkout-session', { sessionId });
+          } catch (err) {
+            checkoutError = err;
+          }
+        }
+        const active = await confirmUpgrade(refreshUser, controller.signal);
+        if (controller.signal.aborted) return;
+        if (!active) throw checkoutError || new Error("Your upgrade is not confirmed yet. Please retry; do not pay again.");
         queryClient.invalidateQueries({ queryKey: ['/api/auth/sync'] });
         queryClient.invalidateQueries({ queryKey: ['/api/subscription-status'] });
         queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
@@ -70,21 +74,19 @@ export default function SubscriptionSuccess() {
           window.location.href = '/';
         }
       } catch (err: any) {
+        if (controller.signal.aborted) return;
         console.error('Checkout verification failed:', err);
-        if (currentUser?.plan === 'SUPER_HERO') {
-          setVerified(true);
-        } else {
-          setError(err.message || 'Failed to verify subscription');
-        }
+        setError('Your upgrade is not confirmed yet. Please retry; do not pay again.');
       } finally {
-        setVerifying(false);
+        if (!controller.signal.aborted) setVerifying(false);
       }
     };
 
     if (currentUser) {
       verifyCheckout();
     }
-  }, [search, currentUser?.id]);
+    return () => controller.abort();
+  }, [search, currentUser?.id, retry]);
 
   if (verifying) {
     return (
@@ -111,11 +113,12 @@ export default function SubscriptionSuccess() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-muted-foreground">
-              Your payment was received! Your account upgrade is being processed and should be active within a few minutes.
+              {error}
             </p>
             <p className="text-sm text-muted-foreground">
-              If you don't see your upgrade after refreshing, please contact support.
+              If activation still cannot be confirmed, contact support. You do not need to purchase again.
             </p>
+            <Button onClick={() => setRetry(value => value + 1)} className="w-full">Retry activation</Button>
             <Button 
               onClick={() => {
                 queryClient.invalidateQueries();

@@ -54,6 +54,9 @@ const DEFAULT_UPGRADE_FEATURES: UpgradeFeature[] = [
 ];
 
 export function UpgradeModal({ isOpen, onClose, currentPlan, trigger, title, description, features }: UpgradeModalProps) {
+  useEffect(() => {
+    if (isOpen && currentPlan === 'SUPER_HERO') onClose();
+  }, [isOpen, currentPlan, onClose]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [iapReadiness, setIapReadiness] = useState<AppleIAPReadiness>(getAppleIAPReadiness());

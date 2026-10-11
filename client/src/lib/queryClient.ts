@@ -26,6 +26,9 @@ async function throwIfResNotOk(res: Response) {
         if (typeof body?.message === "string" && body.message.trim()) {
           message = body.message.trim();
         }
+        if (body?.code === "COLLECTION_LIMIT_REACHED") {
+          message = `COLLECTION_LIMIT_REACHED: ${message}`;
+        }
       } catch {
         // Keep the concise status message when an upstream returns malformed JSON.
       }

@@ -113,18 +113,8 @@ export function Sidebar() {
     enabled: !!user,
   });
 
-  useEffect(() => {
-    if (
-      currentUser &&
-      currentUser.plan === 'SIDE_KICK' &&
-      collectionStats &&
-      (collectionStats as any).totalCards >= SIDE_KICK_CARD_LIMIT &&
-      !sessionStorage.getItem(`upgrade_prompt_shown_${currentUser.id}`)
-    ) {
-      sessionStorage.setItem(`upgrade_prompt_shown_${currentUser.id}`, '1');
-      setShowUpgradeModal(true);
-    }
-  }, [currentUser, collectionStats]);
+  // Only a server-confirmed collection-limit response should automatically
+  // prompt an upgrade; persisted device plans can be stale after checkout.
 
   const IconComponent = ({ iconName }: { iconName: string }) => {
     const Icon = iconMap[iconName as keyof typeof iconMap];
