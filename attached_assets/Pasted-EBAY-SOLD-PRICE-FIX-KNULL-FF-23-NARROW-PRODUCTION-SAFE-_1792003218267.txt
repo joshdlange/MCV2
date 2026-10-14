@@ -1,0 +1,544 @@
+EBAY SOLD PRICE FIX — KNULL FF-23 — NARROW PRODUCTION-SAFE PATCH
+
+We have an active-user issue with Market Price / eBay sold-price matching.
+
+This is NOT a request to redesign pricing, change Scan to Add, change DINO, modify today's image-recognition work, or broadly refactor the eBay integration.
+
+I want a surgical diagnosis and fix.
+
+==================================================
+USER-REPORTED CASE
+==================================================
+
+Card in Marvel Card Vault:
+
+Character:
+Knull
+
+Year:
+2026
+
+Main set:
+Topps Chrome Marvel / Topps Chrome Marvel Comics
+
+Subset:
+Fanfare
+
+Card number:
+FF-23
+
+Variation / parallel:
+Fanfare Green Speckle Refractor /99
+
+The card-detail screen currently shows:
+
+Market Price:
+$0.00
+
+0 sales
+
+The user has independently searched eBay SOLD listings and can clearly see sold examples of this card.
+
+Visible examples include titles approximately like:
+
+1.
+2026 Topps Chrome Marvel Comics
+#FF-23 Knull Fanfare Green Speckle
+55/99
+
+2.
+Topps 2026 Topps Chrome Marvel Comics
+Knull Fanfare Insert FF-23 07/99
+
+3.
+2026 Topps Chrome Marvel Comics
+Fanfare Knull 20/99 Green Speckle
+#FF-23
+
+4.
+2026 Topps Chrome Marvel
+Knull Fanfare /99 Green Speckle #FF-23
+
+These are exactly the kinds of seller-title variations our matching logic needs to handle.
+
+IMPORTANT:
+
+Do not assume the API itself lacks the listings.
+
+Trace the actual code and determine where they are being lost.
+
+==================================================
+FIRST: REPRODUCE AND TRACE
+==================================================
+
+Before changing anything, trace this exact card through the existing Market Price flow.
+
+Identify:
+
+1. Card database record / ID.
+2. Exact metadata stored for:
+   - character/name
+   - year
+   - main set
+   - subset
+   - card number
+   - variation
+   - serial-number information
+
+3. Exact frontend action used by:
+   "Check Value"
+
+4. Exact API route called.
+
+5. Exact pricing/eBay service invoked.
+
+6. Exact eBay query or queries generated for this card.
+
+7. Raw number of sold results returned by the upstream provider/API BEFORE our filtering.
+
+8. Number remaining after each filtering/matching step.
+
+9. Whether any results are rejected because of:
+   - title mismatch
+   - set-name mismatch
+   - subset mismatch
+   - card-number formatting
+   - parallel-name mismatch
+   - serial numbering
+   - date
+   - condition
+   - category
+   - cache
+   - newly-created card state
+
+10. Whether $0 / 0 sales is:
+   A. eBay returned zero candidates
+   B. eBay returned candidates but MCV filtered them out
+   C. cached zero-result data
+   D. pricing refresh never ran for this new card
+   E. another code-path issue
+
+DO NOT PATCH UNTIL THIS IS KNOWN.
+
+==================================================
+LIKELY MATCHING ISSUE TO INVESTIGATE
+==================================================
+
+Do NOT require seller titles to match our canonical card name literally.
+
+Our canonical record may say:
+
+"Fanfare Green Speckle Refractor /99"
+
+while legitimate eBay sellers may use:
+
+"Green Speckle"
+
+"Fanfare Insert"
+
+"Fanfare /99"
+
+"20/99"
+
+"07/99"
+
+"55/99"
+
+"#FF-23"
+
+"FF-23"
+
+or different word ordering.
+
+The word:
+
+"Refractor"
+
+may be missing from a legitimate seller title.
+
+The phrase:
+
+"Marvel Comics"
+
+may appear as simply:
+
+"Marvel"
+
+Seller-title wording should not prevent a clearly identifiable sale from matching.
+
+==================================================
+MATCHING PRIORITY
+==================================================
+
+For this type of card, determine whether the existing matcher can safely prioritize strong identifiers approximately like:
+
+VERY STRONG:
+- card number FF-23 / #FF-23
+- character Knull
+
+STRONG:
+- year 2026
+- Topps Chrome
+- Fanfare
+
+PARALLEL EVIDENCE:
+- Green Speckle
+- /99
+- explicit serial such as 20/99, 55/99, 07/99
+
+WEAKER / OPTIONAL WORDING:
+- Marvel vs Marvel Comics
+- Insert
+- Refractor
+
+Do not blindly implement this hierarchy if the existing architecture handles matching differently.
+
+Use it as the intended matching behavior.
+
+==================================================
+SEARCH QUERY BEHAVIOR
+==================================================
+
+If the current search query is over-constrained, implement the smallest safe fallback strategy.
+
+For example, conceptually:
+
+PRIMARY:
+2026 Topps Chrome Marvel Knull FF-23 Fanfare Green Speckle
+
+If insufficient results:
+
+FALLBACK:
+2026 Topps Chrome Knull FF-23 Fanfare
+
+Potential final bounded fallback:
+
+Knull FF-23 Topps Chrome
+
+Do NOT search only:
+"Knull"
+
+Do NOT search only:
+"Fanfare"
+
+Do NOT broaden enough to mix unrelated Knull cards.
+
+CARD NUMBER + CHARACTER should remain strong anchors whenever available.
+
+==================================================
+POST-SEARCH VALIDATION
+==================================================
+
+Broader retrieval must NOT mean sloppy pricing.
+
+Search broadly enough to FIND legitimate seller-title variants.
+
+Then validate candidates carefully.
+
+For FF-23:
+
+A sold listing should receive very strong confidence when it contains:
+
+- Knull
+AND
+- FF-23 or #FF-23
+
+Then use:
+- 2026
+- Topps Chrome
+- Fanfare
+- Green Speckle
+- /99 or nn/99
+
+to establish exact product/parallel confidence.
+
+Important:
+
+A listing like:
+
+"Knull Fanfare Insert FF-23 07/99"
+
+should NOT automatically be rejected just because it omits the literal phrase "Green Speckle Refractor."
+
+The /99 serial plus exact card number, character, set and subset may be stronger evidence.
+
+But DO NOT mix obvious different parallels or unrelated FF-23 products if evidence contradicts the target card.
+
+==================================================
+NORMALIZATION
+==================================================
+
+Audit existing normalization before adding anything.
+
+Where needed, make comparisons safely tolerate:
+
+FF-23
+#FF-23
+
+Marvel
+Marvel Comics
+
+Topps Chrome Marvel
+Topps Chrome Marvel Comics
+
+Green Speckle Refractor
+Green Speckle
+
+20/99
+55/99
+07/99
+/99
+
+word ordering
+
+case
+
+punctuation
+
+Do NOT create a giant Marvel-specific hardcoded rule system if generic normalization already exists.
+
+Prefer a small improvement to the existing matcher.
+
+==================================================
+NEW-CARD / CACHE AUDIT
+==================================================
+
+This card was recently added to our database.
+
+Specifically determine whether newly created catalog cards are missing any step required for Market Price.
+
+Check:
+
+- price cache initialization
+- card-price records
+- scheduled pricing jobs
+- on-demand Check Value path
+- card ID mappings
+- normalized search terms
+- subset relationships
+- mainSetId relationships
+- stale $0 cache entries
+- TTL behavior
+
+If the issue is actually stale/absent cache state rather than search matching, fix THAT rather than unnecessarily rewriting matching.
+
+"Check Value" should be capable of obtaining fresh pricing for a newly added valid card without waiting for some unrelated bulk job.
+
+==================================================
+PRICE CALCULATION
+==================================================
+
+DO NOT change the existing market-price formula unless the bug specifically exists there.
+
+Preserve:
+
+- existing sale-price aggregation
+- outlier handling
+- currency conversion
+- shipping treatment
+- condition rules
+- date windows
+- minimum-sale requirements
+
+unless you prove one of them is rejecting these exact legitimate sales incorrectly.
+
+This task is primarily about FINDING THE RIGHT SALES.
+
+==================================================
+EBAY INTEGRATION
+==================================================
+
+Do not change:
+
+- eBay credentials
+- affiliate IDs
+- Partner Network tracking
+- API provider
+- OAuth
+- production secrets
+
+unless an actual existing bug requires it.
+
+Do not replace the current eBay integration.
+
+Do not introduce scraping if we currently use an API.
+
+==================================================
+CRITICAL SCOPE PROTECTION
+==================================================
+
+Today's Scan to Add / image-recognition work is fragile and MUST NOT be touched.
+
+MUST NOT MODIFY:
+
+- DINO
+- embeddings
+- Scan to Add
+- image recognition
+- camera capture
+- card cropping
+- catalog image pipeline
+- SAM cleanup/audit work
+- mobile navigation
+- collection functionality
+- card-detail layout
+- PC Binders
+- user authentication
+- subscriptions
+- Stripe
+- Shippo
+
+This fix should stay inside the Market Price / eBay sold-results path.
+
+==================================================
+UI
+==================================================
+
+Do NOT redesign the card detail page.
+
+The existing UI is working.
+
+The goal is simply for:
+
+Market Price
+$0.00
+0 sales
+
+to correctly populate when qualifying sold listings actually exist.
+
+Do not add new modals, badges, explanation screens, or pricing UI unless technically necessary.
+
+==================================================
+REGRESSION TESTS
+==================================================
+
+Before changing anything, capture current behavior for:
+
+1. Knull FF-23 Fanfare Green Speckle /99
+   CURRENTLY BROKEN
+
+Also select several currently working cards representing:
+
+2. a normal base card
+3. an insert
+4. a numbered parallel
+5. a card with a similar card number in another set
+6. a card with multiple parallel variants
+
+Record current:
+- matched sale count
+- market price
+- search query
+- accepted sold-item IDs if available
+
+After the fix, rerun all of them.
+
+The Knull case should improve.
+
+Previously working cases should not materially regress.
+
+==================================================
+SPECIFIC KNULL QA
+==================================================
+
+For Knull FF-23, show me:
+
+BEFORE FIX:
+- exact generated search query
+- upstream candidate count
+- accepted count
+- rejected count
+- reason legitimate examples were rejected
+- resulting price
+
+AFTER FIX:
+- exact generated search query/query sequence
+- upstream candidate count
+- accepted count
+- rejected count
+- accepted sold-item titles
+- sold prices used
+- resulting calculated market price
+
+Explicitly confirm whether examples resembling:
+
+Knull Fanfare Green Speckle 55/99
+Knull Fanfare Insert FF-23 07/99
+Fanfare Knull 20/99 Green Speckle
+Knull Fanfare /99 Green Speckle FF-23
+
+are now discoverable and, where appropriate, accepted.
+
+Do not fake these listings if the API does not actually return them.
+
+==================================================
+MUST DO
+==================================================
+
+- Trace before patching.
+- Reproduce Knull FF-23.
+- Determine exact failure point.
+- Make the smallest possible backend/service fix.
+- Handle normal seller-title variation.
+- Check newly-added-card/cache behavior.
+- Preserve existing price calculation unless proven broken.
+- Regression-test working cards.
+- Keep changes isolated.
+
+==================================================
+MUST NOT DO
+==================================================
+
+- Do not publish yet.
+- Do not broadly refactor eBay pricing.
+- Do not change the card-detail design.
+- Do not modify Scan to Add.
+- Do not modify DINO.
+- Do not touch today's recognition work.
+- Do not change catalog card metadata just to make pricing work.
+- Do not hardcode this one Knull card.
+- Do not loosen matching so much that unrelated cards affect prices.
+- Do not manufacture test results.
+- Do not change eBay affiliate tracking.
+
+==================================================
+PRESERVE
+==================================================
+
+Preserve:
+
+- production behavior outside pricing
+- current eBay integration
+- current UI
+- current pricing methodology
+- card data
+- user collections
+- today's Scan to Add work
+- iOS behavior
+- Android behavior
+- web behavior
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Do the investigation and narrow fix first.
+
+Then tell me:
+
+1. Root cause.
+2. Exact files changed.
+3. Whether the API was returning these sales before our filtering.
+4. The old Knull query.
+5. The new Knull query/query sequence.
+6. What matching rule was preventing valid sales.
+7. Knull accepted sale count before vs after.
+8. Market price before vs after.
+9. Whether newly-created-card caching contributed.
+10. Regression results for existing working cards.
+11. Confirm no unrelated functionality changed.
+12. Confirm Scan to Add / DINO code was untouched.
+13. Confirm eBay tracking was untouched.
+14. Confirm nothing has been published yet.
+
+Do not expand the scope after fixing this case.
