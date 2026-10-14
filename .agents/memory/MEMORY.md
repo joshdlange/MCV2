@@ -17,6 +17,7 @@
 - [Marketing email opt-in & unsubscribe](marketing-email-optin.md) — marketingOptIn gates sends (not emailUpdates); new marketing templates need {{UNSUBSCRIBE_URL}} or they ship with no unsubscribe.
 - [Lifecycle email system v1](lifecycle-email-system.md) — claim-then-send via partial unique index; 14-day cap; launch-date gate; new lifecycle emails MUST go through claimAndSend.
 - [eBay API quota accounting](ebay-quota-accounting.md) — Browse API paths bypass the rate limiter; budget bulk pricing jobs by API calls (not cards) via getTotalRequestCount deltas.
+- [eBay sold-data access](ebay-sold-data-access.md) — Insights scope was rejected in live diagnostics; genuine sold-price integration needs verified access and redistribution rights.
 - [PUT /api/users allowlist](user-update-allowlist.md) — user self-update route allowlists fields; new privileged users columns must NOT be added to it or they're self-escalatable.
 - [Email cron disabled in prod](email-cron-disabled-in-prod.md) — EMAIL_CRON_ENABLED unset everywhere; scheduled email blasts run manually; wire always-on jobs at startup + dedupe drips via email_logs job_name.
 - [Shell background procs die between calls](replit-shell-background-procs.md) — nohup jobs don't survive across bash tool calls; pgrep self-matches its own poll command.
