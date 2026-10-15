@@ -1,0 +1,153 @@
+Proceed with a narrowly scoped eBay sold-data access package and current-UI truthfulness audit.
+
+Do NOT change production yet.
+
+MUST DO
+
+1. DRAFT THE EBAY ACCESS REQUEST
+
+Create a concise technical request to eBay Developer Support asking whether our existing production application can be granted access to Marketplace Insights / sold-history data.
+
+Include:
+
+- Marvel Card Vault application/use case
+- we are an active eBay Partner Network publisher
+- we use eBay data to help trading-card collectors estimate current market value
+- we need completed-sale history, not active-listing asking prices
+- we do NOT need buyer/seller personal data
+
+Include the exact technical evidence already observed:
+
+- existing eBay authentication succeeds
+- hyphenated Insights endpoint returned 404
+- marketplace_insights endpoint returned 403 Access Denied
+- attempting to request the sold-history permission/scope returned:
+  400 invalid_scope
+- no token was issued with the required permission
+
+Ask specifically:
+
+A. Is our application eligible for Marketplace Insights production access?
+B. If yes, what approval process, contracts, use-case review, or account changes are required?
+C. What exact OAuth scope should be enabled?
+D. Is there another currently supported eBay API for completed/sold transaction history suitable for this use case?
+E. Are we permitted to display derived market-price calculations from that data in Marvel Card Vault?
+F. Are there retention/caching/display restrictions we need to follow?
+
+Do not claim we currently have access.
+
+2. GIVE ME A READY-TO-SEND VERSION
+
+Return:
+
+- suggested subject line
+- support-ticket/email body
+- technical appendix with endpoint/status details if useful
+
+Keep the customer-facing email concise and professional.
+
+3. AUDIT CURRENT MARKET-PRICE UI WORDING
+
+Do not modify it yet.
+
+Identify every place in web/iOS/Android where the current active-listing-derived data is presented as:
+
+- “sales”
+- “sold”
+- “sold price”
+- “sales count”
+- or any wording that implies completed transactions
+
+Report exact files/components/routes.
+
+Specifically audit the card-detail Market Price section shown to users.
+
+Determine whether the current UI is materially misrepresenting active-listing estimates as completed-sale data.
+
+4. AUDIT THE CURRENT FORMULA
+
+Document, without changing it:
+
+- source API
+- current active-listing query
+- why asking price is multiplied by 0.85
+- how many listings are used
+- outlier logic
+- shipping handling
+- condition handling
+- currency conversion
+- cache behavior
+- what fields are named soldPrice / salesCount even though the source is active listings
+
+Flag misleading internal names separately from user-facing text.
+
+5. DO NOT FIX KNULL YET
+
+Preserve the Knull query findings:
+
+- FF-23 hyphen currently dropped
+- query omits year / parent set
+- query may be over-constrained around the exact variation phrase
+
+But do NOT implement those changes yet.
+
+Why:
+we first need to decide whether Market Price should remain an active-listing estimate or become genuine sold-history pricing.
+
+6. GIVE ME TWO PRODUCT OPTIONS
+
+After the audit, show me the smallest safe approach for:
+
+OPTION A:
+eBay approves genuine sold-history access.
+
+Explain what changes would be required to make Market Price use verified completed sales.
+
+OPTION B:
+eBay does NOT approve sold-history access.
+
+Explain how we can honestly preserve a useful pricing feature based on active listings without calling them sold sales.
+
+For Option B, consider wording such as:
+
+“Estimated Market Value”
+“Based on current eBay listings”
+
+but do not implement or redesign anything yet.
+
+MUST NOT DO
+
+- Do not publish.
+- Do not change pricing code.
+- Do not change UI.
+- Do not change eBay credentials.
+- Do not alter affiliate tracking.
+- Do not scrape Product Research.
+- Do not add a third-party pricing provider yet.
+- Do not touch Scan to Add or DINO.
+- Do not modify catalog data.
+- Do not change the Knull record.
+
+PRESERVE
+
+- current production behavior
+- current pricing data
+- current eBay integration
+- current card-detail layout
+- today's Scan to Add work
+- mobile and web behavior
+
+FINAL RESPONSE
+
+Give me:
+
+1. Ready-to-send eBay access request.
+2. Exact technical errors to include.
+3. Whether current UI is presenting active-listing data as sold data.
+4. Exact user-facing locations affected.
+5. Exact internal fields/functions using misleading sold terminology.
+6. Explanation of the current 0.85 active-listing estimate formula.
+7. Option A if eBay grants sold-history access.
+8. Option B if eBay denies access.
+9. Your recommended path.
+10. Confirm nothing was changed or published.
