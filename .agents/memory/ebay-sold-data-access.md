@@ -19,3 +19,9 @@ Evaluate upstream authorization separately from a provider's commercial display 
 **Why:** The Card API's terms reviewed on 2026-10-15 allow paid commercial applications but explicitly disclaim compliance with originating marketplaces' terms. A paid API and a display license do not establish authorized eBay sourcing.
 
 **How to apply:** Before recommending adoption, require written source-rights confirmation and representative Marvel numbered-parallel sale samples; do not treat marketing claims about accepted Best Offers as verified transaction evidence.
+
+The user reports eBay Developer Support confirmed no Marketplace Insights access or alternative historical sold API is available to MCV, and authorized a development-only SoldGraph pilot.
+
+**Why:** Production replacement and pricing UI changes must wait for explicit approval of test results. SoldGraph Best Offer flags identify displayed asking prices, not accepted amounts.
+
+**How to apply:** Keep the old provider/caches intact, exclude Best Offers from the sold median, do not apply 0.85, and do not publish or switch production merely because the pilot succeeds. Resolve development card identity by metadata instead of assuming production IDs refer to the same card.

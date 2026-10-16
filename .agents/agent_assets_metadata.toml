@@ -408,3 +408,17 @@ mtime_ms = 1791478595037
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/3b8144bb-fb82-43a5-b3c3-3d82791731f9/ed17de4c-3189-4dd2-9f97-324ae6c7a746"
 storage_version_token = "1791478726735052"
 content_type = "image/png"
+
+[[outputs]]
+id = "rx1Y7JALsCN_9BDDTBJKg"
+uri = "file://.local/soldgraph-qa/complete-report.txt"
+type = "text"
+title = "SoldGraph development QA — complete results"
+description = "Queries, accepted and rejected listings, sale dates, displayed prices, shipping, Best Offer flags, rejection reasons, audit and migration recommendation."
+logical_id = "28e47e12-3f5f-4fb8-8254-ac76343cbe9f"
+content_hash = "sha256:443d1eec1c739fe312a13473bd5c8ddd4c3a43cc89218ce89f3bbf17be4ad8e8"
+size = 176306
+mtime_ms = 1792172976569
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/28e47e12-3f5f-4fb8-8254-ac76343cbe9f/d7b0ca59-2250-43d6-bfad-9bc3d61161ec"
+storage_version_token = "1792172977598603"
+content_type = "text/plain"

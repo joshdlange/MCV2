@@ -1,0 +1,565 @@
+MARVEL CARD VAULT — SOLDGRAPH SOLD-PRICE INTEGRATION
+
+We are replacing the current misleading active-listing Market Price source with a development-only Soldgraph sold-listings integration.
+
+This is a narrow pricing-source integration.
+
+DO NOT touch:
+- Scan to Add
+- DINO
+- image recognition
+- card cropping
+- catalog image work
+- collections
+- authentication
+- subscriptions
+- Stripe
+- Shippo
+- mobile navigation
+- unrelated card-detail functionality
+
+Nothing should be published until testing is complete.
+
+==================================================
+BACKGROUND
+==================================================
+
+Current Marvel Card Vault Market Price behavior is based on ACTIVE eBay listings.
+
+The current pricing service:
+- searches active listings
+- uses asking prices
+- applies an approximately 0.85 multiplier
+- stores/results through fields with names such as soldPrice / salesCount
+
+This is not genuine sold-history data.
+
+We attempted to obtain eBay Marketplace Insights access.
+
+eBay Developer Support confirmed:
+
+- Marketplace Insights is restricted
+- it is not currently open to new users
+- there is currently no alternative eBay API available to us for historical sold-item data
+
+Therefore we are testing Soldgraph as the sold-data provider.
+
+==================================================
+SOLDGRAPH ACCOUNT
+==================================================
+
+A Soldgraph account already exists.
+
+I will add this Replit secret manually:
+
+SOLDGRAPH_KEY
+
+Do not ask me to paste the key into code.
+
+Do not expose it to:
+- frontend JavaScript
+- mobile builds
+- logs
+- API responses
+- git
+- public environment variables
+
+Soldgraph authentication must occur SERVER-SIDE only.
+
+Authorization format:
+
+Authorization: Bearer <SOLDGRAPH_KEY>
+
+Base URL:
+
+https://api.soldgraph.com/v1
+
+Sold listings endpoint:
+
+GET /ebay/sold
+
+==================================================
+FIRST TASK — INSPECT EXISTING PRICING CODE
+==================================================
+
+Before changing anything, trace the current Market Price flow.
+
+Identify:
+
+- frontend Check Value action
+- API route
+- pricing service
+- eBay query builder
+- filtering/matching
+- current active-listing source
+- price calculation
+- cache
+- database fields
+- UI fields
+- current stale/refresh behavior
+
+Specifically identify:
+- fields named soldPrice
+- salesCount
+- source/provider fields
+- price-history records
+- cache TTL
+
+Do not broadly refactor this system.
+
+==================================================
+TARGET CARD FOR INITIAL TEST
+==================================================
+
+Use the known broken user case:
+
+Card ID:
+557954
+
+Character:
+Knull
+
+Year:
+2026
+
+Set:
+Topps Chrome Marvel Comics
+
+Subset:
+Fanfare
+
+Card number:
+FF-23
+
+Parallel:
+Green Speckle Refractor /99
+
+The active-user complaint is that real sold examples are visible on eBay, while Marvel Card Vault shows:
+
+$0.00
+0 sales
+
+Known legitimate seller-title variations include examples like:
+
+2026 Topps Chrome Marvel Comics #FF-23 Knull Fanfare Green Speckle 55/99
+
+2026 Topps Chrome Marvel Comics Knull Fanfare Insert FF-23 07/99
+
+2026 Topps Chrome Marvel Comics Fanfare Knull 20/99 Green Speckle #FF-23
+
+2026 Topps Chrome Marvel Knull Fanfare /99 Green Speckle #FF-23
+
+Do not hardcode these titles.
+
+They are examples of seller-title variation.
+
+==================================================
+PHASE 1 — BUILD SOLDGRAPH SERVER CLIENT
+==================================================
+
+Create a small, isolated Soldgraph server-side service.
+
+Prefer a file/service structure consistent with the existing pricing codebase.
+
+The service should:
+
+1. Read SOLDGRAPH_KEY from server environment.
+2. Send:
+   Authorization: Bearer <key>
+3. Call:
+   GET https://api.soldgraph.com/v1/ebay/sold
+4. Use:
+   country=us
+   count=200
+5. Handle Soldgraph async behavior correctly.
+
+Soldgraph may initially return:
+
+HTTP 202
+status=pending
+poll_url
+
+If pending:
+- poll the provided job URL
+- use the same Authorization header
+- use ?wait=20 where appropriate
+- stop when complete or failed
+- use bounded retry/timeout behavior
+
+Do not create infinite polling.
+
+Handle:
+- 200/complete
+- 202/pending
+- 401 invalid key
+- 429 quota exceeded
+- provider failure
+- timeout
+
+==================================================
+PHASE 2 — SOLDGRAPH SEARCH QUERY
+==================================================
+
+Create a SEARCH query for Knull that is strong but not over-constrained.
+
+Do not reuse the old poor query blindly.
+
+Start with something approximately like:
+
+2026 Topps Chrome Marvel Knull FF-23 Fanfare Green Speckle
+
+The query needs to tolerate seller-title variations such as:
+
+FF-23
+#FF-23
+FF23
+
+Marvel
+Marvel Comics
+
+Green Speckle
+Green Speckle Refractor
+
+serial examples:
+07/99
+20/99
+55/99
+
+Do not require exact word ordering.
+
+If necessary, allow a bounded fallback query such as:
+
+2026 Topps Chrome Knull FF-23 Fanfare
+
+and then:
+
+Knull FF-23 Topps Chrome
+
+Do NOT broaden to generic:
+Knull
+or
+Fanfare
+
+We need high recall without contaminating comps.
+
+==================================================
+PHASE 3 — RESULT MATCHING
+==================================================
+
+Soldgraph returns sold listing rows.
+
+Do not blindly accept every row.
+
+Build a narrow matching layer using the existing card metadata.
+
+For this card, strong positive evidence should include:
+
+VERY STRONG:
+- Knull
+- FF-23 / #FF-23 / FF23
+
+STRONG:
+- 2026
+- Topps Chrome
+- Fanfare
+
+PARALLEL EVIDENCE:
+- Green Speckle
+- /99
+- serial pattern nn/99
+
+OPTIONAL WORDING:
+- Refractor
+- Marvel Comics vs Marvel
+- Insert
+
+Reject obvious contradictions:
+- different card number
+- different character
+- clearly different parallel
+- wrong set/year where confidently detectable
+- unrelated card lots
+- graded cards if current pricing intentionally excludes them
+- multiple-card lots unless current pricing design explicitly allows them
+
+Do not over-filter based on exact wording.
+
+==================================================
+BEST OFFER HANDLING
+==================================================
+
+This is important.
+
+Soldgraph exposes:
+best_offer_accepted
+
+When best_offer_accepted=true:
+
+the displayed price may be the original asking price, NOT the actual accepted sale amount.
+
+Therefore:
+
+DO NOT include those rows in the primary sold-price median unless we explicitly decide otherwise later.
+
+For initial integration:
+
+PRIMARY PRICE CALCULATION:
+use sold listings where:
+best_offer_accepted != true
+
+Use Soldgraph's:
+median_excluding_best_offer
+
+only if it reflects the same filtered listing set we accept.
+
+If our own post-filtering removes listings, calculate our own median from accepted, non-Best-Offer rows.
+
+Still retain/count Best Offer rows separately for diagnostics.
+
+Do not represent Best Offer displayed asking prices as confirmed sold prices.
+
+==================================================
+PRICE CALCULATION
+==================================================
+
+For this development integration:
+
+Use accepted, relevant SOLD listings.
+
+Do NOT apply the current 0.85 active-listing multiplier.
+
+The 0.85 rule belongs to the old asking-price estimate and should NOT be applied to genuine sold listings.
+
+Calculate:
+
+- accepted sold count
+- usable sold count excluding Best Offer
+- median usable sold price
+- low
+- high
+- latest sold date
+- earliest sold date
+
+For initial testing, use item displayed sale price.
+
+Do not silently add shipping unless the existing product explicitly defines Market Price as landed cost.
+
+Report shipping separately during QA.
+
+==================================================
+CACHE / CALL CONSERVATION
+==================================================
+
+The Soldgraph Lite plan provides:
+
+2,000 requests per rolling 30 days.
+
+Do not call Soldgraph on every card-detail page render.
+
+The integration must be cache-aware.
+
+For development, design toward:
+
+- existing cached market price shown immediately
+- Check Value performs a fresh request only when appropriate
+- ordinary page reads use cached price
+- avoid duplicate concurrent refreshes for the same card
+- cache results for a reasonable window, likely 12–24 hours
+
+Do not finalize TTL blindly.
+
+Audit the current cache behavior and recommend the smallest change.
+
+Use one Soldgraph search with count=200 whenever possible.
+
+Do not paginate unless we have a concrete reason.
+
+==================================================
+USAGE MONITORING
+==================================================
+
+Soldgraph has:
+
+GET /v1/usage
+
+This returns usage/remaining request information.
+
+Add a SERVER-SIDE diagnostic/helper for admins or logs if appropriate.
+
+Do NOT show provider quota to normal users.
+
+Do not call /usage on every pricing request.
+
+The goal is simply to make it easy to monitor the 2,000-request plan.
+
+==================================================
+PHASE 4 — DEVELOPMENT TEST
+==================================================
+
+Do not replace production pricing immediately.
+
+First run Soldgraph in a DEVELOPMENT-ONLY test path.
+
+Test Knull FF-23.
+
+Report:
+
+- exact query
+- Soldgraph upstream result count
+- result titles
+- sold dates
+- displayed prices
+- shipping
+- best_offer_accepted
+- listings rejected by our matcher
+- reason for rejection
+- accepted relevant comps
+- number of usable non-Best-Offer comps
+- median
+- low
+- high
+
+Compare those results to the active-user screenshot examples.
+
+==================================================
+REGRESSION / VALIDATION SET
+==================================================
+
+Also test several representative cards already in the database:
+
+1. Knull FF-23 Green Speckle /99
+2. one normal base card
+3. one insert
+4. one numbered parallel
+5. one card with several similar parallel variants
+6. one card where no sold data should reasonably exist
+
+Do not alter those card records.
+
+For each, report whether the sold matches look relevant.
+
+==================================================
+CRITICAL UI TRUTHFULNESS
+==================================================
+
+Do NOT redesign the UI yet.
+
+But if Soldgraph successfully becomes the source:
+
+the Market Price component should eventually reflect genuine sold comps.
+
+Do not continue calling active-listing records "sales."
+
+Do not change UI wording until the development test is approved.
+
+==================================================
+MIGRATION STRATEGY
+==================================================
+
+If Soldgraph tests well:
+
+Recommend the smallest safe transition from:
+
+OLD:
+active eBay listings × 0.85
+
+to:
+
+NEW:
+Soldgraph actual sold listing comps
+
+Do not delete the old integration yet.
+
+Preserve it behind code or feature isolation until the new provider is proven.
+
+We need rollback capability.
+
+Potential strategy:
+
+pricing provider interface:
+- current eBay active estimate
+- Soldgraph sold comps
+
+But do not over-engineer this if a smaller clean abstraction already exists.
+
+==================================================
+SECURITY
+==================================================
+
+SOLDGRAPH_KEY must remain:
+
+- server-only
+- secret/environment based
+- never returned to clients
+- never logged
+- never committed
+
+Check git diff before completion.
+
+==================================================
+MUST NOT DO
+==================================================
+
+- Do not publish.
+- Do not touch Scan to Add.
+- Do not touch DINO.
+- Do not modify image recognition.
+- Do not alter catalog records.
+- Do not alter user collections.
+- Do not change Stripe/Shippo/subscriptions.
+- Do not change affiliate tracking.
+- Do not expose SOLDGRAPH_KEY.
+- Do not scrape eBay.
+- Do not apply the old 0.85 multiplier to sold listings.
+- Do not count Best Offer asking prices as confirmed transaction prices.
+- Do not burn requests unnecessarily.
+- Do not query Soldgraph on every render.
+- Do not delete the old pricing provider yet.
+
+==================================================
+PRESERVE
+==================================================
+
+Preserve:
+
+- existing card-detail design
+- existing Market Price UI for now
+- current pricing integration until Soldgraph is proven
+- current caches/data
+- eBay affiliate links/tracking
+- all Scan to Add work
+- DINO work
+- production behavior
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+After wiring and running DEVELOPMENT tests, tell me:
+
+1. Exact files added/changed.
+2. Confirm SOLDGRAPH_KEY is server-only.
+3. Exact Knull query used.
+4. Number of upstream Soldgraph results.
+5. Number of accepted Knull comps.
+6. Number excluded as Best Offer.
+7. Number rejected as wrong card/parallel.
+8. Accepted Knull sold listings with:
+   - title
+   - sold date
+   - displayed price
+   - Best Offer flag
+9. Calculated Knull median excluding Best Offer.
+10. Low/high.
+11. Whether these results align with the user's visible eBay sold examples.
+12. Results for the representative regression cards.
+13. Estimated Soldgraph request usage under the proposed cache strategy.
+14. Recommended cache TTL.
+15. Recommended production migration path.
+16. Confirm the old 0.85 formula was NOT applied to Soldgraph results.
+17. Confirm no UI was redesigned.
+18. Confirm Scan to Add / DINO was untouched.
+19. Confirm affiliate tracking was untouched.
+20. Confirm nothing was published.
+
+Do not publish or replace the live pricing source until I approve the test results.
