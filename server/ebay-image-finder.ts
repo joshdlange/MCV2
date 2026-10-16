@@ -1,4 +1,5 @@
 import fetch from 'node-fetch';
+import { reserveBrowseRequest } from './pricing/ebay-budget';
 import { v2 as cloudinary } from 'cloudinary';
 import { storage } from './storage';
 import fs from 'fs';
@@ -141,6 +142,7 @@ async function performCOMCSearch(searchQuery: string, accessToken: string): Prom
       'fieldgroups': 'EXTENDED'
     });
 
+    await reserveBrowseRequest();
     const response = await fetch(`${browseApiUrl}?${params}`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -198,6 +200,7 @@ async function performEBaySearch(searchTerms: string): Promise<string | null> {
 
     console.log(`🔍 eBay Browse API search: "${searchTerms}"`);
 
+    await reserveBrowseRequest();
     const response = await fetch(`${browseApiUrl}?${params}`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,

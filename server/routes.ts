@@ -3748,11 +3748,13 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       if (soldgraphEnabled()) return res.json(await soldPricing.read(cardId));
       const pricing = await storage.getCardPricing(cardId);
       if (!pricing) {
-        return res.status(404).json({ message: "No pricing data found" });
+        return res.json({ provider: "legacy", source: "LEGACY_ACTIVE_ESTIMATE", avgPrice: null,
+          salesCount: 0, confidence: "unavailable", lastFetched: null });
       }
 
       res.json({
-        avgPrice: parseFloat(pricing.avgPrice.toString() || "0"),
+        provider: "legacy", source: "LEGACY_ACTIVE_ESTIMATE", confidence: "estimate",
+        avgPrice: Number(pricing.avgPrice)>0 ? Number(pricing.avgPrice) : null,
         salesCount: pricing.salesCount || 0,
         lastFetched: pricing.lastFetched || new Date()
       });
@@ -3778,19 +3780,21 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       await soldPricing.recordDemand(cardId).catch(() => console.warn("Pricing demand recording unavailable"));
       if (soldgraphEnabled()) {
         try { return res.json(await soldPricing.refresh(cardId)); }
-        catch { return res.status(503).json({ message: "Sold pricing refresh unavailable. Cached data is preserved." }); }
+        catch { return res.json({ ...await soldPricing.read(cardId), refreshStatus: "unavailable", message: "Refresh unavailable; best eligible cached price retained." }); }
       }
       const result = await ebayPricingService.forceRefreshCardPricing(cardId);
       
       if (result) {
         res.json({
+          provider: "legacy", source: "LEGACY_ACTIVE_ESTIMATE", confidence: result.avgPrice>0 ? "estimate" : "unavailable",
           avgPrice: result.avgPrice,
           salesCount: result.salesCount,
           lastFetched: result.lastFetched
         });
       } else {
         res.json({
-          avgPrice: 0,
+          provider: "legacy", source: "LEGACY_ACTIVE_ESTIMATE", confidence: "unavailable",
+          avgPrice: null,
           salesCount: 0,
           lastFetched: new Date()
         });
@@ -3824,9 +3828,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
               pricingResults[cardId] = await soldPricing.read(cardId);
               return;
             }
-            const pricing = await ebayPricingService.getCardPricing(cardId);
+            const pricing = await storage.getCardPricing(cardId);
             pricingResults[cardId] = {
-              avgPrice: pricing?.avgPrice || 0,
+              provider: "legacy", source: "LEGACY_ACTIVE_ESTIMATE", confidence: "estimate",
+              avgPrice: Number(pricing?.avgPrice)>0 ? Number(pricing?.avgPrice) : null,
               salesCount: pricing?.salesCount || 0,
               lastFetched: pricing?.lastFetched || new Date()
             };

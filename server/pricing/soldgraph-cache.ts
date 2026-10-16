@@ -17,7 +17,10 @@ export function publicPrice(result: any, refreshedAt: Date | null, expiresAt: Da
 }
 
 export function migrationPrice(sold: ReturnType<typeof publicPrice>, legacy: any) {
-  if (sold.avgPrice != null && sold.avgPrice > 0 && sold.salesCount > 0) return sold;
+  const days = Number(process.env.SOLDGRAPH_DISPLAY_MAX_AGE_DAYS ?? 14);
+  if (!Number.isFinite(days) || days < 1) throw new Error("Invalid SoldGraph display age");
+  const preferred = !!sold.lastFetched && Date.now()-new Date(sold.lastFetched).getTime() <= days*86400000;
+  if (preferred && sold.avgPrice != null && sold.avgPrice > 0 && sold.salesCount > 0) return sold;
   const price = Number(legacy?.avg_price);
   if (Number.isFinite(price) && price > 0) return {
     ...sold, provider: "legacy", source: "LEGACY_ACTIVE_ESTIMATE",
@@ -26,7 +29,8 @@ export function migrationPrice(sold: ReturnType<typeof publicPrice>, legacy: any
     lastFetched: legacy.last_fetched, low: null, high: null,
     earliestSoldDate: null, latestSoldDate: null,
   };
-  return sold;
+  return { ...sold, avgPrice: null, salesCount: 0, confidence: "unavailable",
+    source: "SOLDGRAPH_NO_COMPS", historicalSource: sold.source };
 }
 
 /** Separate shared cache. Old cache and scheduled active-pricing jobs are untouched. */
@@ -63,7 +67,6 @@ export class SoldgraphCache {
     const { rows } = await this.pool.query("SELECT * FROM soldgraph_price_cache WHERE card_id=$1", [cardId]);
     const row = rows[0];
     const sold = publicPrice(row?.result, row?.refreshed_at ?? null, row?.expires_at ?? null);
-    if (sold.salesCount > 0 && sold.avgPrice != null) return sold;
     const legacy = await this.pool.query(`SELECT avg_price,sales_count,last_fetched FROM card_price_cache
       WHERE card_id=$1 ORDER BY last_fetched DESC,id DESC LIMIT 1`, [cardId]);
     return migrationPrice(sold, legacy.rows[0]);

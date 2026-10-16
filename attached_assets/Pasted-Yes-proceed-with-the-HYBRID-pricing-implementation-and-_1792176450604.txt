@@ -1,0 +1,244 @@
+Yes, proceed with the HYBRID pricing implementation and eBay quota safeguards, but make these corrections first.
+
+DO NOT publish.
+DO NOT activate SoldGraph globally.
+DO NOT run any bulk refresh yet.
+
+==================================================
+1. HYBRID PRICING IS THE APPROVED DIRECTION
+==================================================
+
+Keep BOTH providers.
+
+EBAY:
+- broad baseline coverage
+- bulk/background pricing
+- fallback where SoldGraph has never produced usable sold comps
+
+SOLDGRAPH:
+- selective higher-quality sold comps
+- primarily triggered by explicit user Check Value / refresh
+- preferred when usable sold data exists
+
+Do not remove either provider.
+
+==================================================
+2. CORRECT SOLDGRAPH STALENESS BEHAVIOR
+==================================================
+
+Do NOT automatically switch back to the weaker eBay active-listing estimate merely because a SoldGraph result becomes 24 hours old.
+
+Separate:
+
+A. REFRESH ELIGIBILITY
+
+from
+
+B. DISPLAY PREFERENCE
+
+Suggested behavior:
+
+- SoldGraph result becomes eligible for another provider refresh after 24 hours.
+- But the most recent successful SoldGraph sold-comp value remains the preferred displayed price for a longer configurable period.
+
+Start with a configurable SOLDGRAPH_DISPLAY_MAX_AGE_DAYS, with a reasonable default such as 14 days.
+
+During that display period:
+
+- if a valid SoldGraph sold-comp result exists, display it
+- eBay remains stored as the baseline/fallback
+- explicit Check Value may refresh SoldGraph when refresh-eligible
+
+After the maximum display age:
+- if no new SoldGraph result is available, fall back to the valid eBay baseline
+- preserve the stale SoldGraph result historically/diagnostically
+
+Do not hardcode this if there is already an appropriate configuration pattern.
+
+==================================================
+3. CHECK VALUE FLOW
+==================================================
+
+When the user presses Check Value:
+
+1. If SoldGraph result is fresh enough that refresh is not allowed yet:
+   return cached SoldGraph result.
+
+2. If SoldGraph is refresh-eligible:
+   perform quota check and shared lock.
+
+3. Query SoldGraph.
+
+4. If 3+ usable sold comps:
+   store and prefer SoldGraph median.
+
+5. If 1–2 usable comps:
+   store SoldGraph limited-data result and use existing limited-data treatment.
+
+6. If 0 usable sold comps:
+   preserve/display eBay baseline if available.
+
+7. If SoldGraph fails or quota is unavailable:
+   preserve existing prices and return the best eligible fallback.
+
+Never erase a positive eBay baseline because SoldGraph returned no data.
+
+==================================================
+4. NORMAL PAGE READS
+==================================================
+
+Normal card-detail reads must make ZERO provider calls.
+
+Priority:
+
+1. valid preferred SoldGraph value
+2. valid eBay baseline estimate
+3. unavailable
+
+Return the source with the response.
+
+Continue using source states such as:
+
+SOLDGRAPH_SOLD_COMPS
+SOLDGRAPH_LIMITED_DATA
+LEGACY_ACTIVE_ESTIMATE
+SOLDGRAPH_NO_COMPS
+
+==================================================
+5. INVESTIGATE THE 214,246 ACTIVE-CARD COUNT
+==================================================
+
+Before designing a full bulk strategy, explain exactly why production reports:
+
+214,246 active cards
+
+when our prior image/reference catalog discussions were closer to ~77,000 eligible cards.
+
+Break the 214,246 down by whatever is relevant in the actual schema:
+
+- unique physical/catalog cards
+- variations/parallels
+- duplicate records
+- archived equivalents accidentally included
+- cards without images
+- subsets
+- sets
+- any other record category causing the difference
+
+Also report:
+
+- unique active card IDs
+- unique reference-image URLs
+- active cards with usable images
+- active cards eligible for current pricing logic
+- active cards currently owned by at least one user
+- active cards with an existing positive eBay baseline
+
+Do not change catalog data.
+
+==================================================
+6. EBAY BULK PRICING
+==================================================
+
+Keep the existing eBay bulk/backfill capability.
+
+Do NOT run a full 214k-card refresh.
+
+First harden the safeguards:
+
+- shared daily Browse API budget
+- quota checked before EVERY outbound Browse request
+- dedicated/pinned cross-instance lock where required
+- active/non-archived filtering
+- card-level request accounting
+- safe stop before daily quota exhaustion
+- preserve successful cached values on failure
+
+The existing 3,500-call nightly target must not be able to exceed its budget inside a multi-query card.
+
+Other eBay consumers must count against the same shared allowance wherever technically practical.
+
+==================================================
+7. PRIORITIZE EBAY BASELINE COVERAGE
+==================================================
+
+We want eBay to provide broad pricing coverage, but not by blindly processing every database row.
+
+Prioritize eBay baseline refresh approximately as:
+
+1. currently owned cards with no baseline
+2. PC Binder cards with no baseline
+3. newly added cards
+4. cards with an old/expired baseline
+5. other active cards with usable images
+6. remaining eligible cards
+
+If the current nightly job only targets cards with images and no cache, preserve that useful behavior while improving the prioritization.
+
+Do not add new analytics infrastructure.
+
+==================================================
+8. REPORT SAFE BULK CAPACITY
+==================================================
+
+Before executing anything, determine:
+
+- app-specific eBay Browse daily quota if accessible
+- current shared usage if accessible
+- safe nightly call budget
+- estimated cards/night based on ACTUAL observed average queries per card, not just worst case
+- projected time to provide baseline coverage for the meaningful active catalog
+
+If account-specific quota cannot be queried, say so and retain a conservative configured limit.
+
+==================================================
+9. NO BULK SOLDGRAPH
+==================================================
+
+SoldGraph is NOT our mass catalog coverage provider.
+
+Keep its 2,000-call rolling budget primarily for:
+
+- explicit user Check Value actions
+- targeted problem cards
+- selective future operator refreshes
+
+Do not run SoldGraph across the catalog.
+
+==================================================
+MUST NOT DO
+==================================================
+
+- Do not publish.
+- Do not run eBay bulk pricing yet.
+- Do not run SoldGraph bulk pricing.
+- Do not enable PRICING_PROVIDER globally.
+- Do not delete either provider.
+- Do not redesign the UI.
+- Do not touch Scan to Add or DINO.
+- Do not touch affiliate tracking.
+- Do not change catalog records.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+After implementing the routing/safety changes and performing read-only analysis, tell me:
+
+1. Exact hybrid display priority.
+2. SoldGraph refresh age.
+3. SoldGraph maximum preferred display age.
+4. Exact Check Value flow.
+5. Why production reports 214,246 active cards.
+6. Meaningful pricing-eligible catalog count.
+7. Active cards with images.
+8. Active cards owned by users.
+9. Active cards already carrying positive eBay baselines.
+10. eBay shared quota protection implemented.
+11. Estimated average Browse calls/card from existing data/logs if measurable.
+12. Safe nightly baseline-refresh size.
+13. Estimated time to get broad baseline coverage.
+14. Confirm no bulk job was run.
+15. Confirm SoldGraph provider was not globally enabled.
+16. Confirm nothing was published.
+17. Confirm Scan to Add/DINO were untouched.

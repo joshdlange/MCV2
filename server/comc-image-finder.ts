@@ -74,6 +74,7 @@ async function searchCOMCForCardImage(setName: string, cardName: string, cardNum
       sort: 'price' // Sort by price to get consistent results
     });
 
+    await (await import('./pricing/ebay-budget')).reserveBrowseRequest();
     const response = await fetch(`${searchUrl}?${params}`, {
       method: 'GET',
       headers: {

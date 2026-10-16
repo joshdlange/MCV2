@@ -1,4 +1,6 @@
-import { db } from "./db";
+import { db, pool } from "./db";
+import { randomUUID } from "node:crypto";
+import { ebayRequestContext, reserveBrowseRequest } from "./pricing/ebay-budget";
 import { cards, cardPriceCache, cardSets } from "../shared/schema";
 import { eq, and, lt, or, isNull, isNotNull, asc, sql } from "drizzle-orm";
 import { ebayOAuthService } from './ebay-oauth';
@@ -320,6 +322,7 @@ export class EbayPricingService {
       
       console.log(`📤 Making Browse API request...`);
       
+      await reserveBrowseRequest();
       this.totalRequestCount++; // count Browse API calls toward the call budget
       const response = await fetch(url, {
         method: 'GET',
@@ -403,6 +406,7 @@ export class EbayPricingService {
       const url = `${this.browseApiUrl}/item_summary/search?${params.toString()}`;
       console.log(`🔄 FALLBACK Browse API URL: ${url}`);
       
+      await reserveBrowseRequest();
       this.totalRequestCount++; // count fallback Browse API calls toward the call budget
       const response = await fetch(url, {
         method: 'GET',
@@ -804,6 +808,15 @@ export class EbayPricingService {
    * Fetch fresh pricing data and update cache with improved error handling
    */
   async fetchAndCacheCardPricing(cardId: number): Promise<{ avgPrice: number; salesCount: number; lastFetched: Date } | null> {
+    if (ebayRequestContext.getStore()?.cardId !== cardId) {
+      return ebayRequestContext.run({ ...ebayRequestContext.getStore(), cardId },
+        () => this.fetchAndCacheCardPricing(cardId));
+    }
+    const eligible = await pool.query(`SELECT c.id FROM cards c
+      JOIN card_sets s ON s.id=c.set_id JOIN main_sets m ON m.id=s.main_set_id
+      WHERE c.id=$1 AND c.archived_at IS NULL AND s.archived_at IS NULL AND s.is_active
+      AND m.archived_at IS NULL AND m.is_active`,[cardId]);
+    if (!eligible.rowCount) return null;
     try {
       // Get card details including insert flag and description
       const [card] = await db
@@ -1149,6 +1162,10 @@ export function getNightlyBackfillStatus() {
 }
 
 export async function runNightlyPricingBackfill(maxCards: number = NIGHTLY_BACKFILL_LIMIT): Promise<void> {
+  if (!ebayRequestContext.getStore()?.runId) {
+    return ebayRequestContext.run({runId:randomUUID(),limit:NIGHTLY_BACKFILL_CALL_BUDGET,stop:{exhausted:false}},
+      () => runNightlyPricingBackfill(maxCards));
+  }
   if (nightlyBackfillRunning) {
     console.warn('[PricingBackfill] Previous run still in progress — skipping');
     return;
@@ -1160,27 +1177,25 @@ export async function runNightlyPricingBackfill(maxCards: number = NIGHTLY_BACKF
   let callsUsed = 0;
   let lockAcquired = false;
 
+  const lockConnection = await pool.connect();
   try {
     // Cross-instance guard: only one instance may run the nightly backfill
-    const lockResult = await db.execute(
-      sql`SELECT pg_try_advisory_lock(hashtext(${BACKFILL_LOCK_KEY})) AS locked`
-    );
+    const lockResult = await lockConnection.query("SELECT pg_try_advisory_lock(hashtext($1)) AS locked",[BACKFILL_LOCK_KEY]);
     lockAcquired = Boolean((lockResult.rows[0] as any)?.locked);
     if (!lockAcquired) {
       console.log('[PricingBackfill] Another instance holds the backfill lock — skipping on this instance');
       return;
     }
 
-    const targets = await db
-      .select({ cardId: cards.id })
-      .from(cards)
-      .leftJoin(cardPriceCache, eq(cards.id, cardPriceCache.cardId))
-      .where(and(
-        isNull(cardPriceCache.cardId),      // never priced
-        isNotNull(cards.frontImageUrl)       // only cards that have an image
-      ))
-      .orderBy(asc(cards.id))
-      .limit(maxCards);
+    const targets = (await lockConnection.query(`SELECT c.id AS "cardId" FROM cards c
+      JOIN card_sets s ON s.id=c.set_id JOIN main_sets m ON m.id=s.main_set_id
+      WHERE c.archived_at IS NULL AND s.archived_at IS NULL AND s.is_active
+      AND m.archived_at IS NULL AND m.is_active AND c.front_image_url ~ '^https?://'
+      AND NOT EXISTS(SELECT 1 FROM card_price_cache p WHERE p.card_id=c.id)
+      ORDER BY CASE WHEN EXISTS(SELECT 1 FROM user_collections u WHERE u.card_id=c.id AND u.quantity>0) THEN 1
+        WHEN EXISTS(SELECT 1 FROM pc_binder_cards b WHERE b.card_id=c.id) THEN 2
+        WHEN c.created_at>now()-interval '7 days' THEN 3 ELSE 5 END,c.created_at DESC,c.id
+      LIMIT $1`,[maxCards])).rows;
 
     if (targets.length === 0) {
       console.log('[PricingBackfill] No unpriced cards with images remain — nothing to do');
@@ -1195,6 +1210,7 @@ export async function runNightlyPricingBackfill(maxCards: number = NIGHTLY_BACKF
     const callsAtStart = ebayPricingService.getTotalRequestCount();
 
     for (const { cardId } of targets) {
+      if (ebayRequestContext.getStore()?.stop?.exhausted) break;
       callsUsed = ebayPricingService.getTotalRequestCount() - callsAtStart;
       if (callsUsed >= NIGHTLY_BACKFILL_CALL_BUDGET) {
         console.log(`[PricingBackfill] Call budget reached (${callsUsed} calls after ${attempted} cards) — stopping for tonight`);
@@ -1222,11 +1238,14 @@ export async function runNightlyPricingBackfill(maxCards: number = NIGHTLY_BACKF
     nightlyBackfillLastRun = { at: new Date(), attempted, succeeded, failed, apiCalls: callsUsed };
     if (lockAcquired) {
       try {
-        await db.execute(sql`SELECT pg_advisory_unlock(hashtext(${BACKFILL_LOCK_KEY}))`);
+        await lockConnection.query("SELECT pg_advisory_unlock(hashtext($1))",[BACKFILL_LOCK_KEY]);
       } catch (unlockError) {
         console.error('[PricingBackfill] Failed to release advisory lock:', unlockError);
+        lockConnection.release(true);
+        return;
       }
     }
+    lockConnection.release();
   }
 }
 

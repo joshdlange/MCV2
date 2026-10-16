@@ -4,6 +4,7 @@ import pg from "pg";
 import { SoldgraphCache, migrationPrice, publicPrice } from "../pricing/soldgraph-cache";
 import { SoldgraphBulk, parseUsage, safeSearchCount } from "../pricing/soldgraph-bulk";
 import type { SoldgraphClient } from "../pricing/soldgraph-client";
+import { reserveBrowseRequest, ebayRequestContext } from "../pricing/ebay-budget";
 
 test("source selection preserves legacy before refresh and on empty results without inventing sold comps", () => {
   const legacy = { avg_price: "42.50", sales_count: 5, last_fetched: new Date() };
@@ -27,6 +28,14 @@ test("quota math uses per-search credits, preserves reserve and fails closed on 
   // Documented batch example: two completed items (including cache hit) cost two, not one.
   const items = [{status:"complete",credits:1},{status:"complete",credits:1},{status:"rejected",credits:0}];
   assert.equal(items.reduce((n,item) => n+item.credits,0),2);
+});
+test("refresh eligibility does not expire display preference until fourteen days", () => {
+  const legacy={avg_price:20,sales_count:3,last_fetched:new Date()};
+  for (const days of [2,13,15]) {
+    const sold=publicPrice({usableCount:4,median:60},new Date(Date.now()-days*86400000),new Date(0));
+    assert.equal(sold.stale,true);
+    assert.equal(migrationPrice(sold,legacy).avgPrice,days<14 ? 60 : 20);
+  }
 });
 test("isolated PostgreSQL migration, dry run, reserve, resumability and cross-instance locking",
   { skip: process.env.NODE_ENV !== "development" }, async () => {
@@ -58,6 +67,11 @@ test("isolated PostgreSQL migration, dry run, reserve, resumability and cross-in
       INSERT INTO user_collections VALUES(2,1);
       INSERT INTO pc_binder_cards VALUES(4);`);
     const cache = new SoldgraphCache(pool,fake), bulk = new SoldgraphBulk(pool,cache,fake);
+    const attempts = await ebayRequestContext.run({cardId:1,runId:"test",limit:2},
+      ()=>Promise.allSettled(Array.from({length:5},()=>reserveBrowseRequest(pool,
+        async()=>({remaining:5000,reset:new Date(Date.now()+86400000).toISOString()})))));
+    assert.equal(attempts.filter(a=>a.status==="fulfilled").length,2,"per-run guard enforced inside concurrent multi-query card");
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM ebay_browse_reservations")).rows[0].n,2);
     assert.equal((await cache.read(1)).source,"LEGACY_ACTIVE_ESTIMATE");
     await cache.recordDemand(1);
     const candidates = await bulk.candidates(10);

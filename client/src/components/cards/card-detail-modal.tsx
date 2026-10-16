@@ -853,7 +853,7 @@ export function CardDetailModal({
                             await queryClient.refetchQueries({ queryKey: ["/api/card-pricing", card.id] });
                             
                             if (result?.provider === "legacy") {
-                              toast({ title: "Legacy estimate retained", description: "No usable sold comps yet. Existing active-listing estimate preserved." });
+                              toast({ title: "eBay baseline", description: result.avgPrice == null ? "No usable baseline available." : "Estimated from current listings; not sold comps." });
                             } else if (result?.provider === "soldgraph") {
                               toast({ title: result.refreshing ? "Pricing refresh in progress" : result.confidence === "unavailable" ? "Insufficient sold data" : "Pricing updated",
                                 description: result.avgPrice == null ? "No usable sold comps available." :

@@ -1,4 +1,5 @@
 import fetch from 'node-fetch';
+import { reserveBrowseRequest } from './pricing/ebay-budget';
 import { ebayOAuthService } from './ebay-oauth';
 
 interface eBaySearchResponse {
@@ -83,6 +84,7 @@ export class eBayBrowseApi {
         sort: 'newlyListed', // Sort by newest for fresh market data
       });
 
+      await reserveBrowseRequest();
       const response = await fetch(`${this.baseUrl}/item_summary/search?${searchParams}`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -194,6 +196,7 @@ export class eBayBrowseApi {
         sort: 'price'
       });
 
+      await reserveBrowseRequest();
       const response = await fetch(`${this.baseUrl}/item_summary/search?${searchParams}`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -222,6 +225,7 @@ export class eBayBrowseApi {
     try {
       const accessToken = await ebayOAuthService.getAccessToken();
       
+      await reserveBrowseRequest();
       const response = await fetch(`${this.baseUrl}/item/${itemId}`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
