@@ -1,0 +1,183 @@
+CHANGE OF PRICING STRATEGY — KEEP BOTH PROVIDERS
+
+Do not proceed with the assumption that SoldGraph will replace our existing eBay pricing source across the catalog.
+
+We want a HYBRID pricing strategy.
+
+The goal is:
+
+1. Use the existing eBay active-listing pricing source for broad catalog coverage.
+2. Use SoldGraph selectively for higher-quality sold-comparable pricing when users explicitly request a refresh or when a card needs better pricing.
+3. Preserve both providers.
+
+==================================================
+CORE STRATEGY
+==================================================
+
+EBAY EXISTING SOURCE:
+
+Use for:
+- broad/bulk catalog pricing
+- baseline pricing coverage
+- cards that have never had a SoldGraph refresh
+- fallback when SoldGraph has insufficient data
+
+SOLDGRAPH:
+
+Use for:
+- explicit user "Check Value" / refresh actions
+- cards with suspicious/weak pricing
+- cards with no usable baseline price
+- potentially selected high-priority cards later
+
+Do NOT use SoldGraph for catalog-wide bulk refresh.
+
+==================================================
+DISPLAY PRIORITY
+==================================================
+
+For each card:
+
+A. If there is a valid, reasonably fresh SoldGraph sold-comp value:
+   DISPLAY SoldGraph value.
+
+B. Otherwise, if there is a valid legacy eBay active-listing estimate:
+   DISPLAY the legacy estimate.
+
+C. Otherwise:
+   show unavailable.
+
+If SoldGraph returns zero or insufficient usable comps:
+DO NOT erase a valid existing eBay estimate.
+
+==================================================
+SOURCE TRACKING
+==================================================
+
+Continue tracking internally:
+
+SOLDGRAPH_SOLD_COMPS
+SOLDGRAPH_LIMITED_DATA
+LEGACY_ACTIVE_ESTIMATE
+SOLDGRAPH_NO_COMPS
+
+The displayed price response must always know which source generated it.
+
+Do not pretend active-listing estimates are sold comps.
+
+==================================================
+EBAY BULK REFRESH
+==================================================
+
+Audit the CURRENT existing eBay pricing updater.
+
+Determine:
+
+1. Whether it already supports bulk refresh.
+2. Whether it can safely refresh the full eligible active catalog.
+3. eBay API quota/cost implications.
+4. Current cache TTL.
+5. Current concurrency/rate limits.
+6. Whether archived/inactive cards can be excluded.
+7. Approximately how many active catalog cards actually need refresh.
+
+If safe and within existing eBay API limits, create or preserve a bulk baseline pricing job using the EXISTING eBay source.
+
+Do not run it yet.
+
+First report:
+- eligible card count
+- estimated API calls
+- estimated runtime
+- API quota impact
+
+==================================================
+SOLDGRAPH REFRESH BEHAVIOR
+==================================================
+
+The user's explicit Check Value action should prefer SoldGraph.
+
+When the user presses Check Value:
+
+1. If SoldGraph cache is fresh:
+   return it without a provider call.
+
+2. If SoldGraph cache is stale/missing:
+   query SoldGraph.
+
+3. If SoldGraph returns 3+ usable sold comps:
+   use SoldGraph sold median as preferred Market Price.
+
+4. If SoldGraph returns 1–2 usable sold comps:
+   use the existing limited-data handling.
+
+5. If SoldGraph returns no usable comps:
+   preserve/display the existing eBay baseline estimate if available.
+
+Do not overwrite a good baseline with null.
+
+==================================================
+SOLDGRAPH CREDIT STRATEGY
+==================================================
+
+SoldGraph calls are valuable and limited.
+
+Do not spend them on every catalog card.
+
+Use SoldGraph primarily for user-driven refreshes.
+
+Retain the manual operator bulk tool only for selective cases, but do not use SoldGraph for mass catalog coverage.
+
+The 2,000-call allowance should be reserved primarily for:
+- real user requests
+- high-value problem cards
+- targeted QA
+- selective priority refreshes
+
+==================================================
+IMPORTANT UI RULE
+==================================================
+
+Do not redesign the UI yet.
+
+But backend responses must expose enough source/state information so later we can accurately label:
+
+SoldGraph:
+based on recent sold comps
+
+Legacy eBay:
+estimated from current listings
+
+Do not call legacy active-listing counts "sales."
+
+==================================================
+MUST NOT DO
+==================================================
+
+- Do not turn SoldGraph into the catalog-wide pricing provider.
+- Do not remove existing eBay pricing.
+- Do not run SoldGraph across the catalog.
+- Do not publish yet.
+- Do not touch Scan to Add / DINO.
+- Do not touch affiliate tracking.
+- Do not change pricing UI layout.
+- Do not delete existing prices.
+
+==================================================
+NEXT RESPONSE
+==================================================
+
+Before running any bulk operations, tell me:
+
+1. Whether the existing eBay source can bulk-price the active catalog.
+2. How many production-active cards would qualify.
+3. Estimated eBay API calls required.
+4. Any eBay quota/rate-limit concern.
+5. Current bulk-pricing behavior if one already exists.
+6. Proposed hybrid flow for normal page reads.
+7. Proposed flow when user presses Check Value.
+8. How SoldGraph values override/fallback to eBay estimates.
+9. How long SoldGraph results should remain preferred.
+10. Confirm no bulk refresh was run.
+11. Confirm no provider switches were enabled.
+12. Confirm nothing was published.
