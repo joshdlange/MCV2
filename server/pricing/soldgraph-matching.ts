@@ -22,6 +22,29 @@ function subsetWords(card: PricingCard, subset = card.subset): string[] {
 }
 const escaped = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+// Verified product-family alias, NOT a global manufacturer equivalence.
+// Upper Deck's 2020 checklist identifies What If Level 2 (#37–63) as /999:
+// https://upperdeck.com/checklist/2020-marvel-masterpieces-checklist
+function is2020Masterpieces(card: PricingCard) {
+  return card.year === 2020 &&
+    /^(?:2020 )?(?:skybox|upper deck) marvel masterpieces$/.test(norm(card.parent));
+}
+function familyTitle(card: PricingCard, text: string) {
+  const title = norm(text);
+  return is2020Masterpieces(card)
+    ? title.replace(/\b(?:skybox|upper deck) marvel masterpieces\b/g, "marvel masterpieces")
+    : title;
+}
+function expectedSerial(card: PricingCard) {
+  const explicit = `${card.subset} ${card.variation || ""}`.match(/\/\s*(\d+)/)?.[1];
+  if (explicit) return explicit;
+  const subset = norm(card.subset).replace(`${norm(card.parent)} `, "");
+  if (is2020Masterpieces(card) && /^what if(?: level 2)?$/.test(subset) &&
+      !card.variation && /^\d+$/.test(card.cardNumber) &&
+      Number(card.cardNumber) >= 37 && Number(card.cardNumber) <= 63) return "999";
+  return undefined;
+}
+
 export function buildSoldQueries(card: PricingCard): string[] {
   if (!card.name || !card.cardNumber || !card.parent) throw new Error("Missing card identity metadata");
   const parent = card.parent.replace(/\b\d{4}\b/g, "").replace(/\bComics\b/gi, "").trim();
@@ -37,7 +60,7 @@ export function buildSoldQueries(card: PricingCard): string[] {
 
 export function rejectionReason(card: PricingCard, row: SoldRow): string | null {
   const original = row.title || "";
-  const title = norm(original);
+  const title = familyTitle(card, original);
   if (!tokens(card.name).every(w => has(title, w))) return "character_mismatch";
   const numberParts = card.cardNumber.match(/[a-zA-Z]+|\d+/g) || [];
   const numberPattern = new RegExp(`(?:^|[^a-z0-9])#?${numberParts.map(escaped).join("[\\s-]*")}(?![a-z0-9])`, "i");
@@ -48,11 +71,11 @@ export function rejectionReason(card: PricingCard, row: SoldRow): string | null 
       /\b\d+\s*(?:card lot|cards|pcs|count)\b/.test(title)) return "lot_or_multi_card";
   const years = original.match(/\b(?:19|20)\d{2}\b/g) || [];
   if (years.some(y => Number(y) !== card.year)) return "wrong_year";
-  const parentWords = tokens(card.parent).filter(w => !/^\d+$/.test(w) && w !== "comics");
+  const parentWords = tokens(familyTitle(card, card.parent)).filter(w => !/^\d+$/.test(w) && w !== "comics");
   if (!parentWords.every(w => has(title, w))) return "insufficient_set_evidence";
 
   const expected = subsetWords(card, `${card.subset} ${card.variation || ""}`);
-  const serial = `${card.subset} ${card.variation || ""}`.match(/\/\s*(\d+)/)?.[1];
+  const serial = expectedSerial(card);
   const observedSerials = [...original.matchAll(/\/\s*(\d+)\b/g)].map(m => m[1]);
   if (observedSerials.some(n => n !== serial)) return "wrong_serial_parallel";
   // Sibling metadata provides generic parallel contradiction evidence, not a Knull rule.
@@ -69,6 +92,10 @@ export function rejectionReason(card: PricingCard, row: SoldRow): string | null 
   }
   const explicitVariant = expected.every(w => has(title, w));
   const serialMatch = !!serial && observedSerials.includes(serial);
+  // Inferred checklist numbering never substitutes for explicit subset evidence.
+  if (is2020Masterpieces(card) && serial === "999" &&
+      !`${card.subset} ${card.variation || ""}`.includes("/999") && !explicitVariant)
+    return "insufficient_parallel_evidence";
   if (!explicitVariant && !serialMatch) return "insufficient_parallel_evidence";
   if (serial && !serialMatch && !expected.length) return "missing_serial_evidence";
   return null;
