@@ -1,0 +1,293 @@
+MARVEL CARD VAULT — ACTIVATE SOLDGRAPH FOR SUPER_HERO CHECK VALUE FLOW
+
+We need to make the live Check Value behavior match the approved hybrid pricing logic.
+
+This is the exact intended logic:
+
+SUPER_HERO user presses Check Value
+→ attempt SoldGraph first
+→ if SoldGraph returns usable sold-comparison data, use SoldGraph
+→ if SoldGraph returns no usable comps, fails, or cannot refresh, fall back to the existing eBay baseline estimate
+→ never erase a valid eBay baseline because SoldGraph has no data
+
+This is the logic I want implemented and verified.
+
+Do not broaden scope beyond pricing.
+
+==================================================
+CORE USER FLOW
+==================================================
+
+For SUPER_HERO users:
+
+When they press Check Value:
+
+1. Check for a fresh SoldGraph cached result for that card.
+
+2. If fresh SoldGraph data exists:
+   return/display that SoldGraph value immediately.
+   Do not call SoldGraph again unnecessarily.
+
+3. If SoldGraph data is stale or missing:
+   perform the normal global quota / lock / cache checks.
+
+4. Attempt a SoldGraph refresh.
+
+5. If SoldGraph returns 3+ usable sold comps:
+   use SoldGraph sold median as the preferred Market Price.
+
+6. If SoldGraph returns 1–2 usable sold comps:
+   use the existing limited-data handling.
+   Keep it clearly identified internally as limited sold data.
+
+7. If SoldGraph returns 0 usable sold comps:
+   DO NOT return $0.
+   DO NOT erase existing pricing.
+   Fall back to the current eBay baseline estimate if one exists.
+
+8. If SoldGraph errors, times out, quota is blocked, or provider access fails:
+   fall back to the current eBay baseline estimate if one exists.
+
+9. If neither SoldGraph nor eBay has a usable value:
+   return unavailable / insufficient data.
+
+==================================================
+IMPORTANT DISPLAY PRIORITY
+==================================================
+
+For SUPER_HERO after Check Value:
+
+Priority should be:
+
+1. SOLDGRAPH_SOLD_COMPS
+2. SOLDGRAPH_LIMITED_DATA
+3. LEGACY_ACTIVE_ESTIMATE
+4. UNAVAILABLE
+
+Do not let a failed SoldGraph refresh wipe out the eBay baseline.
+
+==================================================
+NORMAL PAGE LOAD BEHAVIOR
+==================================================
+
+Normal card-detail page loads should NOT automatically call SoldGraph.
+
+For normal reads:
+
+1. If a preferred SoldGraph result is already cached and within the configured display-valid window:
+   show it.
+
+2. Otherwise:
+   show the eBay baseline if available.
+
+3. Otherwise:
+   unavailable.
+
+No provider call on ordinary page render.
+
+==================================================
+SUPER_HERO ENTITLEMENT
+==================================================
+
+SUPER_HERO users have NO user-level SoldGraph refresh cap.
+
+Do not apply:
+- Side Kick 20-lifetime limit
+- daily limit
+- monthly limit
+- hidden user quota
+
+However, SUPER_HERO still respects global safety controls:
+
+- SoldGraph remaining account quota
+- safety reserve
+- shared card lock
+- cache TTL
+- concurrent-request deduplication
+- abuse / endpoint protection
+
+If the global provider reserve blocks SoldGraph:
+fall back to eBay baseline.
+Do NOT tell the user they personally hit a limit.
+
+==================================================
+SIDE KICK PRESERVATION
+==================================================
+
+Preserve the existing Side Kick logic:
+
+- 20 lifetime provider-consuming SoldGraph refreshes
+- cached requests do not count
+- normal page views do not count
+- after 20, a new provider-consuming refresh triggers the existing SUPER_HERO upgrade flow
+
+Do not change this behavior.
+
+==================================================
+EBAY FALLBACK
+==================================================
+
+The eBay provider remains the broad baseline provider.
+
+Preserve the existing eBay price/cache for every card.
+
+SoldGraph is an enhancement, not a replacement of the stored eBay baseline.
+
+For any card:
+
+- successful SoldGraph sold comps can override the displayed value
+- SoldGraph no-comps/failure must NOT delete or null the eBay baseline
+- eBay baseline remains available for fallback and rollback
+
+==================================================
+KNULL / WOLVERINE / NICK FURY QA
+==================================================
+
+After wiring this behavior, test the live flow carefully using these representative cards:
+
+1. Knull FF-23
+   2026 Topps Chrome Marvel Comics
+   Fanfare Green Speckle /99
+
+2. Wolverine #82
+   2024 Marvel Masterpieces
+   Nahuel Grego
+
+3. Nick Fury #52
+   2020 Marvel Masterpieces
+   What If
+
+For each, report:
+
+- current eBay baseline value
+- whether SoldGraph was called
+- exact SoldGraph query
+- upstream sold-result count
+- accepted sold comps
+- Best Offer exclusions
+- SoldGraph median
+- final displayed value
+- final source state
+
+If SoldGraph returns no usable comps:
+confirm the eBay baseline remained visible.
+
+==================================================
+SOURCE STATES
+==================================================
+
+Continue using clear internal source states:
+
+SOLDGRAPH_SOLD_COMPS
+SOLDGRAPH_LIMITED_DATA
+LEGACY_ACTIVE_ESTIMATE
+SOLDGRAPH_NO_COMPS
+
+If SoldGraph returns no comps but eBay baseline is displayed:
+the displayed source should clearly remain LEGACY_ACTIVE_ESTIMATE.
+
+Do not mislabel that fallback as sold data.
+
+==================================================
+UI
+==================================================
+
+Do not redesign the pricing UI.
+
+Keep the existing layout.
+
+Only ensure that the response state supports accurate wording.
+
+Do not expose:
+- SoldGraph
+- provider names
+- API credits
+- quotas
+
+to normal users.
+
+==================================================
+CACHE / REFRESH BEHAVIOR
+==================================================
+
+Preserve:
+
+- 24-hour SoldGraph refresh eligibility
+- longer SoldGraph preferred display window if already implemented
+- shared PostgreSQL cache
+- cross-instance locking
+- stale-value preservation
+- cooldown after provider failure
+
+Do not call SoldGraph repeatedly for the same card within the fresh-cache window.
+
+==================================================
+MUST DO
+==================================================
+
+- Wire SUPER_HERO Check Value to SoldGraph first.
+- Fall back to eBay if SoldGraph has no usable data.
+- Preserve all existing eBay baseline prices.
+- Keep ordinary page reads provider-free.
+- Keep Side Kick 20-lifetime logic unchanged.
+- Keep global quota safeguards.
+- Verify representative cards.
+- Keep source tracking accurate.
+
+==================================================
+MUST NOT DO
+==================================================
+
+- Do not remove eBay pricing.
+- Do not make SoldGraph the catalog-wide bulk provider.
+- Do not run a bulk SoldGraph refresh.
+- Do not wipe baseline prices.
+- Do not return $0 just because SoldGraph returns no comps.
+- Do not impose a SUPER_HERO user limit.
+- Do not redesign pricing UI.
+- Do not touch Scan to Add.
+- Do not touch DINO.
+- Do not change affiliate tracking.
+- Do not change catalog records.
+- Do not change subscriptions/billing.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+After implementation and testing, report:
+
+1. Confirm SUPER_HERO Check Value now attempts SoldGraph first.
+2. Exact SoldGraph fallback behavior.
+3. Confirm eBay remains the fallback baseline.
+4. Confirm SoldGraph no-comps does not erase eBay pricing.
+5. Confirm ordinary page loads do not trigger SoldGraph.
+6. Confirm SUPER_HERO has no user-level refresh cap.
+7. Confirm Side Kick 20-lifetime logic is unchanged.
+8. Knull:
+   - eBay baseline
+   - SoldGraph median
+   - final displayed value
+   - final source
+9. Wolverine #82:
+   - eBay baseline
+   - SoldGraph median
+   - final displayed value
+   - final source
+10. Nick Fury #52:
+   - eBay baseline
+   - SoldGraph median
+   - final displayed value
+   - final source
+11. Confirm global quota safeguards remain active.
+12. Confirm no bulk SoldGraph refresh ran.
+13. Confirm Scan to Add / DINO untouched.
+14. Confirm affiliate tracking untouched.
+15. Confirm whether this is live/published or still development-only.
+
+The required business logic is simple:
+
+SUPER_HERO PRESSES CHECK VALUE
+→ SOLDGRAPH FIRST
+→ IF GOOD SOLD DATA EXISTS, USE IT
+→ IF NOT, FALL BACK TO EBAY BASELINE

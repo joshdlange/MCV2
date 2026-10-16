@@ -1,7 +1,9 @@
 # Market Price entitlement and Value Scout
 
-Activation/publishing remain OFF. No paid SoldGraph searches or bulk jobs were
-run for this implementation.
+`PRICING_PROVIDER=soldgraph` is now configured in the shared environment for the
+approved selective Check Value flow. Production requires republishing; no publish
+was performed. Two targeted live provider searches were used for verification
+(Wolverine and Nick Fury); Knull reused fresh cached data. No bulk job ran.
 
 ## Account entitlement
 
@@ -40,6 +42,12 @@ retry spends another credit. Global quota accounting remains conservative separa
 30 explicit refresh attempts/user/minute and 120/IP/minute across instances. IPs
 are hashed for the throttle key; expired throttle rows are removed after a day.
 These abuse protections are not subscription entitlement caps.
+
+Explicit uncached refreshes fetch account usage when the shared quota snapshot
+is missing or older than five minutes. Invalid/unreachable quota fails closed,
+returning the eligible cached sold price or eBay baseline via the refresh fallback.
+The default reserve is 100; recent reservations are conservatively subtracted
+from reported remaining usage. Ordinary reads do not fetch quota or sold data.
 
 ## Badge
 

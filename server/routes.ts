@@ -3783,16 +3783,9 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       // A small pricing-demand signal, not view analytics. Failure must not break legacy pricing.
       await soldPricing.recordDemand(cardId).catch(() => console.warn("Pricing demand recording unavailable"));
       if (soldgraphEnabled()) {
-        try {
-          const price=await soldPricing.refresh(cardId,(req as any).user.id);
-          await awardValueScout((req as any).user.id,price);
-          return res.json(price);
-        }
-        catch {
-          const price=await soldPricing.read(cardId);
-          await awardValueScout((req as any).user.id,price);
-          return res.json({ ...price, refreshStatus: "unavailable", message: "Refresh unavailable; best eligible cached price retained." });
-        }
+        const price=await soldPricing.refreshWithFallback(cardId,(req as any).user.id);
+        await awardValueScout((req as any).user.id,price);
+        return res.json(price);
       }
       const result = await ebayPricingService.forceRefreshCardPricing(cardId);
       await awardValueScout((req as any).user.id,result);

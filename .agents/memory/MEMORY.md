@@ -52,3 +52,4 @@
 - [Catalog label readability](catalog-label-readability.md) — show full subset names while keeping compact, aligned tiles; modest changes rather than a redesign.
 - [Collection value policy](collection-value-policy.md) — positive cached market prices only; quantity-inclusive totals; visitor values limited to public shared collections.
 - [Golden Anniversary checklist](golden-anniversary-checklist.md) — owner expects all 150 numbered cards in the set and its other base subsets; disregard era headings, not cards.
+- [Hybrid pricing policy](hybrid-pricing-policy.md) — selective SoldGraph-first Check Value approved; preserve baseline fallback, quiet Side Kick allowance, and global safeguards.

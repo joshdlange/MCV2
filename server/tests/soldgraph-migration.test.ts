@@ -37,6 +37,18 @@ test("refresh eligibility does not expire display preference until fourteen days
     assert.equal(migrationPrice(sold,legacy).avgPrice,days<14 ? 60 : 20);
   }
 });
+test("representative production baselines survive empty sold comparisons", () => {
+  for (const value of [462.68,425]) {
+    const price=migrationPrice(publicPrice({usableCount:0},new Date(),new Date()),{
+      avg_price:value,sales_count:1,last_fetched:new Date()
+    });
+    assert.equal(price.avgPrice,value);
+    assert.equal(price.source,"LEGACY_ACTIVE_ESTIMATE");
+  }
+  const missing=migrationPrice(publicPrice({usableCount:0},new Date(),new Date()),{avg_price:0});
+  assert.equal(missing.avgPrice,null);
+  assert.equal(missing.confidence,"unavailable");
+});
 test("isolated PostgreSQL migration, dry run, reserve, resumability and cross-instance locking",
   { skip: process.env.NODE_ENV !== "development" }, async () => {
   const schema = `sg_test_${process.pid}_${Date.now()}`;
@@ -97,6 +109,7 @@ test("isolated PostgreSQL migration, dry run, reserve, resumability and cross-in
       [(completed as any).jobId])).rows[0].status,"uncertain","interrupted requests are not automatically reissued");
     // Remove isolated guard, then verify per-card lock across two service instances.
     await pool.query("DELETE FROM soldgraph_quota_snapshot");
+    remaining=2000;
     await Promise.all([cache.refresh(5),new SoldgraphCache(pool,fake).refresh(5)]);
     assert.equal(searches,4,"only one search for concurrent card refresh");
     const held = await pool.connect();
@@ -141,8 +154,26 @@ test("isolated PostgreSQL migration, dry run, reserve, resumability and cross-in
     const ambiguous=new SoldgraphCache(pool,{search:async()=>{throw new SoldgraphError("timeout");}} as unknown as SoldgraphClient);
     await assert.rejects(ambiguous.refresh(18,1));
     assert.equal(await used(),2,"ambiguous timeout conservatively retains reservation");
-    await pool.query("INSERT INTO soldgraph_quota_snapshot VALUES(1,100,100,999999,now())");
+    await pool.query("UPDATE soldgraph_quota_snapshot SET remaining=100,reserve=100,baseline=999999,captured_at=now()");
     await assert.rejects(cache.refresh(19,2),/safety reserve/);
+    await pool.query("UPDATE soldgraph_price_cache SET expires_at=now()-interval '1 second',retry_after=NULL WHERE card_id=3");
+    const protectedFallback=await cache.refreshWithFallback(3,2);
+    assert.equal(protectedFallback.avgPrice,25);
+    assert.equal(protectedFallback.source,"LEGACY_ACTIVE_ESTIMATE");
+    assert.equal("refreshStatus" in protectedFallback && protectedFallback.refreshStatus,"unavailable");
+    assert.equal("upgradeRequired" in protectedFallback,false);
+    const callsAtReserve=searches;
+    remaining=99;
+    await pool.query("UPDATE soldgraph_quota_snapshot SET captured_at=now()-interval '6 minutes'");
+    await assert.rejects(cache.refresh(20,2),/safety reserve/);
+    assert.equal(searches,callsAtReserve,"stale account quota is refreshed before search");
+    await pool.query("DELETE FROM soldgraph_quota_snapshot");
+    const unknownQuota=new SoldgraphCache(pool,{
+      usage:async()=>({remaining:null}),
+      search:async()=>{throw new Error("must not search");}
+    } as unknown as SoldgraphClient);
+    await assert.rejects(unknownQuota.refresh(21,2),/quota unavailable/);
+    assert.equal((await cache.read(3)).avgPrice,25,"quota blocks preserve eBay baseline");
   } finally {
     await pool.end();await admin.query(`DROP SCHEMA ${schema} CASCADE`);await admin.end();
   }

@@ -79,6 +79,15 @@ export class SoldgraphCache {
     await this.pool.query(`INSERT INTO soldgraph_price_demand(card_id)
       SELECT id FROM cards WHERE id=$1 ON CONFLICT(card_id) DO UPDATE SET requested_at=now()`, [cardId]);
   }
+  /** Shared by Check Value and targeted diagnostics. Never discards either cache. */
+  async refreshWithFallback(cardId: number, userId?: number) {
+    try {
+      return await this.refresh(cardId, userId);
+    } catch {
+      return { ...await this.read(cardId), refreshStatus: "unavailable",
+        message: "Refresh unavailable; best eligible cached price retained." };
+    }
+  }
   async refresh(cardId: number, userId?: number) {
     await this.init();
     const db = await this.pool.connect();
@@ -104,9 +113,29 @@ export class SoldgraphCache {
       await db.query("BEGIN");
       try {
         await db.query("SELECT pg_advisory_xact_lock(78437,0)");
-        const quota = (await db.query(`SELECT q.*,
+        let quota = (await db.query(`SELECT q.*,
           (SELECT count(*)::int FROM soldgraph_request_budget WHERE id>q.baseline) AS spent
           FROM soldgraph_quota_snapshot q WHERE id=1`)).rows[0];
+        if (!quota || new Date(quota.captured_at).getTime() < Date.now() - 5 * 60_000) {
+          // Account-wide quota is required, not just this database's local budget.
+          // Capture the baseline before the lookup and conservatively retain recent
+          // reservations that the upstream usage endpoint may not yet include.
+          const recent = (await db.query(`SELECT coalesce(max(id),0) AS baseline,
+            count(*) FILTER(WHERE requested_at>now()-interval '5 minutes')::int AS pending
+            FROM soldgraph_request_budget`)).rows[0];
+          const live: any = await this.client.usage();
+          const reserve = Number(process.env.SOLDGRAPH_SAFETY_RESERVE ?? quota?.reserve ?? 100);
+          if (!live || !["one_time", "rolling_30_days"].includes(live.window) ||
+              ![live.remaining, live.limit, live.used].every(n => Number.isSafeInteger(n) && n >= 0) ||
+              !Number.isSafeInteger(reserve) || reserve < 0) {
+            throw new Error("Pricing account quota unavailable");
+          }
+          quota = { remaining: Math.max(0, live.remaining - recent.pending), reserve, spent: 0 };
+          await db.query(`INSERT INTO soldgraph_quota_snapshot(id,remaining,reserve,baseline,captured_at)
+            VALUES(1,$1,$2,$3,now()) ON CONFLICT(id) DO UPDATE SET remaining=excluded.remaining,
+            reserve=excluded.reserve,baseline=excluded.baseline,captured_at=now()`,
+            [quota.remaining, reserve, recent.baseline]);
+        }
         if (quota && quota.remaining - quota.spent <= quota.reserve) throw new Error("SoldGraph safety reserve reached");
         const usage = (await db.query(`SELECT count(*)::int AS total,
           count(*) FILTER (WHERE requested_at>now()-interval '24 hours')::int AS daily

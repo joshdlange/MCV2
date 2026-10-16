@@ -67,6 +67,7 @@ VITE_EBAY_TOOLID = "10001"
 VITE_EBAY_MKEVT = "1"
 VITE_EBAY_MKCID = "1"
 VITE_EBAY_CUSTOMID_PREFIX = "MCV"
+PRICING_PROVIDER = "soldgraph"
 
 [userenv.production]
 MARKETPLACE_PUBLIC_URL = "https://app.marvelcardvault.com"

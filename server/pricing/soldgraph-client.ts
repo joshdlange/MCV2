@@ -102,7 +102,7 @@ export class SoldgraphClient {
     throw new SoldgraphError("poll_limit");
   }
 
-  /** Explicit operator action only; never called from a price read/search. */
+  /** Quota inspection for explicit refresh reservations/operators; never ordinary reads. */
   async usage(): Promise<unknown> {
     return this.request(new URL("/v1/usage", ORIGIN), Date.now() + 25_000);
   }
