@@ -2,7 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
 interface CardPricing {
-  avgPrice: number;
+  avgPrice: number | null;
+  provider?: string;
+  confidence?: "normal" | "limited" | "unavailable";
+  refreshing?: boolean;
+  stale?: boolean;
   salesCount: number;
   lastFetched: Date;
 }

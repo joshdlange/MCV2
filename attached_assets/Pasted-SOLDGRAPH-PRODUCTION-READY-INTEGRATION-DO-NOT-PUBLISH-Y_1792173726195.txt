@@ -1,0 +1,132 @@
+SOLDGRAPH PRODUCTION-READY INTEGRATION — DO NOT PUBLISH YET
+
+The development pilot is successful.
+
+Proceed with a narrow production-ready implementation, preserving the current live pricing source until final approval.
+
+MUST DO
+
+1. Keep SoldGraph behind a controlled pricing-provider switch.
+2. Add a persistent shared cache suitable for autoscaling/multiple instances.
+3. Use a 24-hour TTL by default.
+4. Prevent duplicate concurrent refreshes for the same card across instances if the current architecture supports it cleanly.
+5. Do not call SoldGraph on every page load.
+6. Continue excluding Best Offer rows from the primary median.
+7. Continue deduplicating exact listing IDs.
+8. Preserve the old pricing provider for rollback.
+
+VALUATION CONFIDENCE
+
+Implement clear data-quality handling:
+
+- 3+ usable sold comps:
+  show normal Market Price
+
+- 1–2 usable sold comps:
+  show the calculated value, but mark it as limited/low-confidence data
+
+- 0 usable sold comps:
+  show unavailable / insufficient sold data
+  do NOT show $0.00 as if the card is worthless
+
+Do not invent confidence percentages.
+
+PRICE CALCULATION
+
+Use:
+- accepted relevant sold listings
+- non-Best-Offer rows only for the primary median
+- no 0.85 multiplier
+- no shipping added unless the existing product definition explicitly changes later
+
+Preserve:
+- median
+- low/high
+- comp count
+- sale-date range
+
+UI
+
+Keep the current card-detail layout.
+
+Make only the smallest wording changes necessary so the UI accurately reflects real sold comps.
+
+Do not redesign the page.
+
+Specifically review:
+- Market Price
+- sales count
+- unavailable state
+- limited-data state
+
+CACHE / QUOTA
+
+Persist:
+- provider
+- card ID
+- query
+- calculated market price
+- usable comp count
+- total matched comp count
+- low/high
+- date range
+- refreshed_at
+- expiry
+- any provider diagnostics needed for admin use
+
+Do not store the API key.
+
+Add quota safeguards so SoldGraph is not called unnecessarily.
+
+Do not build catalog-wide scheduled refreshes.
+
+TEST
+
+Re-run:
+- Knull Green Speckle /99
+- Knull base
+- Knull Fanfare insert
+- Gold /50
+- Purple /75
+- SuperFractor 1/1
+- Mantis empty case
+
+Verify:
+- 3+ comp case behaves normally
+- 1–2 comp cases show limited data
+- 0 comp case shows unavailable, not $0
+- Best Offer rows are excluded from median
+- cache is reused
+- stale refresh works
+- old provider remains available for rollback
+
+MUST NOT DO
+
+- Do not publish.
+- Do not remove the old pricing provider.
+- Do not touch Scan to Add.
+- Do not touch DINO.
+- Do not touch affiliate tracking.
+- Do not change catalog records.
+- Do not add scheduled bulk refresh.
+- Do not expose SOLDGRAPH_KEY.
+- Do not redesign the card-detail page.
+
+FINAL RESPONSE
+
+Tell me:
+1. exact files changed
+2. persistent cache implementation
+3. provider-switch mechanism
+4. Knull final development result
+5. behavior for 3+ comps
+6. behavior for 1–2 comps
+7. behavior for 0 comps
+8. how many SoldGraph calls each test consumed
+9. whether repeat reads used cache
+10. estimated monthly usage at current traffic
+11. rollback path
+12. confirm old pricing remains intact
+13. confirm nothing published
+14. confirm Scan to Add/DINO untouched
+15. confirm affiliate tracking untouched

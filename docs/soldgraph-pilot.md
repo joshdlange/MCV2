@@ -1,5 +1,49 @@
 # SoldGraph development pilot
 
+## Production integration prepared (not enabled or published)
+
+`server/pricing/soldgraph-cache.ts` now provides an additive shared PostgreSQL cache.
+`PRICING_PROVIDER=soldgraph` opts GET, batch and refresh pricing routes into this
+provider. Unset or any other value retains the old implementation. No environment
+switch was changed. Restart the service after an approved switch or rollback.
+The old provider and card_price_cache remain intact. Other collection-value
+aggregations and the separate Trends feature are outside this integration.
+
+The new tables are initialized transactionally on first SoldGraph use, under a
+schema advisory lock. This requires CREATE TABLE permission. The separate cache
+stores provider, card ID, query, JSON result (median, ranges, counts, dates and
+per-row diagnostics), refreshed/expiry times and retry cooldown. Public responses
+omit raw diagnostics and credentials. There is no price-history backfill.
+
+Reads never call SoldGraph. Explicit authenticated refresh returns fresh shared
+cache entries or reserves one provider request, protected by a per-card PostgreSQL
+session advisory lock. A concurrent caller receives cached data with refreshing=true.
+Fresh and empty-result responses expire after 24 hours. Stale cached values survive
+provider errors. A durable 15-minute cooldown prevents immediate retries after
+failure or process interruption. No scheduled refresh was introduced.
+
+Shared rolling request reservations enforce SOLDGRAPH_DAILY_BUDGET (default 20)
+and SOLDGRAPH_30_DAY_BUDGET (default 80), deliberately conservative for the observed
+Free account. These count attempted searches, including ambiguous failures, not
+only billed provider credits. They do not account for calls made outside this
+integration. Confirm provider plan/remaining credits before increasing budgets.
+The Free plan is one-time, so these rolling safeguards are not a substitute for
+checking its remaining allowance. One anchored query per refresh; no auto fallback.
+
+Normal: >=3 usable comps. Limited: 1–2 comps, price plus explicit Limited data text.
+Unavailable: 0 comps, null price, never a $0 valuation. Best Offers remain excluded.
+UI changes are conditional on the provider response so current live wording stays
+unchanged until approval. Source selection affects pricing routes only, not legacy
+cached collection total calculations.
+
+Integration test command:
+`NODE_ENV=development npx tsx scripts/test-soldgraph-cache.ts`
+This uses saved live pilot pages against the real development PostgreSQL cache.
+It tests all seven cards, cross-connection duplicate suppression, fresh/read reuse,
+expiry, failure retention, cooldown and budget denial. It makes zero provider calls.
+It writes only the new SoldGraph tables, including conservative test reservations.
+Do not run it against production.
+
 This is an operator-only CLI, not a replacement for the live pricing routes.
 Run with `NODE_ENV=development`; all other environments fail closed. No application
 entry point imports the pilot. No schema, catalog, collection, existing cache,

@@ -34,7 +34,7 @@ export function CardValue({ cardId, showRefresh = false, estimatedValue, current
   // Use pricing data from database, fallback to current price prop, then estimated value
   const marketPrice = pricingData?.avgPrice;
   const fallbackPrice = estimatedValue ? parseFloat(estimatedValue) : null;
-  const displayPrice = marketPrice || currentPrice || fallbackPrice;
+  const displayPrice = pricingData?.provider === "soldgraph" ? marketPrice : marketPrice || currentPrice || fallbackPrice;
 
   const refreshMutation = useMutation({
     mutationFn: async () => {
@@ -42,13 +42,13 @@ export function CardValue({ cardId, showRefresh = false, estimatedValue, current
       return await response.json();
     },
     onSuccess: (data: any) => {
-      if (data.avgPrice !== undefined) {
+      if (data.avgPrice != null) {
         queryClient.invalidateQueries({
           queryKey: ["/api/card-pricing"]
         });
         toast({
           title: "Pricing Updated",
-          description: `New price: $${data.avgPrice.toFixed(2)} (${data.salesCount} sales found)`
+          description: `New price: $${data.avgPrice.toFixed(2)} (${data.salesCount} ${data.provider === "soldgraph" ? "sold comps" : "sales found"})${data.confidence === "limited" ? " — Limited data" : ""}`
         });
       } else {
         toast({
@@ -102,6 +102,7 @@ export function CardValue({ cardId, showRefresh = false, estimatedValue, current
       <Badge variant="outline" className={`${badgeColor} text-xs font-semibold`}>
         <DollarSign className="w-3 h-3 mr-1" />
         ${displayPrice.toFixed(2)}
+        {pricingData?.confidence === "limited" && <span className="ml-1 text-xs">Limited data</span>}
         {!isMarketPrice && (
           <span className="ml-1 text-xs opacity-60">est</span>
         )}

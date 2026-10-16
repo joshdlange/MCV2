@@ -24,7 +24,9 @@ import { ebayPricingService } from "./ebay-pricing";
 import admin from "firebase-admin";
 import { proxyImage } from "./image-proxy";
 import { uploadImage } from "./cloudinary";
-import { db } from "./db";
+import { db, pool } from "./db";
+import { SoldgraphCache, soldgraphEnabled } from "./pricing/soldgraph-cache";
+const soldPricing = new SoldgraphCache(pool);
 import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userWishlists, badges, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks, blocks, friends, userScanLogs, pcBinders, pcBinderCards, pcBinderShareLinks, PC_BINDER_CATEGORIES, SIDE_KICK_CARD_LIMIT, upcomingSetCandidates, upcomingSets as upcomingSetsTable } from "../shared/schema";
 import { imageContributionXp, computeXpProgress } from "../shared/xp";
 import { getInitialUsernameSeed, resolveFirebaseUserForSync } from "./services/firebaseUserSync";
@@ -3743,6 +3745,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
         return res.status(400).json({ message: "Invalid card ID" });
       }
 
+      if (soldgraphEnabled()) return res.json(await soldPricing.read(cardId));
       const pricing = await storage.getCardPricing(cardId);
       if (!pricing) {
         return res.status(404).json({ message: "No pricing data found" });
@@ -3760,7 +3763,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   });
 
   // Refresh card pricing endpoint
-  app.post("/api/card-pricing/:cardId/refresh", async (req, res) => {
+  app.post("/api/card-pricing/:cardId/refresh", (req, res, next) => {
+    if (soldgraphEnabled()) return authenticateUser(req, res, next);
+    next();
+  }, async (req, res) => {
     try {
       const cardId = parseInt(req.params.cardId);
       if (isNaN(cardId)) {
@@ -3768,6 +3774,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       }
 
       console.log(`Refreshing pricing for card ${cardId}`);
+      if (soldgraphEnabled()) {
+        try { return res.json(await soldPricing.refresh(cardId)); }
+        catch { return res.status(503).json({ message: "Sold pricing refresh unavailable. Cached data is preserved." }); }
+      }
       const result = await ebayPricingService.forceRefreshCardPricing(cardId);
       
       if (result) {
@@ -3808,6 +3818,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       await Promise.all(
         cardIds.map(async (cardId: number) => {
           try {
+            if (soldgraphEnabled()) {
+              pricingResults[cardId] = await soldPricing.read(cardId);
+              return;
+            }
             const pricing = await ebayPricingService.getCardPricing(cardId);
             pricingResults[cardId] = {
               avgPrice: pricing?.avgPrice || 0,
@@ -3816,6 +3830,10 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
             };
           } catch (error) {
             console.error(`Error fetching pricing for card ${cardId}:`, error);
+            if (soldgraphEnabled()) {
+              pricingResults[cardId] = { provider: "soldgraph", avgPrice: null, salesCount: 0, confidence: "unavailable", error: "cache_unavailable" };
+              return;
+            }
             pricingResults[cardId] = {
               avgPrice: 0,
               salesCount: 0,

@@ -829,7 +829,7 @@ export function CardDetailModal({
                     <div className="flex items-center gap-2">
                       <TrendingUp className="w-4 h-4 text-green-400" />
                       <span className="text-white text-sm font-medium">Market Price</span>
-                      {pricing && pricing.avgPrice > 0 && (
+                      {pricing && pricing.avgPrice != null && pricing.avgPrice > 0 && (
                         <span className="text-green-400 font-bold">${pricing.avgPrice.toFixed(2)}</span>
                       )}
                     </div>
@@ -852,12 +852,16 @@ export function CardDetailModal({
                             await queryClient.invalidateQueries({ queryKey: ["/api/card-pricing", card.id] });
                             await queryClient.refetchQueries({ queryKey: ["/api/card-pricing", card.id] });
                             
-                            if (result && result.avgPrice === -1) {
+                            if (result?.provider === "soldgraph") {
+                              toast({ title: result.refreshing ? "Pricing refresh in progress" : result.confidence === "unavailable" ? "Insufficient sold data" : "Pricing updated",
+                                description: result.avgPrice == null ? "No usable sold comps available." :
+                                  `$${result.avgPrice.toFixed(2)} (${result.salesCount} sold comps)${result.confidence === "limited" ? " — Limited data" : ""}` });
+                            } else if (result && result.avgPrice === -1) {
                               toast({ title: "Pricing rate limit reached", description: "Try again later.", variant: "destructive" });
                             } else if (result && result.avgPrice === 0 && result.salesCount === 0) {
                               toast({ title: "No recent sales found", description: "This card may not have recent sales data." });
                             } else {
-                              toast({ title: "Pricing updated", description: result ? `$${result.avgPrice.toFixed(2)} (${result.salesCount} sales)` : "No data" });
+                              toast({ title: "Pricing updated", description: result?.avgPrice != null ? `$${result.avgPrice.toFixed(2)} (${result.salesCount} sales)` : "No data" });
                             }
                           } catch (error: any) {
                             toast({ title: "Failed to update", description: error.message || "Unknown error", variant: "destructive" });
@@ -880,16 +884,20 @@ export function CardDetailModal({
                         Fetching latest prices...
                       </div>
                     ) : pricing ? (
-                      pricing.avgPrice === -1 ? (
+                      pricing.avgPrice == null || pricing.confidence === "unavailable" ? (
+                        <p className="text-sm text-gray-400">Unavailable — insufficient sold data.</p>
+                      ) : pricing.avgPrice === -1 ? (
                         <div className="text-sm text-red-400">Pricing unavailable (rate limit)</div>
                       ) : (
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <span className="text-2xl font-bold text-green-400">${pricing.avgPrice.toFixed(2)}</span>
                             <span className="text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded-full">
-                              {pricing.salesCount} sales
+                              {pricing.salesCount} {pricing.provider === "soldgraph" ? "sold comps" : "sales"}
                             </span>
                           </div>
+                          {pricing.confidence === "limited" && <p className="text-xs text-amber-400">Limited data — based on only {pricing.salesCount} usable sold comps.</p>}
+                          {pricing.provider === "soldgraph" && pricing.stale && <p className="text-xs text-gray-400">Cached value — refresh needed.</p>}
                           <p className="text-xs text-gray-400">
                             Updated: {new Date(pricing.lastFetched).toLocaleDateString()}
                           </p>
