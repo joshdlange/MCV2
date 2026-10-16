@@ -1,0 +1,441 @@
+MARVEL CARD VAULT: SOLDGRAPH SIDE KICK LIMIT + VALUE SCOUT ACHIEVEMENT
+
+We are adjusting the SoldGraph user-access strategy.
+
+Do not publish yet.
+
+Do not change the broader hybrid pricing architecture.
+
+==================================================
+PRODUCT DECISION
+==================================================
+
+SIDE KICK:
+
+Allow 20 TOTAL provider-consuming SoldGraph Market Price refreshes over the lifetime of the account.
+
+After the 20th actual provider-consuming refresh:
+
+- do not make another SoldGraph call for that Side Kick user
+- continue showing cached pricing
+- continue showing the existing eBay baseline where appropriate
+- when they attempt another real SoldGraph refresh, present the existing SUPER_HERO upgrade experience
+
+IMPORTANT:
+
+Do NOT show users:
+- "20 refreshes"
+- "X remaining"
+- a counter
+- SoldGraph terminology
+- API limits
+- credits
+
+This is a quiet product limit.
+
+SUPER_HERO:
+
+NO USER-LEVEL SOLDGRAPH REFRESH LIMIT.
+
+Do not implement:
+- daily limit
+- monthly limit
+- lifetime limit
+
+SUPER_HERO should effectively have unlimited Check Value usage from the collector's perspective.
+
+However, SUPER_HERO requests MUST still respect:
+
+- SoldGraph shared global quota
+- global safety reserve
+- card cache TTL
+- same-card refresh cooldown
+- concurrent request deduplication
+- abuse / endpoint rate protection
+
+"Unlimited" means no subscription entitlement cap. It does NOT mean bypassing provider-level safety controls.
+
+==================================================
+WHAT COUNTS TOWARD SIDE KICK'S 20
+==================================================
+
+Increment the Side Kick lifetime refresh count ONLY when:
+
+1. user explicitly requests Check Value / refresh
+2. there is no sufficiently fresh SoldGraph result that can satisfy the request
+3. the shared lock determines this request is actually responsible for the provider lookup
+4. MCV actually initiates a new SoldGraph search
+
+Do NOT count:
+
+- normal price views
+- cached SoldGraph results
+- cached eBay results
+- page loads
+- same-card requests fulfilled from cache
+- requests deduplicated behind another user's/in-flight provider request
+- requests blocked before SoldGraph is called
+- background eBay pricing
+- admin/operator pricing work
+
+==================================================
+FAILED PROVIDER CALLS
+==================================================
+
+Inspect the existing provider-client behavior.
+
+Prefer to increment the lifetime allowance when an actual SoldGraph search has consumed provider quota.
+
+If SoldGraph rejects the call before consuming a search credit, do not consume the user's allowance.
+
+If provider usage cannot be reliably distinguished:
+
+use the safest server-side interpretation and document it.
+
+Never increment from the frontend.
+
+==================================================
+PERSISTENT ACCOUNTING
+==================================================
+
+The Side Kick lifetime count must be durable.
+
+Use the existing database and user/account architecture.
+
+Do not store this only:
+- in memory
+- localStorage
+- browser state
+- mobile state
+
+Use an appropriate durable field/table/event.
+
+Before creating a new table, inspect whether an existing:
+- usage
+- entitlement
+- event
+- xp_events
+- account metadata
+
+structure is appropriate.
+
+Do not overload XP data if it creates poor architecture.
+
+We need to reliably answer:
+
+"How many provider-consuming Market Price refreshes has this Side Kick account used?"
+
+Across:
+- web
+- iOS
+- Android
+- logouts
+- devices
+- server instances
+
+==================================================
+SIDE KICK LIMIT BEHAVIOR
+==================================================
+
+For Side Kick users with fewer than 20 lifetime provider refreshes:
+
+normal Check Value behavior.
+
+At 20 used:
+
+Normal cached price viewing continues.
+
+If the user presses Check Value and a fresh cache satisfies it:
+return cache normally.
+
+If another SoldGraph call would actually be required:
+
+DO NOT call SoldGraph.
+
+Trigger the existing SUPER_HERO upgrade modal/flow.
+
+Do not create a new pricing-specific subscription purchase system.
+
+Use the existing upgrade experience.
+
+Suggested user-facing language:
+
+"Unlock unlimited Market Price refreshes with SUPER_HERO."
+
+Optionally add a short supporting line:
+
+"Get the latest available card values whenever you need them."
+
+Do NOT mention:
+- 20
+- usage count
+- API calls
+- SoldGraph
+- credits
+
+Keep the wording concise.
+
+==================================================
+SUPER_HERO BEHAVIOR
+==================================================
+
+SUPER_HERO users:
+
+- never hit the Side Kick lifetime limit
+- never see this pricing upgrade gate
+
+But continue respecting:
+- cache behavior
+- global provider reserve
+- abuse safeguards
+- provider availability
+
+If the global provider allowance is temporarily unavailable:
+
+do not tell the SUPER_HERO user they hit a personal limit.
+
+Return the best cached/eBay fallback and an appropriate generic refresh-unavailable state.
+
+==================================================
+ADMIN
+==================================================
+
+Admins/internal accounts should not be subject to the Side Kick lifetime entitlement limit.
+
+They remain subject to global provider protections unless an existing secure operator tool explicitly handles otherwise.
+
+==================================================
+NEW ACHIEVEMENT: VALUE SCOUT
+==================================================
+
+Add a new achievement/badge tied to Market Price refresh usage.
+
+Working achievement name:
+
+VALUE SCOUT
+
+Purpose:
+
+Reward a collector for using the Market Price / Check Value feature for the first time.
+
+Award criteria:
+
+Award VALUE SCOUT once when the user completes their FIRST actual Market Price refresh action.
+
+Prefer triggering after the refresh flow successfully completes and returns a legitimate pricing state such as:
+
+- SoldGraph sold comps
+- SoldGraph limited data
+- usable cached refresh response if the user's action legitimately invoked the refresh workflow
+- existing appropriate fallback after an actual refresh attempt
+
+Do NOT award merely for opening a card-detail page.
+
+Do NOT award repeatedly.
+
+Do NOT incentivize repeated provider calls.
+
+==================================================
+ACHIEVEMENT COPY
+==================================================
+
+Name:
+
+Value Scout
+
+Suggested short description:
+
+"Checked the market and uncovered a card's value."
+
+If the existing badge system uses a different tone/length, adapt this to match the existing achievements.
+
+Do not add Marvel copyrighted character artwork.
+
+I will provide the final badge artwork separately.
+
+Use the existing placeholder/fallback badge behavior until the asset is supplied if necessary.
+
+==================================================
+XP
+==================================================
+
+Audit existing achievement XP behavior first.
+
+If normal achievements already award a standardized amount of XP:
+
+follow the existing convention.
+
+Do NOT invent a disproportionately large XP award.
+
+Tell me what XP amount/rule was used.
+
+==================================================
+ACHIEVEMENT SYSTEM PRESERVATION
+==================================================
+
+Use the existing:
+
+- achievement definitions
+- award logic
+- XP event pattern
+- collector profile display
+- achievement notification behavior
+
+Do not build a second badge system.
+
+Ensure the badge appears wherever existing earned achievements normally appear.
+
+==================================================
+ABUSE SAFETY
+==================================================
+
+Retain the previously built protections:
+
+- server-side accounting
+- shared global SoldGraph quota
+- safety reserve
+- per-card cache
+- refresh locking
+- concurrent deduplication
+- reasonable endpoint/IP throttling
+
+A malicious user should not be able to issue 20 simultaneous calls and exceed the limit because requests race each other.
+
+The lifetime entitlement check and increment must be atomic/concurrency-safe.
+
+==================================================
+EXISTING HYBRID PRICING MUST REMAIN
+==================================================
+
+Do not change the approved architecture:
+
+EBAY:
+broad baseline pricing.
+
+SOLDGRAPH:
+higher-quality selective sold comps.
+
+Display priority remains based on the hybrid rules already implemented.
+
+Do not make SoldGraph the bulk catalog pricing source.
+
+==================================================
+TEST CASES
+==================================================
+
+Use mocks/saved SoldGraph responses wherever possible.
+
+Do not burn live SoldGraph credits merely to test limits.
+
+SIDE KICK TESTS:
+
+1. Usage 0:
+provider refresh allowed and count becomes 1.
+
+2. Usage 19:
+provider refresh allowed and count becomes 20.
+
+3. Usage 20:
+fresh cached result available:
+cache returns normally without upgrade gate.
+
+4. Usage 20:
+new SoldGraph request required:
+provider call blocked and SUPER_HERO upgrade flow returned.
+
+5. Usage 20:
+normal card price view:
+still works.
+
+6. Concurrent requests at usage 19:
+must not allow multiple billable provider calls to escape and exceed intended accounting.
+
+7. Cache hit:
+does not increment count.
+
+8. Shared in-flight request:
+does not incorrectly increment every requesting user if they did not cause a new provider call.
+
+SUPER_HERO TESTS:
+
+9. More than 20 historical refreshes:
+still permitted.
+
+10. No tier-based refresh limit returned.
+
+11. Cache behavior still works.
+
+12. Global quota reserve still overrides provider execution safely without presenting a subscription-limit message.
+
+ACHIEVEMENT TESTS:
+
+13. First valid refresh awards Value Scout.
+
+14. Second refresh does not award it again.
+
+15. Opening pricing UI without refreshing does not award it.
+
+16. Existing achievement/XP system remains unaffected.
+
+==================================================
+MUST NOT DO
+==================================================
+
+- Do not publish.
+- Do not expose Side Kick usage count.
+- Do not display "20 remaining" or similar.
+- Do not impose a SUPER_HERO user limit.
+- Do not remove global SoldGraph protections.
+- Do not change subscription billing.
+- Do not create a new subscription tier.
+- Do not redesign card pricing.
+- Do not touch Scan to Add.
+- Do not touch DINO.
+- Do not change eBay affiliate tracking.
+- Do not bulk-query SoldGraph.
+- Do not spend live SoldGraph calls unnecessarily during QA.
+
+==================================================
+PRESERVE
+==================================================
+
+Preserve:
+
+- hybrid eBay + SoldGraph pricing
+- existing eBay baseline cache
+- SoldGraph cache
+- existing Check Value UI
+- SUPER_HERO upgrade flow
+- current achievement system
+- XP architecture
+- collection behavior
+- card-detail design
+- mobile/web functionality
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+After implementation and tests, report:
+
+1. Where the Side Kick lifetime usage is stored.
+2. Exact condition that increments it.
+3. Confirm Side Kick limit = 20 lifetime provider-consuming refreshes.
+4. Confirm the count is not displayed to users.
+5. Exact experience after Side Kick reaches 20.
+6. Confirm SUPER_HERO has no user-level refresh limit.
+7. Global protections that still apply to SUPER_HERO.
+8. Concurrency protection for Side Kick usage.
+9. Value Scout achievement implementation.
+10. Value Scout description.
+11. XP awarded and why.
+12. Achievement trigger condition.
+13. All relevant test results.
+14. Confirm cached requests do not consume Side Kick allowance.
+15. Confirm QA did not unnecessarily consume SoldGraph credits.
+16. Confirm provider switch / production activation state.
+17. Confirm nothing published.
+18. Confirm Scan to Add/DINO untouched.
+19. Confirm affiliate tracking untouched.
+
+Do not publish until I separately approve it.

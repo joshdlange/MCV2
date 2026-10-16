@@ -26,6 +26,8 @@ import { proxyImage } from "./image-proxy";
 import { uploadImage } from "./cloudinary";
 import { db, pool } from "./db";
 import { SoldgraphCache, soldgraphEnabled } from "./pricing/soldgraph-cache";
+import { awardValueScout } from "./pricing/value-scout";
+import { allowPriceRefresh } from "./pricing/refresh-throttle";
 const soldPricing = new SoldgraphCache(pool);
 import { cards, cardSets, mainSets, emailLogs, pendingCardImages, insertPendingCardImageSchema, userCollections, userWishlists, badges, userBadges, migrationLogs, migrationLogCards, adminAuditLogs, users, shareLinks, blocks, friends, userScanLogs, pcBinders, pcBinderCards, pcBinderShareLinks, PC_BINDER_CATEGORIES, SIDE_KICK_CARD_LIMIT, upcomingSetCandidates, upcomingSets as upcomingSetsTable } from "../shared/schema";
 import { imageContributionXp, computeXpProgress } from "../shared/xp";
@@ -3766,8 +3768,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
 
   // Refresh card pricing endpoint
   app.post("/api/card-pricing/:cardId/refresh", (req, res, next) => {
-    if (soldgraphEnabled()) return authenticateUser(req, res, next);
-    next();
+    return authenticateUser(req, res, next);
   }, async (req, res) => {
     try {
       const cardId = parseInt(req.params.cardId);
@@ -3776,13 +3777,25 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       }
 
       console.log(`Refreshing pricing for card ${cardId}`);
+      if (!await allowPriceRefresh((req as any).user.id,req.ip ?? "unknown")) {
+        return res.status(429).json({message:"Please wait a moment before checking again."});
+      }
       // A small pricing-demand signal, not view analytics. Failure must not break legacy pricing.
       await soldPricing.recordDemand(cardId).catch(() => console.warn("Pricing demand recording unavailable"));
       if (soldgraphEnabled()) {
-        try { return res.json(await soldPricing.refresh(cardId)); }
-        catch { return res.json({ ...await soldPricing.read(cardId), refreshStatus: "unavailable", message: "Refresh unavailable; best eligible cached price retained." }); }
+        try {
+          const price=await soldPricing.refresh(cardId,(req as any).user.id);
+          await awardValueScout((req as any).user.id,price);
+          return res.json(price);
+        }
+        catch {
+          const price=await soldPricing.read(cardId);
+          await awardValueScout((req as any).user.id,price);
+          return res.json({ ...price, refreshStatus: "unavailable", message: "Refresh unavailable; best eligible cached price retained." });
+        }
       }
       const result = await ebayPricingService.forceRefreshCardPricing(cardId);
+      await awardValueScout((req as any).user.id,result);
       
       if (result) {
         res.json({

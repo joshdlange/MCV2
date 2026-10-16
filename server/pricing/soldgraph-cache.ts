@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import { SoldgraphClient } from "./soldgraph-client";
+import { SoldgraphClient, SoldgraphError } from "./soldgraph-client";
 import { analyzeSoldRows, buildSoldQueries } from "./soldgraph-matching";
 
 export const soldgraphEnabled = () => process.env.PRICING_PROVIDER === "soldgraph";
@@ -51,6 +51,9 @@ export class SoldgraphCache {
         await db.query(`CREATE TABLE IF NOT EXISTS soldgraph_request_budget (
           id bigserial PRIMARY KEY, card_id integer NOT NULL, requested_at timestamptz NOT NULL DEFAULT now())`);
         await db.query("CREATE INDEX IF NOT EXISTS soldgraph_budget_time ON soldgraph_request_budget(requested_at)");
+        await db.query(`CREATE TABLE IF NOT EXISTS market_refresh_usage (
+          user_id integer PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+          consumed integer NOT NULL DEFAULT 0 CHECK(consumed>=0))`);
         await db.query(`CREATE TABLE IF NOT EXISTS soldgraph_price_demand (
           card_id integer PRIMARY KEY REFERENCES cards(id) ON DELETE CASCADE,
           requested_at timestamptz NOT NULL DEFAULT now())`);
@@ -62,12 +65,12 @@ export class SoldgraphCache {
       finally { db.release(); }
     })().catch(e => { this.ready = undefined; throw e; });
   }
-  async read(cardId: number) {
+  async read(cardId: number, connection: Pick<Pool,"query"> = this.pool) {
     await this.init();
-    const { rows } = await this.pool.query("SELECT * FROM soldgraph_price_cache WHERE card_id=$1", [cardId]);
+    const { rows } = await connection.query("SELECT * FROM soldgraph_price_cache WHERE card_id=$1", [cardId]);
     const row = rows[0];
     const sold = publicPrice(row?.result, row?.refreshed_at ?? null, row?.expires_at ?? null);
-    const legacy = await this.pool.query(`SELECT avg_price,sales_count,last_fetched FROM card_price_cache
+    const legacy = await connection.query(`SELECT avg_price,sales_count,last_fetched FROM card_price_cache
       WHERE card_id=$1 ORDER BY last_fetched DESC,id DESC LIMIT 1`, [cardId]);
     return migrationPrice(sold, legacy.rows[0]);
   }
@@ -76,15 +79,16 @@ export class SoldgraphCache {
     await this.pool.query(`INSERT INTO soldgraph_price_demand(card_id)
       SELECT id FROM cards WHERE id=$1 ON CONFLICT(card_id) DO UPDATE SET requested_at=now()`, [cardId]);
   }
-  async refresh(cardId: number) {
+  async refresh(cardId: number, userId?: number) {
     await this.init();
     const db = await this.pool.connect();
     let locked = false;
+    let chargedUser: number | undefined;
     try {
       locked = (await db.query("SELECT pg_try_advisory_lock(78436,$1) AS locked", [cardId])).rows[0].locked;
-      if (!locked) return { ...await this.read(cardId), refreshing: true };
+      if (!locked) return { ...await this.read(cardId,db), refreshing: true };
       const cached = (await db.query("SELECT * FROM soldgraph_price_cache WHERE card_id=$1", [cardId])).rows[0];
-      if (cached?.expires_at && new Date(cached.expires_at).getTime() > Date.now()) return await this.read(cardId);
+      if (cached?.expires_at && new Date(cached.expires_at).getTime() > Date.now()) return await this.read(cardId,db);
       if (cached?.retry_after && new Date(cached.retry_after).getTime() > Date.now()) throw new Error("Pricing refresh temporarily unavailable; try later");
       const { rows } = await db.query(`SELECT c.id,c.name,c.card_number AS "cardNumber",s.year,
         m.name AS parent,s.name AS subset,c.variation,
@@ -114,6 +118,20 @@ export class SoldgraphCache {
         };
         if (usage.total >= limit("SOLDGRAPH_30_DAY_BUDGET", 80) ||
             usage.daily >= limit("SOLDGRAPH_DAILY_BUDGET", 20)) throw new Error("Pricing refresh budget reached");
+        if (userId != null) {
+          const user = (await db.query("SELECT plan,is_admin FROM users WHERE id=$1 FOR UPDATE",[userId])).rows[0];
+          if (!user) throw new Error("Account unavailable");
+          if (user.plan !== "SUPER_HERO" && !user.is_admin) {
+            await db.query("INSERT INTO market_refresh_usage(user_id) VALUES($1) ON CONFLICT DO NOTHING",[userId]);
+            const reserved = await db.query(`UPDATE market_refresh_usage SET consumed=consumed+1
+              WHERE user_id=$1 AND consumed<20 RETURNING user_id`,[userId]);
+            if (!reserved.rowCount) {
+              await db.query("ROLLBACK");
+              return {...await this.read(cardId,db),upgradeRequired:true};
+            }
+            chargedUser=userId;
+          }
+        }
         await db.query("INSERT INTO soldgraph_request_budget(card_id) VALUES($1)", [cardId]);
         // Crash-safe cooldown also prevents immediate reissues after an ambiguous timeout/restart.
         await db.query(`INSERT INTO soldgraph_price_cache(card_id,query,retry_after)
@@ -127,11 +145,17 @@ export class SoldgraphCache {
         await db.query(`UPDATE soldgraph_price_cache SET query=$2,result=$3::jsonb,
           refreshed_at=now(),expires_at=now()+interval '24 hours',retry_after=NULL,last_error=NULL
           WHERE card_id=$1`, [cardId, query, JSON.stringify(result)]);
-      } catch {
+      } catch (error) {
+        // Definite pre-credit rejection/failed job: refund. Ambiguous transport outcomes
+        // retain the reservation conservatively because a provider job may still run.
+        if (chargedUser != null && error instanceof SoldgraphError &&
+            ["invalid_key","missing_key","invalid_query","quota_or_rate_limit","job_failed","http_400","http_422"].includes(error.code)) {
+          await db.query("UPDATE market_refresh_usage SET consumed=greatest(0,consumed-1) WHERE user_id=$1",[chargedUser]);
+        }
         await db.query("UPDATE soldgraph_price_cache SET last_error='provider_failure' WHERE card_id=$1", [cardId]);
         throw new Error("Sold pricing provider unavailable; cached value preserved");
       }
-      return await this.read(cardId);
+      return await this.read(cardId,db);
     } finally {
       try {
         if (locked) await db.query("SELECT pg_advisory_unlock(78436,$1)", [cardId]);

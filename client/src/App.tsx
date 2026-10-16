@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useRef } from "react";
+import { MarketUpgradeHost } from "@/components/subscription/market-upgrade-host";
 import { preloadAppleIAP, isAppleIAP, APPLE_IAP_ENABLED } from "@/services/appleIAP";
 import { initializeRevenueCat, isRevenueCatAvailable, REVENUECAT_ENABLED } from "@/services/revenueCat";
 import { Capacitor } from '@capacitor/core';
@@ -433,6 +434,7 @@ function App() {
         <AuthProvider>
           <Toaster />
           <ReportImageHost />
+          <MarketUpgradeHost />
           <AuthenticatedApp />
         </AuthProvider>
       </TooltipProvider>

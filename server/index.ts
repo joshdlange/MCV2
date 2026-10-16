@@ -743,6 +743,7 @@ server.listen({
     // Idempotent badge/feed seeds (deferred post-listen — bulk aggregations
     // must never delay the deploy health check):
     try {
+      await (await import("./pricing/value-scout")).ensureValueScout();
       const { db } = await import('./db');
       const { sql } = await import('drizzle-orm');
 

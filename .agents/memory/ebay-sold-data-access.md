@@ -37,3 +37,15 @@ The user retains the manual SoldGraph operator tool only for selective cases, ne
 **Why:** Migration must prioritize collector demand and respect the rolling provider allowance without blindly refreshing the entire catalog.
 
 **How to apply:** Keep dry-run estimates, a configurable safety reserve, explicit selective targeting and resumable progress. Do not enable the pricing switch or schedule merely because the tooling is ready.
+
+The user corrected staleness: 24 hours controls refresh eligibility, not display preference. Positive SoldGraph prices stay preferred for a configurable period, initially 14 days, before baseline fallback.
+
+**Why:** A recent sold comp should not be replaced by weaker active-listing estimates just because it becomes eligible for refresh.
+
+**How to apply:** Keep refresh age and display age separate.
+
+Side Kick has a quiet lifetime allowance of 20 provider-consuming user refreshes. SUPER_HERO has no user entitlement cap; admins are exempt. All still respect global provider and abuse protections.
+
+**Why:** The user wants paid collectors to experience unlimited Check Value while reserving scarce provider calls for deliberate use.
+
+**How to apply:** Never expose counts, credits or SoldGraph terminology. Only initiating uncached user searches count; reuse the existing upgrade flow. Value Scout rewards the first legitimate explicit refresh once, using existing badge XP/notifications and the supplied artwork.

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import pg from "pg";
 import { SoldgraphCache, migrationPrice, publicPrice } from "../pricing/soldgraph-cache";
 import { SoldgraphBulk, parseUsage, safeSearchCount } from "../pricing/soldgraph-bulk";
-import type { SoldgraphClient } from "../pricing/soldgraph-client";
+import { SoldgraphError, type SoldgraphClient } from "../pricing/soldgraph-client";
 import { reserveBrowseRequest, ebayRequestContext } from "../pricing/ebay-budget";
 
 test("source selection preserves legacy before refresh and on empty results without inventing sold comps", () => {
@@ -53,7 +53,9 @@ test("isolated PostgreSQL migration, dry run, reserve, resumability and cross-in
   } as unknown as SoldgraphClient;
   try {
     await admin.query(`CREATE SCHEMA ${schema}`);
-    await pool.query(`CREATE TABLE main_sets(id integer PRIMARY KEY,name text);
+    await pool.query(`CREATE TABLE users(id integer PRIMARY KEY,plan text,is_admin boolean DEFAULT false);
+      INSERT INTO users VALUES(1,'SIDE_KICK',false),(2,'SUPER_HERO',false),(3,'SIDE_KICK',true);
+      CREATE TABLE main_sets(id integer PRIMARY KEY,name text);
       CREATE TABLE card_sets(id integer PRIMARY KEY,main_set_id integer,year integer,name text);
       CREATE TABLE cards(id integer PRIMARY KEY,set_id integer,name text,card_number text,variation text,
         archived_at timestamptz,created_at timestamptz DEFAULT now());
@@ -110,6 +112,37 @@ test("isolated PostgreSQL migration, dry run, reserve, resumability and cross-in
     await pool.query("UPDATE soldgraph_price_cache SET expires_at=now()-interval '1 second' WHERE card_id=1");
     await assert.rejects(failure.refresh(1));
     assert.equal((await cache.read(1)).avgPrice,60,"failure must preserve sold value");
+    await pool.query("DELETE FROM soldgraph_request_budget");
+    await pool.query(`INSERT INTO cards(id,set_id,name,card_number)
+      SELECT id,1,'Knull','FF-23' FROM generate_series(10,30) id`);
+    const used=async()=>(await pool.query("SELECT consumed FROM market_refresh_usage WHERE user_id=1")).rows[0]?.consumed??0;
+    await cache.refresh(10,1);assert.equal(await used(),1);
+    await cache.refresh(10,1);assert.equal(await used(),1,"cache hits not charged");
+    await pool.query("UPDATE market_refresh_usage SET consumed=19 WHERE user_id=1");
+    const concurrent=await Promise.all([cache.refresh(11,1),cache.refresh(12,1)]);
+    assert.equal(await used(),20);
+    assert.equal(concurrent.filter(p=>"upgradeRequired" in p&&p.upgradeRequired).length,1);
+    const cached=await cache.refresh(10,1);
+    assert.equal("upgradeRequired" in cached,false,"cache remains accessible at limit");
+    assert.equal((await cache.read(10)).avgPrice,60,"ordinary views remain available");
+    const callsBefore=searches;
+    const gated=await cache.refresh(13,1);
+    assert.equal("upgradeRequired" in gated&&gated.upgradeRequired,true);
+    assert.equal(searches,callsBefore);
+    await pool.query("INSERT INTO market_refresh_usage(user_id,consumed) VALUES(2,25)");
+    await cache.refresh(14,2);assert.equal(searches,callsBefore+1,"SUPER_HERO bypasses lifetime cap");
+    await cache.refresh(15,3);assert.equal(searches,callsBefore+2,"admin bypasses cap");
+    await pool.query("UPDATE market_refresh_usage SET consumed=0 WHERE user_id=1");
+    await Promise.all([cache.refresh(16,1),new SoldgraphCache(pool,fake).refresh(16,1)]);
+    assert.equal(await used(),1,"deduplicated requests only charge the initiating user once");
+    const rejected=new SoldgraphCache(pool,{search:async()=>{throw new SoldgraphError("quota_or_rate_limit");}} as unknown as SoldgraphClient);
+    await assert.rejects(rejected.refresh(17,1));
+    assert.equal(await used(),1,"explicit pre-credit rejection refunds allowance");
+    const ambiguous=new SoldgraphCache(pool,{search:async()=>{throw new SoldgraphError("timeout");}} as unknown as SoldgraphClient);
+    await assert.rejects(ambiguous.refresh(18,1));
+    assert.equal(await used(),2,"ambiguous timeout conservatively retains reservation");
+    await pool.query("INSERT INTO soldgraph_quota_snapshot VALUES(1,100,100,999999,now())");
+    await assert.rejects(cache.refresh(19,2),/safety reserve/);
   } finally {
     await pool.end();await admin.query(`DROP SCHEMA ${schema} CASCADE`);await admin.end();
   }

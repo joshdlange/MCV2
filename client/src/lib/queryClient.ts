@@ -77,6 +77,10 @@ export async function apiRequest(
   });
 
   await throwIfResNotOk(res);
+  if (method==="POST" && /^\/api\/card-pricing\/\d+\/refresh$/.test(url)) {
+    const body=await res.clone().json();
+    if(body.upgradeRequired) window.dispatchEvent(new Event("market-upgrade-required"));
+  }
   if (method !== "GET" && /^\/api\/collection(?:\/|$)/.test(url)) {
     invalidateCollectionValues(queryClient);
   }
