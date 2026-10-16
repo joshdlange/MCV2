@@ -26,8 +26,14 @@ The user reports eBay Developer Support confirmed no Marketplace Insights access
 
 **How to apply:** Keep the old provider/caches intact, exclude Best Offers from the sold median, do not apply 0.85, and do not publish or switch production merely because the pilot succeeds. Resolve development card identity by metadata instead of assuming production IDs refer to the same card.
 
-The user approved preparing the production-ready integration, but not activation or publishing. Confidence must be categorical: 3+ usable comps normal, 1–2 limited data, zero unavailable rather than zero dollars.
+The user approved preparing the production-ready integration, but not activation or publishing. Confidence must be categorical: 3+ usable comps normal, 1–2 limited data. During gradual migration, unrefreshed and zero-comp cards retain positive legacy estimates with explicit legacy source tracking; without fallback, show unavailable rather than zero dollars.
 
 **Why:** Sparse sold-listing samples should not imply reliable market values or worthless cards.
 
 **How to apply:** Preserve these distinctions in pricing displays. Keep live provider activation separate from code readiness, and confirm the provider account allowance rather than assuming the intended paid plan is active.
+
+The user authorized a manual operator-only quota-aware bulk refresh tool, not an automatic schedule or a live bulk run.
+
+**Why:** Migration must prioritize collector demand and respect the rolling provider allowance without blindly refreshing the entire catalog.
+
+**How to apply:** Keep dry-run estimates, a configurable safety reserve, bounded priority batches and resumable progress. Do not enable the pricing switch or schedule merely because the operator tooling is ready.

@@ -3774,6 +3774,8 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       }
 
       console.log(`Refreshing pricing for card ${cardId}`);
+      // A small pricing-demand signal, not view analytics. Failure must not break legacy pricing.
+      await soldPricing.recordDemand(cardId).catch(() => console.warn("Pricing demand recording unavailable"));
       if (soldgraphEnabled()) {
         try { return res.json(await soldPricing.refresh(cardId)); }
         catch { return res.status(503).json({ message: "Sold pricing refresh unavailable. Cached data is preserved." }); }

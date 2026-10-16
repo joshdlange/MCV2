@@ -48,7 +48,7 @@ export function CardValue({ cardId, showRefresh = false, estimatedValue, current
         });
         toast({
           title: "Pricing Updated",
-          description: `New price: $${data.avgPrice.toFixed(2)} (${data.salesCount} ${data.provider === "soldgraph" ? "sold comps" : "sales found"})${data.confidence === "limited" ? " — Limited data" : ""}`
+          description: data.provider === "legacy" ? `$${data.avgPrice.toFixed(2)} — legacy active-listing estimate retained` : `New price: $${data.avgPrice.toFixed(2)} (${data.salesCount} ${data.provider === "soldgraph" ? "sold comps" : "sales found"})${data.confidence === "limited" ? " — Limited data" : ""}`
         });
       } else {
         toast({
@@ -103,6 +103,7 @@ export function CardValue({ cardId, showRefresh = false, estimatedValue, current
         <DollarSign className="w-3 h-3 mr-1" />
         ${displayPrice.toFixed(2)}
         {pricingData?.confidence === "limited" && <span className="ml-1 text-xs">Limited data</span>}
+        {pricingData?.provider === "legacy" && <span className="ml-1 text-xs">Legacy estimate</span>}
         {!isMarketPrice && (
           <span className="ml-1 text-xs opacity-60">est</span>
         )}

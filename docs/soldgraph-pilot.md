@@ -2,6 +2,10 @@
 
 ## Production integration prepared (not enabled or published)
 
+**Update:** gradual legacy fallback and manual quota-aware bulk tooling are now
+documented in [soldgraph-bulk.md](soldgraph-bulk.md). That document supersedes
+the original zero-comp/no-legacy behavior below. The provider switch remains off.
+
 `server/pricing/soldgraph-cache.ts` now provides an additive shared PostgreSQL cache.
 `PRICING_PROVIDER=soldgraph` opts GET, batch and refresh pricing routes into this
 provider. Unset or any other value retains the old implementation. No environment
@@ -118,7 +122,9 @@ For 2,000 credits/30 days, one search per distinct expired card costs:
 Fallback searches add credits. Polls are free; SoldGraph's own 15-minute cache
 hits still cost a credit. Ordinary UI reads must never call SoldGraph.
 
-Observed usage on 2026-10-16: Free, 7 used, 100 limit, 93 remaining, one_time.
+Initial pilot usage on 2026-10-16: Free, 7 used, 100 limit, 93 remaining, one_time.
+The later bulk dry-run usage check returned Lite, 7 used, 2,000 limit, 1,993
+remaining, rolling_30_days. See the bulk guide for current safeguards.
 Do not assume the Lite allowance is enabled just because it is in the brief.
 
 ## Migration after explicit approval

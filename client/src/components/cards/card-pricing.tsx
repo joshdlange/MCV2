@@ -65,7 +65,7 @@ export function CardPricing({ cardId, className = "" }: CardPricingProps) {
       </span>
       {pricing.salesCount > 0 && pricing.salesCount !== -1 && (
         <span className="text-xs text-gray-500">
-          ({pricing.salesCount} {pricing.provider === "soldgraph" ? "sold comps" : "sales"}{pricing.confidence === "limited" ? " · Limited data" : ""})
+          ({pricing.provider === "legacy" ? "Legacy estimate" : `${pricing.salesCount} ${pricing.provider === "soldgraph" ? "sold comps" : "sales"}`}{pricing.confidence === "limited" ? " · Limited data" : ""})
         </span>
       )}
     </div>

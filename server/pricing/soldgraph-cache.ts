@@ -7,6 +7,7 @@ export function publicPrice(result: any, refreshedAt: Date | null, expiresAt: Da
   const count = result?.usableCount ?? 0;
   return {
     provider: "soldgraph", avgPrice: result?.median ?? null, salesCount: count,
+    source: count >= 3 ? "SOLDGRAPH_SOLD_COMPS" : count ? "SOLDGRAPH_LIMITED_DATA" : "SOLDGRAPH_NO_COMPS",
     matchedCount: result?.acceptedCount ?? 0, bestOfferCount: result?.bestOfferCount ?? 0,
     confidence: count >= 3 ? "normal" : count ? "limited" : "unavailable",
     low: result?.low ?? null, high: result?.high ?? null,
@@ -15,11 +16,24 @@ export function publicPrice(result: any, refreshedAt: Date | null, expiresAt: Da
   };
 }
 
+export function migrationPrice(sold: ReturnType<typeof publicPrice>, legacy: any) {
+  if (sold.avgPrice != null && sold.avgPrice > 0 && sold.salesCount > 0) return sold;
+  const price = Number(legacy?.avg_price);
+  if (Number.isFinite(price) && price > 0) return {
+    ...sold, provider: "legacy", source: "LEGACY_ACTIVE_ESTIMATE",
+    soldgraphSource: "SOLDGRAPH_NO_COMPS", soldgraphAttempted: !!sold.lastFetched,
+    avgPrice: price, salesCount: legacy.sales_count ?? 0, confidence: "estimate",
+    lastFetched: legacy.last_fetched, low: null, high: null,
+    earliestSoldDate: null, latestSoldDate: null,
+  };
+  return sold;
+}
+
 /** Separate shared cache. Old cache and scheduled active-pricing jobs are untouched. */
 export class SoldgraphCache {
   private ready?: Promise<void>;
   constructor(private pool: Pool, private client = new SoldgraphClient()) {}
-  private init() {
+  async init() {
     return this.ready ??= (async () => {
       const db = await this.pool.connect();
       try {
@@ -33,6 +47,12 @@ export class SoldgraphCache {
         await db.query(`CREATE TABLE IF NOT EXISTS soldgraph_request_budget (
           id bigserial PRIMARY KEY, card_id integer NOT NULL, requested_at timestamptz NOT NULL DEFAULT now())`);
         await db.query("CREATE INDEX IF NOT EXISTS soldgraph_budget_time ON soldgraph_request_budget(requested_at)");
+        await db.query(`CREATE TABLE IF NOT EXISTS soldgraph_price_demand (
+          card_id integer PRIMARY KEY REFERENCES cards(id) ON DELETE CASCADE,
+          requested_at timestamptz NOT NULL DEFAULT now())`);
+        await db.query(`CREATE TABLE IF NOT EXISTS soldgraph_quota_snapshot (
+          id integer PRIMARY KEY CHECK(id=1), remaining integer NOT NULL,
+          reserve integer NOT NULL, baseline bigint NOT NULL, captured_at timestamptz NOT NULL DEFAULT now())`);
         await db.query("COMMIT");
       } catch (e) { await db.query("ROLLBACK"); throw e; }
       finally { db.release(); }
@@ -42,7 +62,16 @@ export class SoldgraphCache {
     await this.init();
     const { rows } = await this.pool.query("SELECT * FROM soldgraph_price_cache WHERE card_id=$1", [cardId]);
     const row = rows[0];
-    return publicPrice(row?.result, row?.refreshed_at ?? null, row?.expires_at ?? null);
+    const sold = publicPrice(row?.result, row?.refreshed_at ?? null, row?.expires_at ?? null);
+    if (sold.salesCount > 0 && sold.avgPrice != null) return sold;
+    const legacy = await this.pool.query(`SELECT avg_price,sales_count,last_fetched FROM card_price_cache
+      WHERE card_id=$1 ORDER BY last_fetched DESC,id DESC LIMIT 1`, [cardId]);
+    return migrationPrice(sold, legacy.rows[0]);
+  }
+  async recordDemand(cardId: number) {
+    await this.init();
+    await this.pool.query(`INSERT INTO soldgraph_price_demand(card_id)
+      SELECT id FROM cards WHERE id=$1 ON CONFLICT(card_id) DO UPDATE SET requested_at=now()`, [cardId]);
   }
   async refresh(cardId: number) {
     await this.init();
@@ -68,6 +97,10 @@ export class SoldgraphCache {
       await db.query("BEGIN");
       try {
         await db.query("SELECT pg_advisory_xact_lock(78437,0)");
+        const quota = (await db.query(`SELECT q.*,
+          (SELECT count(*)::int FROM soldgraph_request_budget WHERE id>q.baseline) AS spent
+          FROM soldgraph_quota_snapshot q WHERE id=1`)).rows[0];
+        if (quota && quota.remaining - quota.spent <= quota.reserve) throw new Error("SoldGraph safety reserve reached");
         const usage = (await db.query(`SELECT count(*)::int AS total,
           count(*) FILTER (WHERE requested_at>now()-interval '24 hours')::int AS daily
           FROM soldgraph_request_budget WHERE requested_at>now()-interval '30 days'`)).rows[0];

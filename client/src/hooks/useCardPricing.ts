@@ -4,7 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 interface CardPricing {
   avgPrice: number | null;
   provider?: string;
-  confidence?: "normal" | "limited" | "unavailable";
+  confidence?: "normal" | "limited" | "unavailable" | "estimate";
   refreshing?: boolean;
   stale?: boolean;
   salesCount: number;

@@ -852,7 +852,9 @@ export function CardDetailModal({
                             await queryClient.invalidateQueries({ queryKey: ["/api/card-pricing", card.id] });
                             await queryClient.refetchQueries({ queryKey: ["/api/card-pricing", card.id] });
                             
-                            if (result?.provider === "soldgraph") {
+                            if (result?.provider === "legacy") {
+                              toast({ title: "Legacy estimate retained", description: "No usable sold comps yet. Existing active-listing estimate preserved." });
+                            } else if (result?.provider === "soldgraph") {
                               toast({ title: result.refreshing ? "Pricing refresh in progress" : result.confidence === "unavailable" ? "Insufficient sold data" : "Pricing updated",
                                 description: result.avgPrice == null ? "No usable sold comps available." :
                                   `$${result.avgPrice.toFixed(2)} (${result.salesCount} sold comps)${result.confidence === "limited" ? " — Limited data" : ""}` });
@@ -893,7 +895,7 @@ export function CardDetailModal({
                           <div className="flex items-center justify-between">
                             <span className="text-2xl font-bold text-green-400">${pricing.avgPrice.toFixed(2)}</span>
                             <span className="text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded-full">
-                              {pricing.salesCount} {pricing.provider === "soldgraph" ? "sold comps" : "sales"}
+                              {pricing.provider === "legacy" ? "Legacy active-listing estimate" : `${pricing.salesCount} ${pricing.provider === "soldgraph" ? "sold comps" : "sales"}`}
                             </span>
                           </div>
                           {pricing.confidence === "limited" && <p className="text-xs text-amber-400">Limited data — based on only {pricing.salesCount} usable sold comps.</p>}

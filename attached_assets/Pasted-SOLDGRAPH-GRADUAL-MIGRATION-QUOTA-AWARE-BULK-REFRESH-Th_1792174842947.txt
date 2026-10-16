@@ -1,0 +1,193 @@
+SOLDGRAPH GRADUAL MIGRATION + QUOTA-AWARE BULK REFRESH
+
+The SoldGraph production-ready integration is good, but make two narrow improvements before we enable it.
+
+Do not publish yet.
+
+==================================================
+1. PRESERVE EXISTING PRICES DURING MIGRATION
+==================================================
+
+When PRICING_PROVIDER=soldgraph is eventually enabled, do NOT make every card without a SoldGraph cache suddenly show Unavailable.
+
+Implement gradual migration behavior:
+
+A. If a card has a valid SoldGraph cached result:
+   use SoldGraph.
+
+B. If a card has never successfully received a SoldGraph result:
+   preserve the existing legacy pricing response.
+
+C. Once a card successfully receives SoldGraph sold-price data:
+   that card should thereafter use the SoldGraph cache as its primary pricing source.
+
+D. If SoldGraph returns zero usable comps:
+   preserve the prior displayed legacy estimate as fallback, but clearly track internally that it is LEGACY_ACTIVE_ESTIMATE rather than sold-data pricing.
+
+Do not represent a legacy fallback as verified sold comps.
+
+Do not erase existing prices simply because SoldGraph has not refreshed that card yet.
+
+Preserve rollback.
+
+==================================================
+2. ADD PROVIDER/SOURCE TRACKING
+==================================================
+
+For each returned price internally distinguish:
+
+SOLDGRAPH_SOLD_COMPS
+
+LEGACY_ACTIVE_ESTIMATE
+
+SOLDGRAPH_LIMITED_DATA
+
+SOLDGRAPH_NO_COMPS
+
+The UI does not need a redesign right now.
+
+But the backend must know which source produced the displayed number.
+
+==================================================
+3. BUILD AN ADMIN-ONLY BULK REFRESH TOOL
+==================================================
+
+SoldGraph paid usage is a rolling 30-day allowance.
+
+Build an ADMIN/OPERATOR-ONLY quota-aware refresh job.
+
+This must NOT run automatically yet.
+
+It should:
+
+1. Call SoldGraph /v1/usage once at job start.
+2. Read:
+   - plan
+   - limit
+   - used
+   - remaining
+   - window
+
+3. Reserve a configurable safety buffer.
+
+Example:
+never intentionally consume the final 100 requests.
+
+4. Determine how many refresh searches are safe.
+
+5. Refresh stale or never-refreshed cards in priority order.
+
+==================================================
+4. REFRESH PRIORITY
+==================================================
+
+Do not bulk-update random cards first.
+
+Prioritize:
+
+1. cards users explicitly pressed Check Value on
+2. cards currently owned by users
+3. cards recently viewed
+4. cards appearing in active collections
+5. cards with existing old/stale pricing
+6. newly-added catalog cards
+7. remaining eligible cards
+
+If some of these signals are not available cleanly, use the strongest existing signals without building new analytics infrastructure.
+
+Do not touch all ~77,000 cards blindly.
+
+==================================================
+5. USE SOLDGRAPH BATCH SUPPORT WHERE USEFUL
+==================================================
+
+SoldGraph supports POST /v1/batches for multiple searches.
+
+Evaluate using that for operator bulk refreshes.
+
+Important:
+Do not assume one batch containing many searches consumes only one search credit.
+
+Confirm actual SoldGraph credit behavior from response/usage before relying on it.
+
+The goal is operational efficiency, not bypassing quota rules.
+
+==================================================
+6. BULK JOB SAFETY
+==================================================
+
+The job must:
+
+- be admin/operator-only
+- have a dry-run mode
+- show estimated requests before starting
+- support a max-card limit
+- stop if remaining quota reaches the safety reserve
+- reuse valid 24-hour cache
+- skip already-fresh cards
+- preserve stale values on provider failure
+- respect the existing refresh lock
+- be resumable
+- avoid duplicate calls across app instances
+- log counts, not secrets
+
+No catalog-wide scheduled cron yet.
+
+==================================================
+7. OPTIONAL FUTURE AUTOMATION
+==================================================
+
+Design the code so we COULD later run a low-rate automatic refresh such as:
+
+refresh X high-priority stale cards daily when quota permits
+
+But do not enable any automatic schedule yet.
+
+==================================================
+8. TEST
+==================================================
+
+Using mocked/saved responses where possible, verify:
+
+- existing legacy price remains visible before SoldGraph refresh
+- successful SoldGraph refresh replaces legacy source for that card
+- cards with no SoldGraph cache do not become blank
+- zero-comps handling preserves fallback safely
+- dry-run calculates correct eligible-card count
+- usage reserve stops the bulk job
+- fresh cards are skipped
+- concurrent instances cannot duplicate refreshes
+- batch behavior does not bypass quota accounting
+
+==================================================
+MUST NOT DO
+==================================================
+
+- Do not publish.
+- Do not turn PRICING_PROVIDER on yet.
+- Do not start a scheduled bulk job.
+- Do not burn live SoldGraph calls unnecessarily.
+- Do not touch Scan to Add / DINO.
+- Do not touch affiliate tracking.
+- Do not redesign the UI.
+- Do not delete the old pricing provider.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Tell me:
+
+1. Whether current existing prices remain available before a card's first SoldGraph refresh.
+2. Exact fallback behavior.
+3. Source/provider states implemented.
+4. How bulk-refresh prioritization works.
+5. Whether SoldGraph batch API was used.
+6. Verified quota behavior of batch requests.
+7. How /v1/usage is used.
+8. Safety reserve default.
+9. How many cards would currently qualify for a dry-run bulk refresh.
+10. How many SoldGraph requests that dry run would require.
+11. Confirm nothing published.
+12. Confirm provider switch remains off.
+13. Confirm no live bulk job ran.
