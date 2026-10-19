@@ -5,7 +5,8 @@ import checklist from './data/fox-kids-1995.json';
 
 const slug = '1995-fleer-ultra-fox-kids-network';
 const name = '1995 Fleer Ultra Fox Kids Network';
-const marker = 'import_fox_kids_1995';
+// Separate completion marker also repairs sets imported before canonical flags were set.
+const marker = 'import_fox_kids_1995_canonical';
 const box = 'https://res.cloudinary.com/dgu7hjfvn/image/upload/v1792445487/image-admin/catalog-imports/1995-fox-kids/mrmjmvrmqnnmtnucktfv.png';
 const wolverine = 'https://res.cloudinary.com/dgu7hjfvn/image/upload/v1792445490/image-admin/catalog-imports/1995-fox-kids/o3wn1aut6yrdbv6gb7kx.png';
 const subsets = [
@@ -33,7 +34,9 @@ export async function importFoxKids1995(database: Pick<typeof db, 'transaction'>
       .where(sql`${mainSets.slug}=${slug} OR lower(${mainSets.name})=lower(${name})`);
     if (matches.length > 1) throw new Error('Fox Kids duplicate main sets');
     let main = matches[0];
-    if (!main) [main] = await tx.insert(mainSets).values({ name, slug }).returning();
+    if (!main) [main] = await tx.insert(mainSets).values({
+      name, slug, isCanonical: true, canonicalSource: 'csv_master',
+    }).returning();
     if (main.slug !== slug || main.name !== name || !main.isActive || main.archivedAt ||
       (main.thumbnailImageUrl && main.thumbnailImageUrl !== box))
       throw new Error('Fox Kids main-set identity/image conflict');
@@ -48,6 +51,7 @@ export async function importFoxKids1995(database: Pick<typeof db, 'transaction'>
       if (!set) [set] = await tx.insert(cardSets).values({
         name: subset.name, slug: `${slug}-${subset.suffix}`, year: 1995,
         mainSetId: main.id, isInsertSubset: subset.isInsert, totalCards: subset.count,
+        isCanonical: true, canonicalSource: 'csv_master',
       }).returning();
       if (set.slug !== `${slug}-${subset.suffix}` || set.year !== 1995 ||
         !set.isActive || set.archivedAt || set.isInsertSubset !== subset.isInsert ||
@@ -86,6 +90,7 @@ export async function importFoxKids1995(database: Pick<typeof db, 'transaction'>
         }
       }
       await tx.update(cardSets).set({
+        isCanonical: true, canonicalSource: 'csv_master',
         totalCards: subset.count, ...(subset.name === 'Base' ? { imageUrl: wolverine } : {}),
       }).where(eq(cardSets.id, set.id));
       const final = await tx.select().from(cards).where(eq(cards.setId, set.id));
@@ -93,7 +98,9 @@ export async function importFoxKids1995(database: Pick<typeof db, 'transaction'>
         !expected.some(e => e.number === c.cardNumber && e.name === c.name && e.isInsert === c.isInsert)))
         throw new Error(`Fox Kids final validation failed: ${subset.name}`);
     }
-    await tx.update(mainSets).set({ thumbnailImageUrl: box }).where(eq(mainSets.id, main.id));
+    await tx.update(mainSets).set({
+      thumbnailImageUrl: box, isCanonical: true, canonicalSource: 'csv_master',
+    }).where(eq(mainSets.id, main.id));
     await tx.insert(adminAuditLogs).values({
       actionType: marker, entityType: 'main_set', entityId: main.id, entityName: name,
       notes: JSON.stringify({
