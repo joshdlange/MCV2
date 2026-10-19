@@ -7,6 +7,8 @@ import { installDataFixWriteGate } from "./dataFixWriteGate";
 import { suppressAutomaticCatalogMutations } from "./devCatalogSnapshot";
 import { allowSuperfractorDuplicateRepair } from "./startupRepairPolicy";
 import { isVisualScanEnabled } from "./scanRuntime";
+import { retryStartupDatabase } from "./startupDatabase";
+import { catalogReadCache } from "./catalogReadCache";
 import path from "path";
 import fs from "fs";
 
@@ -126,11 +128,11 @@ server.listen({
   // Scanner startup is independent of development-only catalog maintenance.
   if (isVisualScanEnabled()) {
     const { initializeScanSchema } = await import("./scanSchema");
-    await initializeScanSchema();
+    await retryStartupDatabase(() => initializeScanSchema());
     const { initializeDevScanTelemetry } = await import("./services/devScanTelemetry");
-    await initializeDevScanTelemetry();
+    await retryStartupDatabase(() => initializeDevScanTelemetry());
     const { initializeDevScanVisual } = await import("./services/devScanVisual");
-    await initializeDevScanVisual();
+    await retryStartupDatabase(() => initializeDevScanVisual());
   }
 
   // Idempotent startup migration: trusted uploader flag (bypasses image approval queue).
@@ -924,7 +926,9 @@ server.listen({
 
   // Kick off the heavy data-fix seeds now that the app is ready (see
   // runDataFixSeeds above — deferred so slow first runs can't fail startup).
-  runDataFixSeeds().catch((error) => {
+  runDataFixSeeds().then(() => {
+    catalogReadCache.invalidate();
+  }).catch((error) => {
     dataFixWriteGate.markFailed();
     console.error('Deferred data-fix seeds failed:', error);
   });

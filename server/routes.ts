@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import { catalogReadCache } from "./catalogReadCache";
 import { suppressAutomaticCatalogMutations } from "./devCatalogSnapshot";
 import { upcomingPublicCatchup } from './services/upcomingSetRelease';
 import { ensureDiscoveryFresh } from './services/upcomingSetsSync';
@@ -243,10 +244,21 @@ function validateCriticalDependencies() {
 }
 
 export async function registerRoutes(app: Express, existingServer?: Server): Promise<Server> {
+  // Catalog writes invalidate local metadata immediately. Other instances expire
+  // within 15 seconds; no collector/account responses enter this cache.
+  app.use((req, res, next) => {
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) &&
+      /^\/api\/(?:main-sets|card-sets|cards|admin)(?:\/|$)/.test(req.path)) {
+      res.on('finish', () => {
+        if (res.statusCode < 400) catalogReadCache.invalidate();
+      });
+    }
+    next();
+  });
   // Reads catch up even on an autoscaled instance that slept through midnight.
   app.use(['/api/main-sets', '/api/card-sets', '/api/cards', '/api/upcoming-sets'], async (_req, res, next) => {
     try {
-      await upcomingPublicCatchup();
+      if (await upcomingPublicCatchup()) catalogReadCache.invalidate();
       void ensureDiscoveryFresh().catch(error => console.error('[Upcoming discovery catchup]', error));
       res.setHeader('Cache-Control', 'no-store');
       next();
@@ -1591,7 +1603,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
       // 1. isActive = true (not archived)
       // 2. isCanonical = true (from CSV import, not legacy duplicates)
       // 3. Has at least one card in database
-      const populatedMainSets = await db
+      const populatedMainSets = await catalogReadCache.get('main-sets', () => db
         .select()
         .from(mainSets)
         .where(
@@ -1606,7 +1618,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
             )
           )
         )
-        .orderBy(desc(mainSets.createdAt));
+        .orderBy(desc(mainSets.createdAt)));
       
       res.json(populatedMainSets);
     } catch (error) {
@@ -1977,7 +1989,7 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   // Get all card sets with optimized counting
   app.get("/api/card-sets", async (req, res) => {
     try {
-      const cardSets = await storage.getCardSets();
+      const cardSets = await catalogReadCache.get('card-sets', () => storage.getCardSets());
       res.json(cardSets);
     } catch (error) {
       console.error('Get card sets error:', error);

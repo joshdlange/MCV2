@@ -549,7 +549,7 @@ export class DatabaseStorage implements IStorage {
       return setsWithCounts;
     } catch (error) {
       console.error('Error getting card sets:', error);
-      return [];
+      throw error;
     }
   }
 

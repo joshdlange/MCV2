@@ -7,6 +7,10 @@ description: User-mandated rule — never present a diagnosis or fix as done wit
 
 **Catalog import verification:** Successful row insertion and an idempotent second run do not prove a set is visible. Check the actual collector-facing set-list response before claiming an import is ready.
 
+**Publishing handoff:** The user explicitly requires related fixes to be completed and verified together before asking them to republish; do not make them repeat visibility requirements.
+
+**Why:** Repeated incomplete checks forced multiple publishes for the same catalog addition. Verify the already-imported repair case as well as fresh imports, and distinguish workspace readiness from verified live delivery.
+
 **Why:** The Fox Kids checklist imported completely but was hidden by catalog eligibility filtering. Database counts and a login screenshot missed this.
 
 **How to apply:** Verify the imported parent and subsets against the same eligibility rules used by browse endpoints, then confirm the public listing includes the parent. Repeat on production after publishing.

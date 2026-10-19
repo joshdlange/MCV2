@@ -1,6 +1,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from "../shared/schema";
+import { warmDatabaseConnections } from "./startupDatabase";
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -55,11 +56,11 @@ pool.on('remove', () => {
 export async function warmPool() {
   const startTime = Date.now();
   try {
-    const clients = await Promise.all(
-      Array.from({ length: 3 }, () => pool.connect())
-    );
-    await Promise.all(clients.map(c => c.query('SELECT 1')));
-    clients.forEach(c => c.release());
+    const failures = await warmDatabaseConnections(pool);
+    if (failures) {
+      console.warn(`Pool warm-up: ${failures}/3 probes failed; all acquired connections released`);
+      return;
+    }
     console.log(`Database pool warmed (3 connections) in ${Date.now() - startTime}ms`);
   } catch (err) {
     console.error('Pool warm-up failed (non-fatal):', err);

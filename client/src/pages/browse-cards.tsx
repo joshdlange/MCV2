@@ -12,6 +12,7 @@ import { Search, Star, ArrowLeft, Plus, Edit, Filter, Grid3X3, List, X, Save, Ho
 import { CardGrid } from "@/components/cards/card-grid";
 import { CardDetailModal } from "@/components/cards/card-detail-modal";
 import { SetThumbnail } from "@/components/cards/set-thumbnail";
+import { catalogQueryOptions } from "@/lib/catalogQueryOptions";
 import { SubsetLabel } from "@/components/cards/subset-label";
 import { MainSetTile } from "@/components/cards/main-set-tile";
 import { getNewReleaseSetIds } from "@/lib/newReleaseSets";
@@ -98,12 +99,12 @@ export default function BrowseCards() {
   // All queries
   const { data: cardSets } = useQuery<CardSet[]>({
     queryKey: ["/api/card-sets"],
-    refetchInterval: 30_000,
+    ...catalogQueryOptions,
   });
 
   const { data: mainSets } = useQuery<MainSet[]>({
     queryKey: ["/api/main-sets"],
-    refetchInterval: 30_000,
+    ...catalogQueryOptions,
   });
   const newReleaseSetIds = useMemo(() => getNewReleaseSetIds(mainSets ?? []), [mainSets]);
 
