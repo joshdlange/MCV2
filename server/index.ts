@@ -671,6 +671,9 @@ server.listen({
       const { importFirstCoversII1991 } = await import('./seeds/importFirstCoversII1991');
       await importFirstCoversII1991();
 
+      const { importFoxKids1995 } = await import('./seeds/importFoxKids1995');
+      await importFoxKids1995();
+
       // Add-only catalog import; includes all checklist rows and the supplied thumbnail.
       const { importToppsVaultMarvel2026 } = await import('./seeds/importToppsVaultMarvel2026');
       await importToppsVaultMarvel2026();
