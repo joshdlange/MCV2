@@ -1,0 +1,502 @@
+[
+  {
+    "number": "1",
+    "name": "Beware",
+    "details": ""
+  },
+  {
+    "number": "2",
+    "name": "Giant-Size Chillers - Curse of Dracula",
+    "details": "Gene Colan, F. Chiaramonte"
+  },
+  {
+    "number": "3",
+    "name": "The Spectacular Spider-Man",
+    "details": "Sal Buscema"
+  },
+  {
+    "number": "4",
+    "name": "The Human Fly",
+    "details": "Lee Elias"
+  },
+  {
+    "number": "5",
+    "name": "The Marvel No-Prize Book",
+    "details": "Mike Golden"
+  },
+  {
+    "number": "6",
+    "name": "Marvel Superhero - Contest of Champions (Limited Series)",
+    "details": "John Romita, Jr., Pablo Marcus"
+  },
+  {
+    "number": "7",
+    "name": "Hercules (Limited Series)",
+    "details": "Bob Layton"
+  },
+  {
+    "number": "8",
+    "name": "Wolverine (Limited Series)",
+    "details": "Frank Miller"
+  },
+  {
+    "number": "9",
+    "name": "Vision and The Scarlet Witch (Limited Series)",
+    "details": "Rick Leonardi, Ian Akin, Brian Garvey"
+  },
+  {
+    "number": "10",
+    "name": "The Uncanny X-Men at the State Fair of Texas",
+    "details": "John Romita, Jr."
+  },
+  {
+    "number": "11",
+    "name": "Marvel Age",
+    "details": "Walt Simonson, Bob Larkin"
+  },
+  {
+    "number": "12",
+    "name": "Obnixio the Clown vs. The X-Men",
+    "details": "Alan Kupperberg"
+  },
+  {
+    "number": "13",
+    "name": "The Saga of Crystar - Crystal Warrior",
+    "details": "Bret Blevins, Vinnie Colletta"
+  },
+  {
+    "number": "14",
+    "name": "Hawkeye (Limited Series)",
+    "details": "Mark Gruenwald, Brett Breeding"
+  },
+  {
+    "number": "15",
+    "name": "Cloak & Dagger (Limited Series)",
+    "details": "Rick Leonardi, Terry Austin"
+  },
+  {
+    "number": "16",
+    "name": "Marvel Tails - Starring Peter Porker - The Spectacular Spider-Ham",
+    "details": "Mark Armstrong, Joe Albelo"
+  },
+  {
+    "number": "17",
+    "name": "The Falcon (Limited Series)",
+    "details": "Paul Smith, Vince Colletta"
+  },
+  {
+    "number": "18",
+    "name": "Magik (Limited Series)",
+    "details": "John Buscema, Tom Palmer"
+  },
+  {
+    "number": "19",
+    "name": "The Jack of Hearts (Limited Series)",
+    "details": "George Freeman"
+  },
+  {
+    "number": "20",
+    "name": "The X-Men and the Micronauts",
+    "details": "Butch Guice, Bob Wiacek"
+  },
+  {
+    "number": "21",
+    "name": "Secret Wars (Limited Series)",
+    "details": "Mike Zeck, John Beatty"
+  },
+  {
+    "number": "22",
+    "name": "Power Pack",
+    "details": "June Brigman, Bob Wiacek"
+  },
+  {
+    "number": "23",
+    "name": "West Coast Avengers (Limited Series)",
+    "details": "Bob Hall, Brett Breeding"
+  },
+  {
+    "number": "24",
+    "name": "Machine Man (Limited Series)",
+    "details": "Barry Windsor-Smith"
+  },
+  {
+    "number": "25",
+    "name": "Web of Spider-Man",
+    "details": "Charles Vess"
+  },
+  {
+    "number": "26",
+    "name": "Moon Knight",
+    "details": "Chris Warner"
+  },
+  {
+    "number": "27",
+    "name": "Cloak and Dagger",
+    "details": "Rick Leonardi, Terry Austin"
+  },
+  {
+    "number": "28",
+    "name": "Secret Wars II (Limited Series)",
+    "details": "John Byrne, Terry Austin"
+  },
+  {
+    "number": "29",
+    "name": "The Life of Captain Marvel",
+    "details": "Jim Starlin"
+  },
+  {
+    "number": "30",
+    "name": "Longshot (Limited Series)",
+    "details": "Arthur Adams"
+  },
+  {
+    "number": "31",
+    "name": "Squadron Supreme (Limited Series)",
+    "details": "Bob Hall, Joe Rubinstein"
+  },
+  {
+    "number": "32",
+    "name": "The Vision and The Scarlet Witch (Limited Series)",
+    "details": "Richard Howell, Andy Mushynsky"
+  },
+  {
+    "number": "33",
+    "name": "Nightcrawler (Limited Series)",
+    "details": "Dave Cockrum"
+  },
+  {
+    "number": "34",
+    "name": "Marvel Saga - The Official History of the Marvel Universe",
+    "details": "Ron Frenz, Bob Layton"
+  },
+  {
+    "number": "35",
+    "name": "X-Men and Alpha Flight (Limited Series)",
+    "details": "Paul Smith, Bob Wiacek"
+  },
+  {
+    "number": "36",
+    "name": "The Punisher (Limited Series)",
+    "details": "Mike Zeck"
+  },
+  {
+    "number": "37",
+    "name": "X-Factor",
+    "details": "Jackson Guice, Bob Layton, Josef Rubenstein"
+  },
+  {
+    "number": "38",
+    "name": "Classic X-Men",
+    "details": "Arthur Adams"
+  },
+  {
+    "number": "39",
+    "name": "Strikeforce:  Morituri",
+    "details": "Brent Anderson, Scott Williams"
+  },
+  {
+    "number": "40",
+    "name": "The Nam",
+    "details": "Michael Golden"
+  },
+  {
+    "number": "41",
+    "name": "The Comet Man",
+    "details": "Bill Sienkiewicz"
+  },
+  {
+    "number": "42",
+    "name": "Fallen Angels (Limited Series)",
+    "details": "Kerry Gammill, Tom Palmer"
+  },
+  {
+    "number": "43",
+    "name": "Strange Tales",
+    "details": "Brett Blevins"
+  },
+  {
+    "number": "44",
+    "name": "The X-Men vs. The Avengers (Limited Series)",
+    "details": "Marc Silvestri"
+  },
+  {
+    "number": "45",
+    "name": "Silver Surfer",
+    "details": "Marshall Rogers, Josef Rubinstein"
+  },
+  {
+    "number": "46",
+    "name": "The Punisher",
+    "details": "Klaus Janson"
+  },
+  {
+    "number": "47",
+    "name": "Solo Adventures Starring Hawkeye and Mockingbird",
+    "details": "Mark Bright, Josef Rubinstein"
+  },
+  {
+    "number": "48",
+    "name": "Marvel Comics Presents Wolverine",
+    "details": "Walt Simonson"
+  },
+  {
+    "number": "49",
+    "name": "Spellbound (Limited Series)",
+    "details": "Terry Shoemaker, Carl Potts"
+  },
+  {
+    "number": "50",
+    "name": "Nick Fury vs. S.H.I.E.L.D.",
+    "details": "Jim Steranko"
+  },
+  {
+    "number": "51",
+    "name": "Black Panther (Limited Series)",
+    "details": "Denys Cowan, Sam DeLarosa"
+  },
+  {
+    "number": "52",
+    "name": "What the ?!",
+    "details": "Jon Bogdanove, Al Milgrom"
+  },
+  {
+    "number": "53",
+    "name": "Wolfpack (Limited Series)",
+    "details": "Ann Nocenti, Terry Kavanagh"
+  },
+  {
+    "number": "54",
+    "name": "Excalibur",
+    "details": "Alan Davis, Paul Neary"
+  },
+  {
+    "number": "55",
+    "name": "X-Terminators",
+    "details": "Jon Bogdanove"
+  },
+  {
+    "number": "56",
+    "name": "The Saga of The Sub-Mariner (Limited Series)",
+    "details": "Rich Buckler"
+  },
+  {
+    "number": "57",
+    "name": "The Punisher War Journal",
+    "details": "Carl Potts, Scott Williams"
+  },
+  {
+    "number": "58",
+    "name": "Wolverine",
+    "details": "John Buscema"
+  },
+  {
+    "number": "59",
+    "name": "Semper Fi'",
+    "details": "John Severin"
+  },
+  {
+    "number": "60",
+    "name": "Fred Hembeck Destroys the Marvel Universe",
+    "details": "Fred Hembeck, Vince Colletta, Joe Staton"
+  },
+  {
+    "number": "61",
+    "name": "What If ...",
+    "details": "Keith Pollard"
+  },
+  {
+    "number": "62",
+    "name": "Solarman",
+    "details": "Mike Zeck"
+  },
+  {
+    "number": "63",
+    "name": "Damage Control (Limited Series)",
+    "details": "Ernie Colon"
+  },
+  {
+    "number": "64",
+    "name": "The Sensational She-Hulk",
+    "details": "John Byrne"
+  },
+  {
+    "number": "65",
+    "name": "Marc Spector - Moon Knight",
+    "details": "Carl Potts, Sal Velluto, Nowlan"
+  },
+  {
+    "number": "66",
+    "name": "Nth Man - The Ultimate Ninja",
+    "details": "Ron Wagner, Bob McLeod"
+  },
+  {
+    "number": "67",
+    "name": "Nick Fury, Agent of S.H.I.E.L.D.",
+    "details": "Bob Hall, Kim Demulder"
+  },
+  {
+    "number": "68",
+    "name": "Power Pachyderms",
+    "details": "Adam Blaustein, John D'Agostino"
+  },
+  {
+    "number": "69",
+    "name": "The Wolverine Saga",
+    "details": "Rob Liefeld, Terry Austin"
+  },
+  {
+    "number": "70",
+    "name": "Quasar",
+    "details": "Paul Ryan"
+  },
+  {
+    "number": "71",
+    "name": "Shadow Masters (Limited Series)",
+    "details": "Jim Lee, Frank Cirocco"
+  },
+  {
+    "number": "72",
+    "name": "The War",
+    "details": "Tom Morgan"
+  },
+  {
+    "number": "73",
+    "name": "Damage Control  (Limited Series)",
+    "details": "Ernie Colon"
+  },
+  {
+    "number": "74",
+    "name": "Open Space",
+    "details": "Tom Grummett, Art Viscardi"
+  },
+  {
+    "number": "75",
+    "name": "The Punisher:  No Escape",
+    "details": "Joe Jusko"
+  },
+  {
+    "number": "76",
+    "name": "The Thanos Quest",
+    "details": "Jim Starlin"
+  },
+  {
+    "number": "77",
+    "name": "X-Men Spotlight On ... Starjammers (Limited Series)",
+    "details": "Dave Cockrum"
+  },
+  {
+    "number": "78",
+    "name": "Namor, The Sub-Mariner",
+    "details": "John Byrne"
+  },
+  {
+    "number": "79",
+    "name": "The Saga of the Original Human Torch (Limited Series)",
+    "details": "Rich Buckler, Danny Bulanadi"
+  },
+  {
+    "number": "80",
+    "name": "Ghost Rider",
+    "details": "Javier Saltares"
+  },
+  {
+    "number": "81",
+    "name": "Marvel Superheroes - Spring Special",
+    "details": "Jim Lee"
+  },
+  {
+    "number": "82",
+    "name": "Black Knight (Limited Series)",
+    "details": "Rick Buckler, Tony Dezuniga"
+  },
+  {
+    "number": "83",
+    "name": "Guardians of the Galaxy",
+    "details": "Jim Valentino"
+  },
+  {
+    "number": "84",
+    "name": "Deathlok (Limited Series)",
+    "details": "Joe Jusko"
+  },
+  {
+    "number": "85",
+    "name": "The New Warriors",
+    "details": "Mark Jackson"
+  },
+  {
+    "number": "86",
+    "name": "The Punisher Armory",
+    "details": "Jim Lee"
+  },
+  {
+    "number": "87",
+    "name": "Spider-Man",
+    "details": "Todd McFarlane"
+  },
+  {
+    "number": "88",
+    "name": "Fool Killer (Limited Series)",
+    "details": "J.J. Birch, Tony Dezuniga"
+  },
+  {
+    "number": "89",
+    "name": "Nomad",
+    "details": "James Fry II, Mark McKenna"
+  },
+  {
+    "number": "90",
+    "name": "Black Panther:  Panther's Prey (Limited Series)",
+    "details": "Dwayne Turner"
+  },
+  {
+    "number": "91",
+    "name": "Punisher P.O.V. (Limited Series)",
+    "details": "Bernie Wrightson"
+  },
+  {
+    "number": "92",
+    "name": "Darkhawk",
+    "details": "Mike Manley"
+  },
+  {
+    "number": "93",
+    "name": "Nightcat",
+    "details": "Joe Jusko"
+  },
+  {
+    "number": "94",
+    "name": "Sweet Sixteen",
+    "details": "Barbara Slate"
+  },
+  {
+    "number": "95",
+    "name": "The Deadly Foes of Spider-Man (Limited Series)",
+    "details": "Al Milgrom"
+  },
+  {
+    "number": "96",
+    "name": "Damage Control Vol. III",
+    "details": "Kyle Baker"
+  },
+  {
+    "number": "97",
+    "name": "Sleepwalker",
+    "details": "Bret Blevins"
+  },
+  {
+    "number": "98",
+    "name": "Deathlok",
+    "details": "Denys Cowan"
+  },
+  {
+    "number": "99",
+    "name": "The Infinity Gauntlet (Limited Series)",
+    "details": "George Perez"
+  },
+  {
+    "number": "100",
+    "name": "Checklist",
+    "details": ""
+  }
+]
