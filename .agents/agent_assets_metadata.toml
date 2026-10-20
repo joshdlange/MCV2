@@ -422,3 +422,17 @@ mtime_ms = 1792172976569
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/28e47e12-3f5f-4fb8-8254-ac76343cbe9f/d7b0ca59-2250-43d6-bfad-9bc3d61161ec"
 storage_version_token = "1792172977598603"
 content_type = "text/plain"
+
+[[outputs]]
+id = "rtVpfZ3KiFHEekLey794D"
+uri = "file://reports/2025-topps-chrome-marvel-subset-counts.csv"
+type = "table"
+title = "2025 Topps Chrome Marvel — every subset and card count"
+description = "All subsets, including empty and similarly named entries, with live production and repaired development counts side by side. Archived cards are counted separately."
+logical_id = "d7295018-204b-4e8b-b986-eccbcaaced19"
+content_hash = "sha256:565bfb2335d6a2e194277286f5b66e559db89ea8b5b27bc3b1afbe440eae16ab"
+size = 45517
+mtime_ms = 1792516808411
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/d7295018-204b-4e8b-b986-eccbcaaced19/0c807c79-ac1d-4ae5-a5d5-1dcc01b70faf"
+storage_version_token = "1792516809222108"
+content_type = "text/csv"
