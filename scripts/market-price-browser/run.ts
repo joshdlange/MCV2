@@ -42,6 +42,7 @@ try {
     INSERT INTO card_sets VALUES(1,1,2026,'Fanfare');
     INSERT INTO cards(id,set_id,name,card_number) VALUES(1,1,'Knull','FF-23'),(2,1,'Knull','FF-23');`);
   const cache = new SoldgraphCache(pool, {
+    usage: async () => ({ window: "rolling_30_days", remaining: 1000, limit: 1000, used: 0 }),
     search: async () => {
       providerCalls++;
       return { data: [{ id: "fixture", title: "2026 Topps Chrome Marvel Knull FF-23 Fanfare",
@@ -123,6 +124,7 @@ try {
   }));
   app.get("/api/badges", handle(async (_req, res) => res.json((await pool.query("SELECT * FROM badges")).rows)));
   app.get("/api/badges/unlock-stats", (_req, res) => res.json({}));
+  app.get("/api/collection", (_req, res) => res.json([]));
   app.get("/api/social/relationships", (_req, res) => res.json({ friends: [], following: [], followers: [] }));
   app.get("/api/social/message-threads", (_req, res) => res.json([]));
   app.get("/api/social/unread-count", (_req, res) => res.json({ count: 0 }));
@@ -141,6 +143,7 @@ try {
     const userId = index + 1, token = randomUUID();
     sessions.set(token, userId);
     await pool.query("DELETE FROM soldgraph_price_cache").catch(() => {});
+    await pool.query("DELETE FROM card_price_cache");
     // Initialize pricing tables with a read, then start just below the lifetime cap.
     await cache.read(1);
     await pool.query("INSERT INTO market_refresh_usage(user_id,consumed) VALUES($1,19)", [userId]);
@@ -153,31 +156,141 @@ try {
     await page.route("**/*", route => new URL(route.request().url()).origin === base ? route.continue() : route.abort());
     await page.goto(base);
     await page.getByText("0 total XP", { exact: true }).filter({ visible: true }).waitFor();
+    const openToasts = page.locator('li[data-state="open"]');
+    const dismissToast = async () => {
+      await openToasts.locator("[toast-close]").click();
+      await openToasts.waitFor({ state: "hidden" });
+    };
+    const assertNoToast = async () => {
+      assert.equal(await openToasts.count(), 0, "gating must not show an error or a false success toast");
+    };
+    const checkDetail = async (expected: "upgradeRequired" | "refreshing", cached: boolean) => {
+      await page.goto(`${base}/detail/2`);
+      const priceText = cached ? "$25.00" : "Unavailable — insufficient sold data.";
+      const price = page.getByText(priceText, { exact: true }).first();
+      await price.waitFor();
+      const response = page.waitForResponse(r => r.url().endsWith("/api/card-pricing/2/refresh"));
+      await page.getByTestId("button-refresh-pricing").click();
+      assert.equal((await (await response).json())[expected], true);
+      await page.waitForFunction(() =>
+        !document.querySelector<HTMLButtonElement>('[data-testid="button-refresh-pricing"]')?.disabled);
+      const upgrade = page.getByRole("dialog").filter({
+        hasText: "Unlock unlimited Market Price refreshes with SUPER_HERO."
+      });
+      if (expected === "upgradeRequired") {
+        await upgrade.waitFor();
+        await openToasts.waitFor({ state: "hidden" });
+        await page.getByText("Fetching pricing...", { exact: true }).waitFor({ state: "hidden" });
+        await assertNoToast();
+        await page.screenshot({ path: join(output, `${width}-detail-upgrade-${cached ? "cached" : "empty"}.png`) });
+        await upgrade.getByRole("button", { name: "Not now — I'll upgrade later" }).click();
+        await upgrade.waitFor({ state: "hidden" });
+      } else {
+        await openToasts.getByText("Refresh In Progress", { exact: true }).waitFor();
+        assert.equal(await openToasts.evaluate(el => el.classList.contains("destructive")), false);
+        assert.equal(await upgrade.count(), 0);
+        await dismissToast();
+      }
+      await price.waitFor();
+      await page.getByTestId("button-close-modal").click();
+      await page.waitForURL(base + "/");
+      await page.getByTestId("card-1").getByText("$60.00", { exact: false }).waitFor();
+    };
     const refresh = async (id: number) => {
       const response = page.waitForResponse(r => r.url().endsWith(`/api/card-pricing/${id}/refresh`));
       await page.getByTestId(`card-${id}`).getByRole("button").click();
       const result = await response;
       const body = await result.json();
       assert.equal(result.status(), 200, JSON.stringify(body));
+      // Wait for mutation callbacks/render, not just the HTTP response, before
+      // asserting the absence of a toast.
+      await page.waitForFunction(cardId =>
+        !document.querySelector<HTMLButtonElement>(`[data-testid="card-${cardId}"] button`)?.disabled, id);
       return body;
     };
     const callsBefore = providerCalls;
     assert.equal((await refresh(1)).avgPrice, 60);
     assert.equal(providerCalls, callsBefore + 1);
     await page.getByTestId("card-1").getByText("$60.00", { exact: false }).waitFor();
+    await openToasts.getByText("Pricing Updated", { exact: true }).waitFor();
+    assert.equal(await openToasts.evaluate(el => el.classList.contains("destructive")), false);
+    await dismissToast();
     assert.equal((await pool.query("SELECT consumed FROM market_refresh_usage WHERE user_id=$1", [userId])).rows[0].consumed, 20);
     const gated = await refresh(2);
     assert.equal(gated.upgradeRequired, true);
     const dialog = page.getByRole("dialog");
     await dialog.getByText("Unlock unlimited Market Price refreshes with SUPER_HERO.", { exact: true }).waitFor();
+    await assertNoToast();
+    await page.getByTestId("card-2").getByText("N/A", { exact: true }).waitFor();
     const box = await dialog.boundingBox();
     assert.ok(box && box.x >= 0 && box.x + box.width <= width + 1, "upgrade dialog fits viewport");
     await page.screenshot({ path: join(output, `${width}-upgrade.png`) });
     await dialog.getByRole("button", { name: "Not now — I'll upgrade later" }).click();
     await dialog.waitFor({ state: "hidden" });
+    await checkDetail("upgradeRequired", false);
+    // Hold the real service lock to exercise in-flight responses both without
+    // a cached price and with one. No external pricing call should be made.
+    for (const id of [2, 1]) {
+      const lock = await pool.connect();
+      try {
+        await lock.query("SELECT pg_advisory_lock(78436,$1)", [id]);
+        assert.equal((await refresh(id)).refreshing, true);
+        await openToasts.getByText("Refresh In Progress", { exact: true }).waitFor();
+        assert.equal(await openToasts.evaluate(el => el.classList.contains("destructive")), false);
+        assert.equal(await dialog.count(), 0, "in-flight refresh does not trigger an upgrade");
+        await page.getByTestId(`card-${id}`).getByText(id === 1 ? "$60.00" : "N/A", { exact: false }).waitFor();
+        await dismissToast();
+        if (id === 2) await checkDetail("refreshing", false);
+      } finally {
+        await lock.query("SELECT pg_advisory_unlock(78436,$1)", [id]);
+        lock.release();
+      }
+    }
+    // An uncached sold-price refresh can still have a usable legacy estimate.
+    // Gating must preserve that price without claiming it was just updated.
+    await pool.query("INSERT INTO card_price_cache(card_id,avg_price,sales_count,last_fetched) VALUES(2,25,3,now())");
+    await page.reload();
+    await page.getByTestId("card-2").getByText("$25.00", { exact: false }).waitFor();
+    assert.equal((await refresh(2)).upgradeRequired, true);
+    await dialog.getByText("Unlock unlimited Market Price refreshes with SUPER_HERO.", { exact: true }).waitFor();
+    await assertNoToast();
+    await page.getByTestId("card-2").getByText("$25.00", { exact: false }).waitFor();
+    await page.screenshot({ path: join(output, `${width}-upgrade-cached.png`) });
+    await dialog.getByRole("button", { name: "Not now — I'll upgrade later" }).click();
+    await dialog.waitFor({ state: "hidden" });
+    await checkDetail("upgradeRequired", true);
+    const legacyLock = await pool.connect();
+    try {
+      await legacyLock.query("SELECT pg_advisory_lock(78436,2)");
+      await checkDetail("refreshing", true);
+    } finally {
+      await legacyLock.query("SELECT pg_advisory_unlock(78436,2)");
+      legacyLock.release();
+    }
     assert.equal((await refresh(1)).avgPrice, 60, "fresh cache remains usable at cap");
+    await openToasts.getByText("Pricing Updated", { exact: true }).waitFor();
+    await dismissToast();
     assert.equal(await dialog.count(), 0);
     assert.equal(providerCalls, callsBefore + 1, "cache and cap do not call provider");
+    // Failure controls: normal gating must not hide genuine missing data or
+    // request failures. Inject these only at the browser boundary.
+    for (const [status, body, title] of [
+      [200, { avgPrice: null }, "Pricing Unavailable"],
+      [503, { message: "Pricing service unavailable" }, "Refresh Failed"],
+    ] as const) {
+      const url = `${base}/api/card-pricing/1/refresh`;
+      await page.route(url, route => route.fulfill({ status, json: body }));
+      try {
+        await page.getByTestId("card-1").getByRole("button").click();
+        await openToasts.getByText(title, { exact: true }).waitFor();
+        assert.equal(await openToasts.evaluate(el => el.classList.contains("destructive")), true);
+        await page.getByTestId("card-1").getByText("$60.00", { exact: false }).waitFor();
+        assert.equal(await dialog.count(), 0);
+        await dismissToast();
+      } finally {
+        await page.unroute(url);
+      }
+    }
     // Concurrent legitimate cache refreshes exercise actual ON CONFLICT award logic.
     await Promise.all(Array.from({ length: 5 }, () => context.request.post(`${base}/api/card-pricing/1/refresh`)));
     assert.equal((await pool.query("SELECT count(*)::int n FROM user_badges WHERE user_id=$1", [userId])).rows[0].n, 1);
@@ -207,7 +320,7 @@ try {
     assert.equal((await services.notificationService.getUserNotifications(userId)).length, 1);
     assert.equal((await services.computeUserXp(userId)).totalXp, 10);
     assert.deepEqual(failures, []);
-    console.log(`${width}px PASS: authenticated refresh, cap modal, fresh cache, one badge/notification/+10 XP, read and reload persistence`);
+    console.log(`${width}px PASS: authenticated refresh, CardValue and detail Check Value cap modal without toast, neutral in-flight notice, retained prices, genuine failure toasts, fresh cache, one badge/notification/+10 XP, read and reload persistence`);
     await context.close();
   }
 } finally {

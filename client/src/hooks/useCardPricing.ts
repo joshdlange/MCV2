@@ -6,6 +6,7 @@ interface CardPricing {
   provider?: string;
   confidence?: "normal" | "limited" | "unavailable" | "estimate";
   refreshing?: boolean;
+  upgradeRequired?: boolean;
   stale?: boolean;
   salesCount: number;
   lastFetched: Date;

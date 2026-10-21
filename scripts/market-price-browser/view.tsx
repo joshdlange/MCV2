@@ -5,6 +5,8 @@ import { Route, Switch } from "wouter";
 import { queryClient } from "../../client/src/lib/queryClient";
 import { useAppStore } from "../../client/src/lib/store";
 import { CardValue } from "../../client/src/components/cards/card-value";
+import { CardDetailModal } from "../../client/src/components/cards/card-detail-modal";
+import type { CardWithSet } from "../../shared/schema";
 import { MarketUpgradeHost } from "../../client/src/components/subscription/market-upgrade-host";
 import { NotificationBell } from "../../client/src/components/NotificationBell";
 import { XpPowerMeter } from "../../client/src/components/dashboard/xp-power-meter";
@@ -20,6 +22,11 @@ createRoot(document.getElementById("root")!).render(
       <header className="flex justify-between mb-6"><h1>Market Price browser verification</h1><NotificationBell /></header>
       <Switch>
         <Route path="/social" component={Social} />
+        <Route path="/detail/:id">{params => <CardDetailModal
+          card={{ id: Number(params.id), name: "Knull", cardNumber: "FF-23", rarity: "Common",
+            set: { name: "Fanfare" } } as CardWithSet}
+          isOpen onClose={() => { window.location.href = "/"; }}
+        />}</Route>
         <Route>
           <div className="bg-gray-950 p-4 rounded mb-6"><XpPowerMeter /></div>
           {[1, 2].map(id => <section key={id} data-testid={`card-${id}`} className="bg-white p-6 mb-4">

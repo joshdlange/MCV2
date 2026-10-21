@@ -42,6 +42,16 @@ export function CardValue({ cardId, showRefresh = false, estimatedValue, current
       return await response.json();
     },
     onSuccess: (data: any) => {
+      // apiRequest opens the upgrade modal. Neither gating nor an existing
+      // refresh is a completed price update; leave the cached value untouched.
+      if (data.upgradeRequired) return;
+      if (data.refreshing) {
+        toast({
+          title: "Refresh In Progress",
+          description: "This card's price is already being refreshed. Please try again shortly."
+        });
+        return;
+      }
       if (data.avgPrice != null) {
         queryClient.invalidateQueries({
           queryKey: ["/api/card-pricing"]

@@ -845,9 +845,22 @@ export function CardDetailModal({
                         onClick={async () => {
                           if (!card || isCheckingValue) return;
                           setIsCheckingValue(true);
-                          toast({ title: "Fetching pricing...", description: "This may take a moment" });
+                          const fetchingToast = toast({ title: "Fetching pricing...", description: "This may take a moment" });
                           try {
                             const result = await refreshPricing(card.id);
+                            // The shared API handler opens the upgrade modal. Do
+                            // not refetch or report a completed update for gating.
+                            if (result?.upgradeRequired) {
+                              fetchingToast.dismiss();
+                              return;
+                            }
+                            if (result?.refreshing) {
+                              toast({
+                                title: "Refresh In Progress",
+                                description: "This card's price is already being refreshed. Please try again shortly."
+                              });
+                              return;
+                            }
                             invalidateCollectionValues(queryClient);
                             await queryClient.invalidateQueries({ queryKey: ["/api/card-pricing", card.id] });
                             await queryClient.refetchQueries({ queryKey: ["/api/card-pricing", card.id] });
@@ -855,7 +868,7 @@ export function CardDetailModal({
                             if (result?.provider === "legacy") {
                               toast({ title: "eBay baseline", description: result.avgPrice == null ? "No usable baseline available." : "Estimated from current listings; not sold comps." });
                             } else if (result?.provider === "soldgraph") {
-                              toast({ title: result.refreshing ? "Pricing refresh in progress" : result.confidence === "unavailable" ? "Insufficient sold data" : "Pricing updated",
+                              toast({ title: result.confidence === "unavailable" ? "Insufficient sold data" : "Pricing updated",
                                 description: result.avgPrice == null ? "No usable sold comps available." :
                                   `$${result.avgPrice.toFixed(2)} (${result.salesCount} sold comps)${result.confidence === "limited" ? " — Limited data" : ""}` });
                             } else if (result && result.avgPrice === -1) {
