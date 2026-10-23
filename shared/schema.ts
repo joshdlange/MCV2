@@ -1,7 +1,32 @@
-import { pgTable, text, serial, integer, boolean, timestamp, decimal, index, uniqueIndex, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, bigserial, bigint, integer, boolean, timestamp, decimal, index, uniqueIndex, jsonb } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Match the pricing guards' existing SQL definitions. Keeping these in the
+// schema prevents development sync / publishing from treating them as obsolete.
+export const marketRefreshThrottle = pgTable("market_refresh_throttle", {
+  key: text("key").primaryKey(),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  hits: integer("hits").notNull(),
+});
+
+export const ebayBrowseReservations = pgTable("ebay_browse_reservations", {
+  id: bigserial("id", { mode: "bigint" }).primaryKey(),
+  requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
+  cardId: integer("card_id"),
+  runId: text("run_id"),
+}, (table) => ({
+  requestedAtIndex: index("ebay_browse_time").on(table.requestedAt),
+}));
+
+export const ebayBrowseAllowance = pgTable("ebay_browse_allowance", {
+  id: integer("id").primaryKey(),
+  remaining: integer("remaining"),
+  baseline: bigint("baseline", { mode: "bigint" }),
+  resetAt: timestamp("reset_at", { withTimezone: true }),
+  capturedAt: timestamp("captured_at", { withTimezone: true }),
+});
 
 // Collection card limit for Side Kick (non-Super Hero) plans.
 // Single source of truth — used by server enforcement and all client checks/copy.
