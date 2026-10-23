@@ -6,6 +6,10 @@ Collection value uses positive cached market prices only, never catalog estimate
 
 **Why:** The user explicitly chose cached market prices only when approving the Most Valuable Cards brief. All collection-value displays must agree.
 
+Collection freshness must distinguish the latest individual price update from the oldest cached price; never imply the whole collection was refreshed together.
+
+**Why:** A collector reported individual cards changing while Home showed an old date. The user approved fixing both valuation-source agreement and the misleading date wording.
+
 Owners always see their own top cards. Visitors may see values only when the profile is public and the collection is shared, subject to block checks. Friends-only visibility does not grant access to top-card values.
 
 **Why:** The feature brief explicitly restricts visitor values to public collections.

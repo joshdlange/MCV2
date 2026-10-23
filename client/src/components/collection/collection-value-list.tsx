@@ -65,7 +65,11 @@ export function CollectionValueList({
         <p className="mt-1 text-3xl font-bold tabular-nums text-green-700">{formatMarketValue(summary.totalValue)}</p>
         <p className="mt-2 text-sm text-gray-600">{summary.pricedCards.toLocaleString()} {summary.pricedCards === 1 ? "card" : "cards"} with prices / {(summary.pricedCards + summary.unpricedCards).toLocaleString()} {summary.pricedCards + summary.unpricedCards === 1 ? "card" : "cards"} in collection</p>
         <p className="mt-1 text-xs text-gray-500">Includes every priced copy in your collection.</p>
-        <p className="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-500">Prices updated {summary.pricesUpdatedAt ? new Date(summary.pricesUpdatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}</p>
+        <div className="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-500">
+          <p>Latest price update: {summary.pricesUpdatedAt ? new Date(summary.pricesUpdatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}</p>
+          {summary.oldestPriceUpdatedAt && <p className="mt-1">Oldest cached price: {new Date(summary.oldestPriceUpdatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>}
+          <p className="mt-1">Cards are updated individually, not all at once.</p>
+        </div>
       </div>}
       {query.isLoading ? <div role="status" aria-label="Loading card values" className="space-y-4">
         {isShowcase && <div className="h-80 animate-pulse rounded-2xl bg-stone-200" />}

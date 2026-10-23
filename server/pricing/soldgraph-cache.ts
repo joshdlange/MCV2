@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import { SoldgraphClient, SoldgraphError } from "./soldgraph-client";
 import { analyzeSoldRows, buildSoldQueries } from "./soldgraph-matching";
+import { soldgraphDisplayMaxAgeDays } from "./display-policy";
 
 export const soldgraphEnabled = () => process.env.PRICING_PROVIDER === "soldgraph";
 export function publicPrice(result: any, refreshedAt: Date | null, expiresAt: Date | null) {
@@ -17,8 +18,7 @@ export function publicPrice(result: any, refreshedAt: Date | null, expiresAt: Da
 }
 
 export function migrationPrice(sold: ReturnType<typeof publicPrice>, legacy: any) {
-  const days = Number(process.env.SOLDGRAPH_DISPLAY_MAX_AGE_DAYS ?? 14);
-  if (!Number.isFinite(days) || days < 1) throw new Error("Invalid SoldGraph display age");
+  const days = soldgraphDisplayMaxAgeDays();
   const preferred = !!sold.lastFetched && Date.now()-new Date(sold.lastFetched).getTime() <= days*86400000;
   if (preferred && sold.avgPrice != null && sold.avgPrice > 0 && sold.salesCount > 0) return sold;
   const price = Number(legacy?.avg_price);

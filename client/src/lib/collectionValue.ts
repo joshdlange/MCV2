@@ -28,6 +28,7 @@ export interface CollectionValueResponse {
     unpricedCards: number;
     pricedCopies: number;
     pricesUpdatedAt: string | null;
+    oldestPriceUpdatedAt?: string | null;
   };
 }
 

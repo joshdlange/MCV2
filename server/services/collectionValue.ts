@@ -1,5 +1,7 @@
 import { sql, type SQL } from 'drizzle-orm';
 import { db } from '../db';
+import { soldgraphEnabled } from '../pricing/soldgraph-cache';
+import { soldgraphDisplayMaxAgeDays } from '../pricing/display-policy';
 
 type Executor = Pick<typeof db, 'execute'>;
 export type CollectionValueOptions = {
@@ -41,15 +43,37 @@ export function canViewTopCards(target: { showCollection: boolean; profileVisibi
 // Latest cache row wins, even if it has no usable price. Never revive an older
 // positive price after a failed/unpriced newer result, or multiply duplicate caches.
 function valuedCollection(userId: number) {
+  // Match card-detail migrationPrice: eligible sold comps first, otherwise the
+  // latest baseline. A failed refresh never erases a usable baseline. This is
+  // cache-only SQL, not one provider lookup per owned card.
+  const useSold = soldgraphEnabled();
+  const soldJoin = useSold ? sql`
+      LEFT JOIN soldgraph_price_cache sg ON sg.card_id = c.id
+      LEFT JOIN LATERAL (
+        SELECT CASE WHEN jsonb_typeof(sg.result->'median') = 'number'
+          THEN (sg.result->>'median')::numeric END AS median,
+          CASE WHEN jsonb_typeof(sg.result->'usableCount') = 'number'
+          THEN (sg.result->>'usableCount')::numeric END AS usable_count
+      ) sold ON true` : sql``;
+  const preferSold = useSold ? sql`(
+    sg.refreshed_at >= now() - ${soldgraphDisplayMaxAgeDays()} * interval '1 day'
+    AND sold.median > 0 AND sold.usable_count > 0
+  )` : sql`false`;
+  const effectivePrice = useSold
+    ? sql`CASE WHEN ${preferSold} THEN sold.median ELSE p.avg_price END`
+    : sql`p.avg_price`;
+  const effectiveDate = useSold
+    ? sql`CASE WHEN ${preferSold} THEN sg.refreshed_at ELSE p.last_fetched END`
+    : sql`p.last_fetched`;
   return sql`
     valued AS MATERIALIZED (
       SELECT c.id, uc.id AS collection_item_id, uc.quantity, uc.is_favorite,
         c.name, c.card_number, c.set_id, c.is_insert, c.front_image_url,
         c.back_image_url, c.rarity, c.estimated_value,
         cs.name AS set_name, cs.year AS set_year, cs.main_set_id,
-        CASE WHEN p.avg_price > 0 AND p.avg_price::text NOT IN ('NaN', 'Infinity', '-Infinity')
-          THEN p.avg_price ELSE NULL END AS market_value,
-        p.last_fetched AS price_updated_at
+        CASE WHEN (${effectivePrice}) > 0 AND (${effectivePrice})::text NOT IN ('NaN', 'Infinity', '-Infinity')
+          THEN ${effectivePrice} ELSE NULL END AS market_value,
+        ${effectiveDate} AS price_updated_at
       FROM user_collections uc
       JOIN cards c ON c.id = uc.card_id
       JOIN card_sets cs ON cs.id = c.set_id
@@ -57,6 +81,7 @@ function valuedCollection(userId: number) {
         SELECT avg_price, last_fetched FROM card_price_cache
         WHERE card_id = c.id ORDER BY last_fetched DESC, id DESC LIMIT 1
       ) p ON true
+      ${soldJoin}
       WHERE uc.user_id = ${userId} AND uc.quantity > 0
         AND c.archived_at IS NULL AND cs.archived_at IS NULL AND cs.is_active = true
     )`;
@@ -67,7 +92,8 @@ const summarySelect = sql`
     count(*) FILTER (WHERE market_value IS NOT NULL)::int AS "pricedCards",
     count(*) FILTER (WHERE market_value IS NULL)::int AS "unpricedCards",
     COALESCE(sum(quantity) FILTER (WHERE market_value IS NOT NULL), 0)::int AS "pricedCopies",
-    min(price_updated_at) FILTER (WHERE market_value IS NOT NULL) AS "pricesUpdatedAt"
+    max(price_updated_at) FILTER (WHERE market_value IS NOT NULL) AS "pricesUpdatedAt",
+    min(price_updated_at) FILTER (WHERE market_value IS NOT NULL) AS "oldestPriceUpdatedAt"
   FROM valued`;
 
 function normalizeSummary(row: any) {
@@ -75,6 +101,7 @@ function normalizeSummary(row: any) {
     totalValue: Number(row.totalValue), pricedCards: Number(row.pricedCards),
     unpricedCards: Number(row.unpricedCards), pricedCopies: Number(row.pricedCopies),
     pricesUpdatedAt: row.pricesUpdatedAt ? new Date(row.pricesUpdatedAt).toISOString() : null,
+    oldestPriceUpdatedAt: row.oldestPriceUpdatedAt ? new Date(row.oldestPriceUpdatedAt).toISOString() : null,
   };
 }
 

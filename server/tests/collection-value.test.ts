@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import express from 'express';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { db, pool } from '../db';
 import { users, cardSets, cards, cardPriceCache, userCollections, blocks, follows } from '../../shared/schema';
 import { getCollectionValue, getCollectionValueSummary, parseCollectionValueOptions, canViewTopCards } from '../services/collectionValue';
@@ -9,6 +9,91 @@ import { resolveCollectorAccess } from '../services/collectorAccess';
 import { registerCollectionValueRoutes } from '../collection-value-routes';
 import { optimizedStorage } from '../optimized-storage';
 import { storage } from '../storage';
+import { migrationPrice, publicPrice } from '../pricing/soldgraph-cache';
+
+test('collection totals and dates match card-detail sold pricing, fallback and refresh', async () => {
+  assert.notEqual(process.env.NODE_ENV, 'production');
+  const oldProvider = process.env.PRICING_PROVIDER;
+  const oldMaxAge = process.env.SOLDGRAPH_DISPLAY_MAX_AGE_DAYS;
+  class Rollback extends Error {}
+  try {
+    process.env.PRICING_PROVIDER = 'soldgraph';
+    process.env.SOLDGRAPH_DISPLAY_MAX_AGE_DAYS = '14';
+    await assert.rejects(db.transaction(async tx => {
+      const tag = `value-sold-${Date.now()}`;
+      const [owner] = await tx.insert(users).values({
+        username: tag, firebaseUid: tag, email: `${tag}@example.invalid`,
+        marketingOptIn: false, emailUpdates: false,
+      }).returning();
+      const [set] = await tx.insert(cardSets).values({ name: tag, slug: tag, year: 2026 }).returning();
+      const baselineAt = new Date(Date.now() - 20 * 86400000);
+      const cases = [
+        { age: 2, median: 60, usableCount: 4, baseline: 20 },
+        { age: 13, median: 70, usableCount: 1, baseline: 30 },
+        { age: 15, median: 90, usableCount: 3, baseline: 40 },
+        { age: 1.5, median: null, usableCount: 0, baseline: 50 },
+        { age: 15, median: 100, usableCount: 3, baseline: null },
+        { age: 1.5, median: 25, usableCount: 2, baseline: null },
+        { age: 1.5, median: 0, usableCount: 0, baseline: -1 },
+      ];
+      const ids: number[] = [];
+      const expected = [];
+      for (const [i, item] of cases.entries()) {
+        const [card] = await tx.insert(cards).values({
+          setId: set.id, name: `Price fixture ${i}`, cardNumber: String(i + 1), rarity: 'Common',
+        }).returning();
+        ids.push(card.id);
+        await tx.insert(userCollections).values({ userId: owner.id, cardId: card.id, quantity: 2 });
+        if (item.baseline !== null) {
+          await tx.insert(cardPriceCache).values([
+            { cardId: card.id, avgPrice: String(item.baseline), salesCount: 5, lastFetched: baselineAt },
+          ]);
+        }
+        const refreshedAt = new Date(Date.now() - item.age * 86400000);
+        const result = { median: item.median, usableCount: item.usableCount };
+        await tx.execute(sql`INSERT INTO soldgraph_price_cache (card_id, query, result, refreshed_at, expires_at)
+          VALUES (${card.id}, 'isolated value test', ${JSON.stringify(result)}::jsonb,
+            ${refreshedAt}, ${new Date(Date.now() - 1000)})`);
+        expected.push(migrationPrice(publicPrice(result, refreshedAt, new Date(0)),
+          item.baseline === null ? undefined : { avg_price: item.baseline, last_fetched: baselineAt, sales_count: 5 }));
+      }
+      const options = parseCollectionValueOptions({ hideUnder5: 'false' });
+      const value = await getCollectionValue(owner.id, options, tx);
+      const total = expected.reduce((sum, p) => sum + (p.avgPrice ?? 0) * 2, 0);
+      assert.equal(value.summary.totalValue, total);
+      assert.equal(value.summary.pricedCards, 5);
+      assert.equal(value.summary.unpricedCards, 2);
+      assert.equal(value.summary.pricedCopies, 10);
+      assert.equal(value.summary.oldestPriceUpdatedAt, baselineAt.toISOString());
+      const latest = Math.max(...expected.filter(p => p.avgPrice != null).map(p => new Date(p.lastFetched!).getTime()));
+      assert.equal(value.summary.pricesUpdatedAt, new Date(latest).toISOString());
+      for (const card of value.cards) {
+        assert.equal(card.marketValue, expected[ids.indexOf(card.id)].avgPrice);
+      }
+      assert.deepEqual(await getCollectionValueSummary(owner.id, tx), value.summary);
+
+      const refreshTime = new Date();
+      await tx.execute(sql`UPDATE soldgraph_price_cache SET
+        result = '{"median":80,"usableCount":4}'::jsonb, refreshed_at = ${refreshTime}
+        WHERE card_id = ${ids[0]}`);
+      const refreshed = await getCollectionValueSummary(owner.id, tx);
+      assert.equal(refreshed.totalValue, total + 40, 'refresh changes quantity-inclusive total immediately');
+      assert.equal(refreshed.pricesUpdatedAt, refreshTime.toISOString());
+      assert.equal(refreshed.oldestPriceUpdatedAt, baselineAt.toISOString());
+
+      process.env.SOLDGRAPH_DISPLAY_MAX_AGE_DAYS = '1';
+      assert.equal((await getCollectionValueSummary(owner.id, tx)).totalValue, (80 + 30 + 40 + 50) * 2);
+      process.env.PRICING_PROVIDER = 'legacy';
+      assert.equal((await getCollectionValueSummary(owner.id, tx)).totalValue, (20 + 30 + 40 + 50) * 2);
+      throw new Rollback();
+    }), error => error instanceof Rollback);
+  } finally {
+    if (oldProvider === undefined) delete process.env.PRICING_PROVIDER;
+    else process.env.PRICING_PROVIDER = oldProvider;
+    if (oldMaxAge === undefined) delete process.env.SOLDGRAPH_DISPLAY_MAX_AGE_DAYS;
+    else process.env.SOLDGRAPH_DISPLAY_MAX_AGE_DAYS = oldMaxAge;
+  }
+});
 
 test('query validation rejects invalid sort, pagination and filter inputs', () => {
   assert.deepEqual(parseCollectionValueOptions({}).order, 'desc');
