@@ -682,6 +682,8 @@ server.listen({
       // Add-only catalog import; includes all checklist rows and the supplied thumbnail.
       const { importToppsVaultMarvel2026 } = await import('./seeds/importToppsVaultMarvel2026');
       await importToppsVaultMarvel2026();
+      const { addVaultFromTheSetAutographs2026 } = await import('./seeds/addVaultFromTheSetAutographs2026');
+      await addVaultFromTheSetAutographs2026();
 
       // Idempotent duplicate/relocation repair: consolidate legacy set twins and
       // repoint every live card reference before archived source cards disappear
