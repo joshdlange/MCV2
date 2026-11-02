@@ -1,5 +1,6 @@
 - [Native vault direction](native-vault-direction.md) — user rejected still-image crossfades; prefers continuous footage and a replayable phone-size preview for periodic replacements.
 - [Vault autograph checklist](vault-autograph-checklist.md) — owner confirms FTSA matches FTS characters but is a separate autographed subset.
+- [Neon checklist correction](neon-checklist-policy.md) — 1 UP–10 UP is one checklist; three color parallels and five full-base Diamante subsets confirmed.
 - [Publishing schema drift](publishing-schema-drift.md) — runtime-created tables need schema declarations; failed publishes can still leave production schema changed.
 - [Native review policy](native-review-policy.md) — native store popup is the default automatic review experience; no review-linked rewards or repeat prompting.
 - [Marketplace scrapped](marketplace-scrapped.md) — MCV is a companion to eBay/Whatnot, not a competitor; don't extend marketplace code or propose selling features.
