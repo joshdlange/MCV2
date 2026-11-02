@@ -693,6 +693,8 @@ server.listen({
       try {
         const { mergeDuplicateLegacySets } = await import('./seeds/mergeDuplicateLegacySets');
         await mergeDuplicateLegacySets();
+        const { repairUltraXMenChromium1995 } = await import('./seeds/repairUltraXMenChromium1995');
+        await repairUltraXMenChromium1995();
       } catch (error) {
         console.error('Startup repair (legacy set merge) failed:', error);
         throw error;

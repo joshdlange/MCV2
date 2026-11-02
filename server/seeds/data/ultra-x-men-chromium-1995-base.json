@@ -1,0 +1,602 @@
+[
+  {
+    "number": "1",
+    "name": "Archangel",
+    "artist": "Andy Kubert",
+    "type": "X-Men"
+  },
+  {
+    "number": "2",
+    "name": "Beast",
+    "artist": "Andy Kubert",
+    "type": "X-Men"
+  },
+  {
+    "number": "3",
+    "name": "Bishop",
+    "artist": "Andy Kubert",
+    "type": "X-Men"
+  },
+  {
+    "number": "4",
+    "name": "Cannonball",
+    "artist": "Andy Kubert",
+    "type": "X-Men"
+  },
+  {
+    "number": "5",
+    "name": "Cyclops",
+    "artist": "Andy Kubert",
+    "type": "X-Men"
+  },
+  {
+    "number": "6",
+    "name": "Gambit",
+    "artist": "Andy Kubert",
+    "type": "X-Men"
+  },
+  {
+    "number": "7",
+    "name": "Iceman",
+    "artist": "Adam Kubert",
+    "type": "X-Men"
+  },
+  {
+    "number": "8",
+    "name": "Phoenix",
+    "artist": "Adam Kubert",
+    "type": "X-Men"
+  },
+  {
+    "number": "9",
+    "name": "Professor X",
+    "artist": "Adam Kubert",
+    "type": "X-Men"
+  },
+  {
+    "number": "10",
+    "name": "Psylocke",
+    "artist": "Andy Kubert",
+    "type": "X-Men"
+  },
+  {
+    "number": "11",
+    "name": "Rogue",
+    "artist": "Andy Kubert",
+    "type": "X-Men"
+  },
+  {
+    "number": "12",
+    "name": "Storm",
+    "artist": "Andy Kubert",
+    "type": "X-Men"
+  },
+  {
+    "number": "13",
+    "name": "Wolverine",
+    "artist": "Adam Kubert",
+    "type": "X-Men"
+  },
+  {
+    "number": "14",
+    "name": "Forge",
+    "artist": "Andy Kubert",
+    "type": "X-Factor"
+  },
+  {
+    "number": "15",
+    "name": "Havok",
+    "artist": "Adam Kubert",
+    "type": "X-Factor"
+  },
+  {
+    "number": "16",
+    "name": "Mystique",
+    "artist": "Joe Kubert",
+    "type": "X-Factor"
+  },
+  {
+    "number": "17",
+    "name": "Random",
+    "artist": "Adam Kubert",
+    "type": "X-Factor"
+  },
+  {
+    "number": "18",
+    "name": "Sabretooth",
+    "artist": "Andy Kubert",
+    "type": "X-Factor"
+  },
+  {
+    "number": "19",
+    "name": "Strong Guy",
+    "artist": "Andy Kubert",
+    "type": "X-Factor"
+  },
+  {
+    "number": "20",
+    "name": "Boomer",
+    "artist": "Joe Kubert",
+    "type": "X-Force"
+  },
+  {
+    "number": "21",
+    "name": "Cable",
+    "artist": "Adam Kubert",
+    "type": "X-Force"
+  },
+  {
+    "number": "22",
+    "name": "Domino",
+    "artist": "Adam Kubert",
+    "type": "X-Force"
+  },
+  {
+    "number": "23",
+    "name": "Shatterstar",
+    "artist": "Joe Kubert",
+    "type": "X-Force"
+  },
+  {
+    "number": "24",
+    "name": "Warpath",
+    "artist": "Andy Kubert",
+    "type": "X-Force"
+  },
+  {
+    "number": "25",
+    "name": "Colossus",
+    "artist": "Andy Kubert",
+    "type": "Excalibur"
+  },
+  {
+    "number": "26",
+    "name": "Douglock",
+    "artist": "Joe Kubert",
+    "type": "Excalibur"
+  },
+  {
+    "number": "27",
+    "name": "Nightcrawler",
+    "artist": "Adam Kubert",
+    "type": "Excalibur"
+  },
+  {
+    "number": "28",
+    "name": "Shadowcat",
+    "artist": "Adam Kubert",
+    "type": "Excalibur"
+  },
+  {
+    "number": "29",
+    "name": "Banshee",
+    "artist": "Andy Kubert",
+    "type": "Generation X"
+  },
+  {
+    "number": "30",
+    "name": "Chamber",
+    "artist": "Adam Kubert",
+    "type": "Generation X"
+  },
+  {
+    "number": "31",
+    "name": "Husk",
+    "artist": "Andy Kubert",
+    "type": "Generation X"
+  },
+  {
+    "number": "32",
+    "name": "Jubilee",
+    "artist": "Adam Kubert",
+    "type": "Generation X"
+  },
+  {
+    "number": "33",
+    "name": "M",
+    "artist": "Adam Kubert",
+    "type": "Generation X"
+  },
+  {
+    "number": "34",
+    "name": "Mondo",
+    "artist": "Andy Kubert",
+    "type": "Generation X"
+  },
+  {
+    "number": "35",
+    "name": "Penance",
+    "artist": "Andy Kubert",
+    "type": "Generation X"
+  },
+  {
+    "number": "36",
+    "name": "Skin",
+    "artist": "Adam Kubert",
+    "type": "Generation X"
+  },
+  {
+    "number": "37",
+    "name": "Synch",
+    "artist": "Andy Kubert",
+    "type": "Generation X"
+  },
+  {
+    "number": "38",
+    "name": "White Queen",
+    "artist": "Andy Kubert",
+    "type": "Generation X"
+  },
+  {
+    "number": "39",
+    "name": "Alter Beast",
+    "artist": "Adam Kubert",
+    "type": "Age of Apocalypse"
+  },
+  {
+    "number": "40",
+    "name": "Holocaust",
+    "artist": "Adam Kubert",
+    "type": "Age of Apocalypse"
+  },
+  {
+    "number": "41",
+    "name": "Sugar Man",
+    "artist": "Andy Kubert",
+    "type": "Age of Apocalypse"
+  },
+  {
+    "number": "42",
+    "name": "X-Man",
+    "artist": "Andy Kubert",
+    "type": "Age of Apocalypse"
+  },
+  {
+    "number": "43",
+    "name": "Deadbolt",
+    "artist": "Joe Kubert",
+    "type": "Dark Riders"
+  },
+  {
+    "number": "44",
+    "name": "Gauntlet",
+    "artist": "Joe Kubert",
+    "type": "Dark Riders"
+  },
+  {
+    "number": "45",
+    "name": "Genesis",
+    "artist": "Joe Kubert",
+    "type": "Dark Riders"
+  },
+  {
+    "number": "46",
+    "name": "Hurricane",
+    "artist": "Joe Kubert",
+    "type": "Dark Riders"
+  },
+  {
+    "number": "47",
+    "name": "Lifeforce",
+    "artist": "Joe Kubert",
+    "type": "Dark Riders"
+  },
+  {
+    "number": "48",
+    "name": "Spyne",
+    "artist": "Joe Kubert",
+    "type": "Dark Riders"
+  },
+  {
+    "number": "49",
+    "name": "Tusk",
+    "artist": "Joe Kubert",
+    "type": "Dark Riders"
+  },
+  {
+    "number": "50",
+    "name": "Corsair",
+    "artist": "Joe Kubert",
+    "type": "Super Hero"
+  },
+  {
+    "number": "51",
+    "name": "Deadpool",
+    "artist": "Andy Kubert",
+    "type": "Super Hero"
+  },
+  {
+    "number": "52",
+    "name": "Kane",
+    "artist": "Joe Kubert",
+    "type": "Super Hero"
+  },
+  {
+    "number": "53",
+    "name": "Lilandra",
+    "artist": "Andy Kubert",
+    "type": "Super Hero"
+  },
+  {
+    "number": "54",
+    "name": "Longshot",
+    "artist": "Adam Kubert",
+    "type": "Super Hero"
+  },
+  {
+    "number": "55",
+    "name": "Magneto",
+    "artist": "Andy Kubert",
+    "type": "Super Hero"
+  },
+  {
+    "number": "56",
+    "name": "Maverick",
+    "artist": "Adam Kubert",
+    "type": "Super Hero"
+  },
+  {
+    "number": "57",
+    "name": "Raza",
+    "artist": "Andy Kubert",
+    "type": "Super Hero"
+  },
+  {
+    "number": "58",
+    "name": "Albert",
+    "artist": "Adam Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "59",
+    "name": "Apocalypse",
+    "artist": "Joe Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "60",
+    "name": "Black Tom Cassidy",
+    "artist": "Joe Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "61",
+    "name": "Blob",
+    "artist": "Adam Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "62",
+    "name": "Blood Scream",
+    "artist": "Adam Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "63",
+    "name": "Cyber",
+    "artist": "Adam Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "64",
+    "name": "Emplate",
+    "artist": "Adam Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "65",
+    "name": "Gladiator",
+    "artist": "Andy Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "66",
+    "name": "Juggernaut",
+    "artist": "Andy Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "67",
+    "name": "Lady Deathstrike",
+    "artist": "Adam Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "68",
+    "name": "Legion",
+    "artist": "Adam Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "69",
+    "name": "Locus",
+    "artist": "Joe Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "70",
+    "name": "Mojo",
+    "artist": "Adam Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "71",
+    "name": "Mr. Sinister",
+    "artist": "Adam Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "72",
+    "name": "Omega Red",
+    "artist": "Adam Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "73",
+    "name": "Orphan Maker",
+    "artist": "Adam Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "74",
+    "name": "Sauron",
+    "artist": "Joe Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "75",
+    "name": "Sentinels",
+    "artist": "Joe Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "76",
+    "name": "Silver Samurai",
+    "artist": "Andy Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "77",
+    "name": "Spiral",
+    "artist": "Andy Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "78",
+    "name": "Stryfe",
+    "artist": "Andy Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "79",
+    "name": "Toad",
+    "artist": "Adam Kubert",
+    "type": "Super Villain"
+  },
+  {
+    "number": "80",
+    "name": "Logan",
+    "artist": "Andy Kubert",
+    "type": "Wolverine Timeline"
+  },
+  {
+    "number": "81",
+    "name": "CIA",
+    "artist": "Adam Kubert",
+    "type": "Wolverine Timeline"
+  },
+  {
+    "number": "82",
+    "name": "Weapon X",
+    "artist": "Adam Kubert",
+    "type": "Wolverine Timeline"
+  },
+  {
+    "number": "83",
+    "name": "Department H",
+    "artist": "Adam Kubert",
+    "type": "Wolverine Timeline"
+  },
+  {
+    "number": "84",
+    "name": "Mariko",
+    "artist": "Andy Kubert",
+    "type": "Wolverine Timeline"
+  },
+  {
+    "number": "85",
+    "name": "Sidekick",
+    "artist": "Adam Kubert",
+    "type": "Wolverine Timeline"
+  },
+  {
+    "number": "86",
+    "name": "Fatal Attractions",
+    "artist": "Andy Kubert",
+    "type": "Wolverine Timeline"
+  },
+  {
+    "number": "87",
+    "name": "Blood Oath",
+    "artist": "Adam Kubert",
+    "type": "Wolverine Timeline"
+  },
+  {
+    "number": "88",
+    "name": "Broken Claws",
+    "artist": "Andy Kubert",
+    "type": "Wolverine Timeline"
+  },
+  {
+    "number": "89",
+    "name": "Back Again",
+    "artist": "Adam Kubert",
+    "type": "Wolverine Timeline"
+  },
+  {
+    "number": "90",
+    "name": "Beast as Ben Franklin",
+    "artist": "Andy Kubert",
+    "type": "Haunted Mansion"
+  },
+  {
+    "number": "91",
+    "name": "Colossus as Count Vampire",
+    "artist": "Adam Kubert",
+    "type": "Haunted Mansion"
+  },
+  {
+    "number": "92",
+    "name": "Cyclops as The King",
+    "artist": "Adam Kubert",
+    "type": "Haunted Mansion"
+  },
+  {
+    "number": "93",
+    "name": "Gambit as The Cajun Cowboy",
+    "artist": "Andy Kubert",
+    "type": "Haunted Mansion"
+  },
+  {
+    "number": "94",
+    "name": "Iceman as The Snowman",
+    "artist": "Andy Kubert",
+    "type": "Haunted Mansion"
+  },
+  {
+    "number": "95",
+    "name": "Professor X as The Wizard of X",
+    "artist": "Adam Kubert",
+    "type": "Haunted Mansion"
+  },
+  {
+    "number": "96",
+    "name": "Psylocke as The French Maid",
+    "artist": "Adam Kubert",
+    "type": "Haunted Mansion"
+  },
+  {
+    "number": "97",
+    "name": "Rogue as The Vampiress",
+    "artist": "Adam Kubert",
+    "type": "Haunted Mansion"
+  },
+  {
+    "number": "98",
+    "name": "Storm as The Witch",
+    "artist": "Andy Kubert",
+    "type": "Haunted Mansion"
+  },
+  {
+    "number": "99",
+    "name": "Wolverine as Captain Claw",
+    "artist": "Andy Kubert",
+    "type": "Haunted Mansion"
+  },
+  {
+    "number": "100",
+    "name": "Checklist",
+    "artist": null,
+    "type": "Checklist"
+  }
+]
