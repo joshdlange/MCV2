@@ -1,0 +1,981 @@
+{
+  "Base": [
+    {
+      "number": "1",
+      "name": "X-Men Archives Checklist",
+      "description": ""
+    },
+    {
+      "number": "2",
+      "name": "Angel",
+      "description": "Artist: Philip Tan."
+    },
+    {
+      "number": "3",
+      "name": "Armor",
+      "description": "Artist: John Cassaday."
+    },
+    {
+      "number": "4",
+      "name": "Beast",
+      "description": "Artist: Marc Silvestri, Joe Weems."
+    },
+    {
+      "number": "5",
+      "name": "Bishop",
+      "description": "Artist: Ariel Olivetti."
+    },
+    {
+      "number": "6",
+      "name": "Blink",
+      "description": "Artist: Mizuki Sakakibara."
+    },
+    {
+      "number": "7",
+      "name": "Cable",
+      "description": "Artist: David Finch, Danny Miki."
+    },
+    {
+      "number": "8",
+      "name": "Caliban",
+      "description": "Artist: Alina Urusov."
+    },
+    {
+      "number": "9",
+      "name": "Callisto",
+      "description": "Artist: Aaron Lopresti, Greg Adams."
+    },
+    {
+      "number": "10",
+      "name": "Cannonball",
+      "description": "Artist: Humberto Ramos, Carlos Cuevas."
+    },
+    {
+      "number": "11",
+      "name": "Captain Britain",
+      "description": "Artist: Leonard Kirk, Jesse Delperdang."
+    },
+    {
+      "number": "12",
+      "name": "Chamber",
+      "description": "Artist: Stuart Immonen."
+    },
+    {
+      "number": "13",
+      "name": "Colossus",
+      "description": "Artist: Terry Dodson."
+    },
+    {
+      "number": "14",
+      "name": "Cyclops",
+      "description": "Artist: Ian Churchill."
+    },
+    {
+      "number": "15",
+      "name": "Dazzler",
+      "description": "Artist: Humberto Ramos."
+    },
+    {
+      "number": "16",
+      "name": "Deadpool",
+      "description": "Artist: Patrick Zircher."
+    },
+    {
+      "number": "17",
+      "name": "Domino",
+      "description": "Artist: Mike Choi."
+    },
+    {
+      "number": "18",
+      "name": "Dust",
+      "description": "Artist: Clayton Henry."
+    },
+    {
+      "number": "19",
+      "name": "Elixir",
+      "description": "Artist: Randy Green."
+    },
+    {
+      "number": "20",
+      "name": "Emma Frost",
+      "description": "Artist: Yanick Paquette."
+    },
+    {
+      "number": "21",
+      "name": "Forge",
+      "description": "Artist: Steve Lightle."
+    },
+    {
+      "number": "22",
+      "name": "Gambit",
+      "description": "Artist: Reilly Brown, Jeremy Freeman."
+    },
+    {
+      "number": "23",
+      "name": "Guardian",
+      "description": "Artist: Mike Choi, Sonia Oback."
+    },
+    {
+      "number": "24",
+      "name": "Havok",
+      "description": "Artist: Philip Tan."
+    },
+    {
+      "number": "25",
+      "name": "Hellion",
+      "description": "Artist: Clayton Henry, Mark Morales."
+    },
+    {
+      "number": "26",
+      "name": "Icarus",
+      "description": "Artist: Michael Ryan, Rick Ketcham."
+    },
+    {
+      "number": "27",
+      "name": "Iceman",
+      "description": "Artist: Eric Nguyen."
+    },
+    {
+      "number": "28",
+      "name": "Ink",
+      "description": "Artist: Michael Ryan."
+    },
+    {
+      "number": "29",
+      "name": "Jean Grey",
+      "description": "Artist: Greg Land."
+    },
+    {
+      "number": "30",
+      "name": "Jubilee",
+      "description": "Artist: Paco Medina, Juan Vlasco."
+    },
+    {
+      "number": "31",
+      "name": "Karma",
+      "description": "Artist: Joshua Middleton."
+    },
+    {
+      "number": "32",
+      "name": "Kuan-Yin Xorn",
+      "description": "Artist: Frank Quitely."
+    },
+    {
+      "number": "33",
+      "name": "Lilandra",
+      "description": "Artist: Tim Seeley."
+    },
+    {
+      "number": "34",
+      "name": "Longshot",
+      "description": "Artist: Paul Pelletier, Rick Magyar."
+    },
+    {
+      "number": "35",
+      "name": "M",
+      "description": "Artist: Pablo Raimondi."
+    },
+    {
+      "number": "36",
+      "name": "Magik",
+      "description": "Artist: Scott Kolins."
+    },
+    {
+      "number": "37",
+      "name": "Magma",
+      "description": "Artist: Salvador Larroca."
+    },
+    {
+      "number": "38",
+      "name": "Marvel Girl",
+      "description": "Artist: Billy Tan."
+    },
+    {
+      "number": "39",
+      "name": "Mercury",
+      "description": "Artist: Clayton Henry, Mark Morales."
+    },
+    {
+      "number": "40",
+      "name": "Mimic",
+      "description": "Artist: Mizuki Sakakibara."
+    },
+    {
+      "number": "41",
+      "name": "Mirage",
+      "description": "Artist: Stuart Immonen."
+    },
+    {
+      "number": "42",
+      "name": "Morph",
+      "description": "Artist: David Williams."
+    },
+    {
+      "number": "43",
+      "name": "Multiple Man",
+      "description": "Artist: Boo Cook."
+    },
+    {
+      "number": "44",
+      "name": "Nightcrawler",
+      "description": "Artist: Brandon Peterson."
+    },
+    {
+      "number": "45",
+      "name": "Northstar",
+      "description": "Artist: Greg Land."
+    },
+    {
+      "number": "46",
+      "name": "Omega Sentinel",
+      "description": "Artist: Greg Adams."
+    },
+    {
+      "number": "47",
+      "name": "Pixie",
+      "description": "Artist: Greg Land, Jay Leisten."
+    },
+    {
+      "number": "48",
+      "name": "Polaris",
+      "description": "Artist: Brandon Peterson."
+    },
+    {
+      "number": "49",
+      "name": "Prodigy",
+      "description": "Artist: Michael Ryan."
+    },
+    {
+      "number": "50",
+      "name": "Professor Xavier",
+      "description": "Artist: Mike McKone."
+    },
+    {
+      "number": "51",
+      "name": "Psylocke",
+      "description": "Artist: Alex Garner."
+    },
+    {
+      "number": "52",
+      "name": "Quicksilver",
+      "description": "Artist: Tom Grummett, Terry Pallot."
+    },
+    {
+      "number": "53",
+      "name": "Rockslide",
+      "description": "Artist: Mark Brooks."
+    },
+    {
+      "number": "54",
+      "name": "Rogue",
+      "description": "Artist: Scot Eaton."
+    },
+    {
+      "number": "55",
+      "name": "Sage",
+      "description": "Artist: Ben Lai, Ray Lai."
+    },
+    {
+      "number": "56",
+      "name": "Shadowcat",
+      "description": "Artist: Randy Green, Rick Ketcham."
+    },
+    {
+      "number": "57",
+      "name": "Shatterstar",
+      "description": "Artist: Rob Liefeld."
+    },
+    {
+      "number": "58",
+      "name": "Shola Inkosi",
+      "description": "Artist: Aaron Lopresti, Greg Adams."
+    },
+    {
+      "number": "59",
+      "name": "Siryn",
+      "description": "Artist: Patrick Zircher, Undo Studios."
+    },
+    {
+      "number": "60",
+      "name": "Starjammers",
+      "description": "Artist: Ale Garza."
+    },
+    {
+      "number": "61",
+      "name": "Storm",
+      "description": "Artist: David Yardin."
+    },
+    {
+      "number": "62",
+      "name": "Strong Guy",
+      "description": "Artist: Khoi Pham, Sandu Florea."
+    },
+    {
+      "number": "63",
+      "name": "Sunfire",
+      "description": "Artist: Salvador Larroca."
+    },
+    {
+      "number": "64",
+      "name": "Sunspot",
+      "description": "Artist: Diogenes Neves."
+    },
+    {
+      "number": "65",
+      "name": "Surge",
+      "description": "Artist: Randy Green."
+    },
+    {
+      "number": "66",
+      "name": "Wallflower",
+      "description": "Artist: Michael Ryan, Rick Ketcham."
+    },
+    {
+      "number": "67",
+      "name": "Warpath",
+      "description": "Artist: Salvador Larroca."
+    },
+    {
+      "number": "68",
+      "name": "Wicked",
+      "description": "Artist: Aaron Lopresti, Greg Adams."
+    },
+    {
+      "number": "69",
+      "name": "Wind Dancer",
+      "description": "Artist: Aaron Lopresti, Brad Vancata."
+    },
+    {
+      "number": "70",
+      "name": "Wolfsbane",
+      "description": "Artist: Mike Choi."
+    },
+    {
+      "number": "71",
+      "name": "Wolverine",
+      "description": "Artist: Greg Horn."
+    },
+    {
+      "number": "72",
+      "name": "X-23",
+      "description": "Artist: Alan Davis."
+    }
+  ],
+  "Nemesis Cards": [
+    {
+      "number": "N1",
+      "name": "Mister Sinister",
+      "description": ""
+    },
+    {
+      "number": "N2",
+      "name": "Magneto",
+      "description": ""
+    },
+    {
+      "number": "N3",
+      "name": "Mystique",
+      "description": ""
+    },
+    {
+      "number": "N4",
+      "name": "Sabretooth",
+      "description": ""
+    },
+    {
+      "number": "N5",
+      "name": "Mojo",
+      "description": ""
+    },
+    {
+      "number": "N6",
+      "name": "Apocalypse",
+      "description": ""
+    },
+    {
+      "number": "N7",
+      "name": "Juggernaut",
+      "description": ""
+    },
+    {
+      "number": "N8",
+      "name": "Sentinels",
+      "description": ""
+    },
+    {
+      "number": "N9",
+      "name": "Brotherhood of Evil Mutants",
+      "description": "Artist: David Finch."
+    }
+  ],
+  "Ready-for-Action Cover Gallery": [
+    {
+      "number": "CA1",
+      "name": "Astonishing X-Men #1",
+      "description": ""
+    },
+    {
+      "number": "CA2",
+      "name": "Astonishing X-Men #7",
+      "description": ""
+    },
+    {
+      "number": "CA3",
+      "name": "Giant-Size X-Men #4",
+      "description": ""
+    },
+    {
+      "number": "CA4",
+      "name": "Uncanny X-Men #488",
+      "description": ""
+    },
+    {
+      "number": "CA5",
+      "name": "Uncanny X-Men #494",
+      "description": ""
+    },
+    {
+      "number": "CA6",
+      "name": "Uncanny X-Men #495",
+      "description": ""
+    },
+    {
+      "number": "CA7",
+      "name": "X-Men First Class #15",
+      "description": ""
+    },
+    {
+      "number": "CA8",
+      "name": "X-Men Legacy #208",
+      "description": ""
+    },
+    {
+      "number": "CA9",
+      "name": "X-Men #175",
+      "description": ""
+    }
+  ],
+  "Legendary Heroes": [
+    {
+      "number": "LH1",
+      "name": "Archangel",
+      "description": ""
+    },
+    {
+      "number": "LH2",
+      "name": "Beast",
+      "description": ""
+    },
+    {
+      "number": "LH3",
+      "name": "Colossus",
+      "description": ""
+    },
+    {
+      "number": "LH4",
+      "name": "Cyclops",
+      "description": ""
+    },
+    {
+      "number": "LH5",
+      "name": "Iceman",
+      "description": ""
+    },
+    {
+      "number": "LH6",
+      "name": "Marvel Girl",
+      "description": ""
+    },
+    {
+      "number": "LH7",
+      "name": "Professor Charles Xavier",
+      "description": ""
+    },
+    {
+      "number": "LH8",
+      "name": "Storm",
+      "description": ""
+    },
+    {
+      "number": "LH9",
+      "name": "Wolverine",
+      "description": ""
+    }
+  ],
+  "Colored Sketch Cards": [
+    {
+      "number": "Kri",
+      "name": "Kristin Allen",
+      "description": ""
+    },
+    {
+      "number": "Lui",
+      "name": "Lui Antonio",
+      "description": ""
+    },
+    {
+      "number": "Mah",
+      "name": "Mahmud Asrar",
+      "description": ""
+    },
+    {
+      "number": "New",
+      "name": "Newton Barbosa",
+      "description": ""
+    },
+    {
+      "number": "Sco",
+      "name": "Scott Barnett",
+      "description": ""
+    },
+    {
+      "number": "Dan",
+      "name": "Daniel Brandao",
+      "description": ""
+    },
+    {
+      "number": "Kat",
+      "name": "Kate Bradley",
+      "description": ""
+    },
+    {
+      "number": "Geo",
+      "name": "George Calloway",
+      "description": ""
+    },
+    {
+      "number": "Dan",
+      "name": "Daniel Campos",
+      "description": ""
+    },
+    {
+      "number": "And",
+      "name": "Andy Carreon",
+      "description": ""
+    },
+    {
+      "number": "Ant",
+      "name": "Anthony Castrillo",
+      "description": ""
+    },
+    {
+      "number": "Dar",
+      "name": "Darren Chandler",
+      "description": ""
+    },
+    {
+      "number": "Jus",
+      "name": "Justin Chung",
+      "description": ""
+    },
+    {
+      "number": "Yil",
+      "name": "Yildiray Cinar",
+      "description": ""
+    },
+    {
+      "number": "Mik",
+      "name": "Mike Clark",
+      "description": ""
+    },
+    {
+      "number": "Ada",
+      "name": "Adam Cleveland",
+      "description": ""
+    },
+    {
+      "number": "Kat",
+      "name": "Katie Cook",
+      "description": ""
+    },
+    {
+      "number": "Dan",
+      "name": "Daniel Cooney",
+      "description": ""
+    },
+    {
+      "number": "Dou",
+      "name": "Doug Cowan",
+      "description": ""
+    },
+    {
+      "number": "Den",
+      "name": "Dennis Crisostomo",
+      "description": ""
+    },
+    {
+      "number": "Jas",
+      "name": "Jason Davies",
+      "description": ""
+    },
+    {
+      "number": "Mar",
+      "name": "Mark Dos Santos",
+      "description": ""
+    },
+    {
+      "number": "Ton",
+      "name": "Tony Fleecs (AMF)",
+      "description": ""
+    },
+    {
+      "number": "Mar",
+      "name": "Marc Ferreira",
+      "description": ""
+    },
+    {
+      "number": "Tes",
+      "name": "Tess Fowler",
+      "description": ""
+    },
+    {
+      "number": "Dav",
+      "name": "Dave Fox",
+      "description": ""
+    },
+    {
+      "number": "Cha",
+      "name": "Charles George",
+      "description": ""
+    },
+    {
+      "number": "Ben",
+      "name": "Benjamin Glendenning",
+      "description": ""
+    },
+    {
+      "number": "Nic",
+      "name": "Nicole Goff",
+      "description": ""
+    },
+    {
+      "number": "Lee",
+      "name": "Leeahd Goldberg",
+      "description": ""
+    },
+    {
+      "number": "Jav",
+      "name": "Javier Gonzalez",
+      "description": ""
+    },
+    {
+      "number": "Rod",
+      "name": "Rodjer Goulart",
+      "description": ""
+    },
+    {
+      "number": "Chr",
+      "name": "Chris Gutierrez",
+      "description": ""
+    },
+    {
+      "number": "Joh",
+      "name": "John Haun",
+      "description": ""
+    },
+    {
+      "number": "Dan",
+      "name": "Daniel Horn de Rosa (HDR)",
+      "description": ""
+    },
+    {
+      "number": "Gab",
+      "name": "Gabriel Hernandez",
+      "description": ""
+    },
+    {
+      "number": "Tom",
+      "name": "Tom Kelly",
+      "description": ""
+    },
+    {
+      "number": "Bra",
+      "name": "Brandon Kenney",
+      "description": ""
+    },
+    {
+      "number": "Bri",
+      "name": "Brian Kong",
+      "description": ""
+    },
+    {
+      "number": "Jim",
+      "name": "Jim Kyle",
+      "description": ""
+    },
+    {
+      "number": "Ken",
+      "name": "Ken Landgraf",
+      "description": ""
+    },
+    {
+      "number": "Kat",
+      "name": "Kathryn Layno",
+      "description": ""
+    },
+    {
+      "number": "Eri",
+      "name": "Erik Maell",
+      "description": ""
+    },
+    {
+      "number": "But",
+      "name": "Butch Mapa",
+      "description": ""
+    },
+    {
+      "number": "War",
+      "name": "Warren Martineck",
+      "description": ""
+    },
+    {
+      "number": "Ran",
+      "name": "Randy Martinez",
+      "description": ""
+    },
+    {
+      "number": "Fel",
+      "name": "Felipe Massafera",
+      "description": ""
+    },
+    {
+      "number": "Meg",
+      "name": "Megan McCausland",
+      "description": ""
+    },
+    {
+      "number": "Rog",
+      "name": "Roger Medeiros",
+      "description": ""
+    },
+    {
+      "number": "Jen",
+      "name": "Jennifer Mercer",
+      "description": ""
+    },
+    {
+      "number": "Fer",
+      "name": "Fernando Merlo",
+      "description": ""
+    },
+    {
+      "number": "Ric",
+      "name": "Rich Molinelli",
+      "description": ""
+    },
+    {
+      "number": "Ran",
+      "name": "Randy Monces",
+      "description": ""
+    },
+    {
+      "number": "Ari",
+      "name": "Arie Monroe",
+      "description": ""
+    },
+    {
+      "number": "Nic",
+      "name": "Nick Neocleous (Nik)",
+      "description": ""
+    },
+    {
+      "number": "Kei",
+      "name": "Keith O'Malley",
+      "description": ""
+    },
+    {
+      "number": "Oak",
+      "name": "Oak",
+      "description": ""
+    },
+    {
+      "number": "Rya",
+      "name": "Ryan Orosco",
+      "description": ""
+    },
+    {
+      "number": "Rhi",
+      "name": "Rhiannon Owens",
+      "description": ""
+    },
+    {
+      "number": "Ton",
+      "name": "Tony Perna",
+      "description": ""
+    },
+    {
+      "number": "Bri",
+      "name": "Brian Postman",
+      "description": ""
+    },
+    {
+      "number": "Mic",
+      "name": "Michael \"Axebone\" Potter",
+      "description": ""
+    },
+    {
+      "number": "Bud",
+      "name": "Buddy Prince",
+      "description": ""
+    },
+    {
+      "number": "Ton",
+      "name": "Tone Rodriguez",
+      "description": ""
+    },
+    {
+      "number": "Joe",
+      "name": "Joe Rubinstein",
+      "description": ""
+    },
+    {
+      "number": "Bla",
+      "name": "Blair Shedd",
+      "description": ""
+    },
+    {
+      "number": "Tho",
+      "name": "Thony Sillas",
+      "description": ""
+    },
+    {
+      "number": "Dav",
+      "name": "Dave Simons",
+      "description": ""
+    },
+    {
+      "number": "Uko",
+      "name": "Uko Smith",
+      "description": ""
+    },
+    {
+      "number": "Jas",
+      "name": "Jason Sobol",
+      "description": ""
+    },
+    {
+      "number": "All",
+      "name": "Allison Sohn",
+      "description": ""
+    },
+    {
+      "number": "Car",
+      "name": "Carl Soriano",
+      "description": ""
+    },
+    {
+      "number": "Mar",
+      "name": "Mark Spears",
+      "description": ""
+    },
+    {
+      "number": "Cat",
+      "name": "Cat Staggs",
+      "description": ""
+    },
+    {
+      "number": "Son",
+      "name": "Sonny Strait",
+      "description": ""
+    },
+    {
+      "number": "Ant",
+      "name": "Anthony Tan",
+      "description": ""
+    },
+    {
+      "number": "San",
+      "name": "Sanna Umemoto",
+      "description": ""
+    },
+    {
+      "number": "Jus",
+      "name": "Justin Vandemark",
+      "description": ""
+    },
+    {
+      "number": "Edd",
+      "name": "Edde Wagner",
+      "description": ""
+    },
+    {
+      "number": "Joh",
+      "name": "John Watkins-Chow",
+      "description": ""
+    },
+    {
+      "number": "Kev",
+      "name": "Kevin West",
+      "description": ""
+    },
+    {
+      "number": "Ant",
+      "name": "Anthony Wheeler",
+      "description": ""
+    },
+    {
+      "number": "Chr",
+      "name": "Chris Wilson",
+      "description": ""
+    },
+    {
+      "number": "Nic",
+      "name": "Nick Yakimovich",
+      "description": ""
+    },
+    {
+      "number": "Cra",
+      "name": "Craig Yeung",
+      "description": ""
+    },
+    {
+      "number": "Jef",
+      "name": "Jeff Zugale",
+      "description": ""
+    }
+  ],
+  "Case Topper X-Men Team Card": [
+    {
+      "number": "CT1",
+      "name": "CT1",
+      "description": ""
+    },
+    {
+      "number": "CT2",
+      "name": "CT2",
+      "description": ""
+    },
+    {
+      "number": "CT3",
+      "name": "CT3",
+      "description": ""
+    }
+  ],
+  "PROMO CARDS": [
+    {
+      "number": "CP1",
+      "name": "Emerald City Comic Con",
+      "description": ""
+    },
+    {
+      "number": "CP2",
+      "name": "Philly Non-Sport Show",
+      "description": ""
+    },
+    {
+      "number": "P1",
+      "name": "6 team",
+      "description": ""
+    },
+    {
+      "number": "P2",
+      "name": "Non-Sport Update",
+      "description": ""
+    },
+    {
+      "number": "P3",
+      "name": "Album exclusive",
+      "description": ""
+    }
+  ]
+}
