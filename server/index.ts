@@ -699,6 +699,8 @@ server.listen({
         await completeXMenArchives2009();
         const { repairSpiderManChecklists } = await import('./seeds/repairSpiderManChecklists');
         await repairSpiderManChecklists();
+        const { repairOwnerBaseAudit } = await import('./seeds/repairOwnerBaseAudit');
+        await repairOwnerBaseAudit();
       } catch (error) {
         console.error('Startup repair (legacy set merge) failed:', error);
         throw error;

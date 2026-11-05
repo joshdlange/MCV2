@@ -1,5 +1,6 @@
 - [Native vault direction](native-vault-direction.md) — user rejected still-image crossfades; prefers continuous footage and a replayable phone-size preview for periodic replacements.
 - [Spider-Man checklist review](spider-man-checklist-review.md) — owner requires 80 Topps base, 150 Ultra base/gold; separate questionable owned entries for review rather than reinterpret them.
+- [Base checklist exceptions](base-checklist-owner-exceptions.md) — owner-confirmed Flair, Black Diamond and XL numbering exceptions; 1990 issue-number mix-up and 2018 Gold checklist policy.
 - [Vault autograph checklist](vault-autograph-checklist.md) — owner confirms FTSA matches FTS characters but is a separate autographed subset.
 - [Neon checklist correction](neon-checklist-policy.md) — 1 UP–10 UP is one checklist; three color parallels and five full-base Diamante subsets confirmed.
 - [1995 Chromium checklist](chromium-1995-checklist.md) — owner-approved five-subset scope; preserve numbered Alternate X twins and verify ambiguous Archangel identities.
