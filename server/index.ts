@@ -686,6 +686,8 @@ server.listen({
       await addVaultFromTheSetAutographs2026();
       const { repairToppsNeon2026 } = await import('./seeds/repairToppsNeon2026');
       await repairToppsNeon2026();
+      const { addNeonSnapVariants2026 } = await import('./seeds/addNeonSnapVariants2026');
+      await addNeonSnapVariants2026();
 
       // Idempotent duplicate/relocation repair: consolidate legacy set twins and
       // repoint every live card reference before archived source cards disappear
