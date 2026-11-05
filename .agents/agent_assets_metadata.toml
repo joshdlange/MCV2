@@ -436,3 +436,17 @@ mtime_ms = 1792516808411
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/d7295018-204b-4e8b-b986-eccbcaaced19/0c807c79-ac1d-4ae5-a5d5-1dcc01b70faf"
 storage_version_token = "1792516809222108"
 content_type = "text/csv"
+
+[[outputs]]
+id = "9ZAS5JpPgZe_69oK-2vGT"
+uri = "file://reports/base-numbering-audit-2026-11-05.csv"
+type = "table"
+title = "Base-set numbering audit"
+description = "Read-only production snapshot: candidate base sets, duplicate counts and numbering gaps. Flags need checklist validation before cleanup."
+logical_id = "7ef823a3-fe69-42fb-a9e3-2acee6aba440"
+content_hash = "sha256:2b1cba8762f5bc52a2382fc8e20e5a0f0c6af9dc5eef639eed143519a5fac7c0"
+size = 84119
+mtime_ms = 1793889213468
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/7ef823a3-fe69-42fb-a9e3-2acee6aba440/a0293c84-1f25-4700-8afe-9d73dd2b1314"
+storage_version_token = "1793889214668721"
+content_type = "text/csv"
