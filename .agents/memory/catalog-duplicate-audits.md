@@ -9,6 +9,12 @@ Do not treat repeated card numbers inside a subset as automatically duplicate. S
 
 **How to apply:** Resolve sets by slug, validate expected terminal checklists, merge through the reference-preserving batch path, and soft-archive rather than delete. Repoint collections, wishlists, binders, listings, XP, scans, feeds, and images atomically. Re-run terminal assertions after every cleanup.
 
+For empty legacy sets, the owner wants a numbered review list and will supply spreadsheets or specifics one set at a time. They authorize deleting old hidden duplicates when the same release is already listed, rather than populating a second copy.
+
+**Why:** The owner explicitly requested this cleanup and review approach. This does not authorize discarding cards or collector references from populated hidden sets.
+
+**How to apply:** Separate empty duplicate candidates, unique checklist gaps, and ambiguous identities. Before hard-deleting an empty duplicate, verify its populated replacement, references, and startup-repair dependencies; preserve or migrate any dependent history.
+
 For 2025 Topps Chrome Marvel, the user confirmed reusing and renaming the shortened Base-parallel subset names, including Clawed Chrome as Base Clawed Chrome Stainless Steel /20. The supplied 200-card checklist governs Base and all 22 specified parallels; odds and serial limits belong in subset notes.
 
 **Why:** The user explicitly approved these mappings and requires collector holdings to survive the correction. Similar names alone are insufficient: generic Refractor-labelled buckets can contain unrelated inserts.

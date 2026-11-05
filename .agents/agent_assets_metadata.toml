@@ -450,3 +450,31 @@ mtime_ms = 1793889213468
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/7ef823a3-fe69-42fb-a9e3-2acee6aba440/a0293c84-1f25-4700-8afe-9d73dd2b1314"
 storage_version_token = "1793889214668721"
 content_type = "text/csv"
+
+[[outputs]]
+id = "knPDe5FpexGqtp5wSkZA6"
+uri = "file://reports/empty-set-owner-review-2026-11-05.csv"
+type = "table"
+title = "Empty & hidden sets — review spreadsheet"
+description = "Numbered list with duplicate candidates, checklist gaps, existing holdings, and columns for your decisions and notes."
+logical_id = "a9b6450a-2aed-4d04-a48f-d506b31156d7"
+content_hash = "sha256:6790489f97f9c26a3941649002053161fe75845004ab84ec307b4b75638bc603"
+size = 65575
+mtime_ms = 1793914860083
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/a9b6450a-2aed-4d04-a48f-d506b31156d7/35c15795-508b-4ad5-a580-55434c4e1a23"
+storage_version_token = "1793914878300101"
+content_type = "text/csv"
+
+[[outputs]]
+id = "ZkN2Wq-s0IAsj43G9VTBK"
+uri = "file://reports/empty-set-owner-review-2026-11-05.md"
+type = "text"
+title = "Empty & hidden sets — readable review list"
+description = "All candidates grouped by recommended next step, based on the live catalog audit."
+logical_id = "5186e36b-fc13-4652-b60c-8c94356dd473"
+content_hash = "sha256:0ff9a5541c07c572d9e19cce90ee3b595463149ff4f03a101f0b20d025bf17a6"
+size = 18826
+mtime_ms = 1793914860087
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/5186e36b-fc13-4652-b60c-8c94356dd473/ea3c870f-3ee5-4341-a8b1-13e2ac638199"
+storage_version_token = "1793914879082227"
+content_type = "text/markdown"

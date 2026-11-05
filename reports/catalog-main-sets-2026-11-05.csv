@@ -1,0 +1,485 @@
+id,name,slug,is_active,archived_at,subsets,total_cards,live_cards
+494,1928 Ogden's Marvels of Motion,1928-ogdens-marvels-of-motion,f,2026-01-31 18:34:54.249255,0,0,0
+495,1929 Gem Marvels of the Future,1929-gem-marvels-of-the-future,f,2026-01-31 18:34:54.249255,0,0,0
+496,1933 Cadbury More British Marvels Album 2,1933-cadbury-more-british-marvels-album-2,f,2026-01-31 18:34:54.249255,0,0,0
+497,1954 Beaulah's Marvels of the World,1954-beaulahs-marvels-of-the-world,f,2026-01-31 18:34:54.249255,0,0,0
+498,1954 Wright's Biscuits Marvels of the World,1954-wrights-biscuits-marvels-of-the-world,f,2026-01-31 18:34:54.249255,0,0,0
+499,1961 Mills Merveilles Modernes (Modern Marvels) (French Text),1961-mills-merveilles-modernes-modern-marvels-french-text,f,2026-01-31 18:34:54.249255,0,0,0
+500,1963 Nabisco American Marvels of Nature,1963-nabisco-american-marvels-of-nature,f,2026-01-31 18:34:54.249255,0,0,0
+131,1966 Donruss Marvel Super Heroes,1966-donruss-marvel-super-heroes,t,,1,66,66
+132,1966 Marvel Super Heroes Club Art Posters,1966-marvel-super-heroes-club-art-posters,t,,1,0,0
+133,1967 Philadelphia Marvel Stickers,1967-philadelphia-marvel-stickers,t,,1,0,0
+134,1974 Marvel Value Stamps Series A,1974-marvel-value-stamps-series-a,t,,1,0,0
+135,1976 Topps Marvel Super Heroes Stickers,1976-topps-marvel-super-heroes-stickers,t,,2,1,1
+136,1977 Marvel Super Heroes,1977-marvel-super-heroes,t,,1,0,0
+137,1978 Milton Bradley Marvel Comics Super-Heroes Card Game,1978-milton-bradley-marvel-comics-super-heroes-card-game,t,,1,0,0
+138,1980 Marvel Super Heroes (Venezuela),1980-marvel-super-heroes-venezuela,t,,1,0,0
+139,1980 Marvel Superheros French Canadian,1980-marvel-superheros-french-canadian,t,,1,0,0
+140,1980 Terrabusi Marvel Comics Superhero (Spain),1980-terrabusi-marvel-comics-superhero-spain,f,,3,72,72
+141,1983 Ovaltine Marvel Super Heroes Stickers (Mexico),1983-ovaltine-marvel-super-heroes-stickers-mexico,t,,1,0,0
+142,1983 Ovaltine Marvel Super Heroes Stickers (USA),1983-ovaltine-marvel-super-heroes-stickers-usa,t,,1,0,0
+143,1983 Sunbeam Marvel Super Heroes Family Adventure,1983-sunbeam-marvel-super-heroes-family-adventure,t,,1,0,0
+144,1984 FTCC Marvel Superheroes First Issue Covers,1984-ftcc-marvel-superheroes-first-issue-covers,t,,1,60,60
+145,1984 Leaf Marvel Super Heroes Secret Wars Stickers,1984-leaf-marvel-super-heroes-secret-wars-stickers,t,,1,0,0
+146,1986 Comic Images Official Marvel Universe Stickers,1986-comic-images-official-marvel-universe-stickers,t,,1,0,0
+147,1987 Comic Images Marvel Universe I,1987-comic-images-marvel-universe-i,t,,1,0,0
+148,1987 Comic Images Marvel Universe II Colossal Conflicts,1987-comic-images-marvel-universe-ii-colossal-conflicts,t,,2,0,0
+149,1987 Comic Images Marvel's Magic Moments Stickers,1987-comic-images-marvel-s-magic-moments-stickers,t,,1,0,0
+150,1987 Marvel Solo Avengers Promo,1987-marvel-solo-avengers-promo,t,,1,0,0
+151,1988 Comic Images Marvel Universe III Wolverine,1988-comic-images-marvel-universe-iii-wolverine,t,,1,0,0
+152,1988 Comic Images Marvel Universe IV Heroic Origins,1988-comic-images-marvel-universe-iv-heroic-origins,t,,1,0,0
+153,1988 Marvel Evolutionary War Promo,1988-marvel-evolutionary-war-promo,t,,1,0,0
+154,1988 Marvel Masterworks Promo,1988-marvel-masterworks-promo,t,,1,0,0
+155,1988 Marvel Nick Fury vs. SHIELD Promo,1988-marvel-nick-fury-vs-shield-promo,t,,1,0,0
+156,1988 Waddington's Super Top Trumps Marvel Super Villains,1988-waddington-s-super-top-trumps-marvel-super-villains,t,,1,0,0
+157,1989 Comic Images Marvel Comics Arthur Adams,1989-comic-images-marvel-comics-arthur-adams,t,,1,0,0
+158,1989 Comic Images Marvel Comics Mike Zeck,1989-comic-images-marvel-comics-mike-zeck,t,,1,0,0
+159,1989 Comic Images Marvel Comics The Best of John Byrne,1989-comic-images-marvel-comics-the-best-of-john-byrne,t,,1,0,0
+160,1989 Comic Images Marvel Comics Todd McFarlane,1989-comic-images-marvel-comics-todd-mcfarlane,t,,1,3,3
+161,1989 Marvel Acts of Vengeance,1989-marvel-acts-of-vengeance,t,,1,0,0
+162,1989 Marvel New Series Premiere,1989-marvel-new-series-premiere,t,,1,0,0
+163,1990 Comic Images Marvel Comics Jim Lee,1990-comic-images-marvel-comics-jim-lee,t,,1,0,0
+164,1990 Comic Images Marvel Comics Todd McFarlane Series 2,1990-comic-images-marvel-comics-todd-mcfarlane-series-2,t,,1,0,0
+165,1990 Impel Marvel Universe,1990-impel-marvel-universe,t,,4,191,191
+166,1990 Marvel Annuals Family Reunion,1990-marvel-annuals-family-reunion,t,,1,0,0
+167,1991 Comic Images Marvel Comics First Covers II,1991-comic-images-marvel-comics-first-covers-ii,t,,1,100,100
+168,1991 Comic Images Marvel Comics Jim Lee II,1991-comic-images-marvel-comics-jim-lee-ii,t,,1,0,0
+474,1991 Comic Images X-Men,1991-comic-images-x-men,t,,1,90,90
+169,1991 Impel Marvel Universe II,1991-impel-marvel-universe-ii,t,,4,173,173
+170,1991 Impel Marvel Universe II Toy Biz Promos,1991-impel-marvel-universe-ii-toy-biz-promos,t,,1,0,0
+171,1991 Marvel Employees,1991-marvel-employees,t,,1,0,0
+172,1991 Marvel Operation Galactic Storm Checklists,1991-marvel-operation-galactic-storm-checklists,t,,1,0,0
+501,1992 Comic Images Spider-Man II: 30th Anniversary 1962-1992,1992-comic-images-spider-man-ii-30th-anniversary-1962-1992,t,,2,96,96
+502,1992 Comic Images Spider-Man: The McFarlane Era,1992-comic-images-spider-man-the-mcfarlane-era,t,,2,96,96
+173,1992 Impel Marvel Universe,1992-impel-marvel-universe,t,,5,214,209
+475,1992 Impel The Uncanny X-Men,1992-impel-the-uncanny-x-men,t,,6,318,318
+174,1992 Marvel Comics Annuals,1992-marvel-comics-annuals,t,,1,0,0
+175,1992 Marvel Comics Bi-Weekly Promos,1992-marvel-comics-bi-weekly-promos,t,,1,0,0
+176,1992 Marvel Comics Live and in Person,1992-marvel-comics-live-and-in-person,t,,1,0,0
+177,1992 Marvel Comics UK Overkill/Exploits of Spider-Man,1992-marvel-comics-uk-overkill-exploits-of-spider-man,t,,1,0,0
+178,1992 Marvel Employees,1992-marvel-employees,t,,1,0,0
+179,1992 Marvel Infinity War Checklist,1992-marvel-infinity-war-checklist,t,,1,0,0
+180,1992 SkyBox Marvel Comics X-Cutioner's Song,1992-skybox-marvel-comics-x-cutioner-s-song,t,,1,0,0
+84,1992 SkyBox Marvel Masterpieces,1992-skybox-marvel-masterpieces,t,,6,215,215
+181,1993 Crunch 'N Munch Marvel Super Heroes,1993-crunch-n-munch-marvel-super-heroes,t,,1,0,0
+476,1993 Diamond X-Men Animated Series Stickers,1993-diamond-x-men-animated-series-stickers,t,,2,30,30
+182,1993 Hasbro G.I. Joe Mission: Search and Destroy,1993-hasbro-g-i-joe-mission-search-and-destroy,f,,1,4,4
+183,1993 Marvel Comics Annuals,1993-marvel-comics-annuals,t,,1,0,0
+184,1993 Marvel Comics Crossover Checklists,1993-marvel-comics-crossover-checklists,t,,1,0,0
+185,1993 Marvel Comics Slamcaps Series 1,1993-marvel-comics-slamcaps-series-1,t,,1,0,0
+186,1993 Marvel Midnight Sons,1993-marvel-midnight-sons,f,,3,4,4
+187,1993 Marvel UK Gene,1993-marvel-uk-gene,t,,1,0,0
+188,1993 Marvel UK Plasmer #1 Inserts,1993-marvel-uk-plasmer-1-inserts,t,,1,0,0
+189,1993 SkyBox Marvel Masterpieces,1993-skybox-marvel-masterpieces,t,,3,104,103
+190,1993 SkyBox Marvel Universe,1993-skybox-marvel-universe,t,,4,199,190
+477,1993 SkyBox X-Men Series 2,1993-skybox-x-men-series-2,t,,3,113,113
+191,1994 Crunch 'N Munch Marvel Super Heroes,1994-crunch-n-munch-marvel-super-heroes,t,,1,0,0
+85,1994 Flair Marvel Annual,1994-flair-marvel-annual,t,,11,182,157
+192,1994 Fleer Marvel Masterpieces Hildebrandt Brothers,1994-fleer-marvel-masterpieces-hildebrandt-brothers,t,,9,320,310
+193,1994 Fleer Marvel Universe,1994-fleer-marvel-universe,t,,8,252,252
+503,1994 Fleer The Amazing Spider-Man,1994-fleer-the-amazing-spider-man,t,,8,330,330
+194,1994 Marvel Checklists,1994-marvel-checklists,t,,1,0,0
+195,1994 Marvel Social Responsibility,1994-marvel-social-responsibility,t,,1,0,0
+196,1994 Marvel UK ClanDestine,1994-marvel-uk-clandestine,t,,1,0,0
+197,1994 Pepsi Marvel,1994-pepsi-marvel,t,,4,38,38
+198,1994 Slamco Marvel Comics SlamCaps Series 2 'PrismCaps',1994-slamco-marvel-comics-slamcaps-series-2-prismcaps,f,,2,1,1
+479,1994 Ultra X-Men,1994-ultra-x-men,t,,11,363,363
+199,1994 Universal Studios Florida Marvel Superheroes,1994-universal-studios-florida-marvel-superheroes,t,,1,0,0
+200,1995 Flair Marvel Annual,1995-flair-marvel-annual,t,,7,217,215
+2,1995 Fleer DC vs Marvel ,1995-fleer-dc-vs-marvel,f,2026-01-31 18:34:54.249255,0,0,0
+201,1995 Fleer DC vs. Marvel Comics,1995-fleer-dc-vs-marvel-comics,t,,9,168,168
+202,1995 Fleer Marvel Masterpieces,1995-fleer-marvel-masterpieces,t,,7,337,337
+532,1995 Fleer Ultra Fox Kids Network,1995-fleer-ultra-fox-kids-network,t,,3,184,184
+504,1995 Fleer Ultra Spider-Man,1995-fleer-ultra-spider-man,t,,9,424,424
+480,1995 Fleer Ultra X-Men,1995-fleer-ultra-x-men,t,,11,355,355
+203,1995 Marvel Comics Checklists,1995-marvel-comics-checklists,t,,1,0,0
+204,1995 Marvel Super Heroes Live & In Person,1995-marvel-super-heroes-live-in-person,t,,1,0,0
+205,1995 Marvel Wallet Cards,1995-marvel-wallet-cards,t,,1,0,0
+206,1995 Metal Marvel,1995-metal-marvel,t,,6,322,322
+505,1995 Panini Spider-Man Stickers,1995-panini-spider-man-stickers,t,,2,18,18
+207,1995 Tarocchi Marvel Glossy Italian,1995-tarocchi-marvel-glossy-italian,t,,1,0,0
+481,1995 Ultra X-Men Chromium,1995-ultra-x-men-chromium,t,,5,352,230
+208,1995 Universal Studios Florida Marvel Superheroes,1995-universal-studios-florida-marvel-superheroes,t,,1,0,0
+209,1995 Universal Studios Hollywood Marvel Superheroes,1995-universal-studios-hollywood-marvel-superheroes,t,,1,0,0
+210,1995 Ziploc Marvel Team-Ups,1995-ziploc-marvel-team-ups,t,,1,0,0
+211,1996 Authentic Images Marvel Classic Characters 24kt. Gold,1996-authentic-images-marvel-classic-characters-24kt-gold,t,,1,0,0
+212,1996 Chris Martin Marvel Super Heroes Magnets,1996-chris-martin-marvel-super-heroes-magnets,t,,1,0,0
+213,1996 Comic Images Conan: The Marvel Years,1996-comic-images-conan-the-marvel-years,f,,5,99,99
+214,1996 Fleer DC vs. Marvel Comics,1996-fleer-dc-vs-marvel-comics,f,2026-01-31 18:43:25.255099,0,0,0
+215,1996 Fleer Marvel OverPower,1996-fleer-marvel-overpower,t,,7,12,12
+216,1996 Fleer/SkyBox Marvel Masterpieces,1996-fleerskybox-marvel-masterpieces,t,,5,121,121
+217,1996 Fleer/SkyBox Marvel Motion,1996-fleerskybox-marvel-motion,t,,4,35,35
+86,1996 Fleer/SkyBox Marvel Vision,1996-fleerskybox-marvel-vision,t,,3,129,129
+218,1996 Marvel Live and in Person,1996-marvel-live-and-in-person,t,,1,0,0
+506,1996 SkyBox Premium Spider-Man,1996-skybox-premium-spider-man,t,,5,218,218
+530,1996 Skybox Wizard Chromium,1996-skybox-wizard-chromium,t,,1,20,20
+219,1996 Ultra Marvel Onslaught,1996-ultra-marvel-onslaught,t,,3,107,107
+482,1996 Ultra X-Men Wolverine,1996-ultra-x-men-wolverine,t,,3,111,111
+220,1997 Fleer Spider-Man,1997-fleer-spider-man,t,,11,46,46
+221,1997 Fleer/SkyBox Marvel Premium QFX,1997-fleerskybox-marvel-premium-qfx,t,,4,157,157
+222,1997 Fleer/SkyBox Marvel vs. Wildstorm,1997-fleerskybox-marvel-vs-wildstorm,t,,4,197,197
+483,1997 Fleer/SkyBox X-Men,1997-fleerskybox-x-men,t,,2,16,16
+484,1997 Fleer/SkyBox X-Men '97 Timelines,1997-fleerskybox-x-men-97-timelines,t,,4,193,193
+485,1997 Fleer/SkyBox X-Men 2099 Oasis,1997-fleerskybox-x-men-2099-oasis,t,,2,198,198
+507,1997 Ultra Spider-Man,1997-ultra-spider-man,t,,3,165,165
+87,1998 Marvel Creators Collection,1998-marvel-creators-collection,t,,10,205,205
+223,1998 SkyBox Marvel: The Silver Age,1998-skybox-marvel-the-silver-age,t,,7,149,149
+224,1999 A&A Global Marvel Vending Stickers,1999-a-a-global-marvel-vending-stickers,t,,1,0,0
+225,1999 Marvel Got Milk?,1999-marvel-got-milk,t,,1,0,0
+226,1999 Marvel Super Hero Island,1999-marvel-super-hero-island,t,,1,0,0
+486,2000 Topps X-Men The Movie,2000-topps-x-men-the-movie,t,,9,206,206
+227,2000 Toy Biz Marvel Greatest Moments,2000-toy-biz-marvel-greatest-moments,t,,1,0,0
+228,2001 Marvel Live and in Person,2001-marvel-live-and-in-person,t,,1,0,0
+229,2001 Marvel Master Prints (Series 1),2001-marvel-master-prints-series-1,t,,1,0,0
+230,2001 Marvel Master Prints (Series 2),2001-marvel-master-prints-series-2,t,,1,0,0
+231,2001 Topps Marvel Heroes (Brazil),2001-topps-marvel-heroes-brazil,t,,1,0,0
+232,2001 Topps Marvel Legends,2001-topps-marvel-legends,t,,7,176,176
+508,2002 FilmCardz Spider-Man,2002-filmcardz-spider-man,t,,7,44,44
+233,2002 Johnny Lightning: Marvel Comics Series 1,2002-johnny-lightning-marvel-comics-series-1,t,,1,0,0
+234,2002 Marvel Live and in Person,2002-marvel-live-and-in-person,t,,1,0,0
+235,2002 Marvel Spider-Man,2002-marvel-spider-man,t,,1,0,0
+236,2002 Perdue Chicken Marvel,2002-perdue-chicken-marvel,t,,1,0,0
+509,2002 Topps Spider-Man,2002-topps-spider-man,t,,6,108,108
+237,2003 Johnny Lightning: Marvel Comics Series 2,2003-johnny-lightning-marvel-comics-series-2,t,,1,0,0
+487,2003 Topps X2: X-Men United,2003-topps-x2-x-men-united,t,,6,20,20
+510,2004 Panini Spider-Man 2 Stickers,2004-panini-spider-man-2-stickers,t,,2,24,24
+238,2004 Sandylion Marvel Stickers,2004-sandylion-marvel-stickers,t,,1,0,0
+511,2004 Upper Deck Spider-Man 2,2004-upper-deck-spider-man-2,t,,2,3,3
+239,2005 Cards Inc. Marvel Heroes Collectors Edition Playing Cards,2005-cards-inc-marvel-heroes-collectors-edition-playing-cards,t,,1,0,0
+240,2005 Galp Marvel Heroes Axtion Flix (Portugal),2005-galp-marvel-heroes-axtion-flix-portugal,t,,1,0,0
+241,2005 Marvel Character Appearances,2005-marvel-character-appearances,t,,1,0,0
+242,2005 Panini Marvel Heroes Playing Cards (Blue Backs),2005-panini-marvel-heroes-playing-cards-blue-backs,t,,1,0,0
+243,2005 Panini Marvel Heroes Playing Cards (Red Backs),2005-panini-marvel-heroes-playing-cards-red-backs,t,,1,0,0
+244,2005 Toy Biz Marvel Figure Factory I,2005-toy-biz-marvel-figure-factory-i,t,,1,0,0
+245,2005 Toy Biz Marvel Figure Factory II,2005-toy-biz-marvel-figure-factory-ii,t,,1,0,0
+246,2006 Marvel Super Heroes Science Exhibition (Los Angeles),2006-marvel-super-heroes-science-exhibition-los-angeles,t,,1,0,0
+247,2006 Marvel Super Heroes Science Exhibition (Ontario),2006-marvel-super-heroes-science-exhibition-ontario,t,,1,0,0
+248,2006 Marvel/eMusic,2006-marvel-emusic,t,,1,0,0
+488,2006 Rittenhouse XIII: X-Men The Last Stand,2006-rittenhouse-xiii-x-men-the-last-stand,t,,8,46,46
+512,2007 Rittenhouse Spider-Man 3,2007-rittenhouse-spider-man-3,t,,10,40,40
+249,2007 SkyBox Marvel Masterpieces,2007-skybox-marvel-masterpieces,t,,14,343,343
+250,2008 Edibas Lamincards Marvel Heroes,2008-edibas-lamincards-marvel-heroes,t,,1,0,0
+251,2008 Panini Marvel Jeu de Cartes (France),2008-panini-marvel-jeu-de-cartes-france,t,,1,0,0
+252,2008 Preziosi Collection Marvel Heroes,2008-preziosi-collection-marvel-heroes,t,,1,0,0
+513,2008 Rittenhouse Iron Man,2008-rittenhouse-iron-man,t,,9,34,34
+253,2008 Rittenhouse Women of Marvel,2008-rittenhouse-women-of-marvel,t,,6,42,42
+254,2008 Salo Marvel Iron Man Estampas,2008-salo-marvel-iron-man-estampas,t,,1,0,0
+88,2008 Upper Deck Marvel Masterpieces Set 2,2008-upper-deck-marvel-masterpieces-set-2,t,,9,231,231
+89,2008 Upper Deck Marvel Masterpieces Set 3,2008-upper-deck-marvel-masterpieces-set-3,t,,6,252,252
+255,2009 Galletas Marinela Marvel,2009-galletas-marinela-marvel,t,,1,0,0
+514,2009 Rittenhouse Spider-Man Archives,2009-rittenhouse-spider-man-archives,t,,8,256,256
+489,2009 Rittenhouse X-Men Archives,2009-rittenhouse-x-men-archives,t,,8,195,195
+490,2009 Rittenhouse X-Men Origins: Wolverine,2009-rittenhouse-x-men-origins-wolverine,t,,7,29,29
+90,2010 Rittenhouse 70 Years of Marvel Comics,2010-rittenhouse-70-years-of-marvel-comics,t,,9,299,299
+256,2010 Rittenhouse Legends of Marvel: Black Widow,2010-rittenhouse-legends-of-marvel-black-widow,t,,1,0,0
+257,2010 Rittenhouse Legends of Marvel: Captain America,2010-rittenhouse-legends-of-marvel-captain-america,t,,1,0,0
+258,2010 Rittenhouse Legends of Marvel: Iron Man,2010-rittenhouse-legends-of-marvel-iron-man,t,,1,0,0
+91,2010 Rittenhouse Marvel Heroes and Villains,2010-rittenhouse-marvel-heroes-and-villains,t,,10,214,214
+259,2010 Sandylion Marvel Extreme Stickers,2010-sandylion-marvel-extreme-stickers,t,,1,0,0
+260,2010 Savvi Marvel Heroes Stickers,2010-savvi-marvel-heroes-stickers,t,,1,0,0
+515,2010 Upper Deck Iron Man 2,2010-upper-deck-iron-man-2,t,,7,44,44
+261,2011 A&A Global Marvel Heroes Stats Stickers,2011-a-a-global-marvel-heroes-stats-stickers,t,,1,0,0
+262,2011 Rittenhouse Legends of Marvel: Elektra,2011-rittenhouse-legends-of-marvel-elektra,t,,1,0,0
+263,2011 Rittenhouse Legends of Marvel: Thor,2011-rittenhouse-legends-of-marvel-thor,t,,1,0,0
+264,2011 Rittenhouse Legends of Marvel: Wolverine,2011-rittenhouse-legends-of-marvel-wolverine,t,,1,0,0
+92,2011 Rittenhouse Marvel Universe,2011-rittenhouse-marvel-universe,t,,10,224,224
+93,2011 Rittenhouse Marvel: Dangerous Divas,2011-rittenhouse-marvel-dangerous-divas,t,,9,185,185
+265,2011 Stussy Marvel,2011-stussy-marvel,t,,1,0,0
+94,2011 Upper Deck Marvel Beginnings S1,2011-upper-deck-marvel-beginnings-s1,t,,12,742,742
+516,2012 Rittenhouse Amazing Spider-Man Movie,2012-rittenhouse-amazing-spider-man-movie,f,,1,7,7
+266,2012 Rittenhouse Legends of Marvel: Ghost Rider,2012-rittenhouse-legends-of-marvel-ghost-rider,t,,1,0,0
+267,2012 Rittenhouse Legends of Marvel: Hulk,2012-rittenhouse-legends-of-marvel-hulk,t,,1,0,0
+268,2012 Rittenhouse Legends of Marvel: Moon Knight,2012-rittenhouse-legends-of-marvel-moon-knight,t,,1,0,0
+95,2012 Rittenhouse Legends of Marvel: Ms. Marvel,2012-rittenhouse-legends-of-marvel-ms-marvel,t,,1,0,0
+269,2012 Rittenhouse Legends of Marvel: Storm,2012-rittenhouse-legends-of-marvel-storm,t,,1,0,0
+270,2012 Rittenhouse Legends of Marvel: Thing,2012-rittenhouse-legends-of-marvel-thing,t,,1,0,0
+271,2012 Rittenhouse Marvel Bronze Age,2012-rittenhouse-marvel-bronze-age,t,,9,208,208
+272,2012 Rittenhouse Marvel Greatest Heroes,2012-rittenhouse-marvel-greatest-heroes,t,,11,225,225
+273,2012 Universal Studios Marvel Comics Playing Cards,2012-universal-studios-marvel-comics-playing-cards,t,,1,0,0
+96,2012 Upper Deck Marvel Beginnings S2,2012-upper-deck-marvel-beginnings-s2,t,,12,757,757
+274,2012 Upper Deck Marvel Beginnings S3,2012-upper-deck-marvel-beginnings-s3,t,,12,746,746
+275,2012 Upper Deck Marvel Premier,2012-upper-deck-marvel-premier,t,,13,366,366
+97,2013 Fleer Retro Marvel,2013-fleer-retro-marvel,t,,24,672,672
+276,2013 Marvel Supereroi,2013-marvel-supereroi,t,,1,0,0
+277,2013 Rittenhouse Legends of Marvel: Daredevil,2013-rittenhouse-legends-of-marvel-daredevil,t,,1,0,0
+98,2013 Rittenhouse Legends of Marvel: Marvel Girl/Phoenix,2013-rittenhouse-legends-of-marvel-marvel-girl-phoenix,t,,1,0,0
+278,2013 Rittenhouse Legends of Marvel: Nova,2013-rittenhouse-legends-of-marvel-nova,t,,1,0,0
+279,2013 Rittenhouse Legends of Marvel: She-Hulk,2013-rittenhouse-legends-of-marvel-she-hulk,t,,1,0,0
+280,2013 Rittenhouse Legends of Marvel: Spider-Man,2013-rittenhouse-legends-of-marvel-spider-man,t,,1,0,0
+281,2013 Rittenhouse Legends of Marvel: War Machine,2013-rittenhouse-legends-of-marvel-war-machine,t,,1,0,0
+282,2013 Rittenhouse Marvel Greatest Battles,2013-rittenhouse-marvel-greatest-battles,t,,9,416,416
+283,2013 Rittenhouse Women of Marvel Series 2,2013-rittenhouse-women-of-marvel-series-2,t,,12,423,423
+517,2013 Upper Deck Iron Man 3,2013-upper-deck-iron-man-3,t,,16,489,489
+284,2013 Upper Deck Marvel Now!,2013-upper-deck-marvel-now,t,,19,1010,1010
+123,2014 Bandai Marvel Disk Wars: The Avengers Soul Royale,2014-bandai-marvel-disk-wars-the-avengers-soul-royale,t,,2,0,0
+285,2014 Bandai Marvel Disk Wars: The Avengers Soul Royale Promo 1,2014-bandai-marvel-disk-wars-the-avengers-soul-royale-promo-1,t,,1,0,0
+286,2014 Bandai Marvel Disk Wars: The Avengers Soul Royale Promo 2,2014-bandai-marvel-disk-wars-the-avengers-soul-royale-promo-2,t,,1,0,0
+287,2014 Bandai Marvel Disk Wars: The Avengers Soul Royale Series 2,2014-bandai-marvel-disk-wars-the-avengers-soul-royale-series-2,t,,1,0,0
+288,2014 Bandai Marvel Disk Wars: The Avengers Soul Royale Series 3,2014-bandai-marvel-disk-wars-the-avengers-soul-royale-series-3,t,,1,0,0
+289,2014 Marvel Puzzle Quest,2014-marvel-puzzle-quest,t,,1,0,0
+290,2014 Marvel The Amazing Spider-Man 2 Happy Meals,2014-marvel-the-amazing-spider-man-2-happy-meals,t,,1,0,0
+291,2014 Panini Marvel Ultimate Spider-Man Stickers,2014-panini-marvel-ultimate-spider-man-stickers,t,,2,24,24
+292,2014 Rittenhouse Marvel 75th Anniversary,2014-rittenhouse-marvel-75th-anniversary,t,,18,578,578
+99,2014 Rittenhouse Marvel Universe,2014-rittenhouse-marvel-universe,t,,19,559,559
+100,2014 Rittenhouse Marvel: Dangerous Divas 2,2014-rittenhouse-marvel-dangerous-divas-2,t,,12,431,431
+293,2014 Upper Deck Marvel Premier,2014-upper-deck-marvel-premier,t,,23,815,815
+294,2015 Bulls-i-Toy Marvel's Avengers: Age of Ultron Dog Tags & Sticker Set,2015-bulls-i-toy-marvel-s-avengers-age-of-ultron-dog-tags-sticker-set,f,,4,30,30
+295,2015 Bulls-i-Toy Marvel's Avengers: Age of Ultron Magnets,2015-bulls-i-toy-marvel-s-avengers-age-of-ultron-magnets,t,,1,0,0
+101,2015 Fleer Retro Marvel,2015-fleer-retro-marvel,t,,59,1489,1489
+296,2015 Marvel Animated Guardians of the Galaxy,2015-marvel-animated-guardians-of-the-galaxy,t,,1,0,0
+297,2015 NECA Marvel Hubsnaps,2015-neca-marvel-hubsnaps,f,,2,48,48
+298,2015 Panini Marvel Avengers Assemble Stickers,2015-panini-marvel-avengers-assemble-stickers,t,,1,0,0
+299,2015 Rittenhouse Marvel The Avengers Silver Age,2015-rittenhouse-marvel-the-avengers-silver-age,t,,15,520,520
+300,2015 Rittenhouse Marvel: Agents of S.H.I.E.L.D. Season 1,2015-rittenhouse-marvel-agents-of-shield-season-1,t,,15,204,204
+301,2015 Rittenhouse Marvel: Agents of S.H.I.E.L.D. Season 2,2015-rittenhouse-marvel-agents-of-shield-season-2,t,,15,218,218
+302,2015 Topps Star Wars: The Force Awakens,2015-topps-star-wars-the-force-awakens,f,,1,0,0
+303,2015 Upper Deck Marvel 3D,2015-upper-deck-marvel-3d,t,,10,342,342
+304,2015 Upper Deck Marvel Ant-Man,2015-upper-deck-marvel-ant-man,t,,18,280,280
+305,2015 Upper Deck Marvel Avengers Comic-Con Exclusive Embedded Patches,2015-upper-deck-marvel-avengers-comic-con-exclusive-embedded-patches,t,,1,0,0
+306,2015 Upper Deck Marvel Dossier,2015-upper-deck-marvel-dossier,t,,3,165,165
+307,2015 Upper Deck Marvel Vibranium,2015-upper-deck-marvel-vibranium,t,,40,1434,1434
+308,2016 Marvel Deadpool Movie Bios Promo,2016-marvel-deadpool-movie-bios-promo,t,,1,0,0
+309,2016 Marvel Deadpool NYCC Promo,2016-marvel-deadpool-nycc-promo,t,,1,0,0
+310,2016 Marvel X-Men Apocalypse Promo,2016-marvel-x-men-apocalypse-promo,t,,1,0,0
+311,2016 Marvel X-Men Apocalypse The Four Horsemen Promo,2016-marvel-x-men-apocalypse-the-four-horsemen-promo,t,,1,0,0
+518,2016 Upper Deck Captain America Civil War,2016-upper-deck-captain-america-civil-war,t,,2,7,7
+102,2016 Upper Deck Marvel Annual,2016-upper-deck-marvel-annual,t,,61,1253,1253
+312,2016 Upper Deck Marvel Doctor Strange,2016-upper-deck-marvel-doctor-strange,t,,26,734,734
+313,2016 Upper Deck Marvel Gems,2016-upper-deck-marvel-gems,t,,41,962,962
+103,2016 Upper Deck Marvel Masterpieces,2016-upper-deck-marvel-masterpieces,t,,39,1922,1922
+55,2017 Fleer Ultra Marvel Spider-Man,2017-fleer-ultra-marvel-spider-man,t,,83,2580,2580
+314,2017 Marvel Puzzle Quest,2017-marvel-puzzle-quest,t,,1,0,0
+315,2017 Upper Deck Marvel Annual,2017-upper-deck-marvel-annual,t,,50,1326,1326
+316,2017 Upper Deck Marvel Cinematic Universe,2017-upper-deck-marvel-cinematic-universe,t,,2,178,178
+317,2017 Upper Deck Marvel Guardians of the Galaxy Vol. 2,2017-upper-deck-marvel-guardians-of-the-galaxy-vol-2,t,,32,932,932
+318,2017 Upper Deck Marvel Guardians of the Galaxy Vol. 2 Walmart/Hanes,2017-upper-deck-marvel-guardians-of-the-galaxy-vol-2-walmart-hanes,f,,8,145,145
+319,2017 Upper Deck Marvel Premier,2017-upper-deck-marvel-premier,t,,19,345,345
+320,2017 Upper Deck Marvel Spider-Man Homecoming,2017-upper-deck-marvel-spider-man-homecoming,t,,35,1307,1307
+321,2017 Upper Deck Marvel Spider-Man: Homecoming Walmart Edition,2017-upper-deck-marvel-spider-man-homecoming-walmart-edition,t,,7,195,195
+322,2017 Upper Deck Marvel Thor Ragnarok,2017-upper-deck-marvel-thor-ragnarok,t,,29,477,477
+323,2017 Woolworths Marvel Heroes Discs,2017-woolworths-marvel-heroes-discs,t,,1,0,0
+491,2018 Fleer Ultra X-Men,2018-fleer-ultra-x-men,t,,56,1847,1847
+324,2018 Marvel AMC Spider-Man: Into the Spider-Verse,2018-marvel-amc-spider-man-into-the-spider-verse,t,,1,0,0
+325,2018 Upper Deck Marvel Ant-Man and the Wasp,2018-upper-deck-marvel-ant-man-and-the-wasp,t,,37,1001,1001
+326,2018 Upper Deck Marvel Avengers Infinity War,2018-upper-deck-marvel-avengers-infinity-war,t,,37,274,274
+327,2018 Upper Deck Marvel Black Panther,2018-upper-deck-marvel-black-panther,t,,29,712,712
+328,2018 Upper Deck Marvel Masterpieces,2018-upper-deck-marvel-masterpieces,t,,36,1720,1720
+329,2018 Upper Deck Marvel's The Defenders,2018-upper-deck-marvels-the-defenders,t,,22,538,538
+330,2018-19 Upper Deck Marvel Annual,2018-19-upper-deck-marvel-annual,t,,45,1272,1272
+331,2019 Dave & Buster's Marvel Contest of Champions,2019-dave-busters-marvel-contest-of-champions,t,,2,150,150
+104,2019 Flair Marvel,2019-flair-marvel,t,,31,949,949
+332,2019 Funko Pop! Marvel Avengers: Endgame Collector Cards,2019-funko-pop-marvel-avengers-endgame-collector-cards,t,,1,0,0
+333,2019 Kellogg's Marvel Spider- Man Far From Home Stand-Ups,2019-kellogg-s-marvel-spider-man-far-from-home-stand-ups,t,,1,0,0
+334,2019 Marvel X-Men Cards of X,2019-marvel-x-men-cards-of-x,t,,1,0,0
+105,2019 Upper Deck Marvel 80th Anniversary,2019-upper-deck-marvel-80th-anniversary,t,,9,406,406
+335,2019 Upper Deck Marvel Agents of S.H.I.E.L.D. Compendium,2019-upper-deck-marvel-agents-of-shield-compendium,t,,22,713,713
+336,2019 Upper Deck Marvel Deadpool,2019-upper-deck-marvel-deadpool,t,,15,581,581
+337,2019 Upper Deck Marvel Premier,2019-upper-deck-marvel-premier,t,,14,385,385
+338,2019 Upper Deck Marvel Spider-Man Far From Home,2019-upper-deck-marvel-spider-man-far-from-home,t,,14,326,326
+106,2019 Upper Deck Marvel Studios The First Ten Years,2019-upper-deck-marvel-studios-the-first-ten-years,t,,14,423,423
+339,2019 Upper Deck Marvel Weekly,2019-upper-deck-marvel-weekly,f,,5,91,91
+107,2019-20 Upper Deck Marvel Annual,2019-20-upper-deck-marvel-annual,t,,34,820,820
+340,2020 Leclerc Marvel: Deviens un Héros,2020-leclerc-marvel-deviens-un-h-ros,f,,2,40,40
+341,2020 Marvel Andamiro Avengers Arcade,2020-marvel-andamiro-avengers-arcade,t,,1,0,0
+342,2020 Marvel Comics Thor #1 Promos,2020-marvel-comics-thor-1-promos,t,,1,0,0
+343,2020 Marvel Comics Villains Playing Cards,2020-marvel-comics-villains-playing-cards,t,,1,0,0
+344,2020 Panini Marvel 80 Years Stickers,2020-panini-marvel-80-years-stickers,t,,3,50,50
+345,2020 SkyBox Marvel Masterpieces,2020-skybox-marvel-masterpieces,t,,32,1806,1806
+346,2020 Upper Deck Marvel Ages,2020-upper-deck-marvel-ages,t,,30,1497,1497
+347,2020 Upper Deck Marvel Anime,2020-upper-deck-marvel-anime,t,,23,823,823
+83,2020 Upper Deck Marvel Avengers Endgame & Captain Marvel,2020-upper-deck-marvel-avengers-endgame-captain-marvel,t,,63,536,536
+348,2020 Upper Deck Marvel Cyber,2020-upper-deck-marvel-cyber,t,,2,0,0
+349,2020 Upper Deck Marvel Weekly,2020-upper-deck-marvel-weekly,f,,7,98,98
+350,2020 Upper Deck Marvel's Runaways,2020-upper-deck-marvels-runaways,t,,11,14,14
+351,2020-21 Upper Deck Marvel Annual,2020-21-upper-deck-marvel-annual,t,,36,2457,2269
+352,2021 Circle K Marvel Shieldz,2021-circle-k-marvel-shieldz,t,,1,0,0
+353,2021 E.Leclerc Marvel: Révèle ton Pouvoir,2021-e-leclerc-marvel-r-v-le-ton-pouvoir,t,,1,0,0
+354,2021 Marvel Heroes Reborn,2021-marvel-heroes-reborn,t,,1,0,0
+355,2021 Panini Marvel Versus,2021-panini-marvel-versus,t,,3,59,59
+356,2021 SkyBox Metal Universe Marvel Spider-Man,2021-skybox-metal-universe-marvel-spider-man,t,,31,3287,3287
+108,2021 SkyBox Metal Universe Marvel X-Men,2021-skybox-metal-universe-marvel-x-men,t,,24,1732,1732
+357,2021 Upper Deck Marvel Black Diamond,2021-upper-deck-marvel-black-diamond,t,,40,1036,1036
+358,2021 Upper Deck Marvel Black Widow,2021-upper-deck-marvel-black-widow,t,,13,59,59
+359,2021 Upper Deck Marvel Legends (Gamestop),2021-upper-deck-marvel-legends-gamestop,t,,2,120,120
+360,2021 Upper Deck Marvel Studios Disney+ SDCC Special Edition,2021-upper-deck-marvel-studios-disney-sdcc-special-edition,t,,1,0,0
+361,2021 Upper Deck Marvel Unbound,2021-upper-deck-marvel-unbound,t,,3,108,108
+109,2021-22 Upper Deck Marvel Annual,2021-22-upper-deck-marvel-annual,t,,46,1772,1772
+362,2022 E.Leclerc Marvel: Pars en Mission,2022-e-leclerc-marvel-pars-en-mission,t,,1,0,0
+110,2022 Fleer Ultra Marvel Avengers,2022-fleer-ultra-marvel-avengers,t,,90,3663,3663
+363,2022 Panini Marvel Versus,2022-panini-marvel-versus,t,,2,1,1
+364,2022 Panini Marvel Versus Stickers,2022-panini-marvel-versus-stickers,t,,1,0,0
+365,2022 SkyBox Marvel Masterpieces,2022-skybox-marvel-masterpieces,t,,32,1673,1673
+366,2022 Upper Deck Allure Marvel Studios,2022-upper-deck-allure-marvel-studios,t,,56,2949,2949
+439,"2022 Upper Deck Marvel Beginnings Volume 2, Series 1",2022-upper-deck-marvel-beginnings-volume-2-series-1,t,,44,3243,3243
+367,2022 Upper Deck Marvel Black Panther: Wakanda Forever Weekly,2022-upper-deck-marvel-black-panther-wakanda-forever-weekly,t,,4,13,13
+368,2022 Upper Deck Marvel Studios Disney+ SDCC,2022-upper-deck-marvel-studios-disney-sdcc,t,,2,15,15
+369,2022 Upper Deck Marvel Thor: Love and Thunder Weekly,2022-upper-deck-marvel-thor-love-and-thunder-weekly,t,,4,19,19
+370,2022 Upper Deck Marvel Unbound,2022-upper-deck-marvel-unbound,t,,15,437,437
+519,2022 Upper Deck Spider-Man: Into the Spider-Verse,2022-upper-deck-spider-man-into-the-spider-verse,t,,42,993,993
+371,2022-23 Upper Deck Marvel Annual,2022-23-upper-deck-marvel-annual,t,,63,3237,3237
+372,2023 E.Leclerc Marvel: Défie tes Héros,2023-e-leclerc-marvel-d-fie-tes-h-ros,t,,1,0,0
+373,2023 Finding Unicorn Marvel Guardians of the Galaxy Vol. 3 Adventure Trip,2023-finding-unicorn-marvel-guardians-of-the-galaxy-vol-3-adventure-trip,f,,14,50,50
+374,2023 Finding Unicorn Marvel Infinity Saga Origin,2023-finding-unicorn-marvel-infinity-saga-origin,t,,23,1293,1293
+375,2023 Finding Unicorn Marvel’s Avengers 60th Anniversary,2023-finding-unicorn-marvels-avengers-60th-anniversary,t,,18,532,532
+376,2023 Flair Marvel,2023-flair-marvel,t,,35,1893,1809
+111,2023 Fleer Throwbacks '89 Marvel Edition,2023-fleer-throwbacks-89-marvel-edition,f,,17,292,292
+377,2023 Fleer Ultra Marvel Midnight Sons,2023-fleer-ultra-marvel-midnight-sons,t,,65,2132,2132
+378,2023 Fleer Ultra Marvel Wolverine,2023-fleer-ultra-marvel-wolverine,t,,77,3159,3159
+379,2023 Kakawow Phantom Disney 100 Marvel,2023-kakawow-phantom-disney-100-marvel,t,,9,409,409
+380,2023 Panini Marvel Spider-Man Welcome to the Spider-Verse Sticker Collection,2023-panini-marvel-spider-man-welcome-to-the-spider-verse-sticker-collection,t,,4,80,80
+381,2023 Panini Marvel the Amazing Spider-Man 60th Anniversary Sticker Collection,2023-panini-marvel-the-amazing-spider-man-60th-anniversary-sticker-collection,t,,1,0,0
+382,2023 Upper Deck Funko Pop Marvel Infinity Saga,2023-upper-deck-funko-pop-marvel-infinity-saga,t,,26,1712,1712
+383,2023 Upper Deck Marvel Allegiance: Avengers vs X-Men,2023-upper-deck-marvel-allegiance-avengers-vs-x-men,t,,52,2163,2163
+384,2023 Upper Deck Marvel Allegiance: The Infinity Trilogy,2023-upper-deck-marvel-allegiance-the-infinity-trilogy,t,,66,2581,2581
+385,2023 Upper Deck Marvel Anime Vol. 2,2023-upper-deck-marvel-anime-vol-2,t,,29,1410,1410
+386,2023 Upper Deck Marvel Ant-Man and the Wasp: Quantumania Weekly,2023-upper-deck-marvel-ant-man-and-the-wasp-quantumania-weekly,t,,4,9,9
+387,2023 Upper Deck Marvel Doctor Strange in the Multiverse of Madness,2023-upper-deck-marvel-doctor-strange-in-the-multiverse-of-madness,t,,44,1264,1264
+388,2023 Upper Deck Marvel Eternals,2023-upper-deck-marvel-eternals,t,,34,1708,1273
+389,2023 Upper Deck Marvel Guardians of the Galaxy Vol. 3 Weekly,2023-upper-deck-marvel-guardians-of-the-galaxy-vol-3-weekly,t,,4,9,9
+390,2023 Upper Deck Marvel Hawkeye,2023-upper-deck-marvel-hawkeye,t,,49,1032,1032
+391,2023 Upper Deck Marvel Loki Season 1,2023-upper-deck-marvel-loki-season-1,t,,40,955,955
+392,2023 Upper Deck Marvel Moon Knight,2023-upper-deck-marvel-moon-knight,t,,36,845,845
+3,2023 Upper Deck Marvel Platinum ,2023-upper-deck-marvel-platinum,t,,69,8357,8148
+393,2023 Upper Deck Marvel Premier,2023-upper-deck-marvel-premier,t,,14,393,393
+394,2023 Upper Deck Marvel Shang-Chi and the Legend of the Ten Rings,2023-upper-deck-marvel-shang-chi-and-the-legend-of-the-ten-rings,t,,71,1488,1488
+395,2023 Upper Deck Marvel Spider-Man Across the Spider-Verse Weekly,2023-upper-deck-marvel-spider-man-across-the-spider-verse-weekly,t,,4,9,9
+396,2023 Upper Deck Marvel The Falcon and The Winter Soldier,2023-upper-deck-marvel-the-falcon-and-the-winter-soldier,t,,53,1498,1498
+112,2023 Upper Deck Marvel The Marvels Weekly,2023-upper-deck-marvel-the-marvels-weekly,t,,4,9,9
+397,2023 Upper Deck Marvel Thor Love and Thunder,2023-upper-deck-marvel-thor-love-and-thunder,t,,35,829,829
+398,2023 Upper Deck Marvel Wandavision,2023-upper-deck-marvel-wandavision,t,,65,1961,1644
+124,2023 Upper Deck Marvel What If…?,2023-upper-deck-marvel-what-if,t,,57,2092,2043
+520,2023 Upper Deck Spider-Man: No Way Home,2023-upper-deck-spider-man-no-way-home,t,,50,1010,1010
+399,2023 Waddingtons Marvel Comics Playing Cards,2023-waddingtons-marvel-comics-playing-cards,t,,1,0,0
+400,2023 Waddingtons Marvel Playing Cards,2023-waddingtons-marvel-playing-cards,t,,1,0,0
+401,2023-24 Upper Deck Marvel Annual,2023-24-upper-deck-marvel-annual,t,,37,2526,2526
+113,2024 E.Leclerc Marvel: Explore L'Univers Marvel avec Groot,2024-e-leclerc-marvel-explore-l-univers-marvel-avec-groot,f,2026-02-03 00:18:51.306,1,0,0
+114,2024 Finding Unicorn Marvel Comics Universe Evolution,2024-finding-unicorn-marvel-comics-universe-evolution,t,,26,1030,1030
+402,2024 Finding Unicorn Marvel Thor Thunder Series,2024-finding-unicorn-marvel-thor-thunder-series,t,,1,0,0
+115,2024 Fleer Throwbacks '59-63 Marvel Edition,2024-fleer-throwbacks-59-63-marvel-edition,f,,23,601,601
+403,2024 Fleer Ultra Matriarchs of Marvel,2024-fleer-ultra-matriarchs-of-marvel,t,,35,2056,2056
+404,2024 Kakawow Marvel Heroes Joy Edition Spider-Man,2024-kakawow-marvel-heroes-joy-edition-spider-man,t,,15,250,250
+405,2024 Loblaw Marvel: Go on a Mission in the Loblaw Universe,2024-loblaw-marvel-go-on-a-mission-in-the-loblaw-universe,t,,1,0,0
+406,2024 Loblaw Marvel: Pars en Mission,2024-loblaw-marvel-pars-en-mission,t,,1,0,0
+407,2024 Marvel Blood Hunt,2024-marvel-blood-hunt,t,,1,0,0
+408,2024 SkyBox Marvel Masterpieces XL,2024-skybox-marvel-masterpieces-xl,t,,24,1046,1046
+409,2024 SkyBox Metal Universe Marvel Avengers,2024-skybox-metal-universe-marvel-avengers,t,,52,4617,4617
+4,2024 Skybox Metal Universe Avengers ,2024-skybox-metal-universe-avengers,f,2026-01-31 18:34:54.249255,1,50,50
+410,2024 The Marvel Art of Russell Dauterman,2024-the-marvel-art-of-russell-dauterman,t,,1,0,0
+116,2024 Topps Chrome Marvel,2024-topps-chrome-marvel,t,,94,3226,3226
+117,2024 Topps Chrome Sapphire Edition Marvel,2024-topps-chrome-sapphire-edition-marvel,t,,32,1651,1651
+411,2024 Topps Star Wars Masterwork,2024-topps-star-wars-masterwork,f,,10,0,0
+118,2024 Upper Deck Marvel Allegiance Secret Wars,2024-upper-deck-marvel-allegiance-secret-wars,t,,42,2002,2002
+412,2024 Upper Deck Marvel Ant-Man and the Wasp Quantumania,2024-upper-deck-marvel-ant-man-and-the-wasp-quantumania,t,,1,0,0
+413,2024 Upper Deck Marvel Avengers,2024-upper-deck-marvel-avengers,t,,15,731,731
+119,2024 Upper Deck Marvel Beginnings Volume 2 Series 2,2024-upper-deck-marvel-beginnings-volume-2-series-2,t,,39,2647,2647
+414,2024 Upper Deck Marvel Black Panther Wakanda Forever,2024-upper-deck-marvel-black-panther-wakanda-forever,t,,52,1349,1349
+415,2024 Upper Deck Marvel Guardians of the Galaxy Vol 3,2024-upper-deck-marvel-guardians-of-the-galaxy-vol-3,t,,85,1512,1512
+416,2024 Upper Deck Marvel Masterpieces '92 Platinum,2024-upper-deck-marvel-masterpieces-92-platinum,t,,62,4737,4637
+417,2024 Upper Deck Marvel Masterpieces Nahuel Grego,2024-upper-deck-marvel-masterpieces-nahuel-grego,t,,42,2335,2335
+418,2024 Upper Deck Marvel Spider-Man,2024-upper-deck-marvel-spider-man,t,,20,773,773
+120,2024 Upper Deck Marvel Spider-Man Renditions,2024-upper-deck-marvel-spider-man-renditions,t,,28,2440,2440
+419,2024 Upper Deck Marvel Studios Series 1,2024-upper-deck-marvel-studios-series-1,t,,44,2594,2427
+420,2024 Upper Deck Marvel Studios Series 2: Cinematic,2024-upper-deck-marvel-studios-series-2-cinematic,t,,39,1497,1497
+421,2024 Upper Deck Marvel Unbound,2024-upper-deck-marvel-unbound,t,,14,437,437
+422,2024 Upper Deck Marvel Unbound Year 4,2024-upper-deck-marvel-unbound-year-4,t,,14,435,435
+423,2024 Upper Deck Women of Marvel,2024-upper-deck-women-of-marvel,t,,32,1601,1358
+492,2024 Upper Deck X-Men ‘97 SDCC,2024-upper-deck-x-men-97-sdcc,f,2026-01-31 18:34:54.249255,0,0,0
+424,2025 Clover Press The Marvel Art of Michael Allred,2025-clover-press-the-marvel-art-of-michael-allred,t,,1,0,0
+425,2025 Clover Press The Marvel Art of Michael Turner,2025-clover-press-the-marvel-art-of-michael-turner,t,,3,2,2
+82,2025 Kakawow Aura Marvel,2025-kakawow-aura-marvel,t,,132,2791,2791
+426,2025 Kakawow Cosmos Marvel,2025-kakawow-cosmos-marvel,t,,43,1273,1273
+427,2025 Kakawow Phantom Marvel Rivals,2025-kakawow-phantom-marvel-rivals,t,,54,1901,1901
+428,2025 Loblaw Marvel Autocollants Libère tes Superpouvoirs,2025-loblaw-marvel-autocollants-lib-re-tes-superpouvoirs,t,,1,0,0
+429,2025 Loblaw Marvel Be a Hero Stickers,2025-loblaw-marvel-be-a-hero-stickers,t,,1,0,0
+521,2025 Panini Marvel Anthology,2025-panini-marvel-anthology,t,,21,1475,1475
+523,2025 Topps Chrome Deadpool,2025-topps-chrome-deadpool,t,,18,278,278
+121,2025 Topps Chrome Marvel,2025-topps-chrome-marvel,t,,201,6542,6421
+122,2025 Topps Chrome Marvel Studios,2025-topps-chrome-marvel-studios,t,,106,9076,8578
+430,2025 Topps Chrome Sapphire Edition Marvel,2025-topps-chrome-sapphire-edition-marvel,t,,13,1880,1880
+431,2025 Topps Chrome Sapphire Edition Marvel Studios,2025-topps-chrome-sapphire-edition-marvel-studios,t,,28,878,878
+493,2025 Topps Finest X-Men '97,2025-topps-finest-x-men-97,t,,47,1906,1896
+432,2025 Topps Marvel Comic Book Heroes 1975 Golden Anniversary,2025-topps-marvel-comic-book-heroes-1975-golden-anniversary,t,,22,1300,1300
+81,2025 Topps Marvel Studios Chrome,2025-topps-marvel-studios-chrome,f,2026-01-31 18:34:54.249255,0,0,0
+433,2025 Topps Marvel The Collector,2025-topps-marvel-the-collector,t,,11,295,295
+434,2025 Topps Mint Marvel,2025-topps-mint-marvel,t,,31,1644,1644
+435,2025 Topps Now Marvel,2025-topps-now-marvel,t,,8,28,28
+524,2026 CardFun Marvel Rivals - Eternal Glory,2026-cardfun-marvel-rivals-eternal-glory,t,,21,40,40
+522,2026 Topps Brooklyn Collection - Captain America,2026-topps-brooklyn-collection-captain-america,t,,14,322,322
+525,2026 Topps Chrome Marvel Comics,2026-topps-chrome-marvel-comics,t,,84,9794,9794
+528,2026 Topps Chrome Sapphire Edition,2026-topps-chrome-sapphire-edition,t,,29,1738,1738
+526,2026 Topps Finest Fantastic Four: 65th Anniversary,2026-topps-finest-fantastic-four-65th-anniversary,t,,137,4851,4851
+531,2026 Topps Marvel Neon,2026-topps-marvel-neon,t,,75,6720,6720
+527,2026 Topps Mint Marvel,2026-topps-mint-marvel,t,,20,1730,1730
+529,2026 Topps Vault Marvel,2026-topps-vault-marvel,t,,75,1427,1427
+6,Marvel 1990 Universe,marvel-1990-universe,f,2026-01-31 18:34:54.249255,1,7,7
+5,Marvel 1991 Universe ,marvel-1991-universe,f,2026-01-31 18:34:54.249255,0,0,0
+9,Marvel 1992 Comic Images Ghost Rider II ,marvel-1992-comic-images-ghost-rider-ii,t,,2,160,160
+10,Marvel 1992 Comic Images Punisher Guts & Gunpowder ,marvel-1992-comic-images-punisher-guts-gunpowder,t,,4,183,183
+11,Marvel 1992 Comic Images Silver Surfer ,marvel-1992-comic-images-silver-surfer,f,2026-01-31 18:34:54.249255,1,72,72
+12,Marvel 1992 Comic Images Spider Man,marvel-1992-comic-images-spider-man,f,2026-01-31 18:34:54.249255,3,97,97
+13,Marvel 1992 Comic Images Wolverine: From then 'til now II ,marvel-1992-comic-images-wolverine-from-then-til-now-ii,f,2026-01-31 18:34:54.249255,2,96,96
+7,Marvel 1992 Masterpieces ,marvel-1992-masterpieces,f,2026-08-04 19:33:04.447,3,215,5
+8,Marvel 1992 Universe ,marvel-1992-universe,f,2026-01-31 18:34:54.249255,0,0,0
+14,Marvel 1992 X-Men Series 1 ,marvel-1992-x-men-series-1,t,,5,310,310
+15,Marvel 1993 Masterpieces,marvel-1993-masterpieces,f,2026-08-04 19:33:11.048,2,196,0
+16,Marvel 1993 Universe ,marvel-1993-universe,f,2026-01-31 18:34:54.249255,0,0,0
+18,Marvel 1994 Flair ,marvel-1994-flair,f,2026-01-31 18:34:54.249255,0,0,0
+19,Marvel 1994 Fleer Amazing Spider Man,marvel-1994-fleer-amazing-spider-man,f,2026-01-31 18:34:54.249255,2,0,0
+20,Marvel 1994 Masterpieces ,marvel-1994-masterpieces,f,2026-01-31 18:34:54.249255,1,3,3
+21,Marvel 1994 Ultra X-Men ,marvel-1994-ultra-x-men,f,2026-01-31 18:34:54.249255,0,0,0
+22,Marvel 1994 Universe ,marvel-1994-universe,f,2026-01-31 18:34:54.249255,0,0,0
+23,Marvel 1995 Flair ,marvel-1995-flair,f,2026-01-31 18:34:54.249255,0,0,0
+24,Marvel 1995 Fleer Overpower ,marvel-1995-fleer-overpower,t,,2,602,602
+25,Marvel 1995 Masterpieces ,marvel-1995-masterpieces,f,2026-01-31 18:34:54.249255,0,0,0
+26,Marvel 1995 Metal ,marvel-1995-metal,f,2026-01-31 18:34:54.249255,0,0,0
+27,Marvel 1995 Ultra Spider Man ,marvel-1995-ultra-spider-man,f,2026-01-31 18:34:54.249255,6,107,107
+28,Marvel 1995 Ultra X-Men ,marvel-1995-ultra-x-men,f,2026-01-31 18:34:54.249255,1,20,20
+29,Marvel 1996 Fleer Amalgam ,marvel-1996-fleer-amalgam,t,,4,188,188
+30,Marvel 1996 Fleer Motion ,marvel-1996-fleer-motion,f,2026-01-31 18:34:54.249255,0,0,0
+31,Marvel 1996 Fleer Spider Man Premium ,marvel-1996-fleer-spider-man-premium,f,2026-01-31 18:34:54.249255,1,0,0
+32,Marvel 1996 Fleer Ultra Onslaught ,marvel-1996-fleer-ultra-onslaught,f,2026-01-31 18:34:54.249255,0,0,0
+33,Marvel 1996 Fleer Vision ,marvel-1996-fleer-vision,f,2026-01-31 18:34:54.249255,1,2,2
+34,Marvel 1996 Masterpieces ,marvel-1996-masterpieces,f,2026-01-31 18:34:54.249255,0,0,0
+37,Marvel 1997 Fleer Premium QFX ,marvel-1997-fleer-premium-qfx,f,2026-01-31 18:34:54.249255,0,0,0
+38,Marvel 1997 Fleer Ultra Spider Man ,marvel-1997-fleer-ultra-spider-man,f,2026-01-31 18:34:54.249255,3,81,81
+39,Marvel 1997 Fleer X-Men Oasis ,marvel-1997-fleer-x-men-oasis,f,2026-01-31 18:34:54.249255,0,0,0
+40,Marvel 1997 Premium X-Men 97 Timelines ,marvel-1997-premium-x-men-97-timelines,f,2026-01-31 18:34:54.249255,0,0,0
+41,Marvel 1998 Fleer Creators Collection ,marvel-1998-fleer-creators-collection,f,2026-01-31 18:34:54.249255,0,0,0
+42,Marvel 1998 The Silver Age ,marvel-1998-the-silver-age,f,2026-01-31 18:34:54.249255,1,11,11
+58,Marvel 20-21 Upper Deck Annual ,marvel-20-21-upper-deck-annual,f,2026-01-31 18:34:54.249255,0,0,0
+43,Marvel 2000 Topps X-Men: The Movie ,marvel-2000-topps-x-men-the-movie,f,2026-01-31 18:34:54.249255,0,0,0
+44,Marvel 2001 Topps Legends ,marvel-2001-topps-legends,f,2026-01-31 18:34:54.249255,0,0,0
+45,Marvel 2002 Topps Spider Man Movie ,marvel-2002-topps-spider-man-movie,f,2026-01-31 18:34:54.249255,5,124,124
+46,Marvel 2007 Masterpieces ,marvel-2007-masterpieces,f,2026-01-31 18:34:54.249255,0,0,0
+47,Marvel 2008 Masterpieces ,marvel-2008-masterpieces,f,2026-01-31 18:34:54.249255,0,0,0
+48,Marvel 2009 Rittenhouse Spider Man Archives,marvel-2009-rittenhouse-spider-man-archives,f,2026-01-31 18:34:54.249255,2,0,0
+49,Marvel 2010 Rittenhouse: 70 years of comics ,marvel-2010-rittenhouse-70-years-of-comics,f,2026-01-31 18:34:54.249255,1,72,72
+50,Marvel 2012 Greatest Heroes Rittenhouse Archives ,marvel-2012-greatest-heroes-rittenhouse-archives,f,2026-01-31 18:34:54.249255,0,0,0
+51,Marvel 2013 Fleer Retro ,marvel-2013-fleer-retro,f,2026-01-31 18:34:54.249255,0,0,0
+52,Marvel 2015 Fleer Retro ,marvel-2015-fleer-retro,f,2026-01-31 18:34:54.249255,0,0,0
+53,Marvel 2015 Upper Deck Vibranium ,marvel-2015-upper-deck-vibranium,f,2026-01-31 18:34:54.249255,0,0,0
+54,Marvel 2016 Masterpieces ,marvel-2016-masterpieces,f,2026-01-31 18:34:54.249255,2,7,7
+56,Marvel 2018 Masterpieces ,marvel-2018-masterpieces,f,2026-01-31 18:34:54.249255,3,40,40
+57,Marvel 2020 Masterpieces ,marvel-2020-masterpieces,f,2026-01-31 18:34:54.249255,10,109,109
+59,Marvel 2021 X-Men metal Universe ,marvel-2021-x-men-metal-universe,f,2026-01-31 18:34:54.249255,4,430,430
+60,Marvel 2022 Allure ,marvel-2022-allure,f,2026-01-31 18:34:54.249255,1,61,61
+61,Marvel 2022 Beginnings,marvel-2022-beginnings,f,2026-01-31 18:34:54.249255,11,14,14
+62,Marvel 2022 Masterpieces ,marvel-2022-masterpieces,f,2026-01-31 18:34:54.249255,0,0,0
+63,Marvel 2022 Metal Universe Spider Man ,marvel-2022-metal-universe-spider-man,f,2026-01-31 18:34:54.249255,3,400,400
+64,Marvel 2022 Ultra Avengers ,marvel-2022-ultra-avengers,f,2026-01-31 18:34:54.249255,1,2,2
+65,Marvel 2023 Flair ,marvel-2023-flair,f,2026-01-31 18:34:54.249255,0,0,0
+66,Marvel 2023 Fleer Ultra Wolverine ,marvel-2023-fleer-ultra-wolverine,f,2026-01-31 18:34:54.249255,3,132,132
+67,Marvel 2023 Upper Deck Allegiance Infinity Trilogy ,marvel-2023-upper-deck-allegiance-infinity-trilogy,f,2026-01-31 18:34:54.249255,0,0,0
+68,Marvel 2023 Upper Deck Anime Volume 2,marvel-2023-upper-deck-anime-volume-2,f,2026-01-31 18:34:54.249255,0,0,0
+69,Marvel 2023 Upper Deck Platinum,marvel-2023-upper-deck-platinum,f,2026-01-31 18:34:54.249255,6,26,26
+70,Marvel 2023 Upper Deck What If ,marvel-2023-upper-deck-what-if,f,2026-01-31 18:34:54.249255,4,149,149
+71,Marvel 2024 Skybox Masterpieces '92 Platinum ,marvel-2024-skybox-masterpieces-92-platinum,f,2026-01-31 18:18:26.344111,1,100,100
+72,Marvel 2024 Skybox Masterpieces Nahuel Grego,marvel-2024-skybox-masterpieces-nahuel-grego,f,2026-01-31 18:18:26.344111,1,90,90
+73,Marvel 2024 Skybox Masterpieces XL ,marvel-2024-skybox-masterpieces-xl,f,2026-01-31 18:43:25.255099,0,0,0
+74,Marvel 2024 Topps Chrome ,marvel-2024-topps-chrome,f,2026-01-31 18:18:26.344111,12,102,102
+75,Marvel 2024 Upper Deck Avengers ,marvel-2024-upper-deck-avengers,f,2026-01-31 18:34:54.249255,0,0,0
+76,Marvel 2024 Upper Deck Spider Man Renditions ,marvel-2024-upper-deck-spider-man-renditions,f,2026-01-31 18:34:54.249255,1,90,90
+77,Marvel 2024 Upper Deck Studios ,marvel-2024-upper-deck-studios,f,2026-01-31 18:18:26.344111,4,128,128
+78,Marvel 2024 Upper Deck Women of Marvel,marvel-2024-upper-deck-women-of-marvel,f,2026-01-31 18:34:54.249255,0,0,0
+80,Marvel 2025 Topps Chrome,marvel-2025-topps-chrome,f,2026-01-31 18:18:26.344111,31,374,374
+79,marvel 2025 topps finest x men '97,marvel-2025-topps-finest-x-men-97,f,2026-01-31 18:34:54.249255,23,472,468
