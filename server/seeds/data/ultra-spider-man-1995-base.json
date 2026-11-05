@@ -1,0 +1,602 @@
+[
+  {
+    "number": "1",
+    "name": "Spider-Man"
+  },
+  {
+    "number": "2",
+    "name": "Annex"
+  },
+  {
+    "number": "3",
+    "name": "Answer"
+  },
+  {
+    "number": "4",
+    "name": "Beetle"
+  },
+  {
+    "number": "5",
+    "name": "Black Cat"
+  },
+  {
+    "number": "6",
+    "name": "Blood Rose"
+  },
+  {
+    "number": "7",
+    "name": "Bloody Mary"
+  },
+  {
+    "number": "8",
+    "name": "Boomerang"
+  },
+  {
+    "number": "9",
+    "name": "Burglar"
+  },
+  {
+    "number": "10",
+    "name": "Calypso"
+  },
+  {
+    "number": "11",
+    "name": "Cardiac"
+  },
+  {
+    "number": "12",
+    "name": "Carnage"
+  },
+  {
+    "number": "13",
+    "name": "Carrion"
+  },
+  {
+    "number": "14",
+    "name": "Chakra"
+  },
+  {
+    "number": "15",
+    "name": "Chameleon"
+  },
+  {
+    "number": "16",
+    "name": "Chance"
+  },
+  {
+    "number": "17",
+    "name": "Coldheart"
+  },
+  {
+    "number": "18",
+    "name": "Demogoblin"
+  },
+  {
+    "number": "19",
+    "name": "Dr. Octopus"
+  },
+  {
+    "number": "20",
+    "name": "Doppelganger"
+  },
+  {
+    "number": "21",
+    "name": "Electro"
+  },
+  {
+    "number": "22",
+    "name": "Female Symbiote"
+  },
+  {
+    "number": "23",
+    "name": "Green Goblin"
+  },
+  {
+    "number": "24",
+    "name": "Grim Hunter"
+  },
+  {
+    "number": "25",
+    "name": "Hammerhead"
+  },
+  {
+    "number": "26",
+    "name": "Hardshell"
+  },
+  {
+    "number": "27",
+    "name": "Hobgoblin"
+  },
+  {
+    "number": "28",
+    "name": "Homo Arachnis"
+  },
+  {
+    "number": "29",
+    "name": "J. Jonah Jameson"
+  },
+  {
+    "number": "30",
+    "name": "Jackal"
+  },
+  {
+    "number": "31",
+    "name": "Judas Traveller"
+  },
+  {
+    "number": "32",
+    "name": "Kaine"
+  },
+  {
+    "number": "33",
+    "name": "Kingpin"
+  },
+  {
+    "number": "34",
+    "name": "Kraven"
+  },
+  {
+    "number": "35",
+    "name": "Lizard"
+  },
+  {
+    "number": "36",
+    "name": "Man-Wolf"
+  },
+  {
+    "number": "37",
+    "name": "Mary Jane"
+  },
+  {
+    "number": "38",
+    "name": "Molten Man"
+  },
+  {
+    "number": "39",
+    "name": "Mysterio"
+  },
+  {
+    "number": "40",
+    "name": "Nightwatch"
+  },
+  {
+    "number": "41",
+    "name": "Nocturne"
+  },
+  {
+    "number": "42",
+    "name": "Owl"
+  },
+  {
+    "number": "43",
+    "name": "Prowler"
+  },
+  {
+    "number": "44",
+    "name": "Puma"
+  },
+  {
+    "number": "45",
+    "name": "Rhino"
+  },
+  {
+    "number": "46",
+    "name": "Sandman"
+  },
+  {
+    "number": "47",
+    "name": "Sandstorm"
+  },
+  {
+    "number": "48",
+    "name": "Scarlet Spider"
+  },
+  {
+    "number": "49",
+    "name": "Scorpion"
+  },
+  {
+    "number": "50",
+    "name": "Shocker"
+  },
+  {
+    "number": "51",
+    "name": "Shriek"
+  },
+  {
+    "number": "52",
+    "name": "Sin-Eater"
+  },
+  {
+    "number": "53",
+    "name": "Solo"
+  },
+  {
+    "number": "54",
+    "name": "Stegron"
+  },
+  {
+    "number": "55",
+    "name": "Strikeback"
+  },
+  {
+    "number": "56",
+    "name": "Stunner"
+  },
+  {
+    "number": "57",
+    "name": "Swarm"
+  },
+  {
+    "number": "58",
+    "name": "Tarantula"
+  },
+  {
+    "number": "59",
+    "name": "Tombstone"
+  },
+  {
+    "number": "60",
+    "name": "Venom"
+  },
+  {
+    "number": "61",
+    "name": "Vermin"
+  },
+  {
+    "number": "62",
+    "name": "Vulture"
+  },
+  {
+    "number": "63",
+    "name": "Warrant"
+  },
+  {
+    "number": "64",
+    "name": "Kraven"
+  },
+  {
+    "number": "65",
+    "name": "Chameleon"
+  },
+  {
+    "number": "66",
+    "name": "Grim Hunter"
+  },
+  {
+    "number": "67",
+    "name": "Carrion"
+  },
+  {
+    "number": "68",
+    "name": "Spider-Clone"
+  },
+  {
+    "number": "69",
+    "name": "Jackal"
+  },
+  {
+    "number": "70",
+    "name": "Spencer Smythe"
+  },
+  {
+    "number": "71",
+    "name": "Spider-Slayer"
+  },
+  {
+    "number": "72",
+    "name": "Alistair Smythe"
+  },
+  {
+    "number": "73",
+    "name": "Jack O'Lantern"
+  },
+  {
+    "number": "74",
+    "name": "Hobgoblin"
+  },
+  {
+    "number": "75",
+    "name": "Demogoblin"
+  },
+  {
+    "number": "76",
+    "name": "Kingpin"
+  },
+  {
+    "number": "77",
+    "name": "Schemer"
+  },
+  {
+    "number": "78",
+    "name": "Blood Rose"
+  },
+  {
+    "number": "79",
+    "name": "Green Goblin"
+  },
+  {
+    "number": "80",
+    "name": "Green Goblin"
+  },
+  {
+    "number": "81",
+    "name": "Fake Parents"
+  },
+  {
+    "number": "82",
+    "name": "Alien Costume"
+  },
+  {
+    "number": "83",
+    "name": "Venom"
+  },
+  {
+    "number": "84",
+    "name": "Carnage"
+  },
+  {
+    "number": "85",
+    "name": "Origin of Spider-Man"
+  },
+  {
+    "number": "86",
+    "name": "Death of Gwen Stacy"
+  },
+  {
+    "number": "87",
+    "name": "Alien Costume Saga"
+  },
+  {
+    "number": "88",
+    "name": "Wedding"
+  },
+  {
+    "number": "89",
+    "name": "Kraven's Last Hunt"
+  },
+  {
+    "number": "90",
+    "name": "Cosmic Spider-Man"
+  },
+  {
+    "number": "91",
+    "name": "Maximum Carnage"
+  },
+  {
+    "number": "92",
+    "name": "Pursuit"
+  },
+  {
+    "number": "93",
+    "name": "Return of the Spider-Clone"
+  },
+  {
+    "number": "94",
+    "name": "The Exile Returns"
+  },
+  {
+    "number": "95",
+    "name": "Web of Life"
+  },
+  {
+    "number": "96",
+    "name": "Web of Death"
+  },
+  {
+    "number": "97",
+    "name": "Smoke and Mirrors"
+  },
+  {
+    "number": "98",
+    "name": "Straight on 'Til Morning"
+  },
+  {
+    "number": "99",
+    "name": "Venom vs. Carnage"
+  },
+  {
+    "number": "100",
+    "name": "Venom vs. Daredevil"
+  },
+  {
+    "number": "101",
+    "name": "Venom vs. Darkhawk"
+  },
+  {
+    "number": "102",
+    "name": "Venom and Demogoblin"
+  },
+  {
+    "number": "103",
+    "name": "Venom vs. Female Symbiote"
+  },
+  {
+    "number": "104",
+    "name": "Venom vs. The Jury"
+  },
+  {
+    "number": "105",
+    "name": "Venom and Mace"
+  },
+  {
+    "number": "106",
+    "name": "Venom and Morbius"
+  },
+  {
+    "number": "107",
+    "name": "Venom vs. Silver Sable"
+  },
+  {
+    "number": "108",
+    "name": "Venom and Vengeance"
+  },
+  {
+    "number": "109",
+    "name": "Beast"
+  },
+  {
+    "number": "110",
+    "name": "Black Cat"
+  },
+  {
+    "number": "111",
+    "name": "Black Widow"
+  },
+  {
+    "number": "112",
+    "name": "Captain America"
+  },
+  {
+    "number": "113",
+    "name": "Daredevil"
+  },
+  {
+    "number": "114",
+    "name": "Deathlok"
+  },
+  {
+    "number": "115",
+    "name": "Dr. Strange"
+  },
+  {
+    "number": "116",
+    "name": "Falcon"
+  },
+  {
+    "number": "117",
+    "name": "Gambit"
+  },
+  {
+    "number": "118",
+    "name": "Ghost Rider"
+  },
+  {
+    "number": "119",
+    "name": "Hawkeye"
+  },
+  {
+    "number": "120",
+    "name": "Human Torch"
+  },
+  {
+    "number": "121",
+    "name": "Iron Man"
+  },
+  {
+    "number": "122",
+    "name": "Moon Knight"
+  },
+  {
+    "number": "123",
+    "name": "Nick Fury"
+  },
+  {
+    "number": "124",
+    "name": "Nova"
+  },
+  {
+    "number": "125",
+    "name": "Punisher"
+  },
+  {
+    "number": "126",
+    "name": "Scarlet Witch"
+  },
+  {
+    "number": "127",
+    "name": "Silver Sable"
+  },
+  {
+    "number": "128",
+    "name": "Dr. Octopus"
+  },
+  {
+    "number": "129",
+    "name": "Green Goblin"
+  },
+  {
+    "number": "130",
+    "name": "The Jury"
+  },
+  {
+    "number": "131",
+    "name": "Lizard"
+  },
+  {
+    "number": "132",
+    "name": "Man-Thing"
+  },
+  {
+    "number": "133",
+    "name": "Puma"
+  },
+  {
+    "number": "134",
+    "name": "Venom"
+  },
+  {
+    "number": "135",
+    "name": "Statue of Liberty"
+  },
+  {
+    "number": "136",
+    "name": "Liberty Bell"
+  },
+  {
+    "number": "137",
+    "name": "Lincoln Memorial"
+  },
+  {
+    "number": "138",
+    "name": "Graceland"
+  },
+  {
+    "number": "139",
+    "name": "The Alamo"
+  },
+  {
+    "number": "140",
+    "name": "Hollywood"
+  },
+  {
+    "number": "141",
+    "name": "San Francisco"
+  },
+  {
+    "number": "142",
+    "name": "Mt. Rushmore"
+  },
+  {
+    "number": "143",
+    "name": "Wrigley Field"
+  },
+  {
+    "number": "144",
+    "name": "Coney Island"
+  },
+  {
+    "number": "145",
+    "name": "Claw-Hide"
+  },
+  {
+    "number": "146",
+    "name": "Doppel Shock"
+  },
+  {
+    "number": "147",
+    "name": "King Carnage"
+  },
+  {
+    "number": "148",
+    "name": "Myzary"
+  },
+  {
+    "number": "149",
+    "name": "Scavenger"
+  },
+  {
+    "number": "150",
+    "name": "Checklist"
+  }
+]
