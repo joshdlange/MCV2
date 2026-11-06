@@ -703,6 +703,8 @@ server.listen({
         await repairSpiderManChecklists();
         const { repairOwnerBaseAudit } = await import('./seeds/repairOwnerBaseAudit');
         await repairOwnerBaseAudit();
+        const { completeVintageAndGold1994 } = await import('./seeds/completeVintageAndGold1994');
+        await completeVintageAndGold1994();
       } catch (error) {
         console.error('Startup repair (legacy set merge) failed:', error);
         throw error;

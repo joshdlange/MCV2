@@ -11,6 +11,8 @@ The owner confirmed:
 - 2018 Masterpieces #83 is Phoenix, #88 Captain America, #89 Iron Man; Gold Signature should have the same full checklist as Base.
 - Use “Sabretooth” for the 1995 Flair duplicate spellings.
 - Remove product boxes and packs from Base, preserving their existing collector records outside Base.
+- 1994 Marvel Masterpieces Gold Signature has the same full checklist as Base; it is a separate variant.
+- 1966 Marvel Super Heroes Club Art Posters and 1967 Philadelphia Marvel Stickers are Base-only. Keep the owner's 1967 captions in public card details, not private collector notes.
 
 **Why:** The owner supplied these identities and explicitly confirmed the numbering exceptions after reviewing the audit.
 
