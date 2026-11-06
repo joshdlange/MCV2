@@ -335,4 +335,87 @@ Yellow Claw
 Zzzax
 Checklist`),
   },
+  {
+    parent: '1987-comic-images-marvel-s-magic-moments-stickers', year: 1987,
+    cards: numbered(`The Watcher
+Galactus
+Skrull
+Inhumans
+Hercules
+Gods
+Original Black Knight
+Black Knight
+Kid Colt / Rawhide Kid / Night Rider / Two-Gun Kid
+Union Jack
+Howling Commandos
+Captain America
+The Invaders
+Captain America
+Bucky
+Captain America
+The Falcon
+Bruce Banner
+Wolverine
+Hulk
+Hulk
+Wasp / Ant-Man
+Janet Van Dyne
+Ant-Man
+Mjolnir
+Beta Ray Bill
+Odin & Surtur
+Thor & Hela
+Iron Man
+Tony Stark
+Obadiah Stane
+Iron Man
+Sub-Mariner
+Sub-Mariner / Marrina
+Silver Surfer / Nova
+Dr. Strange
+Dr. Strange vs. Dread Dormammu
+Dread Dormammu
+Peter Parker
+Spider-Man / Gwen Stacy / Green Goblin
+Spider-Man
+Hobgoblin
+Spider-Man / Daredevil
+Elektra
+Bullseye / Elektra
+Kingpin
+Moon Knight
+Moon Knight
+Cloak and Dagger
+Sub-Mariner / Iron Man
+Avengers
+She-Hulk
+Avengers
+Scarlet Witch & Vision
+Hawkeye
+Wonder Man
+Fantastic Four
+Doctor Doom
+She-Hulk / Mr. Fantastic / Human Torch
+Thing
+Brotherhood of Evil Mutants
+Original X-Men
+Marvel Girl
+Wolverine
+Peter Rasputin
+Storm
+Rogue / Dazzler / Longshot / Psylocke
+James Hudson
+Marrina
+Alpha Flight
+Warlock
+New Mutants
+Magneto
+Original X-Men
+Beast
+Angel
+Captain Mar-Vell
+Jean Grey / Phoenix
+Guardian
+Beyonder`),
+  },
 ];

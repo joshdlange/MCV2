@@ -5,7 +5,7 @@ import { eq, sql } from 'drizzle-orm';
 import { db, pool } from '../db';
 import { cards, cardSets, mainSets } from '../../shared/schema';
 import { vintageChecklists } from '../seeds/data/ownerVintageChecklists';
-import { completeVintageAndGold1994Tx, masterpieces94, heroes1977Image, posters1966Image, secretWars1984Image, stickers1986Image, universe1987Image, colossal1987Image } from '../seeds/completeVintageAndGold1994';
+import { completeVintageAndGold1994Tx, masterpieces94, heroes1977Image, posters1966Image, secretWars1984Image, stickers1986Image, universe1987Image, colossal1987Image, magicMomentsImage } from '../seeds/completeVintageAndGold1994';
 
 test('1967 captions and characters exactly preserve owner attachment', () => {
   const text = readFileSync('attached_assets/Pasted-No-Character-Caption-1-The-Human-Torch-I-must-get-that-_1793980299039.txt', 'utf8');
@@ -13,7 +13,17 @@ test('1967 captions and characters exactly preserve owner attachment', () => {
     .map(m => ({ cardNumber: m![1], name: m![2], description: m![3] }));
   assert.equal(expected.length, 55);
   assert.deepEqual(vintageChecklists[1].cards, expected);
-  assert.deepEqual(vintageChecklists.map(c => c.cards.length), [8,55,42,40,180,77,90,90]);
+  assert.deepEqual(vintageChecklists.map(c => c.cards.length), [8,55,42,40,180,77,90,90,80]);
+});
+
+test('Magic Moments preserves 1–80, repeated characters and multi-character labels', () => {
+  const rows = vintageChecklists[8].cards;
+  assert.deepEqual(rows.map(c=>c.cardNumber),Array.from({length:80},(_,i)=>String(i+1)));
+  assert.deepEqual(rows.filter(c=>c.name==='Captain America').map(c=>c.cardNumber),['12','14','16']);
+  assert.deepEqual(rows.filter(c=>c.name==='Wolverine').map(c=>c.cardNumber),['19','64']);
+  assert.equal(rows[8].name,'Kid Colt / Rawhide Kid / Night Rider / Two-Gun Kid');
+  assert.equal(rows[66].name,'Rogue / Dazzler / Longshot / Psylocke');
+  assert.equal(rows[79].name,'Beyonder');
 });
 
 test('Colossal Conflicts keeps the full 1–90 sequence and supplied names', () => {
@@ -141,6 +151,11 @@ test('checklists complete, preserve existing metadata/holdings and repeat safely
       if (checklist.parent === '1987-comic-images-marvel-universe-ii-colossal-conflicts') {
         const [parent] = await tx.select().from(mainSets).where(eq(mainSets.id, set.mainSetId!));
         assert.equal(parent.thumbnailImageUrl, colossal1987Image);
+        assert.ok(rows.every(c=>!c.frontImageUrl && !c.backImageUrl));
+      }
+      if (checklist.parent === '1987-comic-images-marvel-s-magic-moments-stickers') {
+        const [parent] = await tx.select().from(mainSets).where(eq(mainSets.id, set.mainSetId!));
+        assert.equal(parent.thumbnailImageUrl, magicMomentsImage);
         assert.ok(rows.every(c=>!c.frontImageUrl && !c.backImageUrl));
       }
     }
