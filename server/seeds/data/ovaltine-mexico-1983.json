@@ -1,0 +1,578 @@
+[
+  {
+    "cardNumber": "1",
+    "name": "Ovaltine Marvel Super Heroes"
+  },
+  {
+    "cardNumber": "2",
+    "name": "Cap. Marvel / Captain Marvel"
+  },
+  {
+    "cardNumber": "3",
+    "name": "Moto Fantasma / Ghost Rider"
+  },
+  {
+    "cardNumber": "4",
+    "name": "Pantera / Black Panther"
+  },
+  {
+    "cardNumber": "5",
+    "name": "Hercules"
+  },
+  {
+    "cardNumber": "6",
+    "name": "Moondragon"
+  },
+  {
+    "cardNumber": "7",
+    "name": "Surf Plata / Silver Surfer"
+  },
+  {
+    "cardNumber": "8",
+    "name": "Tormenta / Storm"
+  },
+  {
+    "cardNumber": "9",
+    "name": "Halcon / Falcon"
+  },
+  {
+    "cardNumber": "10",
+    "name": "Mujer Arana / Spider-Woman"
+  },
+  {
+    "cardNumber": "11",
+    "name": "Nighthawk"
+  },
+  {
+    "cardNumber": "12",
+    "name": "Power Man"
+  },
+  {
+    "cardNumber": "13",
+    "name": "Ciclope / Cyclops"
+  },
+  {
+    "cardNumber": "14",
+    "name": "Nick Furia UER / Nick Fury"
+  },
+  {
+    "cardNumber": "15",
+    "name": "El Angel / Angel"
+  },
+  {
+    "cardNumber": "16",
+    "name": "Puno de Hierro / Iron Fist"
+  },
+  {
+    "cardNumber": "17",
+    "name": "Walkirya / Valkyrie"
+  },
+  {
+    "cardNumber": "18",
+    "name": "Hellcat"
+  },
+  {
+    "cardNumber": "19",
+    "name": "Namor"
+  },
+  {
+    "cardNumber": "20",
+    "name": "Banshee"
+  },
+  {
+    "cardNumber": "21",
+    "name": "La Bestia / Beast"
+  },
+  {
+    "cardNumber": "22",
+    "name": "Nightcrawler"
+  },
+  {
+    "cardNumber": "23",
+    "name": "Dr. Extrano / Dr. Strange"
+  },
+  {
+    "cardNumber": "24",
+    "name": "Kung Fu / Shang-Chi"
+  },
+  {
+    "cardNumber": "25",
+    "name": "Hechicera Roja / Scarlet Witch"
+  },
+  {
+    "cardNumber": "26",
+    "name": "Ojos de Aguila / Hawkeye"
+  },
+  {
+    "cardNumber": "27",
+    "name": "H. Antorcha / Human Torch"
+  },
+  {
+    "cardNumber": "28",
+    "name": "Capitan America / Captain America"
+  },
+  {
+    "cardNumber": "29",
+    "name": "La Cosa / Thing"
+  },
+  {
+    "cardNumber": "30",
+    "name": "Mister Fantastico / Mr. Fantastic"
+  },
+  {
+    "cardNumber": "31",
+    "name": "Coloso / Colossus"
+  },
+  {
+    "cardNumber": "32",
+    "name": "Sue Richards UER / Invisible Woman"
+  },
+  {
+    "cardNumber": "33",
+    "name": "Thor"
+  },
+  {
+    "cardNumber": "34",
+    "name": "Hombre de Hierro / Iron Man"
+  },
+  {
+    "cardNumber": "35",
+    "name": "Conan"
+  },
+  {
+    "cardNumber": "36",
+    "name": "Avispa / Wasp"
+  },
+  {
+    "cardNumber": "37",
+    "name": "Miss Marvel / Captain Marvel"
+  },
+  {
+    "cardNumber": "38",
+    "name": "Wolverine"
+  },
+  {
+    "cardNumber": "39",
+    "name": "Vision"
+  },
+  {
+    "cardNumber": "40",
+    "name": "Nova"
+  },
+  {
+    "cardNumber": "41",
+    "name": "Jellow Jackey / Yellowjacket"
+  },
+  {
+    "cardNumber": "42",
+    "name": "Hombre Hielo / Iceman"
+  },
+  {
+    "cardNumber": "43",
+    "name": "Black Widow"
+  },
+  {
+    "cardNumber": "44",
+    "name": "Hombre Arana / Spider-Man"
+  },
+  {
+    "cardNumber": "45",
+    "name": "Escudo Cap. America / Captain America's Shield"
+  },
+  {
+    "cardNumber": "46",
+    "name": "H. Arana Escudo / Spider-Man's Mask"
+  },
+  {
+    "cardNumber": "47",
+    "name": "Thor Martillo / Thor's Hammer"
+  },
+  {
+    "cardNumber": "48",
+    "name": "Fantasticos Escudo / Fantastic Four Logo"
+  },
+  {
+    "cardNumber": "49",
+    "name": "Dan Defensor / Daredevil"
+  },
+  {
+    "cardNumber": "50",
+    "name": "Namor"
+  },
+  {
+    "cardNumber": "51",
+    "name": "Dr. Extrano / Dr. Strange"
+  },
+  {
+    "cardNumber": "52",
+    "name": "Pantera / Black Panther"
+  },
+  {
+    "cardNumber": "53",
+    "name": "Hercules"
+  },
+  {
+    "cardNumber": "54",
+    "name": "Hellcat"
+  },
+  {
+    "cardNumber": "55",
+    "name": "Kung-Fu / Shang-Chi"
+  },
+  {
+    "cardNumber": "56",
+    "name": "Tormenta / Storm"
+  },
+  {
+    "cardNumber": "57",
+    "name": "Halcon / Falcon"
+  },
+  {
+    "cardNumber": "58",
+    "name": "Walkiria / Valkyrie"
+  },
+  {
+    "cardNumber": "59",
+    "name": "Moto Fantasma / Ghost Rider"
+  },
+  {
+    "cardNumber": "60",
+    "name": "Power Man"
+  },
+  {
+    "cardNumber": "61",
+    "name": "Surf Plata / Silver Surfer"
+  },
+  {
+    "cardNumber": "62",
+    "name": "Nick Furia UER / Nick Fury"
+  },
+  {
+    "cardNumber": "63",
+    "name": "El Angel / Angel"
+  },
+  {
+    "cardNumber": "64",
+    "name": "Puno de Hierro / Iron Fist"
+  },
+  {
+    "cardNumber": "65",
+    "name": "Mujer Arana / Spider-Woman"
+  },
+  {
+    "cardNumber": "66",
+    "name": "Moondragon"
+  },
+  {
+    "cardNumber": "67",
+    "name": "Cap. Marvel / Captain Marvel"
+  },
+  {
+    "cardNumber": "68",
+    "name": "Banshee"
+  },
+  {
+    "cardNumber": "69",
+    "name": "La Bestia / Beast"
+  },
+  {
+    "cardNumber": "70",
+    "name": "Nightcrawler"
+  },
+  {
+    "cardNumber": "71",
+    "name": "Nighthawk UER"
+  },
+  {
+    "cardNumber": "72",
+    "name": "Ciclope / Cyclops"
+  },
+  {
+    "cardNumber": "73",
+    "name": "Nova"
+  },
+  {
+    "cardNumber": "74",
+    "name": "Orion"
+  },
+  {
+    "cardNumber": "75",
+    "name": "Antorcha / Human Torch"
+  },
+  {
+    "cardNumber": "76",
+    "name": "Cap. America / Captain America"
+  },
+  {
+    "cardNumber": "77",
+    "name": "La Cosa / Thing"
+  },
+  {
+    "cardNumber": "78",
+    "name": "Mis Marvel / Captain Marvel"
+  },
+  {
+    "cardNumber": "79",
+    "name": "Sue / Invisible Woman"
+  },
+  {
+    "cardNumber": "80",
+    "name": "Conan"
+  },
+  {
+    "cardNumber": "81",
+    "name": "Avispa / Wasp"
+  },
+  {
+    "cardNumber": "82",
+    "name": "H. Arana / Spider-Man"
+  },
+  {
+    "cardNumber": "83",
+    "name": "H. de Hierro / Iron Man"
+  },
+  {
+    "cardNumber": "84",
+    "name": "Coloso / Colossus"
+  },
+  {
+    "cardNumber": "85",
+    "name": "Wolverine"
+  },
+  {
+    "cardNumber": "86",
+    "name": "Vision"
+  },
+  {
+    "cardNumber": "87",
+    "name": "Jackey / Yellowjacket"
+  },
+  {
+    "cardNumber": "88",
+    "name": "M. Fantastico / Mr. Fantastic"
+  },
+  {
+    "cardNumber": "89",
+    "name": "H. Hielo / Iceman"
+  },
+  {
+    "cardNumber": "90",
+    "name": "Widow / Black Widow"
+  },
+  {
+    "cardNumber": "91",
+    "name": "Thor"
+  },
+  {
+    "cardNumber": "92",
+    "name": "Atomo"
+  },
+  {
+    "cardNumber": "93",
+    "name": "Death"
+  },
+  {
+    "cardNumber": "94",
+    "name": "Aguila / Hawkeye"
+  },
+  {
+    "cardNumber": "95",
+    "name": "Craneo / Red Skull"
+  },
+  {
+    "cardNumber": "96",
+    "name": "Cruz de Hierro / Iron Cross"
+  },
+  {
+    "cardNumber": "97",
+    "name": "Barda"
+  },
+  {
+    "cardNumber": "98",
+    "name": "Dan Defensor / Daredevil"
+  },
+  {
+    "cardNumber": "99",
+    "name": "Necrodamus"
+  },
+  {
+    "cardNumber": "100",
+    "name": "Amazona"
+  },
+  {
+    "cardNumber": "101",
+    "name": "Estrella de Fuego / Firestar"
+  },
+  {
+    "cardNumber": "102",
+    "name": "Warlord"
+  },
+  {
+    "cardNumber": "103",
+    "name": "Dr. Bedlam"
+  },
+  {
+    "cardNumber": "104",
+    "name": "Hechicera Roja / Scarlet Witch"
+  },
+  {
+    "cardNumber": "105",
+    "name": "H. Fuego / Firelord"
+  },
+  {
+    "cardNumber": "106",
+    "name": "Watcher"
+  },
+  {
+    "cardNumber": "107",
+    "name": "Urman"
+  },
+  {
+    "cardNumber": "108",
+    "name": "Flash"
+  },
+  {
+    "cardNumber": "109",
+    "name": "Oval"
+  },
+  {
+    "cardNumber": "110",
+    "name": "Tornado / Red Tornado"
+  },
+  {
+    "cardNumber": "111",
+    "name": "Dan Defensor / Daredevil"
+  },
+  {
+    "cardNumber": "112",
+    "name": "Tak"
+  },
+  {
+    "cardNumber": "113",
+    "name": "Hercules"
+  },
+  {
+    "cardNumber": "114",
+    "name": "Rick / Rick Jones"
+  },
+  {
+    "cardNumber": "115",
+    "name": "Capitan America / Captain America"
+  },
+  {
+    "cardNumber": "116",
+    "name": "Spiderman / Spider-Man"
+  },
+  {
+    "cardNumber": "117",
+    "name": "Namor"
+  },
+  {
+    "cardNumber": "118",
+    "name": "Kalibak"
+  },
+  {
+    "cardNumber": "119",
+    "name": "Fumanchu"
+  },
+  {
+    "cardNumber": "120",
+    "name": "El Hombre de Hierro / Iron Man"
+  },
+  {
+    "cardNumber": "121",
+    "name": "Thor"
+  },
+  {
+    "cardNumber": "122",
+    "name": "Hechicera Roja / Scarlet Witch"
+  },
+  {
+    "cardNumber": "123",
+    "name": "Halcon / Falcon"
+  },
+  {
+    "cardNumber": "124",
+    "name": "Ciclope / Cyclops"
+  },
+  {
+    "cardNumber": "125",
+    "name": "Black Widow"
+  },
+  {
+    "cardNumber": "126",
+    "name": "Marvel / Captain Marvel"
+  },
+  {
+    "cardNumber": "127",
+    "name": "Puno de Hierro / Iron Fist"
+  },
+  {
+    "cardNumber": "128",
+    "name": "Nova"
+  },
+  {
+    "cardNumber": "129",
+    "name": "La Bestia / Beast"
+  },
+  {
+    "cardNumber": "130",
+    "name": "Dr. Extrano / Dr. Strange"
+  },
+  {
+    "cardNumber": "131",
+    "name": "Pantera Negra / Black Panther"
+  },
+  {
+    "cardNumber": "132",
+    "name": "Power Man"
+  },
+  {
+    "cardNumber": "133",
+    "name": "Hellcat"
+  },
+  {
+    "cardNumber": "134",
+    "name": "Vision"
+  },
+  {
+    "cardNumber": "135",
+    "name": "Coloso / Colossus"
+  },
+  {
+    "cardNumber": "136",
+    "name": "Ms. Marvel"
+  },
+  {
+    "cardNumber": "137",
+    "name": "Aguila / Hawkeye"
+  },
+  {
+    "cardNumber": "138",
+    "name": "Fantastic / Mr. Fantastic"
+  },
+  {
+    "cardNumber": "139",
+    "name": "Sue Richards / Invisible Woman"
+  },
+  {
+    "cardNumber": "140",
+    "name": "Surf Plata / Silver Surfer"
+  },
+  {
+    "cardNumber": "141",
+    "name": "Mujer Arana / Spider-Woman"
+  },
+  {
+    "cardNumber": "142",
+    "name": "Nick Furia / Nick Fury"
+  },
+  {
+    "cardNumber": "143",
+    "name": "Conan"
+  },
+  {
+    "cardNumber": "144",
+    "name": "Hombre Antorcha"
+  }
+]

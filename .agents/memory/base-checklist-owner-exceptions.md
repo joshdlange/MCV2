@@ -13,6 +13,7 @@ The owner confirmed:
 - Remove product boxes and packs from Base, preserving their existing collector records outside Base.
 - 1994 Marvel Masterpieces Gold Signature has the same full checklist as Base; it is a separate variant.
 - 1966 Marvel Super Heroes Club Art Posters and 1967 Philadelphia Marvel Stickers are Base-only. Keep the owner's 1967 captions in public card details, not private collector notes.
+- 1983 Ovaltine Marvel Super Heroes Stickers is one main set with Mexico and USA subsets, not separate country main sets. The owner's Wolverine USA image is also the USA subset and main-set image.
 
 **Why:** The owner supplied these identities and explicitly confirmed the numbering exceptions after reviewing the audit.
 

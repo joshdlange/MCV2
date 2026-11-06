@@ -5,6 +5,7 @@ import { vintageChecklists } from './data/ownerVintageChecklists';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export const masterpieces94 = '1994-fleer-marvel-masterpieces-hildebrandt-brothers';
+export const heroes1977Image = 'https://res.cloudinary.com/dgu7hjfvn/image/upload/v1793983201/owner-catalog/1977-marvel-super-heroes-main.png';
 export async function completeVintageAndGold1994Tx(tx: Tx) {
   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('merge_duplicate_legacy_sets'))`);
   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('complete_vintage_gold_1994'))`);
@@ -61,6 +62,11 @@ export async function completeVintageAndGold1994Tx(tx: Tx) {
     if ((await rows(set.id)).length !== checklist.cards.length) fail('vintage terminal count');
   }
   if ((await rows(gold.id)).length !== 140) fail('Gold terminal count');
+  // Owner-supplied main-set artwork only; retain later curated replacements.
+  const [heroes1977] = await tx.select().from(mainSets).where(eq(mainSets.slug, '1977-marvel-super-heroes'));
+  if (!heroes1977.thumbnailImageUrl) {
+    await tx.update(mainSets).set({ thumbnailImageUrl: heroes1977Image }).where(eq(mainSets.id, heroes1977.id));
+  }
   return { goldAdded, vintageAdded, namesAligned, captionsAdded };
 }
 

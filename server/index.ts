@@ -705,6 +705,8 @@ server.listen({
         await repairOwnerBaseAudit();
         const { completeVintageAndGold1994 } = await import('./seeds/completeVintageAndGold1994');
         await completeVintageAndGold1994();
+        const { completeOvaltine1983 } = await import('./seeds/completeOvaltine1983');
+        await completeOvaltine1983();
       } catch (error) {
         console.error('Startup repair (legacy set merge) failed:', error);
         throw error;

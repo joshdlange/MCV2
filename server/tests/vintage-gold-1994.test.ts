@@ -3,9 +3,9 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { eq, sql } from 'drizzle-orm';
 import { db, pool } from '../db';
-import { cards, cardSets } from '../../shared/schema';
+import { cards, cardSets, mainSets } from '../../shared/schema';
 import { vintageChecklists } from '../seeds/data/ownerVintageChecklists';
-import { completeVintageAndGold1994Tx, masterpieces94 } from '../seeds/completeVintageAndGold1994';
+import { completeVintageAndGold1994Tx, masterpieces94, heroes1977Image } from '../seeds/completeVintageAndGold1994';
 
 test('1967 captions and characters exactly preserve owner attachment', () => {
   const text = readFileSync('attached_assets/Pasted-No-Character-Caption-1-The-Human-Torch-I-must-get-that-_1793980299039.txt', 'utf8');
@@ -42,7 +42,14 @@ test('checklists complete, preserve existing metadata/holdings and repeat safely
       WHERE s.slug IN (${`1994-${masterpieces94}-base`},${`1994-${masterpieces94}-gold-foil-signature`}) ORDER BY c.id`)).rows;
     const holdings = async () => (await tx.execute(sql`SELECT user_id,sum(quantity)::text qty FROM user_collections GROUP BY user_id ORDER BY user_id`)).rows;
     const old = await snapshot(), owned = await holdings();
+    const [heroesBefore] = await tx.select().from(mainSets).where(eq(mainSets.slug, '1977-marvel-super-heroes'));
+    const images = async () => (await tx.execute(sql`SELECT c.id,c.front_image_url,c.back_image_url,s.image_url
+      FROM cards c JOIN card_sets s ON s.id=c.set_id WHERE s.main_set_id=${heroesBefore.id} ORDER BY c.id`)).rows;
+    const imagesBefore = await images();
     console.log(await completeVintageAndGold1994Tx(tx));
+    const [heroesAfter] = await tx.select().from(mainSets).where(eq(mainSets.id, heroesBefore.id));
+    assert.equal(heroesAfter.thumbnailImageUrl, heroesBefore.thumbnailImageUrl || heroes1977Image);
+    assert.deepEqual(await images(), imagesBefore);
     const after = await snapshot();
     for (const original of old) {
       const actual = after.find(c => c.id === original.id)!;
