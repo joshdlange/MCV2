@@ -13,7 +13,24 @@ test('1967 captions and characters exactly preserve owner attachment', () => {
     .map(m => ({ cardNumber: m![1], name: m![2], description: m![3] }));
   assert.equal(expected.length, 55);
   assert.deepEqual(vintageChecklists[1].cards, expected);
-  assert.deepEqual(vintageChecklists.map(c => c.cards.length), [8,55,42]);
+  assert.deepEqual(vintageChecklists.map(c => c.cards.length), [8,55,42,40]);
+});
+
+test('1978 checklist preserves 01–40, A/B notes, character subtitles and special cards', () => {
+  const checklist = vintageChecklists[3].cards;
+  assert.deepEqual(checklist.map(c => c.cardNumber), Array.from({length:40},(_,i)=>String(i+1).padStart(2,'0')));
+  for (let i = 0; i < 38; i += 2) {
+    assert.equal(checklist[i].name, checklist[i+1].name);
+    assert.equal(checklist[i].description, 'Card A');
+    assert.equal(checklist[i+1].description, 'Card B');
+  }
+  assert.equal(checklist[10].name, 'Sue Richards (Invisible Girl)');
+  assert.equal(checklist[20].name, 'Doctor Strange (Master of the Mystic Arts)');
+  assert.equal(checklist[22].name, 'Daredevil (The Man Without Fear)');
+  assert.deepEqual(checklist.slice(38), [
+    {cardNumber:'39',name:'Doctor Doom',description:'Single card / The "Old Maid" equivalent'},
+    {cardNumber:'40',name:'Two-Sided Instruction / Directions Card',description:null},
+  ]);
 });
 
 test('checklists complete, preserve existing metadata/holdings and repeat safely', async () => {

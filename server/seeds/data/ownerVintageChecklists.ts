@@ -120,4 +120,34 @@ Tiger Shark
 Character List CL
 Game Rules`),
   },
+  {
+    parent: '1978-milton-bradley-marvel-comics-super-heroes-card-game', year: 1978,
+    cards: [
+      ...`The Amazing Spider-Man
+The Incredible Hulk
+Mister Fantastic
+The Thing
+The Human Torch
+Sue Richards (Invisible Girl)
+Captain America
+The Invincible Iron Man
+The Mighty Thor
+Captain Marvel
+Doctor Strange (Master of the Mystic Arts)
+Daredevil (The Man Without Fear)
+The Black Panther
+The Falcon
+The Silver Surfer
+Ghost Rider
+Hawkeye
+The Vision
+Scarlet Witch`.split('\n').flatMap((name, i) => ['A', 'B'].map((letter, j) => ({
+        cardNumber: String(i * 2 + j + 1).padStart(2, '0'),
+        name,
+        description: `Card ${letter}`,
+      }))),
+      { cardNumber: '39', name: 'Doctor Doom', description: 'Single card / The "Old Maid" equivalent' },
+      { cardNumber: '40', name: 'Two-Sided Instruction / Directions Card', description: null },
+    ],
+  },
 ];
