@@ -242,4 +242,97 @@ X-Factor`),
     parent: '1987-comic-images-marvel-universe-i', year: 1987,
     cards: universe1987,
   },
+  {
+    parent: '1987-comic-images-marvel-universe-ii-colossal-conflicts', year: 1987,
+    cards: numbered(`Abomination
+Absorbing Man
+Annihilus
+Arcade
+Attuma
+Baron Blood
+Baron Zemo
+Beyonder
+Blob
+Brotherhood of Evil Mutants
+Bullseye
+Cobra
+Collector
+Constrictor
+Deathlok
+Death-Stalker
+Destroyer
+Doc Samson
+Doctor Doom
+Doctor Octopus
+Dormammu
+Dragon Man
+Electro
+Freedom Force
+Green Goblin
+Grey Gargoyle
+Grim Reaper
+Hela
+Hellfire Club
+Hellions
+Hitler
+Hobgoblin
+Hydra
+Juggernaut
+Kang
+Kingpin
+Klaw
+Kraven the Hunter
+Kurse
+Leader
+Lizard
+Loki
+Magneto
+Magus
+Man-Ape
+Mandarin
+Mandrill
+Marauders
+Maximus
+Mephisto
+Modok
+Mojo
+Mole Man
+Monolith
+Morgan Le Fey
+Mr. Hyde
+Mysterio
+Nightmare
+Nitro
+Owl
+Paladin
+Phoenix
+Pluto
+Puppet Master
+Red Skull
+Rhino
+Ringmaster
+Sandman
+Scarecrow
+Scorpion
+Sentinels
+Serpent
+Shuma-Gorath
+Silver Samurai
+Stilt-Man
+Stranger
+Surtur
+Taskmaster
+Thanos
+Titanic Three
+Ultron
+Umar
+Unicorn
+Viper
+Vulture
+Wolverine
+Wrecking Crew
+Yellow Claw
+Zzzax
+Checklist`),
+  },
 ];

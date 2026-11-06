@@ -5,7 +5,7 @@ import { eq, sql } from 'drizzle-orm';
 import { db, pool } from '../db';
 import { cards, cardSets, mainSets } from '../../shared/schema';
 import { vintageChecklists } from '../seeds/data/ownerVintageChecklists';
-import { completeVintageAndGold1994Tx, masterpieces94, heroes1977Image, posters1966Image, secretWars1984Image, stickers1986Image, universe1987Image } from '../seeds/completeVintageAndGold1994';
+import { completeVintageAndGold1994Tx, masterpieces94, heroes1977Image, posters1966Image, secretWars1984Image, stickers1986Image, universe1987Image, colossal1987Image } from '../seeds/completeVintageAndGold1994';
 
 test('1967 captions and characters exactly preserve owner attachment', () => {
   const text = readFileSync('attached_assets/Pasted-No-Character-Caption-1-The-Human-Torch-I-must-get-that-_1793980299039.txt', 'utf8');
@@ -13,7 +13,16 @@ test('1967 captions and characters exactly preserve owner attachment', () => {
     .map(m => ({ cardNumber: m![1], name: m![2], description: m![3] }));
   assert.equal(expected.length, 55);
   assert.deepEqual(vintageChecklists[1].cards, expected);
-  assert.deepEqual(vintageChecklists.map(c => c.cards.length), [8,55,42,40,180,77,90]);
+  assert.deepEqual(vintageChecklists.map(c => c.cards.length), [8,55,42,40,180,77,90,90]);
+});
+
+test('Colossal Conflicts keeps the full 1–90 sequence and supplied names', () => {
+  const rows = vintageChecklists[7].cards;
+  assert.deepEqual(rows.map(c=>c.cardNumber),Array.from({length:90},(_,i)=>String(i+1)));
+  for (const [n,name] of [[1,'Abomination'],[10,'Brotherhood of Evil Mutants'],[31,'Hitler'],
+    [51,'Modok'],[79,'Thanos'],[86,'Wolverine'],[89,'Zzzax'],[90,'Checklist']] as const) {
+    assert.equal(rows[n-1].name,name);
+  }
 });
 
 test('1987 Universe I preserves source names and third-column group labels', () => {
@@ -75,6 +84,8 @@ test('checklists complete, preserve existing metadata/holdings and repeat safely
       WHERE s.slug IN (${`1994-${masterpieces94}-base`},${`1994-${masterpieces94}-gold-foil-signature`}) ORDER BY c.id`)).rows;
     const holdings = async () => (await tx.execute(sql`SELECT user_id,sum(quantity)::text qty FROM user_collections GROUP BY user_id ORDER BY user_id`)).rows;
     const old = await snapshot(), owned = await holdings();
+    const promosBefore = (await tx.execute(sql`SELECT to_jsonb(s) row FROM card_sets s
+      WHERE s.slug='1987-1987-comic-images-marvel-universe-ii-colossal-conflicts-promos'`)).rows;
     const [heroesBefore] = await tx.select().from(mainSets).where(eq(mainSets.slug, '1977-marvel-super-heroes'));
     const images = async () => (await tx.execute(sql`SELECT c.id,c.front_image_url,c.back_image_url,s.image_url
       FROM cards c JOIN card_sets s ON s.id=c.set_id WHERE s.main_set_id=${heroesBefore.id} ORDER BY c.id`)).rows;
@@ -92,6 +103,8 @@ test('checklists complete, preserve existing metadata/holdings and repeat safely
       assert.deepEqual({ ...actual, name: original.name, updated_at: original.updated_at }, original);
     }
     assert.deepEqual(await holdings(), owned);
+    assert.deepEqual((await tx.execute(sql`SELECT to_jsonb(s) row FROM card_sets s
+      WHERE s.slug='1987-1987-comic-images-marvel-universe-ii-colossal-conflicts-promos'`)).rows,promosBefore);
     const mismatch = await tx.execute(sql`SELECT b.id FROM cards b JOIN card_sets bs ON bs.id=b.set_id
       JOIN card_sets gs ON gs.slug=${`1994-${masterpieces94}-gold-foil-signature`}
       LEFT JOIN cards g ON g.set_id=gs.id AND g.card_number=b.card_number AND g.archived_at IS NULL
@@ -120,9 +133,14 @@ test('checklists complete, preserve existing metadata/holdings and repeat safely
         assert.equal(parent.thumbnailImageUrl, stickers1986Image);
         assert.ok(rows.every(c=>!c.frontImageUrl && !c.backImageUrl));
       }
-      if (checklist.year === 1987) {
+      if (checklist.parent === '1987-comic-images-marvel-universe-i') {
         const [parent] = await tx.select().from(mainSets).where(eq(mainSets.id, set.mainSetId!));
         assert.equal(parent.thumbnailImageUrl, universe1987Image);
+        assert.ok(rows.every(c=>!c.frontImageUrl && !c.backImageUrl));
+      }
+      if (checklist.parent === '1987-comic-images-marvel-universe-ii-colossal-conflicts') {
+        const [parent] = await tx.select().from(mainSets).where(eq(mainSets.id, set.mainSetId!));
+        assert.equal(parent.thumbnailImageUrl, colossal1987Image);
         assert.ok(rows.every(c=>!c.frontImageUrl && !c.backImageUrl));
       }
     }

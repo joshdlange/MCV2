@@ -10,6 +10,7 @@ export const posters1966Image = 'https://res.cloudinary.com/dgu7hjfvn/image/uplo
 export const secretWars1984Image = 'https://res.cloudinary.com/dgu7hjfvn/image/upload/v1793983648/owner-catalog/1984-leaf-secret-wars-main.png';
 export const stickers1986Image = 'https://res.cloudinary.com/dgu7hjfvn/image/upload/v1793984149/owner-catalog/1986-official-marvel-universe-stickers-main.png';
 export const universe1987Image = 'https://res.cloudinary.com/dgu7hjfvn/image/upload/v1793984445/owner-catalog/1987-marvel-universe-i-main.png';
+export const colossal1987Image = 'https://res.cloudinary.com/dgu7hjfvn/image/upload/v1793984919/owner-catalog/1987-colossal-conflicts-main.png';
 export async function completeVintageAndGold1994Tx(tx: Tx) {
   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('merge_duplicate_legacy_sets'))`);
   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('complete_vintage_gold_1994'))`);
@@ -94,6 +95,10 @@ export async function completeVintageAndGold1994Tx(tx: Tx) {
   const [universe1987Main] = await tx.select().from(mainSets).where(eq(mainSets.slug, '1987-comic-images-marvel-universe-i'));
   if (!universe1987Main.thumbnailImageUrl) {
     await tx.update(mainSets).set({ thumbnailImageUrl: universe1987Image }).where(eq(mainSets.id, universe1987Main.id));
+  }
+  const [colossalMain] = await tx.select().from(mainSets).where(eq(mainSets.slug, '1987-comic-images-marvel-universe-ii-colossal-conflicts'));
+  if (!colossalMain.thumbnailImageUrl) {
+    await tx.update(mainSets).set({ thumbnailImageUrl: colossal1987Image }).where(eq(mainSets.id, colossalMain.id));
   }
   return { goldAdded, vintageAdded, namesAligned, captionsAdded };
 }
