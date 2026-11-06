@@ -5,7 +5,7 @@ import { eq, sql } from 'drizzle-orm';
 import { db, pool } from '../db';
 import { cards, cardSets, mainSets } from '../../shared/schema';
 import { vintageChecklists } from '../seeds/data/ownerVintageChecklists';
-import { completeVintageAndGold1994Tx, masterpieces94, heroes1977Image, posters1966Image } from '../seeds/completeVintageAndGold1994';
+import { completeVintageAndGold1994Tx, masterpieces94, heroes1977Image, posters1966Image, secretWars1984Image } from '../seeds/completeVintageAndGold1994';
 
 test('1967 captions and characters exactly preserve owner attachment', () => {
   const text = readFileSync('attached_assets/Pasted-No-Character-Caption-1-The-Human-Torch-I-must-get-that-_1793980299039.txt', 'utf8');
@@ -13,7 +13,16 @@ test('1967 captions and characters exactly preserve owner attachment', () => {
     .map(m => ({ cardNumber: m![1], name: m![2], description: m![3] }));
   assert.equal(expected.length, 55);
   assert.deepEqual(vintageChecklists[1].cards, expected);
-  assert.deepEqual(vintageChecklists.map(c => c.cards.length), [8,55,42,40]);
+  assert.deepEqual(vintageChecklists.map(c => c.cards.length), [8,55,42,40,180]);
+});
+
+test('1984 Secret Wars preserves every supplied number, name and puzzle position', () => {
+  const text = readFileSync('attached_assets/Pasted-1-Captain-America-2-Captain-America-top-left-3-Captain-_1793983516337.txt', 'utf8');
+  const expected = text.split('\n').map(line=>line.match(/^\s*(\d+)\s+(.+)$/)).filter(Boolean)
+    .map(m=>({cardNumber:m![1],name:m![2],description:null}));
+  assert.equal(expected.length,180);
+  assert.deepEqual(vintageChecklists[4].cards,expected);
+  assert.deepEqual(expected.map(c=>c.cardNumber),Array.from({length:180},(_,i)=>String(i+1)));
 });
 
 test('1978 checklist preserves 01–40, A/B notes, character subtitles and special cards', () => {
@@ -76,6 +85,11 @@ test('checklists complete, preserve existing metadata/holdings and repeat safely
         assert.equal(rows[3].frontImageUrl, posters1966Image);
         const [parent] = await tx.select().from(mainSets).where(eq(mainSets.id, set.mainSetId!));
         assert.equal(parent.thumbnailImageUrl, posters1966Image);
+      }
+      if (checklist.year === 1984) {
+        const [parent] = await tx.select().from(mainSets).where(eq(mainSets.id, set.mainSetId!));
+        assert.equal(parent.thumbnailImageUrl, secretWars1984Image);
+        assert.ok(rows.every(c=>!c.frontImageUrl && !c.backImageUrl));
       }
     }
     assert.deepEqual(await completeVintageAndGold1994Tx(tx), {goldAdded:0,vintageAdded:0,namesAligned:0,captionsAdded:0});

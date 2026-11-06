@@ -1,8 +1,11 @@
+import secretWars1984 from './secret-wars-stickers-1984.json';
+
 const numbered = (names: string) => names.split('\n').map((name, i) => ({
   cardNumber: String(i + 1), name, description: null as string | null,
 }));
 
 export const vintageChecklists = [
+  // Keep prior review-list order stable when appending owner checklists.
   {
     parent: '1966-marvel-super-heroes-club-art-posters', year: 1966,
     cards: numbered(`Captain America
@@ -149,5 +152,9 @@ Scarlet Witch`.split('\n').flatMap((name, i) => ['A', 'B'].map((letter, j) => ({
       { cardNumber: '39', name: 'Doctor Doom', description: 'Single card / The "Old Maid" equivalent' },
       { cardNumber: '40', name: 'Two-Sided Instruction / Directions Card', description: null },
     ],
+  },
+  {
+    parent: '1984-leaf-marvel-super-heroes-secret-wars-stickers', year: 1984,
+    cards: secretWars1984,
   },
 ];
