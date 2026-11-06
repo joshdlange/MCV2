@@ -5,7 +5,7 @@ import { eq, sql } from 'drizzle-orm';
 import { db, pool } from '../db';
 import { cards, cardSets, mainSets } from '../../shared/schema';
 import { vintageChecklists } from '../seeds/data/ownerVintageChecklists';
-import { completeVintageAndGold1994Tx, masterpieces94, heroes1977Image, posters1966Image, secretWars1984Image, stickers1986Image } from '../seeds/completeVintageAndGold1994';
+import { completeVintageAndGold1994Tx, masterpieces94, heroes1977Image, posters1966Image, secretWars1984Image, stickers1986Image, universe1987Image } from '../seeds/completeVintageAndGold1994';
 
 test('1967 captions and characters exactly preserve owner attachment', () => {
   const text = readFileSync('attached_assets/Pasted-No-Character-Caption-1-The-Human-Torch-I-must-get-that-_1793980299039.txt', 'utf8');
@@ -13,7 +13,19 @@ test('1967 captions and characters exactly preserve owner attachment', () => {
     .map(m => ({ cardNumber: m![1], name: m![2], description: m![3] }));
   assert.equal(expected.length, 55);
   assert.deepEqual(vintageChecklists[1].cards, expected);
-  assert.deepEqual(vintageChecklists.map(c => c.cards.length), [8,55,42,40,180,77]);
+  assert.deepEqual(vintageChecklists.map(c => c.cards.length), [8,55,42,40,180,77,90]);
+});
+
+test('1987 Universe I preserves source names and third-column group labels', () => {
+  const text = readFileSync('attached_assets/Pasted-1-X-Factor-X-Factor-2-Marvel-Girl-X-Factor-3-Cyclops-X-_1793984338085.txt', 'utf8');
+  const expected = text.trim().split('\n').map(line=>{
+    const [cardNumber,name,description] = line.trim().split(/\s{2,}/);
+    return {cardNumber,name,description:description??null};
+  });
+  assert.deepEqual(vintageChecklists[6].cards,expected);
+  assert.deepEqual(expected.map(c=>c.cardNumber),Array.from({length:90},(_,i)=>String(i+1)));
+  assert.equal(expected[18].description,'Power Opack');
+  assert.deepEqual(expected[89],{cardNumber:'90',name:'Checklist',description:null});
 });
 
 test('1986 checklist preserves numbered repeats and owner labels', () => {
@@ -106,6 +118,11 @@ test('checklists complete, preserve existing metadata/holdings and repeat safely
       if (checklist.year === 1986) {
         const [parent] = await tx.select().from(mainSets).where(eq(mainSets.id, set.mainSetId!));
         assert.equal(parent.thumbnailImageUrl, stickers1986Image);
+        assert.ok(rows.every(c=>!c.frontImageUrl && !c.backImageUrl));
+      }
+      if (checklist.year === 1987) {
+        const [parent] = await tx.select().from(mainSets).where(eq(mainSets.id, set.mainSetId!));
+        assert.equal(parent.thumbnailImageUrl, universe1987Image);
         assert.ok(rows.every(c=>!c.frontImageUrl && !c.backImageUrl));
       }
     }

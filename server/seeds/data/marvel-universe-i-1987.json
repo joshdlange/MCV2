@@ -1,0 +1,452 @@
+[
+  {
+    "cardNumber": "1",
+    "name": "X-Factor",
+    "description": "X-Factor"
+  },
+  {
+    "cardNumber": "2",
+    "name": "Marvel Girl",
+    "description": "X-Factor"
+  },
+  {
+    "cardNumber": "3",
+    "name": "Cyclops",
+    "description": "X-Factor"
+  },
+  {
+    "cardNumber": "4",
+    "name": "Beast",
+    "description": "X-Factor"
+  },
+  {
+    "cardNumber": "5",
+    "name": "Angel",
+    "description": "X-Factor"
+  },
+  {
+    "cardNumber": "6",
+    "name": "Iceman",
+    "description": "X-Factor"
+  },
+  {
+    "cardNumber": "7",
+    "name": "X-Men",
+    "description": "X-Men"
+  },
+  {
+    "cardNumber": "8",
+    "name": "Magneto",
+    "description": "X-Men"
+  },
+  {
+    "cardNumber": "9",
+    "name": "Nightcrawler",
+    "description": "X-Men"
+  },
+  {
+    "cardNumber": "10",
+    "name": "Wolverine",
+    "description": "X-Men"
+  },
+  {
+    "cardNumber": "11",
+    "name": "Storm",
+    "description": "X-Men"
+  },
+  {
+    "cardNumber": "12",
+    "name": "Colossus",
+    "description": "X-Men"
+  },
+  {
+    "cardNumber": "13",
+    "name": "Rogue",
+    "description": "X-Men"
+  },
+  {
+    "cardNumber": "14",
+    "name": "Phoenix I",
+    "description": "X-Men"
+  },
+  {
+    "cardNumber": "15",
+    "name": "Phoenix II",
+    "description": "X-Men"
+  },
+  {
+    "cardNumber": "16",
+    "name": "Longshot",
+    "description": "X-Men"
+  },
+  {
+    "cardNumber": "17",
+    "name": "Lockheed",
+    "description": "X-Men"
+  },
+  {
+    "cardNumber": "18",
+    "name": "Shadowcat",
+    "description": "X-Men"
+  },
+  {
+    "cardNumber": "19",
+    "name": "Power Pack",
+    "description": "Power Opack"
+  },
+  {
+    "cardNumber": "20",
+    "name": "Warriors Three",
+    "description": "New Mutants"
+  },
+  {
+    "cardNumber": "21",
+    "name": "New Mutants",
+    "description": "New Mutants"
+  },
+  {
+    "cardNumber": "22",
+    "name": "Karma",
+    "description": "New Mutants"
+  },
+  {
+    "cardNumber": "23",
+    "name": "Wolfsbane",
+    "description": "New Mutants"
+  },
+  {
+    "cardNumber": "24",
+    "name": "Mirage",
+    "description": "New Mutants"
+  },
+  {
+    "cardNumber": "25",
+    "name": "Sunspot",
+    "description": "New Mutants"
+  },
+  {
+    "cardNumber": "26",
+    "name": "Cannonball",
+    "description": "New Mutants"
+  },
+  {
+    "cardNumber": "27",
+    "name": "Magma",
+    "description": "New Mutants"
+  },
+  {
+    "cardNumber": "28",
+    "name": "Magik",
+    "description": "New Mutants"
+  },
+  {
+    "cardNumber": "29",
+    "name": "Warlock",
+    "description": "New Mutants"
+  },
+  {
+    "cardNumber": "30",
+    "name": "Cypher",
+    "description": "New Mutants"
+  },
+  {
+    "cardNumber": "31",
+    "name": "Avengers",
+    "description": "Avengers"
+  },
+  {
+    "cardNumber": "32",
+    "name": "Wasp",
+    "description": "Avengers"
+  },
+  {
+    "cardNumber": "33",
+    "name": "Captain America",
+    "description": "Avengers"
+  },
+  {
+    "cardNumber": "34",
+    "name": "Hercules",
+    "description": "Avengers"
+  },
+  {
+    "cardNumber": "35",
+    "name": "Black Knight",
+    "description": "Avengers"
+  },
+  {
+    "cardNumber": "36",
+    "name": "Captain Marvel",
+    "description": "Avengers"
+  },
+  {
+    "cardNumber": "37",
+    "name": "Sub-Mariner",
+    "description": "Avengers"
+  },
+  {
+    "cardNumber": "38",
+    "name": "W.C. Avengers",
+    "description": "West Coast Avengers"
+  },
+  {
+    "cardNumber": "39",
+    "name": "Iron Man I",
+    "description": "West Coast Avengers"
+  },
+  {
+    "cardNumber": "40",
+    "name": "Hawkeye",
+    "description": "West Coast Avengers"
+  },
+  {
+    "cardNumber": "41",
+    "name": "Wonder Man",
+    "description": "West Coast Avengers"
+  },
+  {
+    "cardNumber": "42",
+    "name": "Tigra",
+    "description": "West Coast Avengers"
+  },
+  {
+    "cardNumber": "43",
+    "name": "Mockingbird",
+    "description": "West Coast Avengers"
+  },
+  {
+    "cardNumber": "44",
+    "name": "Alpha Flight",
+    "description": "Alpha Flight"
+  },
+  {
+    "cardNumber": "45",
+    "name": "Aurora",
+    "description": "Alpha Flight"
+  },
+  {
+    "cardNumber": "46",
+    "name": "Northstar",
+    "description": "Alpha Flight"
+  },
+  {
+    "cardNumber": "47",
+    "name": "Snowbird",
+    "description": "Alpha Flight"
+  },
+  {
+    "cardNumber": "48",
+    "name": "Puck",
+    "description": "Alpha Flight"
+  },
+  {
+    "cardNumber": "49",
+    "name": "Box",
+    "description": "Alpha Flight"
+  },
+  {
+    "cardNumber": "50",
+    "name": "Vindicator",
+    "description": "Alpha Flight"
+  },
+  {
+    "cardNumber": "51",
+    "name": "Madison Jefferies",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "52",
+    "name": "Fantastic Four",
+    "description": "Fantastic Four"
+  },
+  {
+    "cardNumber": "53",
+    "name": "Mister Fantastic",
+    "description": "Fantastic Four"
+  },
+  {
+    "cardNumber": "54",
+    "name": "Invisible Woman",
+    "description": "Fantastic Four"
+  },
+  {
+    "cardNumber": "55",
+    "name": "Human Torch",
+    "description": "Fantastic Four"
+  },
+  {
+    "cardNumber": "56",
+    "name": "She-Hulk",
+    "description": "Fantastic Four"
+  },
+  {
+    "cardNumber": "57",
+    "name": "Thing",
+    "description": "Fantastic Four"
+  },
+  {
+    "cardNumber": "58",
+    "name": "Spider-Man",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "59",
+    "name": "Quicksilver",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "60",
+    "name": "Jack of Hearts",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "61",
+    "name": "Nomad",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "62",
+    "name": "Watcher",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "63",
+    "name": "Thor",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "64",
+    "name": "Havoc",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "65",
+    "name": "Professor X",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "66",
+    "name": "Spider-Man",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "67",
+    "name": "Silver Surfer",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "68",
+    "name": "Punisher",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "69",
+    "name": "Power Man",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "70",
+    "name": "Scarlet Witch",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "71",
+    "name": "Galactus",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "72",
+    "name": "Nova",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "73",
+    "name": "Moon Knight",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "74",
+    "name": "Callisto",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "75",
+    "name": "Dr. Henry Pym",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "76",
+    "name": "Hulk",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "77",
+    "name": "Iron Man II",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "78",
+    "name": "Nick Fury",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "79",
+    "name": "Forge",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "80",
+    "name": "Falcon",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "81",
+    "name": "Elektra",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "82",
+    "name": "Doctor Strange",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "83",
+    "name": "Daredevil",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "84",
+    "name": "Cloak",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "85",
+    "name": "Dagger",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "86",
+    "name": "Doc Samson",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "87",
+    "name": "Black Panther",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "88",
+    "name": "Vision",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "89",
+    "name": "Black Widow",
+    "description": "Solo"
+  },
+  {
+    "cardNumber": "90",
+    "name": "Checklist",
+    "description": null
+  }
+]

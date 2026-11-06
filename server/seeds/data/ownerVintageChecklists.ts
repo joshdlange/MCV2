@@ -1,4 +1,5 @@
 import secretWars1984 from './secret-wars-stickers-1984.json';
+import universe1987 from './marvel-universe-i-1987.json';
 
 const numbered = (names: string) => names.split('\n').map((name, i) => ({
   cardNumber: String(i + 1), name, description: null as string | null,
@@ -236,5 +237,9 @@ Beast
 Iceman
 X-Factor
 X-Factor`),
+  },
+  {
+    parent: '1987-comic-images-marvel-universe-i', year: 1987,
+    cards: universe1987,
   },
 ];
