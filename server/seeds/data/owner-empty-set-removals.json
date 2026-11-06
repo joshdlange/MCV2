@@ -1,0 +1,247 @@
+[
+  {
+    "review": "S001",
+    "set": "1928 Ogden's Marvels of Motion",
+    "slug": "1928-ogdens-marvels-of-motion"
+  },
+  {
+    "review": "S002",
+    "set": "1929 Gem Marvels of the Future",
+    "slug": "1929-gem-marvels-of-the-future"
+  },
+  {
+    "review": "S003",
+    "set": "1933 Cadbury More British Marvels Album 2",
+    "slug": "1933-cadbury-more-british-marvels-album-2"
+  },
+  {
+    "review": "S004",
+    "set": "1954 Beaulah's Marvels of the World",
+    "slug": "1954-beaulahs-marvels-of-the-world"
+  },
+  {
+    "review": "S005",
+    "set": "1954 Wright's Biscuits Marvels of the World",
+    "slug": "1954-wrights-biscuits-marvels-of-the-world"
+  },
+  {
+    "review": "S006",
+    "set": "1961 Mills Merveilles Modernes (Modern Marvels) (French Text)",
+    "slug": "1961-mills-merveilles-modernes-modern-marvels-french-text"
+  },
+  {
+    "review": "S007",
+    "set": "1963 Nabisco American Marvels of Nature",
+    "slug": "1963-nabisco-american-marvels-of-nature"
+  },
+  {
+    "review": "D001",
+    "set": "1995 Fleer DC vs Marvel",
+    "slug": "1995-fleer-dc-vs-marvel"
+  },
+  {
+    "review": "R001",
+    "set": "1996 Fleer DC vs. Marvel Comics",
+    "slug": "1996-fleer-dc-vs-marvel-comics"
+  },
+  {
+    "review": "S008",
+    "set": "2015 Topps Star Wars: The Force Awakens",
+    "slug": "2015-topps-star-wars-the-force-awakens"
+  },
+  {
+    "review": "R002",
+    "set": "2024 E.Leclerc Marvel: Explore L'Univers Marvel avec Groot",
+    "slug": "2024-e-leclerc-marvel-explore-l-univers-marvel-avec-groot"
+  },
+  {
+    "review": "S009",
+    "set": "2024 Topps Star Wars Masterwork",
+    "slug": "2024-topps-star-wars-masterwork"
+  },
+  {
+    "review": "R003",
+    "set": "2024 Upper Deck X-Men ‘97 SDCC",
+    "slug": "2024-upper-deck-x-men-97-sdcc"
+  },
+  {
+    "review": "D002",
+    "set": "2025 Topps Marvel Studios Chrome",
+    "slug": "2025-topps-marvel-studios-chrome"
+  },
+  {
+    "review": "D003",
+    "set": "Marvel 1991 Universe",
+    "slug": "marvel-1991-universe"
+  },
+  {
+    "review": "D004",
+    "set": "Marvel 1992 Universe",
+    "slug": "marvel-1992-universe"
+  },
+  {
+    "review": "D005",
+    "set": "Marvel 1993 Universe",
+    "slug": "marvel-1993-universe"
+  },
+  {
+    "review": "D006",
+    "set": "Marvel 1994 Flair",
+    "slug": "marvel-1994-flair"
+  },
+  {
+    "review": "D007",
+    "set": "Marvel 1994 Fleer Amazing Spider Man",
+    "slug": "marvel-1994-fleer-amazing-spider-man"
+  },
+  {
+    "review": "D008",
+    "set": "Marvel 1994 Ultra X-Men",
+    "slug": "marvel-1994-ultra-x-men"
+  },
+  {
+    "review": "D009",
+    "set": "Marvel 1994 Universe",
+    "slug": "marvel-1994-universe"
+  },
+  {
+    "review": "D010",
+    "set": "Marvel 1995 Flair",
+    "slug": "marvel-1995-flair"
+  },
+  {
+    "review": "D011",
+    "set": "Marvel 1995 Masterpieces",
+    "slug": "marvel-1995-masterpieces"
+  },
+  {
+    "review": "D012",
+    "set": "Marvel 1995 Metal",
+    "slug": "marvel-1995-metal"
+  },
+  {
+    "review": "D013",
+    "set": "Marvel 1996 Fleer Motion",
+    "slug": "marvel-1996-fleer-motion"
+  },
+  {
+    "review": "D014",
+    "set": "Marvel 1996 Fleer Spider Man Premium",
+    "slug": "marvel-1996-fleer-spider-man-premium"
+  },
+  {
+    "review": "D015",
+    "set": "Marvel 1996 Fleer Ultra Onslaught",
+    "slug": "marvel-1996-fleer-ultra-onslaught"
+  },
+  {
+    "review": "D016",
+    "set": "Marvel 1996 Masterpieces",
+    "slug": "marvel-1996-masterpieces"
+  },
+  {
+    "review": "D017",
+    "set": "Marvel 1997 Fleer Premium QFX",
+    "slug": "marvel-1997-fleer-premium-qfx"
+  },
+  {
+    "review": "D018",
+    "set": "Marvel 1997 Fleer X-Men Oasis",
+    "slug": "marvel-1997-fleer-x-men-oasis"
+  },
+  {
+    "review": "D019",
+    "set": "Marvel 1997 Premium X-Men 97 Timelines",
+    "slug": "marvel-1997-premium-x-men-97-timelines"
+  },
+  {
+    "review": "D020",
+    "set": "Marvel 1998 Fleer Creators Collection",
+    "slug": "marvel-1998-fleer-creators-collection"
+  },
+  {
+    "review": "D021",
+    "set": "Marvel 20-21 Upper Deck Annual",
+    "slug": "marvel-20-21-upper-deck-annual"
+  },
+  {
+    "review": "D022",
+    "set": "Marvel 2000 Topps X-Men: The Movie",
+    "slug": "marvel-2000-topps-x-men-the-movie"
+  },
+  {
+    "review": "D023",
+    "set": "Marvel 2001 Topps Legends",
+    "slug": "marvel-2001-topps-legends"
+  },
+  {
+    "review": "D024",
+    "set": "Marvel 2007 Masterpieces",
+    "slug": "marvel-2007-masterpieces"
+  },
+  {
+    "review": "R004",
+    "set": "Marvel 2008 Masterpieces",
+    "slug": "marvel-2008-masterpieces"
+  },
+  {
+    "review": "D025",
+    "set": "Marvel 2009 Rittenhouse Spider Man Archives",
+    "slug": "marvel-2009-rittenhouse-spider-man-archives"
+  },
+  {
+    "review": "D026",
+    "set": "Marvel 2012 Greatest Heroes Rittenhouse Archives",
+    "slug": "marvel-2012-greatest-heroes-rittenhouse-archives"
+  },
+  {
+    "review": "D027",
+    "set": "Marvel 2013 Fleer Retro",
+    "slug": "marvel-2013-fleer-retro"
+  },
+  {
+    "review": "D028",
+    "set": "Marvel 2015 Fleer Retro",
+    "slug": "marvel-2015-fleer-retro"
+  },
+  {
+    "review": "D029",
+    "set": "Marvel 2015 Upper Deck Vibranium",
+    "slug": "marvel-2015-upper-deck-vibranium"
+  },
+  {
+    "review": "D030",
+    "set": "Marvel 2022 Masterpieces",
+    "slug": "marvel-2022-masterpieces"
+  },
+  {
+    "review": "D031",
+    "set": "Marvel 2023 Flair",
+    "slug": "marvel-2023-flair"
+  },
+  {
+    "review": "D032",
+    "set": "Marvel 2023 Upper Deck Allegiance Infinity Trilogy",
+    "slug": "marvel-2023-upper-deck-allegiance-infinity-trilogy"
+  },
+  {
+    "review": "D033",
+    "set": "Marvel 2023 Upper Deck Anime Volume 2",
+    "slug": "marvel-2023-upper-deck-anime-volume-2"
+  },
+  {
+    "review": "D034",
+    "set": "Marvel 2024 Skybox Masterpieces XL",
+    "slug": "marvel-2024-skybox-masterpieces-xl"
+  },
+  {
+    "review": "D035",
+    "set": "Marvel 2024 Upper Deck Avengers",
+    "slug": "marvel-2024-upper-deck-avengers"
+  },
+  {
+    "review": "D036",
+    "set": "Marvel 2024 Upper Deck Women of Marvel",
+    "slug": "marvel-2024-upper-deck-women-of-marvel"
+  }
+]
