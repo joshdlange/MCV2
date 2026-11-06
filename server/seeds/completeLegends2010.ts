@@ -46,21 +46,29 @@ export const legends2010Lists = [
 }));
 
 export async function completeLegends2010Tx(tx: Tx) {
+  return completeLegendsYearTx(tx, 2010, legends2010Lists);
+}
+
+export async function completeLegendsYearTx(tx: Tx, year: number,
+  lists: { name: string; key: string; cards: { cardNumber: string; name: string; description: string }[] }[]) {
+  const parentSlug = `${year}-rittenhouse-legends-of-marvel`;
+  const parentName = `${year} Rittenhouse Legends of Marvel`;
   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('merge_duplicate_legacy_sets'))`);
-  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('complete_legends_2010'))`);
-  const fail = (message: string): never => { throw new Error(`Legends 2010: ${message}`); };
-  let [main] = await tx.select().from(mainSets).where(eq(mainSets.slug, legends2010Slug));
+  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`complete_legends_${year}`}))`);
+  const fail = (message: string): never => { throw new Error(`Legends ${year}: ${message}`); };
+  let [main] = await tx.select().from(mainSets).where(eq(mainSets.slug, parentSlug));
   if (!main) [main] = await tx.insert(mainSets).values({
-    slug: legends2010Slug, name: '2010 Rittenhouse Legends of Marvel',
+    slug: parentSlug, name: parentName,
     isCanonical: true, canonicalSource: 'owner_checklist',
   }).returning();
-  if (!main.isActive || main.archivedAt || main.name !== '2010 Rittenhouse Legends of Marvel') fail('combined parent conflict');
+  if (!main.isActive || main.archivedAt || main.name !== parentName) fail('combined parent conflict');
   let added = 0, reparented = 0, notesAdded = 0;
-  for (const list of legends2010Lists) {
-    const legacySlug = `${legends2010Slug}-${list.key}`;
+  for (const list of lists) {
+    if (list.cards.length !== 9 || list.cards.some((c,i)=>c.cardNumber !== `L${i+1}`)) fail('invalid source checklist');
+    const legacySlug = `${parentSlug}-${list.key}`;
     const [legacy] = await tx.select().from(mainSets).where(eq(mainSets.slug, legacySlug));
-    const [set] = await tx.select().from(cardSets).where(eq(cardSets.slug, `2010-${legacySlug}-base`));
-    if (!legacy || !set || set.year !== 2010 || !set.isActive || set.archivedAt ||
+    const [set] = await tx.select().from(cardSets).where(eq(cardSets.slug, `${year}-${legacySlug}-base`));
+    if (!legacy || !set || set.year !== year || !set.isActive || set.archivedAt ||
         ![legacy.id, main.id].includes(set.mainSetId!)) fail(`missing/conflicting ${list.name}`);
     const siblings = await tx.select().from(cardSets).where(eq(cardSets.mainSetId, legacy.id));
     if (siblings.some(s => s.id !== set.id)) fail(`unexpected legacy subsets ${list.name}`);

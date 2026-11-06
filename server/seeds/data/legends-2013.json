@@ -1,0 +1,308 @@
+[
+  {
+    "name": "Daredevil",
+    "key": "daredevil",
+    "cards": [
+      {
+        "cardNumber": "L1",
+        "name": "Daredevil",
+        "description": "Artists — Front: Jimmy Palmiotti, Joe Quesada; Back: Billy Tan"
+      },
+      {
+        "cardNumber": "L2",
+        "name": "Daredevil",
+        "description": "Artists — Front: Marko Djurdjevic; Back: Marko Djurdjevic"
+      },
+      {
+        "cardNumber": "L3",
+        "name": "Daredevil",
+        "description": "Artists — Front: Gabriele Dell'Otto; Back: Kenneth Rocafort"
+      },
+      {
+        "cardNumber": "L4",
+        "name": "Daredevil",
+        "description": "Artists — Front: Alex Maleev; Back: Alex Maleev"
+      },
+      {
+        "cardNumber": "L5",
+        "name": "Daredevil",
+        "description": "Artists — Front: Lee Bermejo; Back: Michael Lark"
+      },
+      {
+        "cardNumber": "L6",
+        "name": "Daredevil",
+        "description": "Artists — Front: Patick Zircher; Back: John Cassaday"
+      },
+      {
+        "cardNumber": "L7",
+        "name": "Daredevil",
+        "description": "Artists — Front: Alex Maleev; Back: Alex Maleev"
+      },
+      {
+        "cardNumber": "L8",
+        "name": "Daredevil",
+        "description": "Artists — Front: Greg Land; Back: Marko Djurdjevic"
+      },
+      {
+        "cardNumber": "L9",
+        "name": "Daredevil",
+        "description": "Artists — Front: Marko Djurdjevic; Back: Marko Djurdjevic"
+      }
+    ]
+  },
+  {
+    "name": "Marvel Girl / Phoenix",
+    "key": "marvel-girl-phoenix",
+    "cards": [
+      {
+        "cardNumber": "L1",
+        "name": "Marvel Girl / Phoenix",
+        "description": "Artists — Front: Mike Mayhew; Back: Mike Mayhew"
+      },
+      {
+        "cardNumber": "L2",
+        "name": "Marvel Girl / Phoenix",
+        "description": "Artists — Front: Mike Mayhew; Back: Greg Land"
+      },
+      {
+        "cardNumber": "L3",
+        "name": "Marvel Girl / Phoenix",
+        "description": "Artists — Front: Marko Djurdevic; Back: Jim Cheung"
+      },
+      {
+        "cardNumber": "L4",
+        "name": "Marvel Girl / Phoenix",
+        "description": "Artists — Front: Roger Cruz; Back: Tom Grummett"
+      },
+      {
+        "cardNumber": "L5",
+        "name": "Marvel Girl / Phoenix",
+        "description": "Artists — Front: Greg Land; Back: Greg Land"
+      },
+      {
+        "cardNumber": "L6",
+        "name": "Marvel Girl / Phoenix",
+        "description": "Artists — Front: David Finch; Back: Greg Land"
+      },
+      {
+        "cardNumber": "L7",
+        "name": "Marvel Girl / Phoenix",
+        "description": "Artists — Front: Gabriele Dell'Otto; Back: Jill Thompson"
+      },
+      {
+        "cardNumber": "L8",
+        "name": "Marvel Girl / Phoenix",
+        "description": "Artists — Front: Paul Gulacy; Back: Greg Land"
+      },
+      {
+        "cardNumber": "L9",
+        "name": "Marvel Girl / Phoenix",
+        "description": "Artists — Front: Greg Land; Back: Greg Land"
+      }
+    ]
+  },
+  {
+    "name": "Nova",
+    "key": "nova",
+    "cards": [
+      {
+        "cardNumber": "L1",
+        "name": "Nova",
+        "description": "Artists — Front: Adi Granov; Back: Aleksi Briclot"
+      },
+      {
+        "cardNumber": "L2",
+        "name": "Nova",
+        "description": "Artists — Front: Alex Maleev; Back: Alex Maleev"
+      },
+      {
+        "cardNumber": "L3",
+        "name": "Nova",
+        "description": "Artists — Front: Geraldo Borges; Back: Wellinton Alves"
+      },
+      {
+        "cardNumber": "L4",
+        "name": "Nova",
+        "description": "Artists — Front: Klebs; Back: Miguel Angel Sepulveda"
+      },
+      {
+        "cardNumber": "L5",
+        "name": "Nova",
+        "description": "Artists — Front: Adi Granov; Back: Alex Maleev"
+      },
+      {
+        "cardNumber": "L6",
+        "name": "Nova",
+        "description": "Artists — Front: Nic Klein; Back: John Buscema"
+      },
+      {
+        "cardNumber": "L7",
+        "name": "Nova",
+        "description": "Artists — Front: Francesco Mattina; Back: Andrea Di Vito"
+      },
+      {
+        "cardNumber": "L8",
+        "name": "Nova",
+        "description": "Artists — Front: Mike Deodato Jr.; Back: Wellinton Alves"
+      },
+      {
+        "cardNumber": "L9",
+        "name": "Nova",
+        "description": "Artists — Front: Adi Granov; Back: Adi Granov"
+      }
+    ]
+  },
+  {
+    "name": "She-Hulk",
+    "key": "she-hulk",
+    "cards": [
+      {
+        "cardNumber": "L1",
+        "name": "She-Hulk",
+        "description": "Artists — Front: Adi Granov; Back: Scott Campbell"
+      },
+      {
+        "cardNumber": "L2",
+        "name": "She-Hulk",
+        "description": "Artists — Front: Greg Land; Back: David Williams"
+      },
+      {
+        "cardNumber": "L3",
+        "name": "She-Hulk",
+        "description": "Artists — Front: Mike Mayhew; Back: Mike Mayhew"
+      },
+      {
+        "cardNumber": "L4",
+        "name": "She-Hulk",
+        "description": "Artists — Front: Mike Deodato Jr.; Back: Mike Deodato Jr."
+      },
+      {
+        "cardNumber": "L5",
+        "name": "She-Hulk",
+        "description": "Artists — Front: Adi Granov; Back: Adi Granov"
+      },
+      {
+        "cardNumber": "L6",
+        "name": "She-Hulk",
+        "description": "Artists — Front: Mike Mayhew; Back: Greg Horn"
+      },
+      {
+        "cardNumber": "L7",
+        "name": "She-Hulk",
+        "description": "Artists — Front: Mike Deodato Jr.; Back: Peter Vale"
+      },
+      {
+        "cardNumber": "L8",
+        "name": "She-Hulk",
+        "description": "Artists — Front: Greg Horn; Back: Greg Horn"
+      },
+      {
+        "cardNumber": "L9",
+        "name": "She-Hulk",
+        "description": "Artists — Front: Adi Granov; Back: Adi Granov"
+      }
+    ]
+  },
+  {
+    "name": "Spider-Man",
+    "key": "spider-man",
+    "cards": [
+      {
+        "cardNumber": "L1",
+        "name": "Spider-Man",
+        "description": "Artists — Front: Salvador Larroca; Back: Tom Coker"
+      },
+      {
+        "cardNumber": "L2",
+        "name": "Spider-Man",
+        "description": "Artists — Front: Mike Deodato Jr.; Back: Todd Nauck"
+      },
+      {
+        "cardNumber": "L3",
+        "name": "Spider-Man",
+        "description": "Artists — Front: Doug Braithwaite; Back: Joao Silveira"
+      },
+      {
+        "cardNumber": "L4",
+        "name": "Spider-Man",
+        "description": "Artists — Front: Paolo Rivera; Back: Paolo Rivera"
+      },
+      {
+        "cardNumber": "L5",
+        "name": "Spider-Man",
+        "description": "Artists — Front: Julian Totino Tedesco; Back: Salvador Larroca"
+      },
+      {
+        "cardNumber": "L6",
+        "name": "Spider-Man",
+        "description": "Artists — Front: Paolo Rivera; Back: Nuno Plati"
+      },
+      {
+        "cardNumber": "L7",
+        "name": "Spider-Man",
+        "description": "Artists — Front: Ron Garney; Back: Ron Garney"
+      },
+      {
+        "cardNumber": "L8",
+        "name": "Spider-Man",
+        "description": "Artists — Front: Marko Djurdjevic; Back: Stafano Caselli"
+      },
+      {
+        "cardNumber": "L9",
+        "name": "Spider-Man",
+        "description": "Artists — Front: Shinkiro; Back: Adi Granov"
+      }
+    ]
+  },
+  {
+    "name": "War Machine",
+    "key": "war-machine",
+    "cards": [
+      {
+        "cardNumber": "L1",
+        "name": "War Machine",
+        "description": "Artists — Front: Francesco Mattina; Back: Leonardo Manco"
+      },
+      {
+        "cardNumber": "L2",
+        "name": "War Machine",
+        "description": "Artists — Front: Francesco Mattina; Back: Sean Chen"
+      },
+      {
+        "cardNumber": "L3",
+        "name": "War Machine",
+        "description": "Artists — Front: Adi Granov; Back: Salvador Larroca"
+      },
+      {
+        "cardNumber": "L4",
+        "name": "War Machine",
+        "description": "Artists — Front: Francesco Mattina; Back: Francesco Mattina"
+      },
+      {
+        "cardNumber": "L5",
+        "name": "War Machine",
+        "description": "Artists — Front: Francesco Mattina; Back: Leonardo Manco"
+      },
+      {
+        "cardNumber": "L6",
+        "name": "War Machine",
+        "description": "Artists — Front: Adi Granov; Back: Wellington Alves"
+      },
+      {
+        "cardNumber": "L7",
+        "name": "War Machine",
+        "description": "Artists — Front: Francesco Mattina; Back: Francesco Mattina"
+      },
+      {
+        "cardNumber": "L8",
+        "name": "War Machine",
+        "description": "Artists — Front: Leonardo Manco; Back: Leonardo Manco"
+      },
+      {
+        "cardNumber": "L9",
+        "name": "War Machine",
+        "description": "Artists — Front: Leonardo Manco; Back: Leonardo Manco"
+      }
+    ]
+  }
+]
