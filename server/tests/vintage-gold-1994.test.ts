@@ -5,7 +5,7 @@ import { eq, sql } from 'drizzle-orm';
 import { db, pool } from '../db';
 import { cards, cardSets, mainSets } from '../../shared/schema';
 import { vintageChecklists } from '../seeds/data/ownerVintageChecklists';
-import { completeVintageAndGold1994Tx, masterpieces94, heroes1977Image, posters1966Image, secretWars1984Image } from '../seeds/completeVintageAndGold1994';
+import { completeVintageAndGold1994Tx, masterpieces94, heroes1977Image, posters1966Image, secretWars1984Image, stickers1986Image } from '../seeds/completeVintageAndGold1994';
 
 test('1967 captions and characters exactly preserve owner attachment', () => {
   const text = readFileSync('attached_assets/Pasted-No-Character-Caption-1-The-Human-Torch-I-must-get-that-_1793980299039.txt', 'utf8');
@@ -13,7 +13,19 @@ test('1967 captions and characters exactly preserve owner attachment', () => {
     .map(m => ({ cardNumber: m![1], name: m![2], description: m![3] }));
   assert.equal(expected.length, 55);
   assert.deepEqual(vintageChecklists[1].cards, expected);
-  assert.deepEqual(vintageChecklists.map(c => c.cards.length), [8,55,42,40,180]);
+  assert.deepEqual(vintageChecklists.map(c => c.cards.length), [8,55,42,40,180,77]);
+});
+
+test('1986 checklist preserves numbered repeats and owner labels', () => {
+  const rows = vintageChecklists[5].cards;
+  assert.deepEqual(rows.map(c=>c.cardNumber),Array.from({length:77},(_,i)=>String(i+1)));
+  assert.deepEqual(rows.filter(c=>c.name==='Wolverine').map(c=>c.cardNumber),['3','8','10']);
+  assert.deepEqual(rows.filter(c=>c.name==='Spider-Man').map(c=>c.cardNumber),['28','29','30','31','32']);
+  assert.equal(rows[32].name,'(Spider-Man, black costume)');
+  assert.equal(rows[33].name,'(Spider symbol)');
+  assert.equal(rows[62].name,'Box');
+  assert.equal(rows[64].name,'Doctor Octupus');
+  assert.deepEqual(rows.slice(-2).map(c=>c.name),['X-Factor','X-Factor']);
 });
 
 test('1984 Secret Wars preserves every supplied number, name and puzzle position', () => {
@@ -89,6 +101,11 @@ test('checklists complete, preserve existing metadata/holdings and repeat safely
       if (checklist.year === 1984) {
         const [parent] = await tx.select().from(mainSets).where(eq(mainSets.id, set.mainSetId!));
         assert.equal(parent.thumbnailImageUrl, secretWars1984Image);
+        assert.ok(rows.every(c=>!c.frontImageUrl && !c.backImageUrl));
+      }
+      if (checklist.year === 1986) {
+        const [parent] = await tx.select().from(mainSets).where(eq(mainSets.id, set.mainSetId!));
+        assert.equal(parent.thumbnailImageUrl, stickers1986Image);
         assert.ok(rows.every(c=>!c.frontImageUrl && !c.backImageUrl));
       }
     }

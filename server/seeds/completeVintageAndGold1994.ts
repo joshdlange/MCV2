@@ -8,6 +8,7 @@ export const masterpieces94 = '1994-fleer-marvel-masterpieces-hildebrandt-brothe
 export const heroes1977Image = 'https://res.cloudinary.com/dgu7hjfvn/image/upload/v1793983201/owner-catalog/1977-marvel-super-heroes-main.png';
 export const posters1966Image = 'https://res.cloudinary.com/dgu7hjfvn/image/upload/v1793983384/owner-catalog/1966-club-art-posters-spiderman.png';
 export const secretWars1984Image = 'https://res.cloudinary.com/dgu7hjfvn/image/upload/v1793983648/owner-catalog/1984-leaf-secret-wars-main.png';
+export const stickers1986Image = 'https://res.cloudinary.com/dgu7hjfvn/image/upload/v1793984149/owner-catalog/1986-official-marvel-universe-stickers-main.png';
 export async function completeVintageAndGold1994Tx(tx: Tx) {
   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('merge_duplicate_legacy_sets'))`);
   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('complete_vintage_gold_1994'))`);
@@ -84,6 +85,10 @@ export async function completeVintageAndGold1994Tx(tx: Tx) {
   const [secretWarsMain] = await tx.select().from(mainSets).where(eq(mainSets.slug, '1984-leaf-marvel-super-heroes-secret-wars-stickers'));
   if (!secretWarsMain.thumbnailImageUrl) {
     await tx.update(mainSets).set({ thumbnailImageUrl: secretWars1984Image }).where(eq(mainSets.id, secretWarsMain.id));
+  }
+  const [stickers1986Main] = await tx.select().from(mainSets).where(eq(mainSets.slug, '1986-comic-images-official-marvel-universe-stickers'));
+  if (!stickers1986Main.thumbnailImageUrl) {
+    await tx.update(mainSets).set({ thumbnailImageUrl: stickers1986Image }).where(eq(mainSets.id, stickers1986Main.id));
   }
   return { goldAdded, vintageAdded, namesAligned, captionsAdded };
 }

@@ -157,4 +157,84 @@ Scarlet Witch`.split('\n').flatMap((name, i) => ['A', 'B'].map((letter, j) => ({
     parent: '1984-leaf-marvel-super-heroes-secret-wars-stickers', year: 1984,
     cards: secretWars1984,
   },
+  {
+    parent: '1986-comic-images-official-marvel-universe-stickers', year: 1986,
+    cards: numbered(`Nightcrawler
+Colossus
+Wolverine
+Storm
+Phoenix
+Rogue
+Lockheed
+Wolverine
+Havok
+Wolverine
+Shadowcat
+Longshot
+The Punisher
+Daredevil
+Silver Surfer
+Galactus
+Moon Knight
+Cloak and Dagger
+Elektra
+Punisher
+Magneto
+Wolfsbane
+Sunspot
+Magma
+Warlock
+Cannonball
+Magik
+Spider-Man
+Spider-Man
+Spider-Man
+Spider-Man
+Spider-Man
+(Spider-Man, black costume)
+(Spider symbol)
+Iron Man
+Hawkeye
+Mockingbird
+Tigra
+Wonder Man
+The West Coast Avengers
+The West Coast Avengers
+Mr. Fantastic
+Human Torch
+Invisible Woman
+Thing
+She-Hulk
+Fantastic Four
+The Mighty Thor
+Hulk
+Black Panther
+Vision
+Captain America
+Scarlet Witch
+Hercules - Prince of Power
+The Astonishing Ant-Man
+Wasp
+Shaman
+Vindicator
+Talisman
+Northstar
+Snowbird
+Aurora
+Box
+Dr. Doom
+Doctor Octupus
+Mephisto
+Hobgoblin
+Annihilus
+Kingpin
+Loki
+Marvel Girl
+Cyclops
+Angel
+Beast
+Iceman
+X-Factor
+X-Factor`),
+  },
 ];
