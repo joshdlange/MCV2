@@ -6,6 +6,7 @@ import { vintageChecklists } from './data/ownerVintageChecklists';
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export const masterpieces94 = '1994-fleer-marvel-masterpieces-hildebrandt-brothers';
 export const heroes1977Image = 'https://res.cloudinary.com/dgu7hjfvn/image/upload/v1793983201/owner-catalog/1977-marvel-super-heroes-main.png';
+export const posters1966Image = 'https://res.cloudinary.com/dgu7hjfvn/image/upload/v1793983384/owner-catalog/1966-club-art-posters-spiderman.png';
 export async function completeVintageAndGold1994Tx(tx: Tx) {
   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('merge_duplicate_legacy_sets'))`);
   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('complete_vintage_gold_1994'))`);
@@ -66,6 +67,18 @@ export async function completeVintageAndGold1994Tx(tx: Tx) {
   const [heroes1977] = await tx.select().from(mainSets).where(eq(mainSets.slug, '1977-marvel-super-heroes'));
   if (!heroes1977.thumbnailImageUrl) {
     await tx.update(mainSets).set({ thumbnailImageUrl: heroes1977Image }).where(eq(mainSets.id, heroes1977.id));
+  }
+  const posters = await resolve('1966-marvel-super-heroes-club-art-posters',
+    '1966-1966-marvel-super-heroes-club-art-posters-base', 1966);
+  const spiderman = (await rows(posters.id)).find(c => c.cardNumber === '4' && c.name === 'Spiderman');
+  if (!spiderman) fail('missing 1966 Spiderman');
+  // Initial owner artwork only: never overwrite a later image-admin replacement.
+  if (!spiderman.frontImageUrl) {
+    await tx.update(cards).set({ frontImageUrl: posters1966Image }).where(eq(cards.id, spiderman.id));
+  }
+  const [postersMain] = await tx.select().from(mainSets).where(eq(mainSets.id, posters.mainSetId!));
+  if (!postersMain.thumbnailImageUrl) {
+    await tx.update(mainSets).set({ thumbnailImageUrl: posters1966Image }).where(eq(mainSets.id, postersMain.id));
   }
   return { goldAdded, vintageAdded, namesAligned, captionsAdded };
 }

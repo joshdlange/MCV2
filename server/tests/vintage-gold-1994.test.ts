@@ -5,7 +5,7 @@ import { eq, sql } from 'drizzle-orm';
 import { db, pool } from '../db';
 import { cards, cardSets, mainSets } from '../../shared/schema';
 import { vintageChecklists } from '../seeds/data/ownerVintageChecklists';
-import { completeVintageAndGold1994Tx, masterpieces94, heroes1977Image } from '../seeds/completeVintageAndGold1994';
+import { completeVintageAndGold1994Tx, masterpieces94, heroes1977Image, posters1966Image } from '../seeds/completeVintageAndGold1994';
 
 test('1967 captions and characters exactly preserve owner attachment', () => {
   const text = readFileSync('attached_assets/Pasted-No-Character-Caption-1-The-Human-Torch-I-must-get-that-_1793980299039.txt', 'utf8');
@@ -72,6 +72,11 @@ test('checklists complete, preserve existing metadata/holdings and repeat safely
         .sort((a,b)=>Number(a.cardNumber)-Number(b.cardNumber));
       assert.deepEqual(rows.map(c=>({cardNumber:c.cardNumber,name:c.name,description:c.description})),checklist.cards);
       assert.ok(rows.every(c=>!c.isInsert));
+      if (checklist.year === 1966) {
+        assert.equal(rows[3].frontImageUrl, posters1966Image);
+        const [parent] = await tx.select().from(mainSets).where(eq(mainSets.id, set.mainSetId!));
+        assert.equal(parent.thumbnailImageUrl, posters1966Image);
+      }
     }
     assert.deepEqual(await completeVintageAndGold1994Tx(tx), {goldAdded:0,vintageAdded:0,namesAligned:0,captionsAdded:0});
     throw new Rollback();
