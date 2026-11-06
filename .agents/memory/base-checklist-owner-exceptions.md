@@ -19,6 +19,7 @@ The owner confirmed:
 - 2012 Rittenhouse Legends of Marvel is one main set with Ghost Rider, Hulk, Moon Knight, Ms. Marvel, Storm, and Thing subsets (L1–L9 each), with front/back artist credits in details.
 - The owner requested all six supplied 2013 Legends subsets under one 2013 main set. The source labels She-Hulk, Spider-Man, and War Machine “Series 6: January 2014”; retain that note without silently changing the requested grouping.
 - The owner approved removing all D/R/S entries from the empty-set review: empty duplicates, hidden empty decision entries, and apparently outside-Marvel entries. This does not authorize deleting populated H entries or their collector history.
+- For the Promo/Promos cleanup, the owner explicitly selected “Only empty sets in report.” Do not extend this to populated promo releases or promo subsets elsewhere in the catalog.
 
 **Why:** The owner supplied these identities and explicitly confirmed the numbering exceptions after reviewing the audit.
 

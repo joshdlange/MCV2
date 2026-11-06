@@ -7,11 +7,11 @@ Original review codes are preserved so previous instructions still identify the 
 
 ## Summary
 
-- **49 approved empty main-set entries removed in development:** 36 duplicates (D001–D036), 4 decision entries (R001–R004), and 9 outside-scope entries (S001–S009).
-- **17 unreferenced empty subsets deleted in development.**
+- **62 approved empty main-set entries removed in development:** 36 duplicates (D001–D036), 4 decision entries (R001–R004), 9 outside-scope entries (S001–S009), and 13 empty Promo/Promos entries from the pending report.
+- **30 unreferenced empty subsets deleted in development** (17 in the original cleanup plus 13 promo subsets).
 - Production preflight found the same 49 entries empty. Of their 17 subsets, **5 retain migration history**: on publishing these will remain hidden, detached history records; the other 12 will be deleted. No migration history or share links are deleted.
 - **31 of the original 159 pending entries are now populated or consolidated** in development.
-- **128 active empty main sets remain awaiting checklists or identification**, listed below.
+- **115 active empty main sets remain awaiting checklists or identification**, listed below.
 - **48 originally flagged hidden populated sets are retained**, with separate current production/development card counts below.
 - Cards, collector holdings, wishlists, and populated sets were not deleted. The cleanup refuses candidates that gain cards or an upcoming-release link before it runs.
 
@@ -23,11 +23,7 @@ Provide the existing P code with the checklist or identity correction. Codes hav
 - **P006** 1980 Marvel Super Heroes (Venezuela)
 - **P007** 1980 Marvel Superheros French Canadian
 - **P010** 1983 Sunbeam Marvel Super Heroes Family Adventure
-- **P016** 1987 Marvel Solo Avengers Promo
 - **P018** 1988 Comic Images Marvel Universe IV Heroic Origins
-- **P019** 1988 Marvel Evolutionary War Promo
-- **P020** 1988 Marvel Masterworks Promo
-- **P021** 1988 Marvel Nick Fury vs. SHIELD Promo
 - **P022** 1988 Waddington's Super Top Trumps Marvel Super Villains
 - **P023** 1989 Comic Images Marvel Comics Arthur Adams
 - **P024** 1989 Comic Images Marvel Comics Mike Zeck
@@ -38,11 +34,9 @@ Provide the existing P code with the checklist or identity correction. Codes hav
 - **P029** 1990 Comic Images Marvel Comics Todd McFarlane Series 2
 - **P030** 1990 Marvel Annuals Family Reunion
 - **P031** 1991 Comic Images Marvel Comics Jim Lee II
-- **P032** 1991 Impel Marvel Universe II Toy Biz Promos
 - **P033** 1991 Marvel Employees
 - **P034** 1991 Marvel Operation Galactic Storm Checklists
 - **P035** 1992 Marvel Comics Annuals
-- **P036** 1992 Marvel Comics Bi-Weekly Promos
 - **P037** 1992 Marvel Comics Live and in Person
 - **P038** 1992 Marvel Comics UK Overkill/Exploits of Spider-Man
 - **P039** 1992 Marvel Employees
@@ -104,8 +98,6 @@ Provide the existing P code with the checklist or identity correction. Codes hav
 - **P108** 2012 Universal Studios Marvel Comics Playing Cards
 - **P109** 2013 Marvel Supereroi
 - **P116** 2014 Bandai Marvel Disk Wars: The Avengers Soul Royale
-- **P117** 2014 Bandai Marvel Disk Wars: The Avengers Soul Royale Promo 1
-- **P118** 2014 Bandai Marvel Disk Wars: The Avengers Soul Royale Promo 2
 - **P119** 2014 Bandai Marvel Disk Wars: The Avengers Soul Royale Series 2
 - **P120** 2014 Bandai Marvel Disk Wars: The Avengers Soul Royale Series 3
 - **P121** 2014 Marvel Puzzle Quest
@@ -114,10 +106,6 @@ Provide the existing P code with the checklist or identity correction. Codes hav
 - **P124** 2015 Marvel Animated Guardians of the Galaxy
 - **P125** 2015 Panini Marvel Avengers Assemble Stickers
 - **P126** 2015 Upper Deck Marvel Avengers Comic-Con Exclusive Embedded Patches
-- **P127** 2016 Marvel Deadpool Movie Bios Promo
-- **P128** 2016 Marvel Deadpool NYCC Promo
-- **P129** 2016 Marvel X-Men Apocalypse Promo
-- **P130** 2016 Marvel X-Men Apocalypse The Four Horsemen Promo
 - **P131** 2017 Marvel Puzzle Quest
 - **P132** 2017 Woolworths Marvel Heroes Discs
 - **P133** 2018 Marvel AMC Spider-Man: Into the Spider-Verse
@@ -125,7 +113,6 @@ Provide the existing P code with the checklist or identity correction. Codes hav
 - **P135** 2019 Kellogg's Marvel Spider- Man Far From Home Stand-Ups
 - **P136** 2019 Marvel X-Men Cards of X
 - **P137** 2020 Marvel Andamiro Avengers Arcade
-- **P138** 2020 Marvel Comics Thor #1 Promos
 - **P139** 2020 Marvel Comics Villains Playing Cards
 - **P140** 2020 Upper Deck Marvel Cyber
 - **P141** 2021 Circle K Marvel Shieldz
@@ -257,6 +244,24 @@ The following are completed in development and queued for production at publishi
 - **S008** 2015 Topps Star Wars: The Force Awakens
 - **S009** 2024 Topps Star Wars Masterwork
 
+### Empty Promo/Promos report entries removed
+
+Owner-approved scope: only empty main sets in this report, not populated promo sets or other promo subsets. All 13 were empty in both development and production preflight; none of their subsets had migration or share-link references. Development removal is complete; production awaits publishing.
+
+- **P016** 1987 Marvel Solo Avengers Promo
+- **P019** 1988 Marvel Evolutionary War Promo
+- **P020** 1988 Marvel Masterworks Promo
+- **P021** 1988 Marvel Nick Fury vs. SHIELD Promo
+- **P032** 1991 Impel Marvel Universe II Toy Biz Promos
+- **P036** 1992 Marvel Comics Bi-Weekly Promos
+- **P117** 2014 Bandai Marvel Disk Wars: The Avengers Soul Royale Promo 1
+- **P118** 2014 Bandai Marvel Disk Wars: The Avengers Soul Royale Promo 2
+- **P127** 2016 Marvel Deadpool Movie Bios Promo
+- **P128** 2016 Marvel Deadpool NYCC Promo
+- **P129** 2016 Marvel X-Men Apocalypse Promo
+- **P130** 2016 Marvel X-Men Apocalypse The Four Horsemen Promo
+- **P138** 2020 Marvel Comics Thor #1 Promos
+
 ## Previously hidden sets with cards — retained
 
 These are the original H review entries, not additional deletion candidates. Production and development can differ; a development count of zero does not authorize deleting a populated production entry.
@@ -312,6 +317,6 @@ These are the original H review entries, not additional deletion candidates. Pro
 
 ## Verification and source notes
 
-- Cleanup is limited to the 49 reviewed slugs, rechecks emptiness inside a locked transaction, preserves linked history/share records, and performs no cascading deletes.
+- Cleanup is limited to the 62 reviewed slugs, rechecks emptiness inside a locked transaction, preserves linked history/share records, and performs no cascading deletes.
 - Tests cover history preservation, unchanged card/collection/wishlist counts and owned quantity, repeat runs, and rollback if a candidate becomes populated.
 - Updated from separate database snapshots on November 6, 2026. The companion November 5 CSV files remain historical source snapshots, not a current pending-work list.

@@ -33,14 +33,18 @@ test('empty-set cleanup preserves history, leaves cards alone, and is repeat saf
       (SELECT coalesce(sum(quantity),0) FROM user_collections)::text quantity,
       (SELECT count(*) FROM user_wishlists)::int wishlists`)).rows;
     const before=await snapshot();
+    const outsideManifest = async () => (await tx.execute(sql`SELECT to_jsonb(m) row FROM main_sets m
+      WHERE m.slug NOT IN (${sql.join(removals.map(r=>sql`${r.slug}`),sql`,`)}) ORDER BY m.id`)).rows;
+    const untouched = await outsideManifest();
     const result=await removeOwnerApprovedEmptySetsTx(tx);
-    assert.equal(result.deletedMainSets,49);
+    assert.equal(result.deletedMainSets,removals.length);
     assert.ok(result.preservedHistorySubsets>=1);
     const [preserved]=await tx.select().from(cardSets).where(eq(cardSets.id,set.id));
     assert.equal(preserved.mainSetId,null);assert.equal(preserved.isActive,false);
     assert.ok(preserved.archivedAt);
     assert.equal((await tx.select().from(cardSetMigrations).where(eq(cardSetMigrations.id,history.id))).length,1);
     assert.deepEqual(await snapshot(),before);
+    assert.deepEqual(await outsideManifest(),untouched);
     assert.deepEqual(await removeOwnerApprovedEmptySetsTx(tx),{deletedMainSets:0,deletedSubsets:0,preservedHistorySubsets:0});
     throw new Rollback();
   }),e=>e instanceof Rollback);
@@ -61,3 +65,11 @@ test('cleanup refuses a newly populated candidate and rolls back earlier removal
   }),e=>e instanceof Rollback);
 });
 test.after(()=>pool.end());
+
+test('promo scope is exactly the thirteen approved empty report entries', () => {
+  const promos = removals.filter(r=>r.review.startsWith('P'));
+  assert.deepEqual(promos.map(r=>r.review),[
+    'P016','P019','P020','P021','P032','P036','P117','P118','P127','P128','P129','P130','P138',
+  ]);
+  assert.ok(promos.every(r=>/\bpromos?\b/i.test(r.set)));
+});
