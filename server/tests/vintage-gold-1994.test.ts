@@ -5,7 +5,7 @@ import { eq, sql } from 'drizzle-orm';
 import { db, pool } from '../db';
 import { cards, cardSets, mainSets } from '../../shared/schema';
 import { vintageChecklists } from '../seeds/data/ownerVintageChecklists';
-import { completeVintageAndGold1994Tx, masterpieces94, heroes1977Image, posters1966Image, secretWars1984Image, stickers1986Image, universe1987Image, colossal1987Image, magicMomentsImage, wolverine1988Image } from '../seeds/completeVintageAndGold1994';
+import { completeVintageAndGold1994Tx, masterpieces94, heroes1977Image, posters1966Image, secretWars1984Image, stickers1986Image, universe1987Image, colossal1987Image, magicMomentsImage, wolverine1988Image, crunch1993Image } from '../seeds/completeVintageAndGold1994';
 
 test('1967 captions and characters exactly preserve owner attachment', () => {
   const text = readFileSync('attached_assets/Pasted-No-Character-Caption-1-The-Human-Torch-I-must-get-that-_1793980299039.txt', 'utf8');
@@ -13,7 +13,19 @@ test('1967 captions and characters exactly preserve owner attachment', () => {
     .map(m => ({ cardNumber: m![1], name: m![2], description: m![3] }));
   assert.equal(expected.length, 55);
   assert.deepEqual(vintageChecklists[1].cards, expected);
-  assert.deepEqual(vintageChecklists.map(c => c.cards.length), [8,55,42,40,180,77,90,90,80,50]);
+  assert.deepEqual(vintageChecklists.map(c => c.cards.length), [8,55,42,40,180,77,90,90,80,50,7]);
+});
+
+test('Crunch N Munch preserves all seven owner-ordered entries and bracket notes', () => {
+  assert.deepEqual(vintageChecklists[10].cards, [
+    {cardNumber:'1',name:'Super Heroes',description:'title card / team card'},
+    {cardNumber:'2',name:'Cage',description:null},
+    {cardNumber:'3',name:'Hulk',description:null},
+    {cardNumber:'4',name:'Spider-Man',description:null},
+    {cardNumber:'5',name:'Storm',description:null},
+    {cardNumber:'6',name:'Wolverine',description:'name on back in red'},
+    {cardNumber:'7',name:'Wolverine',description:'name on back in white'},
+  ]);
 });
 
 test('Wolverine III preserves 1–50 and supplied titles', () => {
@@ -170,6 +182,12 @@ test('checklists complete, preserve existing metadata/holdings and repeat safely
         const [parent] = await tx.select().from(mainSets).where(eq(mainSets.id, set.mainSetId!));
         assert.equal(parent.thumbnailImageUrl, wolverine1988Image);
         assert.ok(rows.every(c=>!c.frontImageUrl && !c.backImageUrl));
+      }
+      if (checklist.parent === '1993-crunch-n-munch-marvel-super-heroes') {
+        const [parent] = await tx.select().from(mainSets).where(eq(mainSets.id, set.mainSetId!));
+        assert.equal(parent.thumbnailImageUrl, crunch1993Image);
+        assert.ok(rows.every(c=>!c.frontImageUrl && !c.backImageUrl));
+        assert.notEqual(rows[5].id,rows[6].id);
       }
     }
     assert.deepEqual(await completeVintageAndGold1994Tx(tx), {goldAdded:0,vintageAdded:0,namesAligned:0,captionsAdded:0});

@@ -471,4 +471,16 @@ I'm Home
 Teammates
 Checklist CL`),
   },
+  {
+    parent: '1993-crunch-n-munch-marvel-super-heroes', year: 1993,
+    cards: [
+      { cardNumber: '1', name: 'Super Heroes', description: 'title card / team card' },
+      { cardNumber: '2', name: 'Cage', description: null },
+      { cardNumber: '3', name: 'Hulk', description: null },
+      { cardNumber: '4', name: 'Spider-Man', description: null },
+      { cardNumber: '5', name: 'Storm', description: null },
+      { cardNumber: '6', name: 'Wolverine', description: 'name on back in red' },
+      { cardNumber: '7', name: 'Wolverine', description: 'name on back in white' },
+    ],
+  },
 ];
