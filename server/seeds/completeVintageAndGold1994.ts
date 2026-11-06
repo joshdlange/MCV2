@@ -12,6 +12,7 @@ export const stickers1986Image = 'https://res.cloudinary.com/dgu7hjfvn/image/upl
 export const universe1987Image = 'https://res.cloudinary.com/dgu7hjfvn/image/upload/v1793984445/owner-catalog/1987-marvel-universe-i-main.png';
 export const colossal1987Image = 'https://res.cloudinary.com/dgu7hjfvn/image/upload/v1793984919/owner-catalog/1987-colossal-conflicts-main.png';
 export const magicMomentsImage = 'https://res.cloudinary.com/dgu7hjfvn/image/upload/v1793985948/owner-catalog/1987-magic-moments-main.png';
+export const wolverine1988Image = 'https://res.cloudinary.com/dgu7hjfvn/image/upload/v1793986722/owner-catalog/1988-marvel-universe-iii-wolverine-main.png';
 export async function completeVintageAndGold1994Tx(tx: Tx) {
   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('merge_duplicate_legacy_sets'))`);
   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('complete_vintage_gold_1994'))`);
@@ -104,6 +105,10 @@ export async function completeVintageAndGold1994Tx(tx: Tx) {
   const [magicMain] = await tx.select().from(mainSets).where(eq(mainSets.slug, '1987-comic-images-marvel-s-magic-moments-stickers'));
   if (!magicMain.thumbnailImageUrl) {
     await tx.update(mainSets).set({ thumbnailImageUrl: magicMomentsImage }).where(eq(mainSets.id, magicMain.id));
+  }
+  const [wolverineMain] = await tx.select().from(mainSets).where(eq(mainSets.slug, '1988-comic-images-marvel-universe-iii-wolverine'));
+  if (!wolverineMain.thumbnailImageUrl) {
+    await tx.update(mainSets).set({ thumbnailImageUrl: wolverine1988Image }).where(eq(mainSets.id, wolverineMain.id));
   }
   return { goldAdded, vintageAdded, namesAligned, captionsAdded };
 }

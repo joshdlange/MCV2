@@ -5,7 +5,7 @@ import { eq, sql } from 'drizzle-orm';
 import { db, pool } from '../db';
 import { cards, cardSets, mainSets } from '../../shared/schema';
 import { vintageChecklists } from '../seeds/data/ownerVintageChecklists';
-import { completeVintageAndGold1994Tx, masterpieces94, heroes1977Image, posters1966Image, secretWars1984Image, stickers1986Image, universe1987Image, colossal1987Image, magicMomentsImage } from '../seeds/completeVintageAndGold1994';
+import { completeVintageAndGold1994Tx, masterpieces94, heroes1977Image, posters1966Image, secretWars1984Image, stickers1986Image, universe1987Image, colossal1987Image, magicMomentsImage, wolverine1988Image } from '../seeds/completeVintageAndGold1994';
 
 test('1967 captions and characters exactly preserve owner attachment', () => {
   const text = readFileSync('attached_assets/Pasted-No-Character-Caption-1-The-Human-Torch-I-must-get-that-_1793980299039.txt', 'utf8');
@@ -13,7 +13,15 @@ test('1967 captions and characters exactly preserve owner attachment', () => {
     .map(m => ({ cardNumber: m![1], name: m![2], description: m![3] }));
   assert.equal(expected.length, 55);
   assert.deepEqual(vintageChecklists[1].cards, expected);
-  assert.deepEqual(vintageChecklists.map(c => c.cards.length), [8,55,42,40,180,77,90,90,80]);
+  assert.deepEqual(vintageChecklists.map(c => c.cards.length), [8,55,42,40,180,77,90,90,80,50]);
+});
+
+test('Wolverine III preserves 1–50 and supplied titles', () => {
+  const rows = vintageChecklists[9].cards;
+  assert.deepEqual(rows.map(c=>c.cardNumber),Array.from({length:50},(_,i)=>String(i+1)));
+  for (const [n,name] of [[1,'Challenge'],[5,'Juggernaut / Wolverine'],[18,"Lemme At 'Em"],
+    [26,'Surpise'],[38,'Nightmare / Wolverine'],[40,"Kitty 'n Me"],[43,'Snikt!'],
+    [48,"I'm Home"],[50,'Checklist CL']] as const) assert.equal(rows[n-1].name,name);
 });
 
 test('Magic Moments preserves 1–80, repeated characters and multi-character labels', () => {
@@ -156,6 +164,11 @@ test('checklists complete, preserve existing metadata/holdings and repeat safely
       if (checklist.parent === '1987-comic-images-marvel-s-magic-moments-stickers') {
         const [parent] = await tx.select().from(mainSets).where(eq(mainSets.id, set.mainSetId!));
         assert.equal(parent.thumbnailImageUrl, magicMomentsImage);
+        assert.ok(rows.every(c=>!c.frontImageUrl && !c.backImageUrl));
+      }
+      if (checklist.parent === '1988-comic-images-marvel-universe-iii-wolverine') {
+        const [parent] = await tx.select().from(mainSets).where(eq(mainSets.id, set.mainSetId!));
+        assert.equal(parent.thumbnailImageUrl, wolverine1988Image);
         assert.ok(rows.every(c=>!c.frontImageUrl && !c.backImageUrl));
       }
     }

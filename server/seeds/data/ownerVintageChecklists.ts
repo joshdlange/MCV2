@@ -418,4 +418,57 @@ Jean Grey / Phoenix
 Guardian
 Beyonder`),
   },
+  {
+    parent: '1988-comic-images-marvel-universe-iii-wolverine', year: 1988,
+    cards: numbered(`Challenge
+Masks
+Confrontation
+What The
+Juggernaut / Wolverine
+Savage Land
+Trio
+Attraction
+Sewer Rat
+Tag
+Backoff
+Come On
+Co-Leaders
+Solitude
+Eye to Eye
+Stalker
+Re-Match
+Lemme At 'Em
+Whoosh
+Deadly Intent
+Primal Scream
+Howdy
+Classic Wolvie
+Ready
+At Odds
+Surpise
+Battleground
+Eat Adamantium
+Outta My Face
+Weapon X
+Slash
+Dropping In
+New Beginning
+Reborn
+Dead End
+Tables Are Turned
+Dream
+Nightmare / Wolverine
+Binge
+Kitty 'n Me
+Greeting
+Blizzard
+Snikt!
+Saved
+Pain in the Neck
+Eternal Foe
+Reluctant Duo
+I'm Home
+Teammates
+Checklist CL`),
+  },
 ];
