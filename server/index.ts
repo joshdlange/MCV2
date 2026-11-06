@@ -715,6 +715,8 @@ server.listen({
         await completeLegends2012();
         const { completeLegends2013 } = await import('./seeds/completeLegends2013');
         await completeLegends2013();
+        const { seedLegendsThumbnails } = await import('./seeds/legendsThumbnails');
+        await seedLegendsThumbnails();
       } catch (error) {
         console.error('Startup repair (legacy set merge) failed:', error);
         throw error;
