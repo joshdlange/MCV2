@@ -478,3 +478,31 @@ mtime_ms = 1793914860087
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/5186e36b-fc13-4652-b60c-8c94356dd473/ea3c870f-3ee5-4341-a8b1-13e2ac638199"
 storage_version_token = "1793914879082227"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "rgSvIDy50DmH0FUJBiMDO"
+uri = "file://generated-artifacts/soldgraph-audit/report.html"
+type = "html"
+title = "SoldGraph audit — 50 cards and full listing decisions"
+description = "Baseline metrics, 15 independent sale-history comparisons, confirmed errors, limitations, and expandable per-card results."
+logical_id = "8fb98e77-ebcc-461e-af57-9304004c6edb"
+content_hash = "sha256:72657778dc53bada446148ff902f114462a21a59516f979a01382e37e99c132c"
+size = 351218
+mtime_ms = 1794255657503
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/8fb98e77-ebcc-461e-af57-9304004c6edb/c2db1f46-7925-4d4d-8685-6b432de8a632"
+storage_version_token = "1794255667557567"
+content_type = "text/html"
+
+[[outputs]]
+id = "EP54YyoSfLsLKZ15Vr6R4"
+uri = "file://generated-artifacts/soldgraph-audit/cards.csv"
+type = "table"
+title = "SoldGraph 50-card audit spreadsheet"
+description = "Catalog identities, exact queries, counts, medians, price ranges, modeled pricing states, and primary failure causes."
+logical_id = "4451e289-a27f-498c-a1cc-8334a97a3cdd"
+content_hash = "sha256:b27df8bd17f9b08ab4ff638a737afc324a26f35344cab6c1c505394502660316"
+size = 10959
+mtime_ms = 1794255657483
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/4451e289-a27f-498c-a1cc-8334a97a3cdd/1f449e86-359f-47ab-b469-8d428ebea00f"
+storage_version_token = "1794255668240304"
+content_type = "text/csv"
