@@ -506,3 +506,17 @@ mtime_ms = 1794255657483
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/4451e289-a27f-498c-a1cc-8334a97a3cdd/1f449e86-359f-47ab-b469-8d428ebea00f"
 storage_version_token = "1794255668240304"
 content_type = "text/csv"
+
+[[outputs]]
+id = "7-7Av6V7s8cqd6f6ezS5i"
+uri = "file://generated-artifacts/soldgraph-audit/narrow-report.html"
+type = "html"
+title = "SoldGraph before-and-after evaluation"
+description = "50-card comparison, three live fallback searches, exact changes and evidence limitations."
+logical_id = "636cd66d-df77-498f-a2b0-d1178dc3936b"
+content_hash = "sha256:52d13e44f88344abaf71d1c544a961a7f9670eae69590b9c0777f2f4cdb9dff7"
+size = 6816
+mtime_ms = 1794259850558
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/636cd66d-df77-498f-a2b0-d1178dc3936b/19d123ce-a1f2-4f16-a453-97a8cd43fcb4"
+storage_version_token = "1794259851446657"
+content_type = "text/html"

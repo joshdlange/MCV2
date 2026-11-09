@@ -18,7 +18,7 @@ test("seller wording, punctuation and serial-only parallel evidence", () => {
   for (const text of [title, title.replace("FF-23", "FF23"), title.replace("Green Speckle 55/99", "Insert 07/99")]) {
     assert.equal(analyzeSoldRows(card, [row(text)]).usableCount, 1);
   }
-  assert.match(buildSoldQueries(card)[0], /2026 Topps Chrome Marvel Knull FF-23/);
+  assert.match(buildSoldQueries(card)[0], /2026 Topps Chrome Marvel Knull FF-23/i);
 });
 test("wrong numbers, years, parallels, lots and grades rejected", () => {
   for (const text of [title.replace("FF-23", "FF-230"), title.replace("2026", "2025"),

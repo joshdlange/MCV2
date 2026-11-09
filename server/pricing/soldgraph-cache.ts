@@ -107,7 +107,8 @@ export class SoldgraphCache {
         FROM cards c JOIN card_sets s ON s.id=c.set_id JOIN main_sets m ON m.id=s.main_set_id
         WHERE c.id=$1 AND c.archived_at IS NULL`, [cardId]);
       if (!rows[0]) throw new Error("Card identity unavailable");
-      const card = rows[0], query = buildSoldQueries(card)[0];
+      const card = rows[0], queries = buildSoldQueries(card), query = queries[0];
+      const reserveSearch = async (chargeEntitlement: boolean) => {
       // Reserve credits durably before outbound calls, serializing budget checks across instances.
       // Count failed/ambiguous calls conservatively; no automatic retry that can double-charge.
       await db.query("BEGIN");
@@ -147,7 +148,7 @@ export class SoldgraphCache {
         };
         if (usage.total >= limit("SOLDGRAPH_30_DAY_BUDGET", 80) ||
             usage.daily >= limit("SOLDGRAPH_DAILY_BUDGET", 20)) throw new Error("Pricing refresh budget reached");
-        if (userId != null) {
+        if (chargeEntitlement && userId != null) {
           const user = (await db.query("SELECT plan,is_admin FROM users WHERE id=$1 FOR UPDATE",[userId])).rows[0];
           if (!user) throw new Error("Account unavailable");
           if (user.plan !== "SUPER_HERO" && !user.is_admin) {
@@ -156,7 +157,7 @@ export class SoldgraphCache {
               WHERE user_id=$1 AND consumed<20 RETURNING user_id`,[userId]);
             if (!reserved.rowCount) {
               await db.query("ROLLBACK");
-              return {...await this.read(cardId,db),upgradeRequired:true};
+              return false;
             }
             chargedUser=userId;
           }
@@ -168,12 +169,29 @@ export class SoldgraphCache {
           DO UPDATE SET retry_after=excluded.retry_after`, [cardId, query]);
         await db.query("COMMIT");
       } catch (e) { await db.query("ROLLBACK"); throw e; }
+      return true;
+      };
+      if (!await reserveSearch(true)) return {...await this.read(cardId,db),upgradeRequired:true};
       try {
         const page = await this.client.search(query);
-        const result = analyzeSoldRows(card, page.data);
+        let result = analyzeSoldRows(card, page.data);
+        const attemptedQueries = [query];
+        let fallbackError: string | null = null;
+        // One broader query only; separately reserve its credit, not another user refresh.
+        if (result.acceptedCount === 0 && queries[1]) {
+          try {
+            await reserveSearch(false);
+            attemptedQueries.push(queries[1]);
+            const fallback = await this.client.search(queries[1]);
+            const merged = [...new Map([...page.data, ...fallback.data].map(r => [r.id, r])).values()];
+            result = analyzeSoldRows(card, merged);
+          } catch {
+            fallbackError = "fallback_unavailable";
+          }
+        }
         await db.query(`UPDATE soldgraph_price_cache SET query=$2,result=$3::jsonb,
           refreshed_at=now(),expires_at=now()+interval '24 hours',retry_after=NULL,last_error=NULL
-          WHERE card_id=$1`, [cardId, query, JSON.stringify(result)]);
+          WHERE card_id=$1`, [cardId, query, JSON.stringify({...result, attemptedQueries, fallbackError})]);
       } catch (error) {
         // Definite pre-credit rejection/failed job: refund. Ambiguous transport outcomes
         // retain the reservation conservatively because a provider job may still run.

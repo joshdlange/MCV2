@@ -13,3 +13,9 @@ Manufacturer aliases must remain product-family-specific; never make Upper Deck 
 **Why:** The user explicitly requested surgical normalization and strict rejection of graded/parallel Wolverine comps. Upper Deck's official 2020 Marvel Masterpieces checklist verifies the What If Level 2 numbering, but does not justify relaxed matching for other products.
 
 **How to apply:** Require authoritative checklist evidence before extending alias scope or inferred serial numbering; test wrong variants and unrelated product families.
+
+Unknown serial denominators are uncertain evidence, not a known contradiction and not permission to price the listing. Each fallback search must reserve a separate provider credit, while one collector refresh consumes only one entitlement.
+
+**Why:** The owner requires better recall without accepting arbitrary numbered parallels or unbounded paid searches.
+
+**How to apply:** Infer only from exact documented family/subset definitions; cap refreshes at two searches and do not retry merely because all identity matches are Best Offer or otherwise unusable.
