@@ -673,6 +673,9 @@ server.listen({
       const { importFirstCoversII1991 } = await import('./seeds/importFirstCoversII1991');
       await importFirstCoversII1991();
 
+      const { importJimLee1990 } = await import('./seeds/importJimLee1990');
+      await importJimLee1990();
+
       const { importFoxKids1995 } = await import('./seeds/importFoxKids1995');
       await importFoxKids1995();
 
