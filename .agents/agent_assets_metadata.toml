@@ -548,3 +548,31 @@ mtime_ms = 1794323983108
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/281b4c16-256b-4fab-96a6-9350eda05708/d9ea4fb1-ef1f-4b68-b3cf-67d247df99f2"
 storage_version_token = "1794324013398724"
 content_type = "text/csv"
+
+[[outputs]]
+id = "qcZNwi_uGdb6KKgpo7cqQ"
+uri = "file://generated-artifacts/compsapi-audit/recent-report.html"
+type = "html"
+title = "Recent-sales final validation — 25 cards"
+description = "Decision, recency windows, confidence assignments, Best Offer effects, outliers and active-baseline comparisons."
+logical_id = "45bd9e98-e59c-423c-a254-ff8647f0fdab"
+content_hash = "sha256:da98264445e7109ce8ff2597463b8d596b54485ff9ad3d8423b8cb653ce5a820"
+size = 103459
+mtime_ms = 1794325385159
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/45bd9e98-e59c-423c-a254-ff8647f0fdab/81acd3eb-daa0-4be3-8c78-9ca1a6941a34"
+storage_version_token = "1794325412089435"
+content_type = "text/html"
+
+[[outputs]]
+id = "6od3yFeb5cJs_I6saIZdf"
+uri = "file://generated-artifacts/compsapi-audit/recent.csv"
+type = "table"
+title = "Exact 25-card recent-value comparison"
+description = "Full card identities, 30/90/180/365-day counts and prices, model comparisons, confidence and frozen SoldGraph results."
+logical_id = "8db961eb-af97-4f97-b340-f4ca7660ec08"
+content_hash = "sha256:55fd59ffc42da762155c330b909e6759624359c332d5e68a03e722ae1b179b29"
+size = 9722
+mtime_ms = 1794325384954
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/8db961eb-af97-4f97-b340-f4ca7660ec08/5a4a2ef4-dcb0-4a32-b2a6-cfc9f49c4d62"
+storage_version_token = "1794325412910891"
+content_type = "text/csv"
