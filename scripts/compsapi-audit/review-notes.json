@@ -1,0 +1,45 @@
+{
+  "status": "completed title review; prices and physical cards not independently authenticated",
+  "comparisonOverrides": [
+    {"cardId":558282,"outcome":"COMPSAPI BETTER","reason":"Both have three counted rows, but frozen SoldGraph includes a 12-box case break and Sparkle Foil; CompsAPI final set contains three base-card titles. Frozen SoldGraph figures retained, not rewritten."}
+  ],
+  "reviewedAcceptedTitlesForCards": [15585,16813,17528,17531,17535,17538,17599,357867,357868,18139,19478,26956,75365,46928,61659,55500,320525,523574,534593,534821,536609,536616,537023,558282,559317,563287,563294,554432],
+  "reviewedEmptyAcceptedSetsForCards": [528934,183670,336542],
+  "findings": [
+    {"cardId":537023,"listingId":"366624814615","classification":"UNCERTAIN","action":"Withheld; contradictory Cosmic product wording","reason":"Cosmic might be seller typo or different Chrome product; not assumed identical"},
+    {"cardId":558282,"listingId":"128170797923","classification":"FALSE POSITIVE","action":"Fixed explicit-number contradiction handling","reason":"1UP-8 must not match base #1"},
+    {"cardId":558282,"listingId":"366786413429","classification":"FALSE POSITIVE","action":"Fixed Rivals variant guard","reason":"Rivals Variation is not base"},
+    {"cardId":558282,"listingId":"168831483649","classification":"FALSE POSITIVE","action":"Fixed Diamante variant guard","reason":"Diamante Parallel is not base"},
+    {"cardId":558282,"listingId":"407341589901","classification":"FALSE POSITIVE","action":"Fixed Neon Etch variant guard","reason":"Chrome Neon Etch is not base"},
+    {"cardId":75365,"listingId":"126789161624","classification":"FALSE REJECTION","action":"Retained conservatively; packs wording","reason":"1:72 PACKS describes insert odds, not a pack sale"},
+    {"cardId":15585,"listingId":"407337966339","classification":"FALSE POSITIVE","action":"Fixed multi-number/card quantity detection","reason":"Cards X2 #10 & #23"},
+    {"cardId":15585,"listingId":"206662401959","classification":"FALSE POSITIVE","action":"Fixed multi-number detection","reason":"#23 & #160"},
+    {"cardId":15585,"listingId":"137812381886","classification":"FALSE POSITIVE","action":"Fixed generic numeric grading detection","reason":"OXNY GEM MINT 10"},
+    {"cardId":15585,"listingId":"117097070992","classification":"FALSE POSITIVE","action":"Fixed generic numeric grading detection","reason":"SGT GEM MINT 10"},
+    {"cardId":15585,"listingId":"197432307921","classification":"UNCERTAIN","action":"Withheld by numeric grading detection","reason":"NM-MT 8 without named grader"},
+    {"cardId":15585,"listingId":"336739617006","classification":"FALSE POSITIVE","action":"Fixed grading wording detection","reason":"TCG Grading 9"},
+    {"cardId":15585,"listingId":"377313020404","classification":"UNCERTAIN","action":"Withheld by numeric grading detection","reason":"MINT+ 9.5"},
+    {"cardId":17535,"listingId":"285743873508","classification":"FALSE POSITIVE","action":"Fixed generic numeric grading detection","reason":"GEM MINT 10"},
+    {"cardId":17599,"listingId":"377520389256","classification":"UNCERTAIN","action":"Withheld by numeric grade uncertainty rule","reason":"NICE 9.5 suggests graded condition without a grader"},
+    {"cardId":19478,"listingId":"166912644888","classification":"FALSE POSITIVE","action":"Fixed multi-card conjunction detection","reason":"Iron Man #130 & Dr Doom #128"},
+    {"cardId":26956,"listingId":"297968425584","classification":"FALSE POSITIVE","action":"Fixed X2 quantity detection","reason":"Title indicates two copies"},
+    {"cardId":26956,"listingId":"335463029477","classification":"UNCERTAIN","action":"Withheld by silver foil contradiction rule","reason":"Silver Foil title for base target"},
+    {"cardId":26956,"listingId":"386865582339","classification":"UNCERTAIN","action":"Withheld by silver foil contradiction rule","reason":"Silver Foil title for base target"},
+    {"cardId":26956,"listingId":"225614066969","classification":"UNCERTAIN","action":"Withheld by silver foil contradiction rule","reason":"Silver Foil title for base target"},
+    {"cardId":16813,"listingId":"178482605527","classification":"FALSE REJECTION","action":"Retained conservatively; missing core family wording","reason":"1992 Impel Marvel Milestones Wedding of Spider-Man #199"},
+    {"cardId":17531,"listingId":"256127805114","classification":"FALSE REJECTION","action":"Retained conservatively; provider accessory flag","reason":"Exact Thunderstrike card includes free top loader, not accessory-only listing"},
+    {"cardId":17535,"listingId":"397793979629","classification":"FALSE REJECTION","action":"Retained conservatively; extra comic issue year","reason":"Exact 1994 Cable Returns #112 with cited 1993 comic"},
+    {"cardId":357868,"listingId":"256468352749","classification":"FALSE REJECTION","action":"Retained conservatively; missing Marvel wording","reason":"1994 Fleer Flair Powerblast Thor #13 of 18"},
+    {"cardId":357868,"listingId":"364909655858","classification":"FALSE REJECTION","action":"Retained conservatively; missing Marvel wording","reason":"1994 Fleer Flair Powerblast Thor #13 of 18"},
+    {"cardId":357868,"listingId":"395230658139","classification":"FALSE REJECTION","action":"Retained conservatively; serial parser ambiguity","reason":"Thor PowerBlast #13/18 is checklist position, not numbered parallel"}
+  ],
+  "notes": [
+    "Reviewed accepted titles listed by CLI, plus sampled rejected titles. Correct means title-consistent, not physical card authentication.",
+    "Random exact #106 base titles appear correct despite provider mystery flag; explicit mystery product wording still rejects.",
+    "High Grade without a numeric slab grade is not alone proof of grading.",
+    "Item 257609627713 is a title-consistent Wolverine with anomalous $231.10 item price; do not certify price accuracy from title.",
+    "All nine >25% median differences reviewed against accepted titles on both sides; findings in final report.",
+    "28 successful-card accepted title sets reviewed; final known false positives zero, with uncertainty withheld. This does not certify provider truth.",
+    "Queries and fallback eligibility used the initial conservative evaluator during collection. Final offline review changed exclusions and added verified parallel metadata without extra searches."
+  ]
+}

@@ -520,3 +520,31 @@ mtime_ms = 1794259850558
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/636cd66d-df77-498f-a2b0-d1178dc3936b/19d123ce-a1f2-4f16-a453-97a8cd43fcb4"
 storage_version_token = "1794259851446657"
 content_type = "text/html"
+
+[[outputs]]
+id = "L13yTdNBlVqHjQCxnIXsm"
+uri = "file://generated-artifacts/compsapi-audit/report.html"
+type = "html"
+title = "CompsAPI vs SoldGraph — full evaluation"
+description = "Results, quality review, all 50 cards, listing decisions, and nine median disagreements."
+logical_id = "923b3f04-e867-493a-924c-866c12599676"
+content_hash = "sha256:630552ee2b0911687a6174a11ba398946b35ae52b7a5cad95724cfc947ee01bb"
+size = 514454
+mtime_ms = 1794323985548
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/923b3f04-e867-493a-924c-866c12599676/283c7e77-0ee1-41e6-a671-6db81f3a2102"
+storage_version_token = "1794324012606247"
+content_type = "text/html"
+
+[[outputs]]
+id = "0InuvjdjVsIHRnFRzdrwd"
+uri = "file://generated-artifacts/compsapi-audit/comparison.csv"
+type = "table"
+title = "50-card comparison table"
+description = "Downloadable per-card queries, costs, counts, medians, rejection reasons and head-to-head outcomes."
+logical_id = "281b4c16-256b-4fab-96a6-9350eda05708"
+content_hash = "sha256:c4098b8ae26ab0d4dbe30e2c620514a7c69d5dd9fe44a183483957ab4a098d36"
+size = 23837
+mtime_ms = 1794323983108
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/281b4c16-256b-4fab-96a6-9350eda05708/d9ea4fb1-ef1f-4b68-b3cf-67d247df99f2"
+storage_version_token = "1794324013398724"
+content_type = "text/csv"
