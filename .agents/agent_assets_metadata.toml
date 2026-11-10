@@ -469,14 +469,14 @@ content_type = "text/csv"
 id = "ZkN2Wq-s0IAsj43G9VTBK"
 uri = "file://reports/empty-set-owner-review-2026-11-05.md"
 type = "text"
-title = "Empty & hidden sets — readable review list"
-description = "All candidates grouped by recommended next step, based on the live catalog audit."
+title = "Updated empty-set review — November 6"
+description = "115 remaining empty main sets, with the original P codes preserved for checklist review. Includes completed cleanup and populated-set notes."
 logical_id = "5186e36b-fc13-4652-b60c-8c94356dd473"
-content_hash = "sha256:0ff9a5541c07c572d9e19cce90ee3b595463149ff4f03a101f0b20d025bf17a6"
-size = 18826
-mtime_ms = 1793914860087
-storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/5186e36b-fc13-4652-b60c-8c94356dd473/ea3c870f-3ee5-4341-a8b1-13e2ac638199"
-storage_version_token = "1793914879082227"
+content_hash = "sha256:198bfbae108e278027d244548a6aed9cad80ba2802f2f592d931d10350d9acfc"
+size = 21924
+mtime_ms = 1793993541666
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/5186e36b-fc13-4652-b60c-8c94356dd473/13c164db-3919-43dd-81a0-7243eccc4f7b"
+storage_version_token = "1794340900771379"
 content_type = "text/markdown"
 
 [[outputs]]
