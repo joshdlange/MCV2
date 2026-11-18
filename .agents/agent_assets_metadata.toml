@@ -604,3 +604,17 @@ mtime_ms = 1795025217683
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/e479d422-d6bc-415a-b417-e30f550c2868/c75b62ca-7531-4ce2-8acc-5c0b1b2bbbf0"
 storage_version_token = "1795025266750149"
 content_type = "text/csv"
+
+[[outputs]]
+id = "vcEFnnDYCE8-RV7SAGPJD"
+uri = "file://docs/mobile-review-release-checklist.md"
+type = "text"
+title = "Native review and Keeping Score release handoff"
+description = "Plugin details, fourth-session rules, badge metadata, QA results, international audit, and local Mac packaging steps. Includes outstanding browser QA gates."
+logical_id = "eeaafa84-cdb0-4adf-93cf-d0a724147211"
+content_hash = "sha256:5a07b33273a314b5e7b6870554ceb82d63270c44e08bfaef69403b3f56ab5dd4"
+size = 9655
+mtime_ms = 1795041439897
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/eeaafa84-cdb0-4adf-93cf-d0a724147211/f3ccead1-461b-4df6-a161-12cd6e60bb13"
+storage_version_token = "1795041490031805"
+content_type = "text/markdown"
