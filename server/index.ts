@@ -660,6 +660,8 @@ server.listen({
   const dataFixWriteGate = installDataFixWriteGate(app);
 
   const runDataFixSeeds = async () => {
+    const { seedReturningCollectorBadge } = await import('./services/returningCollectorMilestone');
+    await seedReturningCollectorBadge();
     if (!suppressAutomaticCatalogMutations()) {
       const { seedToppsChromeMarvel2026 } = await import('./seeds/seedToppsChromeMarvel2026');
       await seedToppsChromeMarvel2026();
