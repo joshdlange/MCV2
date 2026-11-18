@@ -679,6 +679,9 @@ server.listen({
       const { importGhostRiderIIGlow1992 } = await import('./seeds/importGhostRiderIIGlow1992');
       await importGhostRiderIIGlow1992();
 
+      const { importCrossoverChecklists1993 } = await import('./seeds/importCrossoverChecklists1993');
+      await importCrossoverChecklists1993();
+
       const { importFoxKids1995 } = await import('./seeds/importFoxKids1995');
       await importFoxKids1995();
 

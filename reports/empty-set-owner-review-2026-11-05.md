@@ -1,4 +1,4 @@
-# Empty and hidden catalog review — updated November 10, 2026
+# Empty and hidden catalog review — updated November 18, 2026
 
 This is the current working review, updated after the owner's approved cleanup and checklist additions.
 **Development changes are applied; production cleanup and recent additions still require publishing.**
@@ -10,8 +10,8 @@ Original review codes are preserved so previous instructions still identify the 
 - **62 approved empty main-set entries removed in development:** 36 duplicates (D001–D036), 4 decision entries (R001–R004), 9 outside-scope entries (S001–S009), and 13 empty Promo/Promos entries from the pending report.
 - **30 unreferenced empty subsets deleted in development** (17 in the original cleanup plus 13 promo subsets).
 - Production preflight found the same 49 entries empty. Of their 17 subsets, **5 retain migration history**: on publishing these will remain hidden, detached history records; the other 12 will be deleted. No migration history or share links are deleted.
-- **32 of the original 159 pending entries are now populated or consolidated** in development.
-- **114 active empty main sets remain on this working list awaiting checklists or identification**, listed below.
+- **33 of the original 159 pending entries are now populated or consolidated** in development.
+- **113 active empty main sets remain on this working list awaiting checklists or identification**, listed below.
 - **48 originally flagged hidden populated sets are retained**, with separate current production/development card counts below.
 - Cards, collector holdings, wishlists, and populated sets were not deleted. The cleanup refuses candidates that gain cards or an upcoming-release link before it runs.
 
@@ -42,7 +42,6 @@ Provide the existing P code with the checklist or identity correction. Codes hav
 - **P040** 1992 Marvel Infinity War Checklist
 - **P041** 1992 SkyBox Marvel Comics X-Cutioner's Song
 - **P043** 1993 Marvel Comics Annuals
-- **P044** 1993 Marvel Comics Crossover Checklists
 - **P045** 1993 Marvel Comics Slamcaps Series 1
 - **P046** 1993 Marvel UK Gene
 - **P047** 1993 Marvel UK Plasmer #1 Inserts
@@ -135,6 +134,8 @@ Provide the existing P code with the checklist or identity correction. Codes hav
 - **P159** 2025 Loblaw Marvel Be a Hero Stickers
 
 ## Completed checklist additions and consolidations
+
+- **P044** 1993 Marvel Comics Crossover Checklists — five owner-supplied base cards added in development on November 18. Comic-shop promotional distribution noted; Blood and Thunder main thumbnail/front, Maximum Carnage subset thumbnail/front/back added. Publishing still required.
 
 - **P028** 1990 Comic Images Marvel Comics Jim Lee — added all 45 owner-supplied cards in development on November 10; pack thumbnail and #1 Surprise! image added. Publishing still required.
 
@@ -322,3 +323,4 @@ These are the original H review entries, not additional deletion candidates. Pro
 - Tests cover history preservation, unchanged card/collection/wishlist counts and owned quantity, repeat runs, and rollback if a candidate becomes populated.
 - Updated from separate database snapshots on November 6, 2026. The companion November 5 CSV files remain historical source snapshots, not a current pending-work list.
 - November 10 update: P028 completion verified in development; remaining-list total reduced by one. Other entries and production counts were not re-audited.
+- November 18 update: P044 completion verified in development; remaining-list total reduced by one. Other entries and production counts were not re-audited.
