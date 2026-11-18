@@ -5773,6 +5773,21 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
     }
   });
 
+  // Device-local milestone claim, never tied to a store request or review result.
+  // The authenticated account is authoritative; client-supplied account IDs are ignored.
+  app.post("/api/badges/returning-collector-milestone", authenticateUser, async (req: any, res) => {
+    if (!Number.isSafeInteger(req.body?.sessionCount) || req.body.sessionCount < 4) {
+      return res.status(400).json({ message: "Session milestone not reached" });
+    }
+    try {
+      const { awardReturningCollectorMilestone } = await import("./services/returningCollectorMilestone");
+      const awarded = await awardReturningCollectorMilestone(req.user.id);
+      return res.json({ awarded });
+    } catch {
+      return res.status(503).json({ message: "Milestone temporarily unavailable" });
+    }
+  });
+
   app.get("/api/badges", authenticateUser, async (req, res) => {
     try {
       const badges = await storage.getBadges();

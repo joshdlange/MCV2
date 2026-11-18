@@ -8,11 +8,11 @@ const stats = {
   wishlistItems: 0,
 };
 
-test("the fourth tracked login receives the review mission", () => {
+test("the fourth tracked login keeps the ordinary mission, never a web review UI", () => {
   const mission = pickMission(stats, undefined, 4);
-  assert.equal(mission.headline, "Help the Vault");
-  assert.equal(mission.cta, "Leave a Review");
-  assert.equal(mission.review, true);
+  assert.equal(mission.headline, "Build Your Vault");
+  assert.equal(mission.cta, "Add Cards");
+  assert.equal(mission.review, undefined);
 });
 
 test("the review mission does not replace other mission days", () => {

@@ -39,13 +39,6 @@ const POWER_THE_ARCHIVE: Mission = {
   cta: "Browse Cards",
 };
 
-const REVIEW_THE_APP: Mission = {
-  headline: "Help the Vault",
-  copy: "Using the iPhone or Android app? Leave us a review. It helps more collectors find MCV and keeps us building the features you've requested.",
-  cta: "Leave a Review",
-  review: true,
-};
-
 const EVERGREEN: Mission[] = [
   BUILD_YOUR_VAULT,
   SHOW_OFF_YOUR_PC,
@@ -63,12 +56,6 @@ export function pickMission(
   totalLogins = 0,
 ): Mission {
   const totalCards = stats.totalCards || 0;
-
-  // Show this for the user's fourth tracked login day only. The badge remains
-  // independently earned from native launches; opening a store is optional.
-  if (totalLogins === 4) {
-    return REVIEW_THE_APP;
-  }
 
   const wishlistRaw = stats.wishlistItems ?? stats.wishlistCount;
   const wishlistKnown = typeof wishlistRaw === "number" && !isNaN(wishlistRaw);

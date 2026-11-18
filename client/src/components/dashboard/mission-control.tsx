@@ -1,26 +1,13 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Apple, ChevronRight, Play, Target } from "lucide-react";
+import { ChevronRight, Target } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { pickMission } from "@/lib/dailyMission";
 import { useNativeReview } from "@/hooks/useNativeReview";
-import { Capacitor } from "@capacitor/core";
 import type { CollectionStats } from "@shared/schema";
 import type { XpProgress } from "@shared/xp";
 
-const APP_STORE_REVIEW_URL =
-  "https://apps.apple.com/us/app/marvelous-card-vault/id6759801987?action=write-review";
-const GOOGLE_PLAY_REVIEW_URL =
-  "https://play.google.com/store/apps/details?id=com.marvelcardvault.app";
 
 /**
  * Shares the exact same query key + cache options as XpPowerMeter, so this
@@ -45,7 +32,6 @@ export function MissionCard({
   const [, setLocation] = useLocation();
   const { data: xp } = useXpSummary();
   const totalLogins = useAppStore((state) => state.currentUser?.totalLogins ?? 0);
-  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   useNativeReview(!isLoading && !!stats);
 
   if (isLoading) {
@@ -98,19 +84,7 @@ export function MissionCard({
           </div>
           <div className="shrink-0 w-full sm:w-auto flex flex-col items-stretch sm:items-end gap-1.5">
             <Button
-              onClick={() => {
-                if (mission.review) {
-                  // Explicit review buttons open the store: native review APIs
-                  // can silently suppress UI and must not leave a dead button.
-                  if (Capacitor.isNativePlatform()) {
-                    window.open(Capacitor.getPlatform() === "ios" ? APP_STORE_REVIEW_URL : GOOGLE_PLAY_REVIEW_URL, "_blank", "noopener,noreferrer");
-                  } else {
-                    setReviewDialogOpen(true);
-                  }
-                } else {
-                  setLocation(mission.href ?? "/browse");
-                }
-              }}
+              onClick={() => setLocation(mission.href ?? "/browse")}
               data-testid="button-mission-cta"
               className="w-full sm:w-auto shrink-0 min-h-[44px] font-semibold text-white border transition-shadow hover:shadow-[0_0_24px_rgba(239,68,68,0.45)] active:scale-[0.98]"
               style={{
@@ -123,57 +97,12 @@ export function MissionCard({
               <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
             <span className="text-[10px] text-red-400/70 font-semibold tracking-wider uppercase text-center sm:text-right">
-              {mission.review ? "A quick review makes a big difference" : "Earn XP as you build"}
+              Earn XP as you build
             </span>
           </div>
         </div>
       </div>
 
-      <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
-        <DialogContent className="border-red-500/20 bg-[#121016] text-white sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="mission-headline text-3xl uppercase">
-              Help the Vault Grow
-            </DialogTitle>
-            <DialogDescription className="text-sm leading-6 text-white/65">
-              If you use Marvelous Card Vault on iPhone or Android, a quick store
-              review helps more collectors discover us and supports the features
-              you keep asking us to build.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-3 pt-2">
-            <Button asChild className="min-h-[48px] bg-white text-black hover:bg-white/90">
-              <a
-                href={APP_STORE_REVIEW_URL}
-                target="_blank"
-                rel="noreferrer"
-                onClick={() => setReviewDialogOpen(false)}
-              >
-                <Apple className="mr-2 h-5 w-5" />
-                Review on the App Store
-              </a>
-            </Button>
-            <Button asChild className="min-h-[48px] bg-[#01875f] text-white hover:bg-[#01724f]">
-              <a
-                href={GOOGLE_PLAY_REVIEW_URL}
-                target="_blank"
-                rel="noreferrer"
-                onClick={() => setReviewDialogOpen(false)}
-              >
-                <Play className="mr-2 h-5 w-5 fill-current" />
-                Review on Google Play
-              </a>
-            </Button>
-            <Button
-              variant="ghost"
-              className="text-white/60 hover:bg-white/5 hover:text-white"
-              onClick={() => setReviewDialogOpen(false)}
-            >
-              Maybe Later
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

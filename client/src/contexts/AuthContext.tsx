@@ -6,6 +6,7 @@ import { useAppStore } from '@/lib/store';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { getNativeLaunchSession } from '@/lib/nativeLaunchSession';
+import { recordAuthenticatedSession } from '@/lib/nativeReview';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { canRefreshScanSessionInPlace } from '@/lib/scanSession';
 import {
@@ -125,6 +126,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         },
       );
       if (!isCurrent() || controller.signal.aborted) return false;
+      // Count only after backend identity confirmation, never token refresh or a failed sync.
+      // The existing launch identifier is stable across callbacks/retries for this app opening.
+      try {
+        const launch = getNativeLaunchSession();
+        let sessionId = launch?.sessionId ?? window.sessionStorage.getItem("mcv:review:authenticated-opening");
+        if (!sessionId) {
+          sessionId = crypto.randomUUID();
+          window.sessionStorage.setItem("mcv:review:authenticated-opening", sessionId);
+        }
+        recordAuthenticatedSession(window.localStorage, sessionId);
+      } catch { /* Optional local milestone must never affect authentication. */ }
       applyBackendUser(backendUser);
       verifiedUid.current = firebaseUser.uid;
       setUser(firebaseUser);
