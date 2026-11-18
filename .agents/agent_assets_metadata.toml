@@ -576,3 +576,31 @@ mtime_ms = 1794325384954
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/8db961eb-af97-4f97-b340-f4ca7660ec08/2a0b9e11-fe0d-45b5-815e-53a131ac4825"
 storage_version_token = "1794327188549087"
 content_type = "text/csv"
+
+[[outputs]]
+id = "_aYioZWSfelBoNVjoJdBO"
+uri = "file://generated-artifacts/empty-sets-review/main-sets-review-2026-11-18.xlsx"
+type = "table"
+title = "Fresh empty main-set review"
+description = "113 active empty sets to review, separate development-completed sets, 20 hidden empty sets, and base-card classification checks. Includes decision and notes columns."
+logical_id = "06815375-7922-4b05-af84-e63844427605"
+content_hash = "sha256:b701259610ec7e78e2ca6bf7b633e46db11680a84abd4fe21b8480c47dc8311b"
+size = 63440
+mtime_ms = 1795025217675
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/06815375-7922-4b05-af84-e63844427605/bea5d6db-f6cf-4691-99be-ccab5d1310da"
+storage_version_token = "1795025265730560"
+content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+[[outputs]]
+id = "SqWKQ83tfVKEY8WGm-d9M"
+uri = "file://generated-artifacts/empty-sets-review/empty-main-sets-2026-11-18.csv"
+type = "table"
+title = "Empty main sets — CSV"
+description = "The 113 active empty sets still needing review, with original review codes where available."
+logical_id = "e479d422-d6bc-415a-b417-e30f550c2868"
+content_hash = "sha256:3f177f86e19afbce7b24f68d2187400dfed7e09c83c7af82a640f69d6b6aaee6"
+size = 13662
+mtime_ms = 1795025217683
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:de1a3664-4e91-4991-91e8-ce9ebee1f902/e479d422-d6bc-415a-b417-e30f550c2868/c75b62ca-7531-4ce2-8acc-5c0b1b2bbbf0"
+storage_version_token = "1795025266750149"
+content_type = "text/csv"
