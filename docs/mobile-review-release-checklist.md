@@ -48,14 +48,18 @@ reloads and repeated auth in that same tab do not count again.
 Normal repeated callbacks reuse the ID, so local counting is idempotent.
 This is local engagement state, not a cryptographic record of logins.
 
-Only session **4**, not session 3 or a catch-up request on session 5+, is eligible.
+Session **4 or later** is eligible if no native request has previously been
+attempted. Missing-plugin binaries preserve the opportunity and do not set a
+request date or start a cooldown; the next eligible session after upgrading can
+request it. Keeping Score is awarded independently.
 After dashboard data is ready and onboarding is complete, wait 15 seconds.
 Skip if backgrounded or any dialog/alertdialog/aria-modal is open.
 Unmounting the dashboard cancels the timer. A skipped opportunity is not forced.
 
 Claim lastReviewPromptRequestedAt immediately before invoking the OS. Suppress
 for at least **120 × 24 hours**, including a rejected native promise or OS-suppressed
-sheet. No recurring 120-day campaign is scheduled. Legacy account/device request
+sheet. An existing request timestamp also consumes this one-time milestone even
+after 120 days: no recurring campaign is scheduled. Legacy account/device request
 markers are conservatively retained because they have no trustworthy timestamp.
 Unavailable/denied/corrupt storage skips safely rather than repeatedly prompting.
 Clearing app data clears local state; OS quotas still apply.

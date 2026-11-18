@@ -15,9 +15,9 @@ test("successful session recorded once despite duplicate callbacks and retries",
   assert.equal(readReviewState(f.storage)?.authenticatedSessionCount, 1);
   assert.equal(readReviewState(f.storage)?.firstAppOpenAt, 1);
 });
-test("only session four is eligible", async () => {
-  for (const count of [1, 2, 3, 5, 10]) assert.equal(await requestMilestoneReview(fixture(count).options), "skipped");
-  assert.equal(await requestMilestoneReview(fixture().options), "requested");
+test("session four or later is eligible when no native request has been attempted", async () => {
+  for (const count of [1, 2, 3]) assert.equal(await requestMilestoneReview(fixture(count).options), "skipped");
+  for (const count of [4, 5, 10]) assert.equal(await requestMilestoneReview(fixture(count).options), "requested");
 });
 test("browser and missing plugin never call or record a request", async () => {
   for (const patch of [{ native: false }, { available: false }]) {
@@ -68,4 +68,58 @@ test("unconfigured badge remains pending and can be awarded later without a revi
   await awardSessionMilestone({ userId: 1, storage: f.storage, award: async () => true });
   assert.equal(readReviewState(f.storage)?.reviewMilestoneAwarded, true);
   assert.equal(f.calls(), 0);
+});
+
+test("A/B/C/E: old binary session four earns badge; upgrade session five requests once; session six stays quiet", async () => {
+  const f = fixture();
+  let awards = 0;
+  const badge = { userId: 1, storage: f.storage, award: async () => { awards++; return true; } };
+  assert.equal(await requestMilestoneReview({ ...f.options, available: false }), "skipped");
+  await awardSessionMilestone(badge);
+  assert.equal(readReviewState(f.storage)?.authenticatedSessionCount, 4);
+  assert.equal(readReviewState(f.storage)?.lastReviewPromptRequestedAt, null);
+  assert.equal(readReviewState(f.storage)?.reviewMilestoneAwarded, true);
+  assert.equal(f.calls(), 0);
+
+  recordAuthenticatedSession(f.storage, "session-5");
+  // Verify the date is committed immediately before the actual native invocation.
+  assert.equal(await requestMilestoneReview({ ...f.options, now: 200, request: async () => {
+    assert.equal(readReviewState(f.storage)?.lastReviewPromptRequestedAt, 200);
+    await f.options.request();
+  } }), "requested");
+  await awardSessionMilestone(badge);
+  recordAuthenticatedSession(f.storage, "session-6");
+  assert.equal(await requestMilestoneReview({ ...f.options, now: 300 }), "skipped");
+  await awardSessionMilestone(badge);
+  assert.equal(awards, 1);
+  assert.equal(f.calls(), 1);
+  assert.equal(readReviewState(f.storage)?.lastReviewPromptRequestedAt, 200);
+});
+
+test("D: 120-day suppression remains enforced; expiration does not create a repeat milestone", async () => {
+  const f = fixture(5);
+  await requestMilestoneReview(f.options);
+  recordAuthenticatedSession(f.storage, "session-6");
+  for (const elapsed of [1, REVIEW_COOLDOWN_MS - 1, REVIEW_COOLDOWN_MS, REVIEW_COOLDOWN_MS + 1]) {
+    assert.equal(await requestMilestoneReview({ ...f.options, now: 100 + elapsed }), "skipped");
+  }
+  assert.equal(f.calls(), 1);
+});
+
+test("F: multiple 15-second dashboard callbacks make only one native invocation, even while it is unresolved", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const f = fixture(5);
+  const results: Promise<string>[] = [];
+  let release!: () => void;
+  let nativeCalls = 0;
+  const pending = new Promise<void>(resolve => { release = resolve; });
+  const options = { ...f.options, request: async () => { nativeCalls++; await pending; } };
+  for (let i = 0; i < 5; i++) setTimeout(() => { results.push(requestMilestoneReview(options)); }, 15_000);
+  t.mock.timers.tick(14_999);
+  assert.equal(nativeCalls, 0);
+  t.mock.timers.tick(1);
+  assert.equal(nativeCalls, 1);
+  assert.equal(readReviewState(f.storage)?.lastReviewPromptRequestedAt, 100);
+  release();
+  assert.deepEqual(await Promise.all(results), ["requested", "skipped", "skipped", "skipped", "skipped"]);
 });

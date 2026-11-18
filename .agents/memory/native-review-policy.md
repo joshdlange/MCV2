@@ -20,3 +20,9 @@ Replit prepares web code only for this release; the owner uses a separate local 
 **Why:** The current store binaries lack the plugin and must remain safe when loading newer web code.
 
 **How to apply:** Never modify ios/ or android/ during this preparation; guard every native review invocation with both native-platform and plugin-availability checks, silently skipping missing plugins.
+
+Old binaries must not consume the review opportunity at session four. Users with four or more sessions remain eligible after upgrading until an actual native request attempt is recorded.
+
+**Why:** Remote-URL shells receive new JavaScript before their native plugin arrives. The owner explicitly requires catch-up after upgrading, while Keeping Score remains independent.
+
+**How to apply:** Missing-plugin visits preserve counters but never set a request timestamp. Claim immediately before the guarded native call; duplicate delayed callbacks must share that durable claim. This is a one-time milestone, not a recurring campaign after the 120-day minimum suppression.

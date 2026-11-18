@@ -33,10 +33,10 @@ export function useNativeReview(ready: boolean) {
         void requestMilestoneReview({
           userId, native: Capacitor.isNativePlatform(),
           available: Capacitor.isPluginAvailable("InAppReview"),
-          storage: window.localStorage, request: async () => {
-            if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("InAppReview"))
-              await InAppReview.requestReview();
-          },
+          // Both live guards above are evaluated in this timer callback. The helper
+          // persists the claim and invokes this immediately, with no await in between.
+          // Do not silently skip inside this callback after recording a request date.
+          storage: window.localStorage, request: () => InAppReview.requestReview(),
         });
       } catch {
         // Storage access can be denied. No prompt without durable suppression.

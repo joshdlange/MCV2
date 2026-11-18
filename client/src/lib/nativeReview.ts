@@ -61,10 +61,12 @@ export async function requestMilestoneReview(options: {
   try {
     const state = readReviewState(options.storage);
     const now = options.now ?? Date.now();
-    // This release has only one opportunity: session four. No later-session catch-up or repeat campaign.
-    if (!state || state.authenticatedSessionCount !== 4 ||
+    // Old binaries must retain the opportunity until a plugin-equipped build can request it.
+    if (!state || state.authenticatedSessionCount < 4 ||
         (state.lastReviewPromptRequestedAt !== null &&
           now - state.lastReviewPromptRequestedAt < REVIEW_COOLDOWN_MS) ||
+        // This is a one-time milestone, not a recurring 120-day review campaign.
+        state.lastReviewPromptRequestedAt !== null ||
         options.storage.getItem(`mcv:native-review:fourth-launch:${options.userId}`)) return "skipped";
     state.lastReviewPromptRequestedAt = now;
     options.storage.setItem(REVIEW_STATE_KEY, JSON.stringify(state));
