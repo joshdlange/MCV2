@@ -15,6 +15,9 @@ const config: CapacitorConfig = {
       providers: ['google.com', 'apple.com']
     },
     SocialLogin: {
+      providers: {
+        facebook: false
+      },
       google: {
         webClientId: '946426423073-rjhk84sgojd77gvkq2uf5ehrcd1l3ja9.apps.googleusercontent.com'
       }

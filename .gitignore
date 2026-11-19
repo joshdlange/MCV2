@@ -17,3 +17,6 @@ __pycache__/
 key.properties
 *adminsdk*.json
 *service-account*.json
+
+# IDE settings
+android/.idea/

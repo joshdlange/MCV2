@@ -14,6 +14,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "946426423073-2tggrlf1hhi5p9f95i1nd4r8erls61ci.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.marvelcardvault.app",
+            "certificate_hash": "68e24cfee42a31e5053fe586ea6bf31afc1237ee"
+          }
+        },
+        {
+          "client_id": "946426423073-qbm24elh0jhttv834lc9k1ih5psjkokj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.marvelcardvault.app",
+            "certificate_hash": "d9a4eee1fb0c3d16288f3d9d326d0a670050107f"
+          }
+        },
+        {
           "client_id": "946426423073-rjhk84sgojd77gvkq2uf5ehrcd1l3ja9.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -29,6 +45,14 @@
             {
               "client_id": "946426423073-rjhk84sgojd77gvkq2uf5ehrcd1l3ja9.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "946426423073-nf11thdapting57kmg1c7cr78rub3ors.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.marvelcardvault.app",
+                "app_store_id": "6759801987"
+              }
             }
           ]
         }
