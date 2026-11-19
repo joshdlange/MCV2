@@ -9,3 +9,11 @@ vite.config.ts.*
 .pythonlibs/
 __pycache__/
 *.py[cod]
+
+# Secrets: never commit
+*.p8
+*.jks
+*.keystore
+key.properties
+*adminsdk*.json
+*service-account*.json
