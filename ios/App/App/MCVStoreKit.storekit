@@ -1,0 +1,92 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "privacyPolicy" : ""
+  },
+  "availableInAllTerritories" : true,
+  "categories" : [],
+  "defaultLocalization" : "en_US",
+  "identifier" : "MCVStoreKit",
+  "nonConsumableIAPProducts" : [],
+  "products" : [],
+  "settings" : {
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Revocation"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redemption"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Win-Back Offer"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "superhero_group",
+      "localizations" : [],
+      "name" : "Super Hero MONTHLY",
+      "performanceGoals" : [],
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "MCV_Apple_Superhero",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlimited card collection tracking and full access to all Marvel Card Vault features.",
+              "displayName" : "Super Hero",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "MCV_Apple_Superhero",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Super Hero Monthly",
+          "reviewed" : false,
+          "subscriptionGroupID" : "superhero_group",
+          "winBackOffers" : []
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 2,
+    "minor" : 0
+  }
+}
