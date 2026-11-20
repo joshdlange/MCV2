@@ -7,3 +7,9 @@ Show subset names without cutting them off, using smaller readable text where ne
 **Why:** The user found truncated names hard to identify while adding images and explicitly asked for modest changes, not a redesign.
 
 **How to apply:** Preserve the compact catalog layout, allow subset labels to wrap, and keep identifying card numbers visible.
+
+Use short collector-facing subset labels, with “Base Cards” for recognized base subsets. Show the master name once as context and separate Master Set and Subset in card details. Keep canonical stored names and ownership relationships unchanged.
+
+**Why:** The owner approved display-only cleanup after seeing the Nahuel Grego master name repeated twice in Browse; full catalog naming should not crowd subset labels.
+
+**How to apply:** Preserve distinguishing insert and parallel names; never classify an ambiguous long name as Base just to shorten it. Admin editing names remain canonical.

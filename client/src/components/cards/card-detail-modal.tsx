@@ -18,11 +18,13 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { convertGoogleDriveUrl } from "@/lib/utils";
 import { getCardAuraTier, type AuraTier } from "@/lib/cardAura";
-import type { CardWithSet } from "@shared/schema";
+import type { CardWithSet, MainSet } from "@shared/schema";
+import { catalogQueryOptions } from "@/lib/catalogQueryOptions";
+import { getCardSetIdentity } from "@/lib/setDisplayName";
 import { useCardPricing, useRefreshCardPricing } from "@/hooks/useCardPricing";
 import { auth } from "@/lib/firebase";
 import noCardImagePlaceholder from "@assets/image_1784478496002.png";
-import { formatCardName, formatSetName } from "@/lib/formatTitle";
+import { formatCardName } from "@/lib/formatTitle";
 import { CardDetailImage } from "./card-detail-image";
 import { invalidateCollectionValues } from "@/lib/collectionValue";
 
@@ -77,6 +79,11 @@ export function CardDetailModal({
   const isFullAdmin = Boolean(currentUser?.isAdmin && isAdminMode);
   const canEditCardImages = Boolean(currentUser?.imageAdmin || isFullAdmin);
   const queryClient = useQueryClient();
+  const { data: mainSets } = useQuery<MainSet[]>({
+    queryKey: ["/api/main-sets"],
+    ...catalogQueryOptions,
+    enabled: isOpen && !!card,
+  });
   const { toast } = useToast();
   const [showQuantityControls, setShowQuantityControls] = useState(false);
   useEffect(() => { setShowQuantityControls(false); }, [card?.id, isOpen]);
@@ -400,6 +407,10 @@ export function CardDetailModal({
   };
 
   if (!card) return null;
+  const setIdentity = getCardSetIdentity(
+    card.set?.name || (card as any).setName || "Unknown Set",
+    mainSets?.find(set => set.id === card.set?.mainSetId)?.name,
+  );
 
   const startEditing = () => {
     setIsEditing(true);
@@ -719,7 +730,18 @@ export function CardDetailModal({
             {/* Card Info */}
             {!isEditing && (
               <div className="text-center space-y-2 bg-gray-900 border border-gray-700 rounded-lg p-3">
-                <p className="text-sm text-white font-medium">{formatSetName(card.set?.name || (card as any).setName) || 'Unknown Set'}</p>
+                <dl className="text-sm space-y-2 break-words">
+                  {setIdentity.masterName && (
+                    <div>
+                      <dt className="text-xs text-gray-400">Master Set</dt>
+                      <dd className="text-white font-medium">{setIdentity.masterName}</dd>
+                    </div>
+                  )}
+                  <div>
+                    <dt className="text-xs text-gray-400">Subset</dt>
+                    <dd className="text-white font-medium">{setIdentity.subsetName}</dd>
+                  </div>
+                </dl>
                 <div className="flex items-center justify-center gap-2 flex-wrap">
                   <Badge variant="outline" className="text-xs border-gray-500 text-gray-300 bg-gray-800">#{card.cardNumber}</Badge>
                   {card.variation && <Badge variant="outline" className="text-xs border-gray-500 text-gray-300 bg-gray-800">{card.variation}</Badge>}

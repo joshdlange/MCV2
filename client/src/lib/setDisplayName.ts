@@ -21,7 +21,7 @@ export function isBaseSetName(cardSetName: string, mainSetName: string): boolean
   if (cardSetName.startsWith(mainSetName + delimiter)) {
     const subsetPortion = cardSetName.slice(mainSetName.length + delimiter.length).toLowerCase().trim();
     // Base set if subset portion is "base" or "base set"
-    if (subsetPortion === 'base' || subsetPortion === 'base set') return true;
+    if (['base', 'base set', 'base cards'].includes(subsetPortion)) return true;
   }
   return false;
 }
@@ -38,7 +38,7 @@ export function getCardSetDisplayName({ cardSetName, mainSetName, isAdmin }: Get
 
   // Check if this is a base set using unified logic
   if (isBaseSetName(cardSetName, mainSetName)) {
-    return { displayName: "Base Set", isBaseSet: true };
+    return { displayName: "Base Cards", isBaseSet: true };
   }
 
   const delimiter = " - ";
@@ -50,4 +50,13 @@ export function getCardSetDisplayName({ cardSetName, mainSetName, isAdmin }: Get
   }
 
   return { displayName: cardSetName, isBaseSet: false };
+}
+
+/** Presentation only: keep canonical names and card/set relationships untouched. */
+export function getCardSetIdentity(cardSetName: string, mainSetName?: string | null) {
+  const masterName = mainSetName || extractMainSetName(cardSetName);
+  const { displayName } = getCardSetDisplayName({
+    cardSetName, mainSetName: masterName, isAdmin: false,
+  });
+  return { masterName, subsetName: displayName };
 }

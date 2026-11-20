@@ -24,7 +24,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useLocation, useParams, Link } from "wouter";
 import type { CardSet, CardWithSet, CollectionItem, MainSet } from "@shared/schema";
 import { formatCardName, formatSetName } from "@/lib/formatTitle";
-import { getCardSetDisplayName, isBaseSetName } from "@/lib/setDisplayName";
+import { getCardSetDisplayName, getCardSetIdentity, isBaseSetName } from "@/lib/setDisplayName";
 import { ShareBinderModal } from "@/components/collection/share-binder-modal";
 
 interface CardFilters {
@@ -683,13 +683,17 @@ export default function BrowseCards() {
 
   // Show individual cards if a set is selected
   if (selectedSet) {
+    const identity = getCardSetIdentity(
+      selectedSet.name,
+      mainSets?.find(ms => ms.id === selectedSet.mainSetId)?.name,
+    );
     return (
       <div className="min-h-screen bg-gray-50">
         {/* Sticky header container */}
         <div className="sticky top-[calc(4rem_+_var(--safe-area-top))] lg:top-0 z-40 bg-gray-50">
           <div className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-2 md:py-4">
           <div className="flex flex-col space-y-2 md:space-y-0 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
               <Button
                 variant="outline"
                 onClick={handleBackToSets}
@@ -701,10 +705,12 @@ export default function BrowseCards() {
                 <span className="sm:hidden">Back</span>
               </Button>
               <div className="min-w-0 flex-1">
-                <h2 className="text-lg md:text-2xl font-bebas text-gray-900 tracking-wide truncate">{selectedSet.name}</h2>
-                <p className="text-xs md:text-sm text-gray-600 font-roboto hidden sm:block">
-                  Explore cards from this set
-                </p>
+                {identity.masterName && (
+                  <p className="text-xs md:text-sm text-gray-600 font-roboto break-words">
+                    {identity.masterName}
+                  </p>
+                )}
+                <h2 className="text-lg md:text-2xl font-bebas text-gray-900 tracking-wide break-words">{identity.subsetName}</h2>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
