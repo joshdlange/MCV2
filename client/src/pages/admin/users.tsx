@@ -1,4 +1,5 @@
 import { avatarUrl } from "@/lib/collectorAvatars";
+import ImageAdminActivity from "@/components/admin/image-admin-activity";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -372,6 +373,7 @@ export default function AdminUsers() {
             </tbody>
           </table>
         </div>
+        <ImageAdminActivity imageAdmins={imageAdmins} isLoading={imageAdminsLoading} />
       </div>
 
       {/* Search and Filters */}

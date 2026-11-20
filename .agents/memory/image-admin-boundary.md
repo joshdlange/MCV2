@@ -8,3 +8,9 @@ Card image URL replacements must go through the dedicated Image Admin workflow. 
 **Why:** Passing arbitrary URLs directly to a remote fetcher allows redirect/DNS SSRF gaps, and alternative write paths can leave external URLs behind or bypass per-editor counters. COMC's Cloudflare policy makes the allowlisted exception necessary. Successful operations must remain recoverable, attributable, and all-or-nothing.
 
 **How to apply:** Any new UI or API that replaces card images must reuse this workflow, preserve optimistic concurrency and old Cloudinary assets, and derive distinct-card/total-operation counters only from committed image-update audit events. Custom pinned DNS lookup callbacks must support Node's `options.all` array response form or production requests fail with an undefined IP.
+
+Historical activity must be described as images **updated**, not newly added images. Count each recorded front/back side separately from edit operations and distinct cards.
+
+**Why:** The existing historical audit records do not retain whether a side was previously missing, so new additions cannot be separated reliably from replacements. Do not infer historical additions from the card's current image.
+
+**How to apply:** Keep this distinction in reports and comparisons; unknown side information is an explicit coverage gap, not an assumed single image.

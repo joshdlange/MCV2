@@ -946,6 +946,25 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
     }
   });
 
+  app.get("/api/admin/image-admins/:id/activity", authenticateUser, async (req: any, res) => {
+    if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+    const id = Number(req.params.id);
+    const interval = req.query.interval ?? "day";
+    if (!/^[1-9]\d*$/.test(req.params.id) || !Number.isSafeInteger(id) || id > 2147483647 ||
+        (interval !== "day" && interval !== "week")) {
+      return res.status(400).json({ message: "Invalid editor ID or interval" });
+    }
+    try {
+      const target = await storage.getUser(id);
+      if (!target) return res.status(404).json({ message: "User not found" });
+      const { getImageAdminActivity } = await import("./services/imageAdminActivity");
+      res.json(await getImageAdminActivity(id, interval));
+    } catch (error) {
+      console.error("Get image activity error:", error);
+      res.status(500).json({ message: "Failed to fetch image activity" });
+    }
+  });
+
   app.post("/api/admin/image-admins", authenticateUser, async (req: any, res) => {
     try {
       if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
