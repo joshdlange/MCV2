@@ -3,8 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { AlertCircle, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/queryClient";
+import { selectImageAdmin } from "@/lib/imageAdminSelection";
 
 type Interval = "day" | "week";
 interface Editor {
@@ -61,10 +61,16 @@ export default function ImageAdminActivity({
 }) {
   const headingId = useId();
   const editorId = useId();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(() => {
+    try { return sessionStorage.getItem("image-admin-activity-editor"); } catch { return null; }
+  });
   const [interval, setInterval] = useState<Interval>("day");
-  const defaultEditor = imageAdmins.find((editor) => editor.username === "yours_sincerely2006") ?? imageAdmins[0];
-  const editor = imageAdmins.find((item) => String(item.id) === selectedId) ?? defaultEditor;
+  const editor = selectImageAdmin(imageAdmins, selectedId);
+  const chooseEditor = (id: string) => {
+    if (!id) return;
+    setSelectedId(id);
+    try { sessionStorage.setItem("image-admin-activity-editor", id); } catch { /* Selection still works in memory. */ }
+  };
   const { data, isLoading, isError, isFetching, refetch } = useQuery<ActivityResponse>({
     queryKey: ["/api/admin/image-admins", editor?.id, "activity", interval],
     enabled: !!editor && !editorsLoading,
@@ -100,17 +106,14 @@ export default function ImageAdminActivity({
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="min-w-0 sm:w-64">
-            <label id={editorId} className="mb-1 block text-xs font-medium text-gray-600">Editor</label>
-            <Select value={editor ? String(editor.id) : ""} onValueChange={setSelectedId} disabled={editorsLoading || !imageAdmins.length}>
-              <SelectTrigger aria-labelledby={editorId} className="w-full bg-white">
-                <SelectValue placeholder="Select an editor" />
-              </SelectTrigger>
-              <SelectContent>
-                {imageAdmins.map((item) => (
-                  <SelectItem key={item.id} value={String(item.id)}>{item.username}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <label htmlFor={editorId} className="mb-1 block text-xs font-medium text-gray-600">Editor</label>
+            <select id={editorId} value={editor ? String(editor.id) : ""}
+              onChange={event => chooseEditor(event.target.value)}
+              disabled={editorsLoading || !imageAdmins.length}
+              className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-600 disabled:opacity-50">
+              <option value="" disabled>Select an editor</option>
+              {imageAdmins.map(item => <option key={item.id} value={String(item.id)}>{item.username}</option>)}
+            </select>
           </div>
           <div role="group" aria-label="Activity interval" className="flex gap-1 rounded-md border border-gray-200 bg-gray-50 p-1">
             {(["day", "week"] as const).map((value) => (
@@ -136,8 +139,13 @@ export default function ImageAdminActivity({
       ) : !editor ? (
         <div className="mt-5 rounded-lg border border-dashed border-gray-200 bg-gray-50 px-5 py-8 text-center">
           <BarChart3 aria-hidden="true" className="mx-auto mb-2 h-6 w-6 text-blue-700" />
-          <p className="text-sm font-medium text-gray-900">Select an Image Admin to track activity</p>
-          <p className="mt-1 text-sm text-gray-500">Editors will appear here once available in the list above.</p>
+          <p className="text-sm font-medium text-gray-900">
+            {selectedId ? "The selected editor is not available in this database" : "yours_sincerely2006 is not available in this database"}
+          </p>
+          <p className="mt-1 text-sm text-gray-500">
+            Preview and live production use separate data. This is not a zero count for that editor.
+            Select another editor above to view their recorded activity.
+          </p>
         </div>
       ) : isError ? (
         <div role="alert" className="mt-5 flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">

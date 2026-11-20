@@ -14,3 +14,9 @@ Historical activity must be described as images **updated**, not newly added ima
 **Why:** The existing historical audit records do not retain whether a side was previously missing, so new additions cannot be separated reliably from replacements. Do not infer historical additions from the card's current image.
 
 **How to apply:** Keep this distinction in reports and comparisons; unknown side information is an explicit coverage gap, not an assumed single image.
+
+Keep the entire Image Admin management and activity section under Image Automation, not Users.
+
+**Why:** The user explicitly requested that image-editor controls and reporting belong with image automation.
+
+**How to apply:** Future image-editor reporting and role controls should stay together in that section.

@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import BulkImageUpdater from "@/components/admin/bulk-image-updater";
+import ImageAdminsSection from "@/components/admin/image-admins-section";
 import { Image, Zap, CloudUpload, RefreshCw, AlertTriangle, CheckCircle2, Play } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -180,6 +181,7 @@ export default function AdminAutomation() {
         </p>
         <BulkImageUpdater />
       </div>
+      <ImageAdminsSection />
     </div>
   );
 }
