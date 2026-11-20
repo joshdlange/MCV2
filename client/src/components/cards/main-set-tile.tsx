@@ -5,6 +5,7 @@ import { Layers } from "lucide-react";
 import { Link } from "wouter";
 import type { MainSet, CardSet } from "@shared/schema";
 import { formatSetName } from "@/lib/formatTitle";
+import { optimizedImageUrl } from "@/lib/utils";
 
 interface MainSetTileProps {
   mainSet: MainSet;
@@ -61,7 +62,7 @@ export function MainSetTile({ mainSet, assignedSets, isNewRelease = false }: Mai
   // Determine thumbnail - use main set thumbnail if available, otherwise use placeholder
   const hasThumbnail = mainSet.thumbnailImageUrl && !isPlaceholderImage(mainSet.thumbnailImageUrl);
   const thumbnailUrl = hasThumbnail 
-    ? getProxiedUrl(mainSet.thumbnailImageUrl!) 
+    ? getProxiedUrl(optimizedImageUrl(mainSet.thumbnailImageUrl!, 240))
     : "/uploads/marvel-card-vault-logo.png";
   const isUsingPlaceholder = !hasThumbnail;
 
@@ -75,6 +76,7 @@ export function MainSetTile({ mainSet, assignedSets, isNewRelease = false }: Mai
               alt={mainSet.name}
               className={`w-full h-full object-cover transition-transform duration-200 group-hover:scale-105 ${isUsingPlaceholder ? 'grayscale opacity-60' : ''}`}
               loading="lazy"
+              decoding="async"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.src = "/uploads/marvel-card-vault-logo.png";

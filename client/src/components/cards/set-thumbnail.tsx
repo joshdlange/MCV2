@@ -9,6 +9,8 @@ import { formatSetName } from "@/lib/formatTitle";
 import { getCardSetDisplayName } from "@/lib/setDisplayName";
 import { SubsetLabel } from "@/components/cards/subset-label";
 import { useLocation } from "wouter";
+import { optimizedImageUrl } from "@/lib/utils";
+import { useNearViewport } from "@/hooks/useNearViewport";
 
 interface SetThumbnailProps {
   set: CardSet;
@@ -23,6 +25,7 @@ interface SetThumbnailProps {
 export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminControls, onEdit, mainSetName }: SetThumbnailProps) {
   const [showStillPopulatingModal, setShowStillPopulatingModal] = useState(false);
   const [location] = useLocation();
+  const { ref: tileRef, near } = useNearViewport();
   
   const isEmpty = set.totalCards === 0;
   
@@ -48,7 +51,12 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
   const needsFirstCardImage = isPlaceholderImage(set.imageUrl) && !!set.id && set.totalCards > 0;
   const { data: firstCardData, isLoading: loading } = useQuery<{ imageUrl: string | null }>({
     queryKey: [`/api/card-sets/${set.id}/first-card-image`],
-    enabled: needsFirstCardImage,
+    enabled: needsFirstCardImage && near,
+    queryFn: async ({ signal }) => {
+      const response = await fetch(`/api/card-sets/${set.id}/first-card-image`, { signal });
+      if (!response.ok) throw new Error("Failed to load set thumbnail");
+      return response.json();
+    },
     staleTime: 10 * 60 * 1000,
   });
   const firstCardImage =
@@ -94,7 +102,8 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
 
   return (
     <>
-    <div 
+    <div
+      ref={tileRef}
       className={`group relative bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden flex flex-col h-full min-w-0 ${
         isEmpty ? 'border-amber-200' : 'border-gray-200'
       }`}
@@ -109,10 +118,11 @@ export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminCo
         ) : (
           <>
           <img
-            src={imageUrl}
+            src={optimizedImageUrl(imageUrl, 240)}
             alt={set.name}
             className={`w-full h-full object-cover ${isEmpty ? 'grayscale opacity-60' : ''}`}
             loading="lazy"
+            decoding="async"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.src = placeholderImage;

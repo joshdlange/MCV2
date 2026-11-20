@@ -26,6 +26,7 @@ import type { CardSet, CardWithSet, CollectionItem, MainSet } from "@shared/sche
 import { formatCardName, formatSetName } from "@/lib/formatTitle";
 import { getCardSetDisplayName, getCardSetIdentity, isBaseSetName } from "@/lib/setDisplayName";
 import { ShareBinderModal } from "@/components/collection/share-binder-modal";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 
 interface CardFilters {
   setId?: number;
@@ -48,6 +49,7 @@ export default function BrowseCards() {
     } catch { return []; }
   });
   const [setSearchQuery, setSetSearchQuery] = useState("");
+  const debouncedSearch = useDebouncedSearch(setSearchQuery.trim());
   const [searchSetsVisible, setSearchSetsVisible] = useState(30);
   const [editingSet, setEditingSet] = useState<CardSet | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -97,13 +99,19 @@ export default function BrowseCards() {
   }, [location]);
 
   // All queries
-  const { data: cardSets } = useQuery<CardSet[]>({
-    queryKey: ["/api/card-sets"],
-    ...catalogQueryOptions,
-  });
-
   const { data: mainSets } = useQuery<MainSet[]>({
     queryKey: ["/api/main-sets"],
+    ...catalogQueryOptions,
+  });
+  const browseMainSetId = isMainSetView ? mainSets?.find(set => set.slug === mainSetSlug)?.id : undefined;
+  const { data: cardSets } = useQuery<CardSet[]>({
+    queryKey: isMainSetView ? ["/api/card-sets", browseMainSetId] : ["/api/card-sets"],
+    queryFn: async ({ signal }) => {
+      const url = browseMainSetId ? `/api/card-sets?mainSetId=${browseMainSetId}` : "/api/card-sets";
+      const response = await apiRequest("GET", url, undefined, signal);
+      return response.json();
+    },
+    enabled: !isMainSetView || browseMainSetId !== undefined,
     ...catalogQueryOptions,
   });
   const newReleaseSetIds = useMemo(() => getNewReleaseSetIds(mainSets ?? []), [mainSets]);
@@ -122,10 +130,18 @@ export default function BrowseCards() {
   });
 
   const { data: searchResults } = useQuery<{ sets: CardSet[], cards: CardWithSet[] }>({
-    queryKey: ["/api/search", setSearchQuery],
-    queryFn: () => fetch(`/api/search?q=${encodeURIComponent(setSearchQuery)}`).then(res => res.json()),
-    enabled: setSearchQuery.length >= 2,
+    queryKey: ["/api/search", debouncedSearch],
+    queryFn: async ({ signal }) => {
+      const response = await apiRequest("GET", `/api/search?q=${encodeURIComponent(debouncedSearch)}`, undefined, signal);
+      return response.json();
+    },
+    enabled: debouncedSearch.length >= 2 && debouncedSearch === setSearchQuery.trim(),
   });
+  useEffect(() => {
+    if (debouncedSearch !== setSearchQuery.trim()) {
+      void queryClient.cancelQueries({ queryKey: ["/api/search", debouncedSearch], exact: true });
+    }
+  }, [debouncedSearch, setSearchQuery, queryClient]);
 
   // All mutations with optimistic updates for instant UI feedback
   const addToCollectionMutation = useMutation({
@@ -433,7 +449,7 @@ export default function BrowseCards() {
   }, [currentViewSets, filters.year, setSearchQuery, currentMainSet]);
 
   // Show search results when user is searching
-  const shouldShowSearchResults = setSearchQuery.length >= 2 && searchResults;
+  const shouldShowSearchResults = setSearchQuery.trim().length >= 2 && debouncedSearch === setSearchQuery.trim() && searchResults;
 
   // For main overview: create main set tiles with their assigned sets, sorted by year descending
   const mainSetTiles = useMemo(() => {
@@ -557,7 +573,7 @@ export default function BrowseCards() {
   };
 
   const handleEditSet = (setId: number) => {
-    const set = cardSets?.find(s => s.id === setId);
+    const set = cardSets?.find(s => s.id === setId) || searchResults?.sets.find(s => s.id === setId);
     if (set) {
       setEditingSet(set);
       setEditFormData({

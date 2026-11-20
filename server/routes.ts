@@ -1989,8 +1989,14 @@ export async function registerRoutes(app: Express, existingServer?: Server): Pro
   // Get all card sets with optimized counting
   app.get("/api/card-sets", async (req, res) => {
     try {
+      const rawMainSetId = req.query.mainSetId;
+      if (rawMainSetId !== undefined &&
+          (typeof rawMainSetId !== "string" || !/^[1-9]\d*$/.test(rawMainSetId) || !Number.isSafeInteger(Number(rawMainSetId)))) {
+        return res.status(400).json({ message: "Invalid mainSetId" });
+      }
       const cardSets = await catalogReadCache.get('card-sets', () => storage.getCardSets());
-      res.json(cardSets);
+      // Reuse the public catalog cache, but do not send thousands of unrelated subsets.
+      res.json(rawMainSetId === undefined ? cardSets : cardSets.filter(set => set.mainSetId === Number(rawMainSetId)));
     } catch (error) {
       console.error('Get card sets error:', error);
       res.status(500).json({ message: "Failed to fetch card sets" });
