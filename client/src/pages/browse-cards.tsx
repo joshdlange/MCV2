@@ -484,8 +484,10 @@ export default function BrowseCards() {
   }, [mainSets, assignedSetsGrouped, isMainSetView, filters.year]);
 
   // Show card sets grid (sort favorites by year too)
-  const favoritesets = filteredDisplaySets.filter(set => favoriteSetIds.includes(set.id));
-  const otherSets = filteredDisplaySets.filter(set => !favoriteSetIds.includes(set.id));
+  // Within a master set, keep the entire checklist together (Base first).
+  // Favoriting must not move Base into a separate section above the other subsets.
+  const favoritesets = currentMainSet ? [] : filteredDisplaySets.filter(set => favoriteSetIds.includes(set.id));
+  const otherSets = currentMainSet ? filteredDisplaySets : filteredDisplaySets.filter(set => !favoriteSetIds.includes(set.id));
 
   // Helper functions
   const isCardInCollection = (cardId: number) => {
@@ -1034,7 +1036,7 @@ export default function BrowseCards() {
                       key={set.id}
                       set={set}
                       onClick={() => handleSetClick(set)}
-                      isFavorite={false}
+                      isFavorite={favoriteSetIds.includes(set.id)}
                       onFavorite={() => handleFavoriteSet(set.id)}
                       showAdminControls={isAdminMode}
                       onEdit={() => handleEditSet(set.id)}

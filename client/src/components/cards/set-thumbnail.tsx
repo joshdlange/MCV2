@@ -8,7 +8,6 @@ import type { CardSet } from "@shared/schema";
 import { formatSetName } from "@/lib/formatTitle";
 import { getCardSetDisplayName } from "@/lib/setDisplayName";
 import { SubsetLabel } from "@/components/cards/subset-label";
-import { useAppStore } from "@/lib/store";
 import { useLocation } from "wouter";
 
 interface SetThumbnailProps {
@@ -23,12 +22,12 @@ interface SetThumbnailProps {
 
 export function SetThumbnail({ set, onClick, isFavorite, onFavorite, showAdminControls, onEdit, mainSetName }: SetThumbnailProps) {
   const [showStillPopulatingModal, setShowStillPopulatingModal] = useState(false);
-  const { isAdminMode } = useAppStore();
   const [location] = useLocation();
   
   const isEmpty = set.totalCards === 0;
   
-  const isAdminContext = isAdminMode || location.startsWith('/admin');
+  // Browse uses collector labels even when edit controls are enabled.
+  const isAdminContext = location.startsWith('/admin');
   const { displayName, isBaseSet } = getCardSetDisplayName({
     cardSetName: set.name,
     mainSetName,

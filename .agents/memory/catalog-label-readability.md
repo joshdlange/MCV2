@@ -12,4 +12,10 @@ Use short collector-facing subset labels, with “Base Cards” for recognized b
 
 **Why:** The owner approved display-only cleanup after seeing the Nahuel Grego master name repeated twice in Browse; full catalog naming should not crowd subset labels.
 
-**How to apply:** Preserve distinguishing insert and parallel names; never classify an ambiguous long name as Base just to shorten it. Admin editing names remain canonical.
+**How to apply:** Preserve distinguishing insert and parallel names; never classify an ambiguous long name as Base just to shorten it. Admin editing names remain canonical, but Browse tiles use short labels even when admin controls are enabled.
+
+Card details should put compact set/subset information above the image and keep collection/wishlist actions accessible without scrolling.
+
+**Why:** The owner said collectors may not scroll through card details, and the large metadata block hid the add buttons.
+
+**How to apply:** Prioritize visible add actions over a large metadata panel; preserve the approved Browse heading with master context above the short subset name.

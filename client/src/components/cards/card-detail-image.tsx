@@ -18,7 +18,7 @@ export function CardDetailImage({ src, alt, fallback, auraTier, children }: {
       />
       <div
         className="relative overflow-hidden rounded-xl shadow-xl bg-gray-900"
-        style={{ width: 280, height: 392 }}
+        style={{ width: "min(280px, calc(100vw - 4rem), 34dvh)", aspectRatio: "5 / 7" }}
         data-testid="card-detail-image-frame"
       >
         <img

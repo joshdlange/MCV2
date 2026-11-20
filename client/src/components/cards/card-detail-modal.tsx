@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Check, Heart, Star, RotateCcw, Edit, Trash2, Save, X, RefreshCw, ExternalLink, Image, Upload, Camera, ChevronDown, ChevronUp, Settings, MoreVertical, ShoppingCart, TrendingUp } from "lucide-react";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
@@ -411,6 +410,14 @@ export function CardDetailModal({
     card.set?.name || (card as any).setName || "Unknown Set",
     mainSets?.find(set => set.id === card.set?.mainSetId)?.name,
   );
+  const normalizeDetail = (value?: string | null) => value?.trim().replace(/\s+/g, " ").toLocaleLowerCase() || "";
+  const subsetText = normalizeDetail(setIdentity.subsetName);
+  const distinctVariation = card.variation && normalizeDetail(card.variation) !== subsetText
+    ? card.variation
+    : null;
+  const distinctDescription = card.description && normalizeDetail(card.description) !== subsetText
+    ? card.description
+    : null;
 
   const startEditing = () => {
     setIsEditing(true);
@@ -426,9 +433,9 @@ export function CardDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[95vh] p-0 overflow-hidden flex flex-col">
+      <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[95vh] max-h-[95dvh] p-0 gap-0 overflow-hidden flex flex-col">
         {/* Sticky Header - Mobile Optimized */}
-        <div className="sticky top-0 z-10 bg-gray-900 border-b border-gray-700 flex items-center justify-between px-3 py-3 sm:px-4">
+        <div className="shrink-0 z-10 bg-gray-900 border-b border-gray-700 flex items-center justify-between px-3 py-2 sm:px-4">
           {/* Large Close Button on Left */}
           <Button
             variant="ghost"
@@ -465,8 +472,8 @@ export function CardDetailModal({
         </div>
 
         {/* Scrollable Content */}
-        <ScrollArea className="flex-1 overflow-y-auto">
-          <div className="p-4 space-y-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain" data-testid="card-detail-scroll">
+          <div className="p-3 sm:p-4 space-y-3">
             
             {/* Admin Tools Dropdown - Only visible when toggled */}
             {canEditCardImages && showAdminTools && !isEditing && !isImageEditing && (
@@ -667,6 +674,28 @@ export function CardDetailModal({
               </div>
             )}
 
+            {/* Compact identity above the card; wrap long names rather than hiding them. */}
+            {!isEditing && (
+              <div className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2" data-testid="card-detail-set-identity">
+                <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-0.5 text-xs leading-4 break-words">
+                  {setIdentity.masterName && (
+                    <>
+                      <dt className="text-gray-400">Master Set</dt>
+                      <dd className="text-gray-200 font-medium">{setIdentity.masterName}</dd>
+                    </>
+                  )}
+                  <dt className="text-gray-400">Subset</dt>
+                  <dd className="text-white font-medium">{setIdentity.subsetName}</dd>
+                </dl>
+                {(distinctVariation || card.isInsert) && (
+                  <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                    {distinctVariation && <Badge variant="outline" className="text-[11px] leading-4 border-gray-500 text-gray-300 bg-gray-800 whitespace-normal break-words">{distinctVariation}</Badge>}
+                    {card.isInsert && <Badge className="bg-yellow-500 text-black text-[11px] leading-4">Insert Card</Badge>}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Card Image - Optimized for Mobile with Value-Based Aura */}
             {!isEditing && !isImageEditing && (() => {
               // Calculate aura tier based on eBay pricing (if available) or card's estimated value
@@ -681,7 +710,7 @@ export function CardDetailModal({
               );
               
               return (
-                <div className="flex justify-center py-6">
+                <div className="flex justify-center py-3">
                   {/* Card Container with Aura */}
                   <CardDetailImage
                     src={(showBack ? convertGoogleDriveUrl(card.backImageUrl || '') : convertGoogleDriveUrl(card.frontImageUrl || '')) || noCardImagePlaceholder}
@@ -704,7 +733,7 @@ export function CardDetailModal({
                         )}
                         {card.isInsert && (
                           <div className="bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg text-xs">
-                            💎
+                            <Star className="w-3.5 h-3.5" />
                           </div>
                         )}
                       </div>
@@ -727,120 +756,9 @@ export function CardDetailModal({
               );
             })()}
 
-            {/* Card Info */}
-            {!isEditing && (
-              <div className="text-center space-y-2 bg-gray-900 border border-gray-700 rounded-lg p-3">
-                <dl className="text-sm space-y-2 break-words">
-                  {setIdentity.masterName && (
-                    <div>
-                      <dt className="text-xs text-gray-400">Master Set</dt>
-                      <dd className="text-white font-medium">{setIdentity.masterName}</dd>
-                    </div>
-                  )}
-                  <div>
-                    <dt className="text-xs text-gray-400">Subset</dt>
-                    <dd className="text-white font-medium">{setIdentity.subsetName}</dd>
-                  </div>
-                </dl>
-                <div className="flex items-center justify-center gap-2 flex-wrap">
-                  <Badge variant="outline" className="text-xs border-gray-500 text-gray-300 bg-gray-800">#{card.cardNumber}</Badge>
-                  {card.variation && <Badge variant="outline" className="text-xs border-gray-500 text-gray-300 bg-gray-800">{card.variation}</Badge>}
-                  {card.isInsert && <Badge className="bg-yellow-500 text-black text-xs">Insert Card</Badge>}
-                </div>
-                {card.description && (
-                  <p className="text-xs text-gray-400 mt-2 px-2">{card.description}</p>
-                )}
-              </div>
-            )}
-
-            {/* Collection/Wishlist Actions - Always Visible */}
-            {!isEditing && (
-              <div className="grid grid-cols-2 gap-2">
-                {showAsOwned ? (
-                  <div className="relative">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => onRemoveFromCollection?.()}
-                      data-testid="button-remove-from-collection"
-                      className="h-12 w-full text-sm border-green-200 text-green-700 hover:bg-green-50"
-                    >
-                      <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-2">
-                        <Check className="w-3 h-3 text-white" />
-                      </div>
-                      In Collection
-                    </Button>
-                    {effectiveItemId != null && effectiveQuantity != null && (
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); setShowQuantityControls(v => !v); }}
-                        className="absolute -top-2 -right-2 min-w-[1.5rem] h-6 px-1.5 rounded-full bg-gray-100 border border-gray-300 text-gray-600 text-xs font-medium hover:bg-gray-200"
-                        title="Copies owned — tap to adjust"
-                        data-testid="button-quantity-toggle"
-                      >
-                        ×{effectiveQuantity}
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <Button 
-                    onClick={() => onAddToCollection?.()}
-                    data-testid="button-add-to-collection"
-                    className="h-12 text-sm bg-green-600 hover:bg-green-700"
-                  >
-                    <Check className="w-4 h-4 mr-2" />
-                    Add to Collection
-                  </Button>
-                )}
-
-                {isInWishlist ? (
-                  <Button 
-                    variant="outline" 
-                    onClick={onRemoveFromWishlist}
-                    data-testid="button-remove-from-wishlist"
-                    className="h-12 text-sm border-pink-200 text-pink-700 hover:bg-pink-50"
-                  >
-                    <Heart className="w-4 h-4 fill-pink-500 text-pink-500 mr-2" />
-                    In Wishlist
-                  </Button>
-                ) : (
-                  <Button 
-                    onClick={onAddToWishlist}
-                    data-testid="button-add-to-wishlist"
-                    className="h-12 text-sm bg-pink-500 hover:bg-pink-600"
-                  >
-                    <Heart className="w-4 h-4 mr-2" />
-                    Add to Wishlist
-                  </Button>
-                )}
-              </div>
-            )}
-
-            {/* Compact quantity stepper — revealed only via the ×N chip */}
-            {!isEditing && showAsOwned && showQuantityControls && effectiveItemId != null && effectiveQuantity != null && (
-              <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground" data-testid="quantity-editor">
-                <span>Copies owned:</span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7"
-                  disabled={effectiveQuantity <= 1 || updateQuantityMutation.isPending}
-                  onClick={() => updateQuantityMutation.mutate(effectiveQuantity - 1)}
-                  data-testid="button-quantity-decrease"
-                >
-                  −
-                </Button>
-                <span className="w-5 text-center font-medium text-foreground" data-testid="text-quantity">{effectiveQuantity}</span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7"
-                  disabled={updateQuantityMutation.isPending}
-                  onClick={() => updateQuantityMutation.mutate(effectiveQuantity + 1)}
-                  data-testid="button-quantity-increase"
-                >
-                  +
-                </Button>
-              </div>
+            {/* Keep only genuinely additional description below the image. */}
+            {!isEditing && distinctDescription && (
+              <p className="text-xs leading-relaxed text-gray-400 text-center px-2 break-words">{distinctDescription}</p>
             )}
 
             {/* Market Price - Collapsible */}
@@ -1136,7 +1054,104 @@ export function CardDetailModal({
             {/* Bottom padding for scroll */}
             <div className="h-4" />
           </div>
-        </ScrollArea>
+        </div>
+
+        {/* Outside the scroll region so collection actions never scroll away. */}
+        {!isEditing && (
+          <div
+            className="shrink-0 border-t border-gray-700 bg-gray-900 px-3 pt-3 sm:px-4 space-y-2"
+            style={{ paddingBottom: "max(0.75rem, var(--safe-area-bottom, 0px))" }}
+            data-testid="card-detail-actions"
+          >
+            <div className="grid grid-cols-2 gap-2">
+              {showAsOwned ? (
+                <div className="relative min-w-0">
+                  <Button
+                    variant="outline"
+                    onClick={() => onRemoveFromCollection?.()}
+                    data-testid="button-remove-from-collection"
+                    className="h-12 w-full px-2 text-xs sm:text-sm border-green-200 text-green-700 hover:bg-green-50"
+                  >
+                    <div className="w-5 h-5 shrink-0 bg-green-500 rounded-full flex items-center justify-center mr-1.5">
+                      <Check className="w-3 h-3 text-white" />
+                    </div>
+                    In Collection
+                  </Button>
+                  {effectiveItemId != null && effectiveQuantity != null && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setShowQuantityControls(v => !v); }}
+                      className="absolute -top-2 right-1 min-w-[1.5rem] h-6 px-1.5 rounded-full bg-gray-100 border border-gray-300 text-gray-600 text-xs font-medium hover:bg-gray-200"
+                      title="Copies owned — tap to adjust"
+                      aria-expanded={showQuantityControls}
+                      aria-controls="card-detail-quantity-editor"
+                      data-testid="button-quantity-toggle"
+                    >
+                      ×{effectiveQuantity}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <Button
+                  onClick={() => onAddToCollection?.()}
+                  data-testid="button-add-to-collection"
+                  className="h-12 min-w-0 px-2 text-xs sm:text-sm bg-green-600 hover:bg-green-700"
+                >
+                  <Check className="w-4 h-4 shrink-0 mr-1.5" />
+                  Add to Collection
+                </Button>
+              )}
+              {isInWishlist ? (
+                <Button
+                  variant="outline"
+                  onClick={onRemoveFromWishlist}
+                  data-testid="button-remove-from-wishlist"
+                  className="h-12 min-w-0 px-2 text-xs sm:text-sm border-pink-200 text-pink-700 hover:bg-pink-50"
+                >
+                  <Heart className="w-4 h-4 shrink-0 fill-pink-500 text-pink-500 mr-1.5" />
+                  In Wishlist
+                </Button>
+              ) : (
+                <Button
+                  onClick={onAddToWishlist}
+                  data-testid="button-add-to-wishlist"
+                  className="h-12 min-w-0 px-2 text-xs sm:text-sm bg-pink-500 hover:bg-pink-600"
+                >
+                  <Heart className="w-4 h-4 shrink-0 mr-1.5" />
+                  Add to Wishlist
+                </Button>
+              )}
+            </div>
+            {showAsOwned && showQuantityControls && effectiveItemId != null && effectiveQuantity != null && (
+              <div id="card-detail-quantity-editor" className="flex items-center justify-end gap-2 text-xs text-muted-foreground" data-testid="quantity-editor">
+                <span>Copies owned:</span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  aria-label="Decrease copies owned"
+                  disabled={effectiveQuantity <= 1 || updateQuantityMutation.isPending}
+                  onClick={() => updateQuantityMutation.mutate(effectiveQuantity - 1)}
+                  data-testid="button-quantity-decrease"
+                >
+                  −
+                </Button>
+                <span className="w-5 text-center font-medium text-foreground" data-testid="text-quantity">{effectiveQuantity}</span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  aria-label="Increase copies owned"
+                  disabled={updateQuantityMutation.isPending}
+                  onClick={() => updateQuantityMutation.mutate(effectiveQuantity + 1)}
+                  data-testid="button-quantity-increase"
+                >
+                  +
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
