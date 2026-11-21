@@ -681,6 +681,8 @@ server.listen({
       await resetSilverSpectrumAutographImages();
       const { correctMasterpiecesBuybackCount } = await import('./seeds/correctMasterpiecesBuybackCount');
       await correctMasterpiecesBuybackCount();
+      const { resetRedSpectrumImages } = await import('./seeds/resetRedSpectrumImages');
+      await resetRedSpectrumImages();
 
       const { importJimLee1990 } = await import('./seeds/importJimLee1990');
       await importJimLee1990();

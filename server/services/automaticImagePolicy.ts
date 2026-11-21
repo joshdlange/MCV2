@@ -3,12 +3,14 @@ import { sql } from "drizzle-orm";
 
 // Owner-cleared checklist: only reviewed/manual image assignments are allowed.
 export const manualImageOnlySlug = "2016-2016-upper-deck-marvel-masterpieces-silver-spectrum-autograph";
+export const redSpectrumManualImageSlug = "2016-2016-upper-deck-marvel-masterpieces-red-spectrum-foil";
+const manualImageOnlySlugs = [manualImageOnlySlug, redSpectrumManualImageSlug];
 
 export async function assertAutomaticImageAllowed(cardId: number) {
   const result = await db.execute(sql`SELECT s.slug FROM cards c
     JOIN card_sets s ON s.id=c.set_id WHERE c.id=${cardId}`);
   if (!result.rows.length) throw new Error("Card not found");
-  if (result.rows[0].slug === manualImageOnlySlug) {
+  if (manualImageOnlySlugs.includes(String(result.rows[0].slug))) {
     throw new Error("This subset requires manually approved images");
   }
 }
@@ -17,7 +19,7 @@ export async function assertAutomaticImageAllowed(cardId: number) {
 export async function saveAutomaticImage(cardId: number, url: string): Promise<boolean> {
   const result = await db.execute(sql`UPDATE cards c SET front_image_url=${url}
     FROM card_sets s WHERE s.id=c.set_id AND c.id=${cardId}
-      AND s.slug <> ${manualImageOnlySlug}
+      AND s.slug NOT IN (${sql.join(manualImageOnlySlugs.map(slug => sql`${slug}`), sql`, `)})
     RETURNING c.id`);
   return result.rows.length === 1;
 }
