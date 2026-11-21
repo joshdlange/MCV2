@@ -16,6 +16,8 @@ Use short collector-facing subset labels, with “Base Cards” for recognized b
 
 Card details should put compact set/subset information above the image and keep collection/wishlist actions accessible without scrolling.
 
+The owner wants this set/subset identity treatment centered and on-brand, rather than a left-aligned “Master Set / Subset” label table.
+
 **Why:** The owner said collectors may not scroll through card details, and the large metadata block hid the add buttons.
 
 **How to apply:** Prioritize visible add actions over a large metadata panel; preserve the approved Browse heading with master context above the short subset name.
