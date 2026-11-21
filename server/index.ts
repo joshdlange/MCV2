@@ -679,6 +679,8 @@ server.listen({
       await restoreWolverineThenTilNow();
       const { resetSilverSpectrumAutographImages } = await import('./seeds/resetSilverSpectrumAutographImages');
       await resetSilverSpectrumAutographImages();
+      const { correctMasterpiecesBuybackCount } = await import('./seeds/correctMasterpiecesBuybackCount');
+      await correctMasterpiecesBuybackCount();
 
       const { importJimLee1990 } = await import('./seeds/importJimLee1990');
       await importJimLee1990();
