@@ -19,3 +19,9 @@ Card details should put compact set/subset information above the image and keep 
 **Why:** The owner said collectors may not scroll through card details, and the large metadata block hid the add buttons.
 
 **How to apply:** Prioritize visible add actions over a large metadata panel; preserve the approved Browse heading with master context above the short subset name.
+
+For owned cards, keep an explicit Remove action, visible minus/count/plus controls, and a compact wishlist heart in one fixed footer row. Collection actions should work the same from Browse, Search, and My Collection.
+
+**Why:** The owner reported collectors could not discover removal and approved replacing the ambiguous owned-status button without expanding the details panel.
+
+**How to apply:** Do not hide removal behind an ownership label or quantity adjustment behind a badge. Confirm removal of the last copy or all copies; keep ordinary quantity changes direct.

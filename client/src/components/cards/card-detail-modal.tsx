@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ import { auth } from "@/lib/firebase";
 import noCardImagePlaceholder from "@assets/image_1784478496002.png";
 import { formatCardName } from "@/lib/formatTitle";
 import { CardDetailImage } from "./card-detail-image";
+import { CardCollectionFooter } from "./card-collection-footer";
 import { invalidateCollectionValues } from "@/lib/collectionValue";
 
 interface CardDetailModalProps {
@@ -46,14 +47,8 @@ export function CardDetailModal({
   card,
   isOpen,
   onClose,
-  isInCollection = false,
-  isInWishlist = false,
-  collectionItemId,
-  collectionQuantity,
-  onAddToCollection,
-  onAddToWishlist,
-  onRemoveFromCollection,
-  onRemoveFromWishlist,
+  isInCollection: initialInCollection = false,
+  isInWishlist: initialInWishlist = false,
   onCardUpdate,
 }: CardDetailModalProps) {
   const [showBack, setShowBack] = useState(false);
@@ -84,8 +79,6 @@ export function CardDetailModal({
     enabled: isOpen && !!card,
   });
   const { toast } = useToast();
-  const [showQuantityControls, setShowQuantityControls] = useState(false);
-  useEffect(() => { setShowQuantityControls(false); }, [card?.id, isOpen]);
   useEffect(() => {
     setIsImageEditing(false);
     setEditedImageUrls({
@@ -94,9 +87,7 @@ export function CardDetailModal({
     });
   }, [card?.id, isOpen]);
 
-  // Self-sufficient ownership lookup: shares the app-wide collection cache so
-  // every entry point (browse, binders, search, …) gets quantity for free.
-  // Props remain as an override for pages that already resolved the item.
+  // Shared live data is authoritative; caller snapshots are only initial hints.
   const { data: ownCollection } = useQuery<any[]>({
     queryKey: ['/api/collection'],
     enabled: !!currentUser && isOpen,
@@ -104,29 +95,18 @@ export function CardDetailModal({
   const ownedItem = card
     ? ownCollection?.find((item: any) => (item.card?.id ?? item.cardId) === card.id)
     : undefined;
-  const effectiveItemId = collectionItemId ?? ownedItem?.id;
-  const effectiveQuantity = collectionQuantity ?? ownedItem?.quantity;
-  const showAsOwned = isInCollection || !!ownedItem;
+  const { data: ownWishlist } = useQuery<any[]>({
+    queryKey: ["/api/wishlist"], enabled: !!currentUser && isOpen,
+  });
+  const isInCollection = ownCollection !== undefined ? !!ownedItem : initialInCollection;
+  const isInWishlist = ownWishlist !== undefined
+    ? ownWishlist.some(item => (item.card?.id ?? item.cardId) === card?.id)
+    : initialInWishlist;
   
   // eBay pricing hooks - enable autoFetch to display cached pricing data
   const { data: pricing, isLoading: isPricingLoading } = useCardPricing(card?.id || 0, true);
   const refreshPricing = useRefreshCardPricing();
   const [isCheckingValue, setIsCheckingValue] = useState(false);
-
-  // Owner quantity update (min 1; removal stays a separate action)
-  const updateQuantityMutation = useMutation({
-    mutationFn: async (quantity: number) => {
-      if (!effectiveItemId) throw new Error('No collection item');
-      return apiRequest('PATCH', `/api/collection/${effectiveItemId}`, { quantity });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/collection'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
-    },
-    onError: () => {
-      toast({ title: "Failed to update quantity", variant: "destructive" });
-    }
-  });
 
   // Admin mutations
   const updateCardMutation = useMutation({
@@ -434,6 +414,8 @@ export function CardDetailModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[95vh] max-h-[95dvh] p-0 gap-0 overflow-hidden flex flex-col">
+        <DialogTitle className="sr-only">{card.name} card details</DialogTitle>
+        <DialogDescription className="sr-only">View card details and manage copies in your collection or wishlist.</DialogDescription>
         {/* Sticky Header - Mobile Optimized */}
         <div className="shrink-0 z-10 bg-gray-900 border-b border-gray-700 flex items-center justify-between px-3 py-2 sm:px-4">
           {/* Large Close Button on Left */}
@@ -1058,99 +1040,7 @@ export function CardDetailModal({
 
         {/* Outside the scroll region so collection actions never scroll away. */}
         {!isEditing && (
-          <div
-            className="shrink-0 border-t border-gray-700 bg-gray-900 px-3 pt-3 sm:px-4 space-y-2"
-            style={{ paddingBottom: "max(0.75rem, var(--safe-area-bottom, 0px))" }}
-            data-testid="card-detail-actions"
-          >
-            <div className="grid grid-cols-2 gap-2">
-              {showAsOwned ? (
-                <div className="relative min-w-0">
-                  <Button
-                    variant="outline"
-                    onClick={() => onRemoveFromCollection?.()}
-                    data-testid="button-remove-from-collection"
-                    className="h-12 w-full px-2 text-xs sm:text-sm border-green-200 text-green-700 hover:bg-green-50"
-                  >
-                    <div className="w-5 h-5 shrink-0 bg-green-500 rounded-full flex items-center justify-center mr-1.5">
-                      <Check className="w-3 h-3 text-white" />
-                    </div>
-                    In Collection
-                  </Button>
-                  {effectiveItemId != null && effectiveQuantity != null && (
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); setShowQuantityControls(v => !v); }}
-                      className="absolute -top-2 right-1 min-w-[1.5rem] h-6 px-1.5 rounded-full bg-gray-100 border border-gray-300 text-gray-600 text-xs font-medium hover:bg-gray-200"
-                      title="Copies owned — tap to adjust"
-                      aria-expanded={showQuantityControls}
-                      aria-controls="card-detail-quantity-editor"
-                      data-testid="button-quantity-toggle"
-                    >
-                      ×{effectiveQuantity}
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <Button
-                  onClick={() => onAddToCollection?.()}
-                  data-testid="button-add-to-collection"
-                  className="h-12 min-w-0 px-2 text-xs sm:text-sm bg-green-600 hover:bg-green-700"
-                >
-                  <Check className="w-4 h-4 shrink-0 mr-1.5" />
-                  Add to Collection
-                </Button>
-              )}
-              {isInWishlist ? (
-                <Button
-                  variant="outline"
-                  onClick={onRemoveFromWishlist}
-                  data-testid="button-remove-from-wishlist"
-                  className="h-12 min-w-0 px-2 text-xs sm:text-sm border-pink-200 text-pink-700 hover:bg-pink-50"
-                >
-                  <Heart className="w-4 h-4 shrink-0 fill-pink-500 text-pink-500 mr-1.5" />
-                  In Wishlist
-                </Button>
-              ) : (
-                <Button
-                  onClick={onAddToWishlist}
-                  data-testid="button-add-to-wishlist"
-                  className="h-12 min-w-0 px-2 text-xs sm:text-sm bg-pink-500 hover:bg-pink-600"
-                >
-                  <Heart className="w-4 h-4 shrink-0 mr-1.5" />
-                  Add to Wishlist
-                </Button>
-              )}
-            </div>
-            {showAsOwned && showQuantityControls && effectiveItemId != null && effectiveQuantity != null && (
-              <div id="card-detail-quantity-editor" className="flex items-center justify-end gap-2 text-xs text-muted-foreground" data-testid="quantity-editor">
-                <span>Copies owned:</span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  aria-label="Decrease copies owned"
-                  disabled={effectiveQuantity <= 1 || updateQuantityMutation.isPending}
-                  onClick={() => updateQuantityMutation.mutate(effectiveQuantity - 1)}
-                  data-testid="button-quantity-decrease"
-                >
-                  −
-                </Button>
-                <span className="w-5 text-center font-medium text-foreground" data-testid="text-quantity">{effectiveQuantity}</span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  aria-label="Increase copies owned"
-                  disabled={updateQuantityMutation.isPending}
-                  onClick={() => updateQuantityMutation.mutate(effectiveQuantity + 1)}
-                  data-testid="button-quantity-increase"
-                >
-                  +
-                </Button>
-              </div>
-            )}
-          </div>
+          <CardCollectionFooter cardId={card.id} cardName={card.name} isOpen={isOpen} />
         )}
       </DialogContent>
     </Dialog>
