@@ -9,6 +9,12 @@ Do not treat repeated card numbers inside a subset as automatically duplicate. S
 
 **How to apply:** Resolve sets by slug, validate expected terminal checklists, merge through the reference-preserving batch path, and soft-archive rather than delete. Repoint collections, wishlists, binders, listings, XP, scans, feeds, and images atomically. Re-run terminal assertions after every cleanup.
 
+For 2016 Marvel Masterpieces, the owner confirms What If... Printing Plates Black uses the same card numbers as regular What If... but different plate images.
+
+**Why:** The owner explicitly distinguished the Black plate checklist from the regular What If... set while reporting a locked duplicate tile.
+
+**How to apply:** Consolidate duplicate Black-plate buckets only; never merge Black plate cards into regular What If... just because their numbers and characters match.
+
 For empty legacy sets, the owner wants a numbered review list and will supply spreadsheets or specifics one set at a time. They authorize deleting old hidden duplicates when the same release is already listed, rather than populating a second copy.
 
 **Why:** The owner explicitly requested this cleanup and review approach. This does not authorize discarding cards or collector references from populated hidden sets.
