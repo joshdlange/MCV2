@@ -1,3 +1,4 @@
+- [Wolverine From Then 'Til Now](wolverine-then-til-now.md) — owner-approved 45-card Series I base-only scope; preserve Series II identities and distinguish the two box photos.
 - [Native vault direction](native-vault-direction.md) — user rejected still-image crossfades; prefers continuous footage and a replayable phone-size preview for periodic replacements.
 - [Spider-Man checklist review](spider-man-checklist-review.md) — owner requires 80 Topps base, 150 Ultra base/gold; separate questionable owned entries for review rather than reinterpret them.
 - [Base checklist exceptions](base-checklist-owner-exceptions.md) — owner-confirmed Flair, Black Diamond and XL numbering exceptions; 1990 issue-number mix-up and 2018 Gold checklist policy.
