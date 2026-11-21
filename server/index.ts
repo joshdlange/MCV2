@@ -677,6 +677,8 @@ server.listen({
 
       const { restoreWolverineThenTilNow } = await import('./seeds/restoreWolverineThenTilNow');
       await restoreWolverineThenTilNow();
+      const { resetSilverSpectrumAutographImages } = await import('./seeds/resetSilverSpectrumAutographImages');
+      await resetSilverSpectrumAutographImages();
 
       const { importJimLee1990 } = await import('./seeds/importJimLee1990');
       await importJimLee1990();

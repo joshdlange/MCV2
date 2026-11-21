@@ -3,6 +3,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import { db } from './db';
 import { cards } from '../shared/schema';
 import { eq } from 'drizzle-orm';
+import { assertAutomaticImageAllowed, saveAutomaticImage } from './services/automaticImagePolicy';
 
 // Configure Cloudinary
 cloudinary.config({
@@ -175,12 +176,7 @@ async function uploadToCloudinary(imageUrl: string, cardId: number): Promise<str
  */
 async function updateCardImage(cardId: number, imageUrl: string): Promise<boolean> {
   try {
-    await db
-      .update(cards)
-      .set({ 
-        frontImageUrl: imageUrl
-      })
-      .where(eq(cards.id, cardId));
+    if (!await saveAutomaticImage(cardId, imageUrl)) return false;
 
     console.log(`✅ Database updated for card ${cardId}`);
     return true;
@@ -201,6 +197,7 @@ export async function searchCOMCForCard(
   cardNumber: string
 ): Promise<COMCSearchResult> {
   try {
+    await assertAutomaticImageAllowed(cardId);
     // Get eBay access token
     const accessToken = await getEBayAccessToken();
     if (!accessToken) {

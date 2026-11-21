@@ -2,6 +2,7 @@ import fetch from 'node-fetch';
 import { reserveBrowseRequest } from './pricing/ebay-budget';
 import { v2 as cloudinary } from 'cloudinary';
 import { storage } from './storage';
+import { assertAutomaticImageAllowed, saveAutomaticImage } from './services/automaticImagePolicy';
 import fs from 'fs';
 import path from 'path';
 
@@ -353,6 +354,7 @@ export async function findAndUpdateCardImage(
   console.log(`📝 Description: ${description || 'None'}`);
 
   try {
+    await assertAutomaticImageAllowed(cardId);
     // Step 1: Search eBay for image
     console.log(`📡 Step 1: Searching eBay for card image...`);
     const ebayImageUrl = await searchEBayForCardImage(setName, cardName, cardNumber, description);
@@ -381,7 +383,9 @@ export async function findAndUpdateCardImage(
 
     // Step 3: Update database
     console.log(`💾 Step 3: Updating database with new image URL...`);
-    await storage.updateCardImage(cardId, cloudinaryUrl);
+    if (!await saveAutomaticImage(cardId, cloudinaryUrl)) {
+      throw new Error("Automatic image assignment blocked");
+    }
 
     console.log(`✅ Step 3 SUCCESS: Database updated`);
     result.success = true;

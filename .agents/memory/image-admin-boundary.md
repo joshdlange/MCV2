@@ -17,6 +17,12 @@ Historical activity must be described as images **updated**, not newly added ima
 
 Keep the entire Image Admin management and activity section under Image Automation, not Users.
 
+2016 Masterpieces Silver Spectrum Autograph must use manually approved images, not automatic search results. The owner authorized clearing its existing images and keeping supplied Fin Fang Foom #3 and Werewolf By Night #4 replacements.
+
+**Why:** The owner reported incorrect images and explicitly approved preventing automated searches from repopulating the cleared subset.
+
+**How to apply:** Preserve this subset's manual-only policy in any future image-search or bulk-fill implementation; do not apply this clearing authorization to What If... or other parallels.
+
 **Why:** The user explicitly requested that image-editor controls and reporting belong with image automation.
 
 **How to apply:** Future image-editor reporting and role controls should stay together in that section.
