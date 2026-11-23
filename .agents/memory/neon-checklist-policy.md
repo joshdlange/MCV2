@@ -8,6 +8,8 @@ The five Diamante subsets are Diamante Foil, Gold Diamante, Green Diamante, Oran
 
 The owner also confirms Snap Gold, Snap Orange, Snap Black, and Snap Red each have the same 20-card checklist as Marvel Snap.
 
+The owner confirms Magenta (Costco exclusive) has the same 200-card checklist as BASE and supplied its Carnage #97 photo. Treat it as distinct from Pink.
+
 **Why:** The owner explicitly supplied these catalog corrections.
 
 **How to apply:** Preserve existing card identities, images, and collector references when consolidating the split subsets. Do not infer serial-number limits or copy base images/prices to new parallels.
