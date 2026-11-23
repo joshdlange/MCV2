@@ -12,3 +12,8 @@ The owner supplied 2026 CardFun Marvel Spider Rally as a November 30, 2026 relea
 
 **Why:** Owner-confirmed announcement and artwork choices, not automatically discovered checklist evidence.
 **How to apply:** Do not invent Spider Rally cards or treat its box art as a checklist.
+
+The owner approved Google Alerts as a trial discovery source for a few months, with accuracy prioritized over publishing speed. Alerts are private, unverified leads requiring admin review, not confirmed release announcements.
+
+**Why:** The owner wants customers to get an accurate heads-up about upcoming products.
+**How to apply:** Preserve the approval boundary and evaluate usefulness before making the trial permanent.

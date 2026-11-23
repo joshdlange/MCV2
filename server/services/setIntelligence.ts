@@ -22,6 +22,31 @@ import { desc, eq, sql, inArray } from 'drizzle-orm';
 const USER_AGENT = 'Mozilla/5.0 (compatible; MarvelCardVault/1.0; +https://marvelcardvault.com)';
 const FETCH_TIMEOUT_MS = 12_000;
 
+export const googleAlertsTrial = {
+  name: 'Google Alerts (trial)',
+  url: 'https://www.google.com/alerts/feeds/10994759539944230461/6585936619794004091',
+  // Three calendar months, ending at midnight Central.
+  endsAt: '2027-02-23T06:00:00.000Z',
+};
+
+export function googleAlertsTrialActive(now = new Date()): boolean {
+  return now.getTime() < new Date(googleAlertsTrial.endsAt).getTime();
+}
+
+/** Google wraps article URLs; retain the actual source for review and deduplication. */
+export function unwrapGoogleAlertLink(link: string): string {
+  try {
+    const url = new URL(link);
+    if ((url.hostname === 'www.google.com' || url.hostname === 'google.com') && url.pathname === '/url') {
+      const target = url.searchParams.get('url') || url.searchParams.get('q');
+      if (!target) return '';
+      const article = new URL(target);
+      return ['https:', 'http:'].includes(article.protocol) ? article.toString() : '';
+    }
+    return ['https:', 'http:'].includes(url.protocol) ? url.toString() : '';
+  } catch { return ''; }
+}
+
 const MARVEL_TERMS = [
   'marvel', // covers topps marvel, marvel studios, marvel sapphire, marvel comics, etc.
 ];
@@ -192,6 +217,10 @@ async function fetchRssItems(url: string, sourceName: string, sourceType: string
   const res = await politeFetch(url, 'application/rss+xml, application/atom+xml, application/xml, text/xml');
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const xml = await res.text();
+  return parseReleaseFeed(xml, sourceName, sourceType, baseConfidence);
+}
+
+export function parseReleaseFeed(xml: string, sourceName: string, sourceType: string, baseConfidence: number): { items: DetectedItem[]; itemsSeen: number } {
   const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
   const parsed = parser.parse(xml);
 
@@ -211,12 +240,14 @@ async function fetchRssItems(url: string, sourceName: string, sourceType: string
     const description = stripHtml(
       typeof e.description === 'string' ? e.description
       : typeof e.summary === 'string' ? e.summary
+      : typeof e.content === 'string' ? e.content
       : typeof e.content === 'object' ? e.content['#text'] || '' : ''
     ).slice(0, 500);
     let link = '';
     if (typeof e.link === 'string') link = e.link;
     else if (Array.isArray(e.link)) link = e.link.find((l: any) => l['@_rel'] !== 'replies')?.['@_href'] || '';
     else if (e.link?.['@_href']) link = e.link['@_href'];
+    if (sourceName === googleAlertsTrial.name) link = unwrapGoogleAlertLink(link);
     if (!title || !link) continue;
     if (!isMarvelCardRelease(`${title} ${description}`)) continue;
 
@@ -233,8 +264,9 @@ async function fetchRssItems(url: string, sourceName: string, sourceType: string
       sourceType,
       baseConfidence,
       imageUrl: image,
-      description,
-      estimatedReleaseDate: extractDate(description),
+      description: sourceName === googleAlertsTrial.name
+        ? `Unverified Google Alerts lead. Verify the release and date with the original source before approval. ${description}` : description,
+      estimatedReleaseDate: sourceName === googleAlertsTrial.name ? null : extractDate(description),
     });
   }
   return { items, itemsSeen: entries.length };
@@ -267,7 +299,7 @@ async function fetchToppsShop(): Promise<{ items: DetectedItem[]; itemsSeen: num
   return { items, itemsSeen: products.length };
 }
 
-function buildSources(): SourceFetcher[] {
+export function buildSources(now = new Date()): SourceFetcher[] {
   return [
     // NOTE: topps.com sits behind bot protection (Incapsula) and often returns
     // 403 to datacenter IPs. The sources stay registered — failures surface in
@@ -278,6 +310,10 @@ function buildSources(): SourceFetcher[] {
     { name: 'Blowout Buzz', run: () => fetchRssItems('https://blowoutcards.com/buzz/feed/', 'Blowout Buzz', 'blog', 55) },
     { name: 'Cardlines', run: () => fetchRssItems('https://www.cardlines.com/feed/', 'Cardlines', 'checklist', 50) },
     { name: 'Cardboard Connection RSS', run: () => fetchRssItems('https://www.cardboardconnection.com/feed', 'Cardboard Connection', 'rss', 60) },
+    ...(googleAlertsTrialActive(now) ? [{
+      name: googleAlertsTrial.name,
+      run: () => fetchRssItems(googleAlertsTrial.url, googleAlertsTrial.name, 'rss', 40),
+    }] : []),
   ];
 }
 
@@ -505,11 +541,12 @@ export async function runSetIntelScan(opts: { dryRun: boolean; trigger?: string 
           if (!normalized || normalized.length < 8) continue;
 
           // Never re-suggest something already suggested (any status) or seen this scan
-          if (knownCandidateNames.has(normalized) || knownCandidateUrls.has(item.sourceUrl) || seenThisScan.has(normalized)) {
+          if (knownCandidateNames.has(normalized) || knownCandidateUrls.has(item.sourceUrl) || seenThisScan.has(normalized) || seenThisScan.has(item.sourceUrl)) {
             result.skippedDuplicate++;
             continue;
           }
           seenThisScan.add(normalized);
+          seenThisScan.add(item.sourceUrl);
 
           const matchUpcoming = findLooseMatch(normalized, upcoming);
           const matchExisting = matchUpcoming ? null : findLooseMatch(normalized, existing);
