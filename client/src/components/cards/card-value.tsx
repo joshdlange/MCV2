@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DollarSign, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -58,7 +57,7 @@ export function CardValue({ cardId, showRefresh = false, estimatedValue, current
         });
         toast({
           title: "Pricing Updated",
-          description: data.provider === "legacy" ? `$${data.avgPrice.toFixed(2)} — legacy active-listing estimate retained` : `New price: $${data.avgPrice.toFixed(2)} (${data.salesCount} ${data.provider === "soldgraph" ? "sold comps" : "sales found"})${data.confidence === "limited" ? " — Limited data" : ""}`
+          description: data.provider === "legacy" ? `Value: $${data.avgPrice.toFixed(2)}` : `New price: $${data.avgPrice.toFixed(2)} (${data.salesCount} ${data.provider === "soldgraph" ? "sold comps" : "sales found"})${data.confidence === "limited" ? " — Limited data" : ""}`
         });
       } else {
         toast({
@@ -103,26 +102,28 @@ export function CardValue({ cardId, showRefresh = false, estimatedValue, current
   }
 
   const isMarketPrice = marketPrice && marketPrice > 0;
-  const badgeColor = isMarketPrice 
-    ? "bg-green-50 text-green-700 border-green-200" 
-    : "bg-blue-50 text-blue-700 border-blue-200";
+  const formattedPrice = displayPrice.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  const limited = pricingData?.confidence === "limited";
 
   return (
-    <div className="flex items-center gap-1">
-      <Badge variant="outline" className={`${badgeColor} text-xs font-semibold`}>
-        <DollarSign className="w-3 h-3 mr-1" />
-        ${displayPrice.toFixed(2)}
-        {pricingData?.confidence === "limited" && <span className="ml-1 text-xs">Limited data</span>}
-        {pricingData?.provider === "legacy" && <span className="ml-1 text-xs">Legacy estimate</span>}
-        {!isMarketPrice && (
-          <span className="ml-1 text-xs opacity-60">est</span>
-        )}
-      </Badge>
+    <div className="flex items-center gap-1.5 whitespace-nowrap">
+      <span
+        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold tabular-nums shadow-sm ring-1 ring-inset ${
+          isMarketPrice
+            ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+            : "bg-slate-50 text-slate-700 ring-slate-200"
+        }`}
+        title={limited ? "Estimated value based on limited sales data" : "Estimated market value"}
+        data-testid={`card-value-${cardId}`}
+      >
+        {formattedPrice}
+      </span>
       {showRefresh && (
         <Button
           size="sm"
           variant="ghost"
-          className="h-4 w-4 p-0"
+          aria-label="Refresh value"
+          className="h-6 w-6 rounded-full p-0 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
           onClick={(e) => {
             e.stopPropagation();
             refreshMutation.mutate();

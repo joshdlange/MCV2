@@ -63,9 +63,9 @@ export function CardPricing({ cardId, className = "" }: CardPricingProps) {
       <span className={getPriceColor(pricing.avgPrice ?? 0, pricing.salesCount)}>
         {pricing.avgPrice == null ? "Unavailable" : formatPrice(pricing.avgPrice, pricing.salesCount)}
       </span>
-      {pricing.salesCount > 0 && pricing.salesCount !== -1 && (
+      {pricing.provider !== "legacy" && pricing.salesCount > 0 && pricing.salesCount !== -1 && (
         <span className="text-xs text-gray-500">
-          ({pricing.provider === "legacy" ? "Legacy estimate" : `${pricing.salesCount} ${pricing.provider === "soldgraph" ? "sold comps" : "sales"}`}{pricing.confidence === "limited" ? " · Limited data" : ""})
+          ({`${pricing.salesCount} ${pricing.provider === "soldgraph" ? "sold comps" : "sales"}`}{pricing.confidence === "limited" ? " · Limited data" : ""})
         </span>
       )}
     </div>
