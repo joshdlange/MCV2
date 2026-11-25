@@ -65,6 +65,7 @@ test('startup catalog imports and image worker are guarded; badge/feed and readi
   assertImportsGuarded(file, [
     './seeds/importSkyboxWizardChromium1996',
     './seeds/importToppsVaultMarvel2026',
+    './seeds/importFleerXMenWalmart1996',
     './seeds/mergeDuplicateLegacySets',
     './seeds/restoreTwinMergeImages',
     './seeds/fixTcms2025Checklist',

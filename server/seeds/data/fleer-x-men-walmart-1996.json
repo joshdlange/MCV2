@@ -1,0 +1,502 @@
+[
+  {
+    "number": "1",
+    "name": "Archangel",
+    "description": "Andy Kubert \u00b7 X-Men"
+  },
+  {
+    "number": "2",
+    "name": "Beast",
+    "description": "Andy Kubert \u00b7 X-Men"
+  },
+  {
+    "number": "3",
+    "name": "Bishop",
+    "description": "Andy Kubert \u00b7 X-Men"
+  },
+  {
+    "number": "4",
+    "name": "Cannonball",
+    "description": "Andy Kubert \u00b7 X-Men"
+  },
+  {
+    "number": "5",
+    "name": "Cyclops",
+    "description": "Andy Kubert \u00b7 X-Men"
+  },
+  {
+    "number": "6",
+    "name": "Gambit",
+    "description": "Andy Kubert \u00b7 X-Men"
+  },
+  {
+    "number": "7",
+    "name": "Iceman",
+    "description": "Adam Kubert \u00b7 X-Men"
+  },
+  {
+    "number": "8",
+    "name": "Phoenix",
+    "description": "Adam Kubert \u00b7 X-Men"
+  },
+  {
+    "number": "9",
+    "name": "Professor X",
+    "description": "Adam Kubert \u00b7 X-Men"
+  },
+  {
+    "number": "10",
+    "name": "Psylocke",
+    "description": "Andy Kubert \u00b7 X-Men"
+  },
+  {
+    "number": "11",
+    "name": "Rogue",
+    "description": "Andy Kubert \u00b7 X-Men"
+  },
+  {
+    "number": "12",
+    "name": "Storm",
+    "description": "Andy Kubert \u00b7 X-Men"
+  },
+  {
+    "number": "13",
+    "name": "Wolverine",
+    "description": "Adam Kubert \u00b7 X-Men"
+  },
+  {
+    "number": "14",
+    "name": "Forge",
+    "description": "Andy Kubert \u00b7 X-Factor"
+  },
+  {
+    "number": "15",
+    "name": "Havok",
+    "description": "Adam Kubert \u00b7 X-Factor"
+  },
+  {
+    "number": "16",
+    "name": "Mystique",
+    "description": "Joe Kubert \u00b7 X-Factor"
+  },
+  {
+    "number": "17",
+    "name": "Random",
+    "description": "Adam Kubert \u00b7 X-Factor"
+  },
+  {
+    "number": "18",
+    "name": "Sabretooth",
+    "description": "Andy Kubert \u00b7 X-Factor"
+  },
+  {
+    "number": "19",
+    "name": "Strong Guy",
+    "description": "Andy Kubert \u00b7 X-Factor"
+  },
+  {
+    "number": "20",
+    "name": "Boomer",
+    "description": "Joe Kubert \u00b7 X-Force"
+  },
+  {
+    "number": "21",
+    "name": "Cable",
+    "description": "Adam Kubert \u00b7 X-Force"
+  },
+  {
+    "number": "22",
+    "name": "Domino",
+    "description": "Adam Kubert \u00b7 X-Force"
+  },
+  {
+    "number": "23",
+    "name": "Shatterstar",
+    "description": "Joe Kubert \u00b7 X-Force"
+  },
+  {
+    "number": "24",
+    "name": "Warpath",
+    "description": "Andy Kubert \u00b7 X-Force"
+  },
+  {
+    "number": "25",
+    "name": "Colossus",
+    "description": "Andy Kubert \u00b7 Excalibur"
+  },
+  {
+    "number": "26",
+    "name": "Douglock",
+    "description": "Joe Kubert \u00b7 Excalibur"
+  },
+  {
+    "number": "27",
+    "name": "Nightcrawler",
+    "description": "Adam Kubert \u00b7 Excalibur"
+  },
+  {
+    "number": "28",
+    "name": "Shadowcat",
+    "description": "Adam Kubert \u00b7 Excalibur"
+  },
+  {
+    "number": "29",
+    "name": "Banshee",
+    "description": "Andy Kubert \u00b7 Generation X"
+  },
+  {
+    "number": "30",
+    "name": "Chamber",
+    "description": "Adam Kubert \u00b7 Generation X"
+  },
+  {
+    "number": "31",
+    "name": "Husk",
+    "description": "Andy Kubert \u00b7 Generation X"
+  },
+  {
+    "number": "32",
+    "name": "Jubilee",
+    "description": "Adam Kubert \u00b7 Generation X"
+  },
+  {
+    "number": "33",
+    "name": "M",
+    "description": "Adam Kubert \u00b7 Generation X"
+  },
+  {
+    "number": "34",
+    "name": "Mondo",
+    "description": "Andy Kubert \u00b7 Generation X"
+  },
+  {
+    "number": "35",
+    "name": "Penance",
+    "description": "Andy Kubert \u00b7 Generation X"
+  },
+  {
+    "number": "36",
+    "name": "Skin",
+    "description": "Adam Kubert \u00b7 Generation X"
+  },
+  {
+    "number": "37",
+    "name": "Synch",
+    "description": "Andy Kubert \u00b7 Generation X"
+  },
+  {
+    "number": "38",
+    "name": "White Queen",
+    "description": "Andy Kubert \u00b7 Generation X"
+  },
+  {
+    "number": "39",
+    "name": "Alter Beast",
+    "description": "Adam Kubert \u00b7 Age of Apocalypse"
+  },
+  {
+    "number": "40",
+    "name": "Holocaust",
+    "description": "Adam Kubert \u00b7 Age of Apocalypse"
+  },
+  {
+    "number": "41",
+    "name": "Sugar Man",
+    "description": "Andy Kubert \u00b7 Age of Apocalypse"
+  },
+  {
+    "number": "42",
+    "name": "X-Man",
+    "description": "Andy Kubert \u00b7 Age of Apocalypse"
+  },
+  {
+    "number": "43",
+    "name": "Deadbolt",
+    "description": "Joe Kubert \u00b7 Dark Riders"
+  },
+  {
+    "number": "44",
+    "name": "Gauntlet",
+    "description": "Joe Kubert \u00b7 Dark Riders"
+  },
+  {
+    "number": "45",
+    "name": "Genesis",
+    "description": "Joe Kubert \u00b7 Dark Riders"
+  },
+  {
+    "number": "46",
+    "name": "Hurricane",
+    "description": "Joe Kubert \u00b7 Dark Riders"
+  },
+  {
+    "number": "47",
+    "name": "Lifeforce",
+    "description": "Joe Kubert \u00b7 Dark Riders"
+  },
+  {
+    "number": "48",
+    "name": "Spyne",
+    "description": "Joe Kubert \u00b7 Dark Riders"
+  },
+  {
+    "number": "49",
+    "name": "Tusk",
+    "description": "Joe Kubert \u00b7 Dark Riders"
+  },
+  {
+    "number": "50",
+    "name": "Corsair",
+    "description": "Joe Kubert \u00b7 Super Hero"
+  },
+  {
+    "number": "51",
+    "name": "Deadpool",
+    "description": "Andy Kubert \u00b7 Super Hero"
+  },
+  {
+    "number": "52",
+    "name": "Kane",
+    "description": "Joe Kubert \u00b7 Super Hero"
+  },
+  {
+    "number": "53",
+    "name": "Lilandra",
+    "description": "Andy Kubert \u00b7 Super Hero"
+  },
+  {
+    "number": "54",
+    "name": "Longshot",
+    "description": "Adam Kubert \u00b7 Super Hero"
+  },
+  {
+    "number": "55",
+    "name": "Magneto",
+    "description": "Andy Kubert \u00b7 Super Hero"
+  },
+  {
+    "number": "56",
+    "name": "Maverick",
+    "description": "Adam Kubert \u00b7 Super Hero"
+  },
+  {
+    "number": "57",
+    "name": "Raza",
+    "description": "Andy Kubert \u00b7 Super Hero"
+  },
+  {
+    "number": "58",
+    "name": "Albert",
+    "description": "Adam Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "59",
+    "name": "Apocalypse",
+    "description": "Joe Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "60",
+    "name": "Black Tom Cassidy",
+    "description": "Joe Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "61",
+    "name": "Blob",
+    "description": "Adam Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "62",
+    "name": "Blood Scream",
+    "description": "Adam Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "63",
+    "name": "Cyber",
+    "description": "Adam Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "64",
+    "name": "Emplate",
+    "description": "Adam Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "65",
+    "name": "Gladiator",
+    "description": "Andy Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "66",
+    "name": "Juggernaut",
+    "description": "Andy Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "67",
+    "name": "Lady Deathstrike",
+    "description": "Adam Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "68",
+    "name": "Legion",
+    "description": "Adam Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "69",
+    "name": "Locus",
+    "description": "Joe Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "70",
+    "name": "Mojo",
+    "description": "Adam Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "71",
+    "name": "Mr. Sinister",
+    "description": "Adam Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "72",
+    "name": "Omega Red",
+    "description": "Adam Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "73",
+    "name": "Orphan Maker",
+    "description": "Adam Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "74",
+    "name": "Sauron",
+    "description": "Joe Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "75",
+    "name": "Sentinels",
+    "description": "Joe Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "76",
+    "name": "Silver Samurai",
+    "description": "Andy Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "77",
+    "name": "Spiral",
+    "description": "Andy Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "78",
+    "name": "Stryfe",
+    "description": "Andy Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "79",
+    "name": "Toad",
+    "description": "Adam Kubert \u00b7 Super Villain"
+  },
+  {
+    "number": "80",
+    "name": "Logan",
+    "description": "Andy Kubert \u00b7 Wolverine Timeline"
+  },
+  {
+    "number": "81",
+    "name": "CIA",
+    "description": "Adam Kubert \u00b7 Wolverine Timeline"
+  },
+  {
+    "number": "82",
+    "name": "Weapon X",
+    "description": "Adam Kubert \u00b7 Wolverine Timeline"
+  },
+  {
+    "number": "83",
+    "name": "Department H",
+    "description": "Adam Kubert \u00b7 Wolverine Timeline"
+  },
+  {
+    "number": "84",
+    "name": "Mariko",
+    "description": "Andy Kubert \u00b7 Wolverine Timeline"
+  },
+  {
+    "number": "85",
+    "name": "Sidekick",
+    "description": "Adam Kubert \u00b7 Wolverine Timeline"
+  },
+  {
+    "number": "86",
+    "name": "Fatal Attractions",
+    "description": "Andy Kubert \u00b7 Wolverine Timeline"
+  },
+  {
+    "number": "87",
+    "name": "Blood Oath",
+    "description": "Adam Kubert \u00b7 Wolverine Timeline"
+  },
+  {
+    "number": "88",
+    "name": "Broken Claws",
+    "description": "Andy Kubert \u00b7 Wolverine Timeline"
+  },
+  {
+    "number": "89",
+    "name": "Back Again",
+    "description": "Adam Kubert \u00b7 Wolverine Timeline"
+  },
+  {
+    "number": "90",
+    "name": "Beast as Ben Franklin",
+    "description": "Andy Kubert \u00b7 Haunted Mansion"
+  },
+  {
+    "number": "91",
+    "name": "Colossus as Count Vampire",
+    "description": "Adam Kubert \u00b7 Haunted Mansion"
+  },
+  {
+    "number": "92",
+    "name": "Cyclops as The King",
+    "description": "Adam Kubert \u00b7 Haunted Mansion"
+  },
+  {
+    "number": "93",
+    "name": "Gambit as The Cajun Cowboy",
+    "description": "Andy Kubert \u00b7 Haunted Mansion"
+  },
+  {
+    "number": "94",
+    "name": "Iceman as The Snowman",
+    "description": "Andy Kubert \u00b7 Haunted Mansion"
+  },
+  {
+    "number": "95",
+    "name": "Professor X as The Wizard of X",
+    "description": "Adam Kubert \u00b7 Haunted Mansion"
+  },
+  {
+    "number": "96",
+    "name": "Psylocke as The French Maid",
+    "description": "Adam Kubert \u00b7 Haunted Mansion"
+  },
+  {
+    "number": "97",
+    "name": "Rogue as The Vampiress",
+    "description": "Adam Kubert \u00b7 Haunted Mansion"
+  },
+  {
+    "number": "98",
+    "name": "Storm as The Witch",
+    "description": "Andy Kubert \u00b7 Haunted Mansion"
+  },
+  {
+    "number": "99",
+    "name": "Wolverine as Captain Claw",
+    "description": "Andy Kubert \u00b7 Haunted Mansion"
+  },
+  {
+    "number": "100",
+    "name": "Checklist",
+    "description": "Checklist"
+  }
+]

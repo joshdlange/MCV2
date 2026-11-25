@@ -688,6 +688,8 @@ server.listen({
 
       const { importJimLee1990 } = await import('./seeds/importJimLee1990');
       await importJimLee1990();
+      const { importFleerXMenWalmart1996 } = await import('./seeds/importFleerXMenWalmart1996');
+      await importFleerXMenWalmart1996();
 
       const { importGhostRiderIIGlow1992 } = await import('./seeds/importGhostRiderIIGlow1992');
       await importGhostRiderIIGlow1992();
